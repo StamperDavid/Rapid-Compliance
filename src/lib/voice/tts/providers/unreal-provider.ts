@@ -4,14 +4,15 @@
  * https://unrealspeech.com/
  */
 
-import {
+import type {
   TTSProvider,
   TTSSynthesizeResponse,
   TTSVoice,
   TTSVoiceSettings,
   TTSProviderInfo,
-  TTS_PROVIDER_INFO,
-  AudioFormat,
+  AudioFormat} from '../types';
+import {
+  TTS_PROVIDER_INFO
 } from '../types';
 
 const UNREAL_API_URL = 'https://api.v7.unrealspeech.com';
@@ -115,7 +116,7 @@ export class UnrealProvider implements TTSProvider {
       // Unreal returns OutputUri with the audio URL
       return {
         audio: data.OutputUri || data.SynthesisTask?.OutputUri || '',
-        format: effectiveSettings.format as AudioFormat,
+        format: effectiveSettings.format,
         durationSeconds: data.TimestampsUri ? this.estimateDuration(text) : this.estimateDuration(text),
         charactersUsed,
         engine: 'unreal',

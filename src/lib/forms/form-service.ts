@@ -8,6 +8,8 @@
  * @version 1.0.0
  */
 
+import type {
+  QueryDocumentSnapshot} from 'firebase/firestore';
 import {
   collection,
   doc,
@@ -24,7 +26,6 @@ import {
   serverTimestamp,
   increment,
   Timestamp,
-  QueryDocumentSnapshot,
   writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
@@ -40,15 +41,15 @@ function getDb() {
 import type {
   FormDefinition,
   FormSubmission,
-  FormFieldConfig,
+  _FormFieldConfig,
   FormStatus,
   FieldResponse,
   SubmissionMetadata,
   FormView,
-  FormAnalyticsSummary,
-  CRMFieldMapping,
-  OrchestratorAction,
-  FormBehavior,
+  _FormAnalyticsSummary,
+  _CRMFieldMapping,
+  _OrchestratorAction,
+  _FormBehavior,
 } from './types';
 
 // ============================================================================
@@ -64,7 +65,7 @@ const getSubmissionsCollectionPath = (orgId: string, workspaceId: string, formId
 const getViewsCollectionPath = (orgId: string, workspaceId: string, formId: string) =>
   `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}/views`;
 
-const getAnalyticsCollectionPath = (orgId: string, workspaceId: string, formId: string) =>
+const _getAnalyticsCollectionPath = (orgId: string, workspaceId: string, formId: string) =>
   `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}/analytics`;
 
 // ============================================================================
@@ -246,7 +247,7 @@ export async function duplicateForm(
 
   const duplicatedForm = await createForm(orgId, workspaceId, {
     ...originalForm,
-    name: newName || `${originalForm.name} (Copy)`,
+    name: newName ?? `${originalForm.name} (Copy)`,
     status: 'draft',
     version: 1,
     createdBy: originalForm.createdBy,
@@ -317,7 +318,7 @@ export async function createSubmission(
     confirmationNumber,
     submittedAt: serverTimestamp() as unknown as Timestamp,
     isPartial,
-    resumeToken: isPartial ? (resumeToken || generateResumeToken()) : undefined,
+    resumeToken: isPartial ? (resumeToken ?? generateResumeToken()) : undefined,
   };
 
   // Batch write submission and update form count

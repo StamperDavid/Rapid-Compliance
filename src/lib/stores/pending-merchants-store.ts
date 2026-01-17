@@ -160,7 +160,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       updateMerchant: (data) => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,
@@ -177,7 +177,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       markAbandoned: (step, reason) => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,
@@ -197,7 +197,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       markRecovered: (source) => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,
@@ -216,7 +216,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       markConverted: () => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,
@@ -233,7 +233,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       recordEmailSent: () => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,
@@ -251,7 +251,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       recordSmsSent: () => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,
@@ -269,7 +269,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       recordVoiceCall: () => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,
@@ -287,7 +287,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       recordEmailOpened: () => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,
@@ -304,7 +304,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       recordEmailClicked: () => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,
@@ -321,7 +321,7 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
       updateRecoveryStatus: (status) => {
         set((state) => {
-          if (!state.currentMerchant) return state;
+          if (!state.currentMerchant) {return state;}
 
           const updated = {
             ...state.currentMerchant,

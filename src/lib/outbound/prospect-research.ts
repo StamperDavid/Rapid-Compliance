@@ -186,7 +186,7 @@ function guessDomainFromCompanyName(companyName: string): string {
 /**
  * Get recent news about the company
  */
-async function getRecentNews(companyName: string, orgId: string): Promise<NewsItem[]> {
+async function getRecentNews(companyName: string, _orgId: string): Promise<NewsItem[]> {
   const { searchCompanyNews } = await import('../enrichment/search-service');
   
   return searchCompanyNews(companyName, 5);
@@ -224,7 +224,7 @@ async function getFundingInfo(companyName: string, orgId: string): Promise<Fundi
 /**
  * Detect technology stack using our free scraper
  */
-async function getTechStack(companyName: string, orgId: string): Promise<string[]> {
+async function getTechStack(companyName: string, _orgId: string): Promise<string[]> {
   const { detectTechStack } = await import('../enrichment/search-service');
   
   const domain = guessDomainFromCompanyName(companyName);
@@ -235,7 +235,7 @@ async function getTechStack(companyName: string, orgId: string): Promise<string[
 /**
  * Find hiring signals (job postings) by scraping careers page
  */
-async function getHiringSignals(companyName: string, orgId: string): Promise<JobPosting[]> {
+async function getHiringSignals(companyName: string, _orgId: string): Promise<JobPosting[]> {
   const { scrapeCareersPage } = await import('../enrichment/web-scraper');
   
   try {
@@ -248,7 +248,7 @@ async function getHiringSignals(companyName: string, orgId: string): Promise<Job
       url: job.url,
       postedDate: new Date().toISOString(),
     }));
-  } catch (error) {
+  } catch (_error) {
     return [];
   }
 }
@@ -256,7 +256,7 @@ async function getHiringSignals(companyName: string, orgId: string): Promise<Job
 /**
  * Get social media presence by scraping the company website
  */
-async function getSocialPresence(companyName: string, orgId: string): Promise<SocialPresence> {
+async function getSocialPresence(companyName: string, _orgId: string): Promise<SocialPresence> {
   const { searchLinkedIn } = await import('../enrichment/search-service');
   const { scrapeWebsite, extractDataPoints } = await import('../enrichment/web-scraper');
   
@@ -274,7 +274,7 @@ async function getSocialPresence(companyName: string, orgId: string): Promise<So
       twitter: dataPoints.socialLinks.find(link => link.includes('twitter.com') || link.includes('x.com')),
       facebook: dataPoints.socialLinks.find(link => link.includes('facebook.com')),
     };
-  } catch (error) {
+  } catch (_error) {
     // Fallback: generate likely URLs
     const companySlug = companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     
@@ -288,7 +288,7 @@ async function getSocialPresence(companyName: string, orgId: string): Promise<So
 /**
  * Generate AI-powered insights for personalization
  */
-async function generateInsights(data: {
+function generateInsights(data: {
   companyInfo: CompanyInfo;
   news: NewsItem[];
   funding?: FundingInfo;

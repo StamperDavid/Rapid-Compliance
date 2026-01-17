@@ -326,16 +326,16 @@ class CRMVoiceActivityLogger {
       const queryParams = new URLSearchParams();
       queryParams.set('organizationId', params.organizationId);
 
-      if (params.contactId) queryParams.set('contactId', params.contactId);
-      if (params.leadId) queryParams.set('leadId', params.leadId);
-      if (params.dealId) queryParams.set('dealId', params.dealId);
-      if (params.type) queryParams.set('type', params.type);
-      if (params.direction) queryParams.set('direction', params.direction);
-      if (params.dateFrom) queryParams.set('dateFrom', params.dateFrom.toISOString());
-      if (params.dateTo) queryParams.set('dateTo', params.dateTo.toISOString());
-      if (params.userId) queryParams.set('userId', params.userId);
-      if (params.limit) queryParams.set('limit', String(params.limit));
-      if (params.offset) queryParams.set('offset', String(params.offset));
+      if (params.contactId) {queryParams.set('contactId', params.contactId);}
+      if (params.leadId) {queryParams.set('leadId', params.leadId);}
+      if (params.dealId) {queryParams.set('dealId', params.dealId);}
+      if (params.type) {queryParams.set('type', params.type);}
+      if (params.direction) {queryParams.set('direction', params.direction);}
+      if (params.dateFrom) {queryParams.set('dateFrom', params.dateFrom.toISOString());}
+      if (params.dateTo) {queryParams.set('dateTo', params.dateTo.toISOString());}
+      if (params.userId) {queryParams.set('userId', params.userId);}
+      if (params.limit) {queryParams.set('limit', String(params.limit));}
+      if (params.offset) {queryParams.set('offset', String(params.offset));}
 
       const response = await fetch(`/api/crm/voice-activity?${queryParams}`);
 
@@ -367,10 +367,10 @@ class CRMVoiceActivityLogger {
       const queryParams = new URLSearchParams();
       queryParams.set('organizationId', organizationId);
 
-      if (params?.dateFrom) queryParams.set('dateFrom', params.dateFrom.toISOString());
-      if (params?.dateTo) queryParams.set('dateTo', params.dateTo.toISOString());
-      if (params?.userId) queryParams.set('userId', params.userId);
-      if (params?.contactId) queryParams.set('contactId', params.contactId);
+      if (params?.dateFrom) {queryParams.set('dateFrom', params.dateFrom.toISOString());}
+      if (params?.dateTo) {queryParams.set('dateTo', params.dateTo.toISOString());}
+      if (params?.userId) {queryParams.set('userId', params.userId);}
+      if (params?.contactId) {queryParams.set('contactId', params.contactId);}
 
       const response = await fetch(`/api/crm/voice-activity/stats?${queryParams}`);
 

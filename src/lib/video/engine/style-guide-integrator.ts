@@ -449,29 +449,29 @@ export class StyleGuideIntegrator {
     };
 
     // Minimal indicators
-    if (layoutAnalysis.whitespaceRatio > 0.5) scores.minimal += 2;
-    if (computedStyles.colorCount < 5) scores.minimal += 1;
-    if (computedStyles.averageBorderRadius < 4) scores.minimal += 1;
+    if (layoutAnalysis.whitespaceRatio > 0.5) {scores.minimal += 2;}
+    if (computedStyles.colorCount < 5) {scores.minimal += 1;}
+    if (computedStyles.averageBorderRadius < 4) {scores.minimal += 1;}
 
     // Modern indicators
-    if (computedStyles.usesGradients) scores.modern += 2;
-    if (computedStyles.headingWeight >= 600) scores.modern += 1;
-    if (computedStyles.usesShadows && computedStyles.shadowIntensity < 0.2) scores.modern += 1;
+    if (computedStyles.usesGradients) {scores.modern += 2;}
+    if (computedStyles.headingWeight >= 600) {scores.modern += 1;}
+    if (computedStyles.usesShadows && computedStyles.shadowIntensity < 0.2) {scores.modern += 1;}
 
     // Classic indicators
-    if (computedStyles.headingFont.includes('serif')) scores.classic += 2;
-    if (computedStyles.colorSaturation < 0.5) scores.classic += 1;
-    if (!computedStyles.usesGradients) scores.classic += 1;
+    if (computedStyles.headingFont.includes('serif')) {scores.classic += 2;}
+    if (computedStyles.colorSaturation < 0.5) {scores.classic += 1;}
+    if (!computedStyles.usesGradients) {scores.classic += 1;}
 
     // Bold indicators
-    if (computedStyles.colorContrast > 7) scores.bold += 2;
-    if (computedStyles.headingWeight >= 800) scores.bold += 1;
-    if (computedStyles.colorSaturation > 0.7) scores.bold += 1;
+    if (computedStyles.colorContrast > 7) {scores.bold += 2;}
+    if (computedStyles.headingWeight >= 800) {scores.bold += 1;}
+    if (computedStyles.colorSaturation > 0.7) {scores.bold += 1;}
 
     // Playful indicators
-    if (computedStyles.averageBorderRadius > 16) scores.playful += 2;
-    if (computedStyles.colorCount > 8) scores.playful += 1;
-    if (computedStyles.colorSaturation > 0.6) scores.playful += 1;
+    if (computedStyles.averageBorderRadius > 16) {scores.playful += 2;}
+    if (computedStyles.colorCount > 8) {scores.playful += 1;}
+    if (computedStyles.colorSaturation > 0.6) {scores.playful += 1;}
 
     // Find highest score
     return Object.entries(scores).reduce((a, b) =>
@@ -645,13 +645,13 @@ export class StyleGuideIntegrator {
     // Determine color family
     let colorFamily = 'neutral';
     if (primaryHsl.s > 30) {
-      if (primaryHsl.h < 30 || primaryHsl.h > 330) colorFamily = 'red';
-      else if (primaryHsl.h < 60) colorFamily = 'orange';
-      else if (primaryHsl.h < 90) colorFamily = 'yellow';
-      else if (primaryHsl.h < 150) colorFamily = 'green';
-      else if (primaryHsl.h < 210) colorFamily = 'cyan';
-      else if (primaryHsl.h < 270) colorFamily = 'blue';
-      else if (primaryHsl.h < 330) colorFamily = 'purple';
+      if (primaryHsl.h < 30 || primaryHsl.h > 330) {colorFamily = 'red';}
+      else if (primaryHsl.h < 60) {colorFamily = 'orange';}
+      else if (primaryHsl.h < 90) {colorFamily = 'yellow';}
+      else if (primaryHsl.h < 150) {colorFamily = 'green';}
+      else if (primaryHsl.h < 210) {colorFamily = 'cyan';}
+      else if (primaryHsl.h < 270) {colorFamily = 'blue';}
+      else if (primaryHsl.h < 330) {colorFamily = 'purple';}
     }
 
     const warmth = primaryHsl.h > 0 && primaryHsl.h < 60 || primaryHsl.h > 300 ? 'warm' : 'cool';

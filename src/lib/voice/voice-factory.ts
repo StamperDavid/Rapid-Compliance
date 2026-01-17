@@ -80,7 +80,7 @@ export class VoiceProviderFactory {
     for (const providerType of providerOrder) {
       try {
         const config = await this.getProviderConfig(organizationId, providerType);
-        if (!config) continue;
+        if (!config) {continue;}
 
         const provider = await this.instantiateProvider(providerType, config, organizationId);
 
@@ -107,7 +107,7 @@ export class VoiceProviderFactory {
   ): Promise<VoiceProviderConfig | null> {
     try {
       const keys = await apiKeyService.getServiceKey(organizationId, providerType);
-      if (!keys) return null;
+      if (!keys) {return null;}
 
       // Map provider-specific key names to standard config
       switch (providerType) {

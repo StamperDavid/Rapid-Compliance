@@ -14,7 +14,7 @@ import type {
   DealRiskPrediction,
   Intervention,
   RiskLevel,
-  RiskFactor,
+  _RiskFactor,
 } from './types';
 
 // ============================================================================
@@ -210,13 +210,13 @@ export async function emitRiskAssessed(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.assessed' as any,
+      type: 'risk.assessed' as unknown,
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',
-      metadata: metadata as any,
+      metadata: metadata as unknown,
     });
     
     logger.debug('Risk assessed signal emitted', {
@@ -253,13 +253,13 @@ export async function emitRiskDetected(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.detected' as any,
+      type: 'risk.detected' as unknown,
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',
-      metadata: metadata as any,
+      metadata: metadata as unknown,
     });
     
     logger.info('Risk detected signal emitted', {
@@ -311,13 +311,13 @@ export async function emitRiskLevelChanged(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.level.changed' as any,
+      type: 'risk.level.changed' as unknown,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 0.9,
       priority: newLevel === 'critical' ? 'High' : 'Medium',
-      metadata: metadata as any,
+      metadata: metadata as unknown,
     });
     
     logger.info('Risk level changed signal emitted', {
@@ -372,13 +372,13 @@ export async function emitCriticalRisk(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.critical' as any,
+      type: 'risk.critical' as unknown,
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: 'High',
-      metadata: metadata as any,
+      metadata: metadata as unknown,
     });
     
     logger.warn('Critical risk signal emitted', {
@@ -424,13 +424,13 @@ export async function emitInterventionRecommended(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.intervention.recommended' as any,
+      type: 'risk.intervention.recommended' as unknown,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 0.85,
       priority: intervention.priority === 'critical' ? 'High' : 'Medium',
-      metadata: metadata as any,
+      metadata: metadata as unknown,
     });
     
     logger.debug('Intervention recommended signal emitted', {
@@ -472,13 +472,13 @@ export async function emitInterventionStarted(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.intervention.started' as any,
+      type: 'risk.intervention.started' as unknown,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 1.0,
       priority: 'Medium',
-      metadata: metadata as any,
+      metadata: metadata as unknown,
     });
     
     logger.info('Intervention started signal emitted', {
@@ -526,13 +526,13 @@ export async function emitInterventionCompleted(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.intervention.completed' as any,
+      type: 'risk.intervention.completed' as unknown,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: metadata as any,
+      metadata: metadata as unknown,
     });
     
     logger.info('Intervention completed signal emitted', {
@@ -573,7 +573,7 @@ export async function emitSlippagePredicted(
       dealId: prediction.dealId,
       dealName: deal.name,
       dealValue: deal.value,
-      originalCloseDate: new Date(deal.expectedCloseDate).toISOString(),
+      originalCloseDate: new Date(deal.expectedCloseDate as string | number | Date).toISOString(),
       predictedSlippageDate: prediction.predictedSlippageDate.toISOString(),
       daysUntilSlippage: prediction.daysUntilSlippage ?? 0,
       slippageProbability: prediction.slippageProbability,
@@ -581,13 +581,13 @@ export async function emitSlippagePredicted(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.slippage.predicted' as any,
+      type: 'risk.slippage.predicted' as unknown,
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: 'High',
-      metadata: metadata as any,
+      metadata: metadata as unknown,
     });
     
     logger.warn('Slippage predicted signal emitted', {
@@ -636,13 +636,13 @@ export async function emitRiskMitigated(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.mitigated' as any,
+      type: 'risk.mitigated' as unknown,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 0.9,
       priority: 'Low',
-      metadata: metadata as any,
+      metadata: metadata as unknown,
     });
     
     logger.info('Risk mitigated signal emitted', {

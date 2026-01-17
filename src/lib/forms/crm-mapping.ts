@@ -18,7 +18,7 @@
 import {
   collection,
   doc,
-  getDoc,
+  getDoc as _getDoc,
   setDoc,
   updateDoc,
   query,
@@ -173,7 +173,7 @@ export function transformValue(
   value: unknown,
   transformation?: 'none' | 'uppercase' | 'lowercase' | 'trim' | 'capitalize'
 ): unknown {
-  if (value == null) return value;
+  if (value == null) {return value;}
 
   const strValue = String(value);
 
@@ -240,11 +240,11 @@ export function parseAddress(address: string): Record<string, string> {
   // This is a simplified parser - in production, use a proper address parsing library
   const lines = address.split('\n').map((l) => l.trim()).filter(Boolean);
 
-  if (lines.length === 0) return {};
+  if (lines.length === 0) {return {};}
 
   const result: Record<string, string> = {};
 
-  if (lines.length >= 1) result.street = lines[0];
+  if (lines.length >= 1) {result.street = lines[0];}
   if (lines.length >= 2) {
     // Try to parse city, state, zip from second line
     const lastLine = lines[lines.length - 1];
@@ -285,7 +285,7 @@ export function mapResponsesToCRM(
   for (const rule of mapping.fieldMappings) {
     const response = responseMap.get(rule.formFieldId);
 
-    if (!response || response.value == null) {
+    if (response?.value == null) {
       continue;
     }
 
@@ -340,7 +340,7 @@ export async function findExistingRecord(
   matchingField: string,
   matchingValue: unknown
 ): Promise<CRMRecord | null> {
-  if (!matchingValue) return null;
+  if (!matchingValue) {return null;}
 
   const collectionPath = getCRMCollectionPath(orgId, workspaceId, entityType);
   const collectionRef = collection(getDb(), collectionPath);
@@ -352,7 +352,7 @@ export async function findExistingRecord(
 
   const snapshot = await getDocs(q);
 
-  if (snapshot.empty) return null;
+  if (snapshot.empty) {return null;}
 
   return snapshot.docs[0].data() as CRMRecord;
 }
@@ -598,8 +598,8 @@ export function getSuggestedMapping(
   }
 
   // Type-based suggestions
-  if (fieldType === 'email') return 'email';
-  if (fieldType === 'phone') return 'phone';
+  if (fieldType === 'email') {return 'email';}
+  if (fieldType === 'phone') {return 'phone';}
 
   return null;
 }

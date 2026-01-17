@@ -3,8 +3,7 @@
  * Prevents abuse and DDoS attacks by limiting request frequency
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 // In-memory rate limit store (for development)
 // In production, use Redis or similar distributed cache
@@ -122,10 +121,10 @@ function getClientId(request: NextRequest): string {
 /**
  * Check if request should be rate limited
  */
-export async function checkRateLimit(
+export function checkRateLimit(
   request: NextRequest,
   endpoint?: string
-): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
+): { allowed: boolean; remaining: number; resetAt: number } {
   const clientId = getClientId(request);
   const path =endpoint ?? new URL(request.url).pathname;
   
@@ -197,7 +196,7 @@ export async function rateLimitMiddleware(
   request: NextRequest,
   endpoint?: string
 ): Promise<NextResponse | null> {
-  const result = await checkRateLimit(request, endpoint);
+  const result = await Promise.resolve(checkRateLimit(request, endpoint));
   
   if (!result.allowed) {
     return NextResponse.json(

@@ -124,7 +124,7 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
  * Validate and normalize role string to expected values.
  */
 function validateRole(role: string | null): TenantClaims['role'] {
-  if (!role) return null;
+  if (!role) {return null;}
 
   const normalizedRole = role.toLowerCase();
   switch (normalizedRole) {
@@ -228,8 +228,8 @@ export function checkTenantAccess(
  * @returns true if user has admin role
  */
 export function hasAdminRole(claims: TenantClaims): boolean {
-  if (claims.admin) return true;
-  if (!claims.role) return false;
+  if (claims.admin) {return true;}
+  if (!claims.role) {return false;}
   return (ADMIN_ROLES as readonly string[]).includes(claims.role);
 }
 

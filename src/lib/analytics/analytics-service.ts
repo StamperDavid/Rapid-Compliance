@@ -24,7 +24,7 @@ import type {
  * Helper function to safely parse float values with fallback
  */
 function safeParseFloat(value: unknown, fallback: number): number {
-  if (value === undefined || value === null) return fallback;
+  if (value === undefined || value === null) {return fallback;}
   const parsed = typeof value === 'number' ? value : parseFloat(String(value));
   return isNaN(parsed) ? fallback : parsed;
 }

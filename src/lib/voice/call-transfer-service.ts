@@ -323,7 +323,7 @@ class CallTransferService {
   async findAvailableAgent(organizationId: string, intent?: string): Promise<TransferAgent | null> {
     try {
       const response = await fetch(`/api/voice/agents/available?organizationId=${organizationId}&intent=${encodeURIComponent(intent ?? '')}`);
-      if (!response.ok) return null;
+      if (!response.ok) {return null;}
 
       const data = await response.json();
       const agents: TransferAgent[] = data.agents ?? [];
@@ -335,7 +335,7 @@ class CallTransferService {
           // Prioritize skill match
           const aHasSkill = intent && a.skills.includes(intent) ? 1 : 0;
           const bHasSkill = intent && b.skills.includes(intent) ? 1 : 0;
-          if (aHasSkill !== bHasSkill) return bHasSkill - aHasSkill;
+          if (aHasSkill !== bHasSkill) {return bHasSkill - aHasSkill;}
 
           // Then by workload
           return a.currentCalls - b.currentCalls;

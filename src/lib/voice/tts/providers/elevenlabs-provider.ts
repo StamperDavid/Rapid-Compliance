@@ -4,14 +4,15 @@
  * https://elevenlabs.io/
  */
 
-import {
+import type {
   TTSProvider,
   TTSSynthesizeResponse,
   TTSVoice,
   TTSVoiceSettings,
   TTSProviderInfo,
-  TTS_PROVIDER_INFO,
-  AudioFormat,
+  AudioFormat} from '../types';
+import {
+  TTS_PROVIDER_INFO
 } from '../types';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
@@ -145,7 +146,7 @@ export class ElevenLabsProvider implements TTSProvider {
 
       return {
         audio: `data:audio/${effectiveSettings.format};base64,${base64Audio}`,
-        format: effectiveSettings.format as AudioFormat,
+        format: effectiveSettings.format,
         durationSeconds: this.estimateDuration(text),
         charactersUsed,
         engine: 'elevenlabs',
@@ -271,7 +272,7 @@ export class ElevenLabsProvider implements TTSProvider {
         },
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) {return null;}
 
       const data = await response.json();
 

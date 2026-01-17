@@ -6,7 +6,7 @@ import type {
   SignalHandler,
   AgentMessage,
   AgentReport,
-  SwarmState
+  SwarmState as _SwarmState
 } from '../agents/types';
 
 type SignalListener = (signal: Signal) => void;
@@ -48,14 +48,14 @@ export class SignalBus {
       if (!this.children.has(parentId)) {
         this.children.set(parentId, new Set());
       }
-      this.children.get(parentId)!.add(agentId);
+      this.children.get(parentId)?.add(agentId);
     } else {
       // Direct report to Jasper
       this.hierarchy.set(agentId, SignalBus.JASPER);
-      this.children.get(SignalBus.JASPER)!.add(agentId);
+      this.children.get(SignalBus.JASPER)?.add(agentId);
     }
 
-    console.log(`[SignalBus] Registered agent: ${agentId} → reports to: ${parentId || 'JASPER'}`);
+    // Agent registered: agentId → parentId ?? 'JASPER'
   }
 
   /**
@@ -78,7 +78,7 @@ export class SignalBus {
     if (!this.listeners.has(agentId)) {
       this.listeners.set(agentId, new Set());
     }
-    this.listeners.get(agentId)!.add(listener);
+    this.listeners.get(agentId)?.add(listener);
 
     // Return unsubscribe function
     return () => {
@@ -152,7 +152,7 @@ export class SignalBus {
    * DIRECT - Send to specific agent
    */
   private async handleDirect(signal: Signal): Promise<AgentReport[]> {
-    const handler = this.handlers.get(signal.target as string);
+    const handler = this.handlers.get(signal.target);
 
     if (!handler) {
       return [{
@@ -165,8 +165,8 @@ export class SignalBus {
       }];
     }
 
-    signal.hops.push(signal.target as string);
-    this.notifyListeners(signal.target as string, signal);
+    signal.hops.push(signal.target);
+    this.notifyListeners(signal.target, signal);
     return [await handler.handle(signal)];
   }
 
@@ -180,10 +180,10 @@ export class SignalBus {
 
     while (currentAgent && currentAgent !== SignalBus.JASPER) {
       const parent = this.hierarchy.get(currentAgent);
-      if (!parent) break;
+      if (!parent) {break;}
 
       const handler = this.handlers.get(parent);
-      if (handler && handler.canHandle(signal)) {
+      if (handler?.canHandle(signal)) {
         signal.hops.push(parent);
         const report = await handler.handle(signal);
         reports.push(report);
@@ -207,7 +207,7 @@ export class SignalBus {
 
     // Start from Jasper or the specified origin
     const startNode = signal.origin || SignalBus.JASPER;
-    const targetPath = this.findPathToTarget(startNode, signal.target as string);
+    const targetPath = this.findPathToTarget(startNode, signal.target);
 
     if (!targetPath) {
       return [{
@@ -223,7 +223,7 @@ export class SignalBus {
     // Traverse down the hierarchy
     for (const agentId of targetPath) {
       const handler = this.handlers.get(agentId);
-      if (handler && handler.canHandle(signal)) {
+      if (handler?.canHandle(signal)) {
         signal.hops.push(agentId);
         const report = await handler.handle(signal);
         reports.push(report);
@@ -243,18 +243,19 @@ export class SignalBus {
    * Find path from parent to descendant
    */
   private findPathToTarget(from: string, to: string): string[] | null {
-    const path: string[] = [];
+    const _path: string[] = [];
     const queue: Array<{ node: string; path: string[] }> = [{ node: from, path: [] }];
     const visited = new Set<string>();
 
     while (queue.length > 0) {
-      const current = queue.shift()!;
+      const current = queue.shift();
+      if (!current) { break; }
 
       if (current.node === to) {
         return current.path;
       }
 
-      if (visited.has(current.node)) continue;
+      if (visited.has(current.node)) {continue;}
       visited.add(current.node);
 
       const childNodes = this.children.get(current.node);
@@ -339,10 +340,10 @@ export class SignalBus {
 
     const printChildren = (parentId: string, indent: number): void => {
       const childSet = this.children.get(parentId);
-      if (!childSet) return;
+      if (!childSet) {return;}
 
       for (const childId of childSet) {
-        const prefix = '  '.repeat(indent) + '├─ ';
+        const prefix = `${'  '.repeat(indent)  }├─ `;
         const handler = this.handlers.get(childId);
         const status = handler ? '✓' : '✗ GHOST';
         lines.push(`${prefix}${childId} [${status}]`);
@@ -359,9 +360,7 @@ export class SignalBus {
 let signalBusInstance: SignalBus | null = null;
 
 export function getSignalBus(): SignalBus {
-  if (!signalBusInstance) {
-    signalBusInstance = new SignalBus();
-  }
+  signalBusInstance ??= new SignalBus();
   return signalBusInstance;
 }
 

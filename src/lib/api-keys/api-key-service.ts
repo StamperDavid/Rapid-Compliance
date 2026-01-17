@@ -225,7 +225,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
             || platformKeys.openrouter?.apiKey
             || null;
 
-          console.log('[APIKeyService] OpenRouter key found:', openrouterKey ? openrouterKey.slice(0, 12) + '...' : 'NOT FOUND');
+          console.log('[APIKeyService] OpenRouter key found:', openrouterKey ? `${openrouterKey.slice(0, 12)  }...` : 'NOT FOUND');
 
           // Convert platform keys format to APIKeysConfig format
           return {

@@ -3,7 +3,7 @@
  * Handles email marketing campaigns, A/B testing, and automation
  */
 
-import { sendEmail, sendBulkEmails, EmailOptions } from './email-service';
+import { sendBulkEmails } from './email-service';
 
 export interface EmailCampaign {
   id: string;
@@ -26,7 +26,7 @@ export interface EmailCampaign {
   
   // Recipients
   recipientList: string[]; // Email addresses or segment IDs
-  segmentCriteria?: Record<string, any>; // For dynamic segments
+  segmentCriteria?: Record<string, unknown>; // For dynamic segments
   
   // Scheduling
   scheduledFor?: Date;
@@ -90,16 +90,16 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
   const fullCampaign: EmailCampaign = {
     id: campaignId,
     name:(campaign.name !== '' && campaign.name != null) ? campaign.name : 'Untitled Campaign',
-    organizationId: campaign.organizationId!,
+    organizationId: campaign.organizationId ?? '',
     workspaceId:(campaign.workspaceId !== '' && campaign.workspaceId != null) ? campaign.workspaceId : 'default',
     type: campaign.type ?? 'broadcast',
-    subject: campaign.subject!,
+    subject: campaign.subject ?? '',
     ...(campaign.subjectB !== undefined && { subjectB: campaign.subjectB }),
-    htmlContent: campaign.htmlContent!,
+    htmlContent: campaign.htmlContent ?? '',
     ...(campaign.htmlContentB !== undefined && { htmlContentB: campaign.htmlContentB }),
     ...(campaign.textContent !== undefined && { textContent: campaign.textContent }),
-    fromEmail: campaign.fromEmail!,
-    fromName: campaign.fromName!,
+    fromEmail: campaign.fromEmail ?? '',
+    fromName: campaign.fromName ?? '',
     ...(campaign.replyTo !== undefined && { replyTo: campaign.replyTo }),
     recipientList:campaign.recipientList ?? [],
     ...(campaign.segmentCriteria !== undefined && { segmentCriteria: campaign.segmentCriteria }),
@@ -131,7 +131,7 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
   if (isTest) {
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { COLLECTIONS } = await import('@/lib/db/firestore-service');
-    saveCampaign = (orgId: string, id: string, data: any) => 
+    saveCampaign = (orgId: string, id: string, data: Record<string, unknown>) => 
       AdminFirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
         id,
@@ -143,7 +143,7 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
     saveCampaign = EmailCampaignService.set.bind(EmailCampaignService);
   }
   
-  const campaignData: any = {
+  const campaignData: Record<string, unknown> = {
     ...fullCampaign,
     createdAt: fullCampaign.createdAt.toISOString(),
     updatedAt: fullCampaign.updatedAt.toISOString(),
@@ -181,10 +181,10 @@ export async function sendCampaign(campaignId: string, organizationId?: string):
   // Convert Firestore data back to EmailCampaign format
   const campaign: EmailCampaign = {
     ...campaignData,
-    createdAt: new Date(campaignData.createdAt),
-    updatedAt: new Date(campaignData.updatedAt),
-    scheduledFor: campaignData.scheduledFor ? new Date(campaignData.scheduledFor) : undefined,
-    sentAt: campaignData.sentAt ? new Date(campaignData.sentAt) : undefined,
+    createdAt: new Date(String(campaignData.createdAt)),
+    updatedAt: new Date(String(campaignData.updatedAt)),
+    scheduledFor: campaignData.scheduledFor ? new Date(String(campaignData.scheduledFor)) : undefined,
+    sentAt: campaignData.sentAt ? new Date(String(campaignData.sentAt)) : undefined,
   } as EmailCampaign;
 
   if (campaign.status !== 'draft' && campaign.status !== 'scheduled') {

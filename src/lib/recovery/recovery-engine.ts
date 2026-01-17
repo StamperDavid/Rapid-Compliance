@@ -12,18 +12,18 @@ export class RecoveryEngine {
   /**
    * Start multi-channel recovery campaign for abandoned merchant
    */
-  async startRecoveryCampaign(merchant: PendingMerchant): Promise<void> {
+  startRecoveryCampaign(merchant: PendingMerchant): void {
     // Cancel any existing campaign for this merchant
     this.cancelCampaign(merchant.id);
 
     const sequence = getRecoverySequence(merchant.stepAbandoned);
     const jobs: NodeJS.Timeout[] = [];
 
-    console.log(`[RecoveryEngine] Starting ${sequence.name} campaign for ${merchant.email}`);
+    // console.log(`[RecoveryEngine] Starting ${sequence.name} campaign for ${merchant.email}`);
 
     for (const step of sequence.steps) {
-      const job = setTimeout(async () => {
-        await this.executeRecoveryStep(merchant, step);
+      const job = setTimeout(() => {
+        void this.executeRecoveryStep(merchant, step);
       }, step.delayMs);
 
       jobs.push(job);
@@ -40,7 +40,7 @@ export class RecoveryEngine {
     if (jobs) {
       jobs.forEach(clearTimeout);
       this.scheduledJobs.delete(merchantId);
-      console.log(`[RecoveryEngine] Cancelled campaign for ${merchantId}`);
+      // console.log(`[RecoveryEngine] Cancelled campaign for ${merchantId}`);
     }
   }
 
@@ -51,7 +51,7 @@ export class RecoveryEngine {
     merchant: PendingMerchant,
     step: RecoveryStep
   ): Promise<void> {
-    console.log(`[RecoveryEngine] Executing ${step.channel} step for ${merchant.email}`);
+    // console.log(`[RecoveryEngine] Executing ${step.channel} step for ${merchant.email}`);
 
     try {
       switch (step.channel) {
@@ -65,8 +65,8 @@ export class RecoveryEngine {
           await this.initiateRecoveryCall(merchant, step.template);
           break;
       }
-    } catch (error) {
-      console.error(`[RecoveryEngine] ${step.channel} step failed:`, error);
+    } catch (_error) {
+      // console.error(`[RecoveryEngine] ${step.channel} step failed:`, error);
     }
   }
 
@@ -74,7 +74,7 @@ export class RecoveryEngine {
    * Send recovery email
    */
   private async sendRecoveryEmail(merchant: PendingMerchant, template: string): Promise<void> {
-    const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/onboarding/industry?recovery=${merchant.id}&source=email_${merchant.emailsSent + 1}`;
+    const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/onboarding/industry?recovery=${merchant.id}&source=email_${merchant.emailsSent + 1}`;
 
     // Dynamic import to avoid circular dependencies
     const { sendEmail } = await import('@/lib/email/email-service');
@@ -83,7 +83,7 @@ export class RecoveryEngine {
     const emailTemplate = templates[template as keyof typeof templates];
 
     if (!emailTemplate) {
-      console.error(`[RecoveryEngine] Unknown email template: ${template}`);
+      // console.error(`[RecoveryEngine] Unknown email template: ${template}`);
       return;
     }
 
@@ -101,7 +101,7 @@ export class RecoveryEngine {
       },
     });
 
-    console.log(`[RecoveryEngine] Sent ${template} email to ${merchant.email}`);
+    // console.log(`[RecoveryEngine] Sent ${template} email to ${merchant.email}`);
   }
 
   /**
@@ -109,16 +109,16 @@ export class RecoveryEngine {
    */
   private async sendRecoverySMS(merchant: PendingMerchant, template: string): Promise<void> {
     if (!merchant.phoneNumber) {
-      console.warn(`[RecoveryEngine] No phone number for ${merchant.email}`);
+      // console.warn(`[RecoveryEngine] No phone number for ${merchant.email}`);
       return;
     }
 
-    const shortUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/r/${merchant.id}`;
+    const shortUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/r/${merchant.id}`;
     const templates = this.getSMSTemplates(merchant, shortUrl);
     const smsTemplate = templates[template as keyof typeof templates];
 
     if (!smsTemplate) {
-      console.error(`[RecoveryEngine] Unknown SMS template: ${template}`);
+      // console.error(`[RecoveryEngine] Unknown SMS template: ${template}`);
       return;
     }
 
@@ -134,7 +134,7 @@ export class RecoveryEngine {
       },
     });
 
-    console.log(`[RecoveryEngine] Sent ${template} SMS to ${merchant.phoneNumber}`);
+    // console.log(`[RecoveryEngine] Sent ${template} SMS to ${merchant.phoneNumber}`);
   }
 
   /**
@@ -142,7 +142,7 @@ export class RecoveryEngine {
    */
   private async initiateRecoveryCall(merchant: PendingMerchant, template: string): Promise<void> {
     if (!merchant.phoneNumber) {
-      console.warn(`[RecoveryEngine] No phone number for voice call to ${merchant.email}`);
+      // console.warn(`[RecoveryEngine] No phone number for voice call to ${merchant.email}`);
       return;
     }
 
@@ -150,7 +150,7 @@ export class RecoveryEngine {
     const script = scripts[template as keyof typeof scripts];
 
     if (!script) {
-      console.error(`[RecoveryEngine] Unknown voice template: ${template}`);
+      // console.error(`[RecoveryEngine] Unknown voice template: ${template}`);
       return;
     }
 
@@ -165,9 +165,9 @@ export class RecoveryEngine {
         { record: true, timeout: 45 }
       );
 
-      console.log(`[RecoveryEngine] Initiated ${template} call to ${merchant.phoneNumber}`);
-    } catch (error) {
-      console.error(`[RecoveryEngine] Voice call failed:`, error);
+      // console.log(`[RecoveryEngine] Initiated ${template} call to ${merchant.phoneNumber}`);
+    } catch (_error) {
+      // console.error(`[RecoveryEngine] Voice call failed:`, error);
     }
   }
 
@@ -208,7 +208,7 @@ export class RecoveryEngine {
       },
 
       industry_guide: {
-        subject: `${firstName}, your ${merchant.industryName || 'industry'} AI toolkit is ready`,
+        subject: `${firstName}, your ${merchant.industryName ?? 'industry'} AI toolkit is ready`,
         html: `
 <!DOCTYPE html>
 <html>
@@ -227,7 +227,7 @@ export class RecoveryEngine {
   <div class="container">
     <div class="header">${firstName}, check out what's waiting for you</div>
     <div class="content">
-      <p>Your personalized ${merchant.industryName || 'AI'} toolkit includes:</p>
+      <p>Your personalized ${merchant.industryName ?? 'AI'} toolkit includes:</p>
       <div class="feature">
         <div class="feature-title">🎯 Lead Hunter</div>
         <div>Find qualified prospects automatically</div>
@@ -388,8 +388,6 @@ Is there anything specific about the platform you'd like me to explain?
 let recoveryEngineInstance: RecoveryEngine | null = null;
 
 export function getRecoveryEngine(): RecoveryEngine {
-  if (!recoveryEngineInstance) {
-    recoveryEngineInstance = new RecoveryEngine();
-  }
+  recoveryEngineInstance ??= new RecoveryEngine();
   return recoveryEngineInstance;
 }

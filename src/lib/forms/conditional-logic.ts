@@ -81,7 +81,7 @@ export function evaluateCondition(
   responses: Map<string, FieldResponse>
 ): boolean {
   const response = responses.get(condition.fieldId);
-  const fieldValue = response?.value;
+  const fieldValue: unknown = response?.value;
 
   switch (condition.operator) {
     case 'equals':
@@ -157,12 +157,12 @@ function areValuesEqual(
   value2: string | number | boolean | string[]
 ): boolean {
   // Handle null/undefined
-  if (value1 == null && value2 == null) return true;
-  if (value1 == null || value2 == null) return false;
+  if (value1 == null && value2 == null) {return true;}
+  if (value1 == null || value2 == null) {return false;}
 
   // Handle array comparison
   if (Array.isArray(value1) && Array.isArray(value2)) {
-    if (value1.length !== value2.length) return false;
+    if (value1.length !== value2.length) {return false;}
     return value1.every((v, i) => String(v) === String(value2[i]));
   }
 
@@ -182,7 +182,7 @@ function valueContains(
   value: unknown,
   searchValue: string | number | boolean | string[]
 ): boolean {
-  if (value == null) return false;
+  if (value == null) {return false;}
 
   if (Array.isArray(value)) {
     if (Array.isArray(searchValue)) {
@@ -205,8 +205,8 @@ function compareValues(
   value1: unknown,
   value2: string | number | boolean | string[]
 ): number {
-  if (value1 == null) return -1;
-  if (value2 == null) return 1;
+  if (value1 == null) {return -1;}
+  if (value2 == null) {return 1;}
 
   const num1 = Number(value1);
   const num2 = Number(value2);
@@ -222,10 +222,10 @@ function compareValues(
  * Check if a value is empty
  */
 function isValueEmpty(value: unknown): boolean {
-  if (value == null) return true;
-  if (typeof value === 'string') return value.trim() === '';
-  if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'object') return Object.keys(value).length === 0;
+  if (value == null) {return true;}
+  if (typeof value === 'string') {return value.trim() === '';}
+  if (Array.isArray(value)) {return value.length === 0;}
+  if (typeof value === 'object') {return Object.keys(value).length === 0;}
   return false;
 }
 
@@ -236,7 +236,7 @@ function valueStartsWith(
   value: unknown,
   searchValue: string | number | boolean | string[]
 ): boolean {
-  if (value == null) return false;
+  if (value == null) {return false;}
   return String(value).toLowerCase().startsWith(String(searchValue).toLowerCase());
 }
 
@@ -247,7 +247,7 @@ function valueEndsWith(
   value: unknown,
   searchValue: string | number | boolean | string[]
 ): boolean {
-  if (value == null) return false;
+  if (value == null) {return false;}
   return String(value).toLowerCase().endsWith(String(searchValue).toLowerCase());
 }
 
@@ -437,10 +437,10 @@ export function calculateProgress(
   state: FormConditionalState
 ): number {
   const activePages = state.activePageIndices;
-  if (activePages.length === 0) return 100;
+  if (activePages.length === 0) {return 100;}
 
   const currentPosition = activePages.indexOf(currentPageIndex);
-  if (currentPosition === -1) return 0;
+  if (currentPosition === -1) {return 0;}
 
   return Math.round(((currentPosition + 1) / activePages.length) * 100);
 }
@@ -480,7 +480,7 @@ export function validatePageWithConditions(
 
   for (const field of pageFields) {
     const evaluation = state.fields.get(field.id);
-    if (!evaluation?.isVisible) continue;
+    if (!evaluation?.isVisible) {continue;}
 
     const response = responses.get(field.id);
     const fieldErrors: string[] = [];
@@ -488,7 +488,7 @@ export function validatePageWithConditions(
     // Check required
     if (evaluation.isRequired && isValueEmpty(response?.value)) {
       fieldErrors.push(
-        field.validation?.customMessage || `${field.label} is required`
+        field.validation?.customMessage ?? `${field.label} is required`
       );
     }
 
@@ -548,7 +548,7 @@ export function buildDependencyGraph(
   const graph = new Map<string, Set<string>>();
 
   for (const field of fields) {
-    if (!field.conditionalLogic?.enabled) continue;
+    if (!field.conditionalLogic?.enabled) {continue;}
 
     // Initialize dependent set for this field
     if (!graph.has(field.id)) {
@@ -561,7 +561,10 @@ export function buildDependencyGraph(
       if (!graph.has(condition.fieldId)) {
         graph.set(condition.fieldId, new Set());
       }
-      graph.get(condition.fieldId)!.add(field.id);
+      const dependencySet = graph.get(condition.fieldId);
+      if (dependencySet) {
+        dependencySet.add(field.id);
+      }
     }
   }
 
@@ -580,8 +583,11 @@ export function getDependentFields(
   const visited = new Set<string>();
 
   while (queue.length > 0) {
-    const current = queue.shift()!;
-    if (visited.has(current)) continue;
+    const current = queue.shift();
+    if (!current) {
+      continue;
+    }
+    if (visited.has(current)) {continue;}
     visited.add(current);
 
     const directDependents = dependencyGraph.get(current);
@@ -617,7 +623,7 @@ export function detectCircularDependencies(
       return true;
     }
 
-    if (visited.has(fieldId)) return false;
+    if (visited.has(fieldId)) {return false;}
 
     visited.add(fieldId);
     recursionStack.add(fieldId);

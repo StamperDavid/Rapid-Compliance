@@ -6,17 +6,18 @@
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
-import {
+import type {
   TTSEngineType,
   TTSEngineConfig,
   TTSProvider,
   TTSSynthesizeRequest,
   TTSSynthesizeResponse,
   TTSVoice,
+  TTSProviderInfo} from './types';
+import {
   TTS_PROVIDER_INFO,
   DEFAULT_TTS_CONFIGS,
-  APIKeyMode,
-  TTSProviderInfo,
+  APIKeyMode
 } from './types';
 import { NativeProvider } from './providers/native-provider';
 import { UnrealProvider } from './providers/unreal-provider';

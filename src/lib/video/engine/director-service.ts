@@ -325,7 +325,7 @@ export class DirectorService {
     // Trim to max words if needed
     const words = script.split(/\s+/);
     if (words.length > maxWords) {
-      script = words.slice(0, maxWords).join(' ') + '...';
+      script = `${words.slice(0, maxWords).join(' ')  }...`;
     }
 
     return script.trim();
@@ -524,7 +524,7 @@ export class DirectorService {
         shots,
         startTime: structure.startTime,
         duration: structure.duration,
-        musicIntensity: musicIntensity as 'low' | 'medium' | 'high',
+        musicIntensity: musicIntensity,
         transitionOut,
         transitionDuration: 500,
       });
@@ -994,7 +994,7 @@ export class DirectorService {
    * Calculate total duration of storyboard
    */
   private calculateTotalDuration(scenes: StoryboardScene[]): number {
-    if (scenes.length === 0) return 0;
+    if (scenes.length === 0) {return 0;}
 
     const lastScene = scenes[scenes.length - 1];
     return lastScene.startTime + lastScene.duration + lastScene.transitionDuration;
@@ -1081,7 +1081,7 @@ export class DirectorService {
   // ============================================================================
 
   private determineMood(toneOfVoice: string, explicitMood?: string): string {
-    if (explicitMood) return explicitMood;
+    if (explicitMood) {return explicitMood;}
 
     const toneToMood: Record<string, string> = {
       warm: 'warm',
@@ -1100,7 +1100,7 @@ export class DirectorService {
     platform: string,
     explicitPacing?: string
   ): string {
-    if (explicitPacing) return explicitPacing;
+    if (explicitPacing) {return explicitPacing;}
 
     // Platform influences pacing
     if (platform === 'tiktok' || platform === 'instagram') {
@@ -1108,8 +1108,8 @@ export class DirectorService {
     }
 
     // Objective influences pacing
-    if (objective === 'awareness') return 'medium';
-    if (objective === 'conversion') return 'dynamic';
+    if (objective === 'awareness') {return 'medium';}
+    if (objective === 'conversion') {return 'dynamic';}
 
     return 'medium';
   }
@@ -1190,8 +1190,8 @@ export class DirectorService {
     isIntro?: boolean,
     isOutro?: boolean
   ): string {
-    if (isIntro) return 'revealing the brand and setting the scene';
-    if (isOutro) return 'presenting final call to action with brand logo';
+    if (isIntro) {return 'revealing the brand and setting the scene';}
+    if (isOutro) {return 'presenting final call to action with brand logo';}
 
     const motionActions: Record<string, string> = {
       static: 'steady focus on subject',

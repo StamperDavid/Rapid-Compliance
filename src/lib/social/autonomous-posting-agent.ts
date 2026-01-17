@@ -11,7 +11,8 @@
 
 import { logger } from '@/lib/logger/logger';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { TwitterService, createTwitterService } from '@/lib/integrations/twitter-service';
+import type { TwitterService} from '@/lib/integrations/twitter-service';
+import { createTwitterService } from '@/lib/integrations/twitter-service';
 import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
 import type { QueryConstraint } from 'firebase/firestore';
 import type {
@@ -216,7 +217,7 @@ export class AutonomousPostingAgent {
     // Truncate content for Twitter's 280 character limit
     let tweetContent = content;
     if (tweetContent.length > 280) {
-      tweetContent = tweetContent.substring(0, 277) + '...';
+      tweetContent = `${tweetContent.substring(0, 277)  }...`;
     }
 
     const result = await this.twitterService.postTweet({
@@ -809,7 +810,7 @@ export class AutonomousPostingAgent {
         postId
       );
 
-      if (post && post.status === 'scheduled') {
+      if (post?.status === 'scheduled') {
         await FirestoreService.update(
           `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_POSTS_COLLECTION}`,
           postId,

@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
 import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { executeCustomTransform } from './custom-transforms';
+import type { QueryConstraint } from 'firebase/firestore';
 
 /**
  * Integration Field Mapping
@@ -72,7 +73,7 @@ export interface FieldTransform {
   type: 'uppercase' | 'lowercase' | 'trim' | 'phone' | 'currency' | 'date' | 'custom';
   format?: string; // For date/currency formatting
   customFunction?: string; // Custom transform function name
-  params?: Record<string, any>; // Parameters for custom transform functions
+  params?: Record<string, unknown>; // Parameters for custom transform functions
   direction?: 'inbound' | 'outbound' | 'both'; // When to apply transform
 }
 
@@ -81,7 +82,7 @@ export interface FieldTransform {
  */
 export interface ValidationRule {
   type: 'regex' | 'min' | 'max' | 'length' | 'enum';
-  value: any;
+  value: unknown;
   message?: string;
 }
 
@@ -140,7 +141,7 @@ export class FieldMappingManager {
       
       const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationFieldMappings`;
       
-      const filters: any[] = [
+      const filters: QueryConstraint[] = [
         where('integrationId', '==', integrationId),
       ];
       
@@ -217,7 +218,7 @@ export class FieldMappingManager {
       const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/integrationFieldMappings`;
       const mappings = await FirestoreService.getAll(mappingsPath, [
         where('schemaId', '==', event.schemaId),
-      ] as any);
+      ] as QueryConstraint[]);
       
       if (mappings.length === 0) {
         logger.info('[Field Mapper] No field mappings found for schema', {
@@ -278,7 +279,7 @@ export class FieldMappingManager {
   /**
    * Handle field rename in mapping
    */
-  private static async handleFieldRenameInMapping(
+  private static handleFieldRenameInMapping(
     mapping: IntegrationFieldMapping,
     oldFieldKey: string,
     newFieldKey: string
@@ -306,7 +307,7 @@ export class FieldMappingManager {
   /**
    * Handle field deletion in mapping
    */
-  private static async handleFieldDeletionInMapping(
+  private static handleFieldDeletionInMapping(
     mapping: IntegrationFieldMapping,
     deletedFieldKey: string
   ): Promise<boolean> {
@@ -339,11 +340,11 @@ export class FieldMappingManager {
    * Map local record to external format
    */
   static async mapLocalToExternal(
-    localRecord: any,
+    localRecord: Record<string, unknown>,
     mapping: IntegrationFieldMapping,
-    schema: any
+    schema: Record<string, unknown>
   ): Promise<Record<string, any>> {
-    const externalRecord: Record<string, any> = {};
+    const externalRecord: Record<string, unknown> = {};
     
     for (const rule of mapping.mappings) {
       if (rule.readonly && mapping.settings.syncDirection === 'outbound') {
@@ -392,11 +393,11 @@ export class FieldMappingManager {
    * Map external record to local format
    */
   static async mapExternalToLocal(
-    externalRecord: any,
+    externalRecord: Record<string, unknown>,
     mapping: IntegrationFieldMapping,
-    schema: any
+    schema: Record<string, unknown>
   ): Promise<Record<string, any>> {
-    const localRecord: Record<string, any> = {};
+    const localRecord: Record<string, unknown> = {};
     
     for (const rule of mapping.mappings) {
       if (rule.readonly && mapping.settings.syncDirection === 'inbound') {
@@ -449,9 +450,9 @@ export class FieldMappingManager {
    * Apply field transformation
    */
   private static async applyTransform(
-    value: any,
+    value: unknown,
     transform: FieldTransform
-  ): Promise<any> {
+  ): Promise<unknown> {
     switch (transform.type) {
       case 'uppercase':
         return String(value).toUpperCase();
@@ -512,7 +513,7 @@ export class FieldMappingManager {
    * Validate value against rules
    */
   private static async validateValue(
-    value: any,
+    value: unknown,
     rules: ValidationRule[]
   ): Promise<boolean> {
     for (const rule of rules) {

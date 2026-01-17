@@ -310,7 +310,7 @@ export interface FieldResponse {
   fieldId: string;
   fieldName: string;        // Denormalized for easier queries
   fieldType: FormFieldType;
-  value: any;               // Varies by field type
+  value: unknown;               // Varies by field type
   displayValue?: string;    // Human-readable version
 }
 
@@ -459,7 +459,7 @@ export interface OrchestratorAction {
   triggeredAt: Timestamp;
   completedAt?: Timestamp;
   error?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -705,7 +705,7 @@ export interface SubmissionExport {
     confirmationNumber: string;
     submittedAt: Date;
     status: SubmissionStatus;
-    responses: Record<string, any>;  // fieldName -> value
+    responses: Record<string, unknown>;  // fieldName -> value
     metadata: SubmissionMetadata;
   }>;
 }

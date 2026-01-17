@@ -489,8 +489,8 @@ If you detect clear disqualification or the customer wants to end the call, ackn
     const negativeCount = negativeWords.filter(w => lower.includes(w)).length;
 
     let sentiment: 'positive' | 'neutral' | 'negative' = 'neutral';
-    if (positiveCount > negativeCount) sentiment = 'positive';
-    if (negativeCount > positiveCount) sentiment = 'negative';
+    if (positiveCount > negativeCount) {sentiment = 'positive';}
+    if (negativeCount > positiveCount) {sentiment = 'negative';}
 
     // Objection detection
     const objectionPatterns = [
@@ -551,23 +551,23 @@ If you detect clear disqualification or the customer wants to end the call, ackn
     let score = context.qualificationScore;
 
     // Adjust based on sentiment
-    if (analysis.sentiment === 'positive') score += 5;
-    if (analysis.sentiment === 'negative') score -= 10;
+    if (analysis.sentiment === 'positive') {score += 5;}
+    if (analysis.sentiment === 'negative') {score -= 10;}
 
     // Adjust for objections
-    if (analysis.isObjection) score -= 5;
+    if (analysis.isObjection) {score -= 5;}
 
     // Boost for buying signals
     if (analysis.buyingSignal) {
-      if (analysis.buyingSignal === 'ready_to_buy') score += 20;
-      else if (analysis.buyingSignal === 'price_inquiry') score += 10;
-      else score += 5;
+      if (analysis.buyingSignal === 'ready_to_buy') {score += 20;}
+      else if (analysis.buyingSignal === 'price_inquiry') {score += 10;}
+      else {score += 5;}
     }
 
     // Boost for engagement (more turns = more engaged)
     const customerTurns = context.turns.filter(t => t.role === 'customer').length;
-    if (customerTurns >= 3) score += 5;
-    if (customerTurns >= 5) score += 5;
+    if (customerTurns >= 3) {score += 5;}
+    if (customerTurns >= 5) {score += 5;}
 
     // Clamp to 0-100
     return Math.max(0, Math.min(100, score));
@@ -669,7 +669,7 @@ If you detect clear disqualification or the customer wants to end the call, ackn
     analysis: ReturnType<typeof this.analyzeCustomerInput>
   ): boolean {
     const lastCustomerTurn = context.turns.filter(t => t.role === 'customer').pop();
-    if (!lastCustomerTurn) return false;
+    if (!lastCustomerTurn) {return false;}
 
     const lower = lastCustomerTurn.content.toLowerCase();
 
@@ -777,7 +777,7 @@ If you detect clear disqualification or the customer wants to end the call, ackn
    */
   generateTransferSummary(callId: string): string {
     const context = this.activeConversations.get(callId);
-    if (!context) return 'No conversation context available.';
+    if (!context) {return 'No conversation context available.';}
 
     const customerInfo = context.customerInfo;
     const summary = context.turns

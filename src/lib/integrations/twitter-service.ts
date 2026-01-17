@@ -71,7 +71,7 @@ export class TwitterService {
 
     // Check rate limits before making request
     const rateLimitInfo = rateLimitCache.get(endpoint);
-    if (rateLimitInfo && rateLimitInfo.remaining === 0 && new Date() < rateLimitInfo.reset) {
+    if (rateLimitInfo?.remaining === 0 && new Date() < rateLimitInfo.reset) {
       const waitTime = Math.ceil((rateLimitInfo.reset.getTime() - Date.now()) / 1000);
       logger.warn('Twitter: Rate limited, waiting', {
         endpoint,
@@ -399,8 +399,8 @@ export class TwitterService {
 
     // Build exclude parameter
     const excludes: string[] = [];
-    if (options.excludeReplies) excludes.push('replies');
-    if (options.excludeRetweets) excludes.push('retweets');
+    if (options.excludeReplies) {excludes.push('replies');}
+    if (options.excludeRetweets) {excludes.push('retweets');}
     if (excludes.length > 0) {
       params.set('exclude', excludes.join(','));
     }

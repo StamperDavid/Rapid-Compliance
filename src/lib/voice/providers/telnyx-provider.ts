@@ -65,7 +65,7 @@ export class TelnyxProvider implements VoiceProvider {
   }
 
   private async getConnectionId(): Promise<string> {
-    if (this.connectionId) return this.connectionId;
+    if (this.connectionId) {return this.connectionId;}
 
     // Get the first available connection (SIP or credential connection)
     const response = await this.request<any>('/connections');
@@ -343,7 +343,7 @@ export class TelnyxProvider implements VoiceProvider {
         messageId: String(data.id ?? ''),
         event: this.mapSMSWebhookEvent(eventType),
         from: String((data.from as any)?.phone_number ?? ''),
-        to: String(((data.to as any[])?.[0] as any)?.phone_number ?? ''),
+        to: String(((data.to as any[])?.[0])?.phone_number ?? ''),
         body: data.text ? String(data.text) : undefined,
         status: this.mapSMSStatusFromEvent(eventType),
         timestamp: new Date(),

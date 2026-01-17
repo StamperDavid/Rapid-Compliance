@@ -20,7 +20,7 @@
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type { FormSubmission, FormDefinition, OrchestratorAction } from './types';
-import { evaluateConditions, createResponsesMap } from './conditional-logic';
+import { evaluateConditions as _evaluateConditions, createResponsesMap } from './conditional-logic';
 import { syncSubmissionToCRM } from './crm-mapping';
 
 // ============================================================================
@@ -119,7 +119,7 @@ async function emitSignal(
  */
 function createSubmissionSignal(
   submission: FormSubmission,
-  form: FormDefinition
+  _form: FormDefinition
 ): Omit<OrchestratorSignal, 'id'> {
   return {
     type: 'lead.discovered',
@@ -153,10 +153,10 @@ function createSubmissionSignal(
 /**
  * Execute emit_signal action
  */
-async function executeEmitSignal(
+async function _executeEmitSignal(
   action: OrchestratorAction,
   submission: FormSubmission,
-  form: FormDefinition
+  _form: FormDefinition
 ): Promise<ActionExecutionResult> {
   const result: ActionExecutionResult = {
     actionId: action.type,
@@ -166,8 +166,8 @@ async function executeEmitSignal(
   };
 
   try {
-    const signalType = action.details?.signalType || 'lead.discovered';
-    const signalPriority = action.details?.signalPriority || 'Medium';
+    const signalType = action.details?.signalType ?? 'lead.discovered';
+    const signalPriority = action.details?.signalPriority ?? 'Medium';
 
     const signalId = await emitSignal({
       type: signalType as string,
@@ -254,7 +254,7 @@ async function executeTriggerSequence(
 /**
  * Execute route_lead action
  */
-async function executeRouteLead(
+async function _executeRouteLead(
   action: OrchestratorAction,
   submission: FormSubmission
 ): Promise<ActionExecutionResult> {
@@ -305,7 +305,7 @@ async function executeRouteLead(
 async function executeNotifySlack(
   action: OrchestratorAction,
   submission: FormSubmission,
-  form: FormDefinition
+  _form: FormDefinition
 ): Promise<ActionExecutionResult> {
   const result: ActionExecutionResult = {
     actionId: action.type,
@@ -356,10 +356,10 @@ async function executeNotifySlack(
 /**
  * Execute send_webhook action
  */
-async function executeSendWebhook(
+async function _executeSendWebhook(
   action: OrchestratorAction,
   submission: FormSubmission,
-  form: FormDefinition
+  _form: FormDefinition
 ): Promise<ActionExecutionResult> {
   const result: ActionExecutionResult = {
     actionId: action.type,
@@ -497,7 +497,7 @@ async function executeWorkflow(
 async function executeCRMUpdate(
   action: OrchestratorAction,
   submission: FormSubmission,
-  form: FormDefinition
+  _form: FormDefinition
 ): Promise<ActionExecutionResult> {
   const result: ActionExecutionResult = {
     actionId: action.type,
@@ -534,13 +534,13 @@ async function executeCRMUpdate(
 function replacePlaceholders(template: string, submission: FormSubmission): string {
   return template.replace(/\{\{(\w+)\}\}/g, (match, fieldName) => {
     // Check indexed fields first
-    if (fieldName === 'email') return submission.indexedEmail || '';
-    if (fieldName === 'phone') return submission.indexedPhone || '';
-    if (fieldName === 'name') return submission.indexedName || '';
-    if (fieldName === 'company') return submission.indexedCompany || '';
-    if (fieldName === 'confirmationNumber') return submission.confirmationNumber;
-    if (fieldName === 'submissionId') return submission.id;
-    if (fieldName === 'formId') return submission.formId;
+    if (fieldName === 'email') {return submission.indexedEmail || '';}
+    if (fieldName === 'phone') {return submission.indexedPhone || '';}
+    if (fieldName === 'name') {return submission.indexedName || '';}
+    if (fieldName === 'company') {return submission.indexedCompany || '';}
+    if (fieldName === 'confirmationNumber') {return submission.confirmationNumber;}
+    if (fieldName === 'submissionId') {return submission.id;}
+    if (fieldName === 'formId') {return submission.formId;}
 
     // Check responses
     const response = submission.responses.find((r) => r.fieldName === fieldName);
@@ -561,7 +561,7 @@ function replacePlaceholders(template: string, submission: FormSubmission): stri
  */
 export async function triggerOrchestratorActions(
   submission: FormSubmission,
-  form: FormDefinition
+  _form: FormDefinition
 ): Promise<TriggerResult> {
   const result: TriggerResult = {
     submissionId: submission.id,
@@ -589,12 +589,12 @@ export async function triggerOrchestratorActions(
   const actions = submission.orchestratorActions || [];
 
   // Create responses map for condition evaluation
-  const responsesMap = createResponsesMap(submission.responses);
+  const _responsesMap = createResponsesMap(submission.responses);
 
   // Execute each action
   for (const action of actions) {
     // Skip if action is disabled or already completed
-    if (action.status !== 'pending') continue;
+    if (action.status !== 'pending') {continue;}
 
     // Execute action based on type
     let actionResult: ActionExecutionResult;
@@ -678,7 +678,7 @@ export async function triggerOrchestratorActions(
  */
 export async function onFormSubmit(
   submission: FormSubmission,
-  form: FormDefinition
+  _form: FormDefinition
 ): Promise<TriggerResult> {
   logger.info('Form submission received, triggering orchestrator', {
     submissionId: submission.id,
@@ -704,7 +704,7 @@ export async function onFormSubmit(
 /**
  * Register form submission handler with signal coordinator
  */
-export async function registerFormSubmissionHandler(
+export function registerFormSubmissionHandler(
   orgId: string,
   workspaceId: string
 ): Promise<void> {

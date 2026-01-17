@@ -24,7 +24,7 @@ export interface EnrollInSequenceParams {
  *
  * TODO: Implement actual sequence enrollment logic
  */
-export async function enrollInSequence(params: EnrollInSequenceParams): Promise<string> {
+export function enrollInSequence(params: EnrollInSequenceParams): Promise<string> {
   logger.info('enrollInSequence called (stub)', {
     sequenceId: params.sequenceId,
     leadId: params.leadId,
@@ -34,5 +34,5 @@ export async function enrollInSequence(params: EnrollInSequenceParams): Promise<
   // Return a stub enrollment ID
   const enrollmentId = `enrollment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  return enrollmentId;
+  return Promise.resolve(enrollmentId);
 }

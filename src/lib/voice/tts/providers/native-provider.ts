@@ -3,12 +3,13 @@
  * Our proprietary hosted high-quality TTS service
  */
 
-import {
+import type {
   TTSProvider,
   TTSSynthesizeResponse,
   TTSVoice,
   TTSVoiceSettings,
-  TTSProviderInfo,
+  TTSProviderInfo} from '../types';
+import {
   TTS_PROVIDER_INFO,
 } from '../types';
 

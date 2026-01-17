@@ -108,7 +108,7 @@ class CallContextService {
     const expiry = this.cacheExpiry.get(callId);
     if (expiry && expiry > Date.now()) {
       const cached = this.cache.get(callId);
-      if (cached) return cached;
+      if (cached) {return cached;}
     }
 
     try {

@@ -22,6 +22,8 @@
  * @version 1.0.0
  */
 
+import type {
+  QueryConstraint} from 'firebase/firestore';
 import {
   collection,
   doc,
@@ -29,7 +31,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
-  deleteDoc,
+  deleteDoc as _deleteDoc,
   query,
   where,
   orderBy,
@@ -40,9 +42,8 @@ import {
   Timestamp,
   writeBatch,
   runTransaction,
-  QueryDocumentSnapshot,
-  DocumentReference,
-  QueryConstraint,
+  _QueryDocumentSnapshot,
+  DocumentReference
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
@@ -62,8 +63,8 @@ import type {
   FormAnalyticsSummary,
   FormFieldAnalytics,
   FormTemplate,
-  FormStatus,
-  SubmissionStatus,
+  _FormStatus,
+  _SubmissionStatus,
   FormFilters,
   SubmissionFilters,
   PaginationOptions,
@@ -71,7 +72,7 @@ import type {
   FormWithFields,
   FieldResponse,
   SubmissionMetadata,
-  CRMFieldMapping,
+  _CRMFieldMapping,
 } from './types';
 
 // ============================================================================
@@ -208,7 +209,7 @@ export async function updateForm(
 ): Promise<void> {
   const formRef = doc(getDb(), PATHS.form(orgId, workspaceId, formId));
 
-  const updateData: Record<string, any> = {
+  const updateData: Record<string, unknown> = {
     ...updates,
     updatedAt: serverTimestamp(),
   };
@@ -361,7 +362,7 @@ export async function duplicateForm(
     const newForm: FormDefinition = {
       ...originalForm,
       id: newFormId,
-      name: newName || `${originalForm.name} (Copy)`,
+      name: newName ?? `${originalForm.name} (Copy)`,
       status: 'draft',
       version: 1,
       submissionCount: 0,
@@ -964,7 +965,7 @@ export async function updateDailyAnalytics(
         transaction.set(analyticsRef, newAnalytics);
       } else {
         // Update existing analytics
-        const updates: Record<string, any> = {
+        const updates: Record<string, unknown> = {
           lastUpdated: serverTimestamp(),
         };
 
