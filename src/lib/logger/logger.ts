@@ -80,6 +80,7 @@ function redactPII(obj: RedactableValue): RedactableValue {
 class Logger {
   private isDevelopment = process.env.NODE_ENV === 'development';
   private isTest = process.env.NODE_ENV === 'test';
+  private isServer = typeof window === 'undefined';
 
   /**
    * Log debug information (only in development)
@@ -166,7 +167,23 @@ class Logger {
       ...safeContext,
     };
 
-    // In development, use colored console output
+    // Browser environment: use console methods (intentional - no Node.js streams available)
+    if (!this.isServer) {
+      /* eslint-disable no-console */
+      const consoleMethods = {
+        [LogLevel.DEBUG]: console.debug,
+        [LogLevel.INFO]: console.info,
+        [LogLevel.WARN]: console.warn,
+        [LogLevel.ERROR]: console.error,
+      };
+      /* eslint-enable no-console */
+      const consoleMethod = consoleMethods[level];
+      const contextStr = context ? ` ${JSON.stringify(context)}` : '';
+      consoleMethod(`[${level.toUpperCase()}] ${timestamp} - ${message}${contextStr}`);
+      return;
+    }
+
+    // Server environment: use process.stdout for structured logging
     if (this.isDevelopment) {
       const colors = {
         [LogLevel.DEBUG]: '\x1b[36m',  // Cyan
