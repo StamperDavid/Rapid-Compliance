@@ -206,7 +206,7 @@
     "out/",
     "build/",
     "dist/",
-    "public/",
+    "/public/",
     "coverage/",
     "*.config.js",
     "*.config.ts",

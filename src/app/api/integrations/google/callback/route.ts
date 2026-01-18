@@ -3,13 +3,13 @@
  * GET /api/integrations/google/callback
  */
 
+export const dynamic = 'force-dynamic';
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/google-calendar-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-
-export const dynamic = 'force-dynamic';
 
 // Zod schema for OAuth state validation
 const OAuthStateSchema = z.object({
@@ -87,7 +87,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?success=gmail'));
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Google OAuth callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/google/callback' });
     return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=oauth_failed'));
   }

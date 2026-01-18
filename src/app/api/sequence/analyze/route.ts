@@ -1,11 +1,11 @@
 /**
  * Email Sequence Intelligence API Endpoint
- * 
+ *
  * Rate-limited API for analyzing email sequences with comprehensive insights,
  * pattern detection, and optimization recommendations.
- * 
+ *
  * POST /api/sequence/analyze
- * 
+ *
  * Features:
  * - AI-powered pattern detection
  * - Performance optimization recommendations
@@ -13,9 +13,11 @@
  * - A/B test insights
  * - Rate limiting (10 req/min)
  * - Response caching (1 hour TTL)
- * 
+ *
  * @module api/sequence/analyze
  */
+
+export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';

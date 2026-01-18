@@ -7,6 +7,8 @@
  * POST /api/discovery/queue/process
  */
 
+export const dynamic = 'force-dynamic';
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { processDiscoveryQueue } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';

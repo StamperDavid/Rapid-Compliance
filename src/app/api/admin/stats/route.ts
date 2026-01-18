@@ -10,6 +10,8 @@
  * @module admin-stats-route
  */
 
+export const dynamic = 'force-dynamic';
+
 import type { NextRequest } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import {

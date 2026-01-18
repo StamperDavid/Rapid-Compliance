@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
@@ -54,8 +56,8 @@ export async function GET(
         userAgent,
       },
       false
-    ).catch((error) => {
-      logger.error('Error recording email open', error, { route: '/api/email/track' });
+    ).catch((error: unknown) => {
+      logger.error('Error recording email open', error instanceof Error ? error : new Error(String(error)), { route: '/api/email/track' });
       // Silently fail - don't break email tracking
     });
 

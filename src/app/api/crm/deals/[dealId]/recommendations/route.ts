@@ -1,11 +1,13 @@
 /**
  * Deal Recommendations API
- * 
+ *
  * GET /api/crm/deals/[dealId]/recommendations
- * 
+ *
  * Returns AI-powered next best action recommendations for a deal.
  * Part of the CRM "Living Ledger" with real-time intelligence.
  */
+
+export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { generateNextBestActions } from '@/lib/crm/next-best-action-engine';

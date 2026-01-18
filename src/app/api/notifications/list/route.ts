@@ -1,10 +1,10 @@
 /**
  * List Notifications API
- * 
+ *
  * GET /api/notifications/list
- * 
+ *
  * Retrieve user notifications with filtering and pagination.
- * 
+ *
  * Query Parameters:
  * - categories: Comma-separated list of categories
  * - statuses: Comma-separated list of statuses
@@ -12,9 +12,11 @@
  * - unreadOnly: Boolean (true/false)
  * - limit: Number (1-100, default 50)
  * - startAfter: Cursor for pagination
- * 
+ *
  * Rate Limit: 60 requests per minute
  */
+
+export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';

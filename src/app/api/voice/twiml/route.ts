@@ -10,6 +10,8 @@
  * - Routes to AI Prospector by default
  */
 
+export const dynamic = 'force-dynamic';
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
 import type { VoiceCall } from '@/lib/voice/types';

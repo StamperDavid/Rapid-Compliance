@@ -7,6 +7,9 @@
  * Rate Limit: 30 requests per minute
  */
 
+// Force dynamic rendering - this route uses request.headers
+export const dynamic = 'force-dynamic';
+
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { updatePreferencesRequestSchema } from '@/lib/notifications/validation';

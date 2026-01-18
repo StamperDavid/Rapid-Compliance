@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
 import { z } from 'zod';

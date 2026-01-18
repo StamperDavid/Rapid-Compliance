@@ -1,12 +1,14 @@
 /**
  * Start Deal Monitor API
- * 
+ *
  * POST /api/crm/deals/monitor/start
- * 
+ *
  * Starts real-time deal monitoring via Signal Bus.
  * Observes deal signals and generates automated recommendations.
  * Part of the CRM "Living Ledger" real-time intelligence.
  */
+
+export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { startDealMonitor } from '@/lib/crm/deal-monitor';
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
     logger.info('Starting deal monitor', config);
 
     // Start monitoring
-    await startDealMonitor(config);
+    startDealMonitor(config);
 
     // Store unsubscribe function (in production, this would be managed server-side)
     // For now, just return success

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import type { NextRequest } from 'next/server';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { adminDal } from '@/lib/firebase/admin-dal';

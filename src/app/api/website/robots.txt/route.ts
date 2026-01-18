@@ -4,11 +4,11 @@
  * CRITICAL: Serves content based on request domain/subdomain
  */
 
+export const dynamic = 'force-dynamic';
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-
-export const dynamic = 'force-dynamic';
 
 interface WebsiteData {
   customDomain?: string;

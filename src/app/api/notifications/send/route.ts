@@ -1,12 +1,14 @@
 /**
  * Send Notification API
- * 
+ *
  * POST /api/notifications/send
- * 
+ *
  * Sends a notification using a template and variables.
- * 
+ *
  * Rate Limit: 50 requests per minute
  */
+
+export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';

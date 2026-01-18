@@ -8,7 +8,9 @@
  * @route POST /api/public/forms/[formId] - Submit form response
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
+
+import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/config';
 import {
   collection,
@@ -186,11 +188,11 @@ export async function POST(
 ) {
   try {
     const { formId } = await params;
-    const body = await request.json();
-    const { responses, metadata } = body as {
-      responses: Record<string, any>;
-      metadata?: Record<string, any>;
+    const body = await request.json() as {
+      responses: Record<string, unknown>;
+      metadata?: Record<string, unknown>;
     };
+    const { responses, metadata } = body;
 
     if (!db) {
       return NextResponse.json(
@@ -273,9 +275,9 @@ export async function POST(
       ([fieldName, value]) => {
         const field = fields.find((f) => f.name === fieldName);
         return {
-          fieldId: field?.id || fieldName,
+          fieldId: field?.id ?? fieldName,
           fieldName,
-          fieldType: field?.type || 'text',
+          fieldType: field?.type ?? 'text',
           value,
           displayValue: String(value),
         };
@@ -296,16 +298,16 @@ export async function POST(
       confirmationNumber,
       isPartial: false,
       metadata: {
-        sessionId: metadata?.sessionId,
-        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
-        source: metadata?.source || 'direct',
-        referrer: request.headers.get('referer') || undefined,
-        utmSource: metadata?.utmSource,
-        utmMedium: metadata?.utmMedium,
-        utmCampaign: metadata?.utmCampaign,
+        sessionId: metadata?.sessionId as string | undefined,
+        ipAddress: request.headers.get('x-forwarded-for') ?? 'unknown',
+        userAgent: request.headers.get('user-agent') ?? 'unknown',
+        source: (metadata?.source as string | undefined) ?? 'direct',
+        referrer: request.headers.get('referer') ?? undefined,
+        utmSource: metadata?.utmSource as string | undefined,
+        utmMedium: metadata?.utmMedium as string | undefined,
+        utmCampaign: metadata?.utmCampaign as string | undefined,
       },
-      submittedAt: serverTimestamp() as any,
+      submittedAt: serverTimestamp() as FormSubmission['submittedAt'],
     };
 
     // Save submission
@@ -340,7 +342,7 @@ export async function POST(
       submissionId: submissionDoc.id,
       confirmationNumber,
       confirmationMessage:
-        form.settings.confirmationMessage || 'Thank you for your submission!',
+        form.settings.confirmationMessage ?? 'Thank you for your submission!',
       redirectUrl: form.settings.redirectUrl,
     });
   } catch (error) {

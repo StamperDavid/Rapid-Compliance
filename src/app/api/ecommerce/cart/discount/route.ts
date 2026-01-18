@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { applyDiscountCode, removeDiscountCode } from '@/lib/ecommerce/cart-service';

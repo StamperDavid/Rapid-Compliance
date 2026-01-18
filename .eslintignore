@@ -14,8 +14,8 @@ dist/
 coverage/
 .nyc_output/
 
-# Static files
-public/
+# Static files (root public directory only)
+/public/
 
 # Logs
 *.log

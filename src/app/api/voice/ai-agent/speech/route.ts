@@ -8,6 +8,8 @@
  * - Returns TwiML with AI response
  */
 
+export const dynamic = 'force-dynamic';
+
 import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
