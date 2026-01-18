@@ -267,7 +267,7 @@ get_platform_stats or get_system_state tool to verify. Tool data ALWAYS wins.
 ═══════════════════════════════════════════════════════════════════════════════
 `;
   } catch (error) {
-    logger.error('[SystemStateService] Failed to generate state context', error);
+    logger.error('[SystemStateService] Failed to generate state context', error instanceof Error ? error : new Error(String(error)));
 
     // Return minimal fallback
     return `

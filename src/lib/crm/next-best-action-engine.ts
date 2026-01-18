@@ -187,11 +187,12 @@ export async function generateNextBestActions(
 
     return recommendations;
   } catch (error) {
-    logger.error('Failed to generate next best actions', error, {
+    const errorInstance = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to generate next best actions', errorInstance, {
       organizationId,
       dealId,
     });
-    throw error;
+    throw errorInstance;
   }
 }
 

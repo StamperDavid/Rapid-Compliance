@@ -32,8 +32,8 @@ import type {
   PlaybookEngineConfig,
   ExtractionSummary,
   SuccessMetrics,
-  DEFAULT_PLAYBOOK_CONFIG,
 } from './types';
+import { DEFAULT_PLAYBOOK_CONFIG } from './types';
 import type {
   ConversationAnalysis,
   Conversation,
@@ -183,7 +183,11 @@ export async function extractPatterns(
     };
     
   } catch (error) {
-    logger.error('Pattern extraction failed', { error, request });
+    logger.error('Pattern extraction failed', error instanceof Error ? error : new Error(String(error)), {
+      organizationId: request.organizationId,
+      workspaceId: request.workspaceId,
+      conversationCount: request.conversationIds?.length ?? 0,
+    });
     throw error;
   }
 }
@@ -739,8 +743,12 @@ export async function generatePlaybook(
     };
     
   } catch (error) {
-    logger.error('Playbook generation failed', { error, request });
-    
+    logger.error('Playbook generation failed', error instanceof Error ? error : new Error(String(error)), {
+      organizationId: request.organizationId,
+      workspaceId: request.workspaceId,
+      conversationCount: request.sourceConversationIds?.length ?? 0,
+    });
+
     return {
       success: false,
       playbook: {} as Playbook,

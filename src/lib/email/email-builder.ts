@@ -252,9 +252,10 @@ export async function createABTest(
 
     return abTest;
 
-  } catch (error: unknown) {
-    logger.error('Failed to create A/B test', error, { organizationId });
-    throw error;
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to create A/B test', err, { organizationId });
+    throw err;
   }
 }
 
@@ -371,9 +372,10 @@ export async function calculateABTestResults(
 
     return results;
 
-  } catch (error: unknown) {
-    logger.error('Failed to calculate A/B test results', error, { testId });
-    throw error;
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to calculate A/B test results', err, { testId });
+    throw err;
   }
 }
 

@@ -6195,13 +6195,11 @@ logger.info('Technical Operations Agent Manuals loaded', {
     'meta_facebook (The Community Builder)',
     'newsletter (The Direct Line)',
   ],
-  systemPromptLengths: {
-    web_migrator: WEB_MIGRATOR_MANUAL.systemPrompt.length,
-    lead_hunter: LEAD_HUNTER_MANUAL.systemPrompt.length,
-    pinterest: PINTEREST_MANUAL.systemPrompt.length,
-    meta_facebook: META_FACEBOOK_MANUAL.systemPrompt.length,
-    newsletter: NEWSLETTER_MANUAL.systemPrompt.length,
-  },
+  web_migrator_prompt_length: WEB_MIGRATOR_MANUAL.systemPrompt.length,
+  lead_hunter_prompt_length: LEAD_HUNTER_MANUAL.systemPrompt.length,
+  pinterest_prompt_length: PINTEREST_MANUAL.systemPrompt.length,
+  meta_facebook_prompt_length: META_FACEBOOK_MANUAL.systemPrompt.length,
+  newsletter_prompt_length: NEWSLETTER_MANUAL.systemPrompt.length,
 });
 
 // ============================================================================

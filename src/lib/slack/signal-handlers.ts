@@ -23,8 +23,8 @@ import type {
   SlackChannelMapping,
   SlackMessage,
   SlackMessagePriority,
-  NotificationCategory,
 } from './types';
+import type { NotificationCategory } from '@/lib/notifications/types';
 
 /**
  * Slack Signal Handler
@@ -81,10 +81,10 @@ export class SlackSignalHandler {
       
       // Route to specific handler based on signal type
       await this.routeSignal(signal, workspace);
-      
+
     } catch (error) {
-      logger.error('Failed to handle signal for Slack', {
-        error,
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to handle signal for Slack', err, {
         signalType: signal.type,
         orgId: signal.orgId,
       });
@@ -605,10 +605,10 @@ export class SlackSignalHandler {
         channelId: message.channelId,
         ts: result.ts,
       });
-      
+
     } catch (error) {
-      logger.error('Failed to send Slack notification', {
-        error,
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to send Slack notification', err, {
         workspaceId: workspace.id,
         category,
       });
@@ -635,10 +635,10 @@ export class SlackSignalHandler {
       
       const doc = snapshot.docs[0];
       return { id: doc.id, ...doc.data() } as SlackWorkspace;
-      
+
     } catch (error) {
-      logger.error('Failed to get Slack workspace', {
-        error,
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to get Slack workspace', err, {
         orgId,
       });
       return null;
@@ -677,10 +677,10 @@ export class SlackSignalHandler {
       
       const doc = snapshot.docs[0];
       return { id: doc.id, ...doc.data() } as SlackChannelMapping;
-      
+
     } catch (error) {
-      logger.error('Failed to get channel mapping', {
-        error,
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to get channel mapping', err, {
         workspaceId,
         category,
       });
@@ -725,10 +725,10 @@ export class SlackSignalHandler {
       } else {
         return currentTimeMinutes >= startTimeMinutes && currentTimeMinutes < endTimeMinutes;
       }
-      
+
     } catch (error) {
-      logger.error('Failed to check quiet hours', {
-        error,
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to check quiet hours', err, {
         workspaceId: workspace.id,
       });
       return false;

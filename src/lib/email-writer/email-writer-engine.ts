@@ -189,8 +189,9 @@ export async function generateSalesEmail(
           ourProduct:(options.companyName !== '' && options.companyName != null) ? options.companyName : 'Our Product',
         });
       } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
         logger.warn('Failed to generate battlecard, continuing without competitive positioning', {
-          error,
+          errorMessage: err.message,
           competitorDomain: options.competitorDomain,
         });
       }
@@ -290,15 +291,15 @@ export async function generateSalesEmail(
       email: generatedEmail,
       suggestedImprovements: extractImprovementSuggestions(llmResponse.text),
     };
-    
+
   } catch (error) {
-    logger.error('Failed to generate email', {
-      error,
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to generate email', err, {
       organizationId: options.organizationId,
       dealId: options.dealId,
       emailType: options.emailType,
     });
-    
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -642,7 +643,8 @@ async function emitEmailGeneratedSignal(params: {
       organizationId: params.organizationId,
     });
   } catch (error) {
-    logger.error('Failed to emit email.generated signal', { error });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to emit email.generated signal', err);
   }
 }
 
@@ -703,14 +705,14 @@ async function generateEmailVariantsAsync(
       success: true,
       email: mainEmail,
     };
-    
+
   } catch (error) {
-    logger.error('Failed to generate email variants', {
-      error,
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to generate email variants', err, {
       organizationId: options.organizationId,
       dealId: options.dealId,
     });
-    
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',

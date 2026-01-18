@@ -270,13 +270,14 @@ export async function compareVersions(
       throw error;
     }
 
-    logger.error('Failed to compare versions', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to compare versions', err, {
       trainingDataId,
       fromVersion,
       toVersion,
     });
 
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = err.message;
     throw new VersionControlError(
       `Failed to compare versions: ${errorMessage}`,
       'COMPARISON_FAILED',
@@ -383,12 +384,13 @@ export async function createBranch(params: {
       throw error;
     }
 
-    logger.error('Failed to create branch', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to create branch', err, {
       name: params.name,
       organizationId: params.organizationId,
     });
 
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = err.message;
     throw new VersionControlError(
       `Failed to create branch: ${errorMessage}`,
       'BRANCH_CREATION_FAILED',
@@ -537,12 +539,13 @@ export async function mergeBranch(
       throw error;
     }
 
-    logger.error('Failed to merge branch', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to merge branch', err, {
       branchId,
       organizationId,
     });
 
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = err.message;
     throw new VersionControlError(
       `Failed to merge branch: ${errorMessage}`,
       'MERGE_FAILED',
@@ -581,7 +584,8 @@ export async function listBranches(
       } as Branch;
     });
   } catch (error) {
-    logger.error('Failed to list branches', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to list branches', err, {
       organizationId,
     });
 
@@ -659,7 +663,8 @@ export async function generateChangelog(
       organizationId,
     };
   } catch (error) {
-    logger.error('Failed to generate changelog', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to generate changelog', err, {
       organizationId,
     });
 
@@ -815,7 +820,8 @@ export async function recoverFromHistory(
 
     return null;
   } catch (error) {
-    logger.error('Failed to recover from history', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to recover from history', err, {
       trainingDataId,
       organizationId,
     });

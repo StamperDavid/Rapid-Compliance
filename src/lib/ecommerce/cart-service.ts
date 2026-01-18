@@ -160,7 +160,7 @@ export async function addToCart(
   // Get product details (from CRM entity)
   const product = await getProduct(workspaceId, productId, organizationId);
   if (!product) {
-    return null;
+    throw new Error('Product not found');
   }
   
   // Check if item already in cart
@@ -177,6 +177,7 @@ export async function addToCart(
       cart.items[existingItemIndex].price * cart.items[existingItemIndex].quantity;
   } else {
     // Add new item
+    const productPrice = typeof product.price === 'number' ? product.price : 0;
     const item: CartItem = {
       id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       productId,
@@ -184,9 +185,9 @@ export async function addToCart(
       sku: product.sku,
       ...(variantId && { variantId }), // Only include if defined
       ...(variantOptions && { variantOptions }), // Only include if defined
-      price: product.price,
+      price: productPrice,
       quantity,
-      subtotal: product.price * quantity,
+      subtotal: productPrice * quantity,
       image: product.images?.[0],
       addedAt: Timestamp.now(),
     };
@@ -287,9 +288,10 @@ export async function applyDiscountCode(
   const discountAmount = calculateDiscountAmount(discount, cart);
   
   // Add to applied discounts
+  const discountType = discount.type as 'percentage' | 'fixed' | 'free_shipping';
   const appliedDiscount: AppliedDiscount = {
     code: discount.code,
-    type: discount.type,
+    type: discountType,
     value: discount.value,
     amount: discountAmount,
   };
@@ -367,18 +369,18 @@ async function saveCart(cart: Cart): Promise<void> {
           id: item.id,
           productId: item.productId,
           productName: item.productName,
-          sku: item.sku,
+          sku: item.sku ?? '',
           price: item.price,
           quantity: item.quantity,
           subtotal: item.subtotal,
           addedAt: serializeTimestamp(item.addedAt),
         };
-        
+
         // Only include optional fields if they are defined
         if (item.variantId !== undefined) {serializedItem.variantId = item.variantId;}
         if (item.variantOptions !== undefined) {serializedItem.variantOptions = item.variantOptions;}
-        if (item.image !== undefined) {serializedItem.image = item.image;}
-        
+        if (item.image !== undefined && item.image !== null) {serializedItem.image = item.image;}
+
         return serializedItem;
       }),
     },
@@ -486,7 +488,7 @@ function validateDiscount(discount: DiscountData, cart: Cart): void {
   }
   
   // Check usage limit
-  if (discount.usageLimit && discount.usageCount >= discount.usageLimit) {
+  if (discount.usageLimit && (discount.usageCount ?? 0) >= discount.usageLimit) {
     throw new Error('Discount code usage limit reached');
   }
   

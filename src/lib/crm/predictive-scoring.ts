@@ -122,7 +122,7 @@ export async function calculatePredictiveLeadScore(
     return predictiveScore;
 
   } catch (error) {
-    logger.error('Predictive scoring failed', error, { leadId: lead.id });
+    logger.error('Predictive scoring failed', error instanceof Error ? error : new Error(String(error)), { leadId: lead.id });
     throw new Error(`Predictive scoring failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -335,7 +335,7 @@ export async function batchScoreLeads(
       const score = await calculatePredictiveLeadScore(organizationId, workspaceId, lead);
       scores.set(lead.id, score);
     } catch (error) {
-      logger.warn('Failed to score lead in batch', { leadId: lead.id, error });
+      logger.warn('Failed to score lead in batch', { leadId: lead.id, error: error instanceof Error ? error.message : String(error) });
     }
   }
 

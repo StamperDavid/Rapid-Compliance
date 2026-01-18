@@ -168,14 +168,14 @@ export async function enrichCompanyByDomain(
 
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error('[Clearbit] API error (${response.status}):', errorText, { file: 'clearbit-service.ts' });
+      logger.error('[Clearbit] API error (${response.status}):', new Error(`[Clearbit] API error (${response.status}): ${errorText}`), { file: 'clearbit-service.ts' });
       return null;
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    logger.error('[Clearbit] Error enriching company:', error, { file: 'clearbit-service.ts' });
+    logger.error('[Clearbit] Error enriching company:', error instanceof Error ? error : new Error(String(error)), { file: 'clearbit-service.ts' });
     return null;
   }
 }
@@ -235,7 +235,7 @@ export async function searchCompanyByName(
 
     return null;
   } catch (error) {
-    logger.error('[Clearbit] Error searching company:', error, { file: 'clearbit-service.ts' });
+    logger.error('[Clearbit] Error searching company:', error instanceof Error ? error : new Error(String(error)), { file: 'clearbit-service.ts' });
     return null;
   }
 }
@@ -284,7 +284,7 @@ export async function enrichPersonByEmail(
     const data = await response.json();
     return data;
   } catch (error) {
-    logger.error('[Clearbit] Error enriching person:', error, { file: 'clearbit-service.ts' });
+    logger.error('[Clearbit] Error enriching person:', error instanceof Error ? error : new Error(String(error)), { file: 'clearbit-service.ts' });
     return null;
   }
 }
@@ -333,7 +333,7 @@ export async function enrichProspect(
       company: data.company ?? null,
     };
   } catch (error) {
-    logger.error('[Clearbit] Error enriching prospect:', error, { file: 'clearbit-service.ts' });
+    logger.error('[Clearbit] Error enriching prospect:', error instanceof Error ? error : new Error(String(error)), { file: 'clearbit-service.ts' });
     return { person: null, company: null };
   }
 }
@@ -352,7 +352,7 @@ async function getClearbitApiKey(organizationId: string): Promise<string | null>
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.clearbitApiKey ?? null;
   } catch (error) {
-    logger.error('[Clearbit] Error getting API key:', error, { file: 'clearbit-service.ts' });
+    logger.error('[Clearbit] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'clearbit-service.ts' });
     return null;
   }
 }

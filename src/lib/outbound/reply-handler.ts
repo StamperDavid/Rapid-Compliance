@@ -90,11 +90,11 @@ export async function classifyReply(reply: EmailReply): Promise<ReplyClassificat
   try {
     // Use AI to classify the reply
     const classification = await classifyWithAI(reply);
-    
+
     return classification;
   } catch (error) {
-    logger.error('[Reply Handler] Classification failed:', error, { file: 'reply-handler.ts' });
-    
+    logger.error('[Reply Handler] Classification failed:', error instanceof Error ? error : undefined, { file: 'reply-handler.ts' });
+
     // Fallback to basic classification
     return fallbackClassification(reply);
   }
@@ -112,11 +112,11 @@ export async function generateReply(
 
   try {
     const response = await generateWithAI(originalReply, classification, context);
-    
+
     return response;
   } catch (error) {
-    logger.error('[Reply Handler] Reply generation failed:', error, { file: 'reply-handler.ts' });
-    throw error;
+    logger.error('[Reply Handler] Reply generation failed:', error instanceof Error ? error : undefined, { file: 'reply-handler.ts' });
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }
 
@@ -270,17 +270,17 @@ function parseClassificationResponse(
     const parsed = JSON.parse(jsonMatch[0]) as ParsedClassification;
 
     return {
-      intent:(parsed.intent !== '' && parsed.intent != null) ? parsed.intent : 'other',
-      sentiment:(parsed.sentiment !== '' && parsed.sentiment != null) ? parsed.sentiment : 'neutral',
+      intent: parsed.intent ?? 'other',
+      sentiment: parsed.sentiment ?? 'neutral',
       sentimentScore: parsed.sentimentScore ?? 0,
       entities: parsed.entities ?? {},
       confidence: parsed.confidence ?? 50,
-      suggestedAction:(parsed.suggestedAction !== '' && parsed.suggestedAction != null) ? parsed.suggestedAction : 'escalate_to_human',
+      suggestedAction: parsed.suggestedAction ?? 'escalate_to_human',
       requiresHumanReview: parsed.requiresHumanReview !== false, // Default to true for safety
-      reasoning:(parsed.reasoning !== '' && parsed.reasoning != null) ? parsed.reasoning : 'AI classification',
+      reasoning: parsed.reasoning ?? 'AI classification',
     };
   } catch (error) {
-    logger.error('[Reply Handler] Failed to parse AI classification:', error, { file: 'reply-handler.ts' });
+    logger.error('[Reply Handler] Failed to parse AI classification:', error instanceof Error ? error : undefined, { file: 'reply-handler.ts' });
     return fallbackClassification(reply);
   }
 }

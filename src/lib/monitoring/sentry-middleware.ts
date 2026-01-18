@@ -160,7 +160,7 @@ export function trackEvent(
     extra: data,
   });
 
-  logger.info(`Event tracked: ${eventName}`, data);
+  logger.info(`Event tracked: ${eventName}`, {});
 }
 
 /**

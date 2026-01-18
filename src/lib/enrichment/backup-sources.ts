@@ -33,8 +33,9 @@ export async function getWhoisData(domain: string): Promise<Partial<CompanyEnric
       contactEmail: registrant.email,
       contactPhone: registrant.telephone,
     };
-  } catch (error) {
-    logger.error('[WHOIS] Error:', error, { file: 'backup-sources.ts' });
+  } catch (error: unknown) {
+    const whoisError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[WHOIS] Error:', whoisError, { file: 'backup-sources.ts' });
     return {};
   }
 }
@@ -84,10 +85,11 @@ export async function getTechStackFromDNS(domain: string): Promise<string[]> {
         logger.warn('[DNS] DNS module not available in this environment', { file: 'backup-sources.ts' });
       }
     }
-    
+
     return [...new Set(techStack)];
-  } catch (error) {
-    logger.error('[DNS] Error:', error, { file: 'backup-sources.ts' });
+  } catch (error: unknown) {
+    const dnsError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[DNS] Error:', dnsError, { file: 'backup-sources.ts' });
     return [];
   }
 }
@@ -144,8 +146,9 @@ export async function getCrunchbaseData(companyName: string): Promise<Partial<Co
       fundingStage: props.funding_stage,
       revenue: props.revenue_range,
     };
-  } catch (error) {
-    logger.error('[Crunchbase] Error:', error, { file: 'backup-sources.ts' });
+  } catch (error: unknown) {
+    const crunchbaseError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Crunchbase] Error:', crunchbaseError, { file: 'backup-sources.ts' });
     return {};
   }
 }
@@ -184,8 +187,9 @@ export async function getGoogleKnowledgeGraph(companyName: string): Promise<Part
       description:entity.description ?? entity.detailedDescription?.articleBody,
       website: entity.url,
     };
-  } catch (error) {
-    logger.error('[Google KG] Error:', error, { file: 'backup-sources.ts' });
+  } catch (error: unknown) {
+    const googleError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Google KG] Error:', googleError, { file: 'backup-sources.ts' });
     return {};
   }
 }
@@ -240,8 +244,9 @@ export async function getWikipediaData(companyName: string): Promise<Partial<Com
     return {
       description,
     };
-  } catch (error) {
-    logger.error('[Wikipedia] Error:', error, { file: 'backup-sources.ts' });
+  } catch (error: unknown) {
+    const wikiError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Wikipedia] Error:', wikiError, { file: 'backup-sources.ts' });
     return {};
   }
 }

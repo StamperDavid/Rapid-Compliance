@@ -87,13 +87,15 @@ export async function getCampaigns(
     logger.info('Email campaigns retrieved', {
       organizationId,
       count: result.data.length,
-      filters,
+      status: filters?.status,
+      createdBy: filters?.createdBy,
     });
 
     return result;
-  } catch (error: any) {
-    logger.error('Failed to get campaigns', error, { organizationId, filters });
-    throw new Error(`Failed to retrieve campaigns: ${error.message}`);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to get campaigns', err, { organizationId, status: filters?.status, createdBy: filters?.createdBy });
+    throw new Error(`Failed to retrieve campaigns: ${err.message}`);
   }
 }
 
@@ -117,9 +119,10 @@ export async function getCampaign(
 
     logger.info('Campaign retrieved', { organizationId, campaignId });
     return campaign;
-  } catch (error: any) {
-    logger.error('Failed to get campaign', error, { organizationId, campaignId });
-    throw new Error(`Failed to retrieve campaign: ${error.message}`);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to get campaign', err, { organizationId, campaignId });
+    throw new Error(`Failed to retrieve campaign: ${err.message}`);
   }
 }
 
@@ -169,9 +172,10 @@ export async function createCampaign(
     });
 
     return campaign;
-  } catch (error: any) {
-    logger.error('Failed to create campaign', error, { organizationId, data });
-    throw new Error(`Failed to create campaign: ${error.message}`);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to create campaign', err, { organizationId, campaignName: data.name });
+    throw new Error(`Failed to create campaign: ${err.message}`);
   }
 }
 
@@ -207,9 +211,10 @@ export async function updateCampaign(
     }
 
     return campaign;
-  } catch (error: any) {
-    logger.error('Failed to update campaign', error, { organizationId, campaignId });
-    throw new Error(`Failed to update campaign: ${error.message}`);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to update campaign', err, { organizationId, campaignId });
+    throw new Error(`Failed to update campaign: ${err.message}`);
   }
 }
 
@@ -227,9 +232,10 @@ export async function deleteCampaign(
     );
 
     logger.info('Campaign deleted', { organizationId, campaignId });
-  } catch (error: any) {
-    logger.error('Failed to delete campaign', error, { organizationId, campaignId });
-    throw new Error(`Failed to delete campaign: ${error.message}`);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to delete campaign', err, { organizationId, campaignId });
+    throw new Error(`Failed to delete campaign: ${err.message}`);
   }
 }
 
@@ -271,9 +277,10 @@ export async function sendCampaign(
     });
 
     return { success: true, sent: sentCount };
-  } catch (error: any) {
-    logger.error('Failed to send campaign', error, { organizationId, campaignId });
-    throw new Error(`Failed to send campaign: ${error.message}`);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to send campaign', err, { organizationId, campaignId });
+    throw new Error(`Failed to send campaign: ${err.message}`);
   }
 }
 

@@ -165,12 +165,19 @@ function extractMentions(content: string): string[] {
  * Helper function to convert Firestore date field to Date
  */
 function toDate(field: FirestoreDateField | undefined | null): Date {
-  if (!field) {return new Date();}
-  if (field instanceof Date) {return field;}
+  if (!field) {
+    return new Date();
+  }
+  if (field instanceof Date) {
+    return field;
+  }
   if (typeof field === 'object' && 'toDate' in field && typeof field.toDate === 'function') {
     return field.toDate();
   }
-  return new Date(field);
+  if (typeof field === 'string' || typeof field === 'number') {
+    return new Date(field);
+  }
+  return new Date();
 }
 
 /**
@@ -202,7 +209,8 @@ async function notifyMentionedUsers(
     }
 
   } catch (error) {
-    logger.warn('Failed to notify mentioned users', { error: error });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.warn('Failed to notify mentioned users', { error: err.message });
   }
 }
 
@@ -274,7 +282,8 @@ async function notifyTaskAssignment(
     }
 
   } catch (error) {
-    logger.warn('Failed to notify task assignment', { error: error });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.warn('Failed to notify task assignment', { error: err.message });
   }
 }
 

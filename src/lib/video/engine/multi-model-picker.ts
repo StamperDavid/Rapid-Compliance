@@ -277,7 +277,7 @@ export class MultiModelPicker {
     const selectedProvider = scoredCandidates[0];
 
     if (!selectedProvider) {
-      logger.error('MultiModelPicker: No suitable provider found', {
+      logger.error('MultiModelPicker: No suitable provider found', new Error('No suitable provider found'), {
         shotType: shot.shotType,
         aspectRatio,
         resolution,
@@ -382,13 +382,20 @@ export class MultiModelPicker {
     }
 
     // Log routing summary
+    const providerDistribution = Object.fromEntries(
+      Array.from(providerGroups.entries()).map(([p, s]) => [p, s.length])
+    );
     logger.info('MultiModelPicker: Storyboard routing complete', {
       organizationId,
       storyboardId,
       totalShots: shots.length,
-      providerDistribution: Object.fromEntries(
-        Array.from(providerGroups.entries()).map(([p, s]) => [p, s.length])
-      ),
+      veo: providerDistribution['veo'] ?? 0,
+      runway: providerDistribution['runway'] ?? 0,
+      kling: providerDistribution['kling'] ?? 0,
+      pika: providerDistribution['pika'] ?? 0,
+      sora: providerDistribution['sora'] ?? 0,
+      heygen: providerDistribution['heygen'] ?? 0,
+      stableVideo: providerDistribution['stable-video'] ?? 0,
     });
 
     return queueItems;

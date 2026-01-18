@@ -379,13 +379,12 @@ export function executeCustomTransform(
     };
     
   } catch (error) {
-    logger.error('[Custom Transforms] Transform execution failed', error, {
+    logger.error('[Custom Transforms] Transform execution failed', error instanceof Error ? error : new Error(String(error)), {
       functionName,
-      value,
-      params,
+      paramsJson: params ? JSON.stringify(params) : undefined,
       file: 'custom-transforms.ts',
     });
-    
+
     return {
       success: false,
       value,

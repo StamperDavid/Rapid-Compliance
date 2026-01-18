@@ -36,7 +36,7 @@ export async function getCompanyJobs(
       return await getJobsFromPublicSearch(companyName, maxResults);
     }
   } catch (error) {
-    logger.error('[LinkedIn] Error fetching jobs:', error, { file: 'linkedin-service.ts' });
+    logger.error('[LinkedIn] Error fetching jobs:', error instanceof Error ? error : new Error(String(error)), { file: 'linkedin-service.ts' });
     return [];
   }
 }
@@ -96,7 +96,7 @@ async function getJobsFromRapidAPI(
       seniority: extractSeniority(job.title),
     }));
   } catch (error) {
-    logger.error('[LinkedIn RapidAPI] Error:', error, { file: 'linkedin-service.ts' });
+    logger.error('[LinkedIn RapidAPI] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'linkedin-service.ts' });
     return [];
   }
 }
@@ -152,10 +152,10 @@ async function getJobsFromPublicSearch(
         });
       }
     }
-    
+
     return jobs;
   } catch (error) {
-    logger.error('[LinkedIn] Public search error:', error, { file: 'linkedin-service.ts' });
+    logger.error('[LinkedIn] Public search error:', error instanceof Error ? error : new Error(String(error)), { file: 'linkedin-service.ts' });
     return generateFallbackJobs(companyName);
   }
 }
@@ -257,7 +257,7 @@ async function getLinkedInApiKey(organizationId: string): Promise<string | null>
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.rapidApiKey ?? null;
   } catch (error) {
-    logger.error('[LinkedIn] Error getting API key:', error, { file: 'linkedin-service.ts' });
+    logger.error('[LinkedIn] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'linkedin-service.ts' });
     return null;
   }
 }

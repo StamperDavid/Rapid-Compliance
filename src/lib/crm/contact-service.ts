@@ -95,13 +95,13 @@ export async function getContacts(
     logger.info('Contacts retrieved', {
       organizationId,
       count: result.data.length,
-      filters,
+      filters: filters ? JSON.stringify(filters) : undefined,
     });
 
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to get contacts', error instanceof Error ? error : undefined, { organizationId, filters });
+    logger.error('Failed to get contacts', error instanceof Error ? error : undefined, { organizationId, filters: filters ? JSON.stringify(filters) : undefined });
     throw new Error(`Failed to retrieve contacts: ${errorMessage}`);
   }
 }
@@ -174,7 +174,7 @@ export async function createContact(
     return contact;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to create contact', error instanceof Error ? error : undefined, { organizationId, data });
+    logger.error('Failed to create contact', error instanceof Error ? error : undefined, { organizationId, email: data.email, company: data.company });
     throw new Error(`Failed to create contact: ${errorMessage}`);
   }
 }

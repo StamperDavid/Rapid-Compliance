@@ -51,7 +51,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
         setCart(data.cart.items);
       }
     } catch (error) {
-      logger.error('Error loading cart:', error, { file: 'ShoppingCart.tsx' });
+      logger.error('Error loading cart:', error instanceof Error ? error : new Error(String(error)), { file: 'ShoppingCart.tsx' });
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
         await loadCart();
       }
     } catch (error) {
-      logger.error('Error updating quantity:', error, { file: 'ShoppingCart.tsx' });
+      logger.error('Error updating quantity:', error instanceof Error ? error : new Error(String(error)), { file: 'ShoppingCart.tsx' });
     }
   };
 
@@ -90,7 +90,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
         await loadCart();
       }
     } catch (error) {
-      logger.error('Error removing item:', error, { file: 'ShoppingCart.tsx' });
+      logger.error('Error removing item:', error instanceof Error ? error : new Error(String(error)), { file: 'ShoppingCart.tsx' });
     }
   };
 

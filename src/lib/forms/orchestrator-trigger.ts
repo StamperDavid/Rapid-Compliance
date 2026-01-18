@@ -218,7 +218,7 @@ async function executeTriggerSequence(
   };
 
   try {
-    const sequenceId = action.details?.sequenceId;
+    const sequenceId = action.details?.sequenceId as string | undefined;
     if (!sequenceId) {
       throw new Error('Sequence ID not specified');
     }
@@ -234,7 +234,7 @@ async function executeTriggerSequence(
 
     const enrollmentId = String(await enrollInSequence({
       sequenceId,
-      leadId: submission.linkedLeadId || submission.id,
+      leadId: submission.linkedLeadId ?? submission.id,
       email,
       orgId: submission.organizationId,
       workspaceId: submission.workspaceId,

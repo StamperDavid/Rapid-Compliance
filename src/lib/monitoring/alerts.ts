@@ -116,12 +116,8 @@ async function triggerAlert(
 
   // Log to Sentry
   logger.error(`🚨 ALERT: ${alert.message}`, new Error('Alert triggered'), {
-    alertId,
-    type,
-    count,
-    threshold,
-    orgId,
-    details: alert.details,
+    organizationId: orgId,
+    error: `Alert ${type}: ${count} occurrences (threshold: ${threshold})`,
   });
 
   // Send to Sentry with high priority
@@ -183,7 +179,7 @@ function getAlertMessage(type: string, count: number, threshold: number): string
  * Send critical alert via multiple channels
  */
 function sendCriticalAlert(alert: Alert): void {
-  logger.error('🚨🚨🚨 CRITICAL ALERT', new Error(alert.message), { alert });
+  logger.error('🚨🚨🚨 CRITICAL ALERT', new Error(alert.message), { error: alert.message });
 
   // In production, implement:
   // 1. Send email to platform admin

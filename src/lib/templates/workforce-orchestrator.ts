@@ -688,7 +688,7 @@ export class WorkforceOrchestrator {
       try {
         listener(event);
       } catch (error) {
-        logger.error('State change listener error', { error });
+        logger.error('State change listener error', error instanceof Error ? error : new Error(String(error)));
       }
     }
   }
@@ -698,7 +698,7 @@ export class WorkforceOrchestrator {
       try {
         listener(event);
       } catch (error) {
-        logger.error('Connection listener error', { error });
+        logger.error('Connection listener error', error instanceof Error ? error : new Error(String(error)));
       }
     }
   }
@@ -724,7 +724,7 @@ export class WorkforceOrchestrator {
         },
       });
     } catch (error) {
-      logger.error('Failed to emit workforce signal', { type, orgId, error });
+      logger.error('Failed to emit workforce signal', error instanceof Error ? error : new Error(String(error)), { type, orgId });
     }
   }
 }

@@ -415,21 +415,19 @@ export function logError(
   context: Record<string, any>,
   level: 'warn' | 'error' = 'error'
 ): void {
-  const errorInfo = {
-    name: error.name,
-    message: error.message,
-    stack: error.stack,
-    ...(error instanceof ScrapeError && {
-      type: error.type,
-      statusCode: error.statusCode,
-      retryable: error.retryable,
-      metadata: error.metadata,
-    }),
-  };
-
   if (level === 'error') {
     logger.error('Scraper error', error, context);
   } else {
-    logger.warn('Scraper warning', { error: errorInfo, ...context });
+    const warnContext = {
+      ...context,
+      errorName: error.name,
+      errorMessage: error.message,
+      ...(error instanceof ScrapeError && {
+        errorType: error.type,
+        statusCode: error.statusCode,
+        retryable: error.retryable,
+      }),
+    };
+    logger.warn(`Scraper warning: ${error.message}`, warnContext);
   }
 }

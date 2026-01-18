@@ -100,7 +100,7 @@ export class FirestoreDAL {
       logger.info('[DRY RUN] Would write to Firestore', {
         collection: collectionRef,
         docId,
-        data,
+        dataKeys: Object.keys(data as Record<string, unknown>).join(', '),
         merge: options?.merge,
         file: 'dal.ts'
       });
@@ -152,7 +152,7 @@ export class FirestoreDAL {
       logger.info('[DRY RUN] Would update Firestore', {
         collection: collectionRef,
         docId,
-        data,
+        dataKeys: Object.keys(data as Record<string, unknown>).join(', '),
         file: 'dal.ts'
       });
       return;
@@ -246,7 +246,7 @@ export class FirestoreDAL {
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would add to Firestore', {
         collection: collectionRef,
-        data,
+        dataKeys: Object.keys(data as Record<string, unknown>).join(', '),
         file: 'dal.ts'
       });
       // Return a fake doc ref in dry run mode

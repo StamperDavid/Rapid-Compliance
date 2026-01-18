@@ -240,8 +240,8 @@ async function processStripePayment(
       };
     }
   } catch (error: unknown) {
-      const err = error as Error;
-    logger.error('Stripe payment error:', error, { file: 'payment-service.ts' });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Stripe payment error:', err, { file: 'payment-service.ts' });
     return {
       success: false,
       error:(err.message !== '' && err.message != null) ? err.message : 'Payment processing failed',
@@ -330,8 +330,8 @@ async function processSquarePayment(
       };
     }
   } catch (error: unknown) {
-      const err = error as Error;
-    logger.error('Square payment error:', error, { file: 'payment-service.ts' });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Square payment error:', err, { file: 'payment-service.ts' });
     const errorMessage = err.message;
     return {
       success: false,
@@ -485,10 +485,11 @@ async function processPayPalPayment(
       transactionId: order.id,
       provider: 'paypal',
     };
-    
+
+
   } catch (error: unknown) {
-      const err = error as Error;
-    logger.error('PayPal payment error:', error, { file: 'payment-service.ts' });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('PayPal payment error:', err, { file: 'payment-service.ts' });
     return {
       success: false,
       error:(err.message !== '' && err.message != null) ? err.message : 'PayPal payment processing failed',

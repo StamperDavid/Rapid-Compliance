@@ -365,7 +365,7 @@ Return patterns in this JSON format:
       const result = JSON.parse(jsonMatch[0]) as { patterns: AIPatternResponse[] };
 
       // Transform AI response to SequencePattern objects
-      return result.patterns.map((p: AIPatternResponse, index: number) => ({
+      return result.patterns.map((p: AIPatternResponse, index: number): SequencePattern => ({
         id: `pattern-${Date.now()}-${index}`,
         type: p.type as PatternType,
         name: p.name,
@@ -379,7 +379,12 @@ Return patterns in this JSON format:
         opportunityLift: p.opportunityLift,
         confidence: p.confidence as PatternConfidence,
         pValue: p.pValue,
-        characteristics: p.characteristics,
+        characteristics: p.characteristics.map(c => ({
+          attribute: c.attribute,
+          value: c.value,
+          importance: c.importance as 'critical' | 'important' | 'moderate',
+          description: c.description,
+        })),
         exampleSequences: p.exampleSequences ?? [],
         recommendation: p.recommendation,
         implementationSteps: p.implementationSteps,
@@ -483,7 +488,7 @@ Return JSON format:
       const result = JSON.parse(jsonMatch[0]) as { recommendations: AIOptimizationResponse[] };
 
       // Transform to OptimizationRecommendation objects
-      return result.recommendations.map((r: AIOptimizationResponse, index: number) => ({
+      return result.recommendations.map((r: AIOptimizationResponse, index: number): OptimizationRecommendation => ({
         id: `opt-${metrics.sequenceId}-${index}`,
         area: r.area as OptimizationArea,
         priority: r.priority as RecommendationPriority,
@@ -496,12 +501,18 @@ Return JSON format:
         solution: r.solution,
         rationale: r.rationale,
         actionItems: r.actionItems,
-        estimatedEffort: r.estimatedEffort,
-        estimatedImpact: r.estimatedImpact,
+        estimatedEffort: (r.estimatedEffort === 'low' || r.estimatedEffort === 'medium' || r.estimatedEffort === 'high') ? r.estimatedEffort : 'medium',
+        estimatedImpact: (r.estimatedImpact === 'low' || r.estimatedImpact === 'medium' || r.estimatedImpact === 'high') ? r.estimatedImpact : 'medium',
         basedOnPatterns: r.basedOnPatterns ?? [],
         sampleSize: metrics.totalRecipients,
         confidence: r.confidence as PatternConfidence,
-        suggestedTest: r.suggestedTest,
+        suggestedTest: r.suggestedTest ? {
+          control: r.suggestedTest.variants?.[0] ?? '',
+          variant: r.suggestedTest.variants?.[1] ?? '',
+          successMetric: 'reply_rate',
+          minimumSampleSize: 100,
+          expectedDuration: typeof r.suggestedTest.duration === 'string' ? parseInt(r.suggestedTest.duration) : 14,
+        } : undefined,
         createdAt: new Date(),
       }));
     } catch {

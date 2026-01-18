@@ -40,15 +40,15 @@ function getDb() {
 import type {
   FormDefinition,
   FormSubmission,
-  _FormFieldConfig,
+  FormFieldConfig,
   FormStatus,
   FieldResponse,
   SubmissionMetadata,
   FormView,
-  _FormAnalyticsSummary,
-  _CRMFieldMapping,
-  _OrchestratorAction,
-  _FormBehavior,
+  FormAnalyticsSummary,
+  CRMFieldMapping,
+  OrchestratorAction,
+  FormBehavior,
 } from './types';
 
 // ============================================================================

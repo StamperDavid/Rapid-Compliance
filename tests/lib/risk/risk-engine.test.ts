@@ -69,7 +69,17 @@ describe('Deal Risk Predictor', () => {
         value: 45,
         benchmark: 30,
       },
-    ],
+    ] as Array<{
+      id: string;
+      name: string;
+      score: number;
+      weight: number;
+      contribution: number;
+      impact: 'positive' | 'negative' | 'neutral';
+      description: string;
+      value: number | string;
+      benchmark?: number | string;
+    }>,
     riskFactors: [
       {
         id: 'risk_1',
@@ -79,8 +89,15 @@ describe('Deal Risk Predictor', () => {
         impact: 'May indicate budget or approval issues',
         mitigation: 'Accelerate decision process',
       },
-    ],
-    recommendations: ['Follow up with decision maker', 'Provide ROI justification'],
+    ] as Array<{
+      id: string;
+      severity: 'critical' | 'high' | 'medium' | 'low';
+      category: 'timing' | 'budget' | 'competition' | 'engagement' | 'stakeholder';
+      description: string;
+      impact: string;
+      mitigation: string;
+    }>,
+    recommendations: ['Follow up with decision maker', 'Provide ROI justification'] as string[],
     predictedCloseDate: mockDeal.expectedCloseDate,
     predictedValue: mockDeal.value,
     calculatedAt: new Date(),
@@ -104,9 +121,15 @@ describe('Deal Risk Predictor', () => {
         impact: 'neutral' as const,
         description: 'On track (45/60 days in negotiation)',
       },
-    ],
-    warnings: ['No activity in 7 days', 'Deal stale'],
-    recommendations: ['Schedule follow-up call', 'Reassess requirements'],
+    ] as Array<{
+      name: string;
+      score: number;
+      weight: number;
+      impact: 'positive' | 'negative' | 'neutral';
+      description: string;
+    }>,
+    warnings: ['No activity in 7 days', 'Deal stale'] as string[],
+    recommendations: ['Schedule follow-up call', 'Reassess requirements'] as string[],
   };
 
   const mockAIResponse = {
@@ -162,21 +185,21 @@ describe('Deal Risk Predictor', () => {
     jest.clearAllMocks();
 
     // Mock getDeal
-    jest.mocked(getDeal).mockResolvedValue(mockDeal);
+    (getDeal as jest.Mock).mockResolvedValue(mockDeal);
 
-    // Mock calculateDealScore
-    jest.mocked(calculateDealScore).mockResolvedValue(mockDealScore);
+    // Mock calculateDealScore (synchronous function)
+    (calculateDealScore as jest.Mock).mockReturnValue(mockDealScore);
 
     // Mock calculateDealHealth
-    jest.mocked(calculateDealHealth).mockResolvedValue(mockDealHealth);
+    (calculateDealHealth as jest.Mock).mockResolvedValue(mockDealHealth);
 
     // Mock AI service
-    jest.mocked(sendUnifiedChatMessage).mockResolvedValue(mockAIResponse);
+    (sendUnifiedChatMessage as jest.Mock).mockResolvedValue(mockAIResponse);
 
     // Mock signal coordinator
-    jest.mocked(getServerSignalCoordinator).mockReturnValue({
+    (getServerSignalCoordinator as jest.Mock).mockReturnValue({
       emitSignal: jest.fn().mockResolvedValue(undefined),
-    } as unknown as ReturnType<typeof getServerSignalCoordinator>);
+    });
   });
 
   describe('predictDealRisk', () => {
@@ -228,13 +251,13 @@ describe('Deal Risk Predictor', () => {
 
     it('should identify protective factors', async () => {
       // Mock high-performing deal
-      jest.mocked(calculateDealScore).mockResolvedValue({
+      (calculateDealScore as jest.Mock).mockReturnValue({
         ...mockDealScore,
         score: 85,
         tier: 'hot',
       });
 
-      jest.mocked(calculateDealHealth).mockResolvedValue({
+      (calculateDealHealth as jest.Mock).mockResolvedValue({
         ...mockDealHealth,
         overall: 82,
         status: 'healthy',
@@ -323,7 +346,7 @@ describe('Deal Risk Predictor', () => {
     });
 
     it('should handle deal not found', async () => {
-      jest.mocked(getDeal).mockResolvedValue(null);
+      (getDeal as jest.Mock).mockResolvedValue(null);
 
       const request: RiskPredictionRequest = {
         dealId: 'nonexistent',
@@ -334,7 +357,7 @@ describe('Deal Risk Predictor', () => {
     });
 
     it('should handle AI failure gracefully', async () => {
-      jest.mocked(sendUnifiedChatMessage).mockRejectedValue(new Error('AI service unavailable'));
+      (sendUnifiedChatMessage as jest.Mock).mockRejectedValue(new Error('AI service unavailable'));
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
@@ -353,13 +376,13 @@ describe('Deal Risk Predictor', () => {
   describe('Risk Level Determination', () => {
     it('should classify critical risk (80%+ slippage)', async () => {
       // Mock very low health
-      jest.mocked(calculateDealHealth).mockResolvedValue({
+      (calculateDealHealth as jest.Mock).mockResolvedValue({
         ...mockDealHealth,
         overall: 15,
         status: 'critical',
       });
 
-      jest.mocked(calculateDealScore).mockResolvedValue({
+      (calculateDealScore as jest.Mock).mockReturnValue({
         ...mockDealScore,
         score: 20,
         tier: 'at-risk',
@@ -378,13 +401,13 @@ describe('Deal Risk Predictor', () => {
 
     it('should classify minimal risk (0-19% slippage)', async () => {
       // Mock high health
-      jest.mocked(calculateDealHealth).mockResolvedValue({
+      (calculateDealHealth as jest.Mock).mockResolvedValue({
         ...mockDealHealth,
         overall: 92,
         status: 'healthy',
       });
 
-      jest.mocked(calculateDealScore).mockResolvedValue({
+      (calculateDealScore as jest.Mock).mockReturnValue({
         ...mockDealScore,
         score: 88,
         tier: 'hot',
@@ -451,7 +474,7 @@ describe('Deal Risk Predictor', () => {
 
     it('should handle partial failures in batch', async () => {
       // Mock: first deal succeeds, second fails
-      jest.mocked(getDeal)
+      (getDeal as jest.Mock)
         .mockResolvedValueOnce(mockDeal)
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce(mockDeal);
@@ -542,7 +565,7 @@ describe('Deal Risk Predictor', () => {
 
   describe('Edge Cases', () => {
     it('should handle deal with no expected close date', async () => {
-      jest.mocked(getDeal).mockResolvedValue({
+      (getDeal as jest.Mock).mockResolvedValue({
         ...mockDeal,
         expectedCloseDate: null,
       });
@@ -559,7 +582,7 @@ describe('Deal Risk Predictor', () => {
     });
 
     it('should handle overdue deal', async () => {
-      jest.mocked(getDeal).mockResolvedValue({
+      (getDeal as jest.Mock).mockResolvedValue({
         ...mockDeal,
         expectedCloseDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days overdue
       });
@@ -576,7 +599,7 @@ describe('Deal Risk Predictor', () => {
     });
 
     it('should handle very old deal', async () => {
-      jest.mocked(getDeal).mockResolvedValue({
+      (getDeal as jest.Mock).mockResolvedValue({
         ...mockDeal,
         createdAt: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000), // 200 days old
       });
@@ -593,7 +616,7 @@ describe('Deal Risk Predictor', () => {
     });
 
     it('should handle deal in early stage', async () => {
-      jest.mocked(getDeal).mockResolvedValue({
+      (getDeal as jest.Mock).mockResolvedValue({
         ...mockDeal,
         stage: 'prospecting',
       });
@@ -609,7 +632,7 @@ describe('Deal Risk Predictor', () => {
     });
 
     it('should handle closed deal', async () => {
-      jest.mocked(getDeal).mockResolvedValue({
+      (getDeal as jest.Mock).mockResolvedValue({
         ...mockDeal,
         stage: 'closed_won',
         actualCloseDate: new Date(),

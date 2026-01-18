@@ -21,8 +21,8 @@ export async function getAuthToken(request: NextRequest): Promise<AuthenticatedU
     }
     
     return result.user;
-  } catch (error) {
-    logger.error('Error getting auth token', error);
+  } catch (error: unknown) {
+    logger.error('Error getting auth token', error instanceof Error ? error : new Error(String(error)));
     return null;
   }
 }

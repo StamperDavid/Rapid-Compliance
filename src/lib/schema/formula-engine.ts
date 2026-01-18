@@ -25,7 +25,7 @@ export class FormulaEngine {
 
       return result;
     } catch (error) {
-      logger.error('Formula evaluation error:', error, { file: 'formula-engine.ts' });
+      logger.error('Formula evaluation error:', error instanceof Error ? error : new Error(String(error)), { file: 'formula-engine.ts' });
       return null;
     }
   }

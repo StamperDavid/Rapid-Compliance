@@ -386,7 +386,7 @@ IMPROVEMENTS:
     
     it('should fetch deal score if not provided', async () => {
       (calculateDealScore as jest.MockedFunction<typeof calculateDealScore>)
-        .mockResolvedValue(mockDealScore);
+        .mockReturnValue(mockDealScore);
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue(mockLLMResponse as never);
       

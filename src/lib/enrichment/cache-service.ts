@@ -56,8 +56,9 @@ export async function getCachedEnrichment(
     
     logger.info('Cache HIT for domain} - saved a scrape!', { file: 'cache-service.ts' });
     return cached.data;
-  } catch (error) {
-    logger.error('[Cache] Error reading cache:', error, { file: 'cache-service.ts' });
+  } catch (error: unknown) {
+    const cacheError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Cache] Error reading cache:', cacheError, { file: 'cache-service.ts' });
     return null; // Fail gracefully - just re-scrape
   }
 }
@@ -89,10 +90,11 @@ export async function cacheEnrichment(
       domain.replace(/[^a-zA-Z0-9-]/g, '-'), // Firestore-safe ID
       cacheEntry
     );
-    
+
     logger.info('Cache Saved domain} to cache (expires in ttlDays} days)', { file: 'cache-service.ts' });
-  } catch (error) {
-    logger.error('[Cache] Error saving to cache:', error, { file: 'cache-service.ts' });
+  } catch (error: unknown) {
+    const saveError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Cache] Error saving to cache:', saveError, { file: 'cache-service.ts' });
     // Don't throw - caching failure shouldn't break enrichment
   }
 }
@@ -109,10 +111,11 @@ export async function invalidateCache(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-cache`,
       domain.replace(/[^a-zA-Z0-9-]/g, '-')
     );
-    
+
     logger.info('Cache Invalidated cache for domain}', { file: 'cache-service.ts' });
-  } catch (error) {
-    logger.error('[Cache] Error invalidating cache:', error, { file: 'cache-service.ts' });
+  } catch (error: unknown) {
+    const invalidateError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Cache] Error invalidating cache:', invalidateError, { file: 'cache-service.ts' });
   }
 }
 
@@ -159,8 +162,9 @@ export async function getCacheStats(organizationId: string): Promise<{
       hitRate,
       avgAge,
     };
-  } catch (error) {
-    logger.error('[Cache] Error getting stats:', error, { file: 'cache-service.ts' });
+  } catch (error: unknown) {
+    const statsError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Cache] Error getting stats:', statsError, { file: 'cache-service.ts' });
     return {
       totalCached: 0,
       hitRate: 0,
@@ -195,11 +199,12 @@ export async function purgeExpiredCache(organizationId: string): Promise<number>
         purgedCount++;
       }
     }
-    
+
     logger.info('Cache Purged purgedCount} expired entries', { file: 'cache-service.ts' });
     return purgedCount;
-  } catch (error) {
-    logger.error('[Cache] Error purging expired cache:', error, { file: 'cache-service.ts' });
+  } catch (error: unknown) {
+    const purgeError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Cache] Error purging expired cache:', purgeError, { file: 'cache-service.ts' });
     return 0;
   }
 }

@@ -95,7 +95,7 @@ export class SchemaChangeDebouncer {
         try {
           await processSchemaChangeEvent(event);
         } catch (error) {
-          logger.error('[Schema Change Debouncer] Failed to process event', error, {
+          logger.error('[Schema Change Debouncer] Failed to process event', error instanceof Error ? error : new Error(String(error)), {
             file: 'schema-change-debouncer.ts',
             eventId: event.id,
           });
@@ -108,7 +108,7 @@ export class SchemaChangeDebouncer {
       });
       
     } catch (error) {
-      logger.error('[Schema Change Debouncer] Batch processing failed', error, {
+      logger.error('[Schema Change Debouncer] Batch processing failed', error instanceof Error ? error : new Error(String(error)), {
         file: 'schema-change-debouncer.ts',
         queueKey: key,
       });
@@ -360,16 +360,17 @@ export class SchemaBatchUpdater {
 
       // Publish single batch event
       const { SchemaChangeEventPublisher } = await import('./schema-change-tracker');
+      const { Timestamp } = await import('firebase/firestore');
       await SchemaChangeEventPublisher.publishEvent({
         id: `sce_batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         organizationId: this.organizationId,
         workspaceId: this.workspaceId,
         schemaId: this.schemaId,
-        timestamp: updatedAt,
+        timestamp: Timestamp.now(),
         changeType: 'field_renamed', // Generic type for batch
         affectedSystems: [],
         processed: false,
-        createdAt: updatedAt,
+        createdAt: Timestamp.now(),
       });
       
       logger.info('[Schema Batch Updater] Batch committed successfully', {
@@ -382,7 +383,7 @@ export class SchemaBatchUpdater {
       this.changes = [];
       
     } catch (error) {
-      logger.error('[Schema Batch Updater] Batch commit failed', error, {
+      logger.error('[Schema Batch Updater] Batch commit failed', error instanceof Error ? error : new Error(String(error)), {
         file: 'schema-change-debouncer.ts',
         schemaId: this.schemaId,
       });

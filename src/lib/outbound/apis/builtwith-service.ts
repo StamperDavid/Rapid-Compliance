@@ -78,7 +78,7 @@ export async function getTechStack(
 
     return technologies;
   } catch (error) {
-    logger.error('[BuiltWith] Error getting tech stack:', error, { file: 'builtwith-service.ts' });
+    logger.error('[BuiltWith] Error getting tech stack:', error instanceof Error ? error : new Error(String(error)), { file: 'builtwith-service.ts' });
     return getFallbackTechStack(domain);
   }
 }
@@ -142,7 +142,7 @@ export async function getTechStackDetailed(
       Categories: categories,
     };
   } catch (error) {
-    logger.error('[BuiltWith] Error getting detailed tech stack:', error, { file: 'builtwith-service.ts' });
+    logger.error('[BuiltWith] Error getting detailed tech stack:', error instanceof Error ? error : new Error(String(error)), { file: 'builtwith-service.ts' });
     return null;
   }
 }
@@ -195,7 +195,7 @@ async function getFallbackTechStack(domain: string): Promise<string[]> {
 
     return technologies;
   } catch (error) {
-    logger.error('[BuiltWith] Fallback detection error:', error, { file: 'builtwith-service.ts' });
+    logger.error('[BuiltWith] Fallback detection error:', error instanceof Error ? error : new Error(String(error)), { file: 'builtwith-service.ts' });
     return [];
   }
 }
@@ -214,7 +214,7 @@ async function getBuiltWithApiKey(organizationId: string): Promise<string | null
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.builtWithApiKey ?? null;
   } catch (error) {
-    logger.error('[BuiltWith] Error getting API key:', error, { file: 'builtwith-service.ts' });
+    logger.error('[BuiltWith] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'builtwith-service.ts' });
     return null;
   }
 }

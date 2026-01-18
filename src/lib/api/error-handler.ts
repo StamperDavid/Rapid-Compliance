@@ -33,7 +33,7 @@ export interface ErrorResponse {
  * Handle API errors and return consistent response
  */
 export function handleAPIError(error: unknown): NextResponse<ErrorResponse> {
-  logger.error('[API Error]', error, { file: 'error-handler.ts' });
+  logger.error('[API Error]', error instanceof Error ? error : new Error(String(error)), { file: 'error-handler.ts' });
 
   // Handle known API errors
   if (error instanceof APIError) {

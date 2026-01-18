@@ -13,47 +13,57 @@ export async function executeHTTPAction(
   triggerData: any
 ): Promise<any> {
   // Resolve variables
-  const url = resolveVariables(action.url, triggerData);
+  const resolvedUrl = resolveVariables(action.url, triggerData);
+  const url = typeof resolvedUrl === 'string' ? resolvedUrl : String(resolvedUrl);
   const method = action.method;
   const headers = action.headers ? resolveVariables(action.headers, triggerData) : {};
   const body = action.body ? resolveVariables(action.body, triggerData) : undefined;
   const timeout = 30000;
   
   // Build fetch options
-  const fetchOptions: RequestInit = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-    signal: AbortSignal.timeout(timeout),
+  const fetchHeaders: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(typeof headers === 'object' && headers !== null && !Array.isArray(headers) ? headers : {}),
   };
-  
-  if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-    fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
-  }
-  
-  // Make request
-  const response = await fetch(url, fetchOptions);
-  
-  const responseData = await response.text();
-  let parsedData: any;
+
+  const fetchBody = (body && (method === 'POST' || method === 'PUT' || method === 'PATCH'))
+    ? (typeof body === 'string' ? body : JSON.stringify(body))
+    : undefined;
+
+  // Make request with timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
   try {
-    parsedData = JSON.parse(responseData);
-  } catch {
-    parsedData = responseData;
+    const response = await fetch(url, {
+      method,
+      headers: fetchHeaders,
+      body: fetchBody,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const responseData = await response.text();
+    let parsedData: any;
+    try {
+      parsedData = JSON.parse(responseData);
+    } catch {
+      parsedData = responseData;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${JSON.stringify(parsedData)}`);
+    }
+
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      data: parsedData,
+    };
+  } finally {
+    clearTimeout(timeoutId);
   }
-  
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${JSON.stringify(parsedData)}`);
-  }
-  
-  return {
-    status: response.status,
-    statusText: response.statusText,
-    headers: Object.fromEntries(response.headers.entries()),
-    data: parsedData,
-  };
 }
 
 /**

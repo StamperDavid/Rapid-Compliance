@@ -136,7 +136,7 @@ export class InMemoryScrapeQueue implements JobQueue {
 
     const job = this.jobs.get(jobId);
     if (!job) {
-      logger.error('Job not found in map', { jobId });
+      logger.error('Job not found in map', new Error('Job not found'), { jobId });
       return null;
     }
 

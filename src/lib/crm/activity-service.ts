@@ -5,7 +5,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot} from 'firebase/firestore';
+import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot} from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type {
   Activity,
@@ -60,8 +60,8 @@ export async function createActivity(
       id: activityId,
       organizationId,
       workspaceId,
-      occurredAt: data.occurredAt ?? now,
-      createdAt: now,
+      occurredAt: data.occurredAt ?? Timestamp.fromDate(now),
+      createdAt: Timestamp.fromDate(now),
     };
 
     await FirestoreService.set(

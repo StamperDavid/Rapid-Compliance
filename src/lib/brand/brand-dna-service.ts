@@ -30,7 +30,8 @@ export async function getBrandDNA(orgId: string): Promise<BrandDNA | null> {
 
     return org.brandDNA as BrandDNA;
   } catch (error) {
-    logger.error('[BrandDNA] Failed to get brand DNA', error, { orgId, file: FILE });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[BrandDNA] Failed to get brand DNA', err, { orgId, file: FILE });
     return null;
   }
 }
@@ -64,7 +65,8 @@ export async function updateBrandDNA(
 
     return true;
   } catch (error) {
-    logger.error('[BrandDNA] Failed to update brand DNA', error, { orgId, file: FILE });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[BrandDNA] Failed to update brand DNA', err, { orgId, file: FILE });
     return false;
   }
 }
@@ -104,7 +106,8 @@ export async function syncBrandDNA(orgId: string): Promise<void> {
 
     logger.info('[BrandDNA] Sync complete', { orgId, tools, file: FILE });
   } catch (error) {
-    logger.error('[BrandDNA] Sync failed', error, { orgId, file: FILE });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[BrandDNA] Sync failed', err, { orgId, file: FILE });
   }
 }
 
@@ -149,7 +152,8 @@ export async function getToolTrainingContext(
 
     return typedToolDoc;
   } catch (error) {
-    logger.error('[BrandDNA] Failed to get tool context', error, { orgId, toolType, file: FILE });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[BrandDNA] Failed to get tool context', err, { orgId, toolType, file: FILE });
     return null;
   }
 }
@@ -306,7 +310,8 @@ export async function initializeBrandDNAFromOnboarding(
 
     return await updateBrandDNA(orgId, brandDNA, userId);
   } catch (error) {
-    logger.error('[BrandDNA] Failed to initialize from onboarding', error, { orgId, file: FILE });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[BrandDNA] Failed to initialize from onboarding', err, { orgId, file: FILE });
     return false;
   }
 }

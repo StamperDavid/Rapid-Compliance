@@ -85,7 +85,7 @@ function calculateNextRun(schedule: ScheduleTrigger['schedule']): string {
       const next = interval.next();
       return next?.toISOString() ?? new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
     } catch (error) {
-      logger.error('[Schedule] Invalid cron expression', error, {
+      logger.error('[Schedule] Invalid cron expression', error instanceof Error ? error : new Error(String(error)), {
         cron: schedule.cron,
         file: 'schedule-trigger.ts'
       });
@@ -164,7 +164,7 @@ export async function executeScheduledWorkflows(): Promise<void> {
             false
           );
         } catch (error) {
-          logger.error('[Schedule Trigger] Error executing workflow ${trigger.workflowId}:', error, { file: 'schedule-trigger.ts' });
+          logger.error(`[Schedule Trigger] Error executing workflow ${trigger.workflowId}`, error instanceof Error ? error : new Error(String(error)), { file: 'schedule-trigger.ts' });
           // Continue with other workflows
         }
       }

@@ -139,7 +139,8 @@ export async function processDiscoveryQueue(
 
     return batchResult;
   } catch (error) {
-    logger.error('[DiscoveryDispatcher] Queue processing failed', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[DiscoveryDispatcher] Queue processing failed', err);
     throw error;
   }
 }
@@ -224,8 +225,9 @@ export async function processDiscoveryTask(
   } catch (error) {
     const durationMs = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    logger.error('[DiscoveryDispatcher] Task failed', error, {
+
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[DiscoveryDispatcher] Task failed', err, {
       id: task.id,
       target: task.target,
     });
@@ -321,7 +323,8 @@ async function findIdleTasks(
 
     return tasks;
   } catch (error) {
-    logger.error('[DiscoveryDispatcher] Failed to find idle tasks', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[DiscoveryDispatcher] Failed to find idle tasks', err);
     return [];
   }
 }
@@ -536,7 +539,8 @@ export async function queueDiscoveryTask(
     
     return taskRef.id;
   } catch (error) {
-    logger.error('[DiscoveryDispatcher] Failed to queue task', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[DiscoveryDispatcher] Failed to queue task', err, {
       type,
       target,
     });

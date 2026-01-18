@@ -86,7 +86,7 @@ export async function searchWorkspace(
       }
     }
   } catch (error) {
-    logger.error('Error searching workspace:', error, { file: 'search-service.ts' });
+    logger.error('Error searching workspace:', error instanceof Error ? error : new Error(String(error)), { file: 'search-service.ts' });
   }
 
   return results.slice(0, options.limit ?? 50);

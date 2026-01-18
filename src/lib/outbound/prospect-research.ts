@@ -105,8 +105,8 @@ export async function researchProspect(
       insights,
     };
   } catch (error) {
-    logger.error('[Prospect Research] Error:', error, { file: 'prospect-research.ts' });
-    
+    logger.error('[Prospect Research] Error:', error instanceof Error ? error : undefined, { file: 'prospect-research.ts' });
+
     // Return minimal data on error
     return {
       companyInfo: {
@@ -159,9 +159,9 @@ async function getCompanyInfo(companyName: string, orgId: string): Promise<Compa
       };
     }
   } catch (error) {
-    logger.error('[getCompanyInfo] Enrichment error:', error, { file: 'prospect-research.ts' });
+    logger.error('[getCompanyInfo] Enrichment error:', error instanceof Error ? error : undefined, { file: 'prospect-research.ts' });
   }
-  
+
   // Fallback to basic info if enrichment fails
   const domain = guessDomainFromCompanyName(companyName);
   return {
@@ -288,7 +288,7 @@ async function getSocialPresence(companyName: string, _orgId: string): Promise<S
 /**
  * Generate AI-powered insights for personalization
  */
-function generateInsights(data: {
+async function generateInsights(data: {
   companyInfo: CompanyInfo;
   news: NewsItem[];
   funding?: FundingInfo;
@@ -297,38 +297,38 @@ function generateInsights(data: {
   prospect: ProspectData;
 }): Promise<string[]> {
   const insights: string[] = [];
-  
+
   // Company size insight
   if (data.companyInfo.size) {
     insights.push(`${data.companyInfo.name} is a ${data.companyInfo.size} company`);
   }
-  
+
   // Recent news insight
   if (data.news && data.news.length > 0) {
     insights.push(`Recently in the news: ${data.news[0].title}`);
   }
-  
+
   // Funding insight
   if (data.funding?.lastRound) {
     insights.push(`Raised ${data.funding.lastRound.amount} in ${data.funding.lastRound.roundType}`);
   }
-  
+
   // Hiring insight
   if (data.hiring && data.hiring.length > 0) {
     const departments = Array.from(new Set(data.hiring.map(j => j.department)));
     insights.push(`Actively hiring in ${departments.join(', ')}`);
   }
-  
+
   // Tech stack insight
   if (data.tech && data.tech.length > 0) {
     insights.push(`Uses ${data.tech.slice(0, 3).join(', ')}`);
   }
-  
+
   // Industry insight
   if (data.companyInfo.industry) {
     insights.push(`Operating in ${data.companyInfo.industry} industry`);
   }
-  
+
   return insights;
 }
 

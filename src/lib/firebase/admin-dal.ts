@@ -163,7 +163,7 @@ export class FirestoreAdminDAL {
       logger.info('[DRY RUN] Would write to Firestore (Admin)', {
         collection: collectionRef,
         docId,
-        data,
+        dataKeys: Object.keys(data as Record<string, unknown>).join(', '),
         merge: options?.merge,
         file: 'admin-dal.ts'
       });
@@ -218,7 +218,7 @@ export class FirestoreAdminDAL {
       logger.info('[DRY RUN] Would update Firestore (Admin)', {
         collection: collectionRef,
         docId,
-        data,
+        dataKeys: Object.keys(data as Record<string, unknown>).join(', '),
         file: 'admin-dal.ts'
       });
       return;
@@ -316,7 +316,7 @@ export class FirestoreAdminDAL {
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would add to Firestore (Admin)', {
         collection: collectionRef,
-        data,
+        dataKeys: Object.keys(data as Record<string, unknown>).join(', '),
         file: 'admin-dal.ts'
       });
       // Return a fake doc ref in dry run mode

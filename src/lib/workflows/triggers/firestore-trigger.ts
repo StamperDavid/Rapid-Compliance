@@ -94,7 +94,7 @@ export async function handleEntityChange(
       
       await executeWorkflow(workflow as Workflow, triggerData);
     } catch (error) {
-      logger.error('[Firestore Trigger] Error executing workflow ${workflow.id}:', error, { file: 'firestore-trigger.ts' });
+      logger.error(`[Firestore Trigger] Error executing workflow ${workflow.id}`, error instanceof Error ? error : new Error(String(error)), { file: 'firestore-trigger.ts' });
       // Continue with other workflows
     }
   }

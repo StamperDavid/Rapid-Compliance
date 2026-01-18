@@ -387,14 +387,14 @@ export async function syncEmailsToCRM(
 
         synced++;
       } catch (error) {
-        logger.error('[Gmail Sync] Error syncing email:', error, { file: 'gmail-service.ts' });
+        logger.error('[Gmail Sync] Error syncing email:', error instanceof Error ? error : new Error(String(error)), { file: 'gmail-service.ts' });
         errors++;
       }
     }
 
     return { synced, errors };
   } catch (error) {
-    logger.error('[Gmail Sync] Error syncing emails:', error, { file: 'gmail-service.ts' });
+    logger.error('[Gmail Sync] Error syncing emails:', error instanceof Error ? error : new Error(String(error)), { file: 'gmail-service.ts' });
     throw error;
   }
 }

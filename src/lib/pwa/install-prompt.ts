@@ -46,7 +46,7 @@ export async function showInstallPrompt(): Promise<boolean> {
     
     return false;
   } catch (error) {
-    logger.error('Error showing install prompt:', error, { file: 'install-prompt.ts' });
+    logger.error('Error showing install prompt:', error instanceof Error ? error : new Error(String(error)), { file: 'install-prompt.ts' });
     return false;
   }
 }

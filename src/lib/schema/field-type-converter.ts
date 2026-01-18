@@ -129,7 +129,7 @@ export class FieldTypeConverter {
       };
       
     } catch (error) {
-      logger.error('[Field Type Converter] Failed to generate preview', error, {
+      logger.error('[Field Type Converter] Failed to generate preview', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-type-converter.ts',
       });
       throw error;
@@ -204,7 +204,7 @@ export class FieldTypeConverter {
       });
       
     } catch (error) {
-      logger.error('[Field Type Converter] Conversion failed', error, {
+      logger.error('[Field Type Converter] Conversion failed', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-type-converter.ts',
       });
       throw error;
@@ -401,7 +401,7 @@ export class FieldTypeConverter {
       return notificationId;
       
     } catch (error) {
-      logger.error('[Field Type Converter] Failed to create approval request', error, {
+      logger.error('[Field Type Converter] Failed to create approval request', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-type-converter.ts',
       });
       throw error;

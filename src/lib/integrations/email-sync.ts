@@ -125,7 +125,8 @@ export async function fetchGmailInbox(
         messages.push(message);
 
       } catch (error) {
-        logger.warn('Failed to fetch individual Gmail message', { messageId: id, error });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn('Failed to fetch individual Gmail message', { messageId: id, error: errorMessage });
       }
     }
 
@@ -340,7 +341,7 @@ async function findOriginalEmail(
     return match ?? null;
 
   } catch (error) {
-    logger.error('Failed to find original email', error);
+    logger.error('Failed to find original email', error instanceof Error ? error : new Error(String(error)));
     return null;
   }
 }

@@ -202,9 +202,9 @@ export function successResponse(
 ): NextResponse {
   return NextResponse.json(
     {
-      success: true,
+      success: true as const,
       ...data,
-      ...(message && { message }),
+      ...(message ? { message } : {}),
     },
     { status: statusCode }
   );
@@ -221,10 +221,10 @@ export function errorResponse(
 ): NextResponse {
   return NextResponse.json(
     {
-      success: false,
+      success: false as const,
       error: message,
-      ...(code && { code }),
-      ...(details && { details }),
+      ...(code ? { code } : {}),
+      ...(details ? { details } : {}),
     },
     { status: statusCode }
   );

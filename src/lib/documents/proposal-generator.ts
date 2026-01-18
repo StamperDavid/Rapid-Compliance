@@ -112,7 +112,7 @@ export async function generateProposal(
     try {
       pdfUrl = generatePDF(htmlContent, organizationId);
     } catch (pdfError) {
-      logger.warn('PDF generation failed, continuing without PDF', { error: pdfError });
+      logger.warn('PDF generation failed, continuing without PDF', { error: pdfError instanceof Error ? pdfError.message : String(pdfError) });
     }
 
     const proposalId = `proposal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -150,7 +150,7 @@ export async function generateProposal(
     return proposal;
 
   } catch (error) {
-    logger.error('Proposal generation failed', error, { organizationId });
+    logger.error('Proposal generation failed', error instanceof Error ? error : new Error(String(error)), { organizationId });
     throw error;
   }
 }
@@ -388,7 +388,7 @@ Best regards
     logger.info('Proposal sent', { proposalId, recipientEmail });
 
   } catch (error) {
-    logger.error('Failed to send proposal', error, { proposalId });
+    logger.error('Failed to send proposal', error instanceof Error ? error : new Error(String(error)), { proposalId });
     throw error;
   }
 }

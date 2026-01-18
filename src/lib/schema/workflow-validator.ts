@@ -63,7 +63,7 @@ export async function validateWorkflowsForSchema(
     }
     
   } catch (error) {
-    logger.error('[Workflow Validator] Validation failed', error, {
+    logger.error('[Workflow Validator] Validation failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'workflow-validator.ts',
       eventId: event.id,
     });
@@ -203,7 +203,7 @@ async function createWorkflowWarningNotification(
     );
     
   } catch (error) {
-    logger.error('[Workflow Validator] Failed to create notification', error, {
+    logger.error('[Workflow Validator] Failed to create notification', error instanceof Error ? error : new Error(String(error)), {
       file: 'workflow-validator.ts',
     });
   }
@@ -278,7 +278,7 @@ export async function getWorkflowValidationSummary(
     }
     
   } catch (error) {
-    logger.error('[Workflow Validator] Failed to get validation summary', error, {
+    logger.error('[Workflow Validator] Failed to get validation summary', error instanceof Error ? error : new Error(String(error)), {
       file: 'workflow-validator.ts',
     });
   }

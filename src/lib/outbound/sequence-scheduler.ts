@@ -45,12 +45,12 @@ export async function processSequences(): Promise<{
               }
             }
           } catch (error) {
-            logger.error('[Sequence Scheduler] Error processing enrollment ${enrollment.id}:', error, { file: 'sequence-scheduler.ts' });
+            logger.error('[Sequence Scheduler] Error processing enrollment ${enrollment.id}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
             errors++;
           }
         }
       } catch (error) {
-        logger.error('[Sequence Scheduler] Error processing org ${orgId}:', error, { file: 'sequence-scheduler.ts' });
+        logger.error('[Sequence Scheduler] Error processing org ${orgId}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
         errors++;
       }
     }
@@ -59,8 +59,8 @@ export async function processSequences(): Promise<{
 
     return { processed, errors };
   } catch (error) {
-    logger.error('[Sequence Scheduler] Fatal error:', error, { file: 'sequence-scheduler.ts' });
-    throw error;
+    logger.error('[Sequence Scheduler] Fatal error:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
+    throw error instanceof Error ? error : new Error(String(error));
   }
 }
 
@@ -76,9 +76,12 @@ async function getAllOrganizations(): Promise<string[]> {
     );
     
     // Return org IDs
-    return orgs.map((org: any) => org.id);
+    return orgs.map((org) => {
+      const orgData = org as { id: string };
+      return orgData.id;
+    });
   } catch (error) {
-    logger.error('[Sequence Scheduler] Error getting organizations:', error, { file: 'sequence-scheduler.ts' });
+    logger.error('[Sequence Scheduler] Error getting organizations:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
     return [];
   }
 }
@@ -100,7 +103,7 @@ async function getActiveEnrollments(orgId: string): Promise<ProspectEnrollment[]
 
     return enrollments as ProspectEnrollment[];
   } catch (error) {
-    logger.error('[Sequence Scheduler] Error getting enrollments for ${orgId}:', error, { file: 'sequence-scheduler.ts' });
+    logger.error('[Sequence Scheduler] Error getting enrollments for ${orgId}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
     return [];
   }
 }

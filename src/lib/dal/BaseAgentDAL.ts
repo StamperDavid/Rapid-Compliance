@@ -230,11 +230,7 @@ export class BaseAgentDAL {
     // Dry run mode - log without executing
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would write to Firestore', {
-        collection: path,
-        docId,
-        data,
-        merge: options?.merge,
-        file: 'BaseAgentDAL.ts'
+        organizationId: options?.organizationId,
       });
       return;
     }
@@ -276,10 +272,7 @@ export class BaseAgentDAL {
     
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would update Firestore', {
-        collection: path,
-        docId,
-        data,
-        file: 'BaseAgentDAL.ts'
+        organizationId: options?.organizationId,
       });
       return;
     }
@@ -317,9 +310,7 @@ export class BaseAgentDAL {
     
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would delete from Firestore', {
-        collection: path,
-        docId,
-        file: 'BaseAgentDAL.ts'
+        organizationId: options?.organizationId,
       });
       return;
     }
@@ -362,9 +353,7 @@ export class BaseAgentDAL {
     
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would add to Firestore', {
-        collection: path,
-        data,
-        file: 'BaseAgentDAL.ts'
+        organizationId: options?.organizationId,
       });
       return doc(this.db, path, 'dry-run-doc-id');
     }

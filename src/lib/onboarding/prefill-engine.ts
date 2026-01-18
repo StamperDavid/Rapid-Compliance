@@ -123,7 +123,7 @@ export async function prefillOnboardingData(
 
     return result;
   } catch (error) {
-    logger.error('Failed to prefill onboarding data', error, {
+    logger.error('Failed to prefill onboarding data', error instanceof Error ? error : new Error(String(error)), {
       websiteUrl,
       organizationId,
     });
@@ -481,7 +481,7 @@ async function emitOnboardingStartedSignal(
     });
   } catch (error) {
     // Don't fail prefill if signal emission fails
-    logger.error('Failed to emit onboarding.started signal', error, {
+    logger.error('Failed to emit onboarding.started signal', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
   }
@@ -526,7 +526,7 @@ async function emitOnboardingPrefilledSignal(
     });
   } catch (error) {
     // Don't fail prefill if signal emission fails
-    logger.error('Failed to emit onboarding.prefilled signal', error, {
+    logger.error('Failed to emit onboarding.prefilled signal', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
   }
@@ -567,7 +567,7 @@ export async function emitOnboardingCompletedSignal(
     });
   } catch (error) {
     // Don't fail onboarding completion if signal emission fails
-    logger.error('Failed to emit onboarding.completed signal', error, {
+    logger.error('Failed to emit onboarding.completed signal', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
   }
@@ -608,7 +608,7 @@ export async function emitOnboardingAbandonedSignal(
     });
   } catch (error) {
     // Don't fail on signal emission
-    logger.error('Failed to emit onboarding.abandoned signal', error, {
+    logger.error('Failed to emit onboarding.abandoned signal', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
   }

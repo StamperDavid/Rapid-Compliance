@@ -131,10 +131,10 @@ export async function executeUpdateEntityAction(
   
   // Determine which record(s) to update
   let recordIds: string[] = [];
-  
+
   if (action.targetRecord === 'trigger') {
     const triggerRecordId = triggerData?.recordId ?? triggerData?.id;
-    if (!triggerRecordId) {
+    if (!triggerRecordId || typeof triggerRecordId !== 'string') {
       throw new Error('No record ID in trigger data');
     }
     recordIds = [triggerRecordId];
@@ -239,7 +239,7 @@ export async function executeDeleteEntityAction(
   
   if (action.targetRecord === 'trigger') {
     const triggerRecordId = triggerData?.recordId ?? triggerData?.id;
-    if (!triggerRecordId) {
+    if (!triggerRecordId || typeof triggerRecordId !== 'string') {
       throw new Error('No record ID in trigger data');
     }
     recordIds = [triggerRecordId];
@@ -384,8 +384,9 @@ Generate ONLY the value for this field. Do not include any explanation or format
     
     return response.text.trim();
   } catch (error) {
-    logger.error('[Entity Action] AI generation failed:', error, { file: 'entity-action.ts' });
-    return `[AI Error: ${error}]`;
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error('[Entity Action] AI generation failed', error instanceof Error ? error : new Error(String(error)), { file: 'entity-action.ts' });
+    return `[AI Error: ${errorMsg}]`;
   }
 }
 
@@ -399,36 +400,33 @@ async function queryEntities(params: {
 }): Promise<any[]> {
   const { entityPath, query, triggerData } = params;
   const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
-  
+  const { where } = await import('firebase/firestore');
+
   // Build Firestore query from criteria
-  const filters: Array<unknown> = [];
-  
+  const filters: any[] = [];
+
   if (query.filters && Array.isArray(query.filters)) {
     for (const filter of query.filters) {
       let value = filter.value;
-      
+
       // Resolve dynamic values
       if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
         const path = value.slice(2, -2).trim();
         value = getNestedValue(triggerData, path);
       }
-      
-      filters.push({
-        field: filter.field,
-        operator: mapOperator(filter.operator),
-        value,
-      });
+
+      filters.push(where(filter.field, mapOperator(filter.operator) as any, value));
     }
   }
-  
+
   // Get matching records
   const results = await FS.getAll(entityPath, filters);
-  
+
   // Apply limit if specified
   if (query.limit && typeof query.limit === 'number') {
     return results.slice(0, query.limit);
   }
-  
+
   return results;
 }
 

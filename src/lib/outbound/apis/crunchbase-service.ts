@@ -105,7 +105,7 @@ export async function searchOrganization(
     // Fetch full organization data
     return await getOrganizationByPermalink(permalink, organizationId);
   } catch (error) {
-    logger.error('[Crunchbase] Error searching organization:', error, { file: 'crunchbase-service.ts' });
+    logger.error('[Crunchbase] Error searching organization:', error instanceof Error ? error : new Error(String(error)), { file: 'crunchbase-service.ts' });
     return null;
   }
 }
@@ -151,7 +151,7 @@ export async function getOrganizationByPermalink(
       funding_rounds: fundingRounds,
     };
   } catch (error) {
-    logger.error('[Crunchbase] Error getting organization:', error, { file: 'crunchbase-service.ts' });
+    logger.error('[Crunchbase] Error getting organization:', error instanceof Error ? error : new Error(String(error)), { file: 'crunchbase-service.ts' });
     return null;
   }
 }
@@ -196,7 +196,7 @@ export async function getFundingRounds(
 
     return typedData.cards?.funding_rounds ?? [];
   } catch (error) {
-    logger.error('[Crunchbase] Error getting funding rounds:', error, { file: 'crunchbase-service.ts' });
+    logger.error('[Crunchbase] Error getting funding rounds:', error instanceof Error ? error : new Error(String(error)), { file: 'crunchbase-service.ts' });
     return [];
   }
 }
@@ -215,7 +215,7 @@ async function getCrunchbaseApiKey(organizationId: string): Promise<string | nul
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.crunchbaseApiKey ?? null;
   } catch (error) {
-    logger.error('[Crunchbase] Error getting API key:', error, { file: 'crunchbase-service.ts' });
+    logger.error('[Crunchbase] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'crunchbase-service.ts' });
     return null;
   }
 }

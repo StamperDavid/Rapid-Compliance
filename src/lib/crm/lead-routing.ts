@@ -157,7 +157,7 @@ export async function routeLead(
  */
 function evaluateConditions(lead: Lead, conditions: RoutingCondition[]): boolean {
   return conditions.every(condition => {
-    const leadValue = (lead as Record<string, unknown>)[condition.field];
+    const leadValue = (lead as unknown as Record<string, unknown>)[condition.field];
 
     switch (condition.operator) {
       case 'equals':
@@ -221,14 +221,14 @@ function getTerritoryUser(lead: Lead, rule: RoutingRule): string | null {
 
   for (const territory of territories) {
     // Check state match
-    if (territory.states && lead.customFields?.state) {
+    if (territory.states && lead.customFields?.state && typeof lead.customFields.state === 'string') {
       if (territory.states.includes(lead.customFields.state)) {
         return territory.userId;
       }
     }
 
     // Check country match
-    if (territory.countries && lead.customFields?.country) {
+    if (territory.countries && lead.customFields?.country && typeof lead.customFields.country === 'string') {
       if (territory.countries.includes(lead.customFields.country)) {
         return territory.userId;
       }
@@ -280,7 +280,7 @@ async function getLoadBalancedUser(
     return selectedUser;
 
   } catch (error: unknown) {
-    logger.warn('Load balancing failed, using first user', error instanceof Error ? error : new Error(String(error)));
+    logger.warn('Load balancing failed, using first user', { error: error instanceof Error ? error.message : String(error) });
     return rule.assignedUsers[0];
   }
 }

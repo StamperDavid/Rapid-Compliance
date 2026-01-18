@@ -104,8 +104,8 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
       valid: true,
       claims,
     };
-  } catch (error) {
-    logger.error('Failed to extract tenant claims', error, { file: 'claims-validator.ts' });
+  } catch (error: unknown) {
+    logger.error('Failed to extract tenant claims', error instanceof Error ? error : new Error(String(error)), { file: 'claims-validator.ts' });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       valid: false,

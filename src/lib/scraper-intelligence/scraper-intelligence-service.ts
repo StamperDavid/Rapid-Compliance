@@ -822,7 +822,8 @@ export async function batchProcessScrapes(
       const result = await processAndStoreScrape(scrape);
       results.push(result);
     } catch (error) {
-      logger.error('Batch processing item failed', error, {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Batch processing item failed', err, {
         url: scrape.url,
         organizationId: scrape.organizationId,
       });
@@ -912,7 +913,8 @@ export async function healthCheck(): Promise<{
       timestamp: new Date(),
     };
   } catch (error) {
-    logger.error('Health check failed', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Health check failed', err);
     return {
       status: 'unhealthy',
       cacheStats: getCacheStats(),

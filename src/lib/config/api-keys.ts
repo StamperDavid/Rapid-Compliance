@@ -51,7 +51,7 @@ export async function getAPIKey(
 
     return envMap[service] ?? null;
   } catch (error) {
-    logger.error('[API Keys] Error loading key:', error, { file: 'api-keys.ts' });
+    logger.error('[API Keys] Error loading key:', error instanceof Error ? error : new Error(String(error)), { file: 'api-keys.ts' });
     // Fallback to env
     const envMap: Record<string, string | undefined> = {
       openai: process.env.OPENAI_API_KEY,

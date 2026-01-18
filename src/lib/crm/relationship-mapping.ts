@@ -105,7 +105,7 @@ export async function createRelationship(
 
     return relationship;
   } catch (error) {
-    logger.error('Failed to create relationship', error);
+    logger.error('Failed to create relationship', error instanceof Error ? error : new Error(String(error)));
     throw new Error(`Failed to create relationship: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -132,7 +132,7 @@ export async function getEntityRelationships(
 
     return filtered;
   } catch (error) {
-    logger.error('Failed to get relationships', error);
+    logger.error('Failed to get relationships', error instanceof Error ? error : new Error(String(error)));
     return [];
   }
 }
@@ -185,7 +185,7 @@ export async function getDealStakeholderMap(
       buyingCommittee,
     };
   } catch (error) {
-    logger.error('Failed to get stakeholder map', error);
+    logger.error('Failed to get stakeholder map', error instanceof Error ? error : new Error(String(error)));
     throw new Error(`Failed to get stakeholder map: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

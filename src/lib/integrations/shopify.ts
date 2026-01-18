@@ -248,7 +248,8 @@ export async function syncShopifyOrdersToCRM(
 
         synced++;
       } catch (error) {
-        logger.warn('Failed to sync individual Shopify order', { orderId: order.id, error });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn('Failed to sync individual Shopify order', { orderId: order.id, error: errorMessage });
       }
     }
 

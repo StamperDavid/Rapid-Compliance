@@ -74,7 +74,7 @@ export function BuyButton({
         }
       }
     } catch (error) {
-      logger.error('Error processing purchase:', error, { file: 'BuyButton.tsx' });
+      logger.error('Error processing purchase:', error instanceof Error ? error : new Error(String(error)), { file: 'BuyButton.tsx' });
     } finally {
       setLoading(false);
     }

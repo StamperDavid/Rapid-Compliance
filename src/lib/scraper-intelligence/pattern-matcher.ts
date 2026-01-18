@@ -192,7 +192,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     );
   }
 
-  let lastError: Error | null = null;
+  let lastError: Error | undefined = undefined;
   
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -573,11 +573,12 @@ export async function findSimilarPatterns(
       throw error;
     }
 
-    logger.error('Failed to find similar patterns', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to find similar patterns', err, {
       queryText: queryText.substring(0, 50),
     });
 
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = err.message;
     throw new PatternMatcherError(
       `Failed to find similar patterns: ${errorMessage}`,
       'MATCHING_FAILED',

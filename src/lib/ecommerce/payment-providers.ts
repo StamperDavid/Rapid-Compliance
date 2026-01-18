@@ -160,8 +160,9 @@ export async function processAuthorizeNetPayment(
       };
     }
   } catch (error: unknown) {
-    logger.error('Authorize.Net payment error:', error, { file: 'payment-providers.ts' });
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Authorize.Net payment error:', err, { file: 'payment-providers.ts' });
+    const errorMessage = err.message;
     return {
       success: false,
       error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Authorize.Net payment processing failed',
@@ -280,8 +281,9 @@ export async function process2CheckoutPayment(
       };
     }
   } catch (error: unknown) {
-    logger.error('2Checkout payment error:', error, { file: 'payment-providers.ts' });
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('2Checkout payment error:', err, { file: 'payment-providers.ts' });
+    const errorMessage = err.message;
     return {
       success: false,
       error:(errorMessage !== '' && errorMessage != null) ? errorMessage : '2Checkout payment processing failed',
@@ -378,8 +380,9 @@ export async function processMolliePayment(
       };
     }
   } catch (error: unknown) {
-    logger.error('Mollie payment error:', error, { file: 'payment-providers.ts' });
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Mollie payment error:', err, { file: 'payment-providers.ts' });
+    const errorMessage = err.message;
     return {
       success: false,
       error:(errorMessage !== '' && errorMessage != null) ? errorMessage : 'Mollie payment processing failed',

@@ -312,7 +312,7 @@ export class SchemaChangeUXHandler {
       );
       
     } catch (error) {
-      logger.error('[Schema Change UX] Failed to create notification', error, {
+      logger.error('[Schema Change UX] Failed to create notification', error instanceof Error ? error : new Error(String(error)), {
         file: 'schema-change-severity.ts',
       });
     }
@@ -365,7 +365,7 @@ export class SchemaChangeUXHandler {
       });
       
     } catch (error) {
-      logger.error('[Schema Change UX] Failed to add to dashboard', error, {
+      logger.error('[Schema Change UX] Failed to add to dashboard', error instanceof Error ? error : new Error(String(error)), {
         file: 'schema-change-severity.ts',
       });
     }

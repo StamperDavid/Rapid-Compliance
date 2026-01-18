@@ -107,7 +107,8 @@ export function detectHighValueSignals(
           confidence = calculateSignalConfidence(signal, content, match[0]);
         }
       } catch (error) {
-        logger.error('Invalid regex pattern in signal', error, {
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Invalid regex pattern in signal', err, {
           signalId: signal.id,
           pattern: signal.regexPattern,
         });
@@ -361,12 +362,13 @@ export async function distillScrape(params: {
       },
     };
   } catch (error) {
-    logger.error('Distillation failed', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Distillation failed', err, {
       url: params.url,
       organizationId: params.organizationId,
     });
 
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = err.message;
     throw new Error(`Distillation failed: ${errorMessage}`);
   }
 }
@@ -426,7 +428,8 @@ export function calculateLeadScore(
         totalScore += rule.scoreBoost;
       }
     } catch (error) {
-      logger.error('Error evaluating scoring rule', error, {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Error evaluating scoring rule', err, {
         ruleId: rule.id,
         condition: rule.condition,
       });
@@ -468,9 +471,10 @@ function evaluateCondition(
     const fn = new Function(`return ${expression}`);
     return Boolean(fn());
   } catch (error) {
-    logger.error('Failed to evaluate condition', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to evaluate condition', err, {
       condition,
-      context,
+      contextKeys: Object.keys(context),
     });
     return false;
   }
@@ -517,7 +521,8 @@ export async function distillBatch(
       });
       results.push(result);
     } catch (error) {
-      logger.error('Batch distillation item failed', error, {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Batch distillation item failed', err, {
         url: scrape.url,
       });
       // Continue with next item

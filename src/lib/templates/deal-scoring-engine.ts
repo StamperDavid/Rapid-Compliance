@@ -315,7 +315,7 @@ export function calculateDealScore(
         score: finalScore
       });
     } catch (signalError) {
-      logger.warn('Failed to emit deal.scored signal', { error: signalError });
+      logger.warn('Failed to emit deal.scored signal', { error: signalError instanceof Error ? signalError.message : String(signalError) });
     }
     
     const duration = Date.now() - startTime;
@@ -867,7 +867,7 @@ export function batchScoreDeals(
       });
       scores.set(dealId, score);
     } catch (error) {
-      logger.warn('Failed to score deal in batch', { dealId, error });
+      logger.warn('Failed to score deal in batch', { dealId, error: error instanceof Error ? error.message : String(error) });
     }
   }
   

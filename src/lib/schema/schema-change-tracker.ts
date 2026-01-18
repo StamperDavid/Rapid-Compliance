@@ -547,7 +547,7 @@ export class SchemaChangeEventPublisher {
         fieldId: event.fieldId,
       });
     } catch (error) {
-      logger.error('[Schema Change] Failed to publish event', error, {
+      logger.error('[Schema Change] Failed to publish event', error instanceof Error ? error : new Error(String(error)), {
         file: 'schema-change-tracker.ts',
         eventId: event.id,
       });
@@ -589,7 +589,7 @@ export class SchemaChangeEventPublisher {
       
       return events as SchemaChangeEvent[];
     } catch (error) {
-      logger.error('[Schema Change] Failed to get unprocessed events', error, {
+      logger.error('[Schema Change] Failed to get unprocessed events', error instanceof Error ? error : new Error(String(error)), {
         file: 'schema-change-tracker.ts',
       });
       return [];
@@ -623,7 +623,7 @@ export class SchemaChangeEventPublisher {
         );
       }
     } catch (error) {
-      logger.error('[Schema Change] Failed to mark event as processed', error, {
+      logger.error('[Schema Change] Failed to mark event as processed', error instanceof Error ? error : new Error(String(error)), {
         file: 'schema-change-tracker.ts',
         eventId,
       });

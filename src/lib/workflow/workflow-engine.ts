@@ -121,7 +121,7 @@ export class WorkflowEngine {
     logger.debug('Trigger evaluation result', {
       workflowId: workflow.id,
       triggerMatches,
-      conditionResults,
+      conditionResults: conditionResults.toString(),
     });
     
     return triggerMatches;
@@ -353,8 +353,7 @@ export class WorkflowEngine {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
       
-      logger.error('Workflow execution failed', {
-        error: errorMessage,
+      logger.error('Workflow execution failed', error instanceof Error ? error : new Error(String(error)), {
         workflowId: workflow.id,
         organizationId: context.organizationId,
         durationMs: duration,
@@ -455,8 +454,7 @@ export class WorkflowEngine {
       const duration = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
-      logger.error('Action execution failed', {
-        error: errorMessage,
+      logger.error('Action execution failed', error instanceof Error ? error : new Error(String(error)), {
         workflowId: workflow.id,
         actionId: action.id,
         actionType: action.type,
@@ -616,7 +614,7 @@ export class WorkflowEngine {
     logger.info('Task would be created', {
       title: config.title,
       assignToUserId,
-      dueDate,
+      dueDate: dueDate?.toISOString() ?? null,
       dealId: context.dealId,
     });
     
@@ -624,7 +622,7 @@ export class WorkflowEngine {
       taskId: `task_${Date.now()}`,
       title: config.title,
       assignedTo: assignToUserId,
-      dueDate: dueDate?.toISOString(),
+      dueDate: dueDate?.toISOString() ?? null,
       priority:(config.priority !== '' && config.priority != null) ? config.priority : 'medium',
     };
   }

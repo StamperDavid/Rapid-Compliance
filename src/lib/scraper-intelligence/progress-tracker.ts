@@ -68,7 +68,10 @@ export class InMemoryProgressTracker implements ProgressTracker {
   emit(event: ProgressEvent): void {
     // Validate event
     if (!event.jobId || !event.type) {
-      logger.error('Invalid progress event', { event });
+      logger.error('Invalid progress event', new Error('Missing jobId or type'), {
+        jobId: event.jobId,
+        type: event.type
+      });
       return;
     }
 
@@ -245,7 +248,8 @@ export class InMemoryProgressTracker implements ProgressTracker {
           subscription.callback(event);
           notifiedCount++;
         } catch (error) {
-          logger.error('Subscriber callback error', error, {
+          const err = error instanceof Error ? error : new Error(String(error));
+          logger.error('Subscriber callback error', err, {
             subscriptionId: subscription.id,
             eventType: event.type,
             jobId: event.jobId,

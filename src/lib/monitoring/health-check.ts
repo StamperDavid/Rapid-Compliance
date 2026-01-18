@@ -267,10 +267,8 @@ function gatherMetrics(): {
 export async function sendAlert(health: HealthCheckResult): Promise<void> {
   if (health.status === 'healthy') {return;}
   
-  logger.error('[Health Check] System is unhealthy', new Error(`System status: ${health.status}`), { 
-    status: health.status, 
-    health,
-    file: 'health-check.ts' 
+  logger.error('[Health Check] System is unhealthy', new Error(`System status: ${health.status}`), {
+    error: `System status: ${health.status}`,
   });
   
   // In production, send to Slack/PagerDuty/Email
@@ -292,7 +290,7 @@ export async function sendAlert(health: HealthCheckResult): Promise<void> {
         }),
       });
     } catch (error) {
-      logger.error('[Health Check] Failed to send Slack alert:', error, { file: 'health-check.ts' });
+      logger.error('[Health Check] Failed to send Slack alert:', error instanceof Error ? error : new Error(String(error)), { file: 'health-check.ts' });
     }
   }
 }

@@ -75,8 +75,8 @@ async function initializeAdminAuth(): Promise<Auth | null> {
       const authInstance = admin.auth(app);
       adminAuth = authInstance;
       return authInstance;
-    } catch (error) {
-      logger.error('Failed to initialize Firebase Admin:', error, { file: 'api-auth.ts' });
+    } catch (error: unknown) {
+      logger.error('Failed to initialize Firebase Admin:', error instanceof Error ? error : new Error(String(error)), { file: 'api-auth.ts' });
       return null;
     }
   })();
@@ -189,8 +189,8 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
       organizationId,
       role,
     };
-  } catch (error) {
-    logger.error('Token verification failed:', error, { file: 'api-auth.ts' });
+  } catch (error: unknown) {
+    logger.error('Token verification failed:', error instanceof Error ? error : new Error(String(error)), { file: 'api-auth.ts' });
     return null;
   }
 }

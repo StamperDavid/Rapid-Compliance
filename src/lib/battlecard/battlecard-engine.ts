@@ -374,12 +374,13 @@ export async function discoverCompetitor(
 
     return profile;
   } catch (error) {
-    logger.error('Failed to discover competitor', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to discover competitor', err, {
       domain,
       organizationId,
     });
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    const errorMessage = err.message;
     throw new Error(`Failed to discover competitor ${domain}: ${errorMessage}`);
   }
 }
@@ -530,7 +531,8 @@ IMPORTANT:
 
     return {};
   } catch (error) {
-    logger.error('Failed to extract competitive intelligence', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to extract competitive intelligence', err, {
       domain: company.domain,
       organizationId,
     });
@@ -605,7 +607,8 @@ export async function generateBattlecard(
         throw new Error('No JSON found in LLM response');
       }
     } catch (parseError) {
-      logger.error('Failed to parse battlecard LLM response', parseError, {
+      const err = parseError instanceof Error ? parseError : new Error(String(parseError));
+      logger.error('Failed to parse battlecard LLM response', err, {
         competitor: competitorProfile.companyName,
       });
       throw new Error('Failed to generate battlecard: Invalid LLM response');
@@ -670,12 +673,13 @@ export async function generateBattlecard(
 
     return battlecard;
   } catch (error) {
-    logger.error('Failed to generate battlecard', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to generate battlecard', err, {
       competitor: competitorProfile.companyName,
       organizationId: competitorProfile.organizationId,
     });
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    const errorMessage = err.message;
     throw new Error(`Failed to generate battlecard: ${errorMessage}`);
   }
 }
@@ -860,7 +864,8 @@ async function emitCompetitorDiscoverySignal(
       fromCache,
     });
   } catch (error) {
-    logger.error('Failed to emit competitor discovery signal', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to emit competitor discovery signal', err, {
       competitorName: profile.companyName,
       organizationId,
     });
@@ -901,7 +906,8 @@ async function emitBattlecardGeneratedSignal(
       organizationId,
     });
   } catch (error) {
-    logger.error('Failed to emit battlecard generated signal', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to emit battlecard generated signal', err, {
       battlecardId: battlecard.id,
       organizationId,
     });

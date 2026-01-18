@@ -492,7 +492,8 @@ export async function queryTwilioStatus(
       errorMessage: data.error_message,
     };
   } catch (error) {
-    logger.error('[SMS Service] Error querying Twilio status:', error, { file: 'sms-service.ts' });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[SMS Service] Error querying Twilio status:', err, { file: 'sms-service.ts' });
     return null;
   }
 }

@@ -211,10 +211,10 @@ async function generateWithAI(
       temperature: 0.7, // Some creativity but not too much
       maxTokens: 500,
     });
-    
+
     return response.text.trim();
   } catch (error) {
-    logger.error('[Email Writer] AI generation failed:', error, { file: 'email-writer.ts' });
+    logger.error('[Email Writer] AI generation failed:', error instanceof Error ? error : undefined, { file: 'email-writer.ts' });
     // Fallback to template
     return buildAIDAEmail(request, tokens);
   }

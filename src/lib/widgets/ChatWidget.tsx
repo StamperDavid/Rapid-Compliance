@@ -154,8 +154,8 @@ export function ChatWidget({
       setMessages((prev) => [...prev, assistantMessage]);
       onMessage?.(assistantMessage);
     } catch (error) {
-      logger.error('Chat error:', error, { file: 'ChatWidget.tsx' });
-      
+      logger.error('Chat error:', error instanceof Error ? error : new Error(String(error)), { file: 'ChatWidget.tsx' });
+
       const errorMessage: Message = {
         id: `msg_${Date.now()}_error`,
         role: 'assistant',

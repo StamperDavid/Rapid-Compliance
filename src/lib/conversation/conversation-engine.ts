@@ -520,7 +520,7 @@ function parseAIAnalysis(aiResponse: string): AIAnalysisResponse {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to parse AI analysis', { error: errorMessage });
+    logger.error('Failed to parse AI analysis', error instanceof Error ? error : new Error(String(error)));
 
     // Return minimal fallback
     return {
@@ -646,7 +646,7 @@ function calculateTalkRatio(
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Talk ratio calculation failed', { error: errorMessage });
+    logger.error('Talk ratio calculation failed', error instanceof Error ? error : new Error(String(error)));
 
     // Return default/fallback
     return {
@@ -987,7 +987,7 @@ async function generateCoachingInsights(
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Coaching insights generation failed', { error: errorMessage });
+    logger.error('Coaching insights generation failed', error instanceof Error ? error : new Error(String(error)));
     return [];
   }
 }
@@ -1083,7 +1083,7 @@ async function generateFollowUpActions(
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Follow-up actions generation failed', { error: errorMessage });
+    logger.error('Follow-up actions generation failed', error instanceof Error ? error : new Error(String(error)));
     return [];
   }
 }

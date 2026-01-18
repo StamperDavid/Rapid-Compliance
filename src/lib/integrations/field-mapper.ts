@@ -8,6 +8,7 @@ import { FieldResolver } from '@/lib/schema/field-resolver';
 import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { executeCustomTransform } from './custom-transforms';
 import type { QueryConstraint } from 'firebase/firestore';
+import type { Schema } from '@/types/schema';
 
 /**
  * Integration Field Mapping
@@ -342,15 +343,15 @@ export class FieldMappingManager {
   static async mapLocalToExternal(
     localRecord: Record<string, unknown>,
     mapping: IntegrationFieldMapping,
-    schema: Record<string, unknown>
+    schema: Schema
   ): Promise<Record<string, any>> {
     const externalRecord: Record<string, unknown> = {};
-    
+
     for (const rule of mapping.mappings) {
       if (rule.readonly && mapping.settings.syncDirection === 'outbound') {
         continue; // Skip readonly fields for outbound sync
       }
-      
+
       // Get local value using field resolver
       const value = FieldResolver.getFieldValue(localRecord, rule.localField, schema);
       
@@ -395,30 +396,30 @@ export class FieldMappingManager {
   static async mapExternalToLocal(
     externalRecord: Record<string, unknown>,
     mapping: IntegrationFieldMapping,
-    schema: Record<string, unknown>
+    schema: Schema
   ): Promise<Record<string, any>> {
     const localRecord: Record<string, unknown> = {};
-    
+
     for (const rule of mapping.mappings) {
       if (rule.readonly && mapping.settings.syncDirection === 'inbound') {
         continue; // Skip readonly fields for inbound sync
       }
-      
+
       const value = externalRecord[rule.externalField];
-      
+
       if (value === undefined || value === null) {
         continue;
       }
-      
+
       // Apply transformation
-      let transformedValue = value;
+      let transformedValue: unknown = value;
       if (rule.transform && this.shouldApplyTransform(rule.transform, 'inbound')) {
         transformedValue = await this.applyTransform(value, rule.transform);
       }
-      
+
       // Resolve local field (in case it was renamed)
       const resolvedField = await FieldResolver.resolveField(schema, rule.localField);
-      
+
       if (!resolvedField) {
         logger.warn('[Field Mapper] Local field not found', {
           file: 'field-mapper.ts',
@@ -426,7 +427,7 @@ export class FieldMappingManager {
         });
         continue;
       }
-      
+
       localRecord[resolvedField.fieldKey] = transformedValue;
     }
     

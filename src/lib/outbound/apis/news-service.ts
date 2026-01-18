@@ -36,7 +36,7 @@ export async function getCompanyNews(
       return await getNewsFromGoogleNews(companyName, maxResults);
     }
   } catch (error) {
-    logger.error('[News] Error fetching news:', error, { file: 'news-service.ts' });
+    logger.error('[News] Error fetching news:', error instanceof Error ? error : new Error(String(error)), { file: 'news-service.ts' });
     return [];
   }
 }
@@ -99,7 +99,7 @@ async function getNewsFromNewsAPI(
       author: article.author,
     }));
   } catch (error) {
-    logger.error('[NewsAPI] Error:', error, { file: 'news-service.ts' });
+    logger.error('[NewsAPI] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'news-service.ts' });
     return [];
   }
 }
@@ -147,10 +147,10 @@ async function getNewsFromGoogleNews(
         });
       }
     }
-    
+
     return articles;
   } catch (error) {
-    logger.error('[Google News] Error:', error, { file: 'news-service.ts' });
+    logger.error('[Google News] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'news-service.ts' });
     return [];
   }
 }
@@ -192,7 +192,7 @@ async function getNewsApiKey(organizationId: string): Promise<string | null> {
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.newsApiKey ?? null;
   } catch (error) {
-    logger.error('[News] Error getting API key:', error, { file: 'news-service.ts' });
+    logger.error('[News] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'news-service.ts' });
     return null;
   }
 }

@@ -232,9 +232,18 @@ async function getOAuthConfig(
   const baseUrlEnv = process.env.NEXT_PUBLIC_APP_URL;
   const baseUrl = (baseUrlEnv !== '' && baseUrlEnv != null) ? baseUrlEnv : 'https://app.example.com';
 
+  // Type guard to ensure apiKeys is a Record with integrations property
+  const integrations = typeof apiKeys === 'object' && apiKeys !== null && 'integrations' in apiKeys
+    ? (apiKeys as Record<string, any>).integrations
+    : undefined;
+
+  if (!integrations || typeof integrations !== 'object') {
+    throw new Error('Integration API keys not properly configured');
+  }
+
   switch (provider) {
     case 'google': {
-      const google = (apiKeys).integrations?.googleWorkspace;
+      const google = integrations?.googleWorkspace;
       if (!google?.clientId || !google?.clientSecret) {
         throw new Error('Google OAuth credentials not configured');
       }
@@ -252,9 +261,9 @@ async function getOAuthConfig(
         tokenUrl: 'https://oauth2.googleapis.com/token',
       };
     }
-    
+
     case 'microsoft': {
-      const microsoft = (apiKeys).integrations?.microsoft365;
+      const microsoft = integrations?.microsoft365;
       if (!microsoft?.clientId || !microsoft?.clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
       }
@@ -272,9 +281,9 @@ async function getOAuthConfig(
         tokenUrl: `https://login.microsoftonline.com/${(microsoft.tenantId !== '' && microsoft.tenantId != null) ? microsoft.tenantId : 'common'}/oauth2/v2.0/token`,
       };
     }
-    
+
     case 'slack': {
-      const slack = (apiKeys).integrations?.slack;
+      const slack = integrations?.slack;
       if (!slack?.clientId || !slack?.clientSecret) {
         throw new Error('Slack OAuth credentials not configured');
       }
@@ -293,9 +302,9 @@ async function getOAuthConfig(
         tokenUrl: 'https://slack.com/api/oauth.v2.access',
       };
     }
-    
+
     case 'quickbooks': {
-      const quickbooks = (apiKeys).integrations?.quickbooks;
+      const quickbooks = integrations?.quickbooks;
       if (!quickbooks?.clientId || !quickbooks?.clientSecret) {
         throw new Error('QuickBooks OAuth credentials not configured');
       }
@@ -314,9 +323,9 @@ async function getOAuthConfig(
         tokenUrl: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
       };
     }
-    
+
     case 'xero': {
-      const xero = (apiKeys).integrations?.xero;
+      const xero = integrations?.xero;
       if (!xero?.clientId || !xero?.clientSecret) {
         throw new Error('Xero OAuth credentials not configured');
       }

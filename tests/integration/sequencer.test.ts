@@ -255,7 +255,12 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
         await db.collection('sequenceEnrollments').doc(enrollmentId).get()
       ).data() as SequenceEnrollment;
 
-      expect(enrollment.metadata?.conditions?.email_opened).toBeDefined();
+      const metadata = enrollment.metadata as {
+        conditions?: {
+          email_opened?: unknown;
+        };
+      };
+      expect(metadata?.conditions?.email_opened).toBeDefined();
     });
 
     afterAll(async () => {

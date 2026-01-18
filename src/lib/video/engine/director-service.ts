@@ -220,10 +220,11 @@ export class DirectorService {
         suggestions,
       };
     } catch (error) {
-      logger.error('Director: Storyboard generation failed', error, {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Director: Storyboard generation failed', err, {
         organizationId: request.organizationId,
       });
-      throw error;
+      throw err;
     }
   }
 
@@ -448,12 +449,12 @@ export class DirectorService {
     // Add outro scene
     const lastScene = scenes[scenes.length - 1];
     const endTime = lastScene.startTime + lastScene.duration;
-    if (endTime < maxDuration * 1000 - 2000) {
+    if (endTime < _maxDuration * 1000 - 2000) {
       scenes.push({
         id: 'scene-outro',
         index: scenes.length,
         startTime: endTime,
-        duration: Math.min(3000, maxDuration * 1000 - endTime),
+        duration: Math.min(3000, _maxDuration * 1000 - endTime),
         segments: [],
         shotsNeeded: 1,
       });

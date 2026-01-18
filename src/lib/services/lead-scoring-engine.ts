@@ -1038,11 +1038,14 @@ async function getDiscoveryData(
   // Discover company
   if (leadData.company || leadData.companyDomain) {
     try {
-      const domain =leadData.companyDomain ?? leadData.company;
-      const result = await discoverCompany(domain, organizationId);
-      company = result.company;
+      const domain = leadData.companyDomain ?? leadData.company;
+      if (domain) {
+        const result = await discoverCompany(domain, organizationId);
+        company = result.company;
+      }
     } catch (error) {
-      logger.warn('Failed to discover company for lead', { leadId, error });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('Failed to discover company for lead', { leadId, error: errorMessage });
     }
   }
 
@@ -1052,7 +1055,8 @@ async function getDiscoveryData(
       const result = await discoverPerson(leadData.email, organizationId);
       person = result.person;
     } catch (error) {
-      logger.warn('Failed to discover person for lead', { leadId, error });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn('Failed to discover person for lead', { leadId, error: errorMessage });
     }
   }
 
@@ -1061,9 +1065,9 @@ async function getDiscoveryData(
 
 interface LeadData {
   id: string;
-  company?: string;
-  companyDomain?: string;
-  email?: string;
+  company?: string | null;
+  companyDomain?: string | null;
+  email?: string | null;
   [key: string]: unknown;
 }
 
@@ -1092,7 +1096,14 @@ async function getLeadData(leadId: string, organizationId: string): Promise<Lead
       
       const leadDoc = await leadRef.get();
       if (leadDoc.exists) {
-        return { id: leadDoc.id, ...leadDoc.data() };
+        const data = leadDoc.data();
+        return {
+          id: leadDoc.id,
+          company: typeof data?.company === 'string' ? data.company : null,
+          companyDomain: typeof data?.companyDomain === 'string' ? data.companyDomain : null,
+          email: typeof data?.email === 'string' ? data.email : null,
+          ...data,
+        };
       }
 
       // Also check contacts
@@ -1103,7 +1114,14 @@ async function getLeadData(leadId: string, organizationId: string): Promise<Lead
       
       const contactDoc = await contactRef.get();
       if (contactDoc.exists) {
-        return { id: contactDoc.id, ...contactDoc.data() };
+        const data = contactDoc.data();
+        return {
+          id: contactDoc.id,
+          company: typeof data?.company === 'string' ? data.company : null,
+          companyDomain: typeof data?.companyDomain === 'string' ? data.companyDomain : null,
+          email: typeof data?.email === 'string' ? data.email : null,
+          ...data,
+        };
       }
     }
 

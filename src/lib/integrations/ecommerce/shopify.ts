@@ -93,7 +93,7 @@ export async function executeShopifyFunction(
         {
           productId: parameters.productId,
           quantity: parameters.quantity,
-          variantId: parameters.variantId,
+          variantId: typeof parameters.variantId === 'string' ? parameters.variantId : undefined,
         },
         shopDomain,
         accessToken

@@ -92,7 +92,8 @@ event.oldFieldKey ?? event.oldFieldName ?? '',
       });
     }
   } catch (error) {
-    logger.error('[E-Commerce Adapter] Failed to adapt mappings', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[E-Commerce Adapter] Failed to adapt mappings', err, {
       file: 'mapping-adapter.ts',
       eventId: event.id,
     });
@@ -127,10 +128,11 @@ function handleFieldRename(
   ];
   
   for (const field of mappingFields) {
-    if (typeof mappings[field] === 'string' && mappings[field] === oldFieldKey) {
-      (mappings as Record<string, string>)[field] = newFieldKey;
+    const currentValue = mappings[field];
+    if (typeof currentValue === 'string' && currentValue === oldFieldKey) {
+      (mappings as unknown as Record<string, string>)[field] = newFieldKey;
       updated = true;
-      
+
       logger.info('[E-Commerce Adapter] Updated mapping', {
         file: 'mapping-adapter.ts',
         mappingField: field,
@@ -173,7 +175,7 @@ async function handleFieldDeletion(
   );
   
   if (!schemaData) {
-    logger.error('[E-Commerce Adapter] Schema not found', {
+    logger.error('[E-Commerce Adapter] Schema not found', new Error('Schema not found'), {
       file: 'mapping-adapter.ts',
       schemaId,
     });
@@ -190,7 +192,7 @@ async function handleFieldDeletion(
     images: ['image', 'photo', 'pictures', 'gallery'],
   };
   
-  const mappingsRecord = mappings as Record<string, string>;
+  const mappingsRecord = mappings as unknown as Record<string, string>;
   for (const [mappingKey, alternatives] of Object.entries(criticalMappings)) {
     const currentMapping = mappingsRecord[mappingKey];
 
@@ -366,9 +368,10 @@ export async function autoConfigureEcommerceMappings(
         });
       }
     }
-    
+
   } catch (error) {
-    logger.error('[E-Commerce Adapter] Failed to auto-configure mappings', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[E-Commerce Adapter] Failed to auto-configure mappings', err, {
       file: 'mapping-adapter.ts',
       schemaId,
     });
@@ -384,17 +387,17 @@ export function getEcommerceFieldValue(
   product: Record<string, unknown>,
   mappingKey: keyof ProductFieldMappings,
   config: EcommerceConfig,
-  schema?: unknown
+  schema?: Schema
 ): unknown {
   const fieldKey = config.productMappings[mappingKey];
-  
+
   if (!fieldKey) {
     return undefined;
   }
-  
+
   // Handle both string and object field mappings
   const actualFieldKey = typeof fieldKey === 'string' ? fieldKey : Object.keys(fieldKey)[0];
-  
+
   // Use field resolver for flexible value retrieval
   return FieldResolver.getFieldValue(product, actualFieldKey, schema);
 }

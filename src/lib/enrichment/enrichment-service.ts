@@ -237,8 +237,9 @@ export async function enrichCompany(
                 contentHash: scrape.contentHash,
                 size: scrapedContent.rawHtml.length,
               });
-            } catch (saveError) {
-              logger.error('Failed to save temporary scrape, continuing with enrichment', saveError, {
+            } catch (saveError: unknown) {
+              const tempScrapeError = saveError instanceof Error ? saveError : new Error(String(saveError));
+              logger.error('Failed to save temporary scrape, continuing with enrichment', tempScrapeError, {
                 domain,
               });
             }
@@ -279,8 +280,9 @@ export async function enrichCompany(
             industryId: request.industryTemplateId,
           });
         }
-      } catch (error) {
-        logger.error('Distillation failed, continuing with standard extraction', error, {
+      } catch (error: unknown) {
+        const distillError = error instanceof Error ? error : new Error(String(error));
+        logger.error('Distillation failed, continuing with standard extraction', distillError, {
           industryId: request.industryTemplateId,
           domain,
         });
@@ -681,8 +683,9 @@ async function logEnrichmentCost(organizationId: string, log: EnrichmentCostLog)
       log,
       false
     );
-  } catch (error) {
-    logger.error('[Enrichment] Error logging cost:', error, { file: 'enrichment-service.ts' });
+  } catch (error: unknown) {
+    const logError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Enrichment] Error logging cost:', logError, { file: 'enrichment-service.ts' });
   }
 }
 
@@ -735,8 +738,9 @@ export async function getEnrichmentAnalytics(
       averageDuration,
       cacheHitRate,
     };
-  } catch (error) {
-    logger.error('[Enrichment] Error getting analytics:', error, { file: 'enrichment-service.ts' });
+  } catch (error: unknown) {
+    const analyticsError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Enrichment] Error getting analytics:', analyticsError, { file: 'enrichment-service.ts' });
     return {
       totalEnrichments: 0,
       successfulEnrichments: 0,
@@ -835,8 +839,9 @@ export async function getStorageOptimizationAnalytics(
       estimatedStorageCostSavings,
       duplicateRate,
     };
-  } catch (error) {
-    logger.error('[Enrichment] Error getting storage analytics:', error, { file: 'enrichment-service.ts' });
+  } catch (error: unknown) {
+    const storageAnalyticsError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Enrichment] Error getting storage analytics:', storageAnalyticsError, { file: 'enrichment-service.ts' });
     return {
       totalScrapes: 0,
       scrapesWithDistillation: 0,

@@ -251,8 +251,8 @@ async function handleSpecificSignalType(
 
     case 'deal.stage.changed': {
       // Stage changed - recalculate and notify
-      const oldStage = signal.metadata?.oldStage;
-      const newStage = signal.metadata?.newStage;
+      const oldStage = signal.metadata?.oldStage as string | undefined;
+      const newStage = signal.metadata?.newStage as string | undefined;
 
       logger.info('Deal stage changed', {
         dealId,

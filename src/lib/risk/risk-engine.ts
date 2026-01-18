@@ -884,7 +884,7 @@ function parseAIInterventions(
     return interventions.sort((a, b) => b.roiScore - a.roiScore);
     
   } catch (error) {
-    logger.warn('Failed to parse AI interventions, using fallback', { error });
+    logger.warn('Failed to parse AI interventions, using fallback', { error: error instanceof Error ? error.message : String(error) });
     return generateFallbackInterventions(riskFactors);
   }
 }
@@ -977,7 +977,7 @@ async function findHistoricalPattern(
     return null;
     
   } catch (error) {
-    logger.warn('Historical pattern matching failed', { error, dealId: deal.id });
+    logger.warn('Historical pattern matching failed', { error: error instanceof Error ? error.message : String(error), dealId: deal.id });
     return null;
   }
 }
@@ -1007,7 +1007,7 @@ async function analyzeRiskTrend(
     };
     
   } catch (error) {
-    logger.warn('Trend analysis failed', { error, dealId });
+    logger.warn('Trend analysis failed', { error: error instanceof Error ? error.message : String(error), dealId });
     return {
       direction: 'stable',
       changeRate: 0,
@@ -1131,7 +1131,7 @@ async function emitRiskSignal(
     });
     
   } catch (error) {
-    logger.error('Failed to emit risk signal', error, {
+    logger.error('Failed to emit risk signal', error instanceof Error ? error : new Error(String(error)), {
       dealId: prediction.dealId,
     });
   }

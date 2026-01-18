@@ -175,8 +175,8 @@ function createBehaviorChange(
   const configKey = configMapping[improvement.area];
   if (!configKey) {return null;}
 
-  const behaviorConfig = goldenMaster.behaviorConfig as BehaviorConfigValue;
-  const currentValue = behaviorConfig[configKey];
+  const behaviorConfig = goldenMaster.behaviorConfig as unknown as Record<string, unknown>;
+  const currentValue = typeof behaviorConfig[configKey] === 'number' ? behaviorConfig[configKey] : undefined;
 
   // Determine proposed value based on suggestion
   let proposedValue: number | undefined = currentValue;
@@ -324,8 +324,10 @@ function applyChange(goldenMaster: GoldenMaster, change: ProposedChange): void {
     goldenMaster.systemPrompt = change.proposedValue as string;
   } else if (change.type === 'behavior_config') {
     const key = pathParts[1];
-    const behaviorConfig = goldenMaster.behaviorConfig as BehaviorConfigValue;
-    behaviorConfig[key] = change.proposedValue as number;
+    if (key) {
+      const behaviorConfig = goldenMaster.behaviorConfig as unknown as Record<string, unknown>;
+      behaviorConfig[key] = change.proposedValue as number;
+    }
   }
 }
 
@@ -343,7 +345,7 @@ async function getGoldenMaster(
     );
     return gm as GoldenMaster;
   } catch (error) {
-    logger.error('[GM Updater] Error fetching Golden Master:', error, { file: 'golden-master-updater.ts' });
+    logger.error('[GM Updater] Error fetching Golden Master:', error instanceof Error ? error : new Error(String(error)), { file: 'golden-master-updater.ts' });
     return null;
   }
 }

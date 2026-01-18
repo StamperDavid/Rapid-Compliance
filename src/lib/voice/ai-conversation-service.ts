@@ -240,7 +240,7 @@ class AIConversationService {
     const config = this.configs.get(callId);
 
     if (!context || !config) {
-      logger.error('[AIConversation] No active conversation found', { callId, file: 'ai-conversation-service.ts' });
+      logger.error('[AIConversation] No active conversation found', new Error('No active conversation found'), { callId, file: 'ai-conversation-service.ts' });
       return this.getFallbackResponse('transfer');
     }
 

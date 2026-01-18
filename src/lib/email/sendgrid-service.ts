@@ -299,17 +299,20 @@ interface RawSendGridEvent {
 
 export function parseSendGridWebhook(body: RawSendGridEvent[]): SendGridWebhookEvent[] {
   // SendGrid sends an array of events
-  return body.map(event => ({
-    email: event.email,
-    timestamp: event.timestamp,
-    event: event.event as SendGridWebhookEvent['event'],
-    sg_event_id: event.sg_event_id,
-    sg_message_id: event.sg_message_id,
-    url: event.url,
-    reason: event.reason,
-    type: event.type,
-    status: event.status,
-    ...event,
-  }));
+  return body.map(event => {
+    const { email, timestamp, sg_event_id, sg_message_id, url, reason, type, status, ...rest } = event;
+    return {
+      ...rest,
+      email,
+      timestamp,
+      event: event.event as SendGridWebhookEvent['event'],
+      sg_event_id,
+      sg_message_id,
+      url,
+      reason,
+      type,
+      status,
+    };
+  });
 }
 

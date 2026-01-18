@@ -38,7 +38,8 @@ export async function requireFeature(
 
     return null; // Feature is available, continue
   } catch (error) {
-    logger.error('[Subscription Middleware] Error checking feature access:', error, { file: 'middleware.ts' });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Subscription Middleware] Error checking feature access:', err, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: 'Failed to verify feature access' },
       { status: 500 }
@@ -81,7 +82,8 @@ export async function requireLimit(
 
     return null; // Under limit, continue
   } catch (error) {
-    logger.error('[Subscription Middleware] Error checking usage limit:', error, { file: 'middleware.ts' });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Subscription Middleware] Error checking usage limit:', err, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: 'Failed to verify usage limit' },
       { status: 500 }
@@ -122,7 +124,8 @@ export async function incrementFeatureUsage(
   try {
     await FeatureGate.incrementUsage(orgId, feature, amount);
   } catch (error) {
-    logger.error('[Subscription Middleware] Error incrementing usage:', error, { file: 'middleware.ts' });
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Subscription Middleware] Error incrementing usage:', err, { file: 'middleware.ts' });
     // Don't throw - this is a non-critical operation
   }
 }
@@ -214,8 +217,9 @@ export async function withFeatureGate<T>(
       ...result,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error && error.message ? error.message : 'Operation failed';
-    logger.error('[Feature Gate] Error in handler:', error, { file: 'middleware.ts' });
+    const err = error instanceof Error ? error : new Error(String(error));
+    const errorMessage = err.message;
+    logger.error('[Feature Gate] Error in handler:', err, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }

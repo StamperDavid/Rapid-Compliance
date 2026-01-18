@@ -86,12 +86,12 @@ export async function getDeals(
       organizationId,
       workspaceId,
       count: result.data.length,
-      filters,
+      filters: filters ? JSON.stringify(filters) : undefined,
     });
 
     return result;
   } catch (error: any) {
-    logger.error('Failed to get deals', error, { organizationId, filters });
+    logger.error('Failed to get deals', error, { organizationId, filters: filters ? JSON.stringify(filters) : undefined });
     throw new Error(`Failed to retrieve deals: ${error.message}`);
   }
 }
@@ -171,7 +171,7 @@ export async function createDeal(
 
     return deal;
   } catch (error: any) {
-    logger.error('Failed to create deal', error, { organizationId, data });
+    logger.error('Failed to create deal', error, { organizationId, dealName: data.name, value: data.value });
     throw new Error(`Failed to create deal: ${error.message}`);
   }
 }
@@ -248,9 +248,9 @@ export async function moveDealToStage(
     // Fire CRM event
     try {
       const { fireDealStageChanged } = await import('./event-triggers');
-      await fireDealStageChanged(organizationId, workspaceId, dealId, oldStage, newStage, deal);
+      await fireDealStageChanged(organizationId, workspaceId, dealId, oldStage, newStage, deal as unknown as Record<string, unknown>);
     } catch (triggerError) {
-      logger.warn('Failed to fire deal stage changed event', triggerError as Error);
+      logger.warn('Failed to fire deal stage changed event', { error: triggerError instanceof Error ? triggerError.message : String(triggerError) });
     }
 
     logger.info('Deal moved to new stage', {
@@ -410,7 +410,7 @@ async function emitDealSignal(params: {
     });
   } catch (error) {
     // Don't fail deal operations if signal emission fails
-    logger.error('Failed to emit deal signal', error, {
+    logger.error('Failed to emit deal signal', error instanceof Error ? error : new Error(String(error)), {
       type: params.type,
       dealId: params.deal.id,
     });

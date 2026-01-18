@@ -163,13 +163,8 @@ export async function getFreeBusy(
 
   const busyTimes = response.data.calendars?.[calendarId]?.busy ?? [];
 
-  interface BusySlot {
-    start?: string;
-    end?: string;
-  }
-
   return {
-    busy: busyTimes.map((slot: BusySlot) => ({
+    busy: busyTimes.map((slot) => ({
       start: slot.start ?? '',
       end: slot.end ?? '',
     })),

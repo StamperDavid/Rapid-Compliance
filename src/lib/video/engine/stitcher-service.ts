@@ -298,9 +298,10 @@ export class StitcherService {
 
       return job;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const err = error instanceof Error ? error : new Error(String(error));
+      const errorMessage = err.message;
 
-      logger.error('Stitcher: Post-production failed', error, {
+      logger.error('Stitcher: Post-production failed', err, {
         jobId: job.id,
         currentStep: job.currentStep,
       });
@@ -367,7 +368,8 @@ export class StitcherService {
           segment.startTime + response.durationSeconds * 1000
         );
       } catch (error) {
-        logger.error('Stitcher: Failed to generate segment', error, {
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Stitcher: Failed to generate segment', err, {
           segmentId: segment.id,
         });
         // Continue with other segments
@@ -742,7 +744,18 @@ export class StitcherService {
         : undefined,
     };
 
-    logger.debug('Stitcher: Color grading params', gradingParams);
+    logger.debug('Stitcher: Color grading params', {
+      contrast: gradingParams.contrast,
+      saturation: gradingParams.saturation,
+      temperature: gradingParams.temperature,
+      tint: gradingParams.tint,
+      exposure: gradingParams.exposure,
+      highlights: gradingParams.highlights,
+      shadows: gradingParams.shadows,
+      vibrance: gradingParams.vibrance,
+      hasFilmGrain: !!gradingParams.filmGrain,
+      hasVignette: !!gradingParams.vignette,
+    });
 
     // In production, this would apply the grading using FFmpeg filters
     return `video://graded/${uuidv4()}.mp4`;
@@ -768,7 +781,13 @@ export class StitcherService {
       watermark: brandOverlay.watermarkEnabled,
     };
 
-    logger.debug('Stitcher: Overlay params', overlayParams);
+    logger.debug('Stitcher: Overlay params', {
+      hasLogoUrl: !!overlayParams.logoUrl,
+      position: overlayParams.position,
+      opacity: overlayParams.opacity,
+      padding: overlayParams.padding,
+      watermark: overlayParams.watermark,
+    });
 
     // In production, this would composite the logo onto the video
     return `video://overlaid/${uuidv4()}.mp4`;
@@ -861,7 +880,16 @@ export class StitcherService {
       },
     };
 
-    logger.debug('Stitcher: Render params', renderParams);
+    logger.debug('Stitcher: Render params', {
+      hasVideoInput: !!renderParams.videoInput,
+      hasAudioInput: !!renderParams.audioInput,
+      aspectRatio: renderParams.outputSettings.aspectRatio,
+      resolution: renderParams.outputSettings.resolution,
+      frameRate: renderParams.outputSettings.frameRate,
+      codec: renderParams.outputSettings.codec,
+      audioCodec: renderParams.outputSettings.audioCodec,
+      audioSampleRate: renderParams.outputSettings.audioSampleRate,
+    });
 
     // In production, this would combine video and audio using FFmpeg
     return `video://final/${uuidv4()}.mp4`;

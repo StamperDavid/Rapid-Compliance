@@ -238,7 +238,7 @@ export function generateRevenueForecast(
         forecast: forecast.forecast
       });
     } catch (signalError) {
-      logger.warn('Failed to emit forecast.updated signal', { error: signalError });
+      logger.warn('Failed to emit forecast.updated signal', { error: signalError instanceof Error ? signalError.message : String(signalError) });
     }
     
     const duration = Date.now() - startTime;
@@ -557,7 +557,7 @@ export function compareForecastPeriods(
       });
       forecasts.set(period, forecast);
     } catch (error) {
-      logger.warn('Failed to generate forecast for period', { period, error });
+      logger.warn('Failed to generate forecast for period', { period, error: error instanceof Error ? error.message : String(error) });
     }
   }
   

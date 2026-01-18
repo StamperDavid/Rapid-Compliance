@@ -32,8 +32,9 @@ export async function searchCompany(query: string): Promise<CompanySearchResult[
       source: 'domain-guess',
     }];
   } catch (error: unknown) {
-    logger.error('[Search Service] Error', error, { file: 'search-service.ts' });
-    
+    const searchError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Search Service] Error', searchError, { file: 'search-service.ts' });
+
     // Last resort: guess the domain
     const likelyDomain = guessDomainFromCompanyName(query);
     return [{
@@ -113,7 +114,8 @@ async function searchWithSerper(query: string, apiKey: string): Promise<CompanyS
       source: 'serper' as const,
     }));
   } catch (error: unknown) {
-    logger.error('[Serper] Error', error, { file: 'search-service.ts' });
+    const serperError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Serper] Error', serperError, { file: 'search-service.ts' });
     return [];
   }
 }
@@ -157,7 +159,8 @@ async function searchWithGoogleCustomSearch(
       source: 'google-custom-search' as const,
     }));
   } catch (error: unknown) {
-    logger.error('[Google Custom Search] Error', error, { file: 'search-service.ts' });
+    const googleSearchError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Google Custom Search] Error', googleSearchError, { file: 'search-service.ts' });
     return [];
   }
 }
@@ -207,10 +210,11 @@ async function searchGoogleDirect(query: string): Promise<CompanySearchResult[]>
       
       if (results.length >= 5) {break;}
     }
-    
+
     return results;
   } catch (error: unknown) {
-    logger.error('[Google Direct] Error', error, { file: 'search-service.ts' });
+    const googleDirectError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Google Direct] Error', googleDirectError, { file: 'search-service.ts' });
     return [];
   }
 }
@@ -265,7 +269,8 @@ export async function searchCompanyNews(companyName: string, limit: number = 5):
       summary: article.description,
     }));
   } catch (error: unknown) {
-    logger.error('[Search Service] News search error', error, { file: 'search-service.ts' });
+    const newsError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Search Service] News search error', newsError, { file: 'search-service.ts' });
     return [];
   }
 }

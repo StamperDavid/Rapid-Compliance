@@ -153,7 +153,7 @@ export async function calculateDealHealth(
     return healthScore;
 
   } catch (error: unknown) {
-    logger.error('Failed to calculate deal health', error, { organizationId, dealId });
+    logger.error('Failed to calculate deal health', error instanceof Error ? error : new Error(String(error)), { organizationId, dealId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Deal health calculation failed: ${errorMessage}`);
   }
@@ -388,7 +388,7 @@ export async function getPipelineHealth(
       const health = await calculateDealHealth(organizationId, workspaceId, dealId);
       healthScores.set(dealId, health);
     } catch (error) {
-      logger.warn('Failed to calculate health for deal', { dealId, error });
+      logger.warn('Failed to calculate health for deal', { dealId, error: error instanceof Error ? error.message : String(error) });
     }
   }
 

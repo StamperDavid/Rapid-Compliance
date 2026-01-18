@@ -70,12 +70,13 @@ export async function syncEmails(config: EmailSyncConfig): Promise<SyncResult> {
     } else {
       throw new Error(`Unsupported email provider: ${config.provider}`);
     }
-  } catch (error: any) {
-    logger.error('Email sync failed', error, { 
-      route: '/email/sync', 
-      provider: config.provider 
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Email sync failed', err, {
+      route: '/email/sync',
+      provider: config.provider
     });
-    
+
     return {
       success: false,
       synced: 0,
@@ -163,7 +164,8 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
         );
         synced++;
       } catch (error) {
-        logger.error('Failed to mark email as synced', error, { emailId: email.id });
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Failed to mark email as synced', err, { emailId: email.id });
         errors++;
       }
     }
@@ -174,8 +176,9 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
       errors,
       lastSyncAt: new Date(),
     };
-  } catch (error: any) {
-    logger.error('Outbound sync failed', error, { route: '/email/sync/outbound' });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Outbound sync failed', err, { route: '/email/sync/outbound' });
   return {
       success: false,
     synced: 0,
@@ -234,12 +237,13 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
       // await setupOutlookWebhook(config.accessToken, config.organizationId);
     }
 
-  } catch (error: any) {
-    logger.error('Failed to start email sync', error, { 
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to start email sync', err, {
       route: '/email/sync/start',
-      provider: config.provider 
+      provider: config.provider
     });
-    throw error;
+    throw err;
   }
 }
 
@@ -286,12 +290,13 @@ export async function stopEmailSync(organizationId: string, provider: 'gmail' | 
       }
     );
 
-  } catch (error: any) {
-    logger.error('Failed to stop email sync', error, { 
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to stop email sync', err, {
       route: '/email/sync/stop',
-      provider 
+      provider
     });
-    throw error;
+    throw err;
   }
 }
 
@@ -336,13 +341,14 @@ export async function getSyncStatus(organizationId: string, provider: 'gmail' | 
       syncedCount: lastSyncResult.messagesSynced,
       errorCount: lastSyncResult.errors,
     };
-  } catch (error: any) {
-    logger.error('Failed to get sync status', error, { organizationId, provider });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to get sync status', err, { organizationId, provider });
     return {
       isActive: false,
       syncedCount: 0,
       errorCount: 0,
-      lastError: error.message,
+      lastError: err.message,
     };
   }
 }

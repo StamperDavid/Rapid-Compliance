@@ -245,7 +245,8 @@ export class CompetitiveMonitor {
       try {
         await this.checkCompetitor(config);
       } catch (error) {
-        logger.error('Failed to check competitor', error, {
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Failed to check competitor', err, {
           organizationId: this.organizationId,
           competitorId: config.competitorId,
           domain: config.domain,
@@ -294,7 +295,8 @@ export class CompetitiveMonitor {
       // - Emit alerts via Signal Bus
 
     } catch (error) {
-      logger.error('Competitor check failed', error, {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Competitor check failed', err, {
         organizationId: this.organizationId,
         competitorId: config.competitorId,
         domain: config.domain,
@@ -658,7 +660,8 @@ export class CompetitiveMonitor {
         severity: change.severity,
       });
     } catch (error) {
-      logger.error('Failed to send competitor change alert', error, {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to send competitor change alert', err, {
         organizationId: change.organizationId,
         competitorId: change.competitorId,
       });

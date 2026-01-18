@@ -119,7 +119,7 @@ if (typeof window === 'undefined') {
       file: 'admin.ts' 
     });
   } catch (error) {
-    logger.error('[Firebase Admin] ❌ Initialization failed', error, { file: 'admin.ts' });
+    logger.error('[Firebase Admin] ❌ Initialization failed', error instanceof Error ? error : new Error(String(error)), { file: 'admin.ts' });
   }
 }
 

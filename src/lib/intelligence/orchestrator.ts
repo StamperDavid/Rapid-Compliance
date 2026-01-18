@@ -815,7 +815,9 @@ export class IntelligenceOrchestrator {
   ): Promise<void> {
     return Promise.resolve().then(() => {
       try {
-        logger.info(`[Telemetry] ${event}`, data);
+        logger.info(`[Telemetry] ${event}`, {
+          organizationId: typeof data.organizationId === 'string' ? data.organizationId : undefined,
+        });
         // In production, send to telemetry service
       } catch {
         // Silently ignore telemetry errors - don't affect main flow

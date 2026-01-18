@@ -166,7 +166,7 @@ export class FieldRenameManager {
       });
       
     } catch (error) {
-      logger.error('[Field Rename Manager] Rollback failed', error, {
+      logger.error('[Field Rename Manager] Rollback failed', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-rename-manager.ts',
         fieldId,
         toVersion,
@@ -297,7 +297,7 @@ export class FieldRenameManager {
       );
       
     } catch (error) {
-      logger.error('[Field Rename Manager] Failed to create rollback notification', error, {
+      logger.error('[Field Rename Manager] Failed to create rollback notification', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-rename-manager.ts',
       });
     }

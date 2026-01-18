@@ -73,7 +73,7 @@ export class InMemoryScrapeCache implements ScrapeCache {
       this.cache.delete(url);
       this.removeFromAccessOrder(url);
       this.stats.misses++;
-      logger.debug('Cache expired', { url, expiresAt: entry.expiresAt });
+      logger.debug('Cache expired', { url, expiresAt: entry.expiresAt.toISOString() });
       return null;
     }
 
@@ -127,11 +127,11 @@ export class InMemoryScrapeCache implements ScrapeCache {
     this.cache.set(url, entry);
     this.updateAccessOrder(url);
 
-    logger.debug('Cache set', { 
-      url, 
-      ttlMs, 
-      expiresAt, 
-      cacheSize: this.cache.size 
+    logger.debug('Cache set', {
+      url,
+      ttlMs,
+      expiresAt: expiresAt.toISOString(),
+      cacheSize: this.cache.size
     });
   }
 

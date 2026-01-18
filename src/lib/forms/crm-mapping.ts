@@ -539,9 +539,8 @@ export async function syncSubmissionToCRM(
   } catch (error) {
     result.success = false;
     result.errors.push(String(error));
-    logger.error('CRM sync failed', {
+    logger.error('CRM sync failed', error instanceof Error ? error : new Error(String(error)), {
       submissionId: submission.id,
-      error: String(error),
     });
   }
 

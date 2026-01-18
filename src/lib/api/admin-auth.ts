@@ -191,7 +191,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       },
     };
   } catch (error: unknown) {
-    logger.error('Admin auth error:', error, { file: 'admin-auth.ts' });
+    logger.error('Admin auth error:', error instanceof Error ? error : new Error(String(error)), { file: 'admin-auth.ts' });
     return {
       success: false,
       error: 'Authentication failed',

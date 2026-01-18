@@ -122,8 +122,9 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
       throw error;
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`[Browser Scraper] Error scraping ${url}`, error, { file: 'browser-scraper.ts' });
+    const scraperError = error instanceof Error ? error : new Error(String(error));
+    const errorMessage = scraperError.message;
+    logger.error(`[Browser Scraper] Error scraping ${url}`, scraperError, { file: 'browser-scraper.ts' });
     throw new Error(`Browser scraping failed: ${errorMessage}`);
   }
 }
@@ -174,8 +175,9 @@ export async function scrapeWithRetry(
 
       return await smartScrape(url);
     } catch (error: unknown) {
-      lastError = error as Error;
-      logger.error(`[Scraper] Attempt ${attempt + 1}/${maxRetries} failed`, error, {
+      const retryError = error instanceof Error ? error : new Error(String(error));
+      lastError = retryError;
+      logger.error(`[Scraper] Attempt ${attempt + 1}/${maxRetries} failed`, retryError, {
         attempt: attempt + 1,
         maxRetries,
         file: 'browser-scraper.ts'

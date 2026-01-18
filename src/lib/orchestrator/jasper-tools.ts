@@ -1294,7 +1294,7 @@ export function executeQueryDocs(
 
     return Promise.resolve(results);
   } catch (error) {
-    logger.error('[Jasper Tools] query_docs failed', error);
+    logger.error('[Jasper Tools] query_docs failed', error instanceof Error ? error : new Error(String(error)));
     return Promise.resolve(getHardcodedBlueprintSection(query, section));
   }
 }
@@ -1461,7 +1461,7 @@ export async function executeGetPlatformStats(
 
     return stats;
   } catch (error) {
-    logger.error('[Jasper Tools] get_platform_stats failed', error);
+    logger.error('[Jasper Tools] get_platform_stats failed', error instanceof Error ? error : new Error(String(error)));
     return {
       timestamp: new Date().toISOString(),
       error: 'Failed to retrieve platform stats',
@@ -1527,7 +1527,11 @@ export function executeDelegateToAgent(
     result: `Task queued: ${specialist.name} will execute "${capability.name}". ${specialist.requiresConnection ? `Note: Requires ${specialist.connectionLabel} connection.` : ''}`,
   };
 
-  logger.info('[Jasper Tools] Agent delegation queued', { delegation });
+  logger.info('[Jasper Tools] Agent delegation queued', {
+    agentId: delegation.agentId,
+    action: delegation.action,
+    status: delegation.status,
+  });
 
   return Promise.resolve(delegation);
 }
@@ -1651,7 +1655,7 @@ export async function executeGetSystemState(organizationId?: string): Promise<Sy
       };
     }
   } catch (error) {
-    logger.error('[Jasper Tools] get_system_state failed', error);
+    logger.error('[Jasper Tools] get_system_state failed', error instanceof Error ? error : new Error(String(error)));
   }
 
   return state;

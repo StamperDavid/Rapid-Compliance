@@ -69,7 +69,7 @@ export async function setCached<T extends DocumentData>(
     // Also invalidate list caches for this collection
     await cacheService.deletePattern(`firestore:${collection}:all:*`);
   } catch (error) {
-    logger.error(`Error setting cached document ${docId} in ${collection}:`, error, { file: 'cached-firestore.ts' });
+    logger.error(`Error setting cached document ${docId} in ${collection}:`, error instanceof Error ? error : new Error(String(error)), { file: 'cached-firestore.ts' });
     throw error;
   }
 }

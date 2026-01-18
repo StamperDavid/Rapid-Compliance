@@ -546,7 +546,7 @@ class VoiceAgentHandler {
         true // merge
       );
     } catch (error) {
-      logger.error('[VoiceAgent] Failed to store call context:', error, { file: 'voice-agent-handler.ts' });
+      logger.error('[VoiceAgent] Failed to store call context:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-agent-handler.ts' });
     }
   }
 

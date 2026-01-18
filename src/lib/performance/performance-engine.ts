@@ -51,8 +51,8 @@ import type {
   MetricBreakdown,
   MetricBreakdownRequest,
   MetricDistribution,
-  DEFAULT_PERFORMANCE_CONFIG,
 } from './types';
+import { DEFAULT_PERFORMANCE_CONFIG } from './types';
 import type { ConversationAnalysis, CoachingCategory, ObjectionType, TopicCategory } from '@/lib/conversation/types';
 import {
   createPerformanceAnalyzedEvent,
@@ -101,8 +101,8 @@ export async function generatePerformanceAnalytics(
     
     logger.info('Retrieved conversation analyses', {
       count: analyses.length,
-      startDate,
-      endDate,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
     });
     
     // 3. Calculate individual rep metrics
@@ -202,7 +202,7 @@ export async function generatePerformanceAnalytics(
     return analytics;
     
   } catch (error) {
-    logger.error('Failed to generate performance analytics', { error });
+    logger.error('Failed to generate performance analytics', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -1411,7 +1411,7 @@ async function emitAnalyticsEvents(
       eventsEmitted: 1 + analytics.topPerformers.length + analytics.coachingPriorities.filter(p => p.priority === 'critical' || p.priority === 'high').length,
     });
   } catch (error) {
-    logger.error('Failed to emit analytics events', { error });
+    logger.error('Failed to emit analytics events', error instanceof Error ? error : new Error(String(error)));
     // Don't throw - analytics was successful even if events failed
   }
 }

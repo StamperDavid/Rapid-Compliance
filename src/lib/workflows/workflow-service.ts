@@ -59,13 +59,14 @@ export async function getWorkflows(
     logger.info('Workflows retrieved', {
       organizationId,
       count: result.data.length,
-      filters,
+      filters: JSON.stringify(filters ?? {}),
     });
 
     return result;
   } catch (error: any) {
-    logger.error('Failed to get workflows', error, { organizationId, filters });
-    throw new Error(`Failed to retrieve workflows: ${error.message}`);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to get workflows', err, { organizationId, filters: JSON.stringify(filters ?? {}) });
+    throw new Error(`Failed to retrieve workflows: ${err.message}`);
   }
 }
 
@@ -137,13 +138,14 @@ export async function createWorkflow(
       organizationId,
       workflowId,
       name: workflow.name,
-      triggerType: workflow.trigger?.type,
+      triggerType: workflow.trigger?.type ?? 'unknown',
     });
 
     return workflow;
   } catch (error: any) {
-    logger.error('Failed to create workflow', error, { organizationId, data });
-    throw new Error(`Failed to create workflow: ${error.message}`);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to create workflow', err, { organizationId, workflowName: data.name ?? 'unknown' });
+    throw new Error(`Failed to create workflow: ${err.message}`);
   }
 }
 

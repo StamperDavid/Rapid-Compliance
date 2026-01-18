@@ -55,7 +55,7 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
         setCategories(cats);
       }
     } catch (error) {
-      logger.error('Error loading products:', error, { file: 'FullStorefront.tsx' });
+      logger.error('Error loading products:', error instanceof Error ? error : new Error(String(error)), { file: 'FullStorefront.tsx' });
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,7 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
 
       logger.info('Added to cart!', { file: 'FullStorefront.tsx' });
     } catch (error) {
-      logger.error('Error adding to cart:', error, { file: 'FullStorefront.tsx' });
+      logger.error('Error adding to cart:', error instanceof Error ? error : new Error(String(error)), { file: 'FullStorefront.tsx' });
     }
   };
 

@@ -38,7 +38,8 @@ import type {
 } from './types';
 import type { CoachingAnalyticsEngine } from './coaching-analytics-engine';
 import { createTeamInsightsGeneratedEvent } from './events';
-import type { SignalCoordinator, SalesSignal } from '../orchestration/SignalCoordinator';
+import type { SignalCoordinator } from '../orchestration/SignalCoordinator';
+import type { SalesSignal } from '../orchestration/types';
 import { logger } from '../logger/logger';
 
 // ============================================================================
@@ -181,8 +182,10 @@ export class TeamCoachingEngine {
       );
       // Convert the coaching event to a SalesSignal format
       const signalData: Omit<SalesSignal, 'id' | 'createdAt' | 'processed' | 'processedAt' | 'ttl'> = {
-        type: 'coaching.team.insights.generated',
+        type: 'coaching.insights.generated',
         orgId: teamInsights.teamId,
+        confidence: 0.85,
+        priority: 'Medium',
         metadata: event.data
       };
       await this.signalCoordinator.emitSignal(signalData);

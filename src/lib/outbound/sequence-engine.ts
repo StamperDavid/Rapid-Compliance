@@ -598,7 +598,7 @@ export class SequenceEngine {
         stats
       );
     } catch (error) {
-      logger.error('[Sequence Engine] Error tracking step execution:', error, { file: 'sequence-engine.ts' });
+      logger.error('[Sequence Engine] Error tracking step execution:', error instanceof Error ? error : undefined, { file: 'sequence-engine.ts' });
       // Don't throw - analytics failure shouldn't stop execution
     }
   }
@@ -750,7 +750,7 @@ export class SequenceEngine {
       
       return enrollments.length > 0 ? enrollments[0] : null;
     } catch (error) {
-      logger.error('[SequenceEngine] Error getting enrollment:', error, { file: 'sequence-engine.ts' });
+      logger.error('[SequenceEngine] Error getting enrollment:', error instanceof Error ? error : undefined, { file: 'sequence-engine.ts' });
     return null;
     }
   }
@@ -793,11 +793,12 @@ export class SequenceEngine {
 
     // Increment analytics
     if (updates && sequence.analytics) {
-      const analytics = sequence.analytics as Record<string, number | undefined>;
       Object.keys(updates).forEach((key) => {
         const value = updates[key as keyof typeof updates];
-        if (typeof value === 'number') {
-          analytics[key] = (analytics[key] ?? 0) + value;
+        if (typeof value === 'number' && sequence.analytics) {
+          const analyticsRecord = sequence.analytics as unknown as Record<string, number | undefined>;
+          const currentValue = analyticsRecord[key] ?? 0;
+          analyticsRecord[key] = currentValue + value;
         }
       });
 
@@ -883,31 +884,19 @@ export class SequenceEngine {
       
       // Update the step in the sequence
       targetSequence.steps[targetStepIndex] = updatedStep;
-      
+
       // Save the updated sequence
       const sequencePath = `organizations/${organizationId}/sequences`;
-      await FirestoreService.update(sequencePath, targetSequence.id, {
-        steps: targetSequence.steps,
-        updatedAt: new Date().toISOString(),
-      });
-      
+      await FirestoreService.set(sequencePath, targetSequence.id, targetSequence, false);
+
       logger.info('Step analytics updated', {
         stepId,
         organizationId,
-        updates,
-        newValues: {
-          sent: updatedStep.sent,
-          delivered: updatedStep.delivered,
-          opened: updatedStep.opened,
-          clicked: updatedStep.clicked,
-          replied: updatedStep.replied,
-        },
       });
     } catch (error) {
-      logger.error('Failed to update step analytics', error as Error, {
+      logger.error('Failed to update step analytics', error instanceof Error ? error : new Error(String(error)), {
         stepId,
         organizationId,
-        updates,
       });
       // Don't throw - analytics updates shouldn't break the main flow
     }

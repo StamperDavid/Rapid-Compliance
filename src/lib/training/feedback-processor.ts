@@ -138,13 +138,18 @@ function parseAnalysisResponse(
     const parsed = JSON.parse(jsonMatch[0]) as ParsedAnalysisResponse;
 
     // Add IDs to suggestions
-    const suggestions: ImprovementSuggestion[] = parsed.suggestions.map((s: ParsedSuggestion, index: number) => ({
+    const suggestions: ImprovementSuggestion[] = parsed.suggestions.map((s: ParsedSuggestion, index: number): ImprovementSuggestion => ({
       id: `${session.id}_suggestion_${index}`,
-      type: s.type,
+      type: s.type as 'prompt_update' | 'behavior_change' | 'knowledge_gap' | 'tone_adjustment' | 'process_improvement',
       area: s.area,
       currentBehavior: s.currentBehavior,
       suggestedBehavior: s.suggestedBehavior,
-      implementation: s.implementation,
+      implementation: s.implementation ? {
+        section: s.implementation.section as 'greeting' | 'objectives' | 'tone' | 'behavior' | 'knowledge' | 'escalation' | 'closing' | 'custom',
+        additions: s.implementation.additions,
+        removals: s.implementation.removals,
+        modifications: s.implementation.modifications,
+      } : undefined,
       priority: s.priority,
       estimatedImpact: s.estimatedImpact,
       confidence: parsed.confidence ?? 0.8,
@@ -159,7 +164,7 @@ function parseAnalysisResponse(
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    logger.error('[Feedback Processor] Failed to parse analysis:', error, { file: 'feedback-processor.ts' });
+    logger.error('[Feedback Processor] Failed to parse analysis:', error instanceof Error ? error : new Error(String(error)), { file: 'feedback-processor.ts' });
 
     // Return fallback analysis based on score
     return generateFallbackAnalysis(session);

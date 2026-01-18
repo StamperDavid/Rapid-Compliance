@@ -113,8 +113,9 @@ export async function extractCompanyData(
     });
     
     if (!response.ok) {
-      const error = await response.text();
-      logger.error('[AI Extractor] OpenAI API error:', error, { file: 'ai-extractor.ts' });
+      const errorText = await response.text();
+      const apiError = new Error(`OpenAI API error: ${errorText}`);
+      logger.error('[AI Extractor] OpenAI API error:', apiError, { file: 'ai-extractor.ts' });
       return fallbackExtraction(scrapedContent, companyName);
     }
     
@@ -137,8 +138,9 @@ export async function extractCompanyData(
       contactEmail: extracted.contactEmail,
       contactPhone: extracted.contactPhone,
     };
-  } catch (error: any) {
-    logger.error('[AI Extractor] Error', error, { file: 'ai-extractor.ts' });
+  } catch (error: unknown) {
+    const extractorError = error instanceof Error ? error : new Error(String(error));
+    logger.error('[AI Extractor] Error', extractorError, { file: 'ai-extractor.ts' });
     return fallbackExtraction(scrapedContent, companyName);
   }
 }
