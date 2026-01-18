@@ -17,7 +17,10 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { OpenRouterProvider, type ChatMessage, type ToolCall, type ChatCompletionResponse } from '@/lib/ai/openrouter-provider';
-import { requireRole } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
+
+// Force dynamic rendering - required for Firebase Auth token verification
+export const dynamic = 'force-dynamic';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -230,15 +233,20 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    // Authentication - Require valid Firebase ID token with admin role
-    const authResult = await requireRole(request, ['super_admin', 'admin', 'owner']);
+    // Authentication - Require valid Firebase ID token
+    // Allow all authenticated users - admin vs merchant context determined below
+    const authResult = await requireAuth(request);
 
     if (authResult instanceof NextResponse) {
-      console.error('[Jasper] Auth failed - no valid token or insufficient role');
+      console.error('[Jasper] Auth failed - no valid token');
       return authResult;
     }
 
     const { user } = authResult;
+
+    // Determine admin context based on role
+    // super_admin and admin get full admin capabilities (tool calling, etc.)
+    // owner, user, member get merchant capabilities
     const isAdminContext = user.role === 'super_admin' || user.role === 'admin';
 
     logger.info('[Jasper] Authenticated', {
