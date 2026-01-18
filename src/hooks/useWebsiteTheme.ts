@@ -66,10 +66,21 @@ export function useWebsiteTheme() {
 
   useEffect(() => {
     const loadTheme = async () => {
+      // ISOMORPHIC GUARD: Prevent direct Firestore calls from the browser
+      // Browser access to platformConfig/website is blocked by Firestore Security Rules
+      // This hook runs client-side only ('use client'), so we use the default theme
+      // and skip the Firestore call entirely to avoid permission errors.
+      // Future enhancement: Fetch custom theme via an API route if needed.
+      if (typeof window !== 'undefined') {
+        // Running in browser - use default theme to avoid Firestore permission errors
+        setLoading(false);
+        return;
+      }
+
       try {
         const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-        // Try to load from platform collection, website document
+        // Server-side only: Try to load from platform collection, website document
         // Firestore paths must have even segments: collection/document
         const configData = await FirestoreService.get('platformConfig', 'website');
 
