@@ -15,6 +15,7 @@ import type {
   InstanceLifecycleService
 } from '@/types/agent-memory';
 import { logger } from '@/lib/logger/logger';
+import { getPluginManager, type ToolContext, type ToolDefinition } from '@/lib/plugins/plugin-manager';
 
 export class AgentInstanceManager implements InstanceLifecycleService {
   /**
@@ -841,6 +842,69 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   private generateNoteId(): string {
     return `note_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  }
+
+  // ===== Plugin Manager Integration =====
+
+  /**
+   * Get available tools for an agent instance
+   */
+  getAvailableTools(orgId: string, userId?: string): ToolDefinition[] {
+    const pluginManager = getPluginManager(orgId);
+    const context: ToolContext = {
+      organizationId: orgId,
+      userId,
+      permissions: ['*'], // In production, fetch actual permissions
+    };
+    return pluginManager.getAvailableTools(context);
+  }
+
+  /**
+   * Execute a tool in the context of an agent instance
+   */
+  async executeTool(
+    orgId: string,
+    toolName: string,
+    input: unknown,
+    userId?: string
+  ): Promise<{ success: boolean; data?: unknown; error?: string }> {
+    const pluginManager = getPluginManager(orgId);
+    const context: ToolContext = {
+      organizationId: orgId,
+      userId,
+      permissions: ['*'], // In production, fetch actual permissions
+    };
+
+    const result = await pluginManager.executeTool(toolName, input, context);
+
+    return {
+      success: result.success,
+      data: result.data,
+      error: result.error,
+    };
+  }
+
+  /**
+   * Get tools formatted for OpenAI function calling
+   */
+  getToolsForAI(orgId: string, userId?: string): Array<{
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  }> {
+    const pluginManager = getPluginManager(orgId);
+    const context: ToolContext = {
+      organizationId: orgId,
+      userId,
+      permissions: ['*'],
+    };
+    const tools = pluginManager.getToolsAsOpenAIFunctions(context);
+    // Cast JSONSchema to Record<string, unknown> for broader compatibility
+    return tools.map(t => ({
+      name: t.name,
+      description: t.description,
+      parameters: t.parameters as unknown as Record<string, unknown>,
+    }));
   }
 }
 
