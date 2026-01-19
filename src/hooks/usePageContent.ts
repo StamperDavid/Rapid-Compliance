@@ -50,7 +50,7 @@ export function usePageContent(pageId: string) {
     const loadPage = async () => {
       try {
         const { FirestoreService } = await import('@/lib/db/firestore-service');
-        const config = await FirestoreService.get('platform/website', 'editor-config');
+        const config = await FirestoreService.get('platform', 'website-editor-config');
 
         if (config && typeof config === 'object' && 'pages' in config) {
           const typedConfig = config as EditorConfig;

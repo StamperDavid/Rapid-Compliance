@@ -1668,13 +1668,13 @@ export default function WebsiteEditorPage() {
     setIsSaving(true);
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      await FirestoreService.set('platform/website', 'editor-config', {
+      await FirestoreService.set('platform', 'website-editor-config', {
         ...config,
         updatedAt: new Date().toISOString(),
       }, false);
-      
+
       // Also save branding to theme for PublicLayout
-      await FirestoreService.set('platform/website', 'config', {
+      await FirestoreService.set('platform', 'website-config', {
         branding: config.branding,
         navigation: config.navigation,
         footer: config.footer,
