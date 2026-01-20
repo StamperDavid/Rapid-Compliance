@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { auth } from '@/lib/firebase/config';
 
@@ -25,12 +25,27 @@ interface SocialAnalytics {
     followersGrowth: number;
     impressions: number;
     engagement: number;
+    configured: boolean;
+    handle: string;
   };
   linkedin: {
     followers: number;
     followersGrowth: number;
     impressions: number;
     engagement: number;
+    configured: boolean;
+    companyName: string;
+  };
+}
+
+interface PlatformConfig {
+  twitter: {
+    configured: boolean;
+    handle: string;
+  };
+  linkedin: {
+    configured: boolean;
+    companyName: string;
   };
 }
 
@@ -43,56 +58,72 @@ export default function AdminSocialPage() {
   const [scheduleTime, setScheduleTime] = useState('');
   const [recentPosts, setRecentPosts] = useState<PlatformPost[]>([]);
   const [analytics, setAnalytics] = useState<SocialAnalytics | null>(null);
+  const [_platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
   const [activeTab, setActiveTab] = useState<'compose' | 'scheduled' | 'analytics'>('compose');
   const [postResult, setPostResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  useEffect(() => {
-    // Load mock data for demonstration
-    setTimeout(() => {
-      setRecentPosts([
-        {
-          id: '1',
-          platform: 'twitter',
-          content: 'Excited to announce our new AI-powered sales automation features! #SalesVelocity #AIAutomation',
-          postedAt: new Date(Date.now() - 86400000).toISOString(),
-          status: 'posted',
-          engagement: { likes: 127, retweets: 34, comments: 18, impressions: 15420 },
-        },
-        {
-          id: '2',
-          platform: 'linkedin',
-          content: 'How AI is transforming sales teams in 2025. Our latest blog post explores the future of sales automation.',
-          postedAt: new Date(Date.now() - 172800000).toISOString(),
-          status: 'posted',
-          engagement: { likes: 89, comments: 23, impressions: 8750 },
-        },
-        {
-          id: '3',
-          platform: 'twitter',
-          content: 'Join our webinar next Tuesday: "Scale Your Sales with AI Agents" - Link in bio!',
-          scheduledAt: new Date(Date.now() + 86400000).toISOString(),
-          status: 'scheduled',
-        },
-      ]);
+  // Fetch platform configuration and status from API
+  const fetchPlatformStatus = useCallback(async () => {
+    try {
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-      setAnalytics({
-        twitter: {
-          followers: 12847,
-          followersGrowth: 342,
-          impressions: 245000,
-          engagement: 4.2,
-        },
-        linkedin: {
-          followers: 8523,
-          followersGrowth: 189,
-          impressions: 156000,
-          engagement: 5.8,
+      const response = await fetch('/api/admin/social/post', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 
+      if (response.ok) {
+        const data = await response.json() as {
+          platforms: PlatformConfig;
+          recentPosts: PlatformPost[];
+          scheduledPosts: PlatformPost[];
+        };
+
+        setPlatformConfig(data.platforms);
+
+        // Combine recent and scheduled posts if available
+        const allPosts = [...(data.recentPosts || []), ...(data.scheduledPosts || [])];
+        if (allPosts.length > 0) {
+          setRecentPosts(allPosts);
+        }
+
+        // Set analytics with real configured status
+        setAnalytics({
+          twitter: {
+            followers: 0, // Will be populated when Twitter API is connected
+            followersGrowth: 0,
+            impressions: 0,
+            engagement: 0,
+            configured: data.platforms.twitter.configured,
+            handle: data.platforms.twitter.handle,
+          },
+          linkedin: {
+            followers: 0, // Will be populated when LinkedIn API is connected
+            followersGrowth: 0,
+            impressions: 0,
+            engagement: 0,
+            configured: data.platforms.linkedin.configured,
+            companyName: data.platforms.linkedin.companyName,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch platform status:', error);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchPlatformStatus();
+  }, [fetchPlatformStatus]);
 
   const handlePostTweet = async () => {
     if (!tweetContent.trim()) {
@@ -420,28 +451,70 @@ export default function AdminSocialPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }} className="md:grid-cols-2">
           {/* Twitter Analytics */}
           <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>X</span>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>Twitter/X Analytics</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>X</span>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>Twitter/X Analytics</h2>
+              </div>
+              <span style={{
+                fontSize: '0.75rem',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '0.25rem',
+                backgroundColor: analytics.twitter.configured ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                color: analytics.twitter.configured ? '#10b981' : '#f59e0b',
+              }}>
+                {analytics.twitter.configured ? 'Connected' : 'Not Configured'}
+              </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }} className="sm:grid-cols-2">
-              <AnalyticCard label="Followers" value={analytics.twitter.followers.toLocaleString()} change={`+${analytics.twitter.followersGrowth}`} />
-              <AnalyticCard label="Impressions (30d)" value={analytics.twitter.impressions.toLocaleString()} />
-              <AnalyticCard label="Engagement Rate" value={`${analytics.twitter.engagement}%`} />
-            </div>
+            {analytics.twitter.configured ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }} className="sm:grid-cols-2">
+                <AnalyticCard label="Handle" value={analytics.twitter.handle} />
+                <AnalyticCard label="Followers" value={analytics.twitter.followers.toLocaleString()} change={analytics.twitter.followersGrowth > 0 ? `+${analytics.twitter.followersGrowth}` : undefined} />
+                <AnalyticCard label="Impressions (30d)" value={analytics.twitter.impressions.toLocaleString()} />
+                <AnalyticCard label="Engagement Rate" value={`${analytics.twitter.engagement}%`} />
+              </div>
+            ) : (
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: '#666' }}>
+                <p style={{ margin: '0 0 1rem 0' }}>Twitter API not configured.</p>
+                <p style={{ margin: 0, fontSize: '0.75rem' }}>
+                  Set PLATFORM_TWITTER_BEARER_TOKEN and PLATFORM_TWITTER_ACCESS_TOKEN environment variables to enable.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* LinkedIn Analytics */}
           <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-              <span style={{ fontSize: '1.5rem', color: '#0a66c2' }}>in</span>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>LinkedIn Analytics</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem', color: '#0a66c2' }}>in</span>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>LinkedIn Analytics</h2>
+              </div>
+              <span style={{
+                fontSize: '0.75rem',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '0.25rem',
+                backgroundColor: analytics.linkedin.configured ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                color: analytics.linkedin.configured ? '#10b981' : '#f59e0b',
+              }}>
+                {analytics.linkedin.configured ? 'Connected' : 'Not Configured'}
+              </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }} className="sm:grid-cols-2">
-              <AnalyticCard label="Followers" value={analytics.linkedin.followers.toLocaleString()} change={`+${analytics.linkedin.followersGrowth}`} />
-              <AnalyticCard label="Impressions (30d)" value={analytics.linkedin.impressions.toLocaleString()} />
-              <AnalyticCard label="Engagement Rate" value={`${analytics.linkedin.engagement}%`} />
-            </div>
+            {analytics.linkedin.configured ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }} className="sm:grid-cols-2">
+                <AnalyticCard label="Company" value={analytics.linkedin.companyName} />
+                <AnalyticCard label="Followers" value={analytics.linkedin.followers.toLocaleString()} change={analytics.linkedin.followersGrowth > 0 ? `+${analytics.linkedin.followersGrowth}` : undefined} />
+                <AnalyticCard label="Impressions (30d)" value={analytics.linkedin.impressions.toLocaleString()} />
+                <AnalyticCard label="Engagement Rate" value={`${analytics.linkedin.engagement}%`} />
+              </div>
+            ) : (
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: '#666' }}>
+                <p style={{ margin: '0 0 1rem 0' }}>LinkedIn API not configured.</p>
+                <p style={{ margin: 0, fontSize: '0.75rem' }}>
+                  Set PLATFORM_LINKEDIN_ACCESS_TOKEN and PLATFORM_LINKEDIN_ORG_ID environment variables to enable.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

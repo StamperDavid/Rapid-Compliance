@@ -144,6 +144,11 @@ export default function AdminLayout({
             <NavLink href="/admin/sales-agent/knowledge" icon="📚" tooltip="Manage platform knowledge base, features, and pricing information">Knowledge Base</NavLink>
           </NavSection>
 
+          <NavSection title="AI Swarm">
+            <NavLink href="/admin/swarm" icon="🐝" tooltip="Swarm Control Center: Monitor and execute AI agents across marketing, intelligence, commerce, and outreach">Swarm Control</NavLink>
+            <NavLink href="/admin/social" icon="📱" tooltip="Platform social media management: Post to Twitter/X and LinkedIn, schedule content, view analytics">Social Media</NavLink>
+          </NavSection>
+
           <NavSection title="System">
             <NavLink href="/admin/system/health" icon="🏥" tooltip="Monitor system health: database, storage, AI, email, SMS services status">System Health</NavLink>
             <NavLink href="/admin/system/api-keys" icon="🔑" tooltip="Manage YOUR platform API keys: Firebase, Stripe, Gemini, etc. (separate from client keys)">Platform API Keys</NavLink>
