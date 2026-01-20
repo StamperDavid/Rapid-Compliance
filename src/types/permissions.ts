@@ -69,11 +69,10 @@ export interface RolePermissions {
 
 export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
   /**
-   * Platform Admin (God Mode)
-   * - Full access to ALL features across ALL organizations
-   * - Bypasses organization isolation filters
-   * - Can dogfood all features for internal marketing
-   * - Can spawn agents for platform-level campaigns
+   * Platform Admin
+   * - Full permissions within their assigned organization
+   * - Must belong to a real organization (no org bypass)
+   * - Access controlled through standard RBAC
    */
   platform_admin: {
     // Organization Management - FULL ACCESS
@@ -353,17 +352,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
 
 /**
  * Check if user has specific permission
- * Platform Admin (God Mode) always returns true for all permissions
+ * Uses unified RBAC - permissions defined in ROLE_PERMISSIONS table
  */
 export function hasPermission(role: string | null | undefined, permission: keyof RolePermissions): boolean {
   // Handle undefined or invalid roles
   if (!role) {
     return false;
-  }
-
-  // Platform Admin (God Mode) - always has all permissions
-  if (isPlatformAdmin(role)) {
-    return true;
   }
 
   // Check if role exists in permissions map
@@ -372,6 +366,8 @@ export function hasPermission(role: string | null | undefined, permission: keyof
     return false;
   }
 
+  // Return permission from the ROLE_PERMISSIONS table
+  // platform_admin has all permissions defined there, no special bypass needed
   return ROLE_PERMISSIONS[roleKey][permission];
 }
 
@@ -391,10 +387,10 @@ export function canPerformAction(userRole: UserRole, requiredPermission: keyof R
 
 /**
  * Role hierarchy (for checking if role is higher than another)
- * Platform Admin sits above all organization-level roles
+ * All roles operate within their assigned organization
  */
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
-  platform_admin: 5, // God Mode - above all org roles
+  platform_admin: 5, // Highest permissions within org
   owner: 4,
   admin: 3,
   manager: 2,
@@ -402,15 +398,15 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
 };
 
 /**
- * Check if user is a Platform Admin (God Mode)
+ * Check if user has platform admin role
+ * Note: This role has full permissions but no org bypass
  */
 export function isPlatformAdmin(role: string | null | undefined): boolean {
   return role === 'platform_admin' || role === 'super_admin';
 }
 
 /**
- * Get all permissions - Platform Admin inherits everything
- * This is used for permission checks where platform_admin should bypass all restrictions
+ * Get all permissions for platform_admin role
  */
 export function getAllPermissions(): RolePermissions {
   return ROLE_PERMISSIONS.platform_admin;

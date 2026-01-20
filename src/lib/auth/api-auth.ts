@@ -230,7 +230,7 @@ export async function optionalAuth(
 
 /**
  * Require specific role
- * Platform Admin (God Mode) automatically passes all role checks
+ * Uses unified RBAC - no special bypasses
  */
 export async function requireRole(
   request: NextRequest,
@@ -244,11 +244,8 @@ export async function requireRole(
 
   const { user } = authResult;
 
-  // Platform Admin (God Mode) - automatically passes all role checks
-  if (user.role === 'platform_admin' || user.role === 'super_admin') {
-    return { user };
-  }
-
+  // Unified RBAC: Check if user's role is in the allowed list
+  // platform_admin and super_admin must be explicitly included in allowedRoles
   if (!user.role || !allowedRoles.includes(user.role)) {
     return NextResponse.json(
       { success: false, error: 'Insufficient permissions' },
@@ -261,7 +258,7 @@ export async function requireRole(
 
 /**
  * Require organization membership
- * Platform Admin (God Mode) bypasses ALL organization isolation checks
+ * All users (including platform_admin) must belong to a real organization
  */
 export async function requireOrganization(
   request: NextRequest,
@@ -275,26 +272,23 @@ export async function requireOrganization(
 
   const { user } = authResult;
 
-  // FIRST: Platform Admin (God Mode) bypasses ALL organization isolation
-  if (['platform_admin', 'super_admin'].includes(user.role ?? '')) {
-    // Assign a default internal org if none exists for data storage
-    user.organizationId ??= 'admin-internal-org';
-    return { user };
-  }
-
-  // If organizationId is provided, verify user belongs to it
-  if (organizationId && user.organizationId && user.organizationId !== organizationId) {
+  // All users must have an organization - no exceptions
+  if (!user.organizationId) {
+    // Allow onboarding for admin/owner roles who are setting up their first org
+    if (['admin', 'owner', 'platform_admin', 'super_admin'].includes(user.role ?? '')) {
+      // Return user without org - they're in onboarding flow
+      return { user };
+    }
     return NextResponse.json(
-      { success: false, error: 'Access denied to this organization' },
+      { success: false, error: 'User must belong to an organization' },
       { status: 403 }
     );
   }
 
-  // For onboarding, allow users without organizationId if they're admin/owner
-  // They're likely setting up their first organization
-  if (!user.organizationId && !['admin', 'owner'].includes(user.role ?? '')) {
+  // If specific organizationId is requested, verify membership
+  if (organizationId && user.organizationId !== organizationId) {
     return NextResponse.json(
-      { success: false, error: 'User must belong to an organization' },
+      { success: false, error: 'Access denied to this organization' },
       { status: 403 }
     );
   }
