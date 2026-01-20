@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useFeatureVisibility } from '@/hooks/useFeatureVisibility';
 import { MerchantOrchestrator } from '@/components/orchestrator';
+import { isPlatformAdmin } from '@/types/permissions';
 
 export default function WorkspaceLayout({
   children,
@@ -17,7 +18,7 @@ export default function WorkspaceLayout({
   const params = useParams();
   const pathname = usePathname();
   const orgId = params.orgId as string;
-  const { user: _user } = useAuth();
+  const { user } = useAuth();
   const { theme } = useOrgTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -26,7 +27,9 @@ export default function WorkspaceLayout({
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
   const brandName = (theme?.branding?.companyName !== '' && theme?.branding?.companyName != null) ? theme.branding.companyName : 'AI CRM';
-  const _logoUrl = theme?.branding?.logoUrl;
+
+  // Determine if user is Platform Admin (God Mode)
+  const isGodMode = isPlatformAdmin(user?.role);
 
   // Use adaptive navigation from hook
   const navSections = filteredNav;
@@ -82,7 +85,7 @@ export default function WorkspaceLayout({
           />
         )}
 
-        {/* Left Sidebar - Minimal */}
+        {/* Left Sidebar - Shows all features for platform_admin via useFeatureVisibility */}
         <aside
           className={`
             fixed md:relative
@@ -97,19 +100,36 @@ export default function WorkspaceLayout({
             md:translate-x-0
           `}
         >
+          {/* God Mode Indicator for Platform Admin */}
+          {isGodMode && (
+            <div style={{
+              padding: '0.5rem 1.25rem',
+              backgroundColor: '#1a1a1a',
+              borderBottom: '1px solid #2a2a2a',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}>
+              <span style={{ fontSize: '1rem' }}>👑</span>
+              <span style={{ color: primaryColor, fontSize: '0.6875rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                God Mode
+              </span>
+            </div>
+          )}
+
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
             {/* Render all sections */}
             {navSections.map((section, sectionIdx) => (
               <div key={sectionIdx}>
                 {sectionIdx > 0 && <div style={{ height: '1px', backgroundColor: '#1a1a1a', margin: '1rem 0' }} />}
-                
+
                 {/* Section Label */}
                 <div style={{ padding: '0 1.25rem', marginBottom: '0.5rem', marginTop: sectionIdx > 0 ? '1rem' : '0' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     {section.title}
                   </span>
                 </div>
-                
+
                 {/* Section Items */}
                 {section.items.map((item) => (
                   <Link
@@ -138,7 +158,7 @@ export default function WorkspaceLayout({
             ))}
           </nav>
 
-          {/* Hidden Features Indicator */}
+          {/* Hidden Features Indicator (not shown for Platform Admin) */}
           {hiddenCount > 0 && !navLoading && (
             <div style={{
               padding: '0.75rem 1.25rem',

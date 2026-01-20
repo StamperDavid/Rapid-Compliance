@@ -16,15 +16,17 @@ import {
   extractTenantClaims,
   hasAdminRole,
   isSuperAdmin,
+  isPlatformAdminClaims,
   type TenantClaims,
 } from '@/lib/auth/claims-validator';
 
 export interface AdminUser {
   uid: string;
   email: string;
-  role: 'super_admin' | 'admin';
+  role: 'platform_admin' | 'super_admin' | 'admin';
   organizationId: string;
   isGlobalAdmin?: boolean;
+  isPlatformAdmin?: boolean;
   tenantId?: string | null;
 }
 
@@ -159,7 +161,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     };
 
     // Check for admin roles using claims-based validation
-    // Allow both super_admin and admin roles
+    // Allow platform_admin, super_admin, and admin roles
     if (!hasAdminRole(effectiveClaims)) {
       logger.warn('Non-admin access attempt', {
         userId,
@@ -175,18 +177,31 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
+    // Log Platform Admin (God Mode) access
+    if (isPlatformAdminClaims(effectiveClaims)) {
+      logger.info('Platform Admin (God Mode) access', {
+        userId,
+        email: userData.email,
+        role: effectiveClaims.role,
+        file: 'admin-auth.ts',
+      });
+    }
+
     // Determine if this is a super admin with global access
     const isGlobalAdmin = isSuperAdmin(effectiveClaims);
+    // Determine if this is a platform admin (God Mode)
+    const isPlatformAdmin = isPlatformAdminClaims(effectiveClaims);
 
     return {
       success: true,
       user: {
         uid: userId,
         email: userData.email ?? decodedToken.email ?? '',
-        role: (effectiveClaims.role as 'super_admin' | 'admin') ?? (userData.role as 'super_admin' | 'admin'),
+        role: (effectiveClaims.role as 'platform_admin' | 'super_admin' | 'admin') ?? (userData.role as 'platform_admin' | 'super_admin' | 'admin'),
         organizationId:
           effectiveClaims.tenant_id ?? userData.organizationId ?? 'platform',
         isGlobalAdmin,
+        isPlatformAdmin,
         tenantId: effectiveClaims.tenant_id,
       },
     };

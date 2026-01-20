@@ -1,9 +1,16 @@
 /**
  * Role-Based Access Control (RBAC) System
  * Permission levels for multi-tenant white-label CRM
+ *
+ * Role Hierarchy (highest to lowest):
+ * - platform_admin: Global super-admin with full access to ALL features across ALL orgs
+ * - owner: Full access within their organization
+ * - admin: Most permissions except billing and org deletion
+ * - manager: Team-level management
+ * - employee: Individual contributor access
  */
 
-export type UserRole = 'owner' | 'admin' | 'manager' | 'employee';
+export type UserRole = 'platform_admin' | 'owner' | 'admin' | 'manager' | 'employee';
 
 export interface RolePermissions {
   // Organization Management
@@ -61,6 +68,68 @@ export interface RolePermissions {
 }
 
 export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
+  /**
+   * Platform Admin (God Mode)
+   * - Full access to ALL features across ALL organizations
+   * - Bypasses organization isolation filters
+   * - Can dogfood all features for internal marketing
+   * - Can spawn agents for platform-level campaigns
+   */
+  platform_admin: {
+    // Organization Management - FULL ACCESS
+    canManageOrganization: true,
+    canManageBilling: true,
+    canManageAPIKeys: true,
+    canManageTheme: true,
+    canDeleteOrganization: true,
+
+    // User Management - FULL ACCESS
+    canInviteUsers: true,
+    canRemoveUsers: true,
+    canChangeUserRoles: true,
+    canViewAllUsers: true,
+
+    // Data Management - FULL ACCESS
+    canCreateSchemas: true,
+    canEditSchemas: true,
+    canDeleteSchemas: true,
+    canExportData: true,
+    canImportData: true,
+    canDeleteData: true,
+    canViewAllRecords: true,
+
+    // CRM Operations - FULL ACCESS
+    canCreateRecords: true,
+    canEditRecords: true,
+    canDeleteRecords: true,
+    canViewOwnRecordsOnly: false,
+    canAssignRecords: true,
+
+    // Workflows & Automation - FULL ACCESS
+    canCreateWorkflows: true,
+    canEditWorkflows: true,
+    canDeleteWorkflows: true,
+
+    // AI Agents - FULL ACCESS
+    canTrainAIAgents: true,
+    canDeployAIAgents: true,
+    canManageAIAgents: true,
+
+    // Reports & Analytics - FULL ACCESS
+    canViewReports: true,
+    canCreateReports: true,
+    canExportReports: true,
+
+    // Settings - FULL ACCESS
+    canAccessSettings: true,
+    canManageIntegrations: true,
+
+    // E-Commerce - FULL ACCESS
+    canManageEcommerce: true,
+    canProcessOrders: true,
+    canManageProducts: true,
+  },
+
   owner: {
     // Organization Management
     canManageOrganization: true,
@@ -284,13 +353,26 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
 
 /**
  * Check if user has specific permission
+ * Platform Admin (God Mode) always returns true for all permissions
  */
-export function hasPermission(role: UserRole, permission: keyof RolePermissions): boolean {
+export function hasPermission(role: string | null | undefined, permission: keyof RolePermissions): boolean {
   // Handle undefined or invalid roles
-  if (!role || !ROLE_PERMISSIONS[role]) {
+  if (!role) {
     return false;
   }
-  return ROLE_PERMISSIONS[role][permission];
+
+  // Platform Admin (God Mode) - always has all permissions
+  if (isPlatformAdmin(role)) {
+    return true;
+  }
+
+  // Check if role exists in permissions map
+  const roleKey = role as UserRole;
+  if (!ROLE_PERMISSIONS[roleKey]) {
+    return false;
+  }
+
+  return ROLE_PERMISSIONS[roleKey][permission];
 }
 
 /**
@@ -309,13 +391,30 @@ export function canPerformAction(userRole: UserRole, requiredPermission: keyof R
 
 /**
  * Role hierarchy (for checking if role is higher than another)
+ * Platform Admin sits above all organization-level roles
  */
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
+  platform_admin: 5, // God Mode - above all org roles
   owner: 4,
   admin: 3,
   manager: 2,
   employee: 1,
 };
+
+/**
+ * Check if user is a Platform Admin (God Mode)
+ */
+export function isPlatformAdmin(role: string | null | undefined): boolean {
+  return role === 'platform_admin' || role === 'super_admin';
+}
+
+/**
+ * Get all permissions - Platform Admin inherits everything
+ * This is used for permission checks where platform_admin should bypass all restrictions
+ */
+export function getAllPermissions(): RolePermissions {
+  return ROLE_PERMISSIONS.platform_admin;
+}
 
 export function isRoleHigherThan(role1: UserRole, role2: UserRole): boolean {
   return ROLE_HIERARCHY[role1] > ROLE_HIERARCHY[role2];

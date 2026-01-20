@@ -23,11 +23,13 @@ export interface TenantClaims {
   /** Super admin flag - grants global read access */
   admin: boolean;
   /** User's role within the organization */
-  role: 'super_admin' | 'admin' | 'owner' | 'member' | 'viewer' | null;
+  role: 'platform_admin' | 'super_admin' | 'admin' | 'owner' | 'member' | 'viewer' | null;
   /** User's email */
   email: string | null;
   /** User ID */
   uid: string;
+  /** Platform admin flag - grants God Mode access across all orgs */
+  isPlatformAdmin?: boolean;
 }
 
 export interface ClaimsValidationResult {
@@ -52,7 +54,10 @@ const SUPER_ADMIN_EMAILS: string[] = [
 ];
 
 /** Roles that grant admin-level access */
-const ADMIN_ROLES = ['super_admin', 'admin'] as const;
+const ADMIN_ROLES = ['platform_admin', 'super_admin', 'admin'] as const;
+
+/** Platform-level admin roles (God Mode - bypasses org isolation) */
+export const PLATFORM_ADMIN_ROLES = ['platform_admin', 'super_admin'] as const;
 
 // ============================================================================
 // CLAIMS EXTRACTION
@@ -83,12 +88,17 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
     // Check if user is in super admin whitelist
     const isWhitelistedAdmin = email ? SUPER_ADMIN_EMAILS.includes(email.toLowerCase()) : false;
 
+    // Determine if this is a platform admin (God Mode)
+    const validatedRole = validateRole(role);
+    const isPlatformAdminRole = validatedRole === 'platform_admin' || validatedRole === 'super_admin';
+
     const claims: TenantClaims = {
       tenant_id: tenantId ?? null,
-      admin: isAdmin || isWhitelistedAdmin,
-      role: validateRole(role),
+      admin: isAdmin || isWhitelistedAdmin || isPlatformAdminRole,
+      role: validatedRole,
       email,
       uid,
+      isPlatformAdmin: isWhitelistedAdmin || isPlatformAdminRole,
     };
 
     logger.debug('Extracted tenant claims', {
@@ -129,6 +139,9 @@ function validateRole(role: string | null): TenantClaims['role'] {
 
   const normalizedRole = role.toLowerCase();
   switch (normalizedRole) {
+    case 'platform_admin':
+    case 'platformadmin':
+      return 'platform_admin';
     case 'super_admin':
     case 'superadmin':
       return 'super_admin';
@@ -153,8 +166,9 @@ function validateRole(role: string | null): TenantClaims['role'] {
  * Check if user has access to a specific tenant/organization.
  *
  * Access is granted if:
- * 1. User is a super admin (global read access)
- * 2. User's tenant_id matches the requested organization
+ * 1. User is a platform admin (God Mode - full access to all orgs)
+ * 2. User is a super admin (global read access)
+ * 3. User's tenant_id matches the requested organization
  *
  * @param claims - User's tenant claims
  * @param requestedOrgId - The organization ID being accessed
@@ -164,7 +178,24 @@ export function checkTenantAccess(
   claims: TenantClaims,
   requestedOrgId: string | null
 ): TenantAccessResult {
-  // Super admins have global read access
+  // Platform Admin (God Mode) - bypasses ALL org isolation
+  if (isPlatformAdminClaims(claims)) {
+    logger.debug('Platform Admin (God Mode) access granted', {
+      uid: claims.uid,
+      email: claims.email,
+      requestedOrgId,
+      role: claims.role,
+      file: 'claims-validator.ts',
+    });
+
+    return {
+      allowed: true,
+      reason: 'Platform Admin has God Mode access to all organizations',
+      isGlobalAdmin: true,
+    };
+  }
+
+  // Super admins have global read access (legacy check)
   if (claims.admin) {
     logger.debug('Global admin access granted', {
       uid: claims.uid,
@@ -240,13 +271,31 @@ export function hasAdminRole(claims: TenantClaims): boolean {
  * Super admin is determined by:
  * 1. admin: true claim in the token
  * 2. Email in the SUPER_ADMIN_EMAILS whitelist
- * 3. role: 'super_admin' claim
+ * 3. role: 'super_admin' or 'platform_admin' claim
  *
  * @param claims - User's tenant claims
  * @returns true if user is super admin
  */
 export function isSuperAdmin(claims: TenantClaims): boolean {
-  return claims.admin || claims.role === 'super_admin';
+  return claims.admin || claims.role === 'super_admin' || claims.role === 'platform_admin';
+}
+
+/**
+ * Check if user has Platform Admin (God Mode) access.
+ *
+ * Platform admin has:
+ * - Full access to ALL features across ALL organizations
+ * - Bypasses organization isolation filters
+ * - Can dogfood all features for internal marketing
+ *
+ * @param claims - User's tenant claims
+ * @returns true if user is platform admin
+ */
+export function isPlatformAdminClaims(claims: TenantClaims): boolean {
+  return claims.isPlatformAdmin === true ||
+    claims.admin === true ||
+    claims.role === 'platform_admin' ||
+    claims.role === 'super_admin';
 }
 
 /**
@@ -306,9 +355,11 @@ const claimsValidator = {
   checkTenantAccess,
   hasAdminRole,
   isSuperAdmin,
+  isPlatformAdminClaims,
   getEffectiveOrgId,
   buildCustomClaims,
   SUPER_ADMIN_EMAILS,
+  PLATFORM_ADMIN_ROLES,
 };
 
 export default claimsValidator;

@@ -17,6 +17,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './useAuth';
+import { isPlatformAdmin } from '@/types/permissions';
 import {
   FeatureToggleService,
   buildNavigationStructure,
@@ -75,8 +76,14 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
   }, [fetchSettings]);
 
   // Build filtered navigation
+  // PLATFORM ADMIN (God Mode): Bypasses ALL visibility filtering
   const filteredNav = useMemo(() => {
     const fullNav = buildNavigationStructure(organizationId);
+
+    // Platform Admin sees ALL features - no filtering applied
+    if (isPlatformAdmin(user?.role)) {
+      return fullNav;
+    }
 
     if (!settings) {
       return fullNav; // No settings = show everything
@@ -98,16 +105,20 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
       }))
       // Remove empty sections
       .filter(section => section.items.length > 0);
-  }, [organizationId, settings]);
+  }, [organizationId, settings, user?.role]);
 
-  // Count hidden features
+  // Count hidden features (Platform Admin always sees 0 hidden)
   const hiddenCount = useMemo(() => {
+    // Platform Admin sees everything - nothing is hidden
+    if (isPlatformAdmin(user?.role)) {
+      return 0;
+    }
     if (!settings) {
       return 0;
     }
     const hiddenFeatures = Object.values(settings.features).filter(f => f.status === 'hidden').length;
     return hiddenFeatures + settings.hiddenCategories.length;
-  }, [settings]);
+  }, [settings, user?.role]);
 
   // Toggle a single feature
   const toggleFeature = useCallback(async (featureId: string, hidden: boolean, reason?: string) => {
@@ -222,21 +233,29 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
     });
   }, [organizationId, user?.id]);
 
-  // Check if a feature is hidden
+  // Check if a feature is hidden (Platform Admin: nothing is hidden)
   const isFeatureHidden = useCallback((featureId: string): boolean => {
+    // Platform Admin sees everything
+    if (isPlatformAdmin(user?.role)) {
+      return false;
+    }
     if (!settings) {
       return false;
     }
     return settings.features[featureId]?.status === 'hidden';
-  }, [settings]);
+  }, [settings, user?.role]);
 
-  // Check if a category is hidden
+  // Check if a category is hidden (Platform Admin: nothing is hidden)
   const isCategoryHidden = useCallback((category: FeatureCategory): boolean => {
+    // Platform Admin sees everything
+    if (isPlatformAdmin(user?.role)) {
+      return false;
+    }
     if (!settings) {
       return false;
     }
     return settings.hiddenCategories.includes(category);
-  }, [settings]);
+  }, [settings, user?.role]);
 
   return {
     settings,

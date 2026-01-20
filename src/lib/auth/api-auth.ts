@@ -230,6 +230,7 @@ export async function optionalAuth(
 
 /**
  * Require specific role
+ * Platform Admin (God Mode) automatically passes all role checks
  */
 export async function requireRole(
   request: NextRequest,
@@ -243,6 +244,11 @@ export async function requireRole(
 
   const { user } = authResult;
 
+  // Platform Admin (God Mode) - automatically passes all role checks
+  if (user.role === 'platform_admin' || user.role === 'super_admin') {
+    return { user };
+  }
+
   if (!user.role || !allowedRoles.includes(user.role)) {
     return NextResponse.json(
       { success: false, error: 'Insufficient permissions' },
@@ -255,6 +261,7 @@ export async function requireRole(
 
 /**
  * Require organization membership
+ * Platform Admin (God Mode) bypasses ALL organization isolation checks
  */
 export async function requireOrganization(
   request: NextRequest,
@@ -268,6 +275,13 @@ export async function requireOrganization(
 
   const { user } = authResult;
 
+  // FIRST: Platform Admin (God Mode) bypasses ALL organization isolation
+  if (['platform_admin', 'super_admin'].includes(user.role ?? '')) {
+    // Assign a default internal org if none exists for data storage
+    user.organizationId ??= 'admin-internal-org';
+    return { user };
+  }
+
   // If organizationId is provided, verify user belongs to it
   if (organizationId && user.organizationId && user.organizationId !== organizationId) {
     return NextResponse.json(
@@ -278,7 +292,7 @@ export async function requireOrganization(
 
   // For onboarding, allow users without organizationId if they're admin/owner
   // They're likely setting up their first organization
-  if (!user.organizationId && !['admin', 'owner', 'super_admin'].includes(user.role ?? '')) {
+  if (!user.organizationId && !['admin', 'owner'].includes(user.role ?? '')) {
     return NextResponse.json(
       { success: false, error: 'User must belong to an organization' },
       { status: 403 }
