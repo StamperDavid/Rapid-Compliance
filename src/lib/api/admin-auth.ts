@@ -125,10 +125,16 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
+    // Check if user has platform admin role in token claims
+    // Platform admins can proceed without a user document
+    const hasPlatformAdminClaim = claims.role === 'platform_admin' || claims.role === 'super_admin';
+
     // Get user document to enrich with database role
     const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(userId).get();
+    const rawUserData = userDoc.exists ? userDoc.data() : null;
 
-    if (!userDoc.exists) {
+    // If no user document and no platform admin claim, deny access
+    if (!userDoc.exists && !hasPlatformAdminClaim) {
       return {
         success: false,
         error: 'User not found in database',
@@ -136,28 +142,23 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
-    const rawUserData = userDoc.data();
-
-    if (!rawUserData) {
-      return {
-        success: false,
-        error: 'User data not found',
-        status: 403,
-      };
-    }
-
-    const userData: UserData = {
+    // Build user data from document or use defaults for platform admins
+    const userData: UserData = rawUserData ? {
       email: rawUserData.email as string | undefined,
       role: rawUserData.role as string | undefined,
       organizationId: rawUserData.organizationId as string | undefined,
+    } : {
+      email: decodedToken.email,
+      role: claims.role ?? undefined,
+      organizationId: claims.tenant_id ?? 'platform-internal-org',
     };
 
-    // Merge token claims with database role
+    // Merge token claims with database role (token claims take precedence)
     const effectiveRole = claims.role ?? userData.role;
     const effectiveClaims: TenantClaims = {
       ...claims,
       role: effectiveRole as TenantClaims['role'],
-      tenant_id: claims.tenant_id ?? userData.organizationId ?? null,
+      tenant_id: claims.tenant_id ?? userData.organizationId ?? 'platform-internal-org',
     };
 
     // Check for admin roles using claims-based validation

@@ -59,6 +59,9 @@
   --color-border-light: #333333;
   --color-border-strong: #4b5563;
 
+  /* Border alias for backward compatibility */
+  --color-border: var(--color-border-light);
+
   /* Legacy surface mappings (for compatibility) */
   --color-surface: var(--color-bg-paper);
   --color-surface-elevated: var(--color-bg-elevated);

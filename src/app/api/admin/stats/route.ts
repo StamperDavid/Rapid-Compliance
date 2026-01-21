@@ -13,7 +13,7 @@
 export const dynamic = 'force-dynamic';
 
 import type { NextRequest } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
 import {
   verifyAdminRequest,
   createErrorResponse,
@@ -23,11 +23,6 @@ import {
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { COLLECTIONS } from '@/lib/firebase/collections';
-import {
-  extractTenantClaims,
-  isSuperAdmin,
-  getEffectiveOrgId,
-} from '@/lib/auth/claims-validator';
 
 // ============================================================================
 // TYPES
@@ -193,33 +188,25 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    if (!adminDb || !adminAuth) {
+    if (!adminDb) {
       return createErrorResponse('Server configuration error', 500);
     }
 
-    // Get the auth token to extract claims
-    const authHeader = request.headers.get('Authorization');
-    const token = authHeader?.split('Bearer ')[1];
+    // Use the authenticated user from verifyAdminRequest
+    const { user } = authResult;
 
-    if (!token) {
-      return createErrorResponse('Missing authentication token', 401);
-    }
-
-    // Verify token and extract claims
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const claimsResult = extractTenantClaims(decodedToken);
-    const claims = claimsResult.claims;
-
-    // Determine if user has global access
-    const isGlobalAdmin = isSuperAdmin(claims);
-    const effectiveOrgId = getEffectiveOrgId(claims);
+    // Determine if user has global access (from verifyAdminRequest's computed flags)
+    const isGlobalAdmin = user.isGlobalAdmin ?? false;
+    const effectiveOrgId = user.tenantId ?? user.organizationId;
 
     let stats: PlatformStats;
 
     if (isGlobalAdmin) {
       // Super Admin: Get global platform statistics
       logger.info('Fetching global platform stats for super admin', {
-        email: claims.email,
+        email: user.email,
+        uid: user.uid,
+        role: user.role,
         file: 'admin-stats-route.ts',
       });
 
@@ -276,7 +263,9 @@ export async function GET(request: NextRequest) {
 
       logger.info('Fetching org-scoped stats', {
         orgId: effectiveOrgId,
-        email: claims.email,
+        email: user.email,
+        uid: user.uid,
+        role: user.role,
         file: 'admin-stats-route.ts',
       });
 
@@ -309,7 +298,9 @@ export async function GET(request: NextRequest) {
     return createSuccessResponse({
       stats,
       user: {
-        email: claims.email,
+        email: user.email,
+        uid: user.uid,
+        role: user.role,
         isGlobalAdmin,
         orgId: effectiveOrgId,
       },
@@ -342,24 +333,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Get the auth token to extract claims
-    const authHeader = request.headers.get('Authorization');
-    const token = authHeader?.split('Bearer ')[1];
+    // Use the authenticated user from verifyAdminRequest
+    const { user } = authResult;
 
-    if (!token || !adminAuth) {
-      return createErrorResponse('Missing authentication token', 401);
-    }
-
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const claimsResult = extractTenantClaims(decodedToken);
-
-    if (!isSuperAdmin(claimsResult.claims)) {
+    // Only super admins can refresh stats
+    if (!user.isGlobalAdmin) {
       return createErrorResponse('Super admin access required for stats refresh', 403);
     }
 
     // In production, this would invalidate a cache
     logger.info('Stats cache refresh requested', {
-      email: claimsResult.claims.email,
+      email: user.email,
+      uid: user.uid,
+      role: user.role,
       file: 'admin-stats-route.ts',
     });
 

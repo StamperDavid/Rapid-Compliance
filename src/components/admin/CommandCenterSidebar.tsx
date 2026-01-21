@@ -325,20 +325,22 @@ const NavItemComponent = React.memo<NavItemComponentProps>(
     return (
       <Link
         href={item.href}
-        className="nav-item"
+        className="flex items-center gap-3 px-4 py-2.5 rounded-md text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-primary)] transition-colors"
         title={isCollapsed ? item.label : item.tooltip}
       >
-        <div className="nav-item-content">
-          <Icon className="nav-item-icon" />
-          {!isCollapsed && (
-            <>
-              <span className="nav-item-label">{item.label}</span>
-              {item.badge !== undefined && item.badge > 0 && (
-                <span className="nav-item-badge">{item.badge}</span>
-              )}
-            </>
-          )}
-        </div>
+        <Icon className="w-5 h-5 flex-shrink-0" />
+        {!isCollapsed && (
+          <>
+            <span className="flex-1 text-[15px] font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+              {item.label}
+            </span>
+            {item.badge !== undefined && item.badge > 0 && (
+              <span className="bg-[var(--color-primary)] text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                {item.badge}
+              </span>
+            )}
+          </>
+        )}
       </Link>
     );
   }
@@ -358,17 +360,16 @@ const NavCategoryComponent = React.memo<NavCategoryComponentProps>(
     const CategoryIcon = category.icon;
     const isSingleItem = category.items.length === 1;
 
-    // Single-item categories (like Dashboard) don't need expansion
     if (isSingleItem) {
       return (
-        <div className="nav-category">
+        <div className="mb-2">
           {!isCollapsed && (
-            <div className="nav-category-header-static">
-              <CategoryIcon className="nav-category-icon" />
-              <span className="nav-category-label">{category.label}</span>
+            <div className="flex items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <CategoryIcon className="w-[18px] h-[18px] flex-shrink-0 text-[var(--color-text-disabled)]" />
+              <span className="flex-1 text-left">{category.label}</span>
             </div>
           )}
-          <div className="nav-items">
+          <div className="flex flex-col gap-0.5 px-2">
             {category.items.map((item) => (
               <NavItemComponent
                 key={item.id}
@@ -382,29 +383,27 @@ const NavCategoryComponent = React.memo<NavCategoryComponentProps>(
     }
 
     return (
-      <div className="nav-category">
+      <div className="mb-2">
         <button
           type="button"
-          className="nav-category-header"
+          className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] transition-colors"
           onClick={onToggle}
           title={isCollapsed ? category.label : undefined}
         >
-          <div className="nav-category-header-content">
-            <CategoryIcon className="nav-category-icon" />
-            {!isCollapsed && (
-              <>
-                <span className="nav-category-label">{category.label}</span>
-                <ChevronRight
-                  className={`nav-category-chevron ${
-                    isExpanded ? "expanded" : ""
-                  }`}
-                />
-              </>
-            )}
-          </div>
+          <CategoryIcon className="w-[18px] h-[18px] flex-shrink-0 text-[var(--color-text-disabled)]" />
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 text-left">{category.label}</span>
+              <ChevronRight
+                className={`w-4 h-4 transition-transform duration-200 text-[var(--color-text-disabled)] ${
+                  isExpanded ? "rotate-90" : ""
+                }`}
+              />
+            </>
+          )}
         </button>
         {isExpanded && !isCollapsed && (
-          <div className="nav-items">
+          <div className="flex flex-col gap-0.5 px-2">
             {category.items.map((item) => (
               <NavItemComponent
                 key={item.id}
@@ -432,11 +431,9 @@ const CommandCenterSidebar: React.FC<CommandCenterSidebarProps> = React.memo(
     isCollapsed: externalIsCollapsed,
     onToggleCollapse,
   }) => {
-    // Local state for collapsed/expanded
     const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
     const isCollapsed = externalIsCollapsed ?? internalIsCollapsed;
 
-    // Track which categories are expanded
     const navigationStructure = useNavigationStructure(organizationId);
     const [expandedCategories, setExpandedCategories] = useState<
       Record<string, boolean>
@@ -448,7 +445,6 @@ const CommandCenterSidebar: React.FC<CommandCenterSidebarProps> = React.memo(
       return initial;
     });
 
-    // Handlers
     const handleToggleCollapse = useCallback(() => {
       if (onToggleCollapse) {
         onToggleCollapse();
@@ -465,44 +461,57 @@ const CommandCenterSidebar: React.FC<CommandCenterSidebarProps> = React.memo(
     }, []);
 
     return (
-      <aside className={`command-center-sidebar ${isCollapsed ? "collapsed" : ""}`}>
+      <aside
+        className={`fixed left-0 top-0 h-screen bg-[var(--color-bg-paper)] border-r border-[var(--color-border-light)] flex flex-col transition-all duration-300 z-[1000] overflow-hidden ${
+          isCollapsed ? "w-16" : "w-[280px]"
+        } max-md:transform max-md:${isCollapsed ? "translate-x-0" : "-translate-x-full"}`}
+      >
         {/* Header */}
-        <div className="sidebar-header">
+        <div className="p-6 border-b border-[var(--color-border-light)] bg-[var(--color-bg-elevated)] relative">
           {!isCollapsed && (
-            <div className="sidebar-header-content">
-              <div className="sidebar-title">
-                <Wrench className="sidebar-title-icon" />
-                <h2 className="sidebar-title-text">Command Center</h2>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <Wrench className="w-6 h-6 text-[var(--color-primary)]" />
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] m-0">
+                  Command Center
+                </h2>
               </div>
-              <div className="sidebar-user">
-                <div className="sidebar-user-avatar">
+              <div className="flex items-center gap-3 p-3 bg-[var(--color-bg-paper)] rounded-lg border border-[var(--color-border-light)]">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center font-bold text-white text-base flex-shrink-0">
                   {adminUser.displayName.charAt(0).toUpperCase()}
                 </div>
-                <div className="sidebar-user-info">
-                  <div className="sidebar-user-name">{adminUser.displayName}</div>
-                  <div className="sidebar-user-role">{adminUser.role}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-[var(--color-text-primary)] whitespace-nowrap overflow-hidden text-ellipsis">
+                    {adminUser.displayName}
+                  </div>
+                  <div className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider">
+                    {adminUser.role}
+                  </div>
                 </div>
               </div>
             </div>
           )}
           <button
             type="button"
-            className="sidebar-collapse-toggle"
+            className={`${
+              isCollapsed
+                ? "static w-10 h-10 mx-auto"
+                : "absolute top-4 right-4 w-8 h-8"
+            } rounded-md border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] flex items-center justify-center cursor-pointer transition-all hover:bg-[var(--color-bg-elevated)] hover:border-[var(--color-primary)]`}
             onClick={handleToggleCollapse}
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? (
-              <ChevronRight className="toggle-icon" />
+              <ChevronRight className="w-4 h-4 text-[var(--color-text-secondary)]" />
             ) : (
-              <ChevronLeft className="toggle-icon" />
+              <ChevronLeft className="w-4 h-4 text-[var(--color-text-secondary)]" />
             )}
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="sidebar-nav">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 scrollbar-thin scrollbar-thumb-[var(--color-border-light)] scrollbar-track-transparent hover:scrollbar-thumb-[var(--color-text-disabled)]">
           {navigationStructure.map((category, index) => {
-            // Jasper Training Lab at bottom
             const isLastCategory =
               category.id === "jasper-training" &&
               index === navigationStructure.length - 1;
@@ -510,7 +519,11 @@ const CommandCenterSidebar: React.FC<CommandCenterSidebarProps> = React.memo(
             return (
               <div
                 key={category.id}
-                className={isLastCategory ? "nav-category-bottom" : ""}
+                className={
+                  isLastCategory
+                    ? "mt-auto pt-4 border-t border-[var(--color-border-light)]"
+                    : ""
+                }
               >
                 <NavCategoryComponent
                   category={category}
@@ -526,383 +539,12 @@ const CommandCenterSidebar: React.FC<CommandCenterSidebarProps> = React.memo(
         {/* Mobile Toggle */}
         <button
           type="button"
-          className="sidebar-mobile-toggle"
+          className="hidden max-md:flex fixed bottom-4 right-4 w-14 h-14 rounded-full bg-[var(--color-primary)] border-0 shadow-lg items-center justify-center cursor-pointer z-[1001] transition-transform hover:scale-105 active:scale-95"
           onClick={handleToggleCollapse}
           aria-label="Toggle sidebar"
         >
-          <Menu className="mobile-toggle-icon" />
+          <Menu className="w-6 h-6 text-white" />
         </button>
-
-        {/* Styles */}
-        <style jsx>{`
-          .command-center-sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            height: 100vh;
-            width: 280px;
-            background: var(--color-bg-paper);
-            border-right: 1px solid var(--color-border);
-            display: flex;
-            flex-direction: column;
-            transition: width 0.3s ease, transform 0.3s ease;
-            z-index: 1000;
-            overflow: hidden;
-          }
-
-          .command-center-sidebar.collapsed {
-            width: 64px;
-          }
-
-          /* Header */
-          .sidebar-header {
-            padding: 1.5rem 1rem;
-            border-bottom: 1px solid var(--color-border);
-            background: var(--color-bg-elevated);
-            position: relative;
-          }
-
-          .sidebar-header-content {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-          }
-
-          .sidebar-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-          }
-
-          .sidebar-title-icon {
-            width: 24px;
-            height: 24px;
-            color: var(--color-primary);
-          }
-
-          .sidebar-title-text {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--color-text-primary);
-            margin: 0;
-          }
-
-          .sidebar-user {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: var(--color-bg-paper);
-            border-radius: 8px;
-            border: 1px solid var(--color-border);
-          }
-
-          .sidebar-user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            color: white;
-            font-size: 1rem;
-            flex-shrink: 0;
-          }
-
-          .sidebar-user-info {
-            flex: 1;
-            min-width: 0;
-          }
-
-          .sidebar-user-name {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--color-text-primary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          .sidebar-user-role {
-            font-size: 0.75rem;
-            color: var(--color-text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-
-          .sidebar-collapse-toggle {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            border: 1px solid var(--color-border);
-            background: var(--color-bg-paper);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-          }
-
-          .sidebar-collapse-toggle:hover {
-            background: var(--color-bg-elevated);
-            border-color: var(--color-primary);
-          }
-
-          .toggle-icon {
-            width: 16px;
-            height: 16px;
-            color: var(--color-text-secondary);
-          }
-
-          .collapsed .sidebar-collapse-toggle {
-            position: static;
-            width: 40px;
-            height: 40px;
-            margin: 0 auto;
-          }
-
-          /* Navigation */
-          .sidebar-nav {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 1rem 0;
-          }
-
-          .sidebar-nav::-webkit-scrollbar {
-            width: 6px;
-          }
-
-          .sidebar-nav::-webkit-scrollbar-track {
-            background: transparent;
-          }
-
-          .sidebar-nav::-webkit-scrollbar-thumb {
-            background: var(--color-border);
-            border-radius: 3px;
-          }
-
-          .sidebar-nav::-webkit-scrollbar-thumb:hover {
-            background: var(--color-text-disabled);
-          }
-
-          /* Category */
-          .nav-category {
-            margin-bottom: 0.5rem;
-          }
-
-          .nav-category-bottom {
-            margin-top: auto;
-            padding-top: 1rem;
-            border-top: 1px solid var(--color-border);
-          }
-
-          .nav-category-header,
-          .nav-category-header-static {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: transparent;
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            cursor: pointer;
-            transition: background 0.2s ease;
-            color: var(--color-text-secondary);
-            font-size: 0.875rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-
-          .nav-category-header-static {
-            cursor: default;
-            padding-bottom: 0.5rem;
-          }
-
-          .nav-category-header:hover {
-            background: var(--color-bg-elevated);
-          }
-
-          .nav-category-header-content {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex: 1;
-          }
-
-          .nav-category-icon {
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0;
-            color: var(--color-text-disabled);
-          }
-
-          .nav-category-label {
-            flex: 1;
-            text-align: left;
-          }
-
-          .nav-category-chevron {
-            width: 16px;
-            height: 16px;
-            transition: transform 0.2s ease;
-            color: var(--color-text-disabled);
-          }
-
-          .nav-category-chevron.expanded {
-            transform: rotate(90deg);
-          }
-
-          .collapsed .nav-category-header {
-            justify-content: center;
-            padding: 0.75rem;
-          }
-
-          /* Nav Items */
-          .nav-items {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            padding: 0 0.5rem;
-          }
-
-          .collapsed .nav-items {
-            padding: 0;
-          }
-
-          :global(.nav-item) {
-            display: block;
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-          }
-
-          :global(.nav-item:hover) {
-            background: var(--color-bg-elevated);
-          }
-
-          :global(.nav-item:active) {
-            background: var(--color-primary-dark);
-          }
-
-          .nav-item-content {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.625rem 1rem;
-          }
-
-          .collapsed .nav-item-content {
-            justify-content: center;
-            padding: 0.75rem;
-          }
-
-          :global(.nav-item-icon) {
-            width: 20px;
-            height: 20px;
-            flex-shrink: 0;
-            color: var(--color-text-secondary);
-            transition: color 0.2s ease;
-          }
-
-          :global(.nav-item:hover .nav-item-icon) {
-            color: var(--color-primary);
-          }
-
-          .nav-item-label {
-            flex: 1;
-            font-size: 0.9375rem;
-            font-weight: 500;
-            color: var(--color-text-primary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          .nav-item-badge {
-            background: var(--color-primary);
-            color: white;
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 0.125rem 0.5rem;
-            border-radius: 12px;
-            min-width: 20px;
-            text-align: center;
-          }
-
-          /* Mobile Toggle */
-          .sidebar-mobile-toggle {
-            display: none;
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: var(--color-primary);
-            border: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 1001;
-            transition: transform 0.2s ease;
-          }
-
-          .sidebar-mobile-toggle:hover {
-            transform: scale(1.05);
-          }
-
-          .sidebar-mobile-toggle:active {
-            transform: scale(0.95);
-          }
-
-          :global(.mobile-toggle-icon) {
-            width: 24px;
-            height: 24px;
-            color: white;
-          }
-
-          /* Responsive */
-          @media (max-width: 768px) {
-            .command-center-sidebar {
-              transform: translateX(-100%);
-            }
-
-            .command-center-sidebar.collapsed {
-              transform: translateX(0);
-              width: 280px;
-            }
-
-            .sidebar-mobile-toggle {
-              display: flex;
-            }
-
-            .sidebar-collapse-toggle {
-              display: none;
-            }
-          }
-
-          /* Active state (would be set via className based on current route) */
-          :global(.nav-item.active) {
-            background: rgba(99, 102, 241, 0.1);
-          }
-
-          :global(.nav-item.active .nav-item-icon) {
-            color: var(--color-primary);
-          }
-
-          :global(.nav-item.active .nav-item-label) {
-            color: var(--color-primary);
-            font-weight: 600;
-          }
-        `}</style>
       </aside>
     );
   }

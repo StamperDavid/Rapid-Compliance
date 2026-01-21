@@ -52,6 +52,9 @@ const ADMIN_ROLES = ['platform_admin', 'super_admin', 'admin'] as const;
 /** Platform-level admin roles - these have full RBAC permissions but NO org bypass */
 export const PLATFORM_ADMIN_ROLES = ['platform_admin', 'super_admin'] as const;
 
+/** Internal org ID used for platform-level operations */
+export const PLATFORM_INTERNAL_ORG = 'platform-internal-org';
+
 // ============================================================================
 // CLAIMS EXTRACTION
 // ============================================================================
@@ -155,6 +158,7 @@ function validateRole(role: string | null): TenantClaims['role'] {
  * Access is granted if:
  * 1. User's tenant_id matches the requested organization
  * 2. No specific org requested - uses user's own org
+ * 3. Platform admins can access platform-internal-org
  *
  * @param claims - User's tenant claims
  * @param requestedOrgId - The organization ID being accessed
@@ -164,8 +168,29 @@ export function checkTenantAccess(
   claims: TenantClaims,
   requestedOrgId: string | null
 ): TenantAccessResult {
+  // Platform admins can access platform-internal-org without tenant_id
+  const isPlatformAdmin = claims.role === 'platform_admin' || claims.role === 'super_admin';
+  const isPlatformOrgRequest = requestedOrgId === PLATFORM_INTERNAL_ORG || requestedOrgId === null;
+
+  if (isPlatformAdmin && isPlatformOrgRequest) {
+    return {
+      allowed: true,
+      reason: 'Platform admin accessing platform-level resources',
+      isGlobalAdmin: true,
+    };
+  }
+
   // No tenant_id in claims means user has no organization access
   if (!claims.tenant_id) {
+    // Platform admins without tenant_id can still operate at platform level
+    if (isPlatformAdmin) {
+      return {
+        allowed: true,
+        reason: 'Platform admin with no tenant operates at platform level',
+        isGlobalAdmin: true,
+      };
+    }
+
     logger.debug('User has no tenant_id', {
       uid: claims.uid,
       email: claims.email,
