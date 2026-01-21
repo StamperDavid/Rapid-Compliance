@@ -466,56 +466,45 @@ export default function SwarmControlPage() {
     }
   }, [executionInput, circuitBreakers]);
 
-  // Styles
-  const bgPaper = '#1a1a1a';
-  const borderColor = '#333';
-  const functionalColor = '#10b981';
-  const shellColor = '#f59e0b';
-  const ghostColor = '#6b7280';
-  const indigoColor = '#6366f1';
-
   return (
-    <div style={{ padding: '2rem', color: '#fff' }}>
+    <div className="p-8 text-[var(--color-text-primary)]">
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">
           Swarm Control Center
         </h1>
-        <p style={{ color: '#666', fontSize: '0.875rem' }}>
+        <p className="text-[var(--color-text-secondary)] text-sm">
           Monitor and execute AI agents across the platform
         </p>
       </div>
 
       {/* Stats Overview */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4 mb-8">
         <StatCard label="Total Agents" value={AGENT_REGISTRY.length.toString()} />
-        <StatCard label="Functional" value={functionalCount.toString()} color={functionalColor} />
-        <StatCard label="Shell" value={shellCount.toString()} color={shellColor} />
-        <StatCard label="Ghost" value={ghostCount.toString()} color={ghostColor} />
+        <StatCard label="Functional" value={functionalCount.toString()} statusType="FUNCTIONAL" />
+        <StatCard label="Shell" value={shellCount.toString()} statusType="SHELL" />
+        <StatCard label="Ghost" value={ghostCount.toString()} statusType="GHOST" />
         <StatCard label="Total LOC" value={totalLOC.toLocaleString()} />
         <StatCard
           label="Coverage"
           value={`${Math.round((functionalCount / AGENT_REGISTRY.length) * 100)}%`}
-          color={functionalColor}
+          statusType="FUNCTIONAL"
         />
       </div>
 
       {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: `1px solid ${borderColor}`, paddingBottom: '1rem' }}>
+      <div className="flex gap-2 mb-6 border-b border-[var(--color-border)] pb-4">
         {(['overview', 'execute', 'history'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '0.625rem 1.25rem',
-              backgroundColor: activeTab === tab ? indigoColor : 'transparent',
-              border: `1px solid ${activeTab === tab ? indigoColor : borderColor}`,
-              borderRadius: '0.5rem',
-              color: '#fff',
-              cursor: 'pointer',
-              textTransform: 'capitalize',
-              fontWeight: activeTab === tab ? '600' : '400',
-            }}
+            className={`
+              px-5 py-2.5 rounded-lg capitalize font-semibold transition-all
+              ${activeTab === tab
+                ? 'bg-[var(--color-primary)] border border-[var(--color-primary)] text-[var(--color-text-primary)]'
+                : 'bg-transparent border border-[var(--color-border)] text-[var(--color-text-primary)] font-normal'
+              }
+            `}
           >
             {tab}
           </button>
@@ -526,10 +515,10 @@ export default function SwarmControlPage() {
       {activeTab === 'overview' && (
         <div>
           {/* Managers Section */}
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
+          <h2 className="text-xl font-semibold mb-4">
             Managers (L2 Orchestrators)
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4 mb-8">
             {AGENT_REGISTRY.filter(a => a.category === 'manager').map(agent => (
               <AgentCard
                 key={agent.id}
@@ -544,10 +533,10 @@ export default function SwarmControlPage() {
           </div>
 
           {/* Specialists Section */}
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
+          <h2 className="text-xl font-semibold mb-4">
             Specialists (L3 Workers)
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
             {AGENT_REGISTRY.filter(a => a.category === 'specialist').map(agent => (
               <AgentCard
                 key={agent.id}
@@ -565,38 +554,27 @@ export default function SwarmControlPage() {
 
       {/* Execute Tab */}
       {activeTab === 'execute' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+        <div className="grid grid-cols-2 gap-6">
           {/* Agent Selection */}
-          <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>
+          <div className="bg-[var(--color-bg-paper)] border border-[var(--color-border)] rounded-xl p-6">
+            <h3 className="text-lg font-semibold mb-4">
               Select Agent to Execute
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div className="flex flex-col gap-2">
               {AGENT_REGISTRY.filter(a => a.executable).map(agent => (
                 <button
                   key={agent.id}
                   onClick={() => setSelectedAgent(agent)}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    backgroundColor: selectedAgent?.id === agent.id ? indigoColor : '#0a0a0a',
-                    border: `1px solid ${selectedAgent?.id === agent.id ? indigoColor : borderColor}`,
-                    borderRadius: '0.5rem',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
+                  className={`
+                    px-4 py-3 rounded-lg text-[var(--color-text-primary)] cursor-pointer text-left flex justify-between items-center
+                    ${selectedAgent?.id === agent.id
+                      ? 'bg-[var(--color-primary)] border border-[var(--color-primary)]'
+                      : 'bg-[var(--color-bg-primary)] border border-[var(--color-border)]'
+                    }
+                  `}
                 >
                   <span>{agent.name}</span>
-                  <span style={{
-                    fontSize: '0.75rem',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '0.25rem',
-                    backgroundColor: `${functionalColor}20`,
-                    color: functionalColor,
-                  }}>
+                  <span className="text-xs px-2 py-1 rounded bg-[var(--color-success)]/20 text-[var(--color-success)]">
                     FUNCTIONAL
                   </span>
                 </button>
@@ -605,48 +583,32 @@ export default function SwarmControlPage() {
           </div>
 
           {/* Execution Form */}
-          <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>
+          <div className="bg-[var(--color-bg-paper)] border border-[var(--color-border)] rounded-xl p-6">
+            <h3 className="text-lg font-semibold mb-4">
               {selectedAgent ? `Execute: ${selectedAgent.name}` : 'Select an Agent'}
             </h3>
 
             {selectedAgent?.id === 'MARKETING_MANAGER' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="flex flex-col gap-4">
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                  <label className="block text-sm text-[var(--color-text-muted)] mb-2">
                     Campaign Message
                   </label>
                   <textarea
                     value={executionInput.campaignMessage}
                     onChange={(e) => setExecutionInput(prev => ({ ...prev, campaignMessage: e.target.value }))}
                     placeholder="Launch viral TikTok campaign for B2C product targeting Gen Z"
-                    style={{
-                      width: '100%',
-                      height: '100px',
-                      padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                      resize: 'none',
-                    }}
+                    className="w-full h-[100px] p-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)] resize-none"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                  <label className="block text-sm text-[var(--color-text-muted)] mb-2">
                     Campaign Objective
                   </label>
                   <select
                     value={executionInput.campaignObjective}
                     onChange={(e) => setExecutionInput(prev => ({ ...prev, campaignObjective: e.target.value as 'awareness' | 'engagement' | 'conversions' | 'leads' }))}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                    }}
+                    className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)]"
                   >
                     <option value="awareness">Awareness</option>
                     <option value="engagement">Engagement</option>
@@ -658,9 +620,9 @@ export default function SwarmControlPage() {
             )}
 
             {selectedAgent?.id === 'COMPETITOR_ANALYST' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="flex flex-col gap-4">
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                  <label className="block text-sm text-[var(--color-text-muted)] mb-2">
                     Business Niche
                   </label>
                   <input
@@ -668,18 +630,11 @@ export default function SwarmControlPage() {
                     value={executionInput.competitorNiche}
                     onChange={(e) => setExecutionInput(prev => ({ ...prev, competitorNiche: e.target.value }))}
                     placeholder="e.g., SaaS CRM, organic skincare, plumbing services"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                    }}
+                    className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)]"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                  <label className="block text-sm text-[var(--color-text-muted)] mb-2">
                     Target Location
                   </label>
                   <input
@@ -687,36 +642,22 @@ export default function SwarmControlPage() {
                     value={executionInput.competitorLocation}
                     onChange={(e) => setExecutionInput(prev => ({ ...prev, competitorLocation: e.target.value }))}
                     placeholder="e.g., Austin TX, United Kingdom, Global"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                    }}
+                    className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)]"
                   />
                 </div>
               </div>
             )}
 
             {selectedAgent?.id === 'TIKTOK_EXPERT' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="flex flex-col gap-4">
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                  <label className="block text-sm text-[var(--color-text-muted)] mb-2">
                     Method
                   </label>
                   <select
                     value={executionInput.tiktokMethod}
                     onChange={(e) => setExecutionInput(prev => ({ ...prev, tiktokMethod: e.target.value as 'generate_viral_hook' | 'script_video_pacing' | 'analyze_trending_sounds' }))}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                    }}
+                    className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)]"
                   >
                     <option value="generate_viral_hook">Generate Viral Hooks</option>
                     <option value="script_video_pacing">Script Video Pacing</option>
@@ -724,7 +665,7 @@ export default function SwarmControlPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                  <label className="block text-sm text-[var(--color-text-muted)] mb-2">
                     Topic/Niche
                   </label>
                   <input
@@ -732,18 +673,11 @@ export default function SwarmControlPage() {
                     value={executionInput.tiktokTopic}
                     onChange={(e) => setExecutionInput(prev => ({ ...prev, tiktokTopic: e.target.value }))}
                     placeholder="e.g., AI productivity tools, fitness hacks"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                    }}
+                    className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)]"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                  <label className="block text-sm text-[var(--color-text-muted)] mb-2">
                     Target Audience
                   </label>
                   <input
@@ -751,14 +685,7 @@ export default function SwarmControlPage() {
                     value={executionInput.tiktokAudience}
                     onChange={(e) => setExecutionInput(prev => ({ ...prev, tiktokAudience: e.target.value }))}
                     placeholder="e.g., Gen Z entrepreneurs, fitness enthusiasts"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                    }}
+                    className="w-full p-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-primary)]"
                   />
                 </div>
               </div>
@@ -768,17 +695,13 @@ export default function SwarmControlPage() {
               <button
                 onClick={() => { void executeAgent(selectedAgent); }}
                 disabled={isExecuting}
-                style={{
-                  marginTop: '1.5rem',
-                  width: '100%',
-                  padding: '0.875rem',
-                  backgroundColor: isExecuting ? '#333' : indigoColor,
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  color: '#fff',
-                  fontWeight: '600',
-                  cursor: isExecuting ? 'not-allowed' : 'pointer',
-                }}
+                className={`
+                  mt-6 w-full py-3.5 rounded-lg text-[var(--color-text-primary)] font-semibold
+                  ${isExecuting
+                    ? 'bg-[var(--color-border)] cursor-not-allowed'
+                    : 'bg-[var(--color-primary)] cursor-pointer'
+                  }
+                `}
               >
                 {isExecuting ? 'Executing...' : `Execute ${selectedAgent.name}`}
               </button>
@@ -789,90 +712,70 @@ export default function SwarmControlPage() {
 
       {/* History Tab */}
       {activeTab === 'history' && (
-        <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>
+        <div className="bg-[var(--color-bg-paper)] border border-[var(--color-border)] rounded-xl p-6">
+          <h3 className="text-lg font-semibold mb-4">
             Execution History
           </h3>
 
           {executionHistory.length === 0 ? (
-            <p style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>
+            <p className="text-[var(--color-text-secondary)] text-center py-8">
               No executions yet. Go to the Execute tab to run an agent.
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="flex flex-col gap-4">
               {executionHistory.map((execution, index) => (
                 <div
                   key={`${execution.taskId}-${index}`}
-                  style={{
-                    padding: '1rem',
-                    backgroundColor: '#0a0a0a',
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: '0.5rem',
-                  }}
+                  className="p-4 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg"
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
+                  <div className="flex justify-between items-start mb-3">
                     <div>
-                      <span style={{ fontWeight: '600' }}>
+                      <span className="font-semibold">
                         {AGENT_REGISTRY.find(a => a.id === execution.agentId)?.name ?? execution.agentId}
                       </span>
-                      <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', color: '#666' }}>
+                      <span className="ml-3 text-xs text-[var(--color-text-secondary)]">
                         {execution.taskId}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div className="flex items-center gap-3">
                       {execution.duration !== undefined && (
-                        <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                        <span className="text-xs text-[var(--color-text-secondary)]">
                           {execution.duration}ms
                         </span>
                       )}
-                      <span style={{
-                        fontSize: '0.75rem',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '0.25rem',
-                        backgroundColor: execution.status === 'COMPLETED' ? `${functionalColor}20` : '#ef444420',
-                        color: execution.status === 'COMPLETED' ? functionalColor : '#ef4444',
-                      }}>
+                      <span className={`
+                        text-xs px-2 py-1 rounded
+                        ${execution.status === 'COMPLETED'
+                          ? 'bg-[var(--color-success)]/20 text-[var(--color-success)]'
+                          : 'bg-[var(--color-error)]/20 text-[var(--color-error)]'
+                        }
+                      `}>
                         {execution.status}
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>
+                  <div className="text-xs text-[var(--color-text-secondary)] mb-2">
                     Started: {new Date(execution.startedAt).toLocaleString()}
                   </div>
 
                   {execution.errors && execution.errors.length > 0 && (
-                    <div style={{
-                      marginTop: '0.75rem',
-                      padding: '0.75rem',
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                      border: '1px solid #ef4444',
-                      borderRadius: '0.375rem',
-                    }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#ef4444', marginBottom: '0.25rem' }}>
+                    <div className="mt-3 p-3 bg-[var(--color-error)]/10 border border-[var(--color-error)] rounded-md">
+                      <div className="text-xs font-semibold text-[var(--color-error)] mb-1">
                         Errors:
                       </div>
                       {execution.errors.map((err, i) => (
-                        <div key={i} style={{ fontSize: '0.75rem', color: '#ef4444' }}>{err}</div>
+                        <div key={i} className="text-xs text-[var(--color-error)]">{err}</div>
                       ))}
                     </div>
                   )}
 
                   {execution.data !== null && execution.data !== undefined && (
-                    <details style={{ marginTop: '0.75rem' }}>
-                      <summary style={{ fontSize: '0.75rem', color: '#999', cursor: 'pointer' }}>
+                    <details className="mt-3">
+                      <summary className="text-xs text-[var(--color-text-muted)] cursor-pointer">
                         View Result Data
                       </summary>
-                      <pre style={{
-                        marginTop: '0.5rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#111',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.75rem',
-                        color: '#ccc',
-                        overflow: 'auto',
-                        maxHeight: '300px',
-                      }}>
+                      <pre className="mt-2 p-3 bg-[var(--color-bg-elevated)] rounded-md text-xs text-[var(--color-text-secondary)] overflow-auto max-h-[300px]">
                         {JSON.stringify(execution.data, null, 2)}
                       </pre>
                     </details>
@@ -891,16 +794,34 @@ export default function SwarmControlPage() {
 // SUB-COMPONENTS
 // ============================================================================
 
-function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
+function StatCard({
+  label,
+  value,
+  statusType
+}: {
+  label: string;
+  value: string;
+  statusType?: 'FUNCTIONAL' | 'SHELL' | 'GHOST';
+}) {
+  const getColorClass = () => {
+    if (!statusType) return 'text-[var(--color-text-primary)]';
+
+    switch (statusType) {
+      case 'FUNCTIONAL':
+        return 'text-[var(--color-success)]';
+      case 'SHELL':
+        return 'text-[var(--color-warning)]';
+      case 'GHOST':
+        return 'text-[var(--color-text-disabled)]';
+      default:
+        return 'text-[var(--color-text-primary)]';
+    }
+  };
+
   return (
-    <div style={{
-      padding: '1rem',
-      backgroundColor: '#1a1a1a',
-      border: '1px solid #333',
-      borderRadius: '0.5rem',
-    }}>
-      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>{label}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: color ?? '#fff' }}>{value}</div>
+    <div className="p-4 bg-[var(--color-bg-paper)] border border-[var(--color-border)] rounded-lg">
+      <div className="text-xs text-[var(--color-text-secondary)] mb-1">{label}</div>
+      <div className={`text-2xl font-bold ${getColorClass()}`}>{value}</div>
     </div>
   );
 }
@@ -914,95 +835,71 @@ function AgentCard({
   circuitBreaker?: CircuitBreakerStatus;
   onSelect: () => void;
 }) {
-  const statusColors = {
-    FUNCTIONAL: '#10b981',
-    SHELL: '#f59e0b',
-    GHOST: '#6b7280',
+  const getStatusColorClass = (status: 'FUNCTIONAL' | 'SHELL' | 'GHOST') => {
+    switch (status) {
+      case 'FUNCTIONAL':
+        return 'bg-[var(--color-success)]/20 text-[var(--color-success)]';
+      case 'SHELL':
+        return 'bg-[var(--color-warning)]/20 text-[var(--color-warning)]';
+      case 'GHOST':
+        return 'bg-[var(--color-text-disabled)]/20 text-[var(--color-text-disabled)]';
+      default:
+        return 'bg-[var(--color-text-secondary)]/20 text-[var(--color-text-secondary)]';
+    }
   };
-
-  const statusColor = statusColors[agent.status];
 
   return (
     <div
-      style={{
-        padding: '1rem',
-        backgroundColor: '#1a1a1a',
-        border: `1px solid #333`,
-        borderRadius: '0.75rem',
-        cursor: agent.executable ? 'pointer' : 'default',
-        transition: 'all 0.2s',
-      }}
+      className={`
+        p-4 bg-[var(--color-bg-paper)] border border-[var(--color-border)] rounded-xl
+        transition-all duration-200
+        ${agent.executable ? 'cursor-pointer hover:border-[var(--color-primary)]' : 'cursor-default'}
+      `}
       onClick={agent.executable ? onSelect : undefined}
-      onMouseEnter={(e) => {
-        if (agent.executable) {
-          e.currentTarget.style.borderColor = '#6366f1';
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#333';
-      }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
+      <div className="flex justify-between items-start mb-3">
         <div>
-          <div style={{ fontWeight: '600', fontSize: '0.9375rem' }}>{agent.name}</div>
-          <div style={{ fontSize: '0.75rem', color: '#666' }}>{agent.id}</div>
+          <div className="font-semibold text-[15px]">{agent.name}</div>
+          <div className="text-xs text-[var(--color-text-secondary)]">{agent.id}</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           {circuitBreaker?.isOpen && (
-            <span style={{
-              fontSize: '0.625rem',
-              padding: '0.125rem 0.375rem',
-              borderRadius: '0.25rem',
-              backgroundColor: '#ef4444' + '20',
-              color: '#ef4444',
-            }}>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-error)]/20 text-[var(--color-error)]">
               CIRCUIT OPEN
             </span>
           )}
-          <span style={{
-            fontSize: '0.75rem',
-            padding: '0.25rem 0.5rem',
-            borderRadius: '0.25rem',
-            backgroundColor: `${statusColor}20`,
-            color: statusColor,
-          }}>
+          <span className={`text-xs px-2 py-1 rounded ${getStatusColorClass(agent.status)}`}>
             {agent.status}
           </span>
         </div>
       </div>
 
-      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>
+      <div className="text-xs text-[var(--color-text-secondary)] mb-2">
         Reports to: {agent.reportsTo}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '0.75rem' }}>
+      <div className="flex flex-wrap gap-1 mb-3">
         {agent.capabilities.slice(0, 3).map(cap => (
           <span
             key={cap}
-            style={{
-              fontSize: '0.625rem',
-              padding: '0.125rem 0.375rem',
-              borderRadius: '0.25rem',
-              backgroundColor: '#333',
-              color: '#999',
-            }}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-border)] text-[var(--color-text-muted)]"
           >
             {cap}
           </span>
         ))}
         {agent.capabilities.length > 3 && (
-          <span style={{ fontSize: '0.625rem', color: '#666' }}>
+          <span className="text-[10px] text-[var(--color-text-secondary)]">
             +{agent.capabilities.length - 3} more
           </span>
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.75rem', color: '#666' }}>
+      <div className="flex justify-between items-center">
+        <span className="text-xs text-[var(--color-text-secondary)]">
           {agent.loc.toLocaleString()} LOC
         </span>
         {agent.executable && (
-          <span style={{ fontSize: '0.75rem', color: '#6366f1' }}>
+          <span className="text-xs text-[var(--color-primary)]">
             Click to Execute
           </span>
         )}
