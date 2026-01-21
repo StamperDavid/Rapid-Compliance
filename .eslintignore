@@ -66,3 +66,8 @@ playwright/.cache/
 
 # Sentry
 .sentryclirc
+
+# Config files (handled by their own validators)
+tailwind.config.ts
+postcss.config.js
+next.config.js

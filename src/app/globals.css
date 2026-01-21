@@ -2,6 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Primary Colors */
+  --color-primary: #6366f1;
+  --color-primary-light: #818cf8;
+  --color-primary-dark: #4f46e5;
+  --color-primary-contrast: #ffffff;
+
+  /* Secondary Colors */
+  --color-secondary: #8b5cf6;
+  --color-secondary-light: #a78bfa;
+  --color-secondary-dark: #7c3aed;
+
+  /* Accent */
+  --color-accent: #ec4899;
+  --color-accent-light: #f472b6;
+  --color-accent-dark: #db2777;
+
+  /* Semantic Colors */
+  --color-success: #10b981;
+  --color-success-light: #34d399;
+  --color-success-dark: #059669;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fbbf24;
+  --color-warning-dark: #d97706;
+  --color-error: #ef4444;
+  --color-error-light: #f87171;
+  --color-error-dark: #dc2626;
+  --color-info: #3b82f6;
+  --color-info-light: #60a5fa;
+  --color-info-dark: #2563eb;
+
+  /* Neutral Scale */
+  --color-neutral-100: #f3f4f6;
+  --color-neutral-200: #e5e7eb;
+  --color-neutral-300: #d1d5db;
+  --color-neutral-400: #9ca3af;
+  --color-neutral-500: #6b7280;
+  --color-neutral-600: #4b5563;
+  --color-neutral-700: #374151;
+  --color-neutral-800: #1f2937;
+  --color-neutral-900: #111827;
+
+  /* Backgrounds */
+  --color-bg-main: #000000;
+  --color-bg-paper: #0a0a0a;
+  --color-bg-elevated: #1a1a1a;
+
+  /* Text */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #999999;
+  --color-text-disabled: #666666;
+
+  /* Borders */
+  --color-border-main: #1a1a1a;
+  --color-border-light: #333333;
+  --color-border-strong: #4b5563;
+
+  /* Legacy surface mappings (for compatibility) */
+  --color-surface: var(--color-bg-paper);
+  --color-surface-elevated: var(--color-bg-elevated);
+  --color-surface-hover: var(--color-bg-elevated);
+  --color-surface-active: rgba(99, 102, 241, 0.2);
+  --color-text-tertiary: var(--color-text-disabled);
+  --color-primary-surface: rgba(99, 102, 241, 0.1);
+
+  /* Sidebar specific */
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 72px;
+  --sidebar-bg: var(--color-bg-paper);
+  --sidebar-border: var(--color-border-main);
+  --sidebar-item-hover: var(--color-bg-elevated);
+  --sidebar-item-active: var(--color-primary);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -11,6 +85,6 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #000000;
-  color: #ffffff;
+  background-color: var(--color-bg-main);
+  color: var(--color-text-primary);
 }
