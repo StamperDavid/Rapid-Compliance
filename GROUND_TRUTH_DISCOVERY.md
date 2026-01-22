@@ -1406,7 +1406,7 @@ The following managers have SHELL status and could be enhanced with orchestratio
 ---
 
 **Full System Audit Completed:** January 21, 2026
-**Last Updated:** January 22, 2026 (Identity Bridge Live)
+**Last Updated:** January 22, 2026 (Identity Bridge Live + Admin Redundancy Audit)
 **Total Files Analyzed:** 1,393
 **Audit Method:** 8-Agent Parallel Swarm + Direct File Analysis
 **Auditor:** Claude Opus 4.5
@@ -1414,3 +1414,484 @@ The following managers have SHELL status and could be enhanced with orchestratio
 **System Status:** PRODUCTION-READY (96% Complete)
 **Identity Bridge:** ✅ LIVE - platform-admin org created, super_admin user linked
 **Remaining Work:** 4% (P0 sidebar routes + P1 enhancements)
+
+---
+
+## PART X: ADMIN UI REDUNDANCY AUDIT
+
+### Executive Summary
+
+The Platform Admin encounters **18+ duplicate navigation entries** across 9 feature areas. The root issue is maintaining separate `/admin/*` routes (mostly placeholders) while simultaneously providing "God Mode" access to `/workspace/platform-admin/*` (fully functional).
+
+### Duplicate Routes Table
+
+| Feature | Admin Path | Workspace Equivalent | Status | Severity |
+|---------|-----------|---------------------|--------|----------|
+| **Leads** | `/admin/leads` | `/workspace/{orgId}/leads` | FULLY DUPLICATE | HIGH |
+| **Deals** | `/admin/deals` | `/workspace/{orgId}/deals` | FULLY DUPLICATE | HIGH |
+| **Analytics** | `/admin/analytics` | `/workspace/{orgId}/analytics` | FULLY DUPLICATE | HIGH |
+| **Email Campaigns** | `/admin/email-campaigns` | `/workspace/{orgId}/email/campaigns` | FULLY DUPLICATE | HIGH |
+| **Social Media** | `/admin/social` | `/workspace/{orgId}/social/campaigns` | FULLY DUPLICATE | HIGH |
+| **Voice Management** | `/admin/voice` + `/admin/voice-training` | `/workspace/{orgId}/voice/training` | PARTIALLY DUPLICATE | MEDIUM |
+| **Sales Agent** | `/admin/sales-agent` | `/workspace/{orgId}/settings/ai-agents` | PARTIALLY DUPLICATE | MEDIUM |
+| **Settings** | `/admin/system/settings` | `/workspace/{orgId}/settings` | FUNCTIONALLY SIMILAR | MEDIUM |
+| **Templates** | `/admin/templates` | `/workspace/{orgId}/settings/email-templates` | PARTIALLY DUPLICATE | LOW |
+
+### Detailed Route Analysis
+
+#### HIGH SEVERITY: Complete Duplicates
+
+1. **Leads Management**
+   - Admin: `/src/app/admin/leads/page.tsx` - Placeholder ("Coming Soon")
+   - Workspace: `/src/app/workspace/[orgId]/leads/page.tsx` - Full implementation
+   - CommandCenterSidebar: Lines 125-130
+   - **Issue:** Admin sees "Leads" twice with different implementations
+
+2. **Deals Management**
+   - Admin: `/src/app/admin/deals/page.tsx` - Placeholder ("In Development")
+   - Workspace: `/src/app/workspace/[orgId]/deals/page.tsx` - Full pipeline view
+   - CommandCenterSidebar: Lines 132-137
+   - **Issue:** Kanban scaffold in admin vs full functionality in workspace
+
+3. **Analytics**
+   - Admin: `/src/app/admin/analytics/page.tsx` - Platform-wide metrics
+   - Workspace: `/src/app/workspace/[orgId]/analytics/page.tsx` - Org-specific metrics
+   - CommandCenterSidebar: Lines 221-243
+   - **Issue:** Different scopes but same conceptual feature
+
+4. **Email Campaigns**
+   - Admin: `/src/app/admin/email-campaigns/page.tsx` - Stub with mock metrics
+   - Workspace: `/src/app/workspace/[orgId]/email/campaigns/page.tsx` - Functional
+   - Also: `/workspace/[orgId]/outbound/email-writer` and `/workspace/[orgId]/marketing/email-builder`
+   - CommandCenterSidebar: Lines 181-186
+   - **Issue:** 3 different pathways to email features
+
+5. **Social Media**
+   - Admin: `/src/app/admin/social/page.tsx` - Platform-wide posting
+   - Workspace: `/src/app/workspace/[orgId]/social/campaigns` - Org campaigns
+   - Also: `/workspace/[orgId]/social/training` - Social AI Lab
+   - CommandCenterSidebar: Lines 154-173
+   - **Issue:** Both labeled "Social Media" without distinguishing scope
+
+#### MEDIUM SEVERITY: Partial Duplicates
+
+6. **Voice Management**
+   - Admin: `/admin/voice` (placeholder) + `/admin/voice-training` (settings)
+   - Workspace: `/workspace/[orgId]/voice/training` - Voice AI Lab
+   - CommandCenterSidebar: Lines 202-215
+   - **Issue:** Admin has fragmented voice routes
+
+7. **Sales Agent**
+   - Admin: `/admin/sales-agent` - Platform-wide settings
+   - Workspace: `/workspace/[orgId]/settings/ai-agents/` - Org-specific training
+   - CommandCenterSidebar: Lines 139-144
+   - **Issue:** Confusing context switch
+
+### Sidebar Entry Redundancy
+
+**CommandCenterSidebar.tsx** (Lines 73-318) contains hardcoded routes that overlap with workspace:
+
+| Category | Admin Routes | Workspace Equivalents |
+|----------|-------------|----------------------|
+| Leads & Sales | `/admin/leads`, `/admin/deals`, `/admin/sales-agent`, `/admin/recovery` | `/workspace/*/leads`, `/workspace/*/deals`, `/workspace/*/settings/ai-agents` |
+| Social Media | `/admin/social`, `/admin/swarm` | `/workspace/*/social/campaigns` |
+| Email Marketing | `/admin/email-campaigns`, `/admin/email-templates` | `/workspace/*/email/campaigns` |
+| AI Voice Agents | `/admin/voice-settings`, `/admin/voice-training` | `/workspace/*/voice/training` |
+| Analytics | `/admin/analytics/usage`, `/admin/analytics/revenue`, `/admin/analytics/pipeline` | `/workspace/*/analytics/*` |
+
+### Component Duplication Summary
+
+| Component Type | Duplicate Count | Primary Issue |
+|---------------|-----------------|---------------|
+| MetricCard implementations | **13** | Each card creates own local MetricCard |
+| Shared widgets (underutilized) | **5** | Only used in CEO Command Center |
+| Local analytics cards | **9** | Embedded MetricCard variants |
+
+**Duplicate MetricCard Locations:**
+- `src/components/shared/MetricCard.tsx` (canonical)
+- `src/app/admin/analytics/page.tsx` (local)
+- `src/app/admin/system/health/page.tsx` (local)
+- `src/app/admin/voice/page.tsx` (local)
+- `src/components/analytics/DealPipelineCard.tsx` (embedded)
+- `src/components/analytics/EmailMetricsCard.tsx` (embedded)
+- `src/components/analytics/RevenueMetricsCard.tsx` (embedded)
+- `src/components/analytics/TeamPerformanceCard.tsx` (embedded)
+- `src/components/analytics/WorkflowMetricsCard.tsx` (embedded)
+- `src/components/coaching/PerformanceScoreCard.tsx` (embedded)
+- `src/components/coaching/team/TeamOverviewCard.tsx` (embedded)
+- `src/components/risk/RiskOverviewCard.tsx` (embedded)
+- `src/components/sequence/SequenceOverviewCard.tsx` (embedded)
+
+### Affected Files
+
+**Primary (Navigation/Layout):**
+- `src/components/admin/CommandCenterSidebar.tsx`
+- `src/app/admin/layout.tsx`
+- `src/app/workspace/[orgId]/layout.tsx`
+
+**Secondary (Route Logic):**
+- `src/lib/routes/workspace-routes.ts`
+- `src/lib/orchestrator/feature-toggle-service.ts`
+- `src/hooks/useFeatureVisibility.ts`
+
+**Pages with Redundant Routes:**
+- `/src/app/admin/leads/page.tsx`
+- `/src/app/admin/deals/page.tsx`
+- `/src/app/admin/analytics/page.tsx`
+- `/src/app/admin/email-campaigns/page.tsx`
+- `/src/app/admin/social/page.tsx`
+- `/src/app/admin/voice/page.tsx`
+- `/src/app/admin/voice-training/page.tsx`
+- `/src/app/admin/sales-agent/page.tsx`
+- `/src/app/admin/templates/page.tsx`
+
+---
+
+## PART XI: THE "SPLIT-BRAIN" ROOT CAUSE
+
+### Executive Summary
+
+The `platform_admin` role is **architecturally designed** to operate as TWO separate identities:
+1. **System Manager** (Admin Dashboard) - `/admin/*` routes via `useAdminAuth()`
+2. **Business Owner** (Workspace Dashboard) - `/workspace/platform-admin/*` routes via `useAuth()`
+
+This is intentional separation of concerns that has resulted in UX confusion.
+
+### The Two Identity Contexts
+
+| Aspect | System Manager Context | Business Owner Context |
+|--------|----------------------|----------------------|
+| **Route** | `/admin/*` | `/workspace/platform-admin/*` |
+| **Auth Hook** | `useAdminAuth()` | `useAuth()` |
+| **Verification** | `/api/admin/verify` | Firebase standard auth |
+| **Layout** | `src/app/admin/layout.tsx` | `src/app/workspace/[orgId]/layout.tsx` |
+| **Orchestrator** | `AdminOrchestrator` | `MerchantOrchestrator` |
+| **Permission Set** | `ADMIN_ROLE_PERMISSIONS` | `ROLE_PERMISSIONS` |
+
+### Technical Bifurcation Points
+
+#### 1. Claims Validation (`src/lib/auth/claims-validator.ts`, Lines 165-238)
+
+```typescript
+// BIFURCATION POINT #1: Platform admins granted access to 'platform-admin' org
+if (isPlatformAdmin && isPlatformOrgRequest) {
+  return {
+    allowed: true,
+    reason: 'Platform admin accessing platform-level resources',
+    isGlobalAdmin: true,  // MARKS AS GLOBAL ADMIN
+  };
+}
+
+// BIFURCATION POINT #2: Platform admins without tenant_id get assigned 'platform-admin'
+if (!claims.tenant_id && isPlatformAdmin) {
+  return {
+    allowed: true,
+    reason: 'Platform admin assigned platform-admin as effective tenant',
+    isGlobalAdmin: true,
+  };
+}
+```
+
+#### 2. Platform Master Org (`src/lib/constants/platform.ts`, Lines 24-29)
+
+```typescript
+export const PLATFORM_MASTER_ORG: PlatformOrgConfig = {
+  id: 'platform-admin',  // SPECIAL VIRTUAL ORG FOR ADMINS
+  name: 'Platform Admin',
+  isPlatformOrg: true,
+  isInternalAdmin: true,
+} as const;
+```
+
+#### 3. Auth Hook Separation
+
+**useAdminAuth()** (`src/hooks/useAdminAuth.ts`, Lines 32-90):
+- Calls `/api/admin/verify` endpoint
+- Creates `AdminUser` type (not `AppUser`)
+- Loads `ADMIN_ROLE_PERMISSIONS`
+
+**useAuth()** (`src/hooks/useAuth.ts`, Lines 32-117):
+- Standard Firebase auth flow
+- Creates `AppUser` type
+- Loads user profile from Firestore `users/{uid}`
+
+#### 4. God Mode Bridge (`src/components/admin/CommandCenterSidebar.tsx`, Lines 88-95)
+
+```typescript
+{
+  id: "god-mode",
+  label: "God Mode",
+  href: "/workspace/platform-admin/dashboard",  // EXPLICIT BRIDGE
+  icon: Zap,
+  tooltip: "Platform Admin God Mode",
+}
+```
+
+The sidebar explicitly bridges the two contexts with a "God Mode" link.
+
+### The Logical Flow
+
+```
+User with platform_admin role
+         │
+         ├─→ Login at /admin-login
+         │   ├─→ useAdminAuth() hook activated
+         │   ├─→ /api/admin/verify endpoint called
+         │   ├─→ Claims validated with hasAdminRole()
+         │   ├─→ Marked as isPlatformAdmin = true
+         │   └─→ Redirects to /admin (System Manager context)
+         │
+         └─→ From /admin/command-center sidebar
+             ├─→ Clicks "God Mode" link
+             ├─→ Navigates to /workspace/platform-admin/dashboard
+             ├─→ useAuth() hook activated
+             ├─→ orgId parameter = "platform-admin"
+             ├─→ User profile loaded from Firestore
+             ├─→ "👑 God Mode" indicator displayed (Layout Line 104-118)
+             └─→ MerchantOrchestrator loaded (Business Owner context)
+```
+
+### Why The Bifurcation Exists
+
+| Reason | Implementation |
+|--------|---------------|
+| **Separation of Concerns** | System management (orgs, users, billing) vs business operations (sales, marketing) |
+| **Authentication Isolation** | Admin requires `/api/admin/verify`; workspace uses standard Firebase |
+| **Permission Model Difference** | `ADMIN_ROLE_PERMISSIONS` (system-level) vs `ROLE_PERMISSIONS` (org-level) |
+| **Orchestrator Separation** | `AdminOrchestrator` (platform-wide) vs `MerchantOrchestrator` (org-specific) |
+| **Feature Flag System** | Each org (including "platform-admin") has separate visibility settings |
+
+### Key File Locations
+
+| Bifurcation Point | File | Lines |
+|------------------|------|-------|
+| Claims Validation Split | `src/lib/auth/claims-validator.ts` | 165-238 |
+| Platform Org Definition | `src/lib/constants/platform.ts` | 24-29 |
+| Admin Auth Hook | `src/hooks/useAdminAuth.ts` | 32-90 |
+| Workspace Auth Hook | `src/hooks/useAuth.ts` | 32-117 |
+| Admin Verification | `src/app/api/admin/verify/route.ts` | 64-192 |
+| Admin Layout | `src/app/admin/layout.tsx` | 10-117 |
+| Workspace Layout | `src/app/workspace/[orgId]/layout.tsx` | 13-204 |
+| God Mode Bridge | `src/components/admin/CommandCenterSidebar.tsx` | 88-95 |
+| Feature Visibility | `src/hooks/useFeatureVisibility.ts` | 77-101 |
+| Permission Model | `src/types/permissions.ts` | 70-130 |
+
+---
+
+## PART XII: RECOMMENDED UNIFICATION BLUEPRINT
+
+### Objective
+
+Collapse the dual-dashboard architecture into a **single unified Command Center** where system management and business operations (SalesVelocity.ai internal) coexist in one view.
+
+### Proposed Architecture
+
+```
+CURRENT STATE (Split-Brain):
+┌─────────────────────────────────────────────────────────────┐
+│  /admin/*                    │  /workspace/platform-admin/* │
+│  ├── System Management       │  ├── CRM (Full)              │
+│  ├── Organizations           │  ├── Social (Full)           │
+│  ├── Users                   │  ├── Analytics (Full)        │
+│  ├── Billing                 │  ├── Email (Full)            │
+│  ├── CRM (Placeholder)       │  ├── Voice (Full)            │
+│  ├── Social (Partial)        │  └── Agent Config (Full)     │
+│  ├── Analytics (Platform)    │                              │
+│  └── Agent Swarm             │                              │
+└─────────────────────────────────────────────────────────────┘
+
+TARGET STATE (Unified Command Center):
+┌─────────────────────────────────────────────────────────────┐
+│  /admin/* (Single Unified Dashboard)                        │
+│  ├── 🏢 PLATFORM MANAGEMENT (System Manager)               │
+│  │   ├── Organizations                                      │
+│  │   ├── Users                                              │
+│  │   ├── Billing                                            │
+│  │   ├── System Health                                      │
+│  │   └── Feature Flags                                      │
+│  │                                                          │
+│  ├── 📊 BUSINESS OPERATIONS (SalesVelocity.ai Internal)    │
+│  │   ├── CRM (Leads, Deals, Contacts)                      │
+│  │   ├── Social Media (Platform accounts)                   │
+│  │   ├── Email Campaigns                                    │
+│  │   ├── Voice AI                                           │
+│  │   └── Analytics (Platform + Internal)                    │
+│  │                                                          │
+│  └── 🤖 AI WORKFORCE (Agent Swarm)                         │
+│      ├── Specialist Registry                                │
+│      ├── Jasper Training Lab                                │
+│      └── Swarm Execution                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Step-by-Step Unification Plan
+
+#### Phase 1: Route Consolidation (Estimated: 4 hours)
+
+| Step | Action | Files to Modify |
+|------|--------|-----------------|
+| 1.1 | Delete placeholder admin pages | `/admin/leads`, `/admin/deals`, `/admin/email-campaigns` |
+| 1.2 | Migrate functional workspace pages to admin | Copy from `/workspace/[orgId]/*` to `/admin/*` |
+| 1.3 | Update CommandCenterSidebar | Remove workspace bridges, use admin routes only |
+| 1.4 | Remove "God Mode" navigation | Delete explicit bridge in sidebar |
+
+**Files to Delete:**
+- `src/app/admin/leads/page.tsx` (placeholder)
+- `src/app/admin/deals/page.tsx` (placeholder)
+- `src/app/admin/email-campaigns/page.tsx` (stub)
+
+**Files to Create:**
+- `src/app/admin/crm/leads/page.tsx` (copy from workspace)
+- `src/app/admin/crm/deals/page.tsx` (copy from workspace)
+- `src/app/admin/marketing/email/page.tsx` (copy from workspace)
+
+#### Phase 2: Sidebar Restructure (Estimated: 2 hours)
+
+Update `src/components/admin/CommandCenterSidebar.tsx`:
+
+```typescript
+// NEW NAVIGATION STRUCTURE
+const UNIFIED_NAV: NavCategory[] = [
+  {
+    id: "platform",
+    label: "🏢 Platform Management",
+    items: [
+      { id: "orgs", label: "Organizations", href: "/admin/organizations" },
+      { id: "users", label: "Users", href: "/admin/users" },
+      { id: "billing", label: "Billing", href: "/admin/billing" },
+      { id: "health", label: "System Health", href: "/admin/system/health" },
+      { id: "flags", label: "Feature Flags", href: "/admin/system/flags" },
+    ],
+  },
+  {
+    id: "business",
+    label: "📊 Business Operations",
+    items: [
+      { id: "leads", label: "Leads", href: "/admin/crm/leads" },
+      { id: "deals", label: "Deals", href: "/admin/crm/deals" },
+      { id: "social", label: "Social Media", href: "/admin/social" },
+      { id: "email", label: "Email Campaigns", href: "/admin/marketing/email" },
+      { id: "voice", label: "Voice AI", href: "/admin/voice" },
+      { id: "analytics", label: "Analytics", href: "/admin/analytics" },
+    ],
+  },
+  {
+    id: "workforce",
+    label: "🤖 AI Workforce",
+    items: [
+      { id: "swarm", label: "Agent Swarm", href: "/admin/swarm" },
+      { id: "specialists", label: "Specialist Registry", href: "/admin/specialists" },
+      { id: "jasper", label: "Jasper Lab", href: "/admin/jasper-lab" },
+    ],
+  },
+];
+```
+
+#### Phase 3: Auth Unification (Estimated: 3 hours)
+
+| Step | Action | Files to Modify |
+|------|--------|-----------------|
+| 3.1 | Merge auth hooks | Create `useUnifiedAuth()` that handles both contexts |
+| 3.2 | Update admin layout | Use unified hook instead of `useAdminAuth()` only |
+| 3.3 | Remove workspace layout for platform-admin | Redirect `/workspace/platform-admin/*` to `/admin/*` |
+
+**New Hook:** `src/hooks/useUnifiedAuth.ts`
+```typescript
+export function useUnifiedAuth() {
+  // Combines useAdminAuth() and useAuth() logic
+  // Returns single user object with both permission sets
+  // Handles both /api/admin/verify and Firestore profile
+}
+```
+
+#### Phase 4: Component Consolidation (Estimated: 4 hours)
+
+| Step | Action | Files to Modify |
+|------|--------|-----------------|
+| 4.1 | Create MetricCard variants | Single component with `variant` prop |
+| 4.2 | Promote shared widgets | Use in unified dashboard |
+| 4.3 | Merge orchestrators | Single `UnifiedOrchestrator` component |
+
+**MetricCard Consolidation:**
+```typescript
+// src/components/shared/MetricCard.tsx
+interface MetricCardProps {
+  label: string;
+  value: string | number;
+  variant?: 'default' | 'trend' | 'status' | 'delta';
+  // Props for each variant
+  trend?: number;
+  status?: 'healthy' | 'warning' | 'critical';
+  delta?: number;
+}
+```
+
+#### Phase 5: Redirect Implementation (Estimated: 1 hour)
+
+Add redirects for deprecated routes:
+
+**File:** `next.config.js`
+```javascript
+redirects: async () => [
+  { source: '/workspace/platform-admin/:path*', destination: '/admin/:path*', permanent: true },
+  { source: '/admin/leads', destination: '/admin/crm/leads', permanent: true },
+  { source: '/admin/deals', destination: '/admin/crm/deals', permanent: true },
+]
+```
+
+### Risk Mitigation
+
+| Risk | Mitigation |
+|------|------------|
+| Breaking existing bookmarks | Implement redirects for all deprecated routes |
+| Auth flow disruption | Maintain backward compatibility in unified hook |
+| Feature parity gaps | Audit workspace features before migration |
+| Orchestrator conflicts | Test unified orchestrator in staging first |
+
+### Success Criteria
+
+1. ✅ Platform Admin sees ONE sidebar with unified navigation
+2. ✅ No more "God Mode" context switching required
+3. ✅ All CRM, Social, Email, Voice features accessible from `/admin/*`
+4. ✅ System management (orgs, users, billing) in same dashboard
+5. ✅ Single auth flow handles both permission sets
+6. ✅ `/workspace/platform-admin/*` redirects to `/admin/*`
+
+### Implementation Priority
+
+| Priority | Phase | Effort | Impact |
+|----------|-------|--------|--------|
+| P0 | Phase 1: Route Consolidation | 4 hours | Eliminates 5 duplicate routes |
+| P0 | Phase 2: Sidebar Restructure | 2 hours | Single navigation source |
+| P1 | Phase 3: Auth Unification | 3 hours | Single auth context |
+| P1 | Phase 4: Component Consolidation | 4 hours | Reduces 13 MetricCard to 1 |
+| P2 | Phase 5: Redirects | 1 hour | Backward compatibility |
+
+**Total Estimated Effort:** 14 hours
+
+### Files Requiring Modification
+
+**Delete (Placeholders):**
+- `src/app/admin/leads/page.tsx`
+- `src/app/admin/deals/page.tsx`
+- `src/app/admin/email-campaigns/page.tsx`
+
+**Create (New Routes):**
+- `src/app/admin/crm/leads/page.tsx`
+- `src/app/admin/crm/deals/page.tsx`
+- `src/app/admin/crm/contacts/page.tsx`
+- `src/app/admin/marketing/email/page.tsx`
+- `src/hooks/useUnifiedAuth.ts`
+
+**Modify:**
+- `src/components/admin/CommandCenterSidebar.tsx` (navigation restructure)
+- `src/app/admin/layout.tsx` (use unified auth)
+- `src/components/shared/MetricCard.tsx` (add variants)
+- `next.config.js` (add redirects)
+
+---
+
+**Admin Redundancy Audit Completed:** January 22, 2026
+**Audit Method:** 3-Agent Parallel Investigation
+**Auditor:** Claude Opus 4.5
+**Status:** DIAGNOSTIC COMPLETE - AWAITING APPROVAL FOR IMPLEMENTATION
