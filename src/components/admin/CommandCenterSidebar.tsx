@@ -30,6 +30,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Menu,
+  Zap,
 } from "lucide-react";
 
 // ============================================================================
@@ -84,6 +85,13 @@ const useNavigationStructure = (organizationId: string): NavCategory[] => {
             href: `/admin/command-center?org=${organizationId}`,
             icon: LayoutDashboard,
             tooltip: "Command Center Overview",
+          },
+          {
+            id: "god-mode",
+            label: "God Mode",
+            href: "/workspace/platform-admin/dashboard",
+            icon: Zap,
+            tooltip: "Platform Admin God Mode",
           },
         ],
       },

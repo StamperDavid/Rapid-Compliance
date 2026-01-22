@@ -19,6 +19,7 @@ import {
   isPlatformAdminClaims,
   type TenantClaims,
 } from '@/lib/auth/claims-validator';
+import { PLATFORM_MASTER_ORG } from '@/lib/constants/platform';
 
 export interface AdminUser {
   uid: string;
@@ -150,7 +151,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     } : {
       email: decodedToken.email,
       role: claims.role ?? undefined,
-      organizationId: claims.tenant_id ?? 'platform-internal-org',
+      organizationId: claims.tenant_id ?? PLATFORM_MASTER_ORG.id,
     };
 
     // Merge token claims with database role (token claims take precedence)
@@ -158,7 +159,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     const effectiveClaims: TenantClaims = {
       ...claims,
       role: effectiveRole as TenantClaims['role'],
-      tenant_id: claims.tenant_id ?? userData.organizationId ?? 'platform-internal-org',
+      tenant_id: claims.tenant_id ?? userData.organizationId ?? PLATFORM_MASTER_ORG.id,
     };
 
     // Check for admin roles using claims-based validation

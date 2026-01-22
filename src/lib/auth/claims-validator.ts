@@ -12,6 +12,7 @@
 
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_MASTER_ORG } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -51,9 +52,6 @@ const ADMIN_ROLES = ['platform_admin', 'super_admin', 'admin'] as const;
 
 /** Platform-level admin roles - these have full RBAC permissions but NO org bypass */
 export const PLATFORM_ADMIN_ROLES = ['platform_admin', 'super_admin'] as const;
-
-/** Internal org ID used for platform-level operations */
-export const PLATFORM_INTERNAL_ORG = 'platform-internal-org';
 
 // ============================================================================
 // CLAIMS EXTRACTION
@@ -158,7 +156,7 @@ function validateRole(role: string | null): TenantClaims['role'] {
  * Access is granted if:
  * 1. User's tenant_id matches the requested organization
  * 2. No specific org requested - uses user's own org
- * 3. Platform admins can access platform-internal-org
+ * 3. Platform admins can access 'platform-admin' org
  *
  * @param claims - User's tenant claims
  * @param requestedOrgId - The organization ID being accessed
@@ -168,9 +166,9 @@ export function checkTenantAccess(
   claims: TenantClaims,
   requestedOrgId: string | null
 ): TenantAccessResult {
-  // Platform admins can access platform-internal-org without tenant_id
+  // Platform admins can access platform-admin org without tenant_id
   const isPlatformAdmin = claims.role === 'platform_admin' || claims.role === 'super_admin';
-  const isPlatformOrgRequest = requestedOrgId === PLATFORM_INTERNAL_ORG || requestedOrgId === null;
+  const isPlatformOrgRequest = requestedOrgId === PLATFORM_MASTER_ORG.id || requestedOrgId === null;
 
   if (isPlatformAdmin && isPlatformOrgRequest) {
     return {
@@ -182,11 +180,11 @@ export function checkTenantAccess(
 
   // No tenant_id in claims means user has no organization access
   if (!claims.tenant_id) {
-    // Platform admins without tenant_id can still operate at platform level
+    // Platform admins without tenant_id get assigned 'platform-admin' as their effective tenant
     if (isPlatformAdmin) {
       return {
         allowed: true,
-        reason: 'Platform admin with no tenant operates at platform level',
+        reason: 'Platform admin assigned platform-admin as effective tenant',
         isGlobalAdmin: true,
       };
     }
