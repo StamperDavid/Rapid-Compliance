@@ -124,14 +124,14 @@ const AGENT_REGISTRY: AgentInfo[] = [
     executable: true,
   },
   {
-    id: 'X_EXPERT',
-    name: 'X/Twitter Expert',
+    id: 'TWITTER_EXPERT',
+    name: 'Twitter/X Expert',
     category: 'specialist',
-    status: 'GHOST',
+    status: 'FUNCTIONAL',
     reportsTo: 'MARKETING_MANAGER',
-    capabilities: ['tweet_strategy', 'thread_writing'],
-    loc: 50,
-    executable: false,
+    capabilities: ['thread_architecture', 'engagement_strategy', 'ratio_assessment', 'viral_analysis'],
+    loc: 1209,
+    executable: true,
   },
   {
     id: 'FACEBOOK_EXPERT',
@@ -804,7 +804,7 @@ function StatCard({
   statusType?: 'FUNCTIONAL' | 'SHELL' | 'GHOST';
 }) {
   const getColorClass = () => {
-    if (!statusType) return 'text-[var(--color-text-primary)]';
+    if (!statusType) {return 'text-[var(--color-text-primary)]';}
 
     switch (statusType) {
       case 'FUNCTIONAL':

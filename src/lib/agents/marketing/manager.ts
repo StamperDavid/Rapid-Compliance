@@ -202,7 +202,7 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
   },
   maxTokens: 8192,
   temperature: 0.4,
-  specialists: ['TIKTOK_EXPERT', 'X_EXPERT', 'FACEBOOK_EXPERT'],
+  specialists: ['TIKTOK_EXPERT', 'TWITTER_EXPERT', 'FACEBOOK_EXPERT'],
   delegationRules: [
     {
       triggerKeywords: ['tiktok', 'viral', 'short video', 'hook', 'trending sound', 'gen z', 'fyp', 'for you page'],
@@ -212,7 +212,7 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     },
     {
       triggerKeywords: ['twitter', 'x', 'thread', 'tweet', 'engagement', 'ratio', 'reply', 'b2b', 'thought leadership'],
-      delegateTo: 'X_EXPERT',
+      delegateTo: 'TWITTER_EXPERT',
       priority: 10,
       requiresApproval: false,
     },
@@ -767,7 +767,8 @@ export class MarketingManager extends BaseManager {
   private getSpecialistId(platform: string): string {
     const mapping: Record<string, string> = {
       TIKTOK: 'TIKTOK_EXPERT',
-      X: 'X_EXPERT',
+      X: 'TWITTER_EXPERT',
+      TWITTER: 'TWITTER_EXPERT',
       FACEBOOK: 'FACEBOOK_EXPERT',
     };
     return mapping[platform] || `${platform}_EXPERT`;

@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import Tooltip from '@/components/Tooltip';
-import type { PlatformMetrics, SystemHealth } from '@/types/admin'
+import { MetricCard, QuickActionCard, SocialComposerWidget, LeadPipelineWidget, SwarmMonitorWidget } from '@/components/shared';
+import type { PlatformMetrics, SystemHealth } from '@/types/admin';
 import { logger } from '@/lib/logger/logger';
 import type { Timestamp } from 'firebase/firestore';
 
-// Define types for API responses
+// Types for API responses
 interface Organization {
   id: string;
   status: 'active' | 'trial' | 'suspended';
@@ -25,35 +25,39 @@ interface User {
   createdAt: Date;
 }
 
-export default function AdminDashboard() {
+export default function CEOCommandCenter() {
   useAdminAuth();
   const [metrics, setMetrics] = useState<PlatformMetrics | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<'NOT_LOGGED_IN' | 'NOT_SUPER_ADMIN' | null>(null);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        logger.info('📊 Admin Dashboard: Loading data...', { file: 'page.tsx' });
+        logger.info('CEO Command Center: Loading data...', { file: 'page.tsx' });
         const { auth } = await import('@/lib/firebase/config');
-        
+
         if (!auth) {
           logger.error('Firebase auth not initialized', new Error('Firebase auth not initialized'), { file: 'page.tsx' });
           return;
         }
 
-        // Check auth state and get token
         const currentUser = auth.currentUser;
-        logger.info('📊 Current auth user', { email: (currentUser?.email !== '' && currentUser?.email != null) ? currentUser.email : 'NOT LOGGED IN', file: 'page.tsx' });
+        logger.info('Current auth user', { email: currentUser?.email ?? 'NOT LOGGED IN', file: 'page.tsx' });
 
         let orgs: Organization[] = [];
         let users: User[] = [];
-        
+
         if (currentUser) {
-          // Use API routes to fetch data (bypasses Firestore rules)
           const token = await currentUser.getIdToken();
-          
+          const tokenResult = await currentUser.getIdTokenResult();
+
+          // Check for platform_admin role
+          const userRole = tokenResult.claims.role as string | undefined;
+          setIsPlatformAdmin(userRole === 'platform_admin' || userRole === 'super_admin');
+
           // Fetch organizations and users in parallel
           const [orgsResponse, usersResponse] = await Promise.all([
             fetch('/api/admin/organizations', {
@@ -63,15 +67,14 @@ export default function AdminDashboard() {
               headers: { Authorization: `Bearer ${token}` }
             })
           ]);
-          
+
           if (orgsResponse.ok) {
             const data = await orgsResponse.json() as { organizations?: Organization[] };
             orgs = data.organizations ?? [];
-            logger.info('📊 Organizations fetched via API', { count: orgs.length, file: 'page.tsx' });
+            logger.info('Organizations fetched via API', { count: orgs.length, file: 'page.tsx' });
           } else {
             const errorText = await orgsResponse.text();
-            logger.error('📊 Orgs API error', new Error(errorText), { status: orgsResponse.status, file: 'page.tsx' });
-            // If 403, user is not a super_admin
+            logger.error('Orgs API error', new Error(errorText), { status: orgsResponse.status, file: 'page.tsx' });
             if (orgsResponse.status === 403) {
               throw new Error('NOT_SUPER_ADMIN');
             }
@@ -80,23 +83,22 @@ export default function AdminDashboard() {
           if (usersResponse.ok) {
             const data = await usersResponse.json() as { users?: User[] };
             users = data.users ?? [];
-            logger.info('📊 Users fetched via API', { count: users.length, file: 'page.tsx' });
+            logger.info('Users fetched via API', { count: users.length, file: 'page.tsx' });
           } else {
-            logger.error('📊 Users API error', new Error('Users API failed'), { status: usersResponse.status, file: 'page.tsx' });
+            logger.error('Users API error', new Error('Users API failed'), { status: usersResponse.status, file: 'page.tsx' });
           }
         } else {
-          logger.warn('📊 No authenticated user - redirecting to login', { file: 'page.tsx' });
+          logger.warn('No authenticated user - redirecting to login', { file: 'page.tsx' });
           throw new Error('NOT_LOGGED_IN');
         }
-        
+
         // Calculate metrics from actual data
         const totalOrganizations = orgs.length;
         const activeOrganizations = orgs.filter((o) => o.status === 'active').length;
         const trialOrganizations = orgs.filter((o) => o.status === 'trial').length;
         const suspendedOrganizations = orgs.filter((o) => o.status === 'suspended').length;
-        
         const totalUsers = users.length;
-        
+
         // Calculate MRR based on plans
         const planPrices: Record<string, number> = {
           starter: 99,
@@ -107,7 +109,7 @@ export default function AdminDashboard() {
         const mrr = orgs
           .filter((o) => o.status === 'active')
           .reduce((sum: number, o) => sum + (planPrices[o.plan] || 0), 0);
-        
+
         const arr = mrr * 12;
 
         setMetrics({
@@ -117,18 +119,18 @@ export default function AdminDashboard() {
           trialOrganizations,
           suspendedOrganizations,
           totalUsers,
-          activeUsers: totalUsers, // Could be refined with lastLoginAt check
-          newUsersThisPeriod: 0, // Would need to check createdAt timestamps
-          totalApiCalls: 0, // Would need analytics collection
-          totalAICalls: 0, // Would need analytics collection
-          totalStorageGB: 0, // Would need to calculate from storage usage
-          totalRecords: 0, // Would need to count across all collections
+          activeUsers: totalUsers,
+          newUsersThisPeriod: 0,
+          totalApiCalls: 0,
+          totalAICalls: 0,
+          totalStorageGB: 0,
+          totalRecords: 0,
           mrr,
           arr,
-          totalRevenue: mrr, // Simplified - would need historical data
-          newRevenue: 0, // Would need historical comparison
-          churnRate: 0, // Would need historical data
-          growthRate: 0, // Would need historical data
+          totalRevenue: mrr,
+          newRevenue: 0,
+          churnRate: 0,
+          growthRate: 0,
           conversionRate: trialOrganizations > 0 ? (activeOrganizations / (activeOrganizations + trialOrganizations)) * 100 : 0,
           updatedAt: new Date() as unknown as Timestamp,
         });
@@ -156,9 +158,8 @@ export default function AdminDashboard() {
         setLoading(false);
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
-        logger.error('❌ Failed to load dashboard data:', err, { file: 'page.tsx' });
+        logger.error('Failed to load dashboard data:', err, { file: 'page.tsx' });
 
-        // Handle auth errors
         if (err.message === 'NOT_LOGGED_IN') {
           setAuthError('NOT_LOGGED_IN');
           setLoading(false);
@@ -169,8 +170,7 @@ export default function AdminDashboard() {
           setLoading(false);
           return;
         }
-        
-        // Set default/empty metrics on error
+
         setMetrics({
           period: new Date().toISOString().slice(0, 7),
           totalOrganizations: 0,
@@ -200,391 +200,195 @@ export default function AdminDashboard() {
     void loadDashboardData();
   }, []);
 
-  // Show auth error screen
+  // Auth error screen
   if (authError) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', maxWidth: '400px', padding: '2rem' }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>
+      <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] flex items-center justify-center">
+        <div className="text-center max-w-md p-8">
+          <div className="text-6xl mb-4">
             {authError === 'NOT_LOGGED_IN' ? '🔐' : '⛔'}
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+          <h1 className="text-2xl font-bold mb-4">
             {authError === 'NOT_LOGGED_IN' ? 'Login Required' : 'Access Denied'}
           </h1>
-          <p style={{ color: '#666', marginBottom: '2rem' }}>
-            {authError === 'NOT_LOGGED_IN' 
-              ? 'You need to login as a super admin to access the admin dashboard.'
+          <p className="text-[var(--color-text-secondary)] mb-6">
+            {authError === 'NOT_LOGGED_IN'
+              ? 'You need to login as a super admin to access the CEO Command Center.'
               : 'Your account does not have super_admin privileges. Contact your platform administrator.'}
           </p>
           <Link
             href="/admin-login"
-            style={{
-              display: 'inline-block',
-              padding: '0.75rem 2rem',
-              backgroundColor: '#6366f1',
-              color: '#fff',
-              borderRadius: '0.5rem',
-              textDecoration: 'none',
-              fontWeight: '600'
-            }}
+            className="inline-block px-6 py-3 bg-[var(--color-primary)] text-white rounded-lg font-semibold no-underline hover:opacity-90"
           >
             {authError === 'NOT_LOGGED_IN' ? 'Go to Login' : 'Login with Different Account'}
           </Link>
-          <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
-            <p style={{ fontSize: '0.875rem', color: '#999' }}>
-              Use your platform super admin credentials to login.
-            </p>
-          </div>
         </div>
       </div>
     );
   }
 
+  // Loading screen
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
-          <div>Loading dashboard...</div>
+      <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-5xl mb-4 animate-pulse">⚡</div>
+          <div className="text-[var(--color-text-secondary)]">Loading Command Center...</div>
         </div>
       </div>
     );
   }
 
-
-  const bgPaper = '#1a1a1a';
-  const borderColor = '#333';
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff' }}>
-      <div style={{ padding: '2rem' }}>
+    <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+      <div className="p-8">
         {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            Admin Dashboard
-          </h1>
-          <p style={{ color: '#666', fontSize: '0.875rem' }}>
-            Platform overview and system health
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold">CEO Command Center</h1>
+            {isPlatformAdmin && (
+              <span className="px-2 py-1 text-xs font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded">
+                Platform Admin
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--color-text-secondary)] text-sm">
+            Unified platform overview, agent orchestration, and campaign management
           </p>
         </div>
 
-      {/* System Health Alert */}
-      {systemHealth && systemHealth.status !== 'healthy' && (
-        <div style={{
-          padding: '1rem',
-          backgroundColor: systemHealth.status === 'down' ? '#7f1d1d' : '#7c2d12',
-          border: '1px solid #991b1b',
-          borderRadius: '0.5rem',
-          marginBottom: '2rem',
-          color: '#fff'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>⚠️</span>
-            <div>
-              <div style={{ fontWeight: '600' }}>System Status: {systemHealth.status.toUpperCase()}</div>
-              <div style={{ fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                {systemHealth.alerts.filter(a => !a.resolved).length} active alerts
+        {/* System Health Alert */}
+        {systemHealth && systemHealth.status !== 'healthy' && (
+          <div className="p-4 mb-6 rounded-lg bg-[var(--color-error)]/10 border border-[var(--color-error)]">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <div className="font-semibold">System Status: {systemHealth.status.toUpperCase()}</div>
+                <div className="text-sm text-[var(--color-text-secondary)]">
+                  {systemHealth.alerts.filter(a => !a.resolved).length} active alerts
+                </div>
               </div>
             </div>
           </div>
+        )}
+
+        {/* Key Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <MetricCard
+            label="Total Organizations"
+            value={metrics?.totalOrganizations?.toLocaleString() ?? '0'}
+            change={`${metrics?.activeOrganizations ?? 0} active`}
+            icon="🏢"
+            tooltip="Total number of customer organizations on the platform"
+          />
+          <MetricCard
+            label="Total Users"
+            value={metrics?.totalUsers?.toLocaleString() ?? '0'}
+            change={`+${metrics?.newUsersThisPeriod ?? 0} this period`}
+            icon="👥"
+            tooltip="Total number of users across all organizations"
+          />
+          <MetricCard
+            label="Monthly Recurring Revenue"
+            value={`$${metrics?.mrr?.toLocaleString() ?? '0'}`}
+            change={`ARR: $${metrics?.arr?.toLocaleString() ?? '0'}`}
+            icon="💵"
+            tooltip="Monthly Recurring Revenue from all active subscriptions"
+          />
+          <MetricCard
+            label="System Uptime"
+            value={`${systemHealth?.performance.uptime?.toFixed(2) ?? '0'}%`}
+            change={`${systemHealth?.performance.activeConnections ?? 0} connections`}
+            icon="⚡"
+            tooltip="Platform uptime and active connections"
+          />
         </div>
-      )}
 
-      {/* Key Metrics Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-        <MetricCard
-          label="Total Organizations"
-          value={(metrics?.totalOrganizations?.toLocaleString() !== '' && metrics?.totalOrganizations?.toLocaleString() != null) ? metrics.totalOrganizations.toLocaleString() : '0'}
-          change={`${metrics?.activeOrganizations ?? 0} active`}
-          icon="🏢"
-          tooltip="Total number of customer organizations on the platform. Includes active, trial, and suspended organizations."
-        />
-        <MetricCard
-          label="Total Users"
-          value={(metrics?.totalUsers?.toLocaleString() !== '' && metrics?.totalUsers?.toLocaleString() != null) ? metrics.totalUsers.toLocaleString() : '0'}
-          change={`+${metrics?.newUsersThisPeriod ?? 0} this period`}
-          icon="👥"
-          tooltip="Total number of users across all organizations. Shows new users added in the current period."
-        />
-        <MetricCard
-          label="Monthly Recurring Revenue"
-          value={(metrics?.mrr?.toLocaleString() !== '' && metrics?.mrr?.toLocaleString() != null) ? `$${metrics.mrr.toLocaleString()}` : '$0'}
-          change={(metrics?.arr?.toLocaleString() !== '' && metrics?.arr?.toLocaleString() != null) ? `ARR: $${metrics.arr.toLocaleString()}` : 'ARR: $0'}
-          icon="💵"
-          tooltip="Monthly Recurring Revenue (MRR) from all active subscriptions. ARR = Annual Recurring Revenue (MRR × 12)."
-        />
-        <MetricCard
-          label="System Uptime"
-          value={(systemHealth?.performance.uptime?.toFixed(2) !== '' && systemHealth?.performance.uptime?.toFixed(2) != null) ? `${systemHealth.performance.uptime.toFixed(2)}%` : '0%'}
-          change={`${systemHealth?.performance.activeConnections ?? 0} active connections`}
-          icon="⚡"
-          tooltip="Platform uptime percentage. Shows current number of active user connections to the system."
-        />
-      </div>
+        {/* Main Dashboard Grid - CEO God View */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Left Column - Social & Campaigns */}
+          <div className="space-y-6">
+            <SocialComposerWidget compact />
+          </div>
 
-      {/* Quick Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <QuickStat 
-          label="Active Orgs" 
-          value={metrics?.activeOrganizations ?? 0}
-          tooltip="Organizations with active paid subscriptions (not trial or suspended)"
-        />
-        <QuickStat 
-          label="Trial Orgs" 
-          value={metrics?.trialOrganizations ?? 0}
-          tooltip="Organizations currently in their free trial period (7-14 days)"
-        />
-        <QuickStat 
-          label="Suspended" 
-          value={metrics?.suspendedOrganizations ?? 0}
-          tooltip="Organizations that have been suspended (usually due to payment issues or policy violations)"
-        />
-        <QuickStat 
-          label="Churn Rate" 
-          value={`${metrics?.churnRate ?? 0}%`}
-          tooltip="Percentage of organizations that cancel their subscription per month. Lower is better."
-        />
-      </div>
+          {/* Center Column - Lead Pipeline */}
+          <div className="space-y-6">
+            <LeadPipelineWidget />
+          </div>
 
-      {/* System Health */}
-      {systemHealth && (
-        <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>System Health</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            {Object.entries(systemHealth.services).map(([service, status]) => {
-              const serviceTooltips: Record<string, string> = {
-                database: 'Firestore database status. Healthy = normal response times, Degraded = slow, Down = unavailable',
-                storage: 'Cloud Storage status for file uploads and documents',
-                ai: 'AI service (Gemini API) status. Response time includes API call latency',
-                email: 'Email service (SendGrid/Resend) status for sending emails',
-                sms: 'SMS service (Twilio) status for sending text messages',
-                api: 'Platform API status and response times',
-              };
+          {/* Right Column - Agent Swarm */}
+          <div className="space-y-6">
+            <SwarmMonitorWidget />
+          </div>
+        </div>
 
-              return (
-                <Tooltip 
-                  key={service} 
-                  content={serviceTooltips[service] || `${service} service status`}
-                  position="top"
+        {/* System Health Services */}
+        {systemHealth && (
+          <div className="mb-8 p-6 bg-[var(--color-bg-paper)] border border-[var(--color-border)] rounded-xl">
+            <h2 className="text-lg font-semibold mb-4">System Services</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {Object.entries(systemHealth.services).map(([service, status]) => (
+                <div
+                  key={service}
+                  className="p-4 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg"
                 >
-                  <div style={{
-                    padding: '1rem',
-                    backgroundColor: '#0a0a0a',
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: '0.5rem',
-                    cursor: 'help'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.875rem', fontWeight: '600', textTransform: 'capitalize' }}>{service}</span>
-                      <span style={{
-                        fontSize: '0.75rem',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '0.25rem',
-                        backgroundColor: status.status === 'healthy' ? '#065f46' : status.status === 'degraded' ? '#78350f' : '#7f1d1d',
-                        color: status.status === 'healthy' ? '#10b981' : status.status === 'degraded' ? '#f59e0b' : '#ef4444'
-                      }}>
-                        {status.status}
-                      </span>
-                    </div>
-                    {status.responseTime && (
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                        {status.responseTime}ms
-                      </div>
-                    )}
-                    {status.message && (
-                      <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem' }}>
-                        {status.message}
-                      </div>
-                    )}
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-semibold capitalize">{service}</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded ${
+                        status.status === 'healthy'
+                          ? 'bg-[var(--color-success)]/20 text-[var(--color-success)]'
+                          : status.status === 'degraded'
+                            ? 'bg-[var(--color-warning)]/20 text-[var(--color-warning)]'
+                            : 'bg-[var(--color-error)]/20 text-[var(--color-error)]'
+                      }`}
+                    >
+                      {status.status}
+                    </span>
                   </div>
-                </Tooltip>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Active Alerts */}
-      {systemHealth && systemHealth.alerts.filter(a => !a.resolved).length > 0 && (
-        <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Active Alerts</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {systemHealth.alerts.filter(a => !a.resolved).map((alert) => (
-              <div key={alert.id} style={{
-                padding: '1rem',
-                backgroundColor: '#0a0a0a',
-                border: `1px solid ${borderColor}`,
-                borderRadius: '0.5rem',
-                display: 'flex',
-                alignItems: 'start',
-                gap: '1rem'
-              }}>
-                <span style={{ fontSize: '1.5rem' }}>
-                  {alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟡' : '🔵'}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{alert.service.toUpperCase()}</div>
-                  <div style={{ fontSize: '0.875rem', color: '#999' }}>{alert.message}</div>
+                  {status.responseTime && (
+                    <div className="text-xs text-[var(--color-text-muted)]">
+                      {status.responseTime}ms
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <QuickActionCard
+            title="Organizations"
+            description="Manage all customer organizations"
+            href="/admin/organizations"
+            icon="🏢"
+            tooltip="View, create, and manage customer organizations"
+          />
+          <QuickActionCard
+            title="Agent Swarm"
+            description="Control 35-agent workforce"
+            href="/admin/swarm"
+            icon="🤖"
+            tooltip="Execute agents, monitor status, view execution history"
+          />
+          <QuickActionCard
+            title="Social Media"
+            description="Compose and schedule posts"
+            href="/admin/social"
+            icon="📱"
+            tooltip="Full social media composer with analytics"
+          />
+          <QuickActionCard
+            title="System Health"
+            description="Monitor system status"
+            href="/admin/system/health"
+            icon="🏥"
+            tooltip="Detailed system health and performance metrics"
+          />
         </div>
-      )}
-
-      {/* Quick Actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-        <QuickActionCard
-          title="Website Editor"
-          description="Edit public website pages"
-          href="/admin/website-editor"
-          icon="🌐"
-          tooltip="Edit your public-facing website: homepage, features, pricing, and other marketing pages. Drag-and-drop sections with live preview."
-        />
-        <QuickActionCard
-          title="Organizations"
-          description="Manage all organizations"
-          href="/admin/organizations"
-          icon="🏢"
-          tooltip="View, create, edit, suspend, or delete customer organizations. See organization details, users, and usage."
-        />
-        <QuickActionCard
-          title="Users"
-          description="View and manage users"
-          href="/admin/users"
-          icon="👥"
-          tooltip="View all users across all organizations. Manage user accounts, roles, and permissions."
-        />
-        <QuickActionCard
-          title="Billing"
-          description="Subscriptions and payments"
-          href="/admin/billing"
-          icon="💳"
-          tooltip="View all subscriptions, payment history, invoices, and handle billing issues or refunds."
-        />
-        <QuickActionCard
-          title="System Health"
-          description="Monitor system status"
-          href="/admin/system/health"
-          icon="🏥"
-          tooltip="Detailed system health monitoring: service status, response times, alerts, and performance metrics."
-        />
-      </div>
       </div>
     </div>
   );
 }
-
-function MetricCard({ label, value, change, icon, tooltip }: {
-  label: string;
-  value: string;
-  change: string;
-  icon: string;
-  tooltip?: string;
-}) {
-  const bgPaper = '#1a1a1a';
-  const borderColor = '#333';
-
-  const card = (
-    <div style={{
-      backgroundColor: bgPaper,
-      border: `1px solid ${borderColor}`,
-      borderRadius: '0.75rem',
-      padding: '1.5rem',
-      cursor: tooltip ? 'help' : 'default'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-        <div>
-          <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>{label}</p>
-          <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>{value}</p>
-        </div>
-        <div style={{ fontSize: '2.5rem', opacity: 0.3 }}>{icon}</div>
-      </div>
-      <div style={{ fontSize: '0.875rem', color: '#666' }}>{change}</div>
-    </div>
-  );
-
-  if (tooltip) {
-    return <Tooltip content={tooltip} position="top">{card}</Tooltip>;
-  }
-
-  return card;
-}
-
-function QuickStat({ label, value, tooltip }: { 
-  label: string; 
-  value: string | number;
-  tooltip?: string;
-}) {
-  const bgPaper = '#1a1a1a';
-  const borderColor = '#333';
-
-  const stat = (
-    <div style={{
-      backgroundColor: bgPaper,
-      border: `1px solid ${borderColor}`,
-      borderRadius: '0.5rem',
-      padding: '1rem',
-      textAlign: 'center',
-      cursor: tooltip ? 'help' : 'default'
-    }}>
-      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
-        {value}
-      </div>
-      <div style={{ fontSize: '0.75rem', color: '#666' }}>{label}</div>
-    </div>
-  );
-
-  if (tooltip) {
-    return <Tooltip content={tooltip} position="top">{stat}</Tooltip>;
-  }
-
-  return stat;
-}
-
-function QuickActionCard({ title, description, href, icon, tooltip }: {
-  title: string;
-  description: string;
-  href: string;
-  icon: string;
-  tooltip?: string;
-}) {
-  const bgPaper = '#1a1a1a';
-  const borderColor = '#333';
-
-  const card = (
-    <Link
-      href={href}
-      style={{
-        display: 'block',
-        backgroundColor: bgPaper,
-        border: `1px solid ${borderColor}`,
-        borderRadius: '0.75rem',
-        padding: '1.5rem',
-        textDecoration: 'none',
-        transition: 'all 0.2s'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#6366f1';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = borderColor;
-        e.currentTarget.style.transform = 'translateY(0)';
-      }}
-    >
-      <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{icon}</div>
-      <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
-        {title}
-      </div>
-      <div style={{ fontSize: '0.875rem', color: '#666' }}>{description}</div>
-    </Link>
-  );
-
-  if (tooltip) {
-    return <Tooltip content={tooltip} position="top">{card}</Tooltip>;
-  }
-
-  return card;
-}
-

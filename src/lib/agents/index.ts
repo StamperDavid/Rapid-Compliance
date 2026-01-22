@@ -13,7 +13,7 @@
  *
  * SPECIALISTS (35):
  * - Intelligence: CompetitorResearcher, SentimentAnalyst, TechnographicScout, ScraperSpecialist, TrendScout
- * - Marketing: TikTokExpert, XExpert, FacebookAdsExpert, LinkedInExpert, SEOExpert, TwitterExpert
+ * - Marketing: TikTokExpert, TwitterExpert, FacebookAdsExpert, LinkedInExpert, SEOExpert
  * - Builder: UxUiArchitect, FunnelEngineer, AssetGenerator, WorkflowOptimizer
  * - Architect: UXUISpecialist, FunnelPathologist, CopySpecialist
  * - Commerce: PricingStrategist, InventoryManagerAgent
@@ -90,11 +90,10 @@ export { TrendScout } from './intelligence/trend/specialist';
 
 // Marketing Specialists
 export { TikTokExpert } from './marketing/tiktok/specialist';
-export { XExpert } from './marketing/x/specialist';
 export { FacebookAdsExpert } from './marketing/facebook/specialist';
 export { LinkedInExpert } from './marketing/linkedin/specialist';
 export { SEOExpert } from './marketing/seo/specialist';
-export { TwitterExpert } from './marketing/twitter/specialist';
+export { TwitterExpert, TwitterExpert as XExpert } from './marketing/twitter/specialist';
 
 // Builder Specialists
 export { UxUiArchitect } from './builder/ux-ui/specialist';
@@ -161,11 +160,10 @@ export const AGENT_IDS = {
 
   // Marketing Specialists
   TIKTOK_EXPERT: 'TIKTOK_EXPERT',
-  X_EXPERT: 'X_EXPERT',
+  TWITTER_EXPERT: 'TWITTER_EXPERT',
   FACEBOOK_EXPERT: 'FACEBOOK_EXPERT',
   LINKEDIN_EXPERT: 'LINKEDIN_EXPERT',
   SEO_EXPERT: 'SEO_EXPERT',
-  TWITTER_EXPERT: 'TWITTER_EXPERT',
 
   // Builder Specialists
   UX_UI_ARCHITECT: 'UX_UI_ARCHITECT',

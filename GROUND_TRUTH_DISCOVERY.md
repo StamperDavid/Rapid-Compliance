@@ -1,5 +1,5 @@
 # GROUND TRUTH DISCOVERY REPORT
-## Full-Scale System Audit - January 21, 2026
+## Full-Scale System Audit - January 21-22, 2026
 
 **Audit Method:** 6-Agent Swarm Investigation via Claude Opus 4.5
 **Files Analyzed:** 200+ route files, 35 agent modules, 50+ auth files, full admin route tree
@@ -13,8 +13,10 @@
 |---------|--------|--------------|
 | **BUILD STATUS** | **✅ STABLE** | TypeScript 0 errors, ESLint 0 warnings |
 | **IDENTITY BRIDGE** | **✅ LIVE** | Master Org initialized, admin linked |
+| **CEO COMMAND CENTER** | **✅ DEPLOYED** | Unified admin dashboard with widgets |
 | Total AI Agents | **44 FOUND** | 9 Managers + 35 Specialists |
-| Functional Agents | **36** | Production-ready with real logic (100% specialists!) |
+| Functional Specialists | **35/35** | 100% COMPLETION - All specialists operational |
+| Functional Managers | **5** | Architect, Marketing, Revenue, Reputation, partial Intelligence |
 | Ghost Agents | **0** | All specialists revived! |
 | Shell Managers | **4** | Incomplete coordination logic |
 | Sidebar Routes Defined | **29** | In CommandCenterSidebar |
@@ -22,7 +24,7 @@
 | Missing Route Files | **7** | Will cause 404 errors |
 | Orphaned Pages | **19** | No sidebar navigation |
 | CSS Violations | **3,194** | Inline styles, hardcoded colors |
-| Ghost/Redundant Files | **11** | 49KB dead code |
+| Ghost/Redundant Files | **10** | ~45KB dead code (reduced after cleanup) |
 | 403 Root Cause | **RESOLVED** | platform-admin org created, user linked |
 
 ---
@@ -115,13 +117,14 @@
    - Critical path calculation for dependency chains
    - AGENT_CATALOG with 9 registered agent capabilities
 
-4. **X (Twitter) Expert (marketing/x/specialist.ts):**
+4. **Twitter/X Expert (marketing/twitter/specialist.ts):**
    - `generate_thread` - Thread generation with 6 hook formulas (Curiosity Gap, Contrarian, Story Hook, etc.)
    - `schedule_tweet` - Optimal posting time calculation based on audience type
    - `analyze_viral` - Viral pattern detection and replication strategies
    - `optimize_engagement` - Thread optimization recommendations
    - VIRAL_PATTERNS database with engagement rate benchmarks
    - OPTIMAL_POSTING_WINDOWS for timezone-aware scheduling
+   - **Note:** Consolidated from marketing/x/ to marketing/twitter/ in Phase 2 cleanup
 
 ### Complete Agent Inventory
 
@@ -166,7 +169,7 @@
 | 21 | Trend Scout | `intelligence/trend/specialist.ts` | 850+ | Market signals, pivot triggering, trend forecasting |
 | 22 | Video Specialist | `content/video/specialist.ts` | 900+ | Script-to-storyboard, audio cues, scene breakdown |
 | 23 | Workflow Optimizer | `builder/workflow/specialist.ts` | 900+ | Chain composition, dependency analysis, performance |
-| 24 | X (Twitter) Expert | `marketing/x/specialist.ts` | 1,100+ | Thread generation, scheduling, viral analysis |
+| 24 | Twitter/X Expert | `marketing/twitter/specialist.ts` | 1,209 | Thread generation, scheduling, viral analysis (consolidated) |
 | 25 | Asset Generator | `builder/assets/specialist.ts` | 500+ | Image generation, brand assets, templates |
 | 26 | Funnel Engineer | `builder/funnel/specialist.ts` | 600+ | Funnel architecture, conversion optimization |
 | 27 | UX/UI Architect | `builder/ux-ui/specialist.ts` | 700+ | User experience design, accessibility |
@@ -185,7 +188,39 @@ All 32 specialist agents are now FUNCTIONAL with production-ready implementation
 The following agents were revived across three sprints:
 - **Sprint 1 (Batch 71):** Deal Closer, Objection Handler, Review Manager, Case Study Builder + 4 Sales/Trust agents
 - **Sprint 2 (Batch 72):** LinkedIn Expert, Email Specialist, SEO Expert, GMB Specialist
-- **Sprint 3 (Batch 73):** Video Specialist, Trend Scout, Workflow Optimizer, X (Twitter) Expert
+- **Sprint 3 (Batch 73):** Video Specialist, Trend Scout, Workflow Optimizer, Twitter/X Expert
+
+### Phase 2 - Specialist Cleanup & Dashboard Unification (January 22, 2026)
+
+**Completed Tasks:**
+
+1. **Marketing Specialist Consolidation:**
+   - Deleted redundant `marketing/x/` directory
+   - Merged X Expert functionality into `marketing/twitter/specialist.ts`
+   - Updated all imports and references in Marketing Manager
+   - Updated index.ts exports to alias XExpert → TwitterExpert
+
+2. **InventorySpecialist Verification:**
+   - Confirmed FUNCTIONAL status (1,127 LOC)
+   - CRUD operations for products/stock analysis
+   - Demand forecasting, reorder alerts, turnover analysis
+
+3. **CEO Command Center Dashboard:**
+   - Refactored `src/app/admin/page.tsx` to unified "CEO Command Center"
+   - Added shared widget components in `src/components/shared/`:
+     - `SocialComposerWidget` - Quick compose for Twitter/X and LinkedIn
+     - `LeadPipelineWidget` - Pipeline visualization with stage tracking
+     - `SwarmMonitorWidget` - 35-agent swarm status overview
+     - `MetricCard` - Reusable metric display component
+     - `QuickActionCard` - Navigation action cards
+   - Identity-aware UI detecting `platform_admin` role
+   - Uses CSS variables from design system (no hardcoded colors)
+
+4. **Build Verification:**
+   - TypeScript: 0 errors (npx tsc --noEmit)
+   - ESLint: 0 warnings
+
+**Final Status: 35/35 Specialists FUNCTIONAL**
 
 ### Registry Mismatch
 
@@ -209,8 +244,8 @@ JASPER (Orchestrator)
 │   ├── TikTok Expert (FUNCTIONAL)
 │   ├── Twitter Expert (FUNCTIONAL)
 │   ├── LinkedIn Expert (FUNCTIONAL) ✓ Enhanced Sprint 2
-│   ├── SEO Expert (FUNCTIONAL) ✓ Enhanced Sprint 2
-│   └── X Expert (FUNCTIONAL) ✓ Revived Sprint 3
+│   └── SEO Expert (FUNCTIONAL) ✓ Enhanced Sprint 2
+│   NOTE: X Expert merged into Twitter Expert (Phase 2 cleanup)
 │
 ├── Revenue Director (FUNCTIONAL)
 │   ├── Sales Qualifier (FUNCTIONAL)
