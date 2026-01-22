@@ -2,27 +2,35 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { AdminOrchestrator } from '@/components/orchestrator';
-import CommandCenterSidebar from '@/components/admin/CommandCenterSidebar';
+import UnifiedSidebar from '@/components/dashboard/UnifiedSidebar';
 import { PLATFORM_INTERNAL_ORG_ID } from '@/lib/routes/workspace-routes';
 
+/**
+ * Admin Layout - UNIFIED VERSION
+ * Now uses UnifiedSidebar and useUnifiedAuth for consistent experience
+ * This layout serves /admin/* routes during migration period
+ */
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { adminUser, loading } = useAdminAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, loading, isPlatformAdmin } = useUnifiedAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
+
   useEffect(() => {
-    if (!loading && !adminUser) {
+    if (!loading && !user) {
       // Redirect to admin login if not authenticated
       router.push('/admin-login');
     }
-  }, [adminUser, loading, router]);
+    // Only platform_admin can access /admin routes
+    if (!loading && user && !isPlatformAdmin()) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router, isPlatformAdmin]);
 
   if (loading) {
     return (
@@ -39,76 +47,35 @@ export default function AdminLayout({
     );
   }
 
-  if (!adminUser) {
+  if (!user || !isPlatformAdmin()) {
     return null;
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--color-background)', flexDirection: 'column' }}>
-      {/* Mobile Header with Hamburger */}
-      <div style={{
-        padding: '1rem',
-        borderBottom: '1px solid var(--color-border)',
-        backgroundColor: 'var(--color-surface)',
-      }} className="md:hidden flex items-center justify-between">
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          style={{
-            padding: '0.5rem',
-            backgroundColor: 'var(--color-surface-elevated)',
-            color: 'var(--color-text-secondary)',
-            border: 'none',
-            borderRadius: '0.375rem',
-            cursor: 'pointer',
-            fontSize: '1.25rem',
-          }}
-          aria-label="Toggle menu"
-        >
-          ☰
-        </button>
-        <span style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>Platform Admin</span>
-      </div>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--color-background)' }}>
+      {/* Unified Sidebar - Role-based navigation */}
+      <UnifiedSidebar
+        user={user}
+        organizationId={PLATFORM_INTERNAL_ORG_ID}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        brandName="Platform Admin"
+        primaryColor="#6366f1"
+      />
 
-      <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
-        {/* Mobile Overlay */}
-        {mobileMenuOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              zIndex: 40,
-            }}
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-        )}
-
-        {/* CommandCenter Sidebar */}
-        <CommandCenterSidebar
-          organizationId={PLATFORM_INTERNAL_ORG_ID}
-          adminUser={{
-            displayName: adminUser.displayName,
-            role: adminUser.role.replace('_', ' ').toUpperCase(),
-          }}
-          isCollapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-
-        {/* Main Content */}
-        <main
-          style={{
-            flex: 1,
-            backgroundColor: 'var(--color-background)',
-            width: '100%',
-            marginLeft: sidebarCollapsed ? '64px' : '280px',
-            transition: 'margin-left 0.3s ease',
-          }}
-          className="md:ml-0"
-        >
-          {children}
-        </main>
-      </div>
+      {/* Main Content */}
+      <main
+        style={{
+          flex: 1,
+          backgroundColor: 'var(--color-background)',
+          width: '100%',
+          marginLeft: sidebarCollapsed ? '64px' : '280px',
+          transition: 'margin-left 0.3s ease',
+        }}
+        className="md:ml-0"
+      >
+        {children}
+      </main>
 
       {/* Admin AI Orchestrator - Platform Master Architect */}
       <AdminOrchestrator />
