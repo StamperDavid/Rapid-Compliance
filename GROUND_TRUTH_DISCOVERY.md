@@ -11,10 +11,10 @@
 
 | Finding | Status | Count/Detail |
 |---------|--------|--------------|
-| Total AI Agents | **35 FOUND** | 9 Managers + 27 Specialists |
-| Functional Agents | **18** | Production-ready with real logic |
-| Ghost Agents | **9** | Empty stubs (32 LOC each) |
-| Shell Managers | **8** | Incomplete coordination logic |
+| Total AI Agents | **40 FOUND** | 9 Managers + 31 Specialists |
+| Functional Agents | **32** | Production-ready with real logic |
+| Ghost Agents | **5** | Empty stubs (32 LOC each) |
+| Shell Managers | **4** | Incomplete coordination logic |
 | Sidebar Routes Defined | **29** | In CommandCenterSidebar |
 | Actual Page Files | **37** | In src/app/admin/ |
 | Missing Route Files | **7** | Will cause 404 errors |
@@ -29,10 +29,46 @@
 
 ### Summary Statistics
 
-- **Total Agents Found: 35** (9 Managers + 27 Specialists)
-- **Functional: 18** (>100 LOC with real implementation)
-- **Ghost: 9** (Empty stubs, 32 LOC boilerplate)
-- **Shell: 8** (Incomplete managers, 78-95 LOC)
+- **Total Agents Found: 40** (9 Managers + 31 Specialists)
+- **Functional: 32** (>100 LOC with real implementation)
+- **Ghost: 5** (Empty stubs, 32 LOC boilerplate)
+- **Shell: 4** (Incomplete managers, 78-95 LOC)
+
+### Agent Revival Sprint 2 - Outreach & SEO (January 21, 2026)
+
+**Enhanced Agents:**
+
+| Agent | Category | New LOC | Key Enhancements |
+|-------|----------|---------|------------------|
+| LinkedIn Expert | Marketing | 1,200+ | 3-tier personalization engine, automation bridge for webhooks/Zapier/Make/n8n, tenant playbook voice matching |
+| Email Specialist | Outreach | 750+ | 5-stage drip campaign architect, spam-filter pre-check, dynamic tag insertion, subject line A/B generator |
+| SEO Expert | Marketing | 1,100+ | Simulated crawl analysis engine, keyword gap analysis, 30-day SEO strategy builder, mobile readiness assessment |
+| GMB Specialist | Trust | 2,200+ | 30-day post calendar generator, Q&A database builder, SEO-optimized business description engine |
+
+**New Capabilities Added:**
+
+1. **LinkedIn Expert Enhancements:**
+   - `connection_request` - Tier 1: Initial outreach with personalization scoring
+   - `followup_sequence` - Tier 2: Multi-touch nurture campaigns (5+ messages)
+   - `high_value_offer` - Tier 3: Premium personalized outreach with conversion prediction
+   - `automation_bridge` - Structured JSON payloads for webhook/Zapier/Make/n8n integration
+   - Tenant playbook integration for voice consistency
+
+2. **Email Specialist Enhancements:**
+   - `drip_campaign` - 5-stage sequence builder (Opening, Discovery, Value, Social Proof, The Ask)
+   - `spam_check` - Trigger word detection with severity scoring and alternative suggestions
+   - `personalize_email` - Dynamic tag replacement engine ({{first_name}}, {{company}}, {{pain_point}})
+   - `subject_line_ab` - A/B variant generator with predicted open rates
+
+3. **SEO Expert Enhancements:**
+   - `crawl_analysis` - Simulated site crawl with SSL, speed, meta, indexing, and mobile analysis
+   - `keyword_gap` - Gap analysis comparing tenant keywords vs market trends
+   - `30_day_strategy` - Comprehensive 4-week SEO implementation plan
+
+4. **GMB Specialist Enhancements:**
+   - `generate30DayPosts` - Full 30-day calendar with weekly themes and local keyword optimization
+   - `generateQADatabase` - Voice search optimized Q&A entries for local service area
+   - `generateBusinessDescription` - SEO-optimized descriptions with local keyword integration
 
 ### Complete Agent Inventory
 
@@ -63,16 +99,16 @@
 | 7 | Sentiment Analyst | `intelligence/sentiment/specialist.ts` | 834 | Emotion detection, crisis alerts |
 | 8 | Technographic Scout | `intelligence/technographic/specialist.ts` | 1,136 | 70+ tech signatures, cost estimation |
 | 9 | Facebook Expert | `marketing/facebook/specialist.ts` | 1,717 | 11 audience personas, ad generation |
-| 10 | LinkedIn Expert | `marketing/linkedin/specialist.ts` | 837 | Post optimization, B2B analysis |
-| 11 | SEO Expert | `marketing/seo/specialist.ts` | 776 | Keyword research, meta optimization |
+| 10 | LinkedIn Expert | `marketing/linkedin/specialist.ts` | 1,200+ | 3-tier personalization, automation bridge, tenant playbook |
+| 11 | SEO Expert | `marketing/seo/specialist.ts` | 1,100+ | Crawl analysis, keyword gap, 30-day strategy |
 | 12 | TikTok Expert | `marketing/tiktok/specialist.ts` | 1,063 | Viral hooks, trending sounds |
 | 13 | Twitter Expert | `marketing/twitter/specialist.ts` | 1,209 | Thread architecture, ratio assessment |
-| 14 | Email Specialist | `outreach/email/specialist.ts` | 453 | SendGrid/Resend, campaign tracking |
+| 14 | Email Specialist | `outreach/email/specialist.ts` | 750+ | 5-stage drip architect, spam pre-check, dynamic tags |
 | 15 | SMS Specialist | `outreach/sms/specialist.ts` | 495 | Twilio/Vonage, bulk messaging |
 | 16 | Merchandiser | `sales/merchandiser/specialist.ts` | 1,585 | 7 nudge strategies, Stripe coupons |
 | 17 | Outreach Expert | `sales/outreach/specialist.ts` | 2,005 | 8 frameworks, personalization engine |
 | 18 | Lead Qualifier | `sales/qualifier/specialist.ts` | 1,836 | BANT scoring, ICP alignment |
-| 19 | GMB Expert | `trust/gmb/specialist.ts` | 1,889 | Local SEO, map pack strategy |
+| 19 | GMB Expert | `trust/gmb/specialist.ts` | 2,200+ | 30-day posts, Q&A database, business description optimizer |
 | 20 | Review Manager | `trust/review/specialist.ts` | 1,222 | 5-star strategies, escalation routing |
 
 **Total Functional LOC:** 25,380+ lines

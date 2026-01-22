@@ -121,12 +121,84 @@ interface ContentCalendarPayload {
   organizationId: string;
 }
 
+// ============================================================================
+// TIER-BASED PERSONALIZATION PAYLOADS
+// ============================================================================
+
+interface ConnectionRequestPayload {
+  action: 'connection_request';
+  tier: 'connection' | 'followup' | 'high_value';
+  targetProfile: {
+    name: string;
+    firstName: string;
+    role: string;
+    company: string;
+    industry: string;
+    mutualConnections?: number;
+    sharedGroups?: string[];
+    recentActivity?: string[];
+  };
+  organizationId: string;
+}
+
+interface FollowUpSequencePayload {
+  action: 'followup_sequence';
+  targetProfile: {
+    name: string;
+    firstName: string;
+    role: string;
+    company: string;
+    industry: string;
+    connectionDate?: string;
+    previousInteractions?: string[];
+  };
+  sequenceLength: number;
+  objective: 'meeting' | 'demo' | 'partnership' | 'referral';
+  organizationId: string;
+}
+
+interface HighValueOfferPayload {
+  action: 'high_value_offer';
+  targetProfile: {
+    name: string;
+    firstName: string;
+    role: string;
+    company: string;
+    industry: string;
+    companySize?: string;
+    painPoints?: string[];
+    budget?: string;
+  };
+  offerType: 'consultation' | 'demo' | 'audit' | 'trial' | 'case_study';
+  organizationId: string;
+}
+
+interface AutomationBridgePayload {
+  action: 'automation_bridge';
+  bridgeType: 'webhook' | 'zapier' | 'make' | 'n8n';
+  campaignData: {
+    targets: Array<{
+      profileUrl?: string;
+      name: string;
+      company: string;
+      role: string;
+    }>;
+    messageTemplates: string[];
+    sequenceType: 'connection' | 'followup' | 'high_value';
+  };
+  organizationId: string;
+}
+
 type LinkedInPayload =
   | OptimizePostPayload
   | GenerateContentPayload
   | AnalyzeAudiencePayload
   | SuggestHashtagsPayload
-  | ContentCalendarPayload;
+  | ContentCalendarPayload
+  | ConnectionRequestPayload
+  | FollowUpSequencePayload
+  | HighValueOfferPayload
+  | AutomationBridgePayload;
 
 interface PostAnalysis {
   originalContent: string;
@@ -166,6 +238,85 @@ interface AudienceInsight {
   bestTopics: string[];
   engagementStrategy: string[];
   competitorInsights: string[];
+}
+
+// ============================================================================
+// 3-TIER PERSONALIZATION RESULT TYPES
+// ============================================================================
+
+interface ConnectionRequestResult {
+  tier: 'connection';
+  message: string;
+  characterCount: number;
+  personalizationScore: number;
+  hooks: string[];
+  alternativeMessages: string[];
+  automationPayload: AutomationPayloadOutput;
+}
+
+interface FollowUpSequenceResult {
+  tier: 'followup';
+  sequence: Array<{
+    day: number;
+    subject: string;
+    message: string;
+    callToAction: string;
+    characterCount: number;
+  }>;
+  totalMessages: number;
+  estimatedResponseRate: number;
+  automationPayload: AutomationPayloadOutput;
+}
+
+interface HighValueOfferResult {
+  tier: 'high_value';
+  personalizedOffer: {
+    headline: string;
+    valueProposition: string;
+    socialProof: string;
+    offer: string;
+    urgency: string;
+    callToAction: string;
+  };
+  fullMessage: string;
+  characterCount: number;
+  conversionProbability: number;
+  automationPayload: AutomationPayloadOutput;
+}
+
+interface AutomationPayloadOutput {
+  format: 'json' | 'webhook';
+  endpoint?: string;
+  headers: Record<string, string>;
+  body: {
+    action: string;
+    targets: Array<{
+      profileIdentifier: string;
+      name: string;
+      company: string;
+      role: string;
+    }>;
+    messages: Array<{
+      sequence: number;
+      content: string;
+      delay?: number;
+    }>;
+    metadata: {
+      tenantId: string;
+      campaignId: string;
+      createdAt: string;
+      tier: string;
+    };
+  };
+}
+
+interface TenantPlaybook {
+  voiceTone: 'professional' | 'friendly' | 'authoritative' | 'casual';
+  valuePropositions: string[];
+  targetIndustries: string[];
+  uniqueSellingPoints: string[];
+  brandPersonality: string[];
+  prohibitedPhrases: string[];
 }
 
 // ============================================================================
@@ -252,6 +403,22 @@ export class LinkedInExpert extends BaseSpecialist {
 
         case 'content_calendar':
           result = this.handleContentCalendar(payload);
+          break;
+
+        case 'connection_request':
+          result = this.handleConnectionRequest(payload);
+          break;
+
+        case 'followup_sequence':
+          result = this.handleFollowUpSequence(payload);
+          break;
+
+        case 'high_value_offer':
+          result = this.handleHighValueOffer(payload);
+          break;
+
+        case 'automation_bridge':
+          result = this.handleAutomationBridge(payload);
           break;
 
         default:
@@ -787,6 +954,530 @@ export class LinkedInExpert extends BaseSpecialist {
       'Monitor trending topics in your niche',
       'Track competitor posting frequency and engagement',
     ];
+  }
+
+  // ==========================================================================
+  // 3-TIER PERSONALIZATION ENGINE
+  // ==========================================================================
+
+  /**
+   * TIER 1: Connection Request - Initial outreach with personalization
+   */
+  private async handleConnectionRequest(payload: ConnectionRequestPayload): Promise<ConnectionRequestResult> {
+    const { targetProfile, organizationId } = payload;
+
+    this.log('INFO', `Generating Tier-1 connection request for ${targetProfile.name} (Tenant: ${organizationId})`);
+
+    // Fetch tenant playbook for voice matching
+    const playbook = await this.fetchTenantPlaybook(organizationId);
+
+    // Generate personalized hooks based on target profile
+    const hooks = this.generateConnectionHooks(targetProfile, playbook);
+
+    // Build the primary connection message
+    const primaryMessage = this.buildConnectionMessage(targetProfile, playbook, hooks[0]);
+
+    // Generate alternative messages for A/B testing
+    const alternatives = hooks.slice(1, 4).map(hook =>
+      this.buildConnectionMessage(targetProfile, playbook, hook)
+    );
+
+    // Calculate personalization score
+    const personalizationScore = this.calculatePersonalizationScore(targetProfile, primaryMessage);
+
+    // Build automation payload for webhook/API bridge
+    const automationPayload = this.buildAutomationPayload(
+      organizationId,
+      'connection',
+      [{ profileIdentifier: targetProfile.name, ...targetProfile }],
+      [{ sequence: 1, content: primaryMessage }]
+    );
+
+    return {
+      tier: 'connection',
+      message: primaryMessage,
+      characterCount: primaryMessage.length,
+      personalizationScore,
+      hooks,
+      alternativeMessages: alternatives,
+      automationPayload,
+    };
+  }
+
+  /**
+   * TIER 2: Follow-Up Sequence - Multi-touch nurture campaign
+   */
+  private async handleFollowUpSequence(payload: FollowUpSequencePayload): Promise<FollowUpSequenceResult> {
+    const { targetProfile, sequenceLength, objective, organizationId } = payload;
+
+    this.log('INFO', `Generating Tier-2 follow-up sequence (${sequenceLength} messages) for ${targetProfile.name}`);
+
+    const playbook = await this.fetchTenantPlaybook(organizationId);
+
+    const sequence: FollowUpSequenceResult['sequence'] = [];
+    const delays = [0, 3, 5, 7, 14]; // Days between messages
+
+    for (let i = 0; i < Math.min(sequenceLength, 5); i++) {
+      const stageType = this.getFollowUpStageType(i, sequenceLength);
+      const message = this.generateFollowUpMessage(targetProfile, playbook, stageType, objective, i + 1);
+
+      sequence.push({
+        day: delays[i] ?? (i * 3),
+        subject: this.generateFollowUpSubject(targetProfile, stageType, i + 1),
+        message: message.content,
+        callToAction: message.cta,
+        characterCount: message.content.length,
+      });
+    }
+
+    // Build automation payload with full sequence
+    const automationPayload = this.buildAutomationPayload(
+      organizationId,
+      'followup',
+      [{ profileIdentifier: targetProfile.name, ...targetProfile }],
+      sequence.map((s, idx) => ({ sequence: idx + 1, content: s.message, delay: s.day * 24 * 60 }))
+    );
+
+    return {
+      tier: 'followup',
+      sequence,
+      totalMessages: sequence.length,
+      estimatedResponseRate: this.estimateResponseRate(sequence.length, objective),
+      automationPayload,
+    };
+  }
+
+  /**
+   * TIER 3: High-Value Offer - Premium personalized outreach
+   */
+  private async handleHighValueOffer(payload: HighValueOfferPayload): Promise<HighValueOfferResult> {
+    const { targetProfile, offerType, organizationId } = payload;
+
+    this.log('INFO', `Generating Tier-3 high-value offer (${offerType}) for ${targetProfile.name}`);
+
+    const playbook = await this.fetchTenantPlaybook(organizationId);
+
+    // Build personalized offer components
+    const headline = this.generateOfferHeadline(targetProfile, offerType, playbook);
+    const valueProposition = this.generateValueProposition(targetProfile, playbook);
+    const socialProof = this.generateSocialProof(targetProfile.industry, playbook);
+    const offer = this.generateOfferDetails(offerType, targetProfile, playbook);
+    const urgency = this.generateUrgencyElement(offerType);
+    const callToAction = this.generateOfferCTA(offerType, targetProfile.firstName);
+
+    const personalizedOffer = {
+      headline,
+      valueProposition,
+      socialProof,
+      offer,
+      urgency,
+      callToAction,
+    };
+
+    // Assemble the full message
+    const fullMessage = this.assembleHighValueMessage(personalizedOffer, targetProfile);
+
+    // Build automation payload
+    const automationPayload = this.buildAutomationPayload(
+      organizationId,
+      'high_value',
+      [{ profileIdentifier: targetProfile.name, ...targetProfile }],
+      [{ sequence: 1, content: fullMessage }]
+    );
+
+    return {
+      tier: 'high_value',
+      personalizedOffer,
+      fullMessage,
+      characterCount: fullMessage.length,
+      conversionProbability: this.calculateConversionProbability(targetProfile, offerType),
+      automationPayload,
+    };
+  }
+
+  /**
+   * Automation Bridge - Generate webhook/API payloads for external tools
+   */
+  private handleAutomationBridge(payload: AutomationBridgePayload): {
+    bridgeType: string;
+    payload: AutomationPayloadOutput;
+    integrationInstructions: string[];
+  } {
+    const { bridgeType, campaignData, organizationId } = payload;
+
+    this.log('INFO', `Building automation bridge for ${bridgeType} (${campaignData.targets.length} targets)`);
+
+    const automationPayload = this.buildAutomationPayload(
+      organizationId,
+      campaignData.sequenceType,
+      campaignData.targets.map(t => ({
+        profileIdentifier: t.profileUrl ?? t.name,
+        name: t.name,
+        company: t.company,
+        role: t.role,
+      })),
+      campaignData.messageTemplates.map((msg, idx) => ({
+        sequence: idx + 1,
+        content: msg,
+        delay: idx * 72 * 60, // 3 days between messages in minutes
+      }))
+    );
+
+    const integrationInstructions = this.generateIntegrationInstructions(bridgeType);
+
+    return {
+      bridgeType,
+      payload: automationPayload,
+      integrationInstructions,
+    };
+  }
+
+  // ==========================================================================
+  // 3-TIER PERSONALIZATION HELPER METHODS
+  // ==========================================================================
+
+  private async fetchTenantPlaybook(organizationId: string): Promise<TenantPlaybook> {
+    // In production, this would fetch from Firestore: organizations/${organizationId}/playbook
+    this.log('INFO', `Fetching playbook for tenant: ${organizationId}`);
+
+    // Default playbook structure - would be overridden by tenant-specific data
+    return Promise.resolve({
+      voiceTone: 'professional',
+      valuePropositions: [
+        'Increase efficiency by 40%',
+        'Reduce costs while scaling',
+        'Data-driven decision making',
+      ],
+      targetIndustries: ['technology', 'saas', 'finance', 'healthcare'],
+      uniqueSellingPoints: [
+        'AI-powered automation',
+        'Seamless integration',
+        '24/7 support',
+      ],
+      brandPersonality: ['innovative', 'trustworthy', 'results-driven'],
+      prohibitedPhrases: ['spam', 'limited time only', 'act now'],
+    });
+  }
+
+  private generateConnectionHooks(target: ConnectionRequestPayload['targetProfile'], playbook: TenantPlaybook): string[] {
+    const hooks: string[] = [];
+
+    // Mutual connection hook
+    if (target.mutualConnections && target.mutualConnections > 0) {
+      hooks.push(`I noticed we share ${target.mutualConnections} mutual connections in the ${target.industry} space`);
+    }
+
+    // Shared group hook
+    if (target.sharedGroups && target.sharedGroups.length > 0) {
+      hooks.push(`Fellow member of ${target.sharedGroups[0]} - your insights on ${target.industry} caught my attention`);
+    }
+
+    // Recent activity hook
+    if (target.recentActivity && target.recentActivity.length > 0) {
+      hooks.push(`Your recent post about ${target.recentActivity[0]} resonated with me`);
+    }
+
+    // Role-based hook
+    hooks.push(`As a fellow professional focused on ${target.industry}, I admire the work ${target.company} is doing`);
+
+    // Industry insight hook
+    hooks.push(`${target.role}s at companies like ${target.company} are solving fascinating challenges right now`);
+
+    // Value-based hook using playbook
+    hooks.push(`I help ${target.industry} leaders ${playbook.valuePropositions[0].toLowerCase()}`);
+
+    return hooks.slice(0, 5);
+  }
+
+  private buildConnectionMessage(
+    target: ConnectionRequestPayload['targetProfile'],
+    playbook: TenantPlaybook,
+    hook: string
+  ): string {
+    const tone = playbook.voiceTone;
+    const greeting = tone === 'casual' ? `Hey ${target.firstName}` : `Hi ${target.firstName}`;
+
+    const body = `${greeting},
+
+${hook}.
+
+I work with ${target.industry} professionals on ${playbook.valuePropositions[0].toLowerCase()}. Given your role at ${target.company}, I thought it would be valuable to connect.
+
+Would love to exchange insights on the industry. No pitch - just genuine networking.
+
+Looking forward to connecting!`;
+
+    return body.length <= 300 ? body : `${body.substring(0, 297)  }...`;
+  }
+
+  private calculatePersonalizationScore(target: ConnectionRequestPayload['targetProfile'], message: string): number {
+    let score = 50; // Base score
+
+    // Name inclusion
+    if (message.includes(target.firstName)) {score += 10;}
+    if (message.includes(target.company)) {score += 15;}
+    if (message.includes(target.role)) {score += 10;}
+    if (message.includes(target.industry)) {score += 10;}
+
+    // Mutual connection mention
+    if (target.mutualConnections && message.includes('mutual')) {score += 15;}
+
+    // Activity mention
+    if (target.recentActivity?.some(a => message.includes(a))) {score += 20;}
+
+    return Math.min(100, score);
+  }
+
+  private getFollowUpStageType(index: number, total: number): 'reminder' | 'value_add' | 'social_proof' | 'urgency' | 'breakup' {
+    if (index === 0) {return 'reminder';}
+    if (index === 1) {return 'value_add';}
+    if (index === 2) {return 'social_proof';}
+    if (index === total - 1) {return 'breakup';}
+    return 'urgency';
+  }
+
+  private generateFollowUpMessage(
+    target: FollowUpSequencePayload['targetProfile'],
+    playbook: TenantPlaybook,
+    stageType: string,
+    objective: string,
+    _sequenceNum: number
+  ): { content: string; cta: string } {
+    const templates: Record<string, { content: string; cta: string }> = {
+      reminder: {
+        content: `Hi ${target.firstName},\n\nHope you're having a great week! I wanted to follow up on my connection request. I believe there's a great opportunity for us to ${objective === 'meeting' ? 'exchange insights' : 'explore collaboration'}.\n\n${playbook.valuePropositions[0]} is something I'm passionate about, and I'd love to hear your perspective from ${target.company}.`,
+        cta: objective === 'meeting' ? 'Would you be open to a brief chat?' : 'Any interest in exploring this further?',
+      },
+      value_add: {
+        content: `Hi ${target.firstName},\n\nI came across this insight that reminded me of the challenges ${target.role}s face in ${target.industry}:\n\n${playbook.uniqueSellingPoints[0]} has been a game-changer for similar companies.\n\nThought you might find it valuable given your work at ${target.company}.`,
+        cta: 'Happy to share more details if helpful.',
+      },
+      social_proof: {
+        content: `Hi ${target.firstName},\n\nQuick update - we recently helped a ${target.industry} company achieve remarkable results:\n\n"${playbook.valuePropositions[1]}"\n\nGiven the similarities with ${target.company}, I thought this might resonate.`,
+        cta: `Would a ${objective === 'demo' ? '15-minute demo' : 'quick call'} make sense?`,
+      },
+      urgency: {
+        content: `Hi ${target.firstName},\n\nI know your time is valuable, so I'll be brief. Companies in ${target.industry} are moving quickly on ${playbook.uniqueSellingPoints[1].toLowerCase()}.\n\nI don't want ${target.company} to miss out on the opportunity.`,
+        cta: 'Can we schedule 15 minutes this week?',
+      },
+      breakup: {
+        content: `Hi ${target.firstName},\n\nI've reached out a few times and understand you're busy. I'll assume the timing isn't right.\n\nIf ${playbook.valuePropositions[0].toLowerCase()} ever becomes a priority for ${target.company}, I'd be happy to reconnect.\n\nWishing you continued success!`,
+        cta: 'Feel free to reach out anytime.',
+      },
+    };
+
+    const template = templates[stageType] || templates.reminder;
+    return template;
+  }
+
+  private generateFollowUpSubject(
+    target: FollowUpSequencePayload['targetProfile'],
+    stageType: string,
+    sequenceNum: number
+  ): string {
+    const subjects: Record<string, string[]> = {
+      reminder: [`Following up, ${target.firstName}`, `Quick question for you`],
+      value_add: [`Thought you might find this valuable`, `Resource for ${target.industry} leaders`],
+      social_proof: [`How ${target.industry} companies are winning`, `Results that might interest you`],
+      urgency: [`Time-sensitive opportunity`, `Before EOW`],
+      breakup: [`Closing the loop`, `One last note`],
+    };
+
+    const options = subjects[stageType] || subjects.reminder;
+    return options[sequenceNum % options.length];
+  }
+
+  private estimateResponseRate(sequenceLength: number, objective: string): number {
+    const baseRates: Record<string, number> = {
+      meeting: 15,
+      demo: 12,
+      partnership: 8,
+      referral: 20,
+    };
+
+    const base = baseRates[objective] || 10;
+    const sequenceBonus = Math.min(sequenceLength * 2, 10);
+
+    return base + sequenceBonus;
+  }
+
+  private generateOfferHeadline(
+    target: HighValueOfferPayload['targetProfile'],
+    offerType: string,
+    playbook: TenantPlaybook
+  ): string {
+    const headlines: Record<string, string> = {
+      consultation: `Exclusive Strategy Session for ${target.company}`,
+      demo: `Personalized Demo: How ${target.company} Can ${playbook.valuePropositions[0]}`,
+      audit: `Complimentary ${target.industry} Performance Audit`,
+      trial: `VIP Access: Experience ${playbook.uniqueSellingPoints[0]}`,
+      case_study: `How Companies Like ${target.company} Achieved Breakthrough Results`,
+    };
+
+    return headlines[offerType] || `Special Opportunity for ${target.firstName}`;
+  }
+
+  private generateValueProposition(
+    target: HighValueOfferPayload['targetProfile'],
+    playbook: TenantPlaybook
+  ): string {
+    const painPoint = target.painPoints?.[0] ?? `challenges facing ${target.role}s`;
+    return `We understand ${painPoint}. That's why we've developed a solution that helps ${target.industry} leaders ${playbook.valuePropositions[0].toLowerCase()}.`;
+  }
+
+  private generateSocialProof(industry: string, playbook: TenantPlaybook): string {
+    return `Companies across ${industry} trust us because we deliver on ${playbook.uniqueSellingPoints.slice(0, 2).join(' and ')}.`;
+  }
+
+  private generateOfferDetails(
+    offerType: string,
+    target: HighValueOfferPayload['targetProfile'],
+    playbook: TenantPlaybook
+  ): string {
+    const offers: Record<string, string> = {
+      consultation: `A 30-minute strategy session tailored to ${target.company}'s unique situation - completely complimentary.`,
+      demo: `A personalized walkthrough showing exactly how we can help ${target.company} achieve ${playbook.valuePropositions[0].toLowerCase()}.`,
+      audit: `A comprehensive analysis of your current performance with actionable recommendations - no strings attached.`,
+      trial: `Full access to our platform for 14 days, with dedicated support to ensure you see results.`,
+      case_study: `Detailed insights from similar ${target.industry} success stories, with specific strategies you can apply.`,
+    };
+
+    return offers[offerType] || 'A unique opportunity designed specifically for you.';
+  }
+
+  private generateUrgencyElement(offerType: string): string {
+    const urgencies: Record<string, string> = {
+      consultation: 'I have limited slots this month for these sessions.',
+      demo: 'We\'re prioritizing demos for companies in your sector this quarter.',
+      audit: 'Our team can only take on a few audits each month.',
+      trial: 'This extended trial offer is available for a limited time.',
+      case_study: 'Happy to share these insights before they become public.',
+    };
+
+    return urgencies[offerType] || 'This opportunity won\'t last forever.';
+  }
+
+  private generateOfferCTA(offerType: string, firstName: string): string {
+    const ctas: Record<string, string> = {
+      consultation: `${firstName}, shall I reserve a time that works for you?`,
+      demo: `Would a 20-minute demo next week work for you?`,
+      audit: `Can I send over the audit framework to get started?`,
+      trial: `Ready to get started? I can activate your access today.`,
+      case_study: `Would you like me to send the full case study?`,
+    };
+
+    return ctas[offerType] || `What do you think, ${firstName}?`;
+  }
+
+  private assembleHighValueMessage(
+    offer: HighValueOfferResult['personalizedOffer'],
+    target: HighValueOfferPayload['targetProfile']
+  ): string {
+    return `Hi ${target.firstName},
+
+${offer.headline}
+
+${offer.valueProposition}
+
+${offer.socialProof}
+
+Here's what I'd like to offer:
+${offer.offer}
+
+${offer.urgency}
+
+${offer.callToAction}
+
+Best regards`;
+  }
+
+  private calculateConversionProbability(
+    target: HighValueOfferPayload['targetProfile'],
+    offerType: string
+  ): number {
+    let probability = 15; // Base
+
+    // Company size factor
+    if (target.companySize === 'enterprise') {probability += 10;}
+    else if (target.companySize === 'mid-market') {probability += 5;}
+
+    // Pain points identified
+    if (target.painPoints && target.painPoints.length > 0) {
+      probability += Math.min(target.painPoints.length * 5, 15);
+    }
+
+    // Budget indicator
+    if (target.budget) {probability += 10;}
+
+    // Offer type factor
+    const offerFactors: Record<string, number> = {
+      consultation: 5,
+      demo: 8,
+      audit: 3,
+      trial: 10,
+      case_study: 2,
+    };
+    probability += offerFactors[offerType] || 0;
+
+    return Math.min(probability, 50);
+  }
+
+  private buildAutomationPayload(
+    tenantId: string,
+    tier: string,
+    targets: Array<{ profileIdentifier: string; name: string; company: string; role: string }>,
+    messages: Array<{ sequence: number; content: string; delay?: number }>
+  ): AutomationPayloadOutput {
+    return {
+      format: 'json',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Tenant-ID': tenantId,
+        'X-Campaign-Type': `linkedin-${tier}`,
+      },
+      body: {
+        action: `linkedin_${tier}_campaign`,
+        targets,
+        messages,
+        metadata: {
+          tenantId,
+          campaignId: `li_${tier}_${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          tier,
+        },
+      },
+    };
+  }
+
+  private generateIntegrationInstructions(bridgeType: string): string[] {
+    const instructions: Record<string, string[]> = {
+      webhook: [
+        'Configure your webhook endpoint to accept POST requests',
+        'Set the X-Tenant-ID header for multi-tenant routing',
+        'Parse the body.messages array for sequence execution',
+        'Use body.metadata.campaignId for tracking',
+      ],
+      zapier: [
+        'Create a new Zap with Webhooks by Zapier trigger',
+        'Select "Catch Hook" and copy the webhook URL',
+        'Map body.targets to your LinkedIn automation action',
+        'Set up delays using body.messages[].delay (in minutes)',
+      ],
+      make: [
+        'Create a scenario with HTTP > Make a request module',
+        'Configure JSON parsing for the incoming payload',
+        'Use an Iterator to process body.targets array',
+        'Add Sleep modules based on body.messages[].delay',
+      ],
+      n8n: [
+        'Add a Webhook node as trigger',
+        'Use Split In Batches for body.targets processing',
+        'Configure Wait nodes using body.messages[].delay',
+        'Connect to LinkedIn nodes for message delivery',
+      ],
+    };
+
+    return instructions[bridgeType] || instructions.webhook;
   }
 
   /**

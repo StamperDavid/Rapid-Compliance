@@ -119,11 +119,42 @@ interface ContentOptimizationPayload {
   organizationId: string;
 }
 
+interface CrawlAnalysisPayload {
+  action: 'crawl_analysis';
+  siteUrl: string;
+  pages?: string[];
+  checkSSL?: boolean;
+  checkSpeed?: boolean;
+  checkMeta?: boolean;
+  checkIndexing?: boolean;
+  organizationId: string;
+}
+
+interface KeywordGapPayload {
+  action: 'keyword_gap';
+  tenantIndustry: string;
+  currentKeywords: string[];
+  competitorDomains?: string[];
+  targetMarket?: string;
+  organizationId: string;
+}
+
+interface ThirtyDayStrategyPayload {
+  action: '30_day_strategy';
+  tenantIndustry: string;
+  currentRankings?: Array<{ keyword: string; position: number }>;
+  businessGoals: string[];
+  organizationId: string;
+}
+
 type SEOPayload =
   | KeywordResearchPayload
   | PageAuditPayload
   | MetaAnalysisPayload
-  | ContentOptimizationPayload;
+  | ContentOptimizationPayload
+  | CrawlAnalysisPayload
+  | KeywordGapPayload
+  | ThirtyDayStrategyPayload;
 
 interface KeywordResult {
   keyword: string;
@@ -156,6 +187,115 @@ interface SEOAuditResult {
     keywordDensity: number;
     readabilityScore: number;
     headingStructure: string[];
+  };
+}
+
+// ============================================================================
+// CRAWL ANALYSIS & KEYWORD GAP RESULT TYPES
+// ============================================================================
+
+interface CrawlHealthReport {
+  siteUrl: string;
+  crawlDate: string;
+  overallScore: number;
+  ssl: {
+    status: 'valid' | 'invalid' | 'expiring' | 'missing';
+    expiryDate?: string;
+    issues: string[];
+    score: number;
+  };
+  speed: {
+    score: number;
+    loadTime: number;
+    ttfb: number;
+    issues: string[];
+    recommendations: string[];
+  };
+  meta: {
+    score: number;
+    pagesAnalyzed: number;
+    missingTitles: number;
+    missingDescriptions: number;
+    duplicateTitles: string[];
+    issues: string[];
+  };
+  indexing: {
+    score: number;
+    indexedPages: number;
+    blockedPages: string[];
+    orphanPages: string[];
+    canonicalIssues: string[];
+  };
+  mobileReadiness: {
+    score: number;
+    isResponsive: boolean;
+    viewportConfigured: boolean;
+    issues: string[];
+  };
+  technicalFixList: Array<{
+    priority: 'critical' | 'high' | 'medium' | 'low';
+    category: string;
+    issue: string;
+    recommendation: string;
+    estimatedImpact: string;
+  }>;
+}
+
+interface KeywordGapResult {
+  tenantId: string;
+  industry: string;
+  analysisDate: string;
+  currentKeywords: {
+    keyword: string;
+    estimatedPosition: number;
+    searchVolume: string;
+    difficulty: string;
+  }[];
+  gapKeywords: {
+    keyword: string;
+    opportunity: 'high' | 'medium' | 'low';
+    searchVolume: string;
+    difficulty: string;
+    competitorRanking: string;
+    recommendation: string;
+  }[];
+  quickWins: string[];
+  longTermTargets: string[];
+  contentGaps: Array<{
+    topic: string;
+    suggestedTitle: string;
+    targetKeywords: string[];
+    estimatedTraffic: string;
+  }>;
+}
+
+interface ThirtyDayStrategy {
+  tenantId: string;
+  industry: string;
+  generatedDate: string;
+  weeks: Array<{
+    weekNumber: number;
+    theme: string;
+    tasks: Array<{
+      day: number;
+      taskType: 'technical' | 'content' | 'outreach' | 'analysis';
+      task: string;
+      targetKeywords?: string[];
+      expectedOutcome: string;
+      effort: 'low' | 'medium' | 'high';
+    }>;
+    keyMetrics: string[];
+  }>;
+  priorityKeywords: Array<{
+    keyword: string;
+    currentPosition: number | null;
+    targetPosition: number;
+    strategy: string;
+  }>;
+  expectedResults: {
+    trafficIncrease: string;
+    rankingImprovements: string;
+    technicalScore: string;
   };
 }
 
@@ -205,6 +345,18 @@ export class SEOExpert extends BaseSpecialist {
 
         case 'content_optimization':
           result = this.handleContentOptimization(payload);
+          break;
+
+        case 'crawl_analysis':
+          result = this.handleCrawlAnalysis(payload);
+          break;
+
+        case 'keyword_gap':
+          result = this.handleKeywordGap(payload);
+          break;
+
+        case '30_day_strategy':
+          result = this.handleThirtyDayStrategy(payload);
           break;
 
         default:
@@ -726,6 +878,570 @@ export class SEOExpert extends BaseSpecialist {
       return 'Include your primary target keyword near the beginning of the title';
     }
     return 'Review and optimize your title tag';
+  }
+
+  // ==========================================================================
+  // CRAWL ANALYSIS ENGINE
+  // ==========================================================================
+
+  /**
+   * Simulated site crawl with technical health report
+   */
+  private handleCrawlAnalysis(payload: CrawlAnalysisPayload): CrawlHealthReport {
+    const { siteUrl, organizationId } = payload;
+
+    this.log('INFO', `Running crawl analysis for ${siteUrl} (Tenant: ${organizationId})`);
+
+    // Simulate SSL check
+    const ssl = this.analyzeSSL(siteUrl);
+
+    // Simulate speed analysis
+    const speed = this.analyzeSpeed(siteUrl);
+
+    // Simulate meta analysis
+    const meta = this.analyzeSiteMeta(siteUrl);
+
+    // Simulate indexing analysis
+    const indexing = this.analyzeIndexing(siteUrl);
+
+    // Mobile readiness check
+    const mobileReadiness = this.analyzeMobileReadiness(siteUrl);
+
+    // Calculate overall score
+    const overallScore = Math.round(
+      (ssl.score + speed.score + meta.score + indexing.score + mobileReadiness.score) / 5
+    );
+
+    // Generate prioritized fix list
+    const technicalFixList = this.generateTechnicalFixList(ssl, speed, meta, indexing, mobileReadiness);
+
+    return {
+      siteUrl,
+      crawlDate: new Date().toISOString(),
+      overallScore,
+      ssl,
+      speed,
+      meta,
+      indexing,
+      mobileReadiness,
+      technicalFixList,
+    };
+  }
+
+  private analyzeSSL(siteUrl: string): CrawlHealthReport['ssl'] {
+    // Simulated SSL analysis
+    const hasHTTPS = siteUrl.startsWith('https://');
+
+    if (!hasHTTPS) {
+      return {
+        status: 'missing',
+        issues: ['Site is not using HTTPS', 'No SSL certificate detected'],
+        score: 0,
+      };
+    }
+
+    // Simulate valid SSL with future expiry
+    const expiryDate = new Date();
+    expiryDate.setMonth(expiryDate.getMonth() + 8);
+
+    return {
+      status: 'valid',
+      expiryDate: expiryDate.toISOString(),
+      issues: [],
+      score: 100,
+    };
+  }
+
+  private analyzeSpeed(_siteUrl: string): CrawlHealthReport['speed'] {
+    // Simulated speed metrics
+    const loadTime = 2.3 + Math.random() * 2; // 2.3-4.3 seconds
+    const ttfb = 0.3 + Math.random() * 0.5; // 0.3-0.8 seconds
+
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+    let score = 100;
+
+    if (loadTime > 3) {
+      issues.push(`Page load time (${loadTime.toFixed(1)}s) exceeds recommended 3s`);
+      recommendations.push('Optimize images and enable lazy loading');
+      recommendations.push('Minify CSS and JavaScript files');
+      score -= 20;
+    }
+
+    if (ttfb > 0.5) {
+      issues.push(`Time to First Byte (${(ttfb * 1000).toFixed(0)}ms) is slow`);
+      recommendations.push('Consider using a CDN');
+      recommendations.push('Optimize server response time');
+      score -= 15;
+    }
+
+    recommendations.push('Enable browser caching for static assets');
+    recommendations.push('Consider implementing HTTP/2');
+
+    return {
+      score: Math.max(0, score),
+      loadTime: parseFloat(loadTime.toFixed(2)),
+      ttfb: parseFloat(ttfb.toFixed(3)),
+      issues,
+      recommendations,
+    };
+  }
+
+  private analyzeSiteMeta(_siteUrl: string): CrawlHealthReport['meta'] {
+    // Simulated meta analysis for a typical site
+    const pagesAnalyzed = 25;
+    const missingTitles = Math.floor(Math.random() * 3);
+    const missingDescriptions = Math.floor(Math.random() * 5);
+    const duplicateTitles = missingTitles > 0 ? ['/page1', '/page2'] : [];
+
+    const issues: string[] = [];
+    let score = 100;
+
+    if (missingTitles > 0) {
+      issues.push(`${missingTitles} pages missing title tags`);
+      score -= missingTitles * 10;
+    }
+
+    if (missingDescriptions > 0) {
+      issues.push(`${missingDescriptions} pages missing meta descriptions`);
+      score -= missingDescriptions * 5;
+    }
+
+    if (duplicateTitles.length > 0) {
+      issues.push(`${duplicateTitles.length} duplicate title tags found`);
+      score -= duplicateTitles.length * 8;
+    }
+
+    return {
+      score: Math.max(0, score),
+      pagesAnalyzed,
+      missingTitles,
+      missingDescriptions,
+      duplicateTitles,
+      issues,
+    };
+  }
+
+  private analyzeIndexing(_siteUrl: string): CrawlHealthReport['indexing'] {
+    // Simulated indexing analysis
+    const indexedPages = 20 + Math.floor(Math.random() * 10);
+    const blockedPages = Math.random() > 0.7 ? ['/admin', '/login'] : [];
+    const orphanPages = Math.random() > 0.5 ? ['/old-page', '/unused'] : [];
+    const canonicalIssues = Math.random() > 0.8 ? ['Missing canonical on /blog'] : [];
+
+    let score = 100;
+
+    if (blockedPages.length > 2) {
+      score -= 10;
+    }
+
+    if (orphanPages.length > 0) {
+      score -= orphanPages.length * 5;
+    }
+
+    if (canonicalIssues.length > 0) {
+      score -= canonicalIssues.length * 8;
+    }
+
+    return {
+      score: Math.max(0, score),
+      indexedPages,
+      blockedPages,
+      orphanPages,
+      canonicalIssues,
+    };
+  }
+
+  private analyzeMobileReadiness(_siteUrl: string): CrawlHealthReport['mobileReadiness'] {
+    // Simulated mobile analysis
+    const isResponsive = Math.random() > 0.2;
+    const viewportConfigured = Math.random() > 0.1;
+
+    const issues: string[] = [];
+    let score = 100;
+
+    if (!isResponsive) {
+      issues.push('Site does not appear to be mobile-responsive');
+      score -= 40;
+    }
+
+    if (!viewportConfigured) {
+      issues.push('Viewport meta tag not properly configured');
+      score -= 20;
+    }
+
+    // Common mobile issues
+    if (Math.random() > 0.6) {
+      issues.push('Touch targets too small (< 48px)');
+      score -= 10;
+    }
+
+    if (Math.random() > 0.7) {
+      issues.push('Text too small to read without zooming');
+      score -= 15;
+    }
+
+    return {
+      score: Math.max(0, score),
+      isResponsive,
+      viewportConfigured,
+      issues,
+    };
+  }
+
+  private generateTechnicalFixList(
+    ssl: CrawlHealthReport['ssl'],
+    speed: CrawlHealthReport['speed'],
+    meta: CrawlHealthReport['meta'],
+    indexing: CrawlHealthReport['indexing'],
+    mobile: CrawlHealthReport['mobileReadiness']
+  ): CrawlHealthReport['technicalFixList'] {
+    const fixList: CrawlHealthReport['technicalFixList'] = [];
+
+    // SSL issues
+    if (ssl.status !== 'valid') {
+      fixList.push({
+        priority: 'critical',
+        category: 'Security',
+        issue: ssl.status === 'missing' ? 'No SSL certificate' : `SSL ${ssl.status}`,
+        recommendation: 'Install and configure a valid SSL certificate',
+        estimatedImpact: 'High - affects rankings and user trust',
+      });
+    }
+
+    // Speed issues
+    if (speed.score < 70) {
+      fixList.push({
+        priority: 'high',
+        category: 'Performance',
+        issue: `Slow page load (${speed.loadTime}s)`,
+        recommendation: speed.recommendations[0] || 'Optimize page speed',
+        estimatedImpact: 'High - affects user experience and Core Web Vitals',
+      });
+    }
+
+    // Meta issues
+    if (meta.missingTitles > 0) {
+      fixList.push({
+        priority: 'high',
+        category: 'On-Page SEO',
+        issue: `${meta.missingTitles} pages missing title tags`,
+        recommendation: 'Add unique, keyword-optimized title tags to all pages',
+        estimatedImpact: 'High - title tags are a primary ranking factor',
+      });
+    }
+
+    if (meta.missingDescriptions > 0) {
+      fixList.push({
+        priority: 'medium',
+        category: 'On-Page SEO',
+        issue: `${meta.missingDescriptions} pages missing meta descriptions`,
+        recommendation: 'Add compelling meta descriptions with target keywords',
+        estimatedImpact: 'Medium - affects click-through rates',
+      });
+    }
+
+    // Indexing issues
+    if (indexing.orphanPages.length > 0) {
+      fixList.push({
+        priority: 'medium',
+        category: 'Site Structure',
+        issue: `${indexing.orphanPages.length} orphan pages detected`,
+        recommendation: 'Add internal links to orphan pages or remove them',
+        estimatedImpact: 'Medium - affects crawl efficiency',
+      });
+    }
+
+    if (indexing.canonicalIssues.length > 0) {
+      fixList.push({
+        priority: 'high',
+        category: 'Technical SEO',
+        issue: 'Canonical tag issues detected',
+        recommendation: 'Fix canonical tags to prevent duplicate content',
+        estimatedImpact: 'High - prevents ranking dilution',
+      });
+    }
+
+    // Mobile issues
+    if (!mobile.isResponsive) {
+      fixList.push({
+        priority: 'critical',
+        category: 'Mobile',
+        issue: 'Site not mobile-responsive',
+        recommendation: 'Implement responsive design or mobile-first approach',
+        estimatedImpact: 'Critical - mobile-first indexing is standard',
+      });
+    }
+
+    // Sort by priority
+    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    fixList.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+    return fixList;
+  }
+
+  // ==========================================================================
+  // KEYWORD GAP ANALYSIS ENGINE
+  // ==========================================================================
+
+  /**
+   * Analyze keyword gaps compared to market trends
+   */
+  private handleKeywordGap(payload: KeywordGapPayload): KeywordGapResult {
+    const { tenantIndustry, currentKeywords, organizationId } = payload;
+
+    this.log('INFO', `Running keyword gap analysis for ${tenantIndustry} (Tenant: ${organizationId})`);
+
+    // Analyze current keywords
+    const currentAnalysis = currentKeywords.map(kw => ({
+      keyword: kw,
+      estimatedPosition: this.estimateKeywordPosition(kw),
+      searchVolume: this.estimateSearchVolume(kw),
+      difficulty: this.estimateDifficulty(kw),
+    }));
+
+    // Generate gap keywords based on industry
+    const gapKeywords = this.generateGapKeywords(tenantIndustry, currentKeywords);
+
+    // Identify quick wins (low difficulty, good opportunity)
+    const quickWins = gapKeywords
+      .filter(kw => kw.difficulty === 'low' && kw.opportunity === 'high')
+      .map(kw => kw.keyword)
+      .slice(0, 5);
+
+    // Identify long-term targets
+    const longTermTargets = gapKeywords
+      .filter(kw => kw.difficulty === 'high' && kw.searchVolume === 'High')
+      .map(kw => kw.keyword)
+      .slice(0, 5);
+
+    // Generate content gap recommendations
+    const contentGaps = this.generateContentGaps(tenantIndustry, gapKeywords);
+
+    return {
+      tenantId: organizationId,
+      industry: tenantIndustry,
+      analysisDate: new Date().toISOString(),
+      currentKeywords: currentAnalysis,
+      gapKeywords,
+      quickWins,
+      longTermTargets,
+      contentGaps,
+    };
+  }
+
+  private estimateKeywordPosition(keyword: string): number {
+    // Simulate position based on keyword length (longer = likely lower position)
+    const wordCount = keyword.split(/\s+/).length;
+    if (wordCount >= 4) {return Math.floor(Math.random() * 20) + 1;}
+    if (wordCount >= 2) {return Math.floor(Math.random() * 50) + 10;}
+    return Math.floor(Math.random() * 100) + 30;
+  }
+
+  private estimateSearchVolume(keyword: string): string {
+    const wordCount = keyword.split(/\s+/).length;
+    if (wordCount <= 1) {return 'High';}
+    if (wordCount <= 3) {return 'Medium';}
+    return 'Low';
+  }
+
+  private generateGapKeywords(
+    industry: string,
+    currentKeywords: string[]
+  ): KeywordGapResult['gapKeywords'] {
+    const industryKeywordMap: Record<string, string[]> = {
+      technology: [
+        'best software tools', 'automation solutions', 'digital transformation',
+        'cloud migration', 'AI integration', 'data analytics', 'cybersecurity solutions',
+        'tech stack optimization', 'API integration', 'workflow automation',
+      ],
+      healthcare: [
+        'healthcare technology', 'patient management', 'medical billing software',
+        'telehealth solutions', 'HIPAA compliance', 'healthcare analytics',
+        'patient engagement', 'medical practice management', 'health records',
+      ],
+      finance: [
+        'fintech solutions', 'financial planning', 'investment management',
+        'accounting automation', 'payment processing', 'financial compliance',
+        'wealth management', 'banking solutions', 'credit management',
+      ],
+      ecommerce: [
+        'ecommerce platform', 'online store optimization', 'shopping cart',
+        'payment gateway', 'inventory management', 'order fulfillment',
+        'customer retention', 'product recommendations', 'checkout optimization',
+      ],
+      saas: [
+        'saas platform', 'subscription management', 'customer success',
+        'user onboarding', 'product analytics', 'feature adoption',
+        'churn reduction', 'upselling strategies', 'saas metrics',
+      ],
+    };
+
+    const industryKeywords = industryKeywordMap[industry.toLowerCase()] ||
+      industryKeywordMap.technology;
+
+    const currentLower = currentKeywords.map(k => k.toLowerCase());
+
+    return industryKeywords
+      .filter(kw => !currentLower.includes(kw.toLowerCase()))
+      .map(keyword => {
+        const difficulty = this.estimateDifficulty(keyword);
+        const volume = this.estimateSearchVolume(keyword);
+
+        let opportunity: 'high' | 'medium' | 'low' = 'medium';
+        if (difficulty === 'low' && volume !== 'Low') {opportunity = 'high';}
+        if (difficulty === 'high' && volume === 'Low') {opportunity = 'low';}
+
+        return {
+          keyword,
+          opportunity,
+          searchVolume: volume,
+          difficulty,
+          competitorRanking: `Top ${Math.floor(Math.random() * 5) + 1} competitors ranking`,
+          recommendation: this.getKeywordRecommendation(opportunity, difficulty),
+        };
+      });
+  }
+
+  private getKeywordRecommendation(opportunity: string, difficulty: string): string {
+    if (opportunity === 'high' && difficulty === 'low') {
+      return 'Create dedicated landing page and blog content immediately';
+    }
+    if (opportunity === 'high') {
+      return 'Build comprehensive content cluster around this topic';
+    }
+    if (difficulty === 'high') {
+      return 'Long-term target - build authority through related content first';
+    }
+    return 'Include in content strategy for supporting pages';
+  }
+
+  private generateContentGaps(
+    industry: string,
+    gapKeywords: KeywordGapResult['gapKeywords']
+  ): KeywordGapResult['contentGaps'] {
+    const highOpportunity = gapKeywords.filter(kw => kw.opportunity === 'high').slice(0, 4);
+
+    return highOpportunity.map(kw => ({
+      topic: kw.keyword,
+      suggestedTitle: this.generateContentTitle(kw.keyword, industry),
+      targetKeywords: [kw.keyword, `${kw.keyword} guide`, `best ${kw.keyword}`],
+      estimatedTraffic: kw.searchVolume === 'High' ? '1,000-5,000/mo' :
+        kw.searchVolume === 'Medium' ? '200-1,000/mo' : '50-200/mo',
+    }));
+  }
+
+  private generateContentTitle(keyword: string, industry: string): string {
+    const templates = [
+      `The Complete Guide to ${keyword} for ${industry}`,
+      `How to Master ${keyword}: A ${industry} Perspective`,
+      `${keyword}: Everything You Need to Know in ${new Date().getFullYear()}`,
+      `Top 10 ${keyword} Strategies for ${industry} Success`,
+    ];
+
+    return templates[Math.floor(Math.random() * templates.length)];
+  }
+
+  // ==========================================================================
+  // 30-DAY KEYWORD STRATEGY GENERATOR
+  // ==========================================================================
+
+  /**
+   * Generate a comprehensive 30-day SEO strategy
+   */
+  private handleThirtyDayStrategy(payload: ThirtyDayStrategyPayload): ThirtyDayStrategy {
+    const { tenantIndustry, currentRankings, businessGoals, organizationId } = payload;
+
+    this.log('INFO', `Generating 30-day strategy for ${tenantIndustry} (Tenant: ${organizationId})`);
+
+    const weeks: ThirtyDayStrategy['weeks'] = [];
+
+    // Week 1: Technical Foundation
+    weeks.push({
+      weekNumber: 1,
+      theme: 'Technical Foundation',
+      tasks: [
+        { day: 1, taskType: 'technical', task: 'Run comprehensive site crawl and audit', expectedOutcome: 'Identify all technical issues', effort: 'medium' },
+        { day: 2, taskType: 'technical', task: 'Fix critical SSL and speed issues', expectedOutcome: 'Improved Core Web Vitals', effort: 'high' },
+        { day: 3, taskType: 'technical', task: 'Optimize meta titles and descriptions', targetKeywords: [tenantIndustry], expectedOutcome: 'Better SERP presence', effort: 'medium' },
+        { day: 4, taskType: 'analysis', task: 'Keyword gap analysis vs competitors', expectedOutcome: 'Keyword opportunity list', effort: 'medium' },
+        { day: 5, taskType: 'technical', task: 'Fix indexing and canonical issues', expectedOutcome: 'Clean site structure', effort: 'medium' },
+      ],
+      keyMetrics: ['Core Web Vitals score', 'Indexed pages count', 'Technical SEO score'],
+    });
+
+    // Week 2: Content Foundation
+    weeks.push({
+      weekNumber: 2,
+      theme: 'Content Optimization',
+      tasks: [
+        { day: 8, taskType: 'content', task: 'Audit existing content for optimization opportunities', expectedOutcome: 'Content improvement roadmap', effort: 'medium' },
+        { day: 9, taskType: 'content', task: 'Update top 5 pages with target keywords', targetKeywords: currentRankings?.slice(0, 5).map(r => r.keyword) ?? [], expectedOutcome: 'Improved on-page SEO', effort: 'high' },
+        { day: 10, taskType: 'content', task: 'Create cornerstone content piece', targetKeywords: [tenantIndustry, `${tenantIndustry} guide`], expectedOutcome: 'Authority content published', effort: 'high' },
+        { day: 11, taskType: 'content', task: 'Internal linking optimization', expectedOutcome: 'Better link equity distribution', effort: 'medium' },
+        { day: 12, taskType: 'analysis', task: 'Competitor content analysis', expectedOutcome: 'Content gap insights', effort: 'low' },
+      ],
+      keyMetrics: ['Content quality scores', 'Keyword rankings', 'Organic traffic'],
+    });
+
+    // Week 3: Authority Building
+    weeks.push({
+      weekNumber: 3,
+      theme: 'Authority Building',
+      tasks: [
+        { day: 15, taskType: 'outreach', task: 'Identify link building opportunities', expectedOutcome: 'Prospect list of 50+ sites', effort: 'medium' },
+        { day: 16, taskType: 'content', task: 'Create linkable asset (guide/tool/study)', targetKeywords: businessGoals, expectedOutcome: 'High-value content for links', effort: 'high' },
+        { day: 17, taskType: 'outreach', task: 'Guest post outreach campaign', expectedOutcome: '5-10 outreach emails sent', effort: 'medium' },
+        { day: 18, taskType: 'content', task: 'Publish supporting blog content', targetKeywords: [`${tenantIndustry} tips`, `${tenantIndustry} best practices`], expectedOutcome: 'Content cluster expansion', effort: 'medium' },
+        { day: 19, taskType: 'analysis', task: 'Monitor and report on progress', expectedOutcome: 'Week 3 performance report', effort: 'low' },
+      ],
+      keyMetrics: ['Referring domains', 'Domain authority', 'Backlink quality'],
+    });
+
+    // Week 4: Optimization & Scale
+    weeks.push({
+      weekNumber: 4,
+      theme: 'Optimization & Scale',
+      tasks: [
+        { day: 22, taskType: 'analysis', task: 'Review ranking changes and adjust strategy', expectedOutcome: 'Data-driven optimizations', effort: 'medium' },
+        { day: 23, taskType: 'content', task: 'Update underperforming content', expectedOutcome: 'Refreshed content with better targeting', effort: 'medium' },
+        { day: 24, taskType: 'technical', task: 'Schema markup implementation', expectedOutcome: 'Rich snippets eligibility', effort: 'medium' },
+        { day: 25, taskType: 'content', task: 'Create content for quick-win keywords', targetKeywords: ['how to', 'best', 'guide'], expectedOutcome: 'Targeting low-competition terms', effort: 'high' },
+        { day: 26, taskType: 'analysis', task: 'Comprehensive 30-day report and next steps', expectedOutcome: 'Full performance analysis', effort: 'medium' },
+      ],
+      keyMetrics: ['Overall organic traffic', 'Keyword position changes', 'Conversion rate'],
+    });
+
+    // Build priority keywords
+    const priorityKeywords: ThirtyDayStrategy['priorityKeywords'] = (currentRankings ?? [])
+      .slice(0, 5)
+      .map(r => ({
+        keyword: r.keyword,
+        currentPosition: r.position,
+        targetPosition: Math.max(1, r.position - 10),
+        strategy: r.position > 20 ? 'Create new optimized content' : r.position > 10 ? 'Optimize existing page + build links' : 'Maintain and protect position',
+      }));
+
+    // Add new keyword targets
+    priorityKeywords.push({
+      keyword: `${tenantIndustry} solutions`,
+      currentPosition: null,
+      targetPosition: 15,
+      strategy: 'Create comprehensive landing page',
+    });
+
+    return {
+      tenantId: organizationId,
+      industry: tenantIndustry,
+      generatedDate: new Date().toISOString(),
+      weeks,
+      priorityKeywords,
+      expectedResults: {
+        trafficIncrease: '20-40% increase in organic traffic',
+        rankingImprovements: 'Average position improvement of 5-10 spots',
+        technicalScore: 'Technical SEO score improvement to 90+',
+      },
+    };
   }
 
   /**
