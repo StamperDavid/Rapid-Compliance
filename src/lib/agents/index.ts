@@ -2,16 +2,16 @@
  * Agent Swarm Index
  * STATUS: REGISTRY - Exports all agents for easy importing
  *
- * SWARM STATUS REPORT (Updated Batch 70b)
+ * SWARM STATUS REPORT (Updated Batch 71 - Sales & Trust Skeleton Revival)
  *
- * Total Agents: 36 (9 managers + 27 specialists)
+ * Total Agents: 40 (9 managers + 31 specialists)
  *
  * MANAGERS (9):
  * - IntelligenceManager, MarketingManager, BuilderManager
  * - CommerceManager, OutreachManager, ContentManager
  * - ArchitectManager, RevenueDirector, ReputationManager
  *
- * SPECIALISTS (27):
+ * SPECIALISTS (31):
  * - Intelligence: CompetitorResearcher, SentimentAnalyst, TechnographicScout, ScraperSpecialist
  * - Marketing: TikTokExpert, XExpert, FacebookAdsExpert, LinkedInExpert, SEOExpert, TwitterExpert
  * - Builder: UxUiArchitect, FunnelEngineer, AssetGenerator
@@ -19,11 +19,11 @@
  * - Commerce: PricingStrategist, InventoryManagerAgent
  * - Outreach: EmailSpecialist, SmsSpecialist
  * - Content: Copywriter, CalendarCoordinator
- * - Sales: MerchandiserSpecialist, OutreachSpecialist, LeadQualifierSpecialist
- * - Trust: GMBSpecialist, ReviewSpecialist
+ * - Sales: MerchandiserSpecialist, OutreachSpecialist, LeadQualifierSpecialist, DealCloserSpecialist, ObjectionHandlerSpecialist
+ * - Trust: GMBSpecialist, ReviewSpecialist, ReviewManagerSpecialist, CaseStudyBuilderSpecialist
  *
  * Status Breakdown:
- * - FUNCTIONAL: 9 (Marketing Manager, TikTok, Competitor, Asset Gen, Funnel, UX/UI, Inventory, Copywriter, Calendar)
+ * - FUNCTIONAL: 13 (Marketing Manager, TikTok, Competitor, Asset Gen, Funnel, UX/UI, Inventory, Copywriter, Calendar, DealCloser, ObjectionHandler, ReviewManager, CaseStudyBuilder)
  * - SHELL: 8 (Other managers)
  * - GHOST: 19 (Remaining specialists)
  */
@@ -96,10 +96,14 @@ export { CalendarCoordinator } from './content/calendar/specialist';
 export { MerchandiserSpecialist } from './sales/merchandiser/specialist';
 export { OutreachSpecialist } from './sales/outreach/specialist';
 export { LeadQualifierSpecialist } from './sales/qualifier/specialist';
+export { DealCloserSpecialist } from './sales/deal-closer/specialist';
+export { ObjectionHandlerSpecialist } from './sales/objection-handler/specialist';
 
 // Trust Specialists
 export { GMBSpecialist } from './trust/gmb/specialist';
 export { ReviewSpecialist } from './trust/review/specialist';
+export { ReviewManagerSpecialist } from './trust/review-manager/specialist';
+export { CaseStudyBuilderSpecialist } from './trust/case-study/specialist';
 
 // ============================================================================
 // AGENT REGISTRY UTILITY
@@ -160,10 +164,14 @@ export const AGENT_IDS = {
   MERCHANDISER: 'MERCHANDISER',
   OUTREACH_SPECIALIST: 'OUTREACH_SPECIALIST',
   LEAD_QUALIFIER: 'LEAD_QUALIFIER',
+  DEAL_CLOSER: 'DEAL_CLOSER',
+  OBJ_HANDLER: 'OBJ_HANDLER',
 
   // Trust Specialists
   GMB_SPECIALIST: 'GMB_SPECIALIST',
   REVIEW_SPECIALIST: 'REVIEW_SPECIALIST',
+  REV_MGR: 'REV_MGR',
+  CASE_STUDY: 'CASE_STUDY',
 } as const;
 
 export type AgentId = typeof AGENT_IDS[keyof typeof AGENT_IDS];

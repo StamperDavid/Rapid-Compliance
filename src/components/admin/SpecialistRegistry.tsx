@@ -1,10 +1,12 @@
 /**
  * AI Specialist Registry Component
  *
- * Comprehensive registry displaying all 27 AI specialists across 9 categories.
+ * Comprehensive registry displaying all 31 AI specialists across 9 categories.
  * Supports filtering, search, and detailed specialist views.
  *
  * Performance optimized with React.memo, useMemo, and useCallback.
+ *
+ * Updated: Added 4 new specialists (Deal Closer, Objection Handler, Review Manager, Case Study Builder)
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -307,7 +309,7 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     managerId: 'CONTENT_MANAGER',
   },
 
-  // Sales Category (3 specialists)
+  // Sales Category (5 specialists)
   {
     id: 'LEAD_QUALIFIER',
     name: 'Lead Qualifier',
@@ -353,8 +355,38 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     ],
     managerId: 'SALES_MANAGER',
   },
+  {
+    id: 'DEAL_CLOSER',
+    name: 'Deal Closer',
+    category: 'sales',
+    status: 'FUNCTIONAL',
+    description: 'Analyzes lead history and generates personalized closing strategies using decision-tree engine',
+    capabilities: [
+      'Lead readiness assessment',
+      'Closing strategy selection (urgency, value stack, trial close)',
+      'Personalized script generation',
+      'Contract template creation',
+      'Objection preemption strategies',
+    ],
+    managerId: 'REVENUE_DIRECTOR',
+  },
+  {
+    id: 'OBJ_HANDLER',
+    name: 'Objection Handler',
+    category: 'sales',
+    status: 'FUNCTIONAL',
+    description: 'Lookup-and-reframing engine providing triple-verified rebuttals based on value propositions',
+    capabilities: [
+      'Objection classification',
+      'Triple-verified rebuttal generation',
+      'Value proposition mapping',
+      'Reframing strategy selection',
+      'Sales playbook integration',
+    ],
+    managerId: 'REVENUE_DIRECTOR',
+  },
 
-  // Trust Category (2 specialists)
+  // Trust Category (4 specialists)
   {
     id: 'REVIEW_SPECIALIST',
     name: 'Review Specialist',
@@ -384,6 +416,36 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
       'Insights analysis',
     ],
     managerId: 'TRUST_MANAGER',
+  },
+  {
+    id: 'REV_MGR',
+    name: 'Review Manager',
+    category: 'trust',
+    status: 'FUNCTIONAL',
+    description: 'Automated sentiment analysis bridge with SEO-optimized response generation',
+    capabilities: [
+      'Multi-tenant sentiment analysis',
+      'SEO keyword injection in responses',
+      'Review request campaign generation',
+      'Brand voice consistency',
+      'Reputation trend analysis',
+    ],
+    managerId: 'REPUTATION_MANAGER',
+  },
+  {
+    id: 'CASE_STUDY',
+    name: 'Case Study Builder',
+    category: 'trust',
+    status: 'FUNCTIONAL',
+    description: 'Structured narrative engine transforming success stories into SEO-optimized case studies',
+    capabilities: [
+      'Before/After data transformation',
+      'Challenge-Solution-Results narrative',
+      'JSON-LD schema generation',
+      'Multi-format export (HTML, PDF, Markdown)',
+      'Dynamic metric visualization',
+    ],
+    managerId: 'REPUTATION_MANAGER',
   },
 
   // Architect Category (3 specialists)
