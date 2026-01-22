@@ -321,14 +321,16 @@ export class VideoSpecialist extends BaseSpecialist {
     super(CONFIG);
   }
 
-  initialize(): void {
+  async initialize(): Promise<void> {
+    await Promise.resolve();
     this.log('INFO', 'Initializing Video Specialist...');
     this.log('INFO', 'Loading storyboard templates and audio cue library...');
     this.isInitialized = true;
     this.log('INFO', 'Video Specialist ready for content production planning');
   }
 
-  execute(message: AgentMessage): AgentReport {
+  async execute(message: AgentMessage): Promise<AgentReport> {
+    await Promise.resolve();
     const taskId = message.id;
 
     try {
@@ -710,9 +712,9 @@ export class VideoSpecialist extends BaseSpecialist {
       });
     }
 
-    sections.forEach((section, _index) => {
+    sections.forEach((section, index) => {
       const sectionDuration = Math.ceil((section.split(/\s+/).length / 150) * 60);
-      currentTime += _index === 0 ? 5 : sectionDuration;
+      currentTime += index === 0 ? 5 : sectionDuration;
 
       // VO transition markers
       if (index > 0) {
@@ -736,7 +738,7 @@ export class VideoSpecialist extends BaseSpecialist {
       }
 
       // Ambient/mood changes
-      if (this.detectMoodShift(section, sections[index - 1])) {
+      if (this.detectMoodShift(section, index > 0 ? sections[index - 1] : undefined)) {
         cues.push({
           timeCode: this.formatTimeCode(currentTime),
           type: 'ambient',
@@ -1114,7 +1116,7 @@ export class VideoSpecialist extends BaseSpecialist {
     const words = title.split(/\s+/).slice(0, 4);
 
     if (clickbaitLevel === 'high') {
-      return words.slice(0, 2).join(' ').toUpperCase() + '?!';
+      return `${words.slice(0, 2).join(' ').toUpperCase()  }?!`;
     }
     if (clickbaitLevel === 'medium') {
       return words.slice(0, 3).join(' ').toUpperCase();
@@ -1257,7 +1259,7 @@ export class VideoSpecialist extends BaseSpecialist {
 
     // Truncate if needed
     if (optimized.length > spec.titleLimit) {
-      optimized = optimized.slice(0, spec.titleLimit - 3) + '...';
+      optimized = `${optimized.slice(0, spec.titleLimit - 3)  }...`;
     }
 
     return optimized;
@@ -1283,7 +1285,7 @@ export class VideoSpecialist extends BaseSpecialist {
 
     // Truncate if needed
     if (optimized.length > spec.descriptionLimit) {
-      optimized = optimized.slice(0, spec.descriptionLimit - 3) + '...';
+      optimized = `${optimized.slice(0, spec.descriptionLimit - 3)  }...`;
     }
 
     return optimized;
@@ -1312,7 +1314,7 @@ export class VideoSpecialist extends BaseSpecialist {
 
   private generateHashtags(keywords: string[], platform: string): string[] {
     const hashtags = keywords.slice(0, 5).map(kw =>
-      '#' + kw.replace(/\s+/g, '').toLowerCase()
+      `#${  kw.replace(/\s+/g, '').toLowerCase()}`
     );
 
     // Add platform-specific hashtags
@@ -1453,12 +1455,12 @@ export class VideoSpecialist extends BaseSpecialist {
     const suggestions: BRollSuggestion[] = [];
     let currentTime = 0;
 
-    sections.forEach((section, index) => {
+    sections.forEach((section, _index) => {
       const sectionDuration = Math.ceil((section.split(/\s+/).length / 150) * 60);
 
       suggestions.push({
         timeCode: this.formatTimeCode(currentTime),
-        context: section.slice(0, 100) + '...',
+        context: `${section.slice(0, 100)  }...`,
         suggestions: this.generateBRollOptions(section, style, budget),
       });
 

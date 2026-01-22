@@ -342,6 +342,7 @@ export class TenantMemoryVault {
     agentId: string,
     options: WriteOptions = {}
   ): Promise<InsightEntry> {
+    await Promise.resolve();
     return this.write<InsightData>(
       tenantId,
       'INSIGHT',
@@ -349,7 +350,7 @@ export class TenantMemoryVault {
       insight,
       agentId,
       { ...options, tags: [...(options.tags ?? []), insight.type] }
-    ) as Promise<InsightEntry>;
+    ) as InsightEntry;
   }
 
   /**
@@ -362,6 +363,7 @@ export class TenantMemoryVault {
     agentId: string,
     options: WriteOptions = {}
   ): Promise<SignalEntry> {
+    await Promise.resolve();
     return this.write<SignalData>(
       tenantId,
       'SIGNAL',
@@ -373,7 +375,7 @@ export class TenantMemoryVault {
         priority: signal.urgency,
         tags: [...(options.tags ?? []), signal.signalType],
       }
-    ) as Promise<SignalEntry>;
+    ) as SignalEntry;
   }
 
   /**
@@ -386,6 +388,7 @@ export class TenantMemoryVault {
     agentId: string,
     options: WriteOptions = {}
   ): Promise<ContentEntry> {
+    await Promise.resolve();
     return this.write<ContentData>(
       tenantId,
       'CONTENT',
@@ -396,7 +399,7 @@ export class TenantMemoryVault {
         ...options,
         tags: [...(options.tags ?? []), content.contentType, content.platform ?? 'generic'],
       }
-    ) as Promise<ContentEntry>;
+    ) as ContentEntry;
   }
 
   /**
@@ -411,6 +414,7 @@ export class TenantMemoryVault {
     body: Record<string, unknown>,
     options: { requiresResponse?: boolean; responseDeadline?: Date; priority?: MemoryPriority } = {}
   ): Promise<CrossAgentEntry> {
+    await Promise.resolve();
     const message: CrossAgentData = {
       fromAgent,
       toAgent,
@@ -431,7 +435,7 @@ export class TenantMemoryVault {
       message,
       fromAgent,
       { priority: options.priority ?? 'HIGH', tags: ['message', messageType.toLowerCase()] }
-    ) as Promise<CrossAgentEntry>;
+    ) as CrossAgentEntry;
   }
 
   // ==========================================================================
@@ -573,7 +577,8 @@ export class TenantMemoryVault {
     agentId: string,
     filter?: { type?: InsightData['type']; minConfidence?: number }
   ): Promise<InsightEntry[]> {
-    const entries = await this.query(tenantId, agentId, {
+    await Promise.resolve();
+    const entries = this.query(tenantId, agentId, {
       category: 'INSIGHT',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -600,7 +605,8 @@ export class TenantMemoryVault {
     tenantId: string,
     agentId: string
   ): Promise<SignalEntry[]> {
-    const entries = await this.query(tenantId, agentId, {
+    await Promise.resolve();
+    const entries = this.query(tenantId, agentId, {
       category: 'SIGNAL',
       sortBy: 'priority',
       sortOrder: 'desc',
@@ -620,7 +626,8 @@ export class TenantMemoryVault {
     agentId: string,
     options?: { unrespondedOnly?: boolean }
   ): Promise<CrossAgentEntry[]> {
-    const entries = await this.query(tenantId, agentId, {
+    await Promise.resolve();
+    const entries = this.query(tenantId, agentId, {
       category: 'CROSS_AGENT',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -645,7 +652,8 @@ export class TenantMemoryVault {
     agentId: string,
     contentType?: ContentData['contentType']
   ): Promise<ContentEntry[]> {
-    const entries = await this.query(tenantId, agentId, {
+    await Promise.resolve();
+    const entries = this.query(tenantId, agentId, {
       category: 'CONTENT',
       tags: contentType ? [contentType] : undefined,
       sortBy: 'createdAt',
@@ -700,7 +708,7 @@ export class TenantMemoryVault {
    */
   private notifySubscribers(tenantId: string, entry: MemoryEntry): void {
     const tenantSubs = this.subscriptions.get(tenantId);
-    if (!tenantSubs) return;
+    if (!tenantSubs) {return;}
 
     for (const [_subscriberId, { callback, options }] of tenantSubs) {
       // Check if subscriber wants this category
@@ -739,14 +747,15 @@ export class TenantMemoryVault {
     signalKey: string,
     agentId: string
   ): Promise<boolean> {
-    const entry = await this.read<SignalData>(tenantId, 'SIGNAL', signalKey, agentId);
-    if (!entry) return false;
+    await Promise.resolve();
+    const entry = this.read<SignalData>(tenantId, 'SIGNAL', signalKey, agentId);
+    if (!entry) {return false;}
 
     entry.value.acknowledged = true;
     entry.value.acknowledgedBy = agentId;
     entry.value.acknowledgedAt = new Date();
 
-    await this.write(tenantId, 'SIGNAL', signalKey, entry.value, agentId, { overwrite: true });
+    this.write(tenantId, 'SIGNAL', signalKey, entry.value, agentId, { overwrite: true });
     return true;
   }
 
@@ -759,13 +768,14 @@ export class TenantMemoryVault {
     responseId: string,
     agentId: string
   ): Promise<boolean> {
-    const entry = await this.read<CrossAgentData>(tenantId, 'CROSS_AGENT', messageKey, agentId);
-    if (!entry) return false;
+    await Promise.resolve();
+    const entry = this.read<CrossAgentData>(tenantId, 'CROSS_AGENT', messageKey, agentId);
+    if (!entry) {return false;}
 
     entry.value.responded = true;
     entry.value.responseId = responseId;
 
-    await this.write(tenantId, 'CROSS_AGENT', messageKey, entry.value, agentId, { overwrite: true });
+    this.write(tenantId, 'CROSS_AGENT', messageKey, entry.value, agentId, { overwrite: true });
     return true;
   }
 
@@ -812,7 +822,7 @@ export class TenantMemoryVault {
    */
   cleanExpired(tenantId: string): number {
     const tenantStore = this.store.get(tenantId);
-    if (!tenantStore) return 0;
+    if (!tenantStore) {return 0;}
 
     const now = new Date();
     let cleaned = 0;

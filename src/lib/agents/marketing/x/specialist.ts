@@ -16,7 +16,6 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger } from '@/lib/logger/logger';
 import {
   getMemoryVault,
   shareInsight,
@@ -420,7 +419,8 @@ export class XExpert extends BaseSpecialist {
     super(CONFIG);
   }
 
-  initialize(): void {
+  async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
     this.log('INFO', 'X (Twitter) Expert initialized - ready to go viral');
   }
@@ -428,12 +428,14 @@ export class XExpert extends BaseSpecialist {
   /**
    * Main execution entry point
    */
-  execute(message: AgentMessage): AgentReport {
+  async execute(message: AgentMessage): Promise<AgentReport> {
+    await Promise.resolve();
     const _taskId = message.id;
 
     try {
       const payload = message.payload as XPayload;
-      const action = message.action ?? 'generate_thread';
+      const payloadWithAction = message.payload as { action?: string };
+      const action = payloadWithAction.action ?? 'generate_thread';
 
       this.log('INFO', `Executing action: ${action}`);
 
@@ -470,13 +472,15 @@ export class XExpert extends BaseSpecialist {
    * Handle signals from the Signal Bus
    */
   async handleSignal(signal: Signal): Promise<AgentReport> {
+    await Promise.resolve();
     const taskId = signal.id;
+    const signalPayload = signal.payload as { type?: string; tenantId?: string; topic?: string };
 
-    if (signal.payload.type === 'TRENDING_TOPIC') {
+    if (signalPayload.type === 'TRENDING_TOPIC') {
       // Generate content for trending topic
       const result = this.handleGenerateThread(taskId, {
-        tenantId: signal.payload.tenantId as string,
-        topic: signal.payload.topic as string,
+        tenantId: signalPayload.tenantId ?? '',
+        topic: signalPayload.topic ?? '',
         targetAudience: 'general',
         tone: 'CASUAL',
       });
@@ -723,7 +727,7 @@ export class XExpert extends BaseSpecialist {
 
     // Ensure under 280 characters
     if (hook.length > 280) {
-      hook = hook.substring(0, 277) + '...';
+      hook = `${hook.substring(0, 277)  }...`;
     }
 
     return hook;
@@ -735,7 +739,7 @@ export class XExpert extends BaseSpecialist {
   private generateContext(topic: string, audience: string, _tone: string): string {
     const context = `First, let's understand why ${topic} matters.\n\nFor ${audience}, this can be the difference between success and stagnation.\n\nHere's the breakdown:`;
 
-    return context.length <= 280 ? context : context.substring(0, 277) + '...';
+    return context.length <= 280 ? context : `${context.substring(0, 277)  }...`;
   }
 
   /**
@@ -749,7 +753,7 @@ export class XExpert extends BaseSpecialist {
   ): string {
     const tweet = `${number}. ${point}\n\nThis is crucial because it directly impacts your results.\n\nDon't skip this step.`;
 
-    return tweet.length <= 280 ? tweet : tweet.substring(0, 277) + '...';
+    return tweet.length <= 280 ? tweet : `${tweet.substring(0, 277)  }...`;
   }
 
   /**
@@ -758,7 +762,7 @@ export class XExpert extends BaseSpecialist {
   private generateSummary(topic: string, _tone: string): string {
     const summary = `TL;DR on ${topic}:\n\n- Start with the fundamentals\n- Stay consistent\n- Measure what matters\n- Iterate based on data\n\nSimple. Not easy.`;
 
-    return summary.length <= 280 ? summary : summary.substring(0, 277) + '...';
+    return summary.length <= 280 ? summary : `${summary.substring(0, 277)  }...`;
   }
 
   /**
@@ -766,12 +770,12 @@ export class XExpert extends BaseSpecialist {
    */
   private generateCTA(topic: string, customCTA: string | undefined, _tone: string): string {
     if (customCTA) {
-      return customCTA.length <= 280 ? customCTA : customCTA.substring(0, 277) + '...';
+      return customCTA.length <= 280 ? customCTA : `${customCTA.substring(0, 277)  }...`;
     }
 
     const cta = `That's it for ${topic}!\n\nIf this was helpful:\n\n1. Follow me for more insights\n2. Repost to help others\n3. Drop a comment with your biggest challenge\n\nI read every reply.`;
 
-    return cta.length <= 280 ? cta : cta.substring(0, 277) + '...';
+    return cta.length <= 280 ? cta : `${cta.substring(0, 277)  }...`;
   }
 
   /**
@@ -927,9 +931,7 @@ export class XExpert extends BaseSpecialist {
     }
 
     // Default window if none found
-    if (!bestWindow) {
-      bestWindow = OPTIMAL_POSTING_WINDOWS[0];
-    }
+    bestWindow ??= OPTIMAL_POSTING_WINDOWS[0];
 
     // Calculate next occurrence of this window
     const targetDate = new Date(now);
@@ -1002,7 +1004,7 @@ export class XExpert extends BaseSpecialist {
 
           if (!bookedTimes.has(isoTime) && date > now) {
             available.push(isoTime);
-            if (available.length >= count) break;
+            if (available.length >= count) {break;}
           }
         }
       }
@@ -1463,9 +1465,10 @@ export class XExpert extends BaseSpecialist {
   private async getBrandVoiceFromVault(
     tenantId: string
   ): Promise<{ voice: string; tone: string; keywords: string[] }> {
+    await Promise.resolve();
     const vault = getMemoryVault();
 
-    const brandEntry = await vault.read<{
+    const brandEntry = vault.read<{
       voice: string;
       tone: string;
       keywords: string[];
@@ -1494,9 +1497,10 @@ export class XExpert extends BaseSpecialist {
       conversions: number;
     }
   ): Promise<void> {
+    await Promise.resolve();
     const vault = getMemoryVault();
 
-    await vault.write(
+    vault.write(
       tenantId,
       'PERFORMANCE',
       `x_performance_${threadId}`,

@@ -282,7 +282,8 @@ export class TrendScout extends BaseSpecialist {
     super(CONFIG);
   }
 
-  initialize(): void {
+  async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
     this.log('INFO', 'Trend Scout initialized - market intelligence active');
   }
@@ -295,7 +296,8 @@ export class TrendScout extends BaseSpecialist {
 
     try {
       const payload = message.payload as TrendPayload;
-      const action = message.action ?? 'scan_signals';
+      const payloadWithAction = message.payload as { action?: string };
+      const action = payloadWithAction.action ?? 'scan_signals';
 
       this.log('INFO', `Executing action: ${action}`);
 
@@ -304,7 +306,7 @@ export class TrendScout extends BaseSpecialist {
           return await this.handleSignalScan(taskId, payload as SignalScanRequest);
 
         case 'analyze_trend':
-          return await this.handleTrendAnalysis(taskId, payload as TrendAnalysisRequest);
+          return this.handleTrendAnalysis(taskId, payload as TrendAnalysisRequest);
 
         case 'trigger_pivot':
           return await this.handlePivotTrigger(taskId, payload as PivotTriggerRequest);
@@ -330,19 +332,20 @@ export class TrendScout extends BaseSpecialist {
    */
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
+    const signalPayload = signal.payload as { type?: string; tenantId?: string; data?: Record<string, unknown> };
 
-    if (signal.payload.type === 'MARKET_DATA_UPDATE') {
+    if (signalPayload.type === 'MARKET_DATA_UPDATE') {
       // Process new market data and detect signals
       const scanResult = await this.processMarketDataUpdate(
-        signal.payload.tenantId as string,
-        signal.payload.data as Record<string, unknown>
+        signalPayload.tenantId ?? '',
+        signalPayload.data ?? {}
       );
       return this.createReport(taskId, 'COMPLETED', scanResult);
     }
 
-    if (signal.payload.type === 'COMPETITOR_ALERT') {
+    if (signalPayload.type === 'COMPETITOR_ALERT') {
       // Process competitor alert
-      const movement = this.analyzeCompetitorAlert(signal.payload);
+      const movement = this.analyzeCompetitorAlert(signalPayload as Record<string, unknown>);
       return this.createReport(taskId, 'COMPLETED', movement);
     }
 
@@ -433,6 +436,7 @@ export class TrendScout extends BaseSpecialist {
     keywords: string[],
     timeframe: string
   ): Promise<MarketSignal[]> {
+    await Promise.resolve();
     const signals: MarketSignal[] = [];
     const now = new Date();
 
@@ -465,7 +469,7 @@ export class TrendScout extends BaseSpecialist {
    * Detect industry-specific signals
    */
   private detectIndustrySignals(
-    _tenantId: string,
+    tenantId: string,
     industry: string,
     timestamp: Date
   ): MarketSignal[] {
@@ -707,10 +711,10 @@ export class TrendScout extends BaseSpecialist {
   /**
    * Analyze individual competitor
    */
-  private analyzeCompetitor(
+  private async analyzeCompetitor(
     _tenantId: string,
     competitorName: string
-  ): CompetitorMovement[] {
+  ): Promise<CompetitorMovement[]> {
     await Promise.resolve(); // Placeholder for async competitor analysis
 
     const competitorId = `comp-${competitorName.toLowerCase().replace(/\s+/g, '-')}`;
@@ -781,7 +785,7 @@ export class TrendScout extends BaseSpecialist {
     taskId: string,
     request: TrendAnalysisRequest
   ): AgentReport {
-    const { _tenantId, trendKeyword, industry, timeHorizon } = request;
+    const { tenantId, trendKeyword, industry, timeHorizon } = request;
 
     this.log('INFO', `Analyzing trend: "${trendKeyword}" for tenant ${tenantId}`);
 
@@ -806,7 +810,7 @@ export class TrendScout extends BaseSpecialist {
     const actionPlan = this.generateTrendActionPlan(forecast);
 
     const result: TrendAnalysisResult = {
-      tenantId: _tenantId,
+      tenantId,
       analysisId,
       analyzedAt: new Date().toISOString(),
       forecast,
@@ -961,6 +965,7 @@ export class TrendScout extends BaseSpecialist {
     taskId: string,
     request: PivotTriggerRequest
   ): Promise<AgentReport> {
+    await Promise.resolve();
     const { tenantId, signalId, targetAgents, priority, dryRun } = request;
 
     this.log('INFO', `Triggering pivot for signal ${signalId}, tenant ${tenantId}`);
@@ -1043,7 +1048,7 @@ export class TrendScout extends BaseSpecialist {
 
     // Determine pivot type based on agent
     const pivotType = this.determinePivotType(targetAgent);
-    if (!pivotType) return null;
+    if (!pivotType) {return null;}
 
     // Generate context-aware recommendations
     const { currentState, recommendedState, steps, rollback } = this.generatePivotDetails(
@@ -1265,7 +1270,7 @@ export class TrendScout extends BaseSpecialist {
    */
   private buildScanSummary(
     signals: MarketSignal[],
-    movements: CompetitorMovement[]
+    _movements: CompetitorMovement[]
   ): SignalScanResult['summary'] {
     const criticalCount = signals.filter(s => s.urgency === 'CRITICAL').length;
     const highCount = signals.filter(s => s.urgency === 'HIGH').length;
@@ -1283,9 +1288,9 @@ export class TrendScout extends BaseSpecialist {
     const threats = signals.filter(s => s.type === 'THREAT' || s.type === 'TREND_DECLINING');
 
     let sentiment: MarketSentiment = 'NEUTRAL';
-    if (opportunities.length > threats.length * 1.5) sentiment = 'BULLISH';
-    else if (threats.length > opportunities.length * 1.5) sentiment = 'BEARISH';
-    else if (opportunities.length > 0 && threats.length > 0) sentiment = 'MIXED';
+    if (opportunities.length > threats.length * 1.5) {sentiment = 'BULLISH';}
+    else if (threats.length > opportunities.length * 1.5) {sentiment = 'BEARISH';}
+    else if (opportunities.length > 0 && threats.length > 0) {sentiment = 'MIXED';}
 
     return {
       totalSignals: signals.length,

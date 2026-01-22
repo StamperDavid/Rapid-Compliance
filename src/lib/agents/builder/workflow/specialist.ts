@@ -424,13 +424,14 @@ export class WorkflowOptimizer extends BaseSpecialist {
 
     try {
       const payload = message.payload as WorkflowPayload;
-      const action = message.action ?? 'compose_workflow';
+      const payloadWithAction = message.payload as { action?: string };
+      const action = payloadWithAction.action ?? 'compose_workflow';
 
       this.log('INFO', `Executing action: ${action}`);
 
       switch (action) {
         case 'compose_workflow':
-          return await this.handleComposeWorkflow(taskId, payload as ComposeWorkflowRequest);
+          return this.handleComposeWorkflow(taskId, payload as ComposeWorkflowRequest);
 
         case 'optimize_chain':
           return this.handleOptimizeChain(taskId, payload as OptimizeChainRequest);
@@ -462,12 +463,13 @@ export class WorkflowOptimizer extends BaseSpecialist {
    */
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
+    const signalPayload = signal.payload as { type?: string; tenantId?: string; workflowId?: string; inputs?: Record<string, unknown> };
 
-    if (signal.payload.type === 'WORKFLOW_TRIGGER') {
+    if (signalPayload.type === 'WORKFLOW_TRIGGER') {
       const result = await this.handleExecuteWorkflow(taskId, {
-        tenantId: signal.payload.tenantId as string,
-        workflowId: signal.payload.workflowId as string,
-        inputs: signal.payload.inputs as Record<string, unknown>,
+        tenantId: signalPayload.tenantId ?? '',
+        workflowId: signalPayload.workflowId ?? '',
+        inputs: signalPayload.inputs,
       });
       return result;
     }
@@ -734,7 +736,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
       const needs = nodeInputNeeds.get(node.id) ?? new Set();
 
       for (const [otherId, outputs] of nodeOutputs) {
-        if (otherId === node.id) continue;
+        if (otherId === node.id) {continue;}
 
         // Check if other node provides any needed inputs
         const providedInputs = new Set([...needs].filter(n => outputs.has(n)));
@@ -832,7 +834,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
 
     while (queue.length > 0) {
       const current = queue.shift();
-      if (!current) break;
+      if (!current) {break;}
       const currentDist = longestPath.get(current) ?? 0;
 
       for (const neighbor of adjList.get(current) ?? []) {
@@ -1136,7 +1138,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
     taskId: string,
     request: ExecuteWorkflowRequest
   ): Promise<AgentReport> {
-    const { tenantId, workflowId, inputs, dryRun } = request;
+    const { tenantId: _tenantId, workflowId, inputs, dryRun } = request;
 
     const workflow = this.workflows.get(workflowId);
     if (!workflow) {
@@ -1219,9 +1221,9 @@ export class WorkflowOptimizer extends BaseSpecialist {
 
         // Simulate execution time
         if (!dryRun) {
-          await new Promise<void>(resolve =>
-            setTimeout(resolve, Math.min(100, node.estimatedDurationMs / 50))
-          );
+          await new Promise<void>(resolve => {
+            setTimeout(resolve, Math.min(100, node.estimatedDurationMs / 50));
+          });
         }
 
         const completedAt = new Date().toISOString();
@@ -1387,7 +1389,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
   /**
    * Handle list workflows request
    */
-  private handleListWorkflows(taskId: string, _tenantId: string): AgentReport {
+  private handleListWorkflows(taskId: string, tenantId: string): AgentReport {
     const tenantWorkflows = Array.from(this.workflows.values()).filter(
       w => w.tenantId === tenantId
     );
@@ -1424,8 +1426,8 @@ export class WorkflowOptimizer extends BaseSpecialist {
    */
   private generateWorkflowName(goal: string): string {
     const words = goal.split(' ').slice(0, 5);
-    return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') +
-      ' Workflow';
+    return `${words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') 
+      } Workflow`;
   }
 
   /**
@@ -1452,10 +1454,11 @@ export class WorkflowOptimizer extends BaseSpecialist {
     tenantId: string,
     workflow: Workflow
   ): Promise<void> {
+    await Promise.resolve();
     const vault = getMemoryVault();
 
     // Write workflow state to vault
-    await vault.write(
+    vault.write(
       tenantId,
       'WORKFLOW',
       `workflow_${workflow.id}`,
@@ -1547,9 +1550,10 @@ export class WorkflowOptimizer extends BaseSpecialist {
     tenantId: string,
     analytics: WorkflowAnalytics
   ): Promise<void> {
+    await Promise.resolve();
     const vault = getMemoryVault();
 
-    await vault.write(
+    vault.write(
       tenantId,
       'PERFORMANCE',
       `workflow_analytics_${analytics.workflowId}`,
@@ -1591,11 +1595,12 @@ export class WorkflowOptimizer extends BaseSpecialist {
     tenantId: string,
     agentIds: string[]
   ): Promise<Map<string, { available: boolean; load: number }>> {
+    await Promise.resolve();
     const vault = getMemoryVault();
     const statusMap = new Map<string, { available: boolean; load: number }>();
 
     for (const agentId of agentIds) {
-      const entry = await vault.read<{ available: boolean; load: number }>(
+      const entry = vault.read<{ available: boolean; load: number }>(
         tenantId,
         'CONTEXT',
         `agent_status_${agentId}`,
