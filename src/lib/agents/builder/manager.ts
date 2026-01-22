@@ -69,7 +69,7 @@ export class BuilderManager extends BaseManager {
       message.id,
       'BLOCKED',
       { reason: 'BUILDER_MANAGER_IS_SHELL' },
-      ['Builder Manager cannot execute - specialists are GHOST']
+      ['Builder Manager is SHELL - delegation to specialists not yet implemented']
     ));
   }
 
