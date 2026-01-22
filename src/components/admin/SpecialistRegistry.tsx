@@ -1,12 +1,12 @@
 /**
  * AI Specialist Registry Component
  *
- * Comprehensive registry displaying all 31 AI specialists across 9 categories.
+ * Comprehensive registry displaying all 35 AI specialists across 9 categories.
  * Supports filtering, search, and detailed specialist views.
  *
  * Performance optimized with React.memo, useMemo, and useCallback.
  *
- * Updated: Added 4 new specialists (Deal Closer, Objection Handler, Review Manager, Case Study Builder)
+ * Updated: Sprint 3 - Added Video Specialist, Trend Scout, Workflow Optimizer, X Expert (revived)
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -88,6 +88,23 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     ],
     managerId: 'INTELLIGENCE_MANAGER',
   },
+  {
+    id: 'TREND_SCOUT',
+    name: 'Trend Scout',
+    category: 'intelligence',
+    status: 'FUNCTIONAL',
+    description: 'Market signal detection specialist that monitors trends and triggers agent pivots',
+    capabilities: [
+      'Market signal detection and classification',
+      'Competitor movement tracking',
+      'Industry shift analysis',
+      'Agent pivot triggering (Chain of Action)',
+      'Trend forecasting with confidence scoring',
+      'Signal aggregation from multiple sources',
+      'Urgency-based alert prioritization',
+    ],
+    managerId: 'INTELLIGENCE_MANAGER',
+  },
 
   // Marketing Category (5 specialists)
   {
@@ -110,13 +127,15 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     name: 'X (Twitter) Expert',
     category: 'marketing',
     status: 'FUNCTIONAL',
-    description: 'Optimizes X/Twitter content for engagement and reach',
+    description: 'Thread generation and scheduling engine with viral pattern analysis',
     capabilities: [
-      'Tweet optimization',
-      'Thread creation',
-      'Hashtag strategy',
-      'Engagement tactics',
-      'Viral mechanics',
+      'Thread generation with 6 hook formulas',
+      'Scheduling optimizer with engagement prediction',
+      'Viral content analysis and replication',
+      'Hashtag strategy and trend riding',
+      'Engagement benchmarking and optimization',
+      'Audience growth tactics',
+      'Content calendar management',
     ],
     managerId: 'MARKETING_MANAGER',
   },
@@ -216,6 +235,23 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     ],
     managerId: 'BUILDER_MANAGER',
   },
+  {
+    id: 'WORKFLOW_OPTIMIZER',
+    name: 'Workflow Optimizer',
+    category: 'builder',
+    status: 'FUNCTIONAL',
+    description: 'Multi-agent chain optimization specialist implementing the Chain of Action pattern',
+    capabilities: [
+      'Workflow composition from high-level goals',
+      'Chain optimization (speed, reliability, cost)',
+      'Dependency analysis and parallel execution',
+      'Bottleneck detection and remediation',
+      'Critical path calculation',
+      'Failure recovery and retry orchestration',
+      'Performance analytics and benchmarking',
+    ],
+    managerId: 'BUILDER_MANAGER',
+  },
 
   // Commerce Category (2 specialists)
   {
@@ -311,6 +347,23 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
       'Publishing workflow',
       'Campaign timing optimization',
       'Content gap analysis',
+    ],
+    managerId: 'CONTENT_MANAGER',
+  },
+  {
+    id: 'VIDEO_SPECIALIST',
+    name: 'Video Specialist',
+    category: 'content',
+    status: 'FUNCTIONAL',
+    description: 'Script-to-storyboard transformation with audio cue markers and platform optimization',
+    capabilities: [
+      'Script-to-storyboard generation',
+      'Audio cue markers for narration pacing',
+      'Scene breakdown with visual direction',
+      'Thumbnail strategy generator',
+      'Video SEO metadata optimization',
+      'B-roll suggestion engine',
+      'Platform-specific formatting (YouTube, TikTok, Reels)',
     ],
     managerId: 'CONTENT_MANAGER',
   },
