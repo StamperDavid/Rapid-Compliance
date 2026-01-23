@@ -17,14 +17,14 @@
   "plugins": ["@typescript-eslint"],
   "rules": {
     // =========================================================================
-    // LEGACY ZONE - Warning-level rules for gradual migration
-    // These keep the dev server alive while we fix incrementally
+    // HARD BLOCKING MODE - The Legacy Zone is CLOSED
+    // All rules are now ERRORS. No warnings. No bypass. No exceptions.
     // =========================================================================
 
-    // TypeScript - Warnings for legacy code
-    "@typescript-eslint/no-explicit-any": "warn",
+    // TypeScript - STRICT ENFORCEMENT
+    "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-unused-vars": [
-      "warn",
+      "error",
       {
         "argsIgnorePattern": "^_",
         "varsIgnorePattern": "^_",
@@ -33,128 +33,74 @@
     ],
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/explicit-module-boundary-types": "off",
-    "@typescript-eslint/no-non-null-assertion": "warn",
-    "@typescript-eslint/no-floating-promises": "warn",
-    "@typescript-eslint/no-misused-promises": "warn",
-    "@typescript-eslint/await-thenable": "warn",
-    "@typescript-eslint/require-await": "warn",
-    "@typescript-eslint/no-unnecessary-type-assertion": "warn",
-    "@typescript-eslint/prefer-nullish-coalescing": "warn",
-    "@typescript-eslint/prefer-optional-chain": "warn",
+    "@typescript-eslint/no-non-null-assertion": "error",
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-misused-promises": "error",
+    "@typescript-eslint/await-thenable": "error",
+    "@typescript-eslint/require-await": "error",
+    "@typescript-eslint/no-unnecessary-type-assertion": "error",
+    "@typescript-eslint/prefer-nullish-coalescing": "error",
+    "@typescript-eslint/prefer-optional-chain": "error",
     "@typescript-eslint/consistent-type-imports": [
-      "warn",
+      "error",
       {
         "prefer": "type-imports",
         "disallowTypeAnnotations": false
       }
     ],
 
-    // Type-safety rules - warnings for legacy
-    "@typescript-eslint/no-unsafe-assignment": "warn",
-    "@typescript-eslint/no-unsafe-member-access": "warn",
-    "@typescript-eslint/no-unsafe-argument": "warn",
-    "@typescript-eslint/no-unsafe-call": "warn",
-    "@typescript-eslint/no-unsafe-return": "warn",
-    "@typescript-eslint/no-redundant-type-constituents": "warn",
+    // Type-safety rules - STRICT ENFORCEMENT
+    "@typescript-eslint/no-unsafe-assignment": "error",
+    "@typescript-eslint/no-unsafe-member-access": "error",
+    "@typescript-eslint/no-unsafe-argument": "error",
+    "@typescript-eslint/no-unsafe-call": "error",
+    "@typescript-eslint/no-unsafe-return": "error",
+    "@typescript-eslint/no-redundant-type-constituents": "error",
 
-    // React Best Practices
+    // React Best Practices - STRICT ENFORCEMENT
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
-    "react-hooks/rules-of-hooks": "warn",
-    "react-hooks/exhaustive-deps": "warn",
-    "react/no-unescaped-entities": "warn",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "error",
+    "react/no-unescaped-entities": "error",
     "react/display-name": "off",
 
-    // Next.js Best Practices
-    "@next/next/no-html-link-for-pages": "warn",
-    "@next/next/no-img-element": "warn",
+    // Next.js Best Practices - STRICT ENFORCEMENT
+    "@next/next/no-html-link-for-pages": "error",
+    "@next/next/no-img-element": "error",
 
-    // General Code Quality - All warnings for legacy
-    "no-console": ["warn", { "allow": ["warn", "error", "info"] }],
-    "no-debugger": "warn",
-    "no-alert": "warn",
-    "no-var": "warn",
-    "prefer-const": "warn",
-    "prefer-template": "warn",
-    "eqeqeq": ["warn", "always", { "null": "ignore" }],
-    "curly": ["warn", "all"],
+    // General Code Quality - STRICT ENFORCEMENT
+    "no-console": ["error", { "allow": ["warn", "error", "info"] }],
+    "no-debugger": "error",
+    "no-alert": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "prefer-template": "error",
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
+    "curly": ["error", "all"],
     "no-return-await": "off",
-    "@typescript-eslint/return-await": ["warn", "in-try-catch"],
+    "@typescript-eslint/return-await": ["error", "in-try-catch"],
 
-    // Import organization
-    "no-duplicate-imports": "warn",
+    // Import organization - STRICT ENFORCEMENT
+    "no-duplicate-imports": "error",
     "import/no-duplicates": "off",
 
-    // Best practices for async/await
-    "require-atomic-updates": "warn",
-    "no-async-promise-executor": "warn",
-    "no-promise-executor-return": "warn",
+    // Best practices for async/await - STRICT ENFORCEMENT
+    "require-atomic-updates": "error",
+    "no-async-promise-executor": "error",
+    "no-promise-executor-return": "error",
 
-    // Prevent common bugs
-    "no-constant-binary-expression": "warn",
-    "no-unreachable": "warn",
-    "no-unreachable-loop": "warn",
-    "no-self-compare": "warn",
-    "no-template-curly-in-string": "warn",
-    "array-callback-return": "warn"
+    // Prevent common bugs - STRICT ENFORCEMENT
+    "no-constant-binary-expression": "error",
+    "no-unreachable": "error",
+    "no-unreachable-loop": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "error",
+    "array-callback-return": "error"
   },
   "overrides": [
     {
-      // =====================================================================
-      // STRICT ZONE - Production-Ready Territory
-      // Zero tolerance for type violations in core systems:
-      // - The Orchestrator Brain (AI engine)
-      // - The Intelligence Module (RAG + Agent orchestration)
-      // - The API Layer (external contracts)
-      // All logic-affecting rules are ERRORS, not warnings
-      // =====================================================================
-      "files": [
-        "src/lib/orchestrator/**/*.ts",
-        "src/lib/orchestrator/**/*.tsx",
-        "src/lib/intelligence/**/*.ts",
-        "src/lib/intelligence/**/*.tsx",
-        "src/app/api/**/*.ts",
-        "src/app/api/**/*.tsx"
-      ],
-      "rules": {
-        // Type Safety - ZERO TOLERANCE
-        "@typescript-eslint/no-explicit-any": "error",
-        "@typescript-eslint/no-unused-vars": [
-          "error",
-          {
-            "argsIgnorePattern": "^_",
-            "varsIgnorePattern": "^_",
-            "caughtErrorsIgnorePattern": "^_"
-          }
-        ],
-        "@typescript-eslint/no-floating-promises": "error",
-        "@typescript-eslint/no-misused-promises": "error",
-        "@typescript-eslint/await-thenable": "error",
-        "@typescript-eslint/require-await": "error",
-        "@typescript-eslint/no-unnecessary-type-assertion": "error",
-        "@typescript-eslint/no-unsafe-assignment": "error",
-        "@typescript-eslint/no-unsafe-member-access": "error",
-        "@typescript-eslint/no-unsafe-argument": "error",
-        "@typescript-eslint/no-unsafe-call": "error",
-        "@typescript-eslint/no-unsafe-return": "error",
-        "@typescript-eslint/no-non-null-assertion": "error",
-        "@typescript-eslint/prefer-nullish-coalescing": "error",
-        "@typescript-eslint/prefer-optional-chain": "error",
-
-        // Code Quality - ZERO TOLERANCE
-        "no-var": "error",
-        "prefer-const": "error",
-        "eqeqeq": ["error", "always", { "null": "ignore" }],
-        "curly": ["error", "all"],
-        "no-duplicate-imports": "error",
-        "import/no-anonymous-default-export": "error",
-
-        // React Hooks - ZERO TOLERANCE (if applicable)
-        "react-hooks/rules-of-hooks": "error"
-      }
-    },
-    {
-      // Relaxed rules for test files
+      // Relaxed rules for test files ONLY
       "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",
