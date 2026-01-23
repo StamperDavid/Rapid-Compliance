@@ -77,7 +77,7 @@ export async function executeHubSpotFunction(
       
       return createContact(
         {
-          email: parameters.email as string,
+          email: parameters.email,
           firstName: parameters.firstName as string | undefined,
           lastName: parameters.lastName as string | undefined,
           phone: parameters.phone as string | undefined,

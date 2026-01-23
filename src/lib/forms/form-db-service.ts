@@ -1091,7 +1091,7 @@ export async function createFormFromTemplate(
 
   const template = templateSnap.data() as FormTemplate;
 
-  return runTransaction(getDb(), async (transaction) => {
+  return runTransaction(getDb(), (transaction): Promise<FormDefinition> => {
     // Create form
     const formsRef = collection(getDb(), PATHS.forms(orgId, workspaceId));
     const formDoc = doc(formsRef);
@@ -1172,7 +1172,7 @@ export async function createFormFromTemplate(
 
     logger.info('Form created from template', { orgId, workspaceId, templateId, formId });
 
-    return { ...form, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
+    return Promise.resolve({ ...form, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
   });
 }
 

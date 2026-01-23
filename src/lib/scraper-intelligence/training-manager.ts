@@ -267,7 +267,7 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
 
     if (!pattern || pattern.length < 3) {
       // Skip very short patterns
-      return Promise.resolve();
+      return;
     }
 
     // Look for existing training data with this pattern

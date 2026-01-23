@@ -9,18 +9,10 @@ import type {
   WorkflowAction,
   WorkflowCondition,
   WorkflowTriggerData,
-  SendEmailAction,
-  SendSMSAction,
   CreateEntityAction,
-  UpdateEntityAction,
-  DeleteEntityAction,
-  HTTPRequestAction,
-  DelayAction,
-  ConditionalBranchAction,
   SendSlackAction,
   LoopAction,
-  AIAgentAction,
-  CreateTaskAction
+  AIAgentAction
 } from '@/types/workflow';
 import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
@@ -224,37 +216,37 @@ async function executeAction(
 
   switch (action.type) {
     case 'send_email':
-      return executeEmailAction(action as SendEmailAction, triggerData, organizationId);
+      return executeEmailAction(action, triggerData, organizationId);
 
     case 'send_sms':
-      return executeSMSAction(action as SendSMSAction, triggerData, organizationId);
+      return executeSMSAction(action, triggerData, organizationId);
 
     case 'create_entity':
     case 'update_entity':
     case 'delete_entity':
       return executeEntityAction(
-        action as CreateEntityAction | UpdateEntityAction | DeleteEntityAction,
+        action,
         triggerData,
         organizationId
       );
 
     case 'http_request':
-      return executeHTTPAction(action as HTTPRequestAction, triggerData);
+      return executeHTTPAction(action, triggerData);
 
     case 'delay':
-      return executeDelayAction(action as DelayAction, triggerData);
+      return executeDelayAction(action, triggerData);
 
     case 'conditional_branch':
-      return executeConditionalAction(action as ConditionalBranchAction, triggerData, workflow, organizationId);
+      return executeConditionalAction(action, triggerData, workflow, organizationId);
 
     case 'send_slack':
-      return executeSlackAction(convertToSlackConfig(action as SendSlackAction), triggerData, organizationId);
+      return executeSlackAction(convertToSlackConfig(action), triggerData, organizationId);
 
     case 'loop':
-      return executeLoopAction(convertToLoopConfig(action as LoopAction), triggerData, workflow, organizationId);
+      return executeLoopAction(convertToLoopConfig(action), triggerData, workflow, organizationId);
 
     case 'ai_agent':
-      return executeAIAgentAction(convertToAIAgentConfig(action as AIAgentAction), triggerData, organizationId);
+      return executeAIAgentAction(convertToAIAgentConfig(action), triggerData, organizationId);
 
     case 'cloud_function':
       // Cloud functions are called via HTTP action with the function URL
@@ -262,9 +254,9 @@ async function executeAction(
       throw new Error('Cloud Function action: Use http_request with your function URL instead');
 
     case 'create_task': {
-      const taskAction = action as CreateTaskAction;
+      const taskAction = action;
       // Create task is handled as entity action
-      return executeEntityAction({
+      const taskEntityAction: CreateEntityAction = {
         ...taskAction,
         type: 'create_entity',
         schemaId: 'tasks',
@@ -275,7 +267,8 @@ async function executeAction(
           { targetField: 'dueDate', source: 'static', staticValue: taskAction.dueDate },
           { targetField: 'priority', source: 'static', staticValue: taskAction.priority },
         ],
-      } as CreateEntityAction, triggerData, organizationId);
+      };
+      return executeEntityAction(taskEntityAction, triggerData, organizationId);
     }
 
     default: {

@@ -3,14 +3,22 @@
  * For use in API routes only
  */
 
-import { db, admin } from '@/lib/firebase-admin';
+import { db } from '@/lib/firebase-admin';
 import { getWorkspaceSubCollection } from '@/lib/firebase/collections';
 import type { FieldType } from '@/types/schema';
 
+/**
+ * Record from Firestore with dynamic fields and standard metadata
+ */
+interface FirestoreRecord {
+  id: string;
+  [fieldKey: string]: unknown;
+}
+
 export interface TypeConversionPreview {
   recordId: string;
-  before: any;
-  after: any;
+  before: unknown;
+  after: unknown;
   status: 'success' | 'fail' | 'warning';
   message?: string;
 }
@@ -63,7 +71,7 @@ export class FieldTypeConverterServer {
       throw new Error('Schema not found');
     }
     
-    const schema = schemaDoc.data();
+    const schema = schemaDoc.data() as { name?: string } | undefined;
     const schemaName = schema?.name;
     
     if (!schemaName) {
@@ -79,32 +87,29 @@ export class FieldTypeConverterServer {
       .limit(Math.max(sampleSize, 100))
       .get();
     
-    const records = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const records: FirestoreRecord[] = recordsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const totalRecords = recordsSnapshot.size;
-    
+
     // Sample records for preview
     const sampleRecords = records.slice(0, sampleSize);
-    
+
     const preview: TypeConversionPreview[] = [];
     let successCount = 0;
-    let failureCount = 0;
-    
+
     for (const record of sampleRecords) {
-      const oldValue = (record as any)[fieldKey];
+      const oldValue = record[fieldKey];
       const conversion = this.convertValue(oldValue, oldType, newType);
-      
+
       preview.push({
-        recordId: (record as any).id,
+        recordId: record.id,
         before: oldValue,
         after: conversion.value,
         status: conversion.success ? 'success' : 'fail',
         message: conversion.message,
       });
-      
+
       if (conversion.success) {
         successCount++;
-      } else {
-        failureCount++;
       }
     }
     
@@ -123,10 +128,10 @@ export class FieldTypeConverterServer {
    * Convert value (same logic as client version)
    */
   static convertValue(
-    value: any,
+    value: unknown,
     oldType: FieldType,
     newType: FieldType
-  ): { success: boolean; value: any; message?: string } {
+  ): { success: boolean; value: unknown; message?: string } {
     if (value === null || value === undefined) {
       return { success: true, value: null };
     }

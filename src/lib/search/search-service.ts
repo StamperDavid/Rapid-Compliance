@@ -73,7 +73,7 @@ export async function searchWorkspace(
       const records = await FirestoreService.getAll(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${schema.id}`,
         []
-      ) as DocumentData[];
+      );
 
       // Filter records that match search term
       const matchingRecords = records.filter((record: DocumentData) => {

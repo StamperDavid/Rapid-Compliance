@@ -280,8 +280,8 @@ function convertToAIAgentConfig(action: WorkflowAction): BaseAction & {
     continueOnError: agentAction.continueOnError,
     retry: agentAction.retry,
     config: {
-      prompt: agentAction.prompt || '',
-      resultField: agentAction.saveResponseAs || 'aiResponse',
+      prompt: agentAction.prompt ?? '',
+      resultField: agentAction.saveResponseAs ?? 'aiResponse',
       storeResult: true,
     },
   };
@@ -335,7 +335,7 @@ function convertToSlackConfig(action: WorkflowAction): BaseAction & {
     retry: slackAction.retry,
     config: {
       channelName: slackAction.channel,
-      message: slackAction.message || '',
+      message: slackAction.message ?? '',
       blocks: slackAction.blocks,
     },
   };

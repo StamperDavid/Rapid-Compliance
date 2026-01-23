@@ -49,6 +49,30 @@ export interface CostMetrics {
   cacheHitRate: number;
 }
 
+// OpenAI API Response Types
+interface OpenAIEmbeddingData {
+  embedding: number[];
+  index: number;
+}
+
+interface OpenAIEmbeddingUsage {
+  prompt_tokens: number;
+  total_tokens: number;
+}
+
+interface OpenAIEmbeddingResponse {
+  data: OpenAIEmbeddingData[];
+  usage: OpenAIEmbeddingUsage;
+}
+
+interface OpenAIErrorResponse {
+  error?: {
+    message?: string;
+    type?: string;
+    code?: string;
+  };
+}
+
 // ============================================================================
 // ERROR HANDLING
 // ============================================================================
@@ -210,20 +234,21 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(`OpenAI API error: ${response.status} - ${JSON.stringify(error)}`);
+        const errorData = await response.json().catch(() => ({})) as OpenAIErrorResponse;
+        const errorMsg = errorData.error?.message ?? 'Unknown error';
+        throw new Error(`OpenAI API error: ${response.status} - ${errorMsg}`);
       }
 
-      const data = await response.json();
-      
+      const data = await response.json() as OpenAIEmbeddingResponse;
+
       if (!data.data?.[0]?.embedding) {
         throw new Error('Invalid response from OpenAI API');
       }
 
-      const embedding = data.data[0].embedding as number[];
-      
+      const embedding: number[] = data.data[0].embedding;
+
       // Track cost
-      const tokensUsed =data.usage?.total_tokens ?? estimateTokens(text);
+      const tokensUsed: number = data.usage?.total_tokens ?? estimateTokens(text);
       costTracker.addTokens(tokensUsed);
 
       // Cache the result
@@ -248,9 +273,9 @@ export async function generateEmbedding(text: string): Promise<number[]> {
         });
         
         // Exponential backoff
-        await new Promise((resolve) =>
-          setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempt - 1))
-        );
+        await new Promise((resolve) => {
+          setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempt - 1));
+        });
       }
     }
   }
@@ -346,29 +371,33 @@ export async function generateEmbeddingsBatch(
         });
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          throw new Error(`OpenAI API error: ${response.status} - ${JSON.stringify(error)}`);
+          const errorData = await response.json().catch(() => ({})) as OpenAIErrorResponse;
+          const errorMsg = errorData.error?.message ?? 'Unknown error';
+          throw new Error(`OpenAI API error: ${response.status} - ${errorMsg}`);
         }
 
-        const data = await response.json();
-        
+        const data = await response.json() as OpenAIEmbeddingResponse;
+
         if (!data.data || !Array.isArray(data.data)) {
           throw new Error('Invalid response from OpenAI API');
         }
 
-        const batchEmbeddings = data.data.map(
-          (item: { embedding: number[] }) => item.embedding
+        const batchEmbeddings: number[][] = data.data.map(
+          (item: OpenAIEmbeddingData) => item.embedding
         );
 
         // Cache all embeddings
         batch.forEach((text, index) => {
-          embeddingCache.set(text, batchEmbeddings[index]);
+          const embedding = batchEmbeddings[index];
+          if (embedding) {
+            embeddingCache.set(text, embedding);
+          }
         });
 
         uncachedEmbeddings.push(...batchEmbeddings);
 
         // Track cost
-        const tokensUsed =data.usage?.total_tokens ?? batch.reduce((sum, text) => sum + estimateTokens(text), 0);
+        const tokensUsed: number = data.usage?.total_tokens ?? batch.reduce((sum, text) => sum + estimateTokens(text), 0);
         costTracker.addTokens(tokensUsed);
 
         logger.debug('Generated batch embeddings', {
@@ -387,10 +416,10 @@ export async function generateEmbeddingsBatch(
             batchSize: batch.length,
             error: lastError.message,
           });
-          
-          await new Promise((resolve) =>
-            setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempt - 1))
-          );
+
+          await new Promise((resolve) => {
+            setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, attempt - 1));
+          });
         }
       }
     }

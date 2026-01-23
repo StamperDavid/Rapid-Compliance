@@ -74,15 +74,14 @@ export default function DatasetsPage() {
         <>
           <div className="grid gap-4">
             {datasets.map((dataset) => {
-              const typedDataset = dataset as Dataset;
-              const exampleCount = typedDataset.exampleCount ?? 0;
-              const createdDate = typedDataset.createdAt && 'toDate' in typedDataset.createdAt
-                ? new Date(typedDataset.createdAt.toDate()).toLocaleDateString()
+              const exampleCount = dataset.exampleCount ?? 0;
+              const createdDate = dataset.createdAt && 'toDate' in dataset.createdAt
+                ? new Date(dataset.createdAt.toDate()).toLocaleDateString()
                 : 'N/A';
 
               return (
-                <div key={typedDataset.id} className="bg-gray-900 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold mb-2">{typedDataset.name}</h3>
+                <div key={dataset.id} className="bg-gray-900 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold mb-2">{dataset.name}</h3>
                   <div className="flex gap-4 text-sm text-gray-400">
                     <span>{exampleCount} examples</span><span>•</span><span>Created {createdDate}</span>
                   </div>

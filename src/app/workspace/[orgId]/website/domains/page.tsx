@@ -447,7 +447,7 @@ function DomainCard({
   onRemove,
   primaryColor,
   bgColor,
-  textColor,
+  textColor: _textColor,
 }: {
   domain: CustomDomain;
   onVerify: (id: string) => void;

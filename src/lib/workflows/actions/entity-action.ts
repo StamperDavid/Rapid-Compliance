@@ -6,8 +6,7 @@
 import type { CreateEntityAction, UpdateEntityAction, DeleteEntityAction, WorkflowTriggerData, FieldTransform } from '@/types/workflow';
 import type { Schema } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
-import type { QueryConstraint } from 'firebase/firestore';
-import { where, limit as firestoreLimit } from 'firebase/firestore';
+import { where, limit as firestoreLimit, type QueryConstraint, type WhereFilterOp } from 'firebase/firestore';
 
 /**
  * Entity data record with flexible field structure
@@ -94,7 +93,7 @@ export async function executeCreateEntityAction(
     
     // Resolve target field using field resolver
     const { FieldResolver } = await import('@/lib/schema/field-resolver');
-    const resolvedTarget = await FieldResolver.resolveFieldWithCommonAliases(
+    const resolvedTarget = FieldResolver.resolveFieldWithCommonAliases(
       schema,
       mapping.targetField
     );
@@ -221,7 +220,7 @@ export async function executeUpdateEntityAction(
     let value: unknown;
     
     // Resolve target field
-    const resolvedTarget = await FieldResolver.resolveFieldWithCommonAliases(
+    const resolvedTarget = FieldResolver.resolveFieldWithCommonAliases(
       schema,
       mapping.targetField
     );
@@ -358,11 +357,11 @@ export async function executeEntityAction(
   }
 
   if (action.type === 'create_entity') {
-    return executeCreateEntityAction(action as CreateEntityAction, triggerData, organizationId, workspaceId);
+    return executeCreateEntityAction(action, triggerData, organizationId, workspaceId);
   } else if (action.type === 'update_entity') {
-    return executeUpdateEntityAction(action as UpdateEntityAction, triggerData, organizationId, workspaceId);
+    return executeUpdateEntityAction(action, triggerData, organizationId, workspaceId);
   } else if (action.type === 'delete_entity') {
-    return executeDeleteEntityAction(action as DeleteEntityAction, triggerData, organizationId, workspaceId);
+    return executeDeleteEntityAction(action, triggerData, organizationId, workspaceId);
   } else {
     const exhaustiveCheck: never = action;
     throw new Error(`Unknown entity action type: ${(exhaustiveCheck as { type: string }).type}`);
@@ -488,8 +487,8 @@ async function queryEntities(params: QueryEntitiesParams): Promise<EntityRecord[
       }
 
       // Convert EntityFilter to QueryConstraint using where()
-      const firestoreOperator = mapOperator(filter.operator);
-      constraints.push(where(filter.field, firestoreOperator as any, value));
+      const firestoreOperator = mapOperator(filter.operator) as WhereFilterOp;
+      constraints.push(where(filter.field, firestoreOperator, value));
     }
   }
 

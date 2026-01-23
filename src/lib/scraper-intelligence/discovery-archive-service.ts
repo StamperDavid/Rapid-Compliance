@@ -21,7 +21,41 @@
 import { db } from '../firebase-admin';
 import { logger } from '../logger/logger';
 import * as crypto from 'crypto';
-import type { TemporaryScrape, ExtractedSignal } from '../../types/scraper-intelligence';
+import type { TemporaryScrape } from '../../types/scraper-intelligence';
+
+/**
+ * Represents a Firestore Timestamp that can be converted to Date
+ */
+interface FirestoreTimestamp {
+  toDate: () => Date;
+  seconds?: number;
+  nanoseconds?: number;
+}
+
+/**
+ * Interface for raw Firestore document data structure
+ * Matches TemporaryScrape but uses union types for date fields
+ * since Firestore can return Timestamp objects, Date, string, or number
+ */
+interface FirestoreTemporaryScrapeData {
+  id?: string;
+  organizationId: string;
+  workspaceId?: string;
+  url: string;
+  rawHtml: string;
+  cleanedContent: string;
+  contentHash: string;
+  createdAt: Date | FirestoreTimestamp | string | number;
+  lastSeen: Date | FirestoreTimestamp | string | number;
+  expiresAt: Date | FirestoreTimestamp | string | number;
+  scrapeCount: number;
+  metadata: TemporaryScrape['metadata'];
+  sizeBytes: number;
+  verified: boolean;
+  verifiedAt?: Date | FirestoreTimestamp | string | number;
+  flaggedForDeletion: boolean;
+  relatedRecordId?: string;
+}
 
 // ============================================================================
 // CONSTANTS
@@ -346,7 +380,7 @@ export async function getFromDiscoveryArchive(scrapeId: string): Promise<Tempora
       return null;
     }
 
-    const raw = doc.data();
+    const raw = doc.data() as FirestoreTemporaryScrapeData | undefined;
     if (!raw) {
       return null;
     }
@@ -392,7 +426,7 @@ export async function getFromDiscoveryArchiveByHash(
       return null;
     }
 
-    const raw = docs.docs[0].data();
+    const raw = docs.docs[0].data() as FirestoreTemporaryScrapeData;
     return {
       id: docs.docs[0].id,
       ...raw,
@@ -436,7 +470,7 @@ export async function getFromDiscoveryArchiveByUrl(
       .get();
 
     return docs.docs.map((doc) => {
-      const raw = doc.data();
+      const raw = doc.data() as FirestoreTemporaryScrapeData;
       return {
         ...raw,
         createdAt: toDate(raw.createdAt),
@@ -525,17 +559,18 @@ export async function calculateStorageCost(organizationId: string): Promise<{
  * Convert Firestore Timestamp to JavaScript Date
  * Firestore returns Timestamp objects, not Date objects
  */
-function toDate(timestamp: any): Date {
+function toDate(timestamp: Date | FirestoreTimestamp | string | number): Date {
   if (timestamp instanceof Date) {
     return timestamp;
   }
-  if (timestamp && typeof timestamp.toDate === 'function') {
+  if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
     return timestamp.toDate();
   }
-  if (timestamp?.seconds) {
+  if (typeof timestamp === 'object' && timestamp !== null && 'seconds' in timestamp && timestamp.seconds != null) {
     return new Date(timestamp.seconds * 1000);
   }
-  return new Date(timestamp);
+  // At this point timestamp must be string | number
+  return new Date(timestamp as string | number);
 }
 
 /**
@@ -559,7 +594,7 @@ export async function getStorageStats(organizationId: string): Promise<{
       .get();
 
     const data = scrapes.docs.map((doc) => {
-      const raw = doc.data();
+      const raw = doc.data() as FirestoreTemporaryScrapeData;
       return {
         ...raw,
         createdAt: toDate(raw.createdAt),

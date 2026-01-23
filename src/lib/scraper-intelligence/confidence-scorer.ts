@@ -187,8 +187,8 @@ export function calculateCredibleInterval(
   negative: number,
   credibilityLevel: number = 0.95
 ): { lower: number; upper: number } {
-  const alpha = positive + DEFAULT_PRIOR_ALPHA;
-  const beta = negative + DEFAULT_PRIOR_BETA;
+  const _alpha = positive + DEFAULT_PRIOR_ALPHA;
+  const _beta = negative + DEFAULT_PRIOR_BETA;
 
   // For Beta distribution, use quantile approximation
   // Simplified Wilson score interval

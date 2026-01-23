@@ -335,7 +335,7 @@ async function executeNotifySlack(
     // Import Slack service dynamically
     const { sendSlackMessage } = await import('@/lib/integrations/slack-service');
 
-    await sendSlackMessage({
+    sendSlackMessage({
       orgId: submission.organizationId,
       channelId,
       message,

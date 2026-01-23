@@ -22,10 +22,10 @@ import type {
 import { logger } from '@/lib/logger/logger';
 import type { Twilio } from 'twilio';
 import type { CallInstance } from 'twilio/lib/rest/api/v2010/account/call';
-import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message';
-import type { RecordingInstance } from 'twilio/lib/rest/api/v2010/account/recording';
+import type { MessageInstance as _MessageInstance } from 'twilio/lib/rest/api/v2010/account/message';
+import type { RecordingInstance as _RecordingInstance } from 'twilio/lib/rest/api/v2010/account/recording';
 import type { IncomingPhoneNumberInstance } from 'twilio/lib/rest/api/v2010/account/incomingPhoneNumber';
-import type { LocalInstance as AvailablePhoneNumberInstance } from 'twilio/lib/rest/api/v2010/account/availablePhoneNumberCountry/local';
+import type { LocalInstance as _AvailablePhoneNumberInstance } from 'twilio/lib/rest/api/v2010/account/availablePhoneNumberCountry/local';
 
 export class TwilioProvider implements VoiceProvider {
   readonly providerType: VoiceProviderType = 'twilio';
@@ -173,6 +173,7 @@ export class TwilioProvider implements VoiceProvider {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- Method must be async for VoiceProvider interface compliance
   async muteCall(_callId: string, _muted: boolean): Promise<void> {
     try {
       // Twilio requires conference for muting; for direct calls we'd need to update the media stream

@@ -7,7 +7,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase/firestore';
-import type { Activity as ActivityType, RelatedEntityType } from '@/types/activity';
+import type { Activity as ActivityType, RelatedEntityType as _RelatedEntityType } from '@/types/activity';
 
 export interface EmailMessage {
   id: string;
@@ -456,7 +456,7 @@ async function getLastSyncTime(organizationId: string, provider: string): Promis
         return timestampLike.toDate();
       }
       // Handle Date or string
-      return new Date(syncAt as Date | string);
+      return new Date(syncAt);
     }
 
     return null;

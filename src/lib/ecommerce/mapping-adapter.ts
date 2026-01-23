@@ -198,7 +198,7 @@ async function handleFieldDeletion(
 
     if (currentMapping === deletedFieldKey) {
       // Try to find an alternative field
-      const resolved = await FieldResolver.resolveField(schema, {
+      const resolved = FieldResolver.resolveField(schema, {
         aliases: alternatives,
       });
 
@@ -271,8 +271,8 @@ export async function validateEcommerceMappings(
         errors.push(`Required mapping '${required}' is not configured`);
         continue;
       }
-      
-      const resolved = await FieldResolver.resolveField(schema, fieldKey);
+
+      const resolved = FieldResolver.resolveField(schema, fieldKey);
       
       if (!resolved) {
         errors.push(`Field '${fieldKey}' for mapping '${required}' not found in schema`);
@@ -293,9 +293,9 @@ export async function validateEcommerceMappings(
     
     for (const optional of optionalMappings) {
       const fieldKey = config.productMappings[optional];
-      
+
       if (fieldKey) {
-        const resolved = await FieldResolver.resolveField(schema, fieldKey);
+        const resolved = FieldResolver.resolveField(schema, fieldKey);
         
         if (!resolved) {
           warnings.push(`Optional field '${fieldKey}' for mapping '${optional}' not found in schema`);
@@ -353,7 +353,7 @@ export async function autoConfigureEcommerceMappings(
     
     const mappingsRecord = mappings as Record<string, string>;
     for (const [mappingKey, aliases] of Object.entries(fieldMappings)) {
-      const resolved = await FieldResolver.resolveField(schema, {
+      const resolved = FieldResolver.resolveField(schema, {
         aliases,
       });
 

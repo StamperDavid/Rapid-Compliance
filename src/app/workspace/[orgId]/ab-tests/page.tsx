@@ -76,29 +76,28 @@ export default function ABTestsPage() {
         <>
           <div className="grid gap-4">
             {tests.map((test) => {
-              const typedTest = test as ABTest;
               const statusClass =
-                typedTest.status === 'running' ? 'bg-green-900 text-green-300' :
-                typedTest.status === 'completed' ? 'bg-blue-900 text-blue-300' :
+                test.status === 'running' ? 'bg-green-900 text-green-300' :
+                test.status === 'completed' ? 'bg-blue-900 text-blue-300' :
                 'bg-gray-700 text-gray-300';
-              const variantCount = typedTest.variants?.length ?? 0;
+              const variantCount = test.variants?.length ?? 0;
 
               return (
-                <div key={typedTest.id} className="bg-gray-900 rounded-lg p-6 hover:bg-gray-800/50 transition">
+                <div key={test.id} className="bg-gray-900 rounded-lg p-6 hover:bg-gray-800/50 transition">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-semibold">{typedTest.name}</h3>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusClass}`}>{typedTest.status}</span>
+                        <h3 className="text-xl font-semibold">{test.name}</h3>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusClass}`}>{test.status}</span>
                       </div>
-                      <p className="text-gray-400 mb-3">{typedTest.description}</p>
+                      <p className="text-gray-400 mb-3">{test.description}</p>
                       <div className="flex gap-4 text-sm text-gray-400">
                         <span>Variants: {variantCount}</span>
-                        {typedTest.winner && <><span>•</span><span className="text-green-400">Winner: {typedTest.winner}</span></>}
+                        {test.winner && <><span>•</span><span className="text-green-400">Winner: {test.winner}</span></>}
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => router.push(`/workspace/${orgId}/ab-tests/${typedTest.id}`)} className="px-3 py-1.5 bg-blue-900 text-blue-300 rounded hover:bg-blue-800 text-sm font-medium">View Results</button>
+                      <button onClick={() => router.push(`/workspace/${orgId}/ab-tests/${test.id}`)} className="px-3 py-1.5 bg-blue-900 text-blue-300 rounded hover:bg-blue-800 text-sm font-medium">View Results</button>
                     </div>
                   </div>
                 </div>

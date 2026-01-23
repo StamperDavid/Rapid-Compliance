@@ -425,7 +425,7 @@ export async function POST(request: NextRequest) {
     const rules: RoutingRule[] = [];
 
     // Route the lead
-    const analysis = await leadRoutingEngine.routeLead(
+    const analysis = leadRoutingEngine.routeLead(
       lead,
       availableReps,
       config,

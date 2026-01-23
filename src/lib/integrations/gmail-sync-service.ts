@@ -53,7 +53,7 @@ interface GmailContact {
   name?: string;
 }
 
-interface GmailMessageRef {
+interface _GmailMessageRef {
   id?: string;
   threadId?: string;
 }

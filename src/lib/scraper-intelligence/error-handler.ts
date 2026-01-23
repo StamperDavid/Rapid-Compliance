@@ -1,9 +1,9 @@
 /**
  * Error Handler
- * 
+ *
  * Intelligent error handling and retry logic for scrape operations.
  * Implements exponential backoff with jitter.
- * 
+ *
  * Features:
  * - Error classification and handling
  * - Retry decision logic
@@ -12,13 +12,16 @@
  * - Detailed error logging
  */
 
-import { logger } from '@/lib/logger/logger';
-import type {
-  ErrorHandler,
-  RetryStrategy,
-  ScrapeErrorType,
-} from './scraper-runner-types';
-import { ScrapeError, calculateRetryDelay } from './scraper-runner-types';
+import { logger, type LogContext } from '@/lib/logger/logger';
+import { ScrapeError, calculateRetryDelay, type ErrorHandler, type MetadataObject, type RetryStrategy, type ScrapeErrorType } from './scraper-runner-types';
+
+/**
+ * Error with HTTP status code (e.g., from fetch or axios)
+ */
+interface ErrorWithStatusCode extends Error {
+  statusCode?: number;
+  status?: number;
+}
 
 // ============================================================================
 // CONSTANTS
@@ -78,7 +81,8 @@ export class ScraperErrorHandler implements ErrorHandler {
     }
 
     // Check for retryable HTTP status codes
-    const statusCode =(error as any).statusCode ?? (error as any).status;
+    const errorWithStatus = error as ErrorWithStatusCode;
+    const statusCode = errorWithStatus.statusCode ?? errorWithStatus.status;
     if (statusCode && RETRYABLE_HTTP_CODES.includes(statusCode)) {
       logger.debug('Retryable HTTP status code', { statusCode });
       return true;
@@ -168,10 +172,11 @@ export class ScraperErrorHandler implements ErrorHandler {
     }
 
     // Rate limit errors
+    const errorWithStatus = error as ErrorWithStatusCode;
     if (
       message.includes('rate limit') ||
       message.includes('too many requests') ||
-      (error as any).statusCode === 429
+      errorWithStatus.statusCode === 429
     ) {
       return 'rate_limit_error';
     }
@@ -246,7 +251,7 @@ export function createErrorHandler(retryStrategy: RetryStrategy): ErrorHandler {
  */
 export function createNetworkError(
   message: string,
-  metadata?: Record<string, any>
+  metadata?: MetadataObject
 ): ScrapeError {
   return new ScrapeError(
     message,
@@ -263,7 +268,7 @@ export function createNetworkError(
 export function createTimeoutError(
   url: string,
   timeoutMs: number,
-  metadata?: Record<string, any>
+  metadata?: MetadataObject
 ): ScrapeError {
   return new ScrapeError(
     `Request to ${url} timed out after ${timeoutMs}ms`,
@@ -280,7 +285,7 @@ export function createTimeoutError(
 export function createRateLimitError(
   domain: string,
   resetInMs: number,
-  metadata?: Record<string, any>
+  metadata?: MetadataObject
 ): ScrapeError {
   return new ScrapeError(
     `Rate limit exceeded for ${domain}. Retry after ${Math.ceil(resetInMs / 1000)}s`,
@@ -296,7 +301,7 @@ export function createRateLimitError(
  */
 export function createValidationError(
   message: string,
-  metadata?: Record<string, any>
+  metadata?: MetadataObject
 ): ScrapeError {
   return new ScrapeError(
     message,
@@ -313,7 +318,7 @@ export function createValidationError(
 export function createExtractionError(
   message: string,
   url: string,
-  metadata?: Record<string, any>
+  metadata?: MetadataObject
 ): ScrapeError {
   return new ScrapeError(
     message,
@@ -329,7 +334,7 @@ export function createExtractionError(
  */
 export function createCacheError(
   message: string,
-  metadata?: Record<string, any>
+  metadata?: MetadataObject
 ): ScrapeError {
   return new ScrapeError(
     message,
@@ -376,7 +381,9 @@ export async function withRetry<T>(
       });
 
       // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      await new Promise<void>(resolve => {
+        setTimeout(resolve, delayMs);
+      });
     }
   }
 
@@ -412,7 +419,7 @@ export async function withTimeout<T>(
  */
 export function logError(
   error: Error,
-  context: Record<string, any>,
+  context: LogContext,
   level: 'warn' | 'error' = 'error'
 ): void {
   if (level === 'error') {

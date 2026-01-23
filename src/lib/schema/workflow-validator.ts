@@ -5,8 +5,12 @@
 
 import type { SchemaChangeEvent } from './schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
-import type { Workflow } from '@/types/workflow';
+import type {
+  Workflow,
+  EntityTrigger
+} from '@/types/workflow';
 import { FieldResolver } from './field-resolver';
+import type { Schema } from '@/types/schema';
 
 /**
  * Validate workflows affected by schema change
@@ -29,20 +33,22 @@ export async function validateWorkflowsForSchema(
     }
     
     // Get schema for field resolution
-    const schema = await FirestoreService.get(
+    const schemaData = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/${COLLECTIONS.SCHEMAS}`,
       event.schemaId
     );
-    
-    if (!schema) {
+
+    if (!schemaData) {
       return;
     }
-    
+
+    const schema = schemaData as Schema;
+
     // Check each workflow
     for (const workflowData of workflows) {
       const workflow = workflowData as Workflow;
-      
-      const validation = await validateWorkflow(workflow, schema, event);
+
+      const validation = validateWorkflow(workflow, schema, event);
       
       if (!validation.valid) {
         logger.warn('[Workflow Validator] Workflow affected by schema change', {
@@ -73,32 +79,32 @@ export async function validateWorkflowsForSchema(
 /**
  * Validate a single workflow
  */
-export async function validateWorkflow(
+export function validateWorkflow(
   workflow: Workflow,
-  schema: any,
-  event?: SchemaChangeEvent
-): Promise<{
+  schema: Schema,
+  _event?: SchemaChangeEvent
+): {
   valid: boolean;
   warnings: string[];
   errors: string[];
-}> {
+} {
   const warnings: string[] = [];
   const errors: string[] = [];
-  
+
   // Check if workflow uses this schema
   const usesSchema = workflowUsesSchema(workflow, schema.id);
-  
+
   if (!usesSchema) {
     return { valid: true, warnings, errors };
   }
-  
+
   // Validate trigger
   if (workflow.trigger.type.startsWith('entity.')) {
-    const entityTrigger = workflow.trigger as any;
+    const entityTrigger = workflow.trigger as EntityTrigger;
     if (entityTrigger.schemaId === schema.id) {
       if (entityTrigger.specificFields) {
         for (const fieldRef of entityTrigger.specificFields) {
-          const resolved = await FieldResolver.resolveField(schema, fieldRef);
+          const resolved = FieldResolver.resolveField(schema, fieldRef);
           if (!resolved) {
             errors.push(`Trigger field '${fieldRef}' not found in schema`);
           } else if (resolved.confidence < 0.8) {
@@ -108,17 +114,17 @@ export async function validateWorkflow(
       }
     }
   }
-  
+
   // Validate actions
   for (const action of workflow.actions) {
     if (action.type === 'create_entity' || action.type === 'update_entity') {
-      const entityAction = action as any;
-      
+      const entityAction = action;
+
       if (entityAction.schemaId === schema.id) {
         // Validate field mappings
-        for (const mapping of entityAction.fieldMappings ?? []) {
-          const resolved = await FieldResolver.resolveField(schema, mapping.targetField);
-          
+        for (const mapping of entityAction.fieldMappings) {
+          const resolved = FieldResolver.resolveField(schema, mapping.targetField);
+
           if (!resolved) {
             errors.push(
               `Action '${action.name}': Field '${mapping.targetField}' not found in schema`
@@ -132,7 +138,7 @@ export async function validateWorkflow(
       }
     }
   }
-  
+
   return {
     valid: errors.length === 0,
     warnings,
@@ -146,22 +152,22 @@ export async function validateWorkflow(
 function workflowUsesSchema(workflow: Workflow, schemaId: string): boolean {
   // Check trigger
   if (workflow.trigger.type.startsWith('entity.')) {
-    const entityTrigger = workflow.trigger as any;
+    const entityTrigger = workflow.trigger as EntityTrigger;
     if (entityTrigger.schemaId === schemaId) {
       return true;
     }
   }
-  
+
   // Check actions
   for (const action of workflow.actions) {
     if (action.type === 'create_entity' || action.type === 'update_entity' || action.type === 'delete_entity') {
-      const entityAction = action as any;
+      const entityAction = action;
       if (entityAction.schemaId === schemaId) {
         return true;
       }
     }
   }
-  
+
   return false;
 }
 
@@ -209,6 +215,15 @@ async function createWorkflowWarningNotification(
   }
 }
 
+/** Detail record for workflow validation */
+interface WorkflowValidationDetail {
+  workflowId: string;
+  workflowName: string;
+  valid: boolean;
+  warningCount: number;
+  errorCount: number;
+}
+
 /**
  * Get validation summary for all workflows
  */
@@ -220,46 +235,49 @@ export async function getWorkflowValidationSummary(
   valid: number;
   withWarnings: number;
   withErrors: number;
-  details: Array<{
-    workflowId: string;
-    workflowName: string;
-    valid: boolean;
-    warningCount: number;
-    errorCount: number;
-  }>;
+  details: WorkflowValidationDetail[];
 }> {
-  const summary = {
+  const summary: {
+    total: number;
+    valid: number;
+    withWarnings: number;
+    withErrors: number;
+    details: WorkflowValidationDetail[];
+  } = {
     total: 0,
     valid: 0,
     withWarnings: 0,
     withErrors: 0,
-    details: [] as any[],
+    details: [],
   };
-  
+
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
+
     const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflows`;
     const workflows = await FirestoreService.getAll(workflowsPath);
-    
+
     const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
     const schemas = await FirestoreService.getAll(schemasPath);
-    
+
     summary.total = workflows.length;
-    
+
     for (const workflowData of workflows) {
       const workflow = workflowData as Workflow;
-      
+
       // Find relevant schema
-      const relevantSchema = schemas.find((s: any) => workflowUsesSchema(workflow, s.id));
-      
+      const relevantSchema = schemas.find((s) => {
+        const schemaId = typeof s.id === 'string' ? s.id : String(s.id);
+        return workflowUsesSchema(workflow, schemaId);
+      });
+
       if (!relevantSchema) {
         summary.valid++;
         continue;
       }
-      
-      const validation = await validateWorkflow(workflow, relevantSchema);
-      
+
+      const validation = validateWorkflow(workflow, relevantSchema as Schema);
+
       if (validation.valid && validation.warnings.length === 0) {
         summary.valid++;
       } else if (validation.errors.length > 0) {
@@ -267,7 +285,7 @@ export async function getWorkflowValidationSummary(
       } else if (validation.warnings.length > 0) {
         summary.withWarnings++;
       }
-      
+
       summary.details.push({
         workflowId: workflow.id,
         workflowName: workflow.name,
@@ -276,13 +294,13 @@ export async function getWorkflowValidationSummary(
         errorCount: validation.errors.length,
       });
     }
-    
+
   } catch (error) {
     logger.error('[Workflow Validator] Failed to get validation summary', error instanceof Error ? error : new Error(String(error)), {
       file: 'workflow-validator.ts',
     });
   }
-  
+
   return summary;
 }
 

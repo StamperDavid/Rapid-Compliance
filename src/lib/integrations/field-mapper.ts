@@ -91,7 +91,9 @@ export interface ValidationRule {
  * Type guard to validate and convert unknown parameters to TransformParams
  */
 function toTransformParams(params: Record<string, unknown> | undefined): TransformParams | undefined {
-  if (!params) return undefined;
+  if (!params) {
+    return undefined;
+  }
 
   // Recursively validate that all values are compatible with TransformParams
   const result: TransformParams = {};
@@ -417,11 +419,11 @@ export class FieldMappingManager {
   /**
    * Map external record to local format
    */
-  static async mapExternalToLocal(
+  static mapExternalToLocal(
     externalRecord: Record<string, unknown>,
     mapping: IntegrationFieldMapping,
     schema: Schema
-  ): Promise<Record<string, unknown>> {
+  ): Record<string, unknown> {
     const localRecord: Record<string, unknown> = {};
 
     for (const rule of mapping.mappings) {
@@ -442,7 +444,7 @@ export class FieldMappingManager {
       }
 
       // Resolve local field (in case it was renamed)
-      const resolvedField = await FieldResolver.resolveField(schema, rule.localField);
+      const resolvedField = FieldResolver.resolveField(schema, rule.localField);
 
       if (!resolvedField) {
         logger.warn('[Field Mapper] Local field not found', {

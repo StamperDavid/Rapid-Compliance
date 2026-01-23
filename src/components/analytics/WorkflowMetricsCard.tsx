@@ -19,7 +19,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import type { WorkflowOverviewMetrics, ActionTypeMetrics } from '@/lib/analytics/dashboard/types';
+import type { WorkflowOverviewMetrics, ActionTypeMetrics as _ActionTypeMetrics } from '@/lib/analytics/dashboard/types';
 
 interface PieChartData extends Record<string, unknown> {
   actionType: string;

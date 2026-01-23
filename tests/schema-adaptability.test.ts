@@ -3,12 +3,13 @@
  * Tests for automatic schema change adaptation across all systems
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import { SchemaChangeDetector, SchemaChangeEventPublisher } from '@/lib/schema/schema-change-tracker';
+import { describe, it, expect } from '@jest/globals';
+import { SchemaChangeDetector } from '@/lib/schema/schema-change-tracker';
 import { FieldResolver } from '@/lib/schema/field-resolver';
-import { adaptEcommerceMappings, autoConfigureEcommerceMappings } from '@/lib/ecommerce/mapping-adapter';
+import { autoConfigureEcommerceMappings } from '@/lib/ecommerce/mapping-adapter';
 import { validateWorkflow } from '@/lib/schema/workflow-validator';
-import { Schema, SchemaField } from '@/types/schema';
+import type { Schema } from '@/types/schema';
+import type { Workflow } from '@/types/workflow';
 import { Timestamp } from 'firebase/firestore';
 
 describe('Schema Adaptability System', () => {
@@ -226,8 +227,8 @@ describe('Schema Adaptability System', () => {
       version: 1,
     };
 
-    it('should resolve exact key match', async () => {
-      const resolved = await FieldResolver.resolveField(testSchema, 'hourly_rate');
+    it('should resolve exact key match', () => {
+      const resolved = FieldResolver.resolveField(testSchema, 'hourly_rate');
 
       expect(resolved).toBeDefined();
       expect(resolved?.fieldKey).toBe('hourly_rate');
@@ -235,16 +236,16 @@ describe('Schema Adaptability System', () => {
       expect(resolved?.matchType).toBe('exact_key');
     });
 
-    it('should resolve field by common alias', async () => {
-      const resolved = await FieldResolver.resolveFieldWithCommonAliases(testSchema, 'price');
+    it('should resolve field by common alias', () => {
+      const resolved = FieldResolver.resolveFieldWithCommonAliases(testSchema, 'price');
 
       expect(resolved).toBeDefined();
       expect(resolved?.fieldKey).toBe('hourly_rate');
       expect(resolved?.confidence).toBeGreaterThan(0.5);
     });
 
-    it('should resolve field by partial label match', async () => {
-      const resolved = await FieldResolver.resolveField(testSchema, 'name');
+    it('should resolve field by partial label match', () => {
+      const resolved = FieldResolver.resolveField(testSchema, 'name');
 
       expect(resolved).toBeDefined();
       expect(resolved?.fieldKey).toBe('service_name');
@@ -271,8 +272,8 @@ describe('Schema Adaptability System', () => {
       expect(value).toBe('test@example.com');
     });
 
-    it('should validate field references', async () => {
-      const validation = await FieldResolver.validateFieldReference(testSchema, 'price');
+    it('should validate field references', () => {
+      const validation = FieldResolver.validateFieldReference(testSchema, 'price');
 
       // 'price' should resolve to 'hourly_rate' via aliases
       expect(validation.valid).toBeDefined();
@@ -280,7 +281,7 @@ describe('Schema Adaptability System', () => {
   });
 
   describe('E-Commerce Mapping Adapter', () => {
-    it('should auto-configure product mappings', async () => {
+    it('should auto-configure product mappings', () => {
       // This test would require mocking Firestore
       // For now, we just ensure the function exists
       expect(autoConfigureEcommerceMappings).toBeDefined();
@@ -307,8 +308,8 @@ describe('Schema Adaptability System', () => {
       ],
     };
 
-    it('should validate workflow with valid field references', async () => {
-      const workflow: any = {
+    it('should validate workflow with valid field references', () => {
+      const workflow = {
         id: 'wf_1',
         name: 'Test Workflow',
         trigger: {
@@ -329,15 +330,15 @@ describe('Schema Adaptability System', () => {
           },
         ],
         status: 'active',
-      };
+      } as Workflow;
 
-      const validation = await validateWorkflow(workflow, testSchema);
+      const validation = validateWorkflow(workflow, testSchema as Schema);
 
       expect(validation.valid).toBeDefined();
     });
 
-    it('should detect invalid field references in workflows', async () => {
-      const workflow: any = {
+    it('should detect invalid field references in workflows', () => {
+      const workflow: Workflow = {
         id: 'wf_1',
         name: 'Test Workflow',
         trigger: {
@@ -358,16 +359,16 @@ describe('Schema Adaptability System', () => {
           },
         ],
         status: 'active',
-      };
+      } as Workflow;
 
-      const validation = await validateWorkflow(workflow, testSchema);
+      const validation = validateWorkflow(workflow, testSchema as Schema);
 
       expect(validation.errors.length).toBeGreaterThan(0);
     });
   });
 
   describe('Integration Scenarios', () => {
-    it('should handle field rename scenario end-to-end', async () => {
+    it('should handle field rename scenario end-to-end', () => {
       // Scenario: User renames 'price' to 'hourly_rate'
       
       // 1. Create old schema
@@ -426,7 +427,7 @@ describe('Schema Adaptability System', () => {
       expect(events.length).toBeGreaterThan(0);
 
       // 4. Verify field resolver can still find the field
-      const resolved = await FieldResolver.resolveFieldWithCommonAliases(newSchema, 'price');
+      const resolved = FieldResolver.resolveFieldWithCommonAliases(newSchema, 'price');
       expect(resolved).toBeDefined();
       expect(resolved?.fieldKey).toBe('hourly_rate');
 

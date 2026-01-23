@@ -75,25 +75,24 @@ export default function FineTuningPage() {
         <>
           <div className="grid gap-4">
             {jobs.map((job) => {
-              const typedJob = job as FineTuningJob;
-              const datasetSize = typedJob.datasetSize ?? 0;
+              const datasetSize = job.datasetSize ?? 0;
               const statusClass =
-                typedJob.status === 'completed' ? 'bg-green-900 text-green-300' :
-                typedJob.status === 'running' ? 'bg-blue-900 text-blue-300' :
-                typedJob.status === 'failed' ? 'bg-red-900 text-red-300' :
+                job.status === 'completed' ? 'bg-green-900 text-green-300' :
+                job.status === 'running' ? 'bg-blue-900 text-blue-300' :
+                job.status === 'failed' ? 'bg-red-900 text-red-300' :
                 'bg-gray-700 text-gray-300';
 
               return (
-                <div key={typedJob.id} className="bg-gray-900 rounded-lg p-6">
+                <div key={job.id} className="bg-gray-900 rounded-lg p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold mb-2">{typedJob.modelName}</h3>
+                      <h3 className="text-xl font-semibold mb-2">{job.modelName}</h3>
                       <div className="flex gap-4 text-sm text-gray-400 mb-3">
-                        <span>Base: {typedJob.baseModel}</span><span>•</span><span>Dataset: {datasetSize} examples</span>
+                        <span>Base: {job.baseModel}</span><span>•</span><span>Dataset: {datasetSize} examples</span>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusClass}`}>{typedJob.status}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusClass}`}>{job.status}</span>
                     </div>
-                    <div>{typedJob.status === 'completed' && <button className="px-3 py-1.5 bg-blue-900 text-blue-300 rounded hover:bg-blue-800 text-sm font-medium">Deploy Model</button>}</div>
+                    <div>{job.status === 'completed' && <button className="px-3 py-1.5 bg-blue-900 text-blue-300 rounded hover:bg-blue-800 text-sm font-medium">Deploy Model</button>}</div>
                   </div>
                 </div>
               );

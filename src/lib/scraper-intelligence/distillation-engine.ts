@@ -16,20 +16,21 @@
  * Result: 95%+ storage reduction while preserving business value
  */
 
-import type { 
-  ResearchIntelligence, 
-  HighValueSignal, 
-  ExtractedSignal,
-  TemporaryScrape,
-  ScrapingPlatform 
-} from '../../types/scraper-intelligence';
-import { 
-  getAllKeywords, 
-  getFluffRegexes,
-  calculateMaxScore 
+import {
+  type ResearchIntelligence,
+  type HighValueSignal,
+  type ExtractedSignal,
+  type TemporaryScrape,
+  type ScrapingPlatform,
+  getFluffRegexes
 } from '../../types/scraper-intelligence';
 import { logger } from '../logger/logger';
 import { saveTemporaryScrape } from './discovery-archive-service';
+
+/**
+ * Context data for scoring rule evaluation
+ */
+type ScoringContext = Record<string, string | number | boolean | null | undefined>;
 
 // ============================================================================
 // SIGNAL DETECTION
@@ -400,7 +401,7 @@ export async function distillScrape(params: {
 export function calculateLeadScore(
   signals: ExtractedSignal[],
   research: ResearchIntelligence,
-  context: Record<string, any>
+  context: ScoringContext
 ): number {
   let totalScore = 0;
 
@@ -452,7 +453,7 @@ export function calculateLeadScore(
  */
 function evaluateCondition(
   condition: string,
-  context: Record<string, any>
+  context: ScoringContext
 ): boolean {
   // Simple variable substitution and evaluation
   // Supports: &&, ||, >, <, >=, <=, ==, !=
@@ -467,8 +468,8 @@ function evaluateCondition(
     }
 
     // Use Function constructor (safer than eval)
-    // eslint-disable-next-line no-new-func
-    const fn = new Function(`return ${expression}`);
+    // eslint-disable-next-line no-new-func -- Required for dynamic condition evaluation in scoring rules
+    const fn = new Function(`return ${expression}`) as () => unknown;
     return Boolean(fn());
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

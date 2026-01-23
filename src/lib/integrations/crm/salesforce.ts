@@ -72,10 +72,10 @@ export async function executeSalesforceFunction(
       
       return createLead(
         {
-          firstName: parameters.firstName as string,
-          lastName: parameters.lastName as string,
-          email: parameters.email as string,
-          company: parameters.company as string,
+          firstName: parameters.firstName,
+          lastName: parameters.lastName,
+          email: parameters.email,
+          company: parameters.company,
           phone: parameters.phone as string | undefined,
           notes: parameters.notes as string | undefined,
         },

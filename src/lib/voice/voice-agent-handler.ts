@@ -362,6 +362,7 @@ class VoiceAgentHandler {
   /**
    * Handle deal closing (Closer mode)
    */
+  // eslint-disable-next-line @typescript-eslint/require-await -- Method must be async for consistent interface with other handlers
   private async handleClose(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
     const context = aiConversationService.getConversationContext(callId);
     const closingConfig = this.config?.closingConfig;

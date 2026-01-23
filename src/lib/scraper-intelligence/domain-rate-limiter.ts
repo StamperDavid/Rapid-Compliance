@@ -13,12 +13,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import type {
-  DomainRateLimiter,
-  RateLimitConfig,
-  RateLimitStatus,
-} from './scraper-runner-types';
-import { extractDomain } from './scraper-runner-types';
+import { extractDomain, type DomainRateLimiter, type RateLimitConfig, type RateLimitStatus } from './scraper-runner-types';
 
 // ============================================================================
 // CONSTANTS
@@ -65,7 +60,7 @@ export class DomainBasedRateLimiter implements DomainRateLimiter {
   /**
    * Check if request is allowed for a domain
    */
-  async checkLimit(domain: string): Promise<RateLimitStatus> {
+  checkLimit(domain: string): Promise<RateLimitStatus> {
     const normalizedDomain = this.normalizeDomain(domain);
     const now = Date.now();
     const window = this.getOrCreateWindow(normalizedDomain);
@@ -103,7 +98,7 @@ export class DomainBasedRateLimiter implements DomainRateLimiter {
       });
     }
 
-    return status;
+    return Promise.resolve(status);
   }
 
   /**
@@ -338,7 +333,9 @@ export class DomainBasedRateLimiter implements DomainRateLimiter {
    * Sleep for specified milliseconds
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
   }
 }
 

@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/useToast';
 // ============================================================================
 
 interface FormDataBase {
-  [key: string]: string | number | boolean | File[] | unknown[] | string[];
+  [key: string]: string | number | boolean | File[] | unknown[];
 }
 
 type FormData = FormDataBase;
@@ -369,7 +369,7 @@ export default function OnboardingWizard() {
             // Type-safe assignment: only assign to compatible fields
             if (Array.isArray(value) && isStringArrayField(fieldName)) {
               // Assign string array to string array fields
-              (updatedFormData as Record<string, unknown>)[fieldName] = value as string[];
+              (updatedFormData as Record<string, unknown>)[fieldName] = value;
             } else if (typeof value === 'string' && isStringField(fieldName)) {
               // Assign string to string fields
               (updatedFormData as Record<string, unknown>)[fieldName] = value;

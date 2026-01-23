@@ -26,7 +26,7 @@ import { logger } from '@/lib/logger/logger';
  * Type guard to safely pass unknown parameters to integration functions
  * Each integration validates its own parameters internally
  */
-function toIntegrationParams<T extends Record<string, unknown>>(params: Record<string, unknown>): T {
+function _toIntegrationParams<T extends Record<string, unknown>>(params: Record<string, unknown>): T {
   return params as T;
 }
 

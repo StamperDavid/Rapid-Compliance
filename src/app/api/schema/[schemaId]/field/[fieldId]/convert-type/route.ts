@@ -179,9 +179,8 @@ export async function POST(
         const conversion = FieldTypeConverterServer.convertValue(oldValue, oldType, newType);
         
         if (conversion.success) {
-          // conversion.value is any from external library, explicitly type it
-          const convertedValue = conversion.value as unknown;
-          const updateData: Record<string, unknown> = { [fieldKey]: convertedValue };
+          // conversion.value is any from external library, safely assign it
+          const updateData: Record<string, unknown> = { [fieldKey]: conversion.value };
           batch.update(doc.ref, updateData);
           successCount++;
         } else {

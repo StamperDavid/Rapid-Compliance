@@ -3,8 +3,7 @@
  * Generates personalized cold emails using AI and prospect research
  */
 
-import type { ProspectData, ProspectResearch } from './prospect-research';
-import { generatePersonalizationTokens } from './prospect-research';
+import { generatePersonalizationTokens, type ProspectData, type ProspectResearch } from './prospect-research';
 import { logger } from '@/lib/logger/logger';
 
 export interface EmailGenerationRequest {
