@@ -106,7 +106,7 @@ export default function AdminSalesAgentPersonaPage() {
       try {
         const response = await fetch('/api/admin/sales-agent/persona');
         if (response.ok) {
-          const data = await response.json();
+          const data = await response.json() as AgentPersona;
           setPersona(data);
         }
       } catch (error) {
@@ -116,8 +116,8 @@ export default function AdminSalesAgentPersonaPage() {
         setLoading(false);
       }
     };
-    
-    loadPersona();
+
+    void loadPersona();
   }, []);
 
   const handleSave = async () => {
@@ -181,7 +181,7 @@ export default function AdminSalesAgentPersonaPage() {
             </p>
           </div>
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             disabled={saving}
             style={{
               padding: '0.75rem 1.5rem',
@@ -236,7 +236,7 @@ export default function AdminSalesAgentPersonaPage() {
         ].map((section) => (
           <button
             key={section.id}
-            onClick={() => setActiveSection(section.id as any)}
+            onClick={() => setActiveSection(section.id as 'core' | 'cognitive' | 'knowledge' | 'learning' | 'execution')}
             style={{
               padding: '0.75rem 1.5rem',
               backgroundColor: 'transparent',

@@ -8,11 +8,11 @@ export default function FeatureFlagsPage() {
   const { hasPermission } = useAdminAuth();
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
-  const [_showCreateModal, setShowCreateModal] = useState(false);
+  const [, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     setTimeout(() => {
-      setFlags([
+      const mockFlags: FeatureFlag[] = [
         {
           id: 'flag-1',
           name: 'New Dashboard UI',
@@ -20,8 +20,8 @@ export default function FeatureFlagsPage() {
           enabled: true,
           rolloutPercentage: 50,
           createdBy: 'admin-1',
-          createdAt: new Date('2024-03-01') as any,
-          updatedAt: new Date('2024-03-15') as any,
+          createdAt: { seconds: new Date('2024-03-01').getTime() / 1000, nanoseconds: 0 } as import('firebase/firestore').Timestamp,
+          updatedAt: { seconds: new Date('2024-03-15').getTime() / 1000, nanoseconds: 0 } as import('firebase/firestore').Timestamp,
         },
         {
           id: 'flag-2',
@@ -30,10 +30,11 @@ export default function FeatureFlagsPage() {
           enabled: false,
           rolloutPercentage: 0,
           createdBy: 'admin-1',
-          createdAt: new Date('2024-03-10') as any,
-          updatedAt: new Date('2024-03-10') as any,
+          createdAt: { seconds: new Date('2024-03-10').getTime() / 1000, nanoseconds: 0 } as import('firebase/firestore').Timestamp,
+          updatedAt: { seconds: new Date('2024-03-10').getTime() / 1000, nanoseconds: 0 } as import('firebase/firestore').Timestamp,
         },
-      ]);
+      ];
+      setFlags(mockFlags);
       setLoading(false);
     }, 500);
   }, []);
@@ -128,6 +129,10 @@ function FlagCard({ flag, onToggle, canManage }: { flag: FeatureFlag; onToggle: 
   const borderColor = '#333';
   const primaryColor = '#6366f1';
 
+  const updatedDate = flag.updatedAt && typeof flag.updatedAt === 'object' && 'seconds' in flag.updatedAt
+    ? new Date(flag.updatedAt.seconds * 1000)
+    : new Date();
+
   return (
     <div style={{
       backgroundColor: bgPaper,
@@ -154,7 +159,7 @@ function FlagCard({ flag, onToggle, canManage }: { flag: FeatureFlag; onToggle: 
           <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.75rem' }}>{flag.description}</p>
           <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#666' }}>
             <span>Rollout: {flag.rolloutPercentage}%</span>
-            <span>Updated: {new Date(flag.updatedAt as any).toLocaleDateString()}</span>
+            <span>Updated: {updatedDate.toLocaleDateString()}</span>
           </div>
         </div>
         {canManage && (

@@ -963,13 +963,13 @@ export class Copywriter extends BaseSpecialist {
   private suggestIcon(feature: string): string {
     const lowerFeature = feature.toLowerCase();
 
-    if (lowerFeature.includes('fast') || lowerFeature.includes('speed')) return 'zap';
-    if (lowerFeature.includes('secure') || lowerFeature.includes('safe')) return 'shield';
-    if (lowerFeature.includes('easy') || lowerFeature.includes('simple')) return 'smile';
-    if (lowerFeature.includes('automated')) return 'cpu';
-    if (lowerFeature.includes('cloud')) return 'cloud';
-    if (lowerFeature.includes('mobile')) return 'smartphone';
-    if (lowerFeature.includes('analytics') || lowerFeature.includes('data')) return 'bar-chart';
+    if (lowerFeature.includes('fast') || lowerFeature.includes('speed')) {return 'zap';}
+    if (lowerFeature.includes('secure') || lowerFeature.includes('safe')) {return 'shield';}
+    if (lowerFeature.includes('easy') || lowerFeature.includes('simple')) {return 'smile';}
+    if (lowerFeature.includes('automated')) {return 'cpu';}
+    if (lowerFeature.includes('cloud')) {return 'cloud';}
+    if (lowerFeature.includes('mobile')) {return 'smartphone';}
+    if (lowerFeature.includes('analytics') || lowerFeature.includes('data')) {return 'bar-chart';}
 
     return 'check-circle';
   }
@@ -1350,7 +1350,7 @@ export class Copywriter extends BaseSpecialist {
     }
 
     // Truncate if needed
-    return headline.length > maxLength ? headline.substring(0, maxLength - 3) + '...' : headline;
+    return headline.length > maxLength ? `${headline.substring(0, maxLength - 3)  }...` : headline;
   }
 
   /**
@@ -1378,14 +1378,14 @@ export class Copywriter extends BaseSpecialist {
       text += 'Join them today.';
     }
 
-    return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+    return text.length > maxLength ? `${text.substring(0, maxLength - 3)  }...` : text;
   }
 
   /**
    * Generate ad description
    */
   private generateAdDescription(usp: string, maxLength: number): string {
-    const desc = usp.length > maxLength ? usp.substring(0, maxLength - 3) + '...' : usp;
+    const desc = usp.length > maxLength ? `${usp.substring(0, maxLength - 3)  }...` : usp;
     return desc;
   }
 

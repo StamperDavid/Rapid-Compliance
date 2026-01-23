@@ -30,7 +30,7 @@ export function LeadPipelineWidget({ compact = false, stages = DEFAULT_STAGES }:
     <div className="bg-[var(--color-bg-paper)] border border-[var(--color-border)] rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Lead Pipeline</h3>
-        <Link href="/admin/leads" className="text-sm text-[var(--color-primary)] hover:underline">
+        <Link href="/dashboard/leads" className="text-sm text-[var(--color-primary)] hover:underline">
           View All
         </Link>
       </div>
@@ -93,7 +93,7 @@ export function LeadPipelineWidget({ compact = false, stages = DEFAULT_STAGES }:
         <div className="text-center py-4">
           <p className="text-sm text-[var(--color-text-secondary)]">No leads in pipeline</p>
           <Link
-            href="/admin/leads"
+            href="/dashboard/leads"
             className="inline-block mt-2 text-sm text-[var(--color-primary)] hover:underline"
           >
             Add your first lead

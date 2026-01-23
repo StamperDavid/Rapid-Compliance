@@ -80,7 +80,7 @@ export type FirestoreDate = Timestamp | Date | string | null | undefined;
  * Convert FirestoreDate to JavaScript Date
  */
 export function toDate(firestoreDate: FirestoreDate): Date | null {
-  if (!firestoreDate) return null;
+  if (!firestoreDate) {return null;}
 
   if (firestoreDate instanceof Date) {
     return firestoreDate;
@@ -128,14 +128,14 @@ export interface CustomFields {
  * Type guard to validate custom field values
  */
 export function isValidCustomFieldValue(value: unknown): value is CustomFieldValue {
-  if (value === null || value === undefined) return true;
+  if (value === null || value === undefined) {return true;}
 
   const valueType = typeof value;
   if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
     return true;
   }
 
-  if (value instanceof Date) return true;
+  if (value instanceof Date) {return true;}
 
   if (Array.isArray(value)) {
     return value.every(item => typeof item === 'string' || typeof item === 'number');
@@ -203,19 +203,19 @@ export interface EnrichmentData {
  * Type guard to check if enrichment data is valid
  */
 export function isEnrichmentData(data: unknown): data is EnrichmentData {
-  if (!data || typeof data !== 'object') return false;
+  if (!data || typeof data !== 'object') {return false;}
 
   const enrichment = data as Record<string, unknown>;
 
   // Validate optional fields if present
   if (enrichment.companySize !== undefined) {
     const validSizes = ['startup', 'small', 'medium', 'enterprise', 'unknown'];
-    if (!validSizes.includes(enrichment.companySize as string)) return false;
+    if (!validSizes.includes(enrichment.companySize as string)) {return false;}
   }
 
   if (enrichment.hiringStatus !== undefined) {
     const validStatuses = ['actively-hiring', 'hiring', 'not-hiring', 'unknown'];
-    if (!validStatuses.includes(enrichment.hiringStatus as string)) return false;
+    if (!validStatuses.includes(enrichment.hiringStatus as string)) {return false;}
   }
 
   return true;
@@ -511,7 +511,7 @@ export interface PaginationOptions {
  */
 export interface PaginatedResult<T> {
   data: T[];
-  lastDoc: unknown | null; // QueryDocumentSnapshot or null
+  lastDoc: unknown; // QueryDocumentSnapshot or null
   hasMore: boolean;
   total?: number;
 }
@@ -586,7 +586,7 @@ export function validationFailure(errors: ValidationError[]): ValidationResult {
  * Type guard to check if object is a Deal
  */
 export function isDeal(entity: unknown): entity is Deal {
-  if (!entity || typeof entity !== 'object') return false;
+  if (!entity || typeof entity !== 'object') {return false;}
 
   const deal = entity as Record<string, unknown>;
 
@@ -605,7 +605,7 @@ export function isDeal(entity: unknown): entity is Deal {
  * Type guard to check if object is a Lead
  */
 export function isLead(entity: unknown): entity is Lead {
-  if (!entity || typeof entity !== 'object') return false;
+  if (!entity || typeof entity !== 'object') {return false;}
 
   const lead = entity as Record<string, unknown>;
 
@@ -624,7 +624,7 @@ export function isLead(entity: unknown): entity is Lead {
  * Type guard to check if object is a Contact
  */
 export function isContact(entity: unknown): entity is Contact {
-  if (!entity || typeof entity !== 'object') return false;
+  if (!entity || typeof entity !== 'object') {return false;}
 
   const contact = entity as Record<string, unknown>;
 
@@ -656,9 +656,9 @@ export type CRMEntityType = 'deal' | 'lead' | 'contact';
  * Get entity type from entity
  */
 export function getEntityType(entity: CRMEntity): CRMEntityType {
-  if (isDeal(entity)) return 'deal';
-  if (isLead(entity)) return 'lead';
-  if (isContact(entity)) return 'contact';
+  if (isDeal(entity)) {return 'deal';}
+  if (isLead(entity)) {return 'lead';}
+  if (isContact(entity)) {return 'contact';}
 
   throw new Error('Unknown CRM entity type');
 }

@@ -64,7 +64,7 @@ export default function NewOrganizationPage() {
       if (response.ok) {
         const result = await response.json() as OrganizationCreateResponse;
         logger.info('Organization created', { orgId: result.id, file: 'page.tsx' });
-        router.push('/admin/organizations');
+        router.push('/dashboard/organizations');
       } else {
         const errorData = await response.json() as ErrorResponse;
         setError((errorData.error !== '' && errorData.error != null) ? errorData.error : 'Failed to create organization');
@@ -97,7 +97,7 @@ export default function NewOrganizationPage() {
           <p style={{ color: '#666', marginBottom: '2rem' }}>
             You need super admin privileges to create organizations.
           </p>
-          <Link href="/admin/organizations" style={{
+          <Link href="/dashboard/organizations" style={{
             display: 'inline-block',
             padding: '0.75rem 2rem',
             backgroundColor: '#6366f1',
@@ -120,7 +120,7 @@ export default function NewOrganizationPage() {
     <div style={{ padding: '2rem', color: '#fff', maxWidth: '800px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
-        <Link href="/admin/organizations" style={{ color: '#6366f1', textDecoration: 'none', fontSize: '0.875rem', marginBottom: '1rem', display: 'inline-block' }}>
+        <Link href="/dashboard/organizations" style={{ color: '#6366f1', textDecoration: 'none', fontSize: '0.875rem', marginBottom: '1rem', display: 'inline-block' }}>
           ← Back to Organizations
         </Link>
         <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
@@ -301,7 +301,7 @@ export default function NewOrganizationPage() {
               {loading ? 'Creating...' : 'Create Organization'}
             </button>
             <Link
-              href="/admin/organizations"
+              href="/dashboard/organizations"
               style={{
                 flex: 1,
                 padding: '0.75rem',

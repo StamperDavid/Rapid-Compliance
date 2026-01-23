@@ -13,7 +13,7 @@ export default function AuditLogsPage() {
 
   useEffect(() => {
     setTimeout(() => {
-      setLogs([
+      const mockLogs: AdminAuditLog[] = [
         {
           id: 'log-1',
           adminId: 'admin-1',
@@ -22,7 +22,7 @@ export default function AuditLogsPage() {
           resourceType: 'organization',
           resourceId: 'org-3',
           details: { reason: 'Payment failed' },
-          timestamp: new Date('2024-03-20T10:30:00') as any,
+          timestamp: { seconds: new Date('2024-03-20T10:30:00').getTime() / 1000, nanoseconds: 0 } as import('firebase/firestore').Timestamp,
         },
         {
           id: 'log-2',
@@ -32,7 +32,7 @@ export default function AuditLogsPage() {
           resourceType: 'user',
           resourceId: 'user-1',
           details: { reason: 'Support ticket #1234' },
-          timestamp: new Date('2024-03-20T09:15:00') as any,
+          timestamp: { seconds: new Date('2024-03-20T09:15:00').getTime() / 1000, nanoseconds: 0 } as import('firebase/firestore').Timestamp,
         },
         {
           id: 'log-3',
@@ -42,9 +42,10 @@ export default function AuditLogsPage() {
           resourceType: 'subscription',
           resourceId: 'sub-1',
           details: { plan: 'enterprise', previousPlan: 'pro' },
-          timestamp: new Date('2024-03-19T14:20:00') as any,
+          timestamp: { seconds: new Date('2024-03-19T14:20:00').getTime() / 1000, nanoseconds: 0 } as import('firebase/firestore').Timestamp,
         },
-      ]);
+      ];
+      setLogs(mockLogs);
       setLoading(false);
     }, 500);
   }, []);
@@ -132,7 +133,9 @@ export default function AuditLogsPage() {
               {filteredLogs.map((log) => (
                 <tr key={log.id} style={{ borderBottom: `1px solid ${borderColor}` }}>
                   <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#999' }}>
-                    {new Date(log.timestamp as any).toLocaleString()}
+                    {log.timestamp && typeof log.timestamp === 'object' && 'seconds' in log.timestamp
+                      ? new Date(log.timestamp.seconds * 1000).toLocaleString()
+                      : new Date().toLocaleString()}
                   </td>
                   <td style={{ padding: '1rem', fontSize: '0.875rem' }}>{log.adminEmail}</td>
                   <td style={{ padding: '1rem' }}>

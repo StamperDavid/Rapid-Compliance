@@ -101,7 +101,7 @@ export default function UserDetailPage() {
             The user you're looking for doesn't exist or couldn't be loaded.
           </p>
           <Link
-            href="/admin/users"
+            href="/dashboard/users"
             style={{
               display: 'inline-block',
               padding: '0.75rem 1.5rem',
@@ -124,7 +124,7 @@ export default function UserDetailPage() {
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <Link
-          href="/admin/users"
+          href="/dashboard/users"
           style={{
             color: '#666',
             textDecoration: 'none',
@@ -172,7 +172,7 @@ export default function UserDetailPage() {
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {hasPermission('canImpersonateUsers') && (
               <Link
-                href={`/admin/support/impersonate?userId=${user.id}`}
+                href={`/dashboard/support/impersonate?userId=${user.id}`}
                 style={{
                   padding: '0.75rem 1.5rem',
                   backgroundColor: primaryColor,
@@ -223,7 +223,7 @@ export default function UserDetailPage() {
             <InfoRow label="Organization ID" value={user.organizationId || 'None'} />
             {user.organizationId && (
               <Link
-                href={`/admin/organizations/${user.organizationId}`}
+                href={`/dashboard/organizations/${user.organizationId}`}
                 style={{
                   marginTop: '0.5rem',
                   color: primaryColor,

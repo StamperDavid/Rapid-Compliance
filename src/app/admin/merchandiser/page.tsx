@@ -179,9 +179,15 @@ function getStatusColor(status: PromotionStatus): string {
 }
 
 function getROIColor(roi: number): string {
-  if (roi >= 3.0) return "var(--color-success)";
-  if (roi >= 2.0) return "var(--color-info)";
-  if (roi >= 1.5) return "var(--color-warning)";
+  if (roi >= 3.0) {
+    return "var(--color-success)";
+  }
+  if (roi >= 2.0) {
+    return "var(--color-info)";
+  }
+  if (roi >= 1.5) {
+    return "var(--color-warning)";
+  }
   return "var(--color-error)";
 }
 
@@ -191,7 +197,6 @@ function getROIColor(roi: number): string {
 
 export default function MerchandiserPage() {
   const [selectedStrategy, setSelectedStrategy] = useState<NudgeStrategyId | null>(null);
-  const [_isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "strategies" | "create" | "analytics">(
     "overview"
   );

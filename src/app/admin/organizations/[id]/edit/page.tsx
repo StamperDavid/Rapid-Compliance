@@ -41,7 +41,7 @@ export default function EditOrganizationPage() {
   useEffect(() => {
     // Check permissions
     if (!hasPermission('canEditOrganizations')) {
-      router.push('/admin/organizations');
+      router.push('/dashboard/organizations');
       return;
     }
 
@@ -101,7 +101,7 @@ export default function EditOrganizationPage() {
       });
       
       setSaving(false);
-      router.push(`/admin/organizations/${orgId}`);
+      router.push(`/dashboard/organizations/${orgId}`);
     } catch (error) {
       logger.error('Failed to save organization', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       setSaving(false);
@@ -135,7 +135,7 @@ export default function EditOrganizationPage() {
             The organization you&apos;re looking for doesn&apos;t exist.
           </p>
           <Link
-            href="/admin/organizations"
+            href="/dashboard/organizations"
             style={{
               display: 'inline-block',
               padding: '0.75rem 1.5rem',
@@ -159,7 +159,7 @@ export default function EditOrganizationPage() {
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ marginBottom: '1rem' }}>
           <Link
-            href={`/admin/organizations/${orgId}`}
+            href={`/dashboard/organizations/${orgId}`}
             style={{
               color: '#666',
               textDecoration: 'none',
@@ -301,7 +301,7 @@ export default function EditOrganizationPage() {
           {/* Actions */}
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
             <Link
-              href={`/admin/organizations/${orgId}`}
+              href={`/dashboard/organizations/${orgId}`}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: 'transparent',

@@ -4,8 +4,7 @@
  * MOCK IMPLEMENTATION - Ready for backend integration
  */
 
-import type { Workflow} from '@/types/workflow';
-import { WorkflowTrigger } from '@/types/workflow';
+import type { Workflow } from '@/types/workflow';
 import { executeWorkflowImpl as executeWorkflow } from './workflow-engine';
 
 /**

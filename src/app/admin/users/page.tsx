@@ -216,7 +216,7 @@ export default function UsersPage() {
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                       <Link
-                        href={`/admin/users/${user.id}`}
+                        href={`/dashboard/users/${user.id}`}
                         style={{
                           padding: '0.375rem 0.75rem',
                           backgroundColor: 'transparent',
@@ -231,7 +231,7 @@ export default function UsersPage() {
                       </Link>
                       {hasPermission('canImpersonateUsers') && (
                         <Link
-                          href={`/admin/support/impersonate?userId=${user.id}`}
+                          href={`/dashboard/support/impersonate?userId=${user.id}`}
                           style={{
                             padding: '0.375rem 0.75rem',
                             backgroundColor: 'transparent',

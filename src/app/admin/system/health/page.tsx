@@ -13,16 +13,19 @@ export default function SystemHealthPage() {
   useEffect(() => {
     const loadHealth = () => {
       // In production, this would fetch from API
+      const now = new Date();
+      const mockTimestamp = { seconds: now.getTime() / 1000, nanoseconds: 0 } as import('firebase/firestore').Timestamp;
+
       setSystemHealth({
         status: 'healthy',
-        timestamp: new Date() as any,
+        timestamp: mockTimestamp,
         services: {
-          database: { status: 'healthy', responseTime: 12, lastChecked: new Date() as any },
-          storage: { status: 'healthy', responseTime: 45, lastChecked: new Date() as any },
-          ai: { status: 'healthy', responseTime: 234, lastChecked: new Date() as any },
-          email: { status: 'healthy', responseTime: 89, lastChecked: new Date() as any },
-          sms: { status: 'degraded', responseTime: 456, lastChecked: new Date() as any, message: 'Slightly elevated response times' },
-          api: { status: 'healthy', responseTime: 23, lastChecked: new Date() as any },
+          database: { status: 'healthy', responseTime: 12, lastChecked: mockTimestamp },
+          storage: { status: 'healthy', responseTime: 45, lastChecked: mockTimestamp },
+          ai: { status: 'healthy', responseTime: 234, lastChecked: mockTimestamp },
+          email: { status: 'healthy', responseTime: 89, lastChecked: mockTimestamp },
+          sms: { status: 'degraded', responseTime: 456, lastChecked: mockTimestamp, message: 'Slightly elevated response times' },
+          api: { status: 'healthy', responseTime: 23, lastChecked: mockTimestamp },
         },
         performance: {
           averageResponseTime: 89,
@@ -36,7 +39,7 @@ export default function SystemHealthPage() {
             severity: 'warning',
             service: 'sms',
             message: 'SMS service response time elevated',
-            timestamp: new Date() as any,
+            timestamp: mockTimestamp,
             resolved: false,
           },
         ],
@@ -59,7 +62,9 @@ export default function SystemHealthPage() {
     );
   }
 
-  if (!systemHealth) {return null;}
+  if (!systemHealth) {
+    return null;
+  }
 
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
@@ -107,7 +112,9 @@ export default function SystemHealthPage() {
             System Status: {systemHealth.status.toUpperCase()}
           </div>
           <div style={{ fontSize: '0.875rem', opacity: 0.9 }}>
-            Last updated: {new Date(systemHealth.timestamp as any).toLocaleString()}
+            Last updated: {systemHealth.timestamp && typeof systemHealth.timestamp === 'object' && 'seconds' in systemHealth.timestamp
+              ? new Date(systemHealth.timestamp.seconds * 1000).toLocaleString()
+              : new Date().toLocaleString()}
           </div>
         </div>
       </div>
@@ -141,7 +148,7 @@ export default function SystemHealthPage() {
         <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>Service Status</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
           {Object.entries(systemHealth.services).map(([service, status]) => (
-            <ServiceCard key={service} service={service} status={status} />
+            <ServiceCard key={service} service={service} serviceStatus={status} />
           ))}
         </div>
       </div>
@@ -168,7 +175,9 @@ export default function SystemHealthPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.25rem' }}>
                     <div style={{ fontWeight: '600' }}>{alert.service.toUpperCase()}</div>
                     <span style={{ fontSize: '0.75rem', color: '#666' }}>
-                      {new Date(alert.timestamp as any).toLocaleString()}
+                      {alert.timestamp && typeof alert.timestamp === 'object' && 'seconds' in alert.timestamp
+                        ? new Date(alert.timestamp.seconds * 1000).toLocaleString()
+                        : new Date().toLocaleString()}
                     </span>
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#999' }}>{alert.message}</div>
@@ -226,9 +235,12 @@ function MetricCard({ label, value, status }: { label: string; value: string; st
   );
 }
 
-function ServiceCard({ service, status }: { service: string; status: any }) {
-
+function ServiceCard({ service, serviceStatus }: { service: string; serviceStatus: import('@/types/admin').ServiceStatus }) {
   const borderColor = '#333';
+
+  const lastCheckedDate = serviceStatus.lastChecked && typeof serviceStatus.lastChecked === 'object' && 'seconds' in serviceStatus.lastChecked
+    ? new Date(serviceStatus.lastChecked.seconds * 1000)
+    : new Date();
 
   return (
     <div style={{
@@ -243,24 +255,24 @@ function ServiceCard({ service, status }: { service: string; status: any }) {
           fontSize: '0.75rem',
           padding: '0.25rem 0.5rem',
           borderRadius: '0.25rem',
-          backgroundColor: status.status === 'healthy' ? '#065f46' : status.status === 'degraded' ? '#78350f' : '#7f1d1d',
-          color: status.status === 'healthy' ? '#10b981' : status.status === 'degraded' ? '#f59e0b' : '#ef4444'
+          backgroundColor: serviceStatus.status === 'healthy' ? '#065f46' : serviceStatus.status === 'degraded' ? '#78350f' : '#7f1d1d',
+          color: serviceStatus.status === 'healthy' ? '#10b981' : serviceStatus.status === 'degraded' ? '#f59e0b' : '#ef4444'
         }}>
-          {status.status}
+          {serviceStatus.status}
         </span>
       </div>
-      {status.responseTime && (
+      {serviceStatus.responseTime && (
         <div style={{ fontSize: '0.75rem', color: '#666' }}>
-          Response: {status.responseTime}ms
+          Response: {serviceStatus.responseTime}ms
         </div>
       )}
-      {status.message && (
+      {serviceStatus.message && (
         <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem' }}>
-          {status.message}
+          {serviceStatus.message}
         </div>
       )}
       <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-        Last checked: {new Date(status.lastChecked).toLocaleTimeString()}
+        Last checked: {lastCheckedDate.toLocaleTimeString()}
       </div>
     </div>
   );

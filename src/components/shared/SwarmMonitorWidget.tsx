@@ -45,7 +45,7 @@ export function SwarmMonitorWidget({ compact = false, agents = SAMPLE_AGENTS }: 
     <div className="bg-[var(--color-bg-paper)] border border-[var(--color-border)] rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Agent Swarm</h3>
-        <Link href="/admin/swarm" className="text-sm text-[var(--color-primary)] hover:underline">
+        <Link href="/dashboard/swarm" className="text-sm text-[var(--color-primary)] hover:underline">
           Control Center
         </Link>
       </div>

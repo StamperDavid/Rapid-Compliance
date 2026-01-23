@@ -1895,3 +1895,489 @@ redirects: async () => [
 **Audit Method:** 3-Agent Parallel Investigation
 **Auditor:** Claude Opus 4.5
 **Status:** DIAGNOSTIC COMPLETE - AWAITING APPROVAL FOR IMPLEMENTATION
+
+---
+
+## PART XIII: PERMANENT PROJECT CONSTITUTION
+
+**Codified:** January 22, 2026
+**Authority:** Supreme Law of the AI Sales Platform Codebase
+**Enforcement:** ALL AI agents and human developers MUST adhere to these mandates
+
+---
+
+### MANDATE 1: ZERO SUPPRESSION POLICY
+
+The use of build-bypass mechanisms is a **violation of project integrity**.
+
+| Prohibited Pattern | Reason | Enforcement |
+|-------------------|--------|-------------|
+| `eslint: { ignoreDuringBuilds: true }` | Hides warnings that become technical debt | DELETE from next.config.js |
+| `typescript: { ignoreBuildErrors: true }` | Masks type errors that cause runtime failures | NEVER add to config |
+| `@ts-ignore` directives | Silences the type system | PROHIBITED - fix the type instead |
+| `// eslint-disable-next-line` | Bypasses lint rules | REQUIRES explicit justification comment |
+
+**CONSTITUTIONAL REQUIREMENT:** All builds MUST be 100% clean. Zero ESLint warnings. Zero TypeScript errors.
+
+---
+
+### MANDATE 2: STRICT TYPE INTEGRITY
+
+The use of `any` type or unsafe type assertions is **prohibited**.
+
+| Prohibited Pattern | Replacement |
+|-------------------|-------------|
+| `as any` | Define proper interface/type |
+| `catch (error: any)` | `catch (error: unknown)` with type narrowing |
+| `Record<string, any>` | `Record<string, unknown>` or explicit interface |
+| Untyped function parameters | Explicit parameter types |
+| Implicit `any` returns | Explicit return type annotations |
+
+**KEY DATA STRUCTURES REQUIRING STRICT TYPING:**
+
+1. **AI Army Types** (`src/types/agent.ts`):
+   - `AgentSpecialist` - Base specialist interface
+   - `AgentManager` - Manager orchestration interface
+   - `AgentSignal` - Cross-agent communication type
+   - `TenantContext` - Tenant-scoped operation context
+
+2. **Onboarding DNA Types** (`src/types/onboarding.ts`):
+   - `OnboardingStage` - Stage progression tracking
+   - `IndustryNiche` - Dynamic niche refinement
+   - `BasePersona` - Industry-loaded persona template
+   - `RefinedPersona` - Niche-modified final persona
+
+3. **RBAC Types** (`src/types/unified-rbac.ts`):
+   - `AccountRole` - Role hierarchy (platform_admin → employee)
+   - `UnifiedUser` - Cross-context user representation
+   - `UnifiedPermissions` - Permission matrix per role
+
+---
+
+### MANDATE 3: ADMIN-FIRST GLOBAL RBAC
+
+The `platform_admin` role is a **global entity** that transcends tenant boundaries.
+
+**AUTHENTICATION FLOW REQUIREMENTS:**
+
+```
+User authenticates via Firebase
+         │
+         ▼
+Check isPlatformAdmin FIRST
+         │
+    ┌────┴────┐
+    │ YES     │ NO
+    ▼         ▼
+Skip tenant  Require tenant_id
+validation   from claims/profile
+    │         │
+    ▼         ▼
+Grant global Load tenant-scoped
+permissions  permissions
+```
+
+**IMPLEMENTATION REQUIREMENTS:**
+
+1. **Unified Auth Hook** (`src/hooks/useUnifiedAuth.ts`):
+   - Check `platform_admin` status BEFORE tenant fetch
+   - If admin, grant full permissions WITHOUT requiring `tenantId`
+   - If NOT admin, require valid `tenantId` or return unauthenticated
+
+2. **API Route Guards** (`src/lib/api/admin-auth.ts`):
+   - Platform admins bypass organization checks
+   - Platform admins can access ANY organization's data
+   - Permission-denied loops MUST NOT occur for valid admins
+
+3. **Middleware** (`src/middleware.ts`):
+   - `/admin/*` routes: Verify admin role only
+   - `/workspace/[orgId]/*` routes: Verify tenant membership OR admin role
+
+---
+
+### MANDATE 4: UI CLEANLINESS (FEATURE TOGGLE COMPLIANCE)
+
+When a tool/feature is toggled OFF, the system MUST **programmatically hide** all associated UI elements.
+
+**REQUIREMENTS:**
+
+| UI Element | Visibility Condition |
+|------------|---------------------|
+| Navigation items | `featureFlags[feature].enabled === true` |
+| Dashboard widgets | `featureFlags[feature].enabled === true` |
+| Action buttons | `featureFlags[feature].enabled === true` |
+| Menu entries | `featureFlags[feature].enabled === true` |
+
+**IMPLEMENTATION PATTERN:**
+
+```typescript
+// CORRECT: Conditional rendering based on feature flag
+{featureFlags.socialMedia.enabled && (
+  <NavItem href="/admin/social" icon={Twitter}>
+    Social Media
+  </NavItem>
+)}
+
+// WRONG: Always render, disable interaction
+<NavItem
+  href="/admin/social"
+  disabled={!featureFlags.socialMedia.enabled}  // ❌ Still visible
+>
+  Social Media
+</NavItem>
+```
+
+**FEATURE FLAG SOURCE:** `src/lib/orchestrator/feature-toggle-service.ts`
+
+---
+
+## PART XIV: THE COMPREHENSIVE CLIENT JOURNEY ("AI ARMY" PIPELINE)
+
+This documents the exact flow from lead capture to AI Army deployment.
+
+### Stage 1: Lead Capture
+
+```
+Client clicks "Free Trial" button (public/pricing or public/signup)
+         │
+         ▼
+Redirect to /signup with ?plan=trial query param
+         │
+         ▼
+Display SignupForm component
+```
+
+**Entry Points:**
+- `/src/app/(public)/pricing/page.tsx` - "Start Free Trial" button
+- `/src/app/(public)/signup/page.tsx` - Signup form
+
+### Stage 2: Initial Input (Industry Selection)
+
+```
+Client enters:
+├── Email address
+├── Password
+├── Company name
+└── INDUSTRY SELECTION ◄── CRITICAL: Triggers Base Persona Load
+```
+
+**Industry Options:** (from `src/lib/setup/industry-templates.ts`)
+- General/Other
+- Transportation & Logistics
+- Professional Services
+- E-commerce & Retail
+- Real Estate
+- Legal Services
+- Healthcare
+- Home Services
+- SaaS/Technology
+
+### Stage 3: Financial Commitment
+
+```
+Client enters Credit Card information
+         │
+         ▼
+Stripe Elements component captures payment method
+         │
+         ▼
+Payment method attached to Stripe Customer
+         │
+         ▼
+Trial subscription created (14 days, then auto-charge)
+```
+
+**Payment Processing:**
+- Stripe Elements: `src/components/billing/StripeElements.tsx`
+- Subscription API: `/api/billing/subscribe`
+- Webhook Handler: `/api/webhooks/stripe`
+
+### Stage 4: Onboarding Phase 1 (Base Load)
+
+```
+Upon Industry selection:
+         │
+         ▼
+System loads BASE PERSONAS for ALL 35 AI specialists
+         │
+         ▼
+Personas are industry-generic (e.g., "Healthcare Sales Qualifier")
+         │
+         ▼
+Stored in TenantMemoryVault under 'base_personas' key
+```
+
+**Base Persona Structure:**
+```typescript
+interface BasePersona {
+  agentId: string;           // e.g., "sales-qualifier"
+  industry: string;          // e.g., "healthcare"
+  baseInstructions: string;  // Industry-generic prompt
+  capabilities: string[];    // Agent capabilities
+  tone: string;              // Communication style
+}
+```
+
+**Persona Templates:** `src/lib/persona/templates/*.ts`
+
+### Stage 5: Onboarding Phase 2 (Niche Refinement)
+
+```
+Client answers dynamic questions:
+         │
+         ├── "What specific services do you offer?"
+         ├── "Who is your ideal customer?"
+         ├── "What makes you different from competitors?"
+         └── "What is your company's brand voice?"
+         │
+         ▼
+System extracts:
+├── Industry NICHE (e.g., "Dental Practice Management")
+├── Company BRAND (e.g., "Modern, tech-forward, patient-first")
+└── Market DIFFERENTIATORS (e.g., "24/7 AI scheduling, same-day appointments")
+```
+
+**Onboarding Wizard:** `src/app/workspace/[orgId]/onboarding/page.tsx`
+**Question Engine:** `src/lib/onboarding/question-engine.ts`
+
+### Stage 6: Dynamic Persona Modification
+
+```
+System uses Niche/Brand/Differentiator data to MODIFY base personas:
+         │
+         ▼
+Each of 35 specialists gets REFINED PERSONA:
+├── BaseInstructions → NicheInstructions
+├── Generic tone → Brand-specific tone
+├── General capabilities → Niche-specific applications
+         │
+         ▼
+Refined personas stored in TenantMemoryVault under 'refined_personas' key
+```
+
+**Persona Refinement Logic:**
+```typescript
+function refinePersona(
+  base: BasePersona,
+  niche: IndustryNiche,
+  brand: CompanyBrand,
+  differentiators: string[]
+): RefinedPersona {
+  return {
+    ...base,
+    instructions: injectNicheContext(base.baseInstructions, niche),
+    tone: alignToBrand(base.tone, brand),
+    differentiators: differentiators,
+    nicheApplications: mapCapabilitiesToNiche(base.capabilities, niche),
+  };
+}
+```
+
+### Stage 7: Introduction to Primary Assistant
+
+```
+Client is introduced to their PRIMARY AI ASSISTANT (Jasper/The Manager)
+         │
+         ▼
+Jasper presents:
+├── Overview of available specialist agents
+├── Quick-start actions (e.g., "Let's post to social media")
+└── Workspace dashboard with widgets
+```
+
+**Jasper Interface:** `src/components/ai/JasperAssistant.tsx`
+**Chat API:** `/api/agent/chat`
+
+### Stage 8: Orchestration Logic
+
+```
+PRIMARY ASSISTANT manages specialist agents as TOOLS:
+         │
+         ▼
+Client request: "Post to Facebook"
+         │
+         ▼
+Jasper (Manager):
+├── Parses intent
+├── Selects Facebook Specialist agent
+├── Provides refined prompt using persona
+├── Executes specialist task
+└── Returns result to client
+```
+
+**Orchestration Chain:**
+```
+User Request → Jasper (L1 Orchestrator)
+                    │
+                    ▼
+              Marketing Manager (L2)
+                    │
+                    ▼
+              Facebook Specialist (L3) → Executes task
+                    │
+                    ▼
+              Result → Jasper → User
+```
+
+### Stage 9: User Preference Execution
+
+```
+Based on client's interaction preference:
+         │
+    ┌────┴────┐
+    │         │
+AUTONOMOUS    GUIDED
+    │         │
+    ▼         ▼
+Execute     Provide
+directly    step-by-step
+            instructions
+```
+
+**Preference Settings:** `src/app/workspace/[orgId]/settings/preferences/page.tsx`
+
+---
+
+## PART XV: THE COMPREHENSIVE ADMIN JOURNEY ("DOGFOODING" PATH)
+
+This documents how Platform Admin uses the same tools as clients.
+
+### Admin as Client Zero
+
+The Platform Admin IS the first client of the platform. They use SalesVelocity.ai's own tools to:
+1. Generate leads for the platform itself
+2. Manage social media for @SalesVelocityAI
+3. Run email campaigns to prospective customers
+4. Use the AI Army to sell the AI Army
+
+### Unified Command Center
+
+```
+Admin operates from SINGLE unified dashboard:
+         │
+         ▼
+CEO COMMAND CENTER (/admin)
+├── 🏢 Platform Management
+│   ├── Organizations (view/edit all tenants)
+│   ├── Users (manage all users)
+│   ├── Billing (Stripe dashboard)
+│   ├── System Health (API/DB status)
+│   └── Feature Flags (toggle features)
+│
+├── 📊 Business Operations (SalesVelocity.ai Internal)
+│   ├── CRM (platform's own leads/deals)
+│   ├── Social Media (platform accounts)
+│   ├── Email Campaigns (marketing to prospects)
+│   ├── Voice AI (sales call automation)
+│   └── Analytics (platform metrics)
+│
+└── 🤖 AI Workforce
+    ├── Specialist Registry (35 agents)
+    ├── Jasper Training Lab
+    └── Swarm Execution
+```
+
+### Platform Selling ("Eating Own Dog Food")
+
+```
+Admin uses EXACT SAME tools as clients to sell the platform:
+         │
+         ▼
+Lead Scraper → Finds companies that need AI sales automation
+         │
+         ▼
+Social Media AI → Posts thought leadership content
+         │
+         ▼
+Email Specialist → Runs outreach sequences
+         │
+         ▼
+Voice Agent → Handles inbound demo requests
+         │
+         ▼
+CRM → Tracks deals through pipeline
+         │
+         ▼
+Deal Closer → Generates proposals and closes
+```
+
+### Feature Toggling for Tenants
+
+```
+Admin manages tool availability per tenant:
+         │
+         ▼
+Feature Toggle Panel (/admin/system/flags)
+├── Global Features (all tenants)
+│   ├── Social Media AI: ON/OFF
+│   ├── Voice Agents: ON/OFF
+│   ├── Lead Scraper: ON/OFF
+│   └── etc.
+│
+└── Per-Tenant Overrides
+    ├── org-123: Social Media = OFF (override global)
+    └── org-456: Voice Agents = ON (inherit global)
+```
+
+**CRITICAL REQUIREMENT:** When a feature is toggled OFF:
+1. API endpoints return 403 Forbidden
+2. UI elements are HIDDEN (not disabled)
+3. Webhooks are disabled
+4. Background jobs are paused
+
+### Seamless Context Switching
+
+```
+Admin can switch between:
+         │
+    ┌────┴────┐
+    │         │
+Platform    Tenant
+Context     Context
+    │         │
+    ▼         ▼
+/admin/*   /workspace/[orgId]/*
+    │         │
+    ▼         ▼
+Global     Scoped to
+access     specific org
+```
+
+**REQUIREMENT:** Admin MUST NEVER encounter:
+- "Missing Permissions" errors when accessing any route
+- 404 loops when navigating between contexts
+- Infinite loading when tenant profile not found
+
+---
+
+## PART XVI: IMMEDIATE EXECUTION CHECKLIST
+
+### ✅ Step 1: Constitution Codified
+
+This document now contains the permanent project constitution.
+
+### ⏳ Step 2: Remove ESLint Bypass
+
+**File:** `next.config.js`
+**Action:** DELETE lines 8-11 (eslint: { ignoreDuringBuilds: true })
+
+### ⏳ Step 3: Refactor useUnifiedAuth
+
+**File:** `src/hooks/useUnifiedAuth.ts`
+**Actions:**
+1. DELETE `createDemoUser()` function
+2. If `firebaseUser` is null, return `{ user: null, loading: false }`
+3. If user is `platform_admin`, skip tenant fetch, grant full permissions
+4. If user is tenant user but no profile found, return `{ user: null }` (not demo fallback)
+
+### ⏳ Step 4: Audit Build Warnings
+
+**Command:** `npm run build`
+**Objective:** Identify the core type file causing the largest cascade
+**Expected:** TypeScript will reveal the root cause now that ESLint bypass is removed
+
+---
+
+**Constitution Codified:** January 22, 2026
+**Authority:** Claude Opus 4.5 per User Directive
+**Status:** PERMANENT - NO AMENDMENTS WITHOUT USER APPROVAL

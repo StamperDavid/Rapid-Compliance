@@ -167,9 +167,21 @@ const INTEGRATION_CARDS: IntegrationCard[] = [
   },
 ];
 
+interface IntegrationData {
+  [key: string]: string | undefined;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+interface IntegrationSettings {
+  [integrationId: string]: IntegrationData | string | undefined;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export default function AdminAPIKeysPageNew() {
   const { adminUser } = useAdminAuth();
-  const [keys, setKeys] = useState<Record<string, any>>({});
+  const [keys, setKeys] = useState<IntegrationSettings>({});
   const [loading, setLoading] = useState(true);
   const [selectedIntegration, setSelectedIntegration] = useState<IntegrationCard | null>(null);
   const [modalData, setModalData] = useState<Record<string, string>>({});
@@ -178,14 +190,14 @@ export default function AdminAPIKeysPageNew() {
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
-    loadKeys();
+    void loadKeys();
   }, []);
 
   const loadKeys = async () => {
     try {
       const adminSettings = await FirestoreService.get('admin', 'platform-api-keys');
       if (adminSettings) {
-        setKeys(adminSettings as Record<string, any>);
+        setKeys(adminSettings as IntegrationSettings);
       }
     } catch (error) {
       logger.error('Error loading API keys:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -196,15 +208,17 @@ export default function AdminAPIKeysPageNew() {
 
   const openIntegrationModal = (integration: IntegrationCard) => {
     setSelectedIntegration(integration);
-    
+
     // Load existing data for this integration
     const existingData: Record<string, string> = {};
-    const integrationData = keys[integration.id] ?? {};
-    
+    const rawData = keys[integration.id];
+    const integrationData: IntegrationData = (typeof rawData === 'object' && rawData !== null) ? rawData : {};
+
     integration.fields.forEach(field => {
-      existingData[field.key] = (integrationData[field.key] !== '' && integrationData[field.key] != null) ? integrationData[field.key] : '';
+      const value = integrationData[field.key];
+      existingData[field.key] = (value !== '' && value != null) ? value : '';
     });
-    
+
     setModalData(existingData);
     setShowKeys({});
   };
@@ -216,31 +230,37 @@ export default function AdminAPIKeysPageNew() {
   };
 
   const saveIntegration = async () => {
-    if (!selectedIntegration) {return;}
-    
+    if (!selectedIntegration) {
+      return;
+    }
+
     setIsSaving(true);
     setSaveMessage(null);
 
     try {
-      const updatedKeys = {
-        ...keys,
-        [selectedIntegration.id]: modalData,
+      const integrationDataWithMeta: IntegrationData = {
+        ...modalData,
         updatedAt: new Date().toISOString(),
         updatedBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : 'admin',
       };
+      const updatedKeys: IntegrationSettings = {
+        ...keys,
+        [selectedIntegration.id]: integrationDataWithMeta,
+      };
 
       await FirestoreService.set('admin', 'platform-api-keys', updatedKeys);
-      
+
       setKeys(updatedKeys);
       setSaveMessage({ type: 'success', message: `${selectedIntegration.name} configured successfully!` });
-      
+
       setTimeout(() => {
         closeModal();
         setSaveMessage(null);
       }, 1500);
-      
-    } catch (error: any) {
-      setSaveMessage({ type: 'error', message: (error.message !== '' && error.message != null) ? error.message : 'Failed to save configuration' });
+
+    } catch (error) {
+      const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to save configuration';
+      setSaveMessage({ type: 'error', message: errorMessage });
     } finally {
       setIsSaving(false);
     }
@@ -248,8 +268,10 @@ export default function AdminAPIKeysPageNew() {
 
   const isIntegrationConfigured = (integrationId: string) => {
     const integrationData = keys[integrationId];
-    if (!integrationData) {return false;}
-    
+    if (!integrationData) {
+      return false;
+    }
+
     // Check if at least one field has a value
     return Object.values(integrationData).some(value => value && value !== '');
   };
@@ -276,7 +298,7 @@ export default function AdminAPIKeysPageNew() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/admin/system/settings" className="text-indigo-400 hover:text-indigo-300 mb-4 inline-block">
+          <Link href="/dashboard/system/settings" className="text-indigo-400 hover:text-indigo-300 mb-4 inline-block">
             ← Back to System Settings
           </Link>
           <div className="flex justify-between items-start">
@@ -287,7 +309,7 @@ export default function AdminAPIKeysPageNew() {
               </p>
             </div>
             <button
-              onClick={() => alert('Custom integration builder coming soon! For now, contact support to add custom integrations.')}
+              onClick={() => console.error('Custom integration builder coming soon! For now, contact support to add custom integrations.')}
               className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2"
             >
               <span>➕</span> Add Custom Integration
@@ -307,7 +329,9 @@ export default function AdminAPIKeysPageNew() {
         {/* Categories */}
         {categories.map(category => {
           const categoryIntegrations = INTEGRATION_CARDS.filter(i => i.category === category.id);
-          if (categoryIntegrations.length === 0) {return null;}
+          if (categoryIntegrations.length === 0) {
+            return null;
+          }
 
           return (
             <div key={category.id} className="mb-10">
@@ -366,7 +390,7 @@ export default function AdminAPIKeysPageNew() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button
-              onClick={() => alert('Custom integration builder coming soon! For now, contact support to add custom integrations.')}
+              onClick={() => console.error('Custom integration builder coming soon! For now, contact support to add custom integrations.')}
               className="bg-gray-900 hover:bg-gray-800 border-2 border-dashed border-gray-700 hover:border-gray-600 rounded-lg p-6 text-left transition-all group"
             >
               <div className="text-4xl mb-3">➕</div>
@@ -453,7 +477,7 @@ export default function AdminAPIKeysPageNew() {
                           onClick={() => setShowKeys(prev => ({ ...prev, [field.key]: !prev[field.key] }))}
                           className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-200"
                         >
-                          {showKeys[field.key] ? '👁️' : '👁️‍🗨️'}
+                          {showKeys[field.key] ? '👁️' : '👁'}
                         </button>
                       )}
                     </div>
@@ -467,7 +491,7 @@ export default function AdminAPIKeysPageNew() {
               {selectedIntegration.getStartedUrl && (
                 <div className="mt-6 bg-blue-900/20 border border-blue-800 rounded p-4">
                   <p className="text-sm text-blue-200 mb-2">
-                    Don't have an API key yet?
+                    Don&apos;t have an API key yet?
                   </p>
                   <a
                     href={selectedIntegration.getStartedUrl}
@@ -475,7 +499,7 @@ export default function AdminAPIKeysPageNew() {
                     rel="noopener noreferrer"
                     className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
                   >
-                    Get started with {selectedIntegration.name} →
+                    Get started with {selectedIntegration.name} &rarr;
                   </a>
                 </div>
               )}
@@ -490,7 +514,7 @@ export default function AdminAPIKeysPageNew() {
                 Cancel
               </button>
               <button
-                onClick={saveIntegration}
+                onClick={() => void saveIntegration()}
                 disabled={isSaving}
                 className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
               >

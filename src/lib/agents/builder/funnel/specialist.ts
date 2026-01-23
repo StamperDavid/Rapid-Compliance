@@ -842,13 +842,13 @@ export class FunnelEngineer extends BaseSpecialist {
     let rate = baseRates[stageName] || 0.5;
 
     // Adjust for funnel type
-    if (funnelType === 'leadMagnet' && stageName === 'interest') rate *= 1.4;
-    if (funnelType === 'applicationFunnel' && stageName === 'intent') rate *= 1.6;
-    if (funnelType === 'tripwire' && stageName === 'conversion') rate *= 1.3;
+    if (funnelType === 'leadMagnet' && stageName === 'interest') {rate *= 1.4;}
+    if (funnelType === 'applicationFunnel' && stageName === 'intent') {rate *= 1.6;}
+    if (funnelType === 'tripwire' && stageName === 'conversion') {rate *= 1.3;}
 
     // Adjust for price point
-    if (pricePoint === 'high' && stageName === 'conversion') rate *= 0.4;
-    if (pricePoint === 'low' && stageName === 'conversion') rate *= 1.5;
+    if (pricePoint === 'high' && stageName === 'conversion') {rate *= 0.4;}
+    if (pricePoint === 'low' && stageName === 'conversion') {rate *= 1.5;}
 
     return Math.min(Math.max(rate, 0.05), 0.95);
   }
@@ -862,7 +862,7 @@ export class FunnelEngineer extends BaseSpecialist {
   }
 
   private estimateCPA(trafficSource?: string, pricePoint?: string): string {
-    if (!trafficSource) return 'Varies by traffic source';
+    if (!trafficSource) {return 'Varies by traffic source';}
 
     const baseCPA: Record<string, number> = {
       organic: 0,
@@ -874,8 +874,8 @@ export class FunnelEngineer extends BaseSpecialist {
 
     let cpa = baseCPA[trafficSource] || 45;
 
-    if (pricePoint === 'high') cpa *= 2.5;
-    if (pricePoint === 'low') cpa *= 0.6;
+    if (pricePoint === 'high') {cpa *= 2.5;}
+    if (pricePoint === 'low') {cpa *= 0.6;}
 
     return `$${cpa.toFixed(0)} (estimated)`;
   }
@@ -1125,9 +1125,9 @@ export class FunnelEngineer extends BaseSpecialist {
   // ==========================================================================
 
   private determineSequenceType(leadType: string, fieldCount: number, nurturePlan: string): string {
-    if (fieldCount <= 2) return 'Single-step opt-in';
-    if (fieldCount <= 4) return 'Two-step opt-in';
-    if (nurturePlan === 'qualification-call') return 'Multi-step application';
+    if (fieldCount <= 2) {return 'Single-step opt-in';}
+    if (fieldCount <= 4) {return 'Two-step opt-in';}
+    if (nurturePlan === 'qualification-call') {return 'Multi-step application';}
     return 'Progressive profiling';
   }
 
@@ -1163,8 +1163,8 @@ export class FunnelEngineer extends BaseSpecialist {
   private calculateStepExitRate(stepNumber: number, leadType: string, fieldCount: number): number {
     let baseRate = stepNumber === 1 ? 15 : 25 * stepNumber;
 
-    if (leadType === 'cold') baseRate *= 1.5;
-    if (leadType === 'hot') baseRate *= 0.6;
+    if (leadType === 'cold') {baseRate *= 1.5;}
+    if (leadType === 'hot') {baseRate *= 0.6;}
 
     baseRate += fieldCount * 3; // Each additional field adds friction
 
@@ -1321,9 +1321,9 @@ export class FunnelEngineer extends BaseSpecialist {
     const benchmark = benchmarks[trafficSource] || 0.04;
     const performance = currentConversion / benchmark;
 
-    if (performance > 1.5) return `Excellent - ${(performance * 100).toFixed(0)}% above benchmark`;
-    if (performance > 1.1) return `Good - ${((performance - 1) * 100).toFixed(0)}% above benchmark`;
-    if (performance > 0.9) return 'At benchmark - room for optimization';
+    if (performance > 1.5) {return `Excellent - ${(performance * 100).toFixed(0)}% above benchmark`;}
+    if (performance > 1.1) {return `Good - ${((performance - 1) * 100).toFixed(0)}% above benchmark`;}
+    if (performance > 0.9) {return 'At benchmark - room for optimization';}
     return `Below benchmark - ${((1 - performance) * 100).toFixed(0)}% improvement opportunity`;
   }
 

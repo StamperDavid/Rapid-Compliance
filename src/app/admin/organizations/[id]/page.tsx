@@ -110,7 +110,7 @@ export default function OrganizationDetailPage() {
             The organization you&apos;re looking for doesn&apos;t exist.
           </p>
           <Link
-            href="/admin/organizations"
+            href="/dashboard/organizations"
             style={{
               display: 'inline-block',
               padding: '0.75rem 1.5rem',
@@ -134,7 +134,7 @@ export default function OrganizationDetailPage() {
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ marginBottom: '1rem' }}>
           <Link
-            href="/admin/organizations"
+            href="/dashboard/organizations"
             style={{
               color: '#666',
               textDecoration: 'none',
@@ -182,7 +182,7 @@ export default function OrganizationDetailPage() {
           </div>
           {hasPermission('canEditOrganizations') && (
             <Link
-              href={`/admin/organizations/${organization.id}/edit`}
+              href={`/dashboard/organizations/${organization.id}/edit`}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: primaryColor,

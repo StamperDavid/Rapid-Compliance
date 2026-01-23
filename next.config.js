@@ -5,11 +5,9 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
-  // ESLint - allow build despite warnings (we'll fix them incrementally)
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  
+  // ESLint - ZERO SUPPRESSION POLICY (per Project Constitution)
+  // All builds must be 100% clean. No bypass mechanisms allowed.
+
   // Image optimization
   images: {
     domains: ['localhost', 'firebasestorage.googleapis.com'],

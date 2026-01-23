@@ -843,7 +843,7 @@ export class AssetGenerator extends BaseSpecialist {
 
     const negativePrompts = 'no text, no letters, no words, no photographs, no realistic images, no clutter, no complex details';
 
-    return `Professional ${layout} logo design for "${brandName}", ${styleDescriptors[style]}, ${industryElements[industry as keyof typeof industryElements] ?? 'industry-appropriate elements'}, ${colorScheme}, ${layoutDescriptor[layout]}${taglineText}, flat design, vector-style, high-resolution, clean and scalable, modern brand identity. ${negativePrompts}`;
+    return `Professional ${layout} logo design for "${brandName}", ${styleDescriptors[style]}, ${industryElements[industry] ?? 'industry-appropriate elements'}, ${colorScheme}, ${layoutDescriptor[layout]}${taglineText}, flat design, vector-style, high-resolution, clean and scalable, modern brand identity. ${negativePrompts}`;
   }
 
   /**

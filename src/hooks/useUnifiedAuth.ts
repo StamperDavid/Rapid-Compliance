@@ -63,21 +63,13 @@ export interface UseUnifiedAuthReturn {
 }
 
 /**
- * Create a demo user for development/demo mode
+ * REMOVED: createDemoUser()
+ * Per Project Constitution (GROUND_TRUTH_DISCOVERY.md Part XIII):
+ * - Demo user fallbacks mask authentication issues
+ * - If user is not authenticated, return null (not a fake user)
+ * - Platform admins must be verified via /api/admin/verify
+ * - Tenant users must have valid profile in Firestore
  */
-function createDemoUser(): UnifiedUser {
-  return {
-    id: 'demo-user',
-    email: 'admin@demo.com',
-    displayName: 'Demo Admin',
-    role: 'owner',
-    tenantId: 'demo-org',
-    status: 'active',
-    mfaEnabled: false,
-    createdAt: Timestamp.now(),
-    lastLoginAt: Timestamp.now(),
-  };
-}
 
 /**
  * Verify if user is a platform admin via the admin API
@@ -255,12 +247,12 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
   useEffect(() => {
     // Check if Firebase is configured
     if (!isFirebaseConfigured || !auth) {
-      // Demo mode - use demo user
-      const demoUser = createDemoUser();
-      setUser(demoUser);
-      setPermissions(getUnifiedPermissions(demoUser.role));
+      // Firebase not configured - user is unauthenticated
+      // Per Project Constitution: NO demo user fallbacks
+      setUser(null);
+      setPermissions(null);
       setLoading(false);
-      logger.info('Using demo mode (Firebase not configured)', {
+      logger.warn('Firebase not configured - user unauthenticated', {
         file: 'useUnifiedAuth.ts',
       });
       return;
@@ -270,12 +262,12 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       void (async () => {
         if (!firebaseUser) {
-          // No Firebase user - use demo mode
-          const demoUser = createDemoUser();
-          setUser(demoUser);
-          setPermissions(getUnifiedPermissions(demoUser.role));
+          // No Firebase user - user is unauthenticated
+          // Per Project Constitution: NO demo user fallbacks
+          setUser(null);
+          setPermissions(null);
           setLoading(false);
-          logger.info('No Firebase user, using demo mode', {
+          logger.info('No Firebase user - unauthenticated', {
             file: 'useUnifiedAuth.ts',
           });
           return;
@@ -285,7 +277,8 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
           // Get Firebase ID token for API calls
           const idToken = await firebaseUser.getIdToken();
 
-          // Step 1: Try to verify as platform admin
+          // ADMIN-FIRST: Check platform_admin status BEFORE tenant fetch
+          // Per Project Constitution (Mandate 3): Platform admin is global entity
           const platformAdminUser = await verifyPlatformAdmin(
             firebaseUser.uid,
             firebaseUser.email,
@@ -293,14 +286,18 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
           );
 
           if (platformAdminUser) {
-            // User is platform admin
+            // User is platform admin - grant full permissions WITHOUT tenant
             setUser(platformAdminUser);
             setPermissions(getUnifiedPermissions('platform_admin'));
             setLoading(false);
+            logger.info('Platform admin authenticated - full permissions granted', {
+              userId: firebaseUser.uid,
+              file: 'useUnifiedAuth.ts',
+            });
             return;
           }
 
-          // Step 2: Load as tenant user from Firestore
+          // Not a platform admin - load tenant user profile
           const tenantUser = await loadTenantUserProfile(
             firebaseUser.uid,
             firebaseUser.email,
@@ -308,33 +305,27 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
           );
 
           if (tenantUser) {
-            // User is tenant user
+            // User is valid tenant user
             setUser(tenantUser);
             setPermissions(getUnifiedPermissions(tenantUser.role));
             setLoading(false);
             return;
           }
 
-          // Step 3: Fallback - create basic user profile
-          logger.warn('Could not load user profile, using fallback', {
-            userId: firebaseUser.uid,
-            file: 'useUnifiedAuth.ts',
-          });
+          // No valid profile found - user is authenticated but not provisioned
+          // Per Project Constitution: NO demo user fallbacks
+          logger.error(
+            'Firebase user has no profile - not provisioned',
+            new Error('User not provisioned'),
+            {
+              userId: firebaseUser.uid,
+              email: firebaseUser.email,
+              file: 'useUnifiedAuth.ts',
+            }
+          );
 
-          const fallbackUser: UnifiedUser = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email ?? '',
-            displayName: firebaseUser.displayName ?? 'User',
-            role: 'employee',
-            tenantId: 'demo-org', // Fallback tenant
-            status: 'active',
-            mfaEnabled: false,
-            createdAt: Timestamp.now(),
-            lastLoginAt: Timestamp.now(),
-          };
-
-          setUser(fallbackUser);
-          setPermissions(getUnifiedPermissions('employee'));
+          setUser(null);
+          setPermissions(null);
           setLoading(false);
         } catch (error) {
           logger.error(
@@ -343,10 +334,10 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
             { file: 'useUnifiedAuth.ts' }
           );
 
-          // Fallback to demo mode on error
-          const demoUser = createDemoUser();
-          setUser(demoUser);
-          setPermissions(getUnifiedPermissions(demoUser.role));
+          // On error - user is unauthenticated
+          // Per Project Constitution: NO demo user fallbacks on error
+          setUser(null);
+          setPermissions(null);
           setLoading(false);
         }
       })();

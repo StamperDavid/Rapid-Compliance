@@ -311,7 +311,7 @@ export async function POST(request: NextRequest) {
 
     // Use single model with RAG (MVP approach - proven to work)
     const { AIProviderFactory } = await import('@/lib/ai/provider-factory');
-    const provider = await AIProviderFactory.createProvider(selectedModel, orgId);
+    const provider = AIProviderFactory.createProvider(selectedModel, orgId);
 
     const startTime = Date.now();
     const response: AIResponse = await provider.generateResponse(

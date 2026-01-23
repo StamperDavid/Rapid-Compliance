@@ -11,6 +11,23 @@ const subdomainCache = new Map<string, string>();
 const customDomainCache = new Map<string, string>();
 
 /**
+ * API Response Types
+ */
+interface SubdomainApiResponse {
+  success: boolean;
+  organizationId: string;
+  subdomain: string;
+}
+
+interface DomainApiResponse {
+  success: boolean;
+  organizationId: string;
+  domain: string;
+  verified: boolean;
+  sslEnabled: boolean;
+}
+
+/**
  * Get organization ID from subdomain
  * Format: {subdomain}.yourplatform.com → organizationId
  */
@@ -34,8 +51,8 @@ async function getOrgBySubdomain(subdomain: string): Promise<string | null> {
     );
 
     if (response.ok) {
-      const data = await response.json();
-      const orgId = data.organizationId;
+      const data = await response.json() as SubdomainApiResponse;
+      const orgId: string = data.organizationId;
 
       // Cache for 5 minutes
       subdomainCache.set(subdomain, orgId);
@@ -74,8 +91,8 @@ async function getOrgByCustomDomain(domain: string): Promise<string | null> {
     );
 
     if (response.ok) {
-      const data = await response.json();
-      const orgId = data.organizationId;
+      const data = await response.json() as DomainApiResponse;
+      const orgId: string = data.organizationId;
 
       // Cache for 5 minutes
       customDomainCache.set(domain, orgId);
@@ -106,6 +123,50 @@ export async function middleware(request: NextRequest) {
     pathname.includes('.') // Static files
   ) {
     return NextResponse.next();
+  }
+
+  // LEGACY ROUTE REDIRECTS (308 Permanent Redirect)
+  // Redirect old admin routes to new unified dashboard
+  if (pathname.startsWith('/admin')) {
+    const newUrl = request.nextUrl.clone();
+
+    // Special cases that stay in /admin namespace
+    const adminExceptions = [
+      '/admin/login',
+      '/admin/organizations',
+      '/admin/users',
+      '/admin/billing',
+      '/admin/subscriptions',
+      '/admin/global-config',
+      '/admin/analytics',
+      '/admin/revenue',
+      '/admin/recovery',
+      '/admin/sales-agent',
+      '/admin/system',
+      '/admin/support',
+      '/admin/advanced',
+    ];
+
+    // Check if the path should stay in /admin
+    const shouldStayInAdmin = adminExceptions.some((exception) =>
+      pathname === exception || pathname.startsWith(`${exception}/`)
+    );
+
+    if (!shouldStayInAdmin) {
+      // Redirect /admin/* to /dashboard/* (preserving sub-paths and query params)
+      newUrl.pathname = pathname.replace(/^\/admin/, '/dashboard');
+      newUrl.search = search;
+      return NextResponse.redirect(newUrl, { status: 308 });
+    }
+  }
+
+  // Redirect legacy workspace platform-admin routes to new dashboard
+  if (pathname.startsWith('/workspace/platform-admin')) {
+    const newUrl = request.nextUrl.clone();
+    // /workspace/platform-admin/* → /dashboard/*
+    newUrl.pathname = pathname.replace(/^\/workspace\/platform-admin/, '/dashboard');
+    newUrl.search = search;
+    return NextResponse.redirect(newUrl, { status: 308 });
   }
 
   // Get the base domain from environment
