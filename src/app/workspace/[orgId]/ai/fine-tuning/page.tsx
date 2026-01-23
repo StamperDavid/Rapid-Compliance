@@ -4,7 +4,7 @@ import { useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { usePagination } from '@/hooks/usePagination';
-import { orderBy, type QueryConstraint, type DocumentData } from 'firebase/firestore';
+import { orderBy, type QueryConstraint, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
 
 interface FineTuningJob {
   id: string;
@@ -20,17 +20,26 @@ export default function FineTuningPage() {
   const orgId = params.orgId as string;
 
   // Fetch function with pagination
-  const fetchJobs = useCallback(async (lastDoc?: DocumentData) => {
+  const fetchJobs = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
+    data: FineTuningJob[];
+    lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+    hasMore: boolean;
+  }> => {
     const constraints: QueryConstraint[] = [
       orderBy('createdAt', 'desc')
     ];
 
-    return FirestoreService.getAllPaginated(
+    const result = await FirestoreService.getAllPaginated(
       `organizations/${orgId}/fineTuningJobs`,
       constraints,
       50,
       lastDoc
     );
+    return {
+      data: result.data as FineTuningJob[],
+      lastDoc: result.lastDoc,
+      hasMore: result.hasMore,
+    };
   }, [orgId]);
 
   const {
@@ -40,7 +49,7 @@ export default function FineTuningPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination({ fetchFn: fetchJobs });
+  } = usePagination<FineTuningJob, QueryDocumentSnapshot<DocumentData>>({ fetchFn: fetchJobs });
 
   // Initial load
   useEffect(() => {

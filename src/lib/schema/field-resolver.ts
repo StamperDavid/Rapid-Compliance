@@ -5,7 +5,6 @@
  */
 
 import type { Schema, SchemaField, FieldType } from '@/types/schema';
-import { logger } from '@/lib/logger/logger';
 
 /**
  * Field Query
@@ -140,10 +139,10 @@ export class FieldResolver {
    * Use when schema might need to be fetched from database
    * Supports: exact match, aliases, type-based fallback
    */
-  static async resolveField(
+  static resolveField(
     schema: Schema,
     fieldReference: string | FieldQuery
-  ): Promise<ResolvedField | null> {
+  ): ResolvedField | null {
     // For now, just call sync version
     // In future, this could fetch additional data if needed
     return this.resolveFieldSync(schema, fieldReference);
@@ -168,10 +167,10 @@ export class FieldResolver {
   /**
    * Resolve field with common aliases (Asynchronous - DEPRECATED, use sync version)
    */
-  static async resolveFieldWithCommonAliases(
+  static resolveFieldWithCommonAliases(
     schema: Schema,
     fieldReference: string
-  ): Promise<ResolvedField | null> {
+  ): ResolvedField | null {
     return this.resolveFieldWithCommonAliasesSync(schema, fieldReference);
   }
   
@@ -179,10 +178,10 @@ export class FieldResolver {
    * Get field value from entity record using flexible resolution
    */
   static getFieldValue(
-    record: any,
+    record: Record<string, unknown>,
     fieldReference: string | ResolvedField,
-    schema?: Schema
-  ): any {
+    _schema?: Schema
+  ): unknown {
     // If we have a resolved field, use its key
     if (typeof fieldReference !== 'string') {
       const resolved = fieldReference;
@@ -217,9 +216,9 @@ export class FieldResolver {
    * Set field value in entity record
    */
   static setFieldValue(
-    record: any,
+    record: Record<string, unknown>,
     fieldReference: string | ResolvedField,
-    value: any
+    value: unknown
   ): void {
     const fieldKey = typeof fieldReference === 'string'
       ? fieldReference
@@ -332,28 +331,41 @@ export class FieldResolver {
   /**
    * Get nested value from object using dot notation
    */
-  private static getNestedValue(obj: any, path: string): any {
+  private static getNestedValue(obj: Record<string, unknown>, path: string): unknown {
     if (!path) {return undefined;}
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+    return path.split('.').reduce((current: unknown, key: string) => {
+      if (current && typeof current === 'object' && key in current) {
+        return (current as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, obj);
   }
   
   /**
    * Set nested value in object using dot notation
    */
-  private static setNestedValue(obj: any, path: string, value: any): void {
+  private static setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
     if (!path) {return;}
-    
+
     const keys = path.split('.');
-    const lastKey = keys.pop()!;
-    
-    let current = obj;
-    for (const key of keys) {
+    const lastKey = keys[keys.length - 1];
+    const pathKeys = keys.slice(0, -1);
+
+    if (!lastKey) {return;}
+
+    let current: Record<string, unknown> = obj;
+    for (const key of pathKeys) {
       if (!(key in current)) {
         current[key] = {};
       }
-      current = current[key];
+      const next = current[key];
+      if (typeof next === 'object' && next !== null) {
+        current = next as Record<string, unknown>;
+      } else {
+        return;
+      }
     }
-    
+
     current[lastKey] = value;
   }
   
@@ -363,7 +375,12 @@ export class FieldResolver {
   private static camelCase(str: string): string {
     return str
       .toLowerCase()
-      .replace(/[_\s-](.)/g, (_, char) => char.toUpperCase());
+      .replace(/[_\s-](.)/g, (_match: string, char: string) => {
+        if (typeof char === 'string') {
+          return char.toUpperCase();
+        }
+        return '';
+      });
   }
   
   /**
@@ -391,26 +408,26 @@ export class FieldResolver {
   /**
    * Validate if a field reference exists in schema
    */
-  static async validateFieldReference(
+  static validateFieldReference(
     schema: Schema,
     fieldReference: string
-  ): Promise<{
+  ): {
     valid: boolean;
     field?: ResolvedField;
     suggestions?: string[];
-  }> {
-    const resolved = await this.resolveField(schema, fieldReference);
-    
+  } {
+    const resolved = this.resolveField(schema, fieldReference);
+
     if (resolved && resolved.confidence >= 0.8) {
       return {
         valid: true,
         field: resolved,
       };
     }
-    
+
     // Generate suggestions
     const suggestions = this.generateFieldSuggestions(schema, fieldReference);
-    
+
     return {
       valid: false,
       suggestions,
@@ -454,52 +471,52 @@ export class FieldResolver {
   /**
    * Resolve multiple field references at once
    */
-  static async resolveMultipleFields(
+  static resolveMultipleFields(
     schema: Schema,
     fieldReferences: string[]
-  ): Promise<Map<string, ResolvedField | null>> {
+  ): Map<string, ResolvedField | null> {
     const results = new Map<string, ResolvedField | null>();
-    
+
     for (const ref of fieldReferences) {
-      const resolved = await this.resolveField(schema, ref);
+      const resolved = this.resolveField(schema, ref);
       results.set(ref, resolved);
     }
-    
+
     return results;
   }
   
   /**
    * Get field mapping with automatic resolution
    */
-  static async createFieldMapping(
+  static createFieldMapping(
     sourceSchema: Schema,
     targetSchema: Schema,
     sourceFieldRef: string,
     targetFieldRef: string
-  ): Promise<{
+  ): {
     sourceField: ResolvedField | null;
     targetField: ResolvedField | null;
     compatible: boolean;
     warnings?: string[];
-  }> {
-    const sourceField = await this.resolveField(sourceSchema, sourceFieldRef);
-    const targetField = await this.resolveField(targetSchema, targetFieldRef);
-    
+  } {
+    const sourceField = this.resolveField(sourceSchema, sourceFieldRef);
+    const targetField = this.resolveField(targetSchema, targetFieldRef);
+
     const warnings: string[] = [];
-    
+
     // Check compatibility
     let compatible = true;
-    
+
     if (!sourceField) {
       warnings.push(`Source field '${sourceFieldRef}' not found in schema '${sourceSchema.name}'`);
       compatible = false;
     }
-    
+
     if (!targetField) {
       warnings.push(`Target field '${targetFieldRef}' not found in schema '${targetSchema.name}'`);
       compatible = false;
     }
-    
+
     if (sourceField && targetField) {
       // Check type compatibility
       if (!this.areTypesCompatible(sourceField.fieldType, targetField.fieldType)) {
@@ -508,7 +525,7 @@ export class FieldResolver {
         );
       }
     }
-    
+
     return {
       sourceField,
       targetField,

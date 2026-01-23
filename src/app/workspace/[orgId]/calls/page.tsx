@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Phone, Plus, Play, Clock, Calendar, User, PhoneCall, Download } from 'lucide-react';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { usePagination } from '@/hooks/usePagination';
-import { type QueryConstraint, type DocumentData, orderBy } from 'firebase/firestore';
+import { type QueryConstraint, type DocumentData, type QueryDocumentSnapshot, orderBy } from 'firebase/firestore';
 
 interface Call {
   id: string;
@@ -24,17 +24,26 @@ export default function CallLogPage() {
   const orgId = params.orgId as string;
 
   // Fetch function with pagination
-  const fetchCalls = useCallback(async (lastDoc?: DocumentData) => {
+  const fetchCalls = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
+    data: Call[];
+    lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+    hasMore: boolean;
+  }> => {
     const constraints: QueryConstraint[] = [
       orderBy('createdAt', 'desc')
     ];
 
-    return FirestoreService.getAllPaginated(
+    const result = await FirestoreService.getAllPaginated(
       `organizations/${orgId}/workspaces/default/calls`,
       constraints,
       50,
       lastDoc
     );
+    return {
+      data: result.data as Call[],
+      lastDoc: result.lastDoc,
+      hasMore: result.hasMore,
+    };
   }, [orgId]);
 
   const {
@@ -44,7 +53,7 @@ export default function CallLogPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination<Call>({ fetchFn: fetchCalls });
+  } = usePagination<Call, QueryDocumentSnapshot<DocumentData>>({ fetchFn: fetchCalls });
 
   // Initial load
   useEffect(() => {

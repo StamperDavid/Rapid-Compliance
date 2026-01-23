@@ -3,15 +3,41 @@
  * Pre-configured CRM setups for different industries
  */
 
+export interface CustomSchemaField {
+  key: string;
+  label: string;
+  type: string;
+  options?: string[];
+}
+
+export interface CustomSchema {
+  name: string;
+  fields: CustomSchemaField[];
+}
+
+export interface FieldCustomization {
+  rename?: string;
+  hide?: boolean;
+  addFields?: CustomSchemaField[];
+}
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  trigger: string;
+  actions: unknown[];
+}
+
 export interface IndustryTemplate {
   id: string;
   name: string;
   description: string;
   icon: string;
   schemas: string[];  // Which standard schemas to enable
-  customSchemas?: any[];  // Industry-specific schemas
-  fieldCustomizations: Record<string, any>;  // Modifications to standard schemas
-  workflows?: any[];  // Pre-built workflows
+  customSchemas?: CustomSchema[];  // Industry-specific schemas
+  fieldCustomizations: Record<string, FieldCustomization>;  // Modifications to standard schemas
+  workflows?: WorkflowTemplate[];  // Pre-built workflows
   aiAgentPrompt: string;  // Industry-specific AI agent configuration
 }
 

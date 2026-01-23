@@ -94,11 +94,11 @@ class CallContextService {
         file: 'call-context-service.ts',
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const _message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallContext] Failed to store context:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
-      throw new Error(`Failed to store call context: ${message}`);
+      throw new Error(`Failed to store call context: ${_message}`);
     }
   }
 
@@ -128,7 +128,6 @@ class CallContextService {
 
       return null;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallContext] Failed to get context:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
@@ -154,7 +153,6 @@ class CallContextService {
 
       return results[0] ?? null;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallContext] Failed to get context by phone:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
@@ -191,11 +189,11 @@ class CallContextService {
         this.cache.set(callId, { ...cached, ...updates });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const _message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallContext] Failed to update context:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
-      throw new Error(`Failed to update call context: ${message}`);
+      throw new Error(`Failed to update call context: ${_message}`);
     }
   }
 
@@ -261,7 +259,6 @@ class CallContextService {
 
       return results;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallContext] Failed to query contexts:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
@@ -308,7 +305,6 @@ class CallContextService {
       // Filter out transferred calls (Firestore doesn't support null comparisons well)
       return results.filter(r => !r.transferReason);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallContext] Failed to get follow-up calls:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
@@ -417,7 +413,6 @@ class CallContextService {
 
       return trainingData;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallContext] Failed to get training data:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });

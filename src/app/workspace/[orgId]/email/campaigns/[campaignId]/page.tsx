@@ -30,7 +30,7 @@ export default function CampaignStatsPage() {
   const loadStats = useCallback(async () => {
     try {
       const data = await getCampaignStats(campaignId);
-      setStats(data as CampaignStats);
+      setStats(data as unknown as CampaignStats);
     } catch (error: unknown) {
       logger.error('Error loading campaign stats:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       showError('Failed to load campaign statistics');

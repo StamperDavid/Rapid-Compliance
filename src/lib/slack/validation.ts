@@ -158,9 +158,28 @@ export const slackTextObjectSchema = z.object({
 });
 
 /**
+ * Slack Block Element Type
+ */
+interface SlackBlockElement {
+  type: z.infer<typeof slackActionTypeSchema> | 'image' | 'plain_text' | 'mrkdwn';
+  action_id?: string;
+  text?: z.infer<typeof slackTextObjectSchema>;
+  style?: z.infer<typeof slackButtonStyleSchema>;
+  value?: string;
+  url?: string;
+  image_url?: string;
+  alt_text?: string;
+  placeholder?: z.infer<typeof slackTextObjectSchema>;
+  options?: Array<{
+    text: z.infer<typeof slackTextObjectSchema>;
+    value: string;
+  }>;
+}
+
+/**
  * Slack Block Element Schema
  */
-export const slackBlockElementSchema: z.ZodType<any> = z.lazy(() =>
+export const slackBlockElementSchema: z.ZodType<SlackBlockElement> = z.lazy(() =>
   z.object({
     type: z.union([
       slackActionTypeSchema,
@@ -186,9 +205,24 @@ export const slackBlockElementSchema: z.ZodType<any> = z.lazy(() =>
 );
 
 /**
+ * Slack Block Type
+ */
+interface SlackBlock {
+  type: z.infer<typeof slackBlockTypeSchema>;
+  block_id?: string;
+  text?: z.infer<typeof slackTextObjectSchema>;
+  accessory?: SlackBlockElement;
+  fields?: Array<z.infer<typeof slackTextObjectSchema>>;
+  elements?: SlackBlockElement[];
+  image_url?: string;
+  alt_text?: string;
+  title?: z.infer<typeof slackTextObjectSchema>;
+}
+
+/**
  * Slack Block Schema
  */
-export const slackBlockSchema: z.ZodType<any> = z.lazy(() =>
+export const slackBlockSchema: z.ZodType<SlackBlock> = z.lazy(() =>
   z.object({
     type: slackBlockTypeSchema,
     block_id: z.string().optional(),

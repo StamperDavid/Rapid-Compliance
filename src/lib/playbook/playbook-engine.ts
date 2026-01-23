@@ -19,21 +19,21 @@
 import { logger } from '@/lib/logger/logger';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import type {
-  ExtractPatternsRequest,
-  PatternExtractionResult,
-  Pattern,
-  TalkTrack,
-  ObjectionResponse,
-  PlaybookBestPractice,
-  Playbook,
-  GeneratePlaybookRequest,
-  GeneratePlaybookResponse,
-  PlaybookEngineConfig,
-  ExtractionSummary,
-  SuccessMetrics,
+import {
+  DEFAULT_PLAYBOOK_CONFIG,
+  type ExtractPatternsRequest,
+  type PatternExtractionResult,
+  type Pattern,
+  type TalkTrack,
+  type ObjectionResponse,
+  type PlaybookBestPractice,
+  type Playbook,
+  type GeneratePlaybookRequest,
+  type GeneratePlaybookResponse,
+  type PlaybookEngineConfig,
+  type ExtractionSummary,
+  type SuccessMetrics,
 } from './types';
-import { DEFAULT_PLAYBOOK_CONFIG } from './types';
 import type {
   ConversationAnalysis,
   Conversation,

@@ -13,13 +13,13 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import type {
-  ScrapeCache,
-  ScrapeCacheEntry,
-  CacheStats,
-  ScrapeJobResult,
+import {
+  getCacheKey,
+  type ScrapeCache,
+  type ScrapeCacheEntry,
+  type CacheStats,
+  type ScrapeJobResult,
 } from './scraper-runner-types';
-import { getCacheKey } from './scraper-runner-types';
 import type { ScrapingPlatform } from '@/types/scraper-intelligence';
 
 // ============================================================================
@@ -58,13 +58,13 @@ export class InMemoryScrapeCache implements ScrapeCache {
   /**
    * Get cached result by URL
    */
-  async get(url: string): Promise<ScrapeCacheEntry | null> {
+  get(url: string): Promise<ScrapeCacheEntry | null> {
     const entry = this.cache.get(url);
 
     if (!entry) {
       this.stats.misses++;
       logger.debug('Cache miss', { url });
-      return null;
+      return Promise.resolve(null);
     }
 
     // Check if expired
@@ -74,30 +74,30 @@ export class InMemoryScrapeCache implements ScrapeCache {
       this.removeFromAccessOrder(url);
       this.stats.misses++;
       logger.debug('Cache expired', { url, expiresAt: entry.expiresAt.toISOString() });
-      return null;
+      return Promise.resolve(null);
     }
 
     // Update access tracking
     entry.hits++;
     entry.lastAccessedAt = now;
     this.updateAccessOrder(url);
-    
+
     this.stats.hits++;
-    logger.debug('Cache hit', { 
-      url, 
-      hits: entry.hits, 
-      ageMs: now.getTime() - entry.cachedAt.getTime() 
+    logger.debug('Cache hit', {
+      url,
+      hits: entry.hits,
+      ageMs: now.getTime() - entry.cachedAt.getTime()
     });
 
-    return entry;
+    return Promise.resolve(entry);
   }
 
   /**
    * Set cache entry
    */
-  async set(
-    url: string, 
-    result: ScrapeJobResult, 
+  set(
+    url: string,
+    result: ScrapeJobResult,
     ttlMs: number = this.defaultTtlMs
   ): Promise<void> {
     const now = new Date();
@@ -133,17 +133,20 @@ export class InMemoryScrapeCache implements ScrapeCache {
       expiresAt: expiresAt.toISOString(),
       cacheSize: this.cache.size
     });
+
+    return Promise.resolve();
   }
 
   /**
    * Invalidate specific cache entry
    */
-  async invalidate(url: string): Promise<void> {
+  invalidate(url: string): Promise<void> {
     const existed = this.cache.delete(url);
     if (existed) {
       this.removeFromAccessOrder(url);
       logger.debug('Cache invalidated', { url });
     }
+    return Promise.resolve();
   }
 
   /**
@@ -151,7 +154,7 @@ export class InMemoryScrapeCache implements ScrapeCache {
    */
   async invalidatePattern(pattern: RegExp): Promise<number> {
     let count = 0;
-    
+
     for (const url of this.cache.keys()) {
       if (pattern.test(url)) {
         await this.invalidate(url);
@@ -159,9 +162,9 @@ export class InMemoryScrapeCache implements ScrapeCache {
       }
     }
 
-    logger.info('Cache pattern invalidation', { 
-      pattern: pattern.toString(), 
-      invalidatedCount: count 
+    logger.info('Cache pattern invalidation', {
+      pattern: pattern.toString(),
+      invalidatedCount: count
     });
 
     return count;

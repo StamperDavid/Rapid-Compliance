@@ -163,9 +163,8 @@ export class TwilioProvider implements VoiceProvider {
     }
   }
 
-  async muteCall(callId: string, muted: boolean): Promise<void> {
+  async muteCall(_callId: string, _muted: boolean): Promise<void> {
     try {
-      const client = await this.getClient();
       // Twilio requires conference for muting; for direct calls we'd need to update the media stream
       // This is a simplified implementation
       logger.warn('[Twilio] Mute requires conference context', { file: 'twilio-provider.ts' });
@@ -178,8 +177,8 @@ export class TwilioProvider implements VoiceProvider {
 
   async holdCall(callId: string, hold: boolean): Promise<void> {
     try {
-      const client = await this.getClient();
       if (hold) {
+        const client = await this.getClient();
         const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Play loop="0">https://api.twilio.com/cowbell.mp3</Play>

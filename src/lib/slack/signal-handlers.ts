@@ -14,17 +14,15 @@
 
 import { logger } from '@/lib/logger/logger';
 import type { SalesSignal } from '@/lib/orchestration/types';
-import type { NotificationVariables } from '@/lib/notifications/types';
+import type { NotificationVariables, NotificationCategory } from '@/lib/notifications/types';
 import type { SlackService } from './slack-service';
 import { SlackMessageBuilder } from './message-builder';
 import { db } from '@/lib/firebase-admin';
 import type {
   SlackWorkspace,
   SlackChannelMapping,
-  SlackMessage,
   SlackMessagePriority,
 } from './types';
-import type { NotificationCategory } from '@/lib/notifications/types';
 
 /**
  * Slack Signal Handler

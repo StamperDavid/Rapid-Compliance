@@ -123,7 +123,7 @@ export function supportsWebP(): boolean {
   if (typeof document === 'undefined') {return false;}
 
   const canvas = document.createElement('canvas');
-  if (canvas.getContext && canvas.getContext('2d')) {
+  if (canvas.getContext?.('2d')) {
     return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
   }
   return false;

@@ -17,6 +17,20 @@ export interface SeverityAssessment {
   affectedItemCount: number;
 }
 
+interface NotificationAction {
+  label: string;
+  action: string;
+  primary?: boolean;
+  dangerous?: boolean;
+}
+
+interface NotificationOptions extends SeverityAssessment {
+  type: string;
+  blocking: boolean;
+  showWizard?: boolean;
+  actions: NotificationAction[];
+}
+
 /**
  * Severity Assessor
  */
@@ -24,7 +38,7 @@ export class SchemaChangeSeverityAssessor {
   /**
    * Assess severity of schema change
    */
-  static async assessSeverity(event: SchemaChangeEvent): Promise<SeverityAssessment> {
+  static assessSeverity(event: SchemaChangeEvent): SeverityAssessment {
     // Count affected items
     const affectedCount = event.affectedSystems.reduce((sum, system) => sum + system.itemsAffected, 0);
     
@@ -53,7 +67,7 @@ export class SchemaChangeSeverityAssessor {
         break;
       
       case 'field_type_changed':
-        if (this.isIncompatibleTypeChange(event.oldFieldType!, event.newFieldType!)) {
+        if (event.oldFieldType && event.newFieldType && this.isIncompatibleTypeChange(event.oldFieldType, event.newFieldType)) {
           level = 'high';
           requiresImmediateAction = true;
           blockingAction = false;
@@ -63,7 +77,7 @@ export class SchemaChangeSeverityAssessor {
           level = 'medium';
           requiresImmediateAction = false;
           blockingAction = false;
-          userMessage = `Field type changed from ${event.oldFieldType} to ${event.newFieldType}.`;
+          userMessage = `Field type changed from ${event.oldFieldType ?? 'unknown'} to ${event.newFieldType ?? 'unknown'}.`;
           recommendation = 'Compatible type change - auto-converted.';
         }
         break;
@@ -153,7 +167,7 @@ export class SchemaChangeUXHandler {
    * Handle schema change with appropriate UX
    */
   static async handleSchemaChange(event: SchemaChangeEvent): Promise<void> {
-    const assessment = await SchemaChangeSeverityAssessor.assessSeverity(event);
+    const assessment = SchemaChangeSeverityAssessor.assessSeverity(event);
     
     logger.info('[Schema Change UX] Handling schema change', {
       file: 'schema-change-severity.ts',
@@ -276,7 +290,7 @@ export class SchemaChangeUXHandler {
    */
   private static async createNotification(
     event: SchemaChangeEvent,
-    options: any
+    options: NotificationOptions
   ): Promise<void> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -293,7 +307,7 @@ export class SchemaChangeUXHandler {
           workspaceId: event.workspaceId,
           title: `Schema Change: ${options.level.toUpperCase()}`,
           message: options.userMessage,
-          type:(options.type !== '' && options.type != null) ? options.type : 'info',
+          type: options.type || 'info',
           category: 'schema_change_severity',
           metadata: {
             eventId: event.id,
@@ -303,9 +317,9 @@ export class SchemaChangeUXHandler {
             recommendation: options.recommendation,
             showWizard: options.showWizard,
           },
-          actions: options.actions ?? [],
+          actions: options.actions || [],
           read: false,
-          requiresAction: options.blocking ?? false,
+          requiresAction: options.blocking || false,
           createdAt: new Date().toISOString(),
         },
         false
@@ -344,7 +358,7 @@ export class SchemaChangeUXHandler {
           severity: assessment.level,
           status: 'open',
           
-          title: `${event.changeType}: ${(event.oldFieldName || event.newFieldName !== '' && event.oldFieldName || event.newFieldName != null) ? event.oldFieldName ?? event.newFieldName: 'Schema change'}`,
+          title: `${event.changeType}: ${event.oldFieldName ?? event.newFieldName ?? 'Schema change'}`,
           description: assessment.userMessage,
           recommendation: assessment.recommendation,
           

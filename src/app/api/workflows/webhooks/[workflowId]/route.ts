@@ -34,7 +34,7 @@ export async function POST(
 
     const method = request.method;
     const headers = Object.fromEntries(request.headers.entries());
-    const body: unknown = await request.json().catch(() => ({}));
+    const body: Record<string, unknown> = await request.json().catch(() => ({})) as Record<string, unknown>;
 
     // Get webhook URL from request
     const webhookUrl = request.url;

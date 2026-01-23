@@ -201,7 +201,7 @@ export default function IdentityRefinementPage() {
             companyDescription: onboardingData.problemSolved ?? '',
             uniqueValue: onboardingData.uniqueValue ?? '',
             targetAudience: onboardingData.targetCustomer ?? '',
-            toneOfVoice: onboardingData.tone ?? 'professional',
+            toneOfVoice: (onboardingData.tone ?? 'professional') as typeof prev.brandDNA.toneOfVoice,
             industry: onboardingData.industry ?? '',
           },
           personalityArchetype: mapToneToArchetype(onboardingData.tone ?? 'professional'),

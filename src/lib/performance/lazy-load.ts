@@ -13,6 +13,13 @@ export interface LazyLoadOptions {
 }
 
 /**
+ * Component import function type
+ */
+interface ComponentModule {
+  default: React.ComponentType;
+}
+
+/**
  * Create intersection observer for lazy loading
  */
 export function createLazyLoader(options: LazyLoadOptions = {}): IntersectionObserver | null {
@@ -100,21 +107,21 @@ export function observeLazyLoad(
  * Lazy load component wrapper
  */
 export function lazyLoadComponent(
-  importFn: () => Promise<any>,
+  importFn: () => Promise<ComponentModule>,
   options: {
     fallback?: React.ReactNode;
     delay?: number;
   } = {}
-) {
+): Promise<ComponentModule> | null {
   if (typeof window === 'undefined') {
     return null;
   }
 
-  const { fallback = null, delay = 0 } = options;
+  const { delay = 0 } = options;
 
-  return new Promise(resolve => {
+  return new Promise<ComponentModule>(resolve => {
     setTimeout(() => {
-      importFn().then(resolve);
+      void importFn().then(resolve);
     }, delay);
   });
 }
@@ -158,13 +165,23 @@ export function deferScript(src: string, onLoad?: () => void): void {
 }
 
 /**
+ * Window with requestIdleCallback support
+ */
+interface WindowWithIdleCallback extends Window {
+  requestIdleCallback: (
+    callback: () => void,
+    options?: { timeout: number }
+  ) => number;
+}
+
+/**
  * Load script only when idle
  */
 export function loadWhenIdle(callback: () => void, timeout: number = 2000): void {
   if (typeof window === 'undefined') {return;}
 
   if ('requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(callback, { timeout });
+    (window as WindowWithIdleCallback).requestIdleCallback(callback, { timeout });
   } else {
     setTimeout(callback, timeout);
   }

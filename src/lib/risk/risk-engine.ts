@@ -25,23 +25,22 @@ import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-fact
 import { getDeal, type Deal } from '@/lib/crm/deal-service';
 import { calculateDealScore, type DealScore } from '@/lib/templates/deal-scoring-engine';
 import { calculateDealHealth, type DealHealthScore } from '@/lib/crm/deal-health';
-import type {
-  DealRiskPrediction,
-  RiskPredictionRequest,
-  BatchRiskPredictionRequest,
-  BatchRiskPredictionResponse,
-  RiskLevel,
-  RiskFactor,
-  ProtectiveFactor,
-  Intervention,
-  HistoricalPattern,
-  RiskTrend,
-  RiskMetadata,
-  RiskEngineConfig,
-  RiskSummary,
-  RiskCategory,
+import {
+  DEFAULT_RISK_CONFIG,
+  type DealRiskPrediction,
+  type RiskPredictionRequest,
+  type BatchRiskPredictionRequest,
+  type BatchRiskPredictionResponse,
+  type RiskLevel,
+  type RiskFactor,
+  type ProtectiveFactor,
+  type Intervention,
+  type HistoricalPattern,
+  type RiskTrend,
+  type RiskEngineConfig,
+  type RiskSummary,
+  type RiskCategory,
 } from './types';
-import { DEFAULT_RISK_CONFIG } from './types';
 
 // ============================================================================
 // MAIN PREDICTION FUNCTION
@@ -82,22 +81,21 @@ export async function predictDealRisk(
     }
     
     // 2. Get deal score and health
-    const [dealScore, dealHealth] = await Promise.all([
-      calculateDealScore({
-        organizationId: request.organizationId,
-        workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
-        dealId: request.dealId,
-        deal,
-      }),
-      calculateDealHealth(
-        request.organizationId,
+    const dealScore = calculateDealScore({
+      organizationId: request.organizationId,
+      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
+      dealId: request.dealId,
+      deal,
+    });
+
+    const dealHealth = await calculateDealHealth(
+      request.organizationId,
 (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
-        request.dealId
-      ),
-    ]);
+      request.dealId
+    );
     
     // 3. Analyze risk factors
-    const riskFactors = await analyzeRiskFactors(deal, dealScore, dealHealth);
+    const riskFactors = analyzeRiskFactors(deal, dealScore, dealHealth);
     
     // 4. Identify protective factors
     const protectiveFactors = identifyProtectiveFactors(deal, dealScore, dealHealth);
@@ -128,7 +126,7 @@ export async function predictDealRisk(
     );
     
     // 9. Analyze risk trend
-    const trend = await analyzeRiskTrend(request.dealId, riskLevel, slippageProbability);
+    const trend = analyzeRiskTrend(request.dealId, riskLevel, slippageProbability);
     
     // 10. Generate AI interventions (if requested)
     let interventions: Intervention[] = [];
@@ -152,7 +150,7 @@ export async function predictDealRisk(
     // 11. Find historical patterns
     let historicalPattern: HistoricalPattern | null = null;
     if (fullConfig.includeHistoricalPatterns) {
-      historicalPattern = await findHistoricalPattern(
+      historicalPattern = findHistoricalPattern(
         deal,
         riskFactors,
         request.organizationId,
@@ -232,8 +230,7 @@ export async function predictBatchDealRisk(
     });
     
     const predictions = new Map<string, DealRiskPrediction>();
-    const errors: string[] = [];
-    
+
     // Predict risk for each deal
     for (const dealId of request.dealIds) {
       try {
@@ -247,10 +244,10 @@ export async function predictBatchDealRisk(
           },
           config
         );
-        
+
         // Filter if highRiskOnly
-        if (!request.highRiskOnly || 
-            prediction.riskLevel === 'critical' || 
+        if (!request.highRiskOnly ||
+            prediction.riskLevel === 'critical' ||
             prediction.riskLevel === 'high') {
           predictions.set(dealId, prediction);
         }
@@ -260,7 +257,6 @@ export async function predictBatchDealRisk(
           dealId,
           error: errorMessage,
         });
-        errors.push(`${dealId}: ${errorMessage}`);
       }
     }
     
@@ -270,7 +266,6 @@ export async function predictBatchDealRisk(
     logger.info('Batch risk prediction complete', {
       totalDeals: request.dealIds.length,
       successful: predictions.size,
-      failed: errors.length,
       duration: Date.now() - startTime,
     });
     
@@ -295,11 +290,11 @@ export async function predictBatchDealRisk(
 /**
  * Analyze all risk factors for a deal
  */
-async function analyzeRiskFactors(
+function analyzeRiskFactors(
   deal: Deal,
   dealScore: DealScore,
   dealHealth: DealHealthScore
-): Promise<RiskFactor[]> {
+): RiskFactor[] {
   const factors: RiskFactor[] = [];
   const now = new Date();
   
@@ -324,7 +319,7 @@ async function analyzeRiskFactors(
   
   // Close date risk
   if (deal.expectedCloseDate) {
-    const daysToClose = getDaysToClose(deal.expectedCloseDate as Date | { toDate: () => Date } | string | number);
+    const daysToClose = getDaysToClose(deal.expectedCloseDate);
     if (daysToClose < 0) {
       factors.push({
         id: 'timing_overdue',
@@ -546,7 +541,7 @@ function identifyProtectiveFactors(
   
   // 6. Close date soon (urgency)
   if (deal.expectedCloseDate) {
-    const daysToClose = getDaysToClose(deal.expectedCloseDate as Date | { toDate: () => Date } | string | number);
+    const daysToClose = getDaysToClose(deal.expectedCloseDate);
     if (daysToClose > 0 && daysToClose <= 14) {
       factors.push({
         id: 'urgency_close_soon',
@@ -692,8 +687,8 @@ function predictSlippageTimeline(
     return { daysUntilSlippage: null, predictedSlippageDate: null };
   }
 
-  const daysToClose = getDaysToClose(deal.expectedCloseDate as Date | { toDate: () => Date } | string | number);
-  
+  const daysToClose = getDaysToClose(deal.expectedCloseDate);
+
   // Already overdue
   if (daysToClose < 0) {
     // Predict additional slippage
@@ -713,19 +708,10 @@ function predictSlippageTimeline(
   
   const baseSlippageDays = 14; // Default 2 weeks
   const riskMultiplier = 1 + (criticalRisks * 0.5) + (highRisks * 0.3);
-  
+
   const slippageDays = Math.round(baseSlippageDays * riskMultiplier);
 
-  const expectedDateValue: unknown = deal.expectedCloseDate;
-  let expectedDate: Date;
-
-  if (expectedDateValue instanceof Date) {
-    expectedDate = expectedDateValue;
-  } else if (typeof expectedDateValue === 'object' && expectedDateValue !== null && 'toDate' in expectedDateValue) {
-    expectedDate = (expectedDateValue as { toDate: () => Date }).toDate();
-  } else {
-    expectedDate = new Date(expectedDateValue as string | number);
-  }
+  const expectedDate = convertToDate(deal.expectedCloseDate);
 
   const slippageDate = new Date(expectedDate);
   slippageDate.setDate(slippageDate.getDate() + slippageDays);
@@ -823,18 +809,7 @@ DEAL INFORMATION:
 - Value: $${deal.value.toLocaleString()}
 - Stage: ${deal.stage}
 - Probability: ${deal.probability}%
-- Expected Close: ${deal.expectedCloseDate ? (() => {
-    const dateValue: unknown = deal.expectedCloseDate;
-    let date: Date;
-    if (dateValue instanceof Date) {
-      date = dateValue;
-    } else if (typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue) {
-      date = (dateValue as { toDate: () => Date }).toDate();
-    } else {
-      date = new Date(dateValue as string | number);
-    }
-    return date.toLocaleDateString();
-  })() : 'Not set'}
+- Expected Close: ${deal.expectedCloseDate ? convertToDate(deal.expectedCloseDate).toLocaleDateString() : 'Not set'}
 - Deal Score: ${dealScore.score}/100 (${dealScore.tier})
 - Health Score: ${dealHealth.overall}/100 (${dealHealth.status})
 
@@ -1008,28 +983,22 @@ function generateFallbackInterventions(riskFactors: RiskFactor[]): Intervention[
 /**
  * Find historical patterns for similar deals
  */
-async function findHistoricalPattern(
-  deal: Deal,
-  riskFactors: RiskFactor[],
-  organizationId: string,
-  workspaceId: string
-): Promise<HistoricalPattern | null> {
-  try {
-    // TODO: Implement actual historical pattern matching
-    // For now, return a placeholder
-    
-    // In production, this would:
-    // 1. Query historical deals with similar characteristics
-    // 2. Analyze outcomes (slip, on-time, loss)
-    // 3. Extract common success/failure factors
-    // 4. Calculate match confidence
-    
-    return null;
-    
-  } catch (error) {
-    logger.warn('Historical pattern matching failed', { error: error instanceof Error ? error.message : String(error), dealId: deal.id });
-    return null;
-  }
+function findHistoricalPattern(
+  _deal: Deal,
+  _riskFactors: RiskFactor[],
+  _organizationId: string,
+  _workspaceId: string
+): HistoricalPattern | null {
+  // TODO: Implement actual historical pattern matching
+  // For now, return a placeholder
+
+  // In production, this would:
+  // 1. Query historical deals with similar characteristics
+  // 2. Analyze outcomes (slip, on-time, loss)
+  // 3. Extract common success/failure factors
+  // 4. Calculate match confidence
+
+  return null;
 }
 
 // ============================================================================
@@ -1039,33 +1008,21 @@ async function findHistoricalPattern(
 /**
  * Analyze risk trend over time
  */
-async function analyzeRiskTrend(
-  dealId: string,
-  currentRiskLevel: RiskLevel,
-  currentSlippageProbability: number
-): Promise<RiskTrend> {
-  try {
-    // TODO: Implement actual trend analysis from historical predictions
-    // For now, return a basic trend
-    
-    return {
-      direction: 'stable',
-      changeRate: 0,
-      previousLevel: null,
-      daysSinceLastCheck: null,
-      description: 'First risk assessment for this deal',
-    };
-    
-  } catch (error) {
-    logger.warn('Trend analysis failed', { error: error instanceof Error ? error.message : String(error), dealId });
-    return {
-      direction: 'stable',
-      changeRate: 0,
-      previousLevel: null,
-      daysSinceLastCheck: null,
-      description: 'Unable to determine trend',
-    };
-  }
+function analyzeRiskTrend(
+  _dealId: string,
+  _currentRiskLevel: RiskLevel,
+  _currentSlippageProbability: number
+): RiskTrend {
+  // TODO: Implement actual trend analysis from historical predictions
+  // For now, return a basic trend
+
+  return {
+    direction: 'stable',
+    changeRate: 0,
+    previousLevel: null,
+    daysSinceLastCheck: null,
+    description: 'First risk assessment for this deal',
+  };
 }
 
 // ============================================================================
@@ -1156,7 +1113,7 @@ async function emitRiskSignal(
     const coordinator = getServerSignalCoordinator();
     
     await coordinator.emitSignal({
-      type: 'risk.detected' as 'risk.detected',
+      type: 'risk.detected' as const,
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
@@ -1192,20 +1149,24 @@ async function emitRiskSignal(
 // ============================================================================
 
 /**
+ * Convert flexible date types to Date object
+ */
+function convertToDate(dateValue: unknown): Date {
+  if (dateValue instanceof Date) {
+    return dateValue;
+  } else if (typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue) {
+    const dateObj = dateValue as { toDate: () => Date };
+    return dateObj.toDate();
+  } else {
+    return new Date(dateValue as string | number);
+  }
+}
+
+/**
  * Get deal age in days
  */
 function getDealAge(deal: Deal): number {
-  const createdAtValue: unknown = deal.createdAt;
-  let createdAt: Date;
-
-  if (createdAtValue instanceof Date) {
-    createdAt = createdAtValue;
-  } else if (typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue) {
-    createdAt = (createdAtValue as { toDate: () => Date }).toDate();
-  } else {
-    createdAt = new Date(createdAtValue as string | number);
-  }
-
+  const createdAt = convertToDate(deal.createdAt);
   return Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 }
 
@@ -1213,16 +1174,6 @@ function getDealAge(deal: Deal): number {
  * Get days until close date
  */
 function getDaysToClose(expectedCloseDate: Date | { toDate: () => Date } | string | number): number {
-  let closeDate: Date;
-
-  if (expectedCloseDate instanceof Date) {
-    closeDate = expectedCloseDate;
-  } else if (typeof expectedCloseDate === 'object' && expectedCloseDate !== null && 'toDate' in expectedCloseDate) {
-    closeDate = expectedCloseDate.toDate();
-  } else {
-    // expectedCloseDate is string | number
-    closeDate = new Date(expectedCloseDate as string | number);
-  }
-
+  const closeDate = convertToDate(expectedCloseDate);
   return Math.floor((closeDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }

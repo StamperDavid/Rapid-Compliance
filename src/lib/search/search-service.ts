@@ -6,8 +6,7 @@
 // For now, we'll implement a basic Firestore-based search
 // In production, integrate with Algolia or Typesense
 
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { COLLECTIONS } from '@/lib/db/firestore-service'
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 
 export interface SearchResult {
@@ -17,13 +16,32 @@ export interface SearchResult {
   subtitle?: string;
   description?: string;
   url: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SearchOptions {
   limit?: number;
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   sortBy?: string;
+}
+
+interface RecordData {
+  id: string;
+  notes?: string;
+  description?: string;
+  [key: string]: unknown;
+}
+
+interface SchemaField {
+  key: string;
+  [key: string]: unknown;
+}
+
+interface _Schema {
+  id: string;
+  name: string;
+  fields?: SchemaField[];
+  [key: string]: unknown;
 }
 
 /**
@@ -46,10 +64,15 @@ export async function searchWorkspace(
     // Search records (all entity types)
     // In production, this would use Algolia/Typesense
     // For now, we'll do a basic Firestore query
-    
+
     // Get all schemas to know what entities exist
     const { SchemaService } = await import('@/lib/db/firestore-service');
-    const schemas = await SchemaService.getAll(orgId, workspaceId);
+    const schemas = await SchemaService.getAll(orgId, workspaceId) as Array<{
+      id: string;
+      name: string;
+      fields?: SchemaField[];
+      [key: string]: unknown;
+    }>;
 
     // Search each entity type
     for (const schema of schemas) {
@@ -59,7 +82,7 @@ export async function searchWorkspace(
       );
 
       // Filter records that match search term
-      const matchingRecords = records.filter((record: any) => {
+      const matchingRecords = records.filter((record: RecordData) => {
         const searchableText = Object.values(record)
           .filter(v => typeof v === 'string')
           .join(' ')
@@ -69,19 +92,24 @@ export async function searchWorkspace(
 
       // Convert to search results
       for (const record of matchingRecords.slice(0, options.limit ?? 10)) {
-        const titleField = schema.fields?.find((f: any) => 
+        const titleField = schema.fields?.find((f: SchemaField) =>
           f.key === 'name' || f.key === 'title' || f.key === 'first_name'
         );
-        const title = titleField ? record[titleField.key] : record.id;
+        const titleValue = titleField ? (record[titleField.key] as string | undefined) : undefined;
+        const title = titleValue && titleValue !== '' ? titleValue : 'Untitled';
+
+        const recordId = typeof record.id === 'string' ? record.id : String(record.id);
+        const recordNotes = typeof record.notes === 'string' ? record.notes : undefined;
+        const recordDescription = typeof record.description === 'string' ? record.description : undefined;
 
         results.push({
-          id: record.id,
-          type: schema.id,
-          title:(title !== '' && title != null) ? title : 'Untitled',
+          id: recordId,
+          type: schema.id as SearchResult['type'],
+          title,
           subtitle: schema.name,
-          description:record.notes ?? record.description,
-          url: `/workspace/${orgId}/entities/${schema.id}/${record.id}`,
-          metadata: record,
+          description: recordNotes ?? recordDescription,
+          url: `/workspace/${orgId}/entities/${schema.id}/${recordId}`,
+          metadata: record as Record<string, unknown>,
         });
       }
     }
@@ -96,13 +124,13 @@ export async function searchWorkspace(
  * Index a record for search
  * In production, this would add to Algolia/Typesense index
  */
-export async function indexRecord(
+export function indexRecord(
   orgId: string,
   workspaceId: string,
   entityName: string,
   recordId: string,
-  recordData: any
-): Promise<void> {
+  _recordData: Record<string, unknown>
+): void {
   // In production, add to search index
   // For now, records are automatically searchable via Firestore queries
   logger.info('Indexing record', { orgId, workspaceId, entityName, recordId, file: 'search-service.ts' });
@@ -111,12 +139,12 @@ export async function indexRecord(
 /**
  * Remove a record from search index
  */
-export async function unindexRecord(
+export function unindexRecord(
   orgId: string,
   workspaceId: string,
   entityName: string,
   recordId: string
-): Promise<void> {
+): void {
   // In production, remove from search index
   logger.info('Unindexing record', { orgId, workspaceId, entityName, recordId, file: 'search-service.ts' });
 }
@@ -124,7 +152,7 @@ export async function unindexRecord(
 /**
  * Initialize search (for Algolia/Typesense setup)
  */
-export async function initializeSearch(): Promise<void> {
+export function initializeSearch(): void {
   // In production, initialize Algolia/Typesense client
   // For now, using Firestore-based search
   logger.info('Search initialized (using Firestore)', { file: 'search-service.ts' });

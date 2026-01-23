@@ -3,12 +3,37 @@
  * Track and report web vitals and performance metrics
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface PerformanceMetrics {
   fcp?: number; // First Contentful Paint
   lcp?: number; // Largest Contentful Paint
   fid?: number; // First Input Delay
   cls?: number; // Cumulative Layout Shift
   ttfb?: number; // Time to First Byte
+}
+
+/**
+ * Largest Contentful Paint entry with timing data
+ */
+interface LCPEntry extends PerformanceEntry {
+  renderTime: number;
+  loadTime: number;
+}
+
+/**
+ * First Input Delay entry with processing timing
+ */
+interface FIDEntry extends PerformanceEntry {
+  processingStart: number;
+}
+
+/**
+ * Layout Shift entry with value and input tracking
+ */
+interface LayoutShiftEntry extends PerformanceEntry {
+  value: number;
+  hadRecentInput: boolean;
 }
 
 /**
@@ -36,8 +61,8 @@ export function collectWebVitals(callback: (metrics: PerformanceMetrics) => void
       // Observe LCP (Largest Contentful Paint)
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1] as any;
-        metrics.lcp =lastEntry.renderTime ?? lastEntry.loadTime;
+        const lastEntry = entries[entries.length - 1] as LCPEntry;
+        metrics.lcp = lastEntry.renderTime ?? lastEntry.loadTime;
         callback(metrics);
       });
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
@@ -46,7 +71,8 @@ export function collectWebVitals(callback: (metrics: PerformanceMetrics) => void
       const fidObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         for (const entry of entries) {
-          metrics.fid = (entry as any).processingStart - entry.startTime;
+          const fidEntry = entry as FIDEntry;
+          metrics.fid = fidEntry.processingStart - entry.startTime;
           callback(metrics);
         }
       });
@@ -56,8 +82,9 @@ export function collectWebVitals(callback: (metrics: PerformanceMetrics) => void
       let clsValue = 0;
       const clsObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          if (!(entry as any).hadRecentInput) {
-            clsValue += (entry as any).value;
+          const clsEntry = entry as LayoutShiftEntry;
+          if (!clsEntry.hadRecentInput) {
+            clsValue += clsEntry.value;
             metrics.cls = clsValue;
             callback(metrics);
           }
@@ -65,7 +92,7 @@ export function collectWebVitals(callback: (metrics: PerformanceMetrics) => void
       });
       clsObserver.observe({ entryTypes: ['layout-shift'] });
     } catch (error) {
-      console.error('[Performance] Error collecting web vitals:', error);
+      logger.error('[Performance] Error collecting web vitals', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -146,14 +173,14 @@ export function calculatePerformanceScore(metrics: PerformanceMetrics): number {
 export function logPerformanceMetrics(metrics: PerformanceMetrics): void {
   if (process.env.NODE_ENV !== 'development') {return;}
 
-  console.group('🚀 Performance Metrics');
-  console.log('FCP (First Contentful Paint):', metrics.fcp?.toFixed(0), 'ms');
-  console.log('LCP (Largest Contentful Paint):', metrics.lcp?.toFixed(0), 'ms');
-  console.log('FID (First Input Delay):', metrics.fid?.toFixed(0), 'ms');
-  console.log('CLS (Cumulative Layout Shift):', metrics.cls?.toFixed(3));
-  console.log('TTFB (Time to First Byte):', metrics.ttfb?.toFixed(0), 'ms');
-  console.log('Performance Score:', calculatePerformanceScore(metrics), '/100');
-  console.groupEnd();
+  logger.debug('Performance Metrics', {
+    fcp: metrics.fcp?.toFixed(0),
+    lcp: metrics.lcp?.toFixed(0),
+    fid: metrics.fid?.toFixed(0),
+    cls: metrics.cls?.toFixed(3),
+    ttfb: metrics.ttfb?.toFixed(0),
+    performanceScore: calculatePerformanceScore(metrics),
+  });
 }
 
 /**
@@ -167,13 +194,13 @@ export function monitorLongTasks(callback: (duration: number) => void): void {
       for (const entry of list.getEntries()) {
         if (entry.duration > 50) {
           callback(entry.duration);
-          console.warn('[Performance] Long task detected:', entry.duration, 'ms');
+          logger.warn('[Performance] Long task detected', { duration: entry.duration });
         }
       }
     });
 
     observer.observe({ entryTypes: ['longtask'] });
-  } catch (error) {
+  } catch (_error) {
     // longtask not supported in all browsers
   }
 }

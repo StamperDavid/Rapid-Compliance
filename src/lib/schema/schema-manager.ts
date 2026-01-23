@@ -13,10 +13,9 @@ import {
   deleteDoc,
   query,
   where,
-  serverTimestamp
-} from 'firebase/firestore';
-import type { Firestore ,
-  Timestamp
+  serverTimestamp,
+  type Firestore,
+  type Timestamp
 } from 'firebase/firestore';
 import type { Schema, SchemaField, SchemaRelation, FieldType } from '@/types/schema';
 
@@ -64,23 +63,27 @@ export class SchemaManager {
    * Create a new schema (custom object)
    */
   async createSchema(schema: Partial<Schema>, userId: string): Promise<Schema> {
-    const schemaId = this.generateSchemaId(schema.name!);
-    
+    if (!schema.name) {
+      throw new Error('Schema name is required');
+    }
+
+    const schemaId = this.generateSchemaId(schema.name);
+
     const newSchema: Schema = {
       id: schemaId,
       workspaceId: this.workspaceId,
-      name: schema.name!,
-      pluralName: schema.pluralName ?? schema.name!,
-      singularName: schema.singularName ?? schema.name!,
+      name: schema.name,
+      pluralName: schema.pluralName ?? schema.name,
+      singularName: schema.singularName ?? schema.name,
       description: schema.description,
       icon:(schema.icon ?? '📋'),
       color:(schema.color ?? '#3B82F6'),
       
       // Start with empty fields, user will add them
       fields: schema.fields ?? this.getDefaultFields(),
-      
+
       // Set first field as primary
-      primaryFieldId: (() => { const v = schema.fields?.[0]?.id; return (v ?? 'field_name'); })(),
+      primaryFieldId: schema.fields?.[0]?.id ?? 'field_name',
       
       relations: [],
       permissions: {
@@ -234,9 +237,9 @@ export class SchemaManager {
       if (events.length > 0) {
         const { SchemaChangeDebouncer } = await import('./schema-change-debouncer');
         const debouncer = SchemaChangeDebouncer.getInstance(5000); // 5 second debounce
-        
+
         for (const event of events) {
-          await debouncer.addEvent(event);
+          debouncer.addEvent(event);
         }
       }
     } catch (error) {
@@ -252,7 +255,8 @@ export class SchemaManager {
     try {
       const workspaceDoc = await getDoc(doc(this.db, 'workspaces', this.workspaceId));
       if (workspaceDoc.exists()) {
-        return (workspaceDoc.data() as any).organizationId ?? null;
+        const data = workspaceDoc.data() as { organizationId?: string };
+        return data.organizationId ?? null;
       }
       return null;
     } catch (error) {
@@ -358,8 +362,8 @@ export class SchemaManager {
       
       const updatedField = FieldRenameManager.addRenameRecord(
         currentField,
-updates.key ?? currentField.key,
-updates.label ?? currentField.label,
+        updates.key ?? currentField.key,
+        updates.label ?? currentField.label,
         userId
       );
       
@@ -477,7 +481,7 @@ updates.label ?? currentField.label,
         ...newRelation,
         fromSchemaId: toSchemaId,
         toSchemaId: fromSchemaId,
-        fromFieldId:relation.toFieldId ?? relation.fromFieldId,
+        fromFieldId: relation.toFieldId ?? relation.fromFieldId,
         toFieldId: relation.fromFieldId
       };
 
@@ -542,22 +546,22 @@ updates.label ?? currentField.label,
     return schema.fields.filter(field => {
       // Check lookup fields
       if (field.type === 'lookup') {
-        const config = field.config as any;
+        const config = field.config as { linkFieldId?: string; lookupFieldId?: string };
         return config.linkFieldId === fieldId || config.lookupFieldId === fieldId;
       }
-      
+
       // Check rollup fields
       if (field.type === 'rollup') {
-        const config = field.config as any;
+        const config = field.config as { linkFieldId?: string; rollupFieldId?: string };
         return config.linkFieldId === fieldId || config.rollupFieldId === fieldId;
       }
-      
+
       // Check formula fields (basic check)
       if (field.type === 'formula') {
-        const config = field.config as any;
+        const config = field.config as { formula?: string };
         return config.formula?.includes(fieldId);
       }
-      
+
       return false;
     });
   }
@@ -624,7 +628,7 @@ updates.label ?? currentField.label,
   /**
    * Validate field type
    */
-  validateFieldType(type: FieldType, config: any): boolean {
+  validateFieldType(type: FieldType, config: Record<string, unknown>): boolean {
     // Add validation logic based on field type
     switch (type) {
       case 'text':
@@ -689,9 +693,9 @@ updates.label ?? currentField.label,
       relations: [] // Don't clone relations
     };
 
-    delete (clonedSchema as any).id;
+    const { id: _id, ...schemaWithoutId } = clonedSchema;
 
-    return this.createSchema(clonedSchema, userId);
+    return this.createSchema(schemaWithoutId, userId);
   }
 }
 

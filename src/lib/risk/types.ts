@@ -13,7 +13,6 @@
  * @module lib/risk
  */
 
-import type { Deal } from '@/lib/crm/deal-service';
 import type { DealScore } from '@/lib/templates/deal-scoring-engine';
 import type { DealHealthScore } from '@/lib/crm/deal-health';
 

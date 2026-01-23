@@ -189,7 +189,7 @@ export default function PublicSitePage() {
       <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         {/* Render page content with responsive design */}
         {page.content && page.content.length > 0 ? (
-          <ResponsiveRenderer content={page.content} breakpoint={breakpoint} />
+          <ResponsiveRenderer content={page.content as unknown as Parameters<typeof ResponsiveRenderer>[0]['content']} breakpoint={breakpoint} />
         ) : (
           <div style={{
             display: 'flex',

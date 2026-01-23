@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         code: e.code,
       }));
 
-      return errors.validation('Validation failed', zodErrors);
+      return errors.validation('Validation failed', { errors: zodErrors });
     }
 
     const { orgId: validatedOrgId, workspaceId: validatedWorkspaceId, q: validatedQuery, limit: validatedLimit } = validation.data;

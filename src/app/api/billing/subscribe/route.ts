@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         };
       }) ?? [];
 
-      return errors.validation('Validation failed', errorDetails);
+      return errors.validation('Validation failed', { errors: errorDetails });
     }
 
     const { organizationId, email, name, planId, trialDays } = validation.data;

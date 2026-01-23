@@ -39,13 +39,7 @@ import type {
   AssignmentMethod,
   RoutingCondition,
   Territory,
-  CompanySize} from './types';
-import {
-  ConditionOperator,
-  RepWorkload,
-  TerritoryType
 } from './types';
-import { PerformanceTier } from '../coaching/types';
 
 /**
  * Lead Routing Engine
@@ -62,12 +56,12 @@ export class LeadRoutingEngine {
    * @param rules - Optional routing rules to apply
    * @returns Routing analysis with recommended assignment
    */
-  async routeLead(
+  routeLead(
     lead: Lead,
     availableReps: SalesRep[],
     config: RoutingConfiguration,
     rules?: RoutingRule[]
-  ): Promise<RoutingAnalysis> {
+  ): RoutingAnalysis {
     const startTime = Date.now();
     
     // Step 1: Assess lead quality
@@ -82,12 +76,12 @@ export class LeadRoutingEngine {
     
     // Step 3: Apply routing rules if provided
     let filteredReps = eligibleReps;
-    let matchedRules: string[] = [];
-    
+    let _matchedRules: string[] = [];
+
     if (rules && rules.length > 0) {
       const ruleResult = this.applyRoutingRules(lead, eligibleReps, rules);
       filteredReps = ruleResult.reps;
-      matchedRules = ruleResult.matchedRules;
+      _matchedRules = ruleResult.matchedRules;
     }
     
     // Step 4: Score all eligible reps
@@ -224,7 +218,7 @@ export class LeadRoutingEngine {
   /**
    * Calculate potential value score
    */
-  private calculatePotentialScore(lead: Lead): number {
+  private calculatePotentialScore(_lead: Lead): number {
     let score = 50; // Base score
     
     // Company size scoring
@@ -234,15 +228,15 @@ export class LeadRoutingEngine {
       smb: 10,
       startup: 5,
     };
-    if (lead.companySize) {
-      score += sizeScores[lead.companySize] || 0;
+    if (_lead.companySize) {
+      score += sizeScores[_lead.companySize] || 0;
     }
-    
+
     // Estimated value scoring
-    if (lead.estimatedValue) {
-      if (lead.estimatedValue >= 100000) {score += 20;}
-      else if (lead.estimatedValue >= 50000) {score += 15;}
-      else if (lead.estimatedValue >= 25000) {score += 10;}
+    if (_lead.estimatedValue) {
+      if (_lead.estimatedValue >= 100000) {score += 20;}
+      else if (_lead.estimatedValue >= 50000) {score += 15;}
+      else if (_lead.estimatedValue >= 25000) {score += 10;}
       else {score += 5;}
     }
     
@@ -252,7 +246,7 @@ export class LeadRoutingEngine {
   /**
    * Filter reps to only those eligible for assignment
    */
-  filterEligibleReps(reps: SalesRep[], lead: Lead): SalesRep[] {
+  filterEligibleReps(reps: SalesRep[], _lead: Lead): SalesRep[] {
     return reps.filter(rep => {
       // Must be available
       if (!rep.isAvailable) {return false;}
@@ -394,12 +388,12 @@ export class LeadRoutingEngine {
    */
   private getFieldValue(lead: Lead, field: string): unknown {
     const parts = field.split('.');
-    let value: any = lead;
-    
+    let value: unknown = lead;
+
     for (const part of parts) {
-      value = value?.[part];
+      value = (value as Record<string, unknown>)?.[part];
     }
-    
+
     return value;
   }
   
@@ -684,7 +678,7 @@ export class LeadRoutingEngine {
   generateRecommendation(
     repScore: RepRoutingScore,
     leadQuality: LeadQualityAssessment,
-    config: RoutingConfiguration
+    _config: RoutingConfiguration
   ): AssignmentRecommendation {
     // Calculate confidence based on match score
     const confidence = Math.min(1, repScore.matchScore / 100);
@@ -864,7 +858,7 @@ export class LeadRoutingEngine {
       matchScore: recommendation.matchScore,
       confidence: recommendation.confidence,
       reason: recommendation.reasons.join('; '),
-      alternatives: analysis.alternatives.map((alt, idx) => ({
+      alternatives: analysis.alternatives.map((alt, _idx) => ({
         repId: alt.repId,
         repName: alt.repName,
         matchScore: alt.matchScore,

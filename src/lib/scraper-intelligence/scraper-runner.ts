@@ -17,20 +17,18 @@
 import { logger } from '@/lib/logger/logger';
 import { processAndStoreScrape } from './scraper-intelligence-service';
 import { getIndustryTemplate } from '@/lib/persona/industry-templates';
-import type {
-  ScraperRunner,
-  ScraperRunnerConfig,
-  ScrapeJobConfig,
-  ScrapeJobResult,
-  ScrapeCache,
-  DomainRateLimiter,
-  JobQueue,
-  ProgressTracker,
-  ErrorHandler,
-  QueueStats,
-  CacheStats,
-} from './scraper-runner-types';
 import {
+  type ScraperRunner,
+  type ScraperRunnerConfig,
+  type ScrapeJobConfig,
+  type ScrapeJobResult,
+  type ScrapeCache,
+  type DomainRateLimiter,
+  type JobQueue,
+  type ProgressTracker,
+  type ErrorHandler,
+  type QueueStats,
+  type CacheStats,
   DEFAULT_RUNNER_CONFIG,
   extractDomain,
   generateJobId,
@@ -130,7 +128,7 @@ export class ProductionScraperRunner implements ScraperRunner {
 
     // Start processing if not already running
     if (!this.running) {
-      this.startProcessing();
+      void this.startProcessing();
     }
 
     logger.info('Job submitted', {
@@ -205,9 +203,9 @@ export class ProductionScraperRunner implements ScraperRunner {
     timeoutMs: number = 60000
   ): Promise<ScrapeJobResult> {
     const startTime = Date.now();
-    const running = true;
 
-    while (running) {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
       const result = await this.queue.getJob(jobId);
 
       if (!result) {
@@ -240,11 +238,10 @@ export class ProductionScraperRunner implements ScraperRunner {
       }
 
       // Wait before checking again
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise<void>(resolve => {
+        setTimeout(() => resolve(), 100);
+      });
     }
-    
-    // Should never reach here, but TypeScript needs this
-    throw new ScrapeError('Unexpected loop exit', 'unknown_error', 500, false);
   }
 
   /**
@@ -278,7 +275,9 @@ export class ProductionScraperRunner implements ScraperRunner {
     const startTime = Date.now();
 
     while (this.activeWorkers > 0 && Date.now() - startTime < shutdownTimeout) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise<void>(resolve => {
+        setTimeout(() => resolve(), 100);
+      });
     }
 
     // Shutdown components
@@ -333,7 +332,9 @@ export class ProductionScraperRunner implements ScraperRunner {
 
         if (!jobConfig) {
           // No jobs available, wait before checking again
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise<void>(resolve => {
+            setTimeout(() => resolve(), 1000);
+          });
           continue;
         }
 
@@ -404,14 +405,17 @@ export class ProductionScraperRunner implements ScraperRunner {
       await this.rateLimiter.waitForSlot(domain);
 
       // Step 3: Execute scrape with retry logic
+      const timeoutMs = config.timeoutMs ?? this.config.defaultTimeoutMs;
+      const maxRetries = config.maxRetries ?? this.config.retryStrategy.maxAttempts;
+
       const result = await withRetry(
         () => withTimeout(
           () => this.executeScrape(config),
-          config.timeoutMs!,
+          timeoutMs,
           `Scrape timeout for ${url}`
         ),
         this.errorHandler,
-        config.maxRetries
+        maxRetries
       );
 
       // Step 4: Cache result (if enabled)
@@ -460,11 +464,15 @@ export class ProductionScraperRunner implements ScraperRunner {
    * Check cache for existing result
    */
   private async checkCache(config: ScrapeJobConfig): Promise<{
-    signals: any[];
+    signals: unknown[];
     leadScore: number;
     tempScrapeId: string;
     cacheAgeMs: number;
-    storageReduction?: any;
+    storageReduction?: {
+      rawSizeBytes: number;
+      signalsSizeBytes: number;
+      reductionPercent: number;
+    };
   } | null> {
     const { url, platform, organizationId } = config;
     const cacheKey = getScrapeCacheKey(url, platform, organizationId);
@@ -497,10 +505,14 @@ export class ProductionScraperRunner implements ScraperRunner {
    * Execute the actual scrape operation
    */
   private async executeScrape(config: ScrapeJobConfig): Promise<{
-    signals: any[];
+    signals: unknown[];
     leadScore: number;
     tempScrapeId: string;
-    storageReduction?: any;
+    storageReduction?: {
+      rawSizeBytes: number;
+      signalsSizeBytes: number;
+      reductionPercent: number;
+    };
   }> {
     const { url, organizationId, workspaceId, industryId, relatedRecordId, platform } = config;
 
@@ -563,7 +575,7 @@ export class ProductionScraperRunner implements ScraperRunner {
     logError(error, { jobId, url });
 
     // Determine attempt number (from retry context if available)
-    const attemptNumber = (error as any).attemptNumber ?? 1;
+    const attemptNumber = (error as { attemptNumber?: number }).attemptNumber ?? 1;
 
     // Mark job as failed
     await this.queue.failJob(jobId, error, attemptNumber);
@@ -623,7 +635,7 @@ export function getScraperRunner(
  */
 export function resetScraperRunner(): void {
   if (globalRunner) {
-    globalRunner.shutdown();
+    void globalRunner.shutdown();
     globalRunner = null;
   }
 }

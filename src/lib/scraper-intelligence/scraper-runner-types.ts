@@ -1,11 +1,24 @@
 /**
  * Scraper Runner Types
- * 
+ *
  * Type definitions for the intelligent web scraping orchestration system.
  * Supports multi-template scraping, caching, rate limiting, and queue management.
  */
 
-import type { ResearchIntelligence, ScrapingPlatform } from '@/types/scraper-intelligence';
+import type { ScrapingPlatform } from '@/types/scraper-intelligence';
+
+// ============================================================================
+// BASE TYPES
+// ============================================================================
+
+/**
+ * Generic metadata container for flexible data storage
+ */
+export type MetadataValue = string | number | boolean | null | undefined | MetadataObject | MetadataArray;
+export interface MetadataObject {
+  [key: string]: MetadataValue;
+}
+export type MetadataArray = MetadataValue[];
 
 // ============================================================================
 // JOB MANAGEMENT
@@ -14,7 +27,7 @@ import type { ResearchIntelligence, ScrapingPlatform } from '@/types/scraper-int
 /**
  * Status of a scrape job
  */
-export type ScrapeJobStatus = 
+export type ScrapeJobStatus =
   | 'pending'      // Waiting in queue
   | 'running'      // Currently executing
   | 'completed'    // Successfully completed
@@ -63,9 +76,9 @@ export interface ScrapeJobConfig {
   
   /** Skip cache and force fresh scrape */
   skipCache?: boolean;
-  
+
   /** Additional metadata */
-  metadata?: Record<string, any>;
+  metadata?: MetadataObject;
 }
 
 /**
@@ -91,7 +104,7 @@ export interface ScrapeJobResult {
   signals?: Array<{
     signalId: string;
     signalLabel: string;
-    value: any;
+    value: MetadataValue;
     confidence: number;
   }>;
   
@@ -375,9 +388,9 @@ export interface ProgressEvent {
   
   /** Human-readable message */
   message: string;
-  
+
   /** Additional data */
-  data?: Record<string, any>;
+  data?: MetadataObject;
 }
 
 /**
@@ -428,7 +441,7 @@ export class ScrapeError extends Error {
     public readonly type: ScrapeErrorType,
     public readonly statusCode: number = 500,
     public readonly retryable: boolean = false,
-    public readonly metadata?: Record<string, any>
+    public readonly metadata?: MetadataObject
   ) {
     super(message);
     this.name = 'ScrapeError';

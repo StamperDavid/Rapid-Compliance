@@ -402,7 +402,7 @@ export default function EntityTablePage() {
             organizationId={orgId}
             workspaceId="default"
             targetEntity={(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : 'contacts'}
-            value={value}
+            value={typeof value === 'string' ? value : value != null ? String(value) : null}
             onChange={(recordId: string | null) => {
               setFormData({ ...formData, [field.key]: recordId });
             }}
@@ -543,7 +543,7 @@ export default function EntityTablePage() {
                           </span>
                         ) : (
                           <span style={{ fontWeight: field.key === 'name' || field.key === 'first_name' ? '600' : '400' }}>
-                            {formatValue(record[field.key], field)}
+                            {formatValue(record[field.key] as RecordValue, field)}
                           </span>
                         )}
                       </td>

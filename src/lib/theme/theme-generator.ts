@@ -35,7 +35,7 @@ export class ThemeGenerator {
   /**
    * Generate color CSS variables
    */
-  private static generateColorVariables(colors: any): string {
+  private static generateColorVariables(colors: Theme['colors']): string {
     const vars: string[] = [];
 
     // Handle gradient colors
@@ -59,7 +59,7 @@ export class ThemeGenerator {
   /**
    * Check if value is a gradient
    */
-  private static isGradient(value: any): value is GradientColor {
+  private static isGradient(value: unknown): value is GradientColor {
     return value && typeof value === 'object' && 'type' in value && 'stops' in value;
   }
 
@@ -86,7 +86,7 @@ export class ThemeGenerator {
   /**
    * Generate typography CSS variables
    */
-  private static generateTypographyVariables(typography: any): string {
+  private static generateTypographyVariables(typography: Theme['typography']): string {
     const vars: string[] = [];
 
     // Font families
@@ -105,7 +105,7 @@ export class ThemeGenerator {
   /**
    * Generate spacing CSS variables
    */
-  private static generateSpacingVariables(spacing: any): string {
+  private static generateSpacingVariables(spacing: Theme['spacing']): string {
     const vars: string[] = [];
 
     vars.push(`--spacing-unit: ${spacing.baseUnit}px;`);
@@ -120,7 +120,7 @@ export class ThemeGenerator {
   /**
    * Generate layout CSS variables
    */
-  private static generateLayoutVariables(layout: any): string {
+  private static generateLayoutVariables(layout: Theme['layout']): string {
     const vars: string[] = [];
 
     // Border radius
@@ -146,7 +146,7 @@ export class ThemeGenerator {
   /**
    * Generate component CSS variables
    */
-  private static generateComponentVariables(components: any): string {
+  private static generateComponentVariables(_components: Theme['components']): string {
     const vars: string[] = [];
 
     // Add component-specific variables as needed

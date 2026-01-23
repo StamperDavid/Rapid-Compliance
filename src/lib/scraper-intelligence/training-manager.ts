@@ -15,17 +15,14 @@
 
 import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
-import type {
-  ClientFeedback,
-  TrainingData,
-  TrainingHistory,
-  FeedbackType,
-} from '@/types/scraper-intelligence';
 import {
   ClientFeedbackSchema,
-  TrainingDataSchema,
+  type ClientFeedback,
+  type TrainingData,
+  type TrainingHistory,
+  type FeedbackType,
 } from '@/types/scraper-intelligence';
-import { flagScrapeForDeletion, getTemporaryScrape } from './discovery-archive-service';
+import { flagScrapeForDeletion, getTemporaryScrape } from './temporary-scrapes-service';
 
 // ============================================================================
 // CONSTANTS
@@ -253,13 +250,13 @@ export async function submitFeedback(params: {
 }
 
 /**
- * Process feedback into training data (async background task)
- * 
+ * Process feedback into training data (background task)
+ *
  * Extracts patterns from feedback and updates training data with Bayesian inference.
- * 
+ *
  * @param feedback - The feedback to process
  */
-async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
+function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
   try {
     const { organizationId, signalId, sourceText, feedbackType } = feedback;
 
@@ -319,7 +316,7 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
           });
 
           // Log history
-          await logTrainingHistory(transaction, {
+          logTrainingHistory(transaction, {
             trainingDataId: doc.id,
             organizationId,
             userId: feedback.userId,
@@ -338,7 +335,7 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
           });
 
           // Log history
-          await logTrainingHistory(transaction, {
+          logTrainingHistory(transaction, {
             trainingDataId: doc.id,
             organizationId,
             userId: feedback.userId,
@@ -581,7 +578,7 @@ export async function deactivateTrainingData(
       });
 
       // Log history
-      await logTrainingHistory(transaction, {
+      logTrainingHistory(transaction, {
         trainingDataId,
         organizationId,
         userId,
@@ -669,7 +666,7 @@ export async function activateTrainingData(
       });
 
       // Log history
-      await logTrainingHistory(transaction, {
+      logTrainingHistory(transaction, {
         trainingDataId,
         organizationId,
         userId,
@@ -708,13 +705,13 @@ export async function activateTrainingData(
 
 /**
  * Log training history for audit trail
- * 
+ *
  * Creates a history record within a transaction.
- * 
+ *
  * @param transaction - Firestore transaction
  * @param params - History parameters
  */
-async function logTrainingHistory(
+function logTrainingHistory(
   transaction: FirebaseFirestore.Transaction,
   params: {
     trainingDataId: string;
@@ -725,7 +722,7 @@ async function logTrainingHistory(
     newValue?: TrainingData;
     reason?: string;
   }
-): Promise<void> {
+): void {
   const historyId = db.collection(TRAINING_HISTORY_COLLECTION).doc().id;
   const now = new Date();
 
@@ -772,9 +769,9 @@ export async function getTrainingHistory(
       const raw = doc.data();
       return {
         ...raw,
-        changedAt: toDate(raw.changedAt),
-        previousValue: raw.previousValue ? toTrainingData(raw.previousValue) : undefined,
-        newValue: raw.newValue ? toTrainingData(raw.newValue) : undefined,
+        changedAt: toDate(raw.changedAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+        previousValue: raw.previousValue ? toTrainingData(raw.previousValue as FirebaseFirestore.DocumentData) : undefined,
+        newValue: raw.newValue ? toTrainingData(raw.newValue as FirebaseFirestore.DocumentData) : undefined,
       } as TrainingHistory;
     });
   } catch (error) {
@@ -871,7 +868,7 @@ export async function rollbackTrainingData(
       });
 
       // Log history
-      await logTrainingHistory(transaction, {
+      logTrainingHistory(transaction, {
         trainingDataId,
         organizationId,
         userId,
@@ -933,8 +930,8 @@ export async function getFeedbackForScrape(
       const raw = doc.data();
       return {
         ...raw,
-        submittedAt: toDate(raw.submittedAt),
-        processedAt: raw.processedAt ? toDate(raw.processedAt) : undefined,
+        submittedAt: toDate(raw.submittedAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+        processedAt: raw.processedAt ? toDate(raw.processedAt as Date | FirestoreTimestamp | { seconds: number } | string | number) : undefined,
       } as ClientFeedback;
     });
   } catch (error) {
@@ -974,8 +971,8 @@ export async function getUnprocessedFeedback(
       const raw = doc.data();
       return {
         ...raw,
-        submittedAt: toDate(raw.submittedAt),
-        processedAt: raw.processedAt ? toDate(raw.processedAt) : undefined,
+        submittedAt: toDate(raw.submittedAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+        processedAt: raw.processedAt ? toDate(raw.processedAt as Date | FirestoreTimestamp | { seconds: number } | string | number) : undefined,
       } as ClientFeedback;
     });
   } catch (error) {
@@ -1031,7 +1028,8 @@ export async function getTrainingAnalytics(organizationId: string): Promise<{
     };
 
     feedbackDocs.docs.forEach((doc) => {
-      const type = doc.data().feedbackType;
+      const docData = doc.data();
+      const type = docData.feedbackType as string;
       feedbackByType[type] = (feedbackByType[type] || 0) + 1;
     });
 
@@ -1047,7 +1045,10 @@ export async function getTrainingAnalytics(organizationId: string): Promise<{
     ).length;
 
     const confidenceSum = trainingDocs.docs.reduce(
-      (sum, doc) => sum + (doc.data().confidence ?? 0),
+      (sum, doc) => {
+        const docData = doc.data();
+        return sum + ((docData.confidence as number | undefined) ?? 0);
+      },
       0
     );
     const averageConfidence =
@@ -1079,6 +1080,15 @@ export async function getTrainingAnalytics(organizationId: string): Promise<{
 // ============================================================================
 
 /**
+ * Firestore Timestamp interface
+ */
+interface FirestoreTimestamp {
+  seconds: number;
+  nanoseconds: number;
+  toDate: () => Date;
+}
+
+/**
  * Convert Firestore data to TrainingData type
  */
 function toTrainingData(data: FirebaseFirestore.DocumentData | undefined): TrainingData {
@@ -1088,23 +1098,23 @@ function toTrainingData(data: FirebaseFirestore.DocumentData | undefined): Train
 
   return {
     ...data,
-    createdAt: toDate(data.createdAt),
-    lastUpdatedAt: toDate(data.lastUpdatedAt),
-    lastSeenAt: toDate(data.lastSeenAt),
+    createdAt: toDate(data.createdAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+    lastUpdatedAt: toDate(data.lastUpdatedAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+    lastSeenAt: toDate(data.lastSeenAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
   } as TrainingData;
 }
 
 /**
  * Convert Firestore Timestamp to JavaScript Date
  */
-function toDate(timestamp: any): Date {
+function toDate(timestamp: Date | FirestoreTimestamp | { seconds: number } | string | number): Date {
   if (timestamp instanceof Date) {
     return timestamp;
   }
-  if (timestamp && typeof timestamp.toDate === 'function') {
-    return timestamp.toDate();
+  if (timestamp && typeof (timestamp as FirestoreTimestamp).toDate === 'function') {
+    return (timestamp as FirestoreTimestamp).toDate();
   }
-  if (timestamp?.seconds) {
+  if (typeof timestamp === 'object' && 'seconds' in timestamp) {
     return new Date(timestamp.seconds * 1000);
   }
   return new Date(timestamp);

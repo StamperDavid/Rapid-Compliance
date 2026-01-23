@@ -14,14 +14,6 @@ import type {
   ImpactAnalysis,
 } from '@/types/training';
 
-interface BehaviorConfigValue {
-  closingAggressiveness?: number;
-  questionFrequency?: number;
-  responseLength?: number;
-  proactiveLevel?: number;
-  [key: string]: number | undefined;
-}
-
 interface FirestoreDocument {
   id: string;
   isActive?: boolean;

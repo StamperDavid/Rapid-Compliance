@@ -179,8 +179,13 @@ export async function POST(request: NextRequest) {
     const provider = AIProviderFactory.createProvider(selectedModel, orgId);
     
     const startTime = Date.now();
+    // Filter to only valid AI provider roles (messages are already user/assistant, this narrows the type)
+    const validMessages = messages.filter(
+      (msg): msg is ChatMessage & { role: 'user' | 'system' | 'assistant' } =>
+        msg.role === 'user' || msg.role === 'system' || msg.role === 'assistant'
+    );
     const response = await provider.generateResponse(
-      messages,
+      validMessages,
       enhancedSystemPrompt,
       modelConfig
     );

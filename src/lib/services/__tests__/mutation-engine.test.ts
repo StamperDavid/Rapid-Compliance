@@ -325,7 +325,7 @@ describe('MutationEngine', () => {
       };
 
       expect(() => {
-        engine.compile(template, null as any);
+        engine.compile(template, null as unknown as OnboardingData);
       }).toThrow();
     });
 

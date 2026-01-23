@@ -31,19 +31,24 @@ export function setupInstallPrompt() {
  * Show install prompt
  */
 export async function showInstallPrompt(): Promise<boolean> {
-  if (!deferredPrompt) {
+  // Capture local reference to avoid race condition
+  const promptEvent = deferredPrompt;
+
+  if (!promptEvent) {
     return false;
   }
 
+  // Clear the deferred prompt before awaiting to avoid race condition
+  deferredPrompt = null;
+
   try {
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
+    await promptEvent.prompt();
+    const { outcome } = await promptEvent.userChoice;
+
     if (outcome === 'accepted') {
-      deferredPrompt = null;
       return true;
     }
-    
+
     return false;
   } catch (error) {
     logger.error('Error showing install prompt:', error instanceof Error ? error : new Error(String(error)), { file: 'install-prompt.ts' });
@@ -52,21 +57,28 @@ export async function showInstallPrompt(): Promise<boolean> {
 }
 
 /**
+ * Extended Navigator interface for iOS standalone detection
+ */
+interface NavigatorStandalone extends Navigator {
+  standalone?: boolean;
+}
+
+/**
  * Check if app is installed
  */
 export function isAppInstalled(): boolean {
   if (typeof window === 'undefined') {return false;}
-  
+
   // Check if running in standalone mode (installed PWA)
   if (window.matchMedia('(display-mode: standalone)').matches) {
     return true;
   }
-  
+
   // Check if running in iOS standalone mode
-  if ((window.navigator as any).standalone === true) {
+  if ((window.navigator as NavigatorStandalone).standalone === true) {
     return true;
   }
-  
+
   return false;
 }
 

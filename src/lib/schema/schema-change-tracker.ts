@@ -3,7 +3,7 @@
  * Detects and publishes schema change events to enable automatic system adaptation
  */
 
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, type QueryConstraint } from 'firebase/firestore';
 import type { Schema, SchemaField } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
 
@@ -370,8 +370,8 @@ export class SchemaChangeDetector {
    * Analyze impact of schema rename
    */
   private static analyzeSchemaRenameImpact(
-    oldName: string,
-    newName: string
+    _oldName: string,
+    _newName: string
   ): AffectedSystem[] {
     const affected: AffectedSystem[] = [];
     
@@ -530,7 +530,7 @@ export class SchemaChangeEventPublisher {
    */
   static async publishEvent(
     event: SchemaChangeEvent,
-    db?: any
+    _db?: unknown
   ): Promise<void> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -576,15 +576,15 @@ export class SchemaChangeEventPublisher {
       const { where } = await import('firebase/firestore');
       
       const eventPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
-      
-      const filters: any[] = [
+
+      const filters: QueryConstraint[] = [
         where('processed', '==', false),
       ];
-      
+
       if (schemaId) {
         filters.push(where('schemaId', '==', schemaId));
       }
-      
+
       const events = await FirestoreService.getAll(eventPath, filters);
       
       return events as SchemaChangeEvent[];

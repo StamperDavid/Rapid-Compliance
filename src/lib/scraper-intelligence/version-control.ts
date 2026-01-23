@@ -26,10 +26,19 @@ const TRAINING_BRANCHES_COLLECTION = 'training_branches';
 // TYPES
 // ============================================================================
 
+/**
+ * Firestore Timestamp interface
+ */
+interface FirestoreTimestamp {
+  seconds: number;
+  nanoseconds: number;
+  toDate: () => Date;
+}
+
 export interface DiffEntry {
   field: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: unknown;
+  newValue: unknown;
   changeType: 'added' | 'removed' | 'modified';
 }
 
@@ -341,12 +350,12 @@ export async function createBranch(params: {
 
     const snapshot: Record<string, TrainingData> = {};
     for (const doc of trainingDocs.docs) {
-      const data = doc.data() as TrainingData;
+      const docData = doc.data() as TrainingData;
       snapshot[doc.id] = {
-        ...data,
-        createdAt: toDate(data.createdAt),
-        lastUpdatedAt: toDate(data.lastUpdatedAt),
-        lastSeenAt: toDate(data.lastSeenAt),
+        ...docData,
+        createdAt: toDate(docData.createdAt),
+        lastUpdatedAt: toDate(docData.lastUpdatedAt),
+        lastSeenAt: toDate(docData.lastSeenAt),
       };
     }
 
@@ -413,7 +422,7 @@ export async function createBranch(params: {
 export async function mergeBranch(
   branchId: string,
   organizationId: string,
-  userId: string
+  _userId: string
 ): Promise<MergeResult> {
   try {
     // Get branch
@@ -448,12 +457,12 @@ export async function mergeBranch(
 
     const currentData: Record<string, TrainingData> = {};
     for (const doc of currentDocs.docs) {
-      const data = doc.data() as TrainingData;
+      const docData = doc.data() as TrainingData;
       currentData[doc.id] = {
-        ...data,
-        createdAt: toDate(data.createdAt),
-        lastUpdatedAt: toDate(data.lastUpdatedAt),
-        lastSeenAt: toDate(data.lastSeenAt),
+        ...docData,
+        createdAt: toDate(docData.createdAt),
+        lastUpdatedAt: toDate(docData.lastUpdatedAt),
+        lastSeenAt: toDate(docData.lastSeenAt),
       };
     }
 
@@ -480,11 +489,11 @@ export async function mergeBranch(
       if (currentVersion.version > branchVersion.version) {
         // Conflict: pattern modified in both branch and main
         const diff = generateDiff(branchVersion, currentVersion);
-        
+
         if (diff.changes.length > 0) {
           conflicts.push({
             trainingDataId: id,
-            conflictingFields: diff.changes.map((c) => c.field),
+            conflictingFields: diff.changes.map((change) => change.field),
           });
         }
       } else {
@@ -497,10 +506,10 @@ export async function mergeBranch(
     if (conflicts.length === 0) {
       const batch = db.batch();
 
-      for (const [id, data] of Object.entries(branch.trainingDataSnapshot)) {
+      for (const [id, trainingData] of Object.entries(branch.trainingDataSnapshot)) {
         const ref = db.collection(TRAINING_DATA_COLLECTION).doc(id);
         batch.set(ref, {
-          ...data,
+          ...trainingData,
           lastUpdatedAt: new Date(),
         });
       }
@@ -577,10 +586,10 @@ export async function listBranches(
     const docs = await query.orderBy('createdAt', 'desc').get();
 
     return docs.docs.map((doc) => {
-      const data = doc.data();
+      const docData = doc.data();
       return {
-        ...data,
-        createdAt: toDate(data.createdAt),
+        ...docData,
+        createdAt: toDate(docData.createdAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
       } as Branch;
     });
   } catch (error) {
@@ -625,7 +634,6 @@ export async function generateChangelog(
 
     const docs = await query.orderBy('changedAt', 'desc').limit(100).get();
 
-    const entries: ChangelogEntry[] = [];
     const entriesByVersion = new Map<number, ChangelogEntry>();
 
     for (const doc of docs.docs) {
@@ -637,7 +645,7 @@ export async function generateChangelog(
       if (!entry) {
         entry = {
           version,
-          date: toDate(history.changedAt),
+          date: toDate(history.changedAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
           author: history.userId,
           changes: [],
           type: determineChangeType(history.changeType),
@@ -801,19 +809,19 @@ export async function recoverFromHistory(
     // Find last valid version
     for (const doc of historyDocs.docs) {
       const history = doc.data() as TrainingHistory;
-      const data = history.newValue;
+      const historyData = history.newValue;
 
-      if (data) {
-        const validation = validateIntegrity(data);
-        
+      if (historyData) {
+        const validation = validateIntegrity(historyData);
+
         if (validation.valid) {
           logger.info('Recovered training data from history', {
             trainingDataId,
-            version: data.version,
+            version: historyData.version,
             organizationId,
           });
-          
-          return data;
+
+          return historyData;
         }
       }
     }
@@ -837,14 +845,14 @@ export async function recoverFromHistory(
 /**
  * Convert Firestore Timestamp to Date
  */
-function toDate(timestamp: any): Date {
+function toDate(timestamp: Date | FirestoreTimestamp | { seconds: number } | string | number): Date {
   if (timestamp instanceof Date) {
     return timestamp;
   }
-  if (timestamp && typeof timestamp.toDate === 'function') {
-    return timestamp.toDate();
+  if (timestamp && typeof (timestamp as FirestoreTimestamp).toDate === 'function') {
+    return (timestamp as FirestoreTimestamp).toDate();
   }
-  if (timestamp?.seconds) {
+  if (typeof timestamp === 'object' && 'seconds' in timestamp) {
     return new Date(timestamp.seconds * 1000);
   }
   return new Date(timestamp);

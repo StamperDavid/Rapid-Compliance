@@ -22,14 +22,11 @@
  */
 
 import type { SalesSignal, SignalPriority } from '../orchestration/types';
-import type { 
-  Lead, 
-  LeadAssignment, 
+import type {
+  Lead,
+  LeadAssignment,
   RoutingStrategy,
   AssignmentMethod} from './types';
-import {
-  AssignmentStatus,
-} from './types';
 
 // ============================================================================
 // EVENT METADATA TYPES
@@ -169,7 +166,7 @@ export function createLeadRoutedSignal(
   lead: Lead,
   assignment: LeadAssignment,
   qualityScore: number,
-  expectedConversion: number
+  _expectedConversion: number
 ): Omit<SalesSignal, 'id' | 'createdAt' | 'ttl'> {
   const metadata: LeadRoutedEventMetadata = {
     leadId: lead.id,

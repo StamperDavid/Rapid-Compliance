@@ -16,15 +16,15 @@
 
 import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
-import type { 
-  ResearchIntelligence, 
-  ExtractedSignal,
-  TemporaryScrape,
-  ScrapingPlatform 
+import {
+  type ResearchIntelligence,
+  type ExtractedSignal,
+  type TemporaryScrape,
+  type ScrapingPlatform,
+  ResearchIntelligenceSchema,
+  ExtractedSignalSchema
 } from '@/types/scraper-intelligence';
-import { ResearchIntelligenceSchema, ExtractedSignalSchema } from '@/types/scraper-intelligence';
-import { distillScrape, calculateLeadScore, detectHighValueSignals } from './distillation-engine';
-import { getTemporaryScrape, getTemporaryScrapesByUrl } from './discovery-archive-service';
+import { distillScrape, calculateLeadScore } from './distillation-engine';
 
 // ============================================================================
 // CONSTANTS
@@ -165,14 +165,14 @@ export class ScraperIntelligenceError extends Error {
     message: string,
     public readonly code: string,
     public readonly statusCode: number = 500,
-    public readonly metadata?: Record<string, any>
+    public readonly metadata?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'ScraperIntelligenceError';
   }
 }
 
-function handleFirestoreError(error: any, operation: string, context: Record<string, any>): never {
+function handleFirestoreError(error: unknown, operation: string, context: Record<string, unknown>): never {
   logger.error(`Firestore ${operation} failed`, error, context);
 
   if (error instanceof ScraperIntelligenceError) {
@@ -180,7 +180,7 @@ function handleFirestoreError(error: any, operation: string, context: Record<str
   }
 
   const message = error instanceof Error ? error.message : 'Unknown error';
-  
+
   throw new ScraperIntelligenceError(
     `${operation} failed: ${message}`,
     'FIRESTORE_ERROR',
@@ -236,17 +236,18 @@ export async function getResearchIntelligence(
       return null;
     }
 
-    const data = doc.data();
+    const data = doc.data() as Record<string, unknown> | undefined;
     if (!data) {
       return null;
     }
 
     // Convert Firestore timestamps to Dates
+    const metadata = data.metadata as { lastUpdated?: unknown } | undefined;
     const research: ResearchIntelligence = {
       ...data,
       metadata: {
-        ...data.metadata,
-        lastUpdated: toDate(data.metadata?.lastUpdated),
+        ...(metadata ?? {}),
+        lastUpdated: toDate(metadata?.lastUpdated),
       },
     } as ResearchIntelligence;
 
@@ -362,16 +363,17 @@ export async function listResearchIntelligence(
       .get();
 
     const results = snapshot.docs.map((doc) => {
-      const data = doc.data();
+      const data = doc.data() as Record<string, unknown>;
       const industryId = doc.id.replace(`${organizationId}_`, '');
-      
+      const metadata = data.metadata as { lastUpdated?: unknown } | undefined;
+
       return {
         industryId,
         research: {
           ...data,
           metadata: {
-            ...data.metadata,
-            lastUpdated: toDate(data.metadata?.lastUpdated),
+            ...(metadata ?? {}),
+            lastUpdated: toDate(metadata?.lastUpdated),
           },
         } as ResearchIntelligence,
       };
@@ -433,7 +435,8 @@ export async function saveExtractedSignals(
 
       if (doc.exists) {
         // Append to existing signals
-        const existing = doc.data()?.signals ?? [];
+        const data = doc.data() as { signals?: ExtractedSignal[] } | undefined;
+        const existing = data?.signals ?? [];
         transaction.update(docRef, {
           signals: [...existing, ...validated],
           updatedAt: new Date(),
@@ -498,8 +501,9 @@ export async function getExtractedSignals(
       return [];
     }
 
-    const data = doc.data();
-    const signals = (data?.signals ?? []).map((signal: any) => ({
+    const data = doc.data() as { signals?: Array<Record<string, unknown>> } | undefined;
+    const signalsData = data?.signals ?? [];
+    const signals = signalsData.map((signal) => ({
       ...signal,
       extractedAt: toDate(signal.extractedAt),
     })) as ExtractedSignal[];
@@ -545,9 +549,10 @@ export async function querySignalsByPlatform(
     const results: Array<{ recordId: string; signals: ExtractedSignal[] }> = [];
 
     for (const doc of snapshot.docs) {
-      const data = doc.data();
+      const data = doc.data() as { recordId: string; signals?: Array<Record<string, unknown>> };
       const recordId = data.recordId;
-      const allSignals = (data.signals ?? []).map((signal: any) => ({
+      const signalsData = data.signals ?? [];
+      const allSignals = signalsData.map((signal) => ({
         ...signal,
         extractedAt: toDate(signal.extractedAt),
       })) as ExtractedSignal[];
@@ -882,17 +887,17 @@ export function invalidateOrganizationCaches(organizationId: string): void {
 /**
  * Convert Firestore Timestamp to JavaScript Date
  */
-function toDate(timestamp: any): Date {
+function toDate(timestamp: unknown): Date {
   if (timestamp instanceof Date) {
     return timestamp;
   }
-  if (timestamp && typeof timestamp.toDate === 'function') {
-    return timestamp.toDate();
+  if (timestamp && typeof (timestamp as { toDate?: () => Date }).toDate === 'function') {
+    return (timestamp as { toDate: () => Date }).toDate();
   }
-  if (timestamp?.seconds) {
-    return new Date(timestamp.seconds * 1000);
+  if ((timestamp as { seconds?: number })?.seconds) {
+    return new Date((timestamp as { seconds: number }).seconds * 1000);
   }
-  return new Date(timestamp);
+  return new Date(timestamp as string | number);
 }
 
 /**

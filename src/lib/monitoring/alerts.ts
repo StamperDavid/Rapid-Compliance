@@ -43,11 +43,11 @@ const DEFAULT_CONFIGS: AlertConfig[] = [
 /**
  * Track an event and trigger alert if threshold exceeded
  */
-export async function trackEvent(
+export function trackEvent(
   type: AlertConfig['type'],
   details: Record<string, unknown> = {},
   orgId?: string
-): Promise<void> {
+): void {
   const key = `${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`;
   const config = DEFAULT_CONFIGS.find(c => c.type === type);
   

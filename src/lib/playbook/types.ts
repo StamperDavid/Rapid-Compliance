@@ -409,7 +409,7 @@ export interface ABTestResults {
   // Results
   variantASuccessRate: number;
   variantBSuccessRate: number;
-  winner: 'inconclusive' | string;
+  winner: string; // variation ID or 'inconclusive'
 
   // Stats
   sampleSizeA: number;

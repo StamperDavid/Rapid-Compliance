@@ -4,7 +4,7 @@ import { useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { usePagination } from '@/hooks/usePagination';
-import { orderBy, type QueryConstraint, type DocumentData, type Timestamp } from 'firebase/firestore';
+import { orderBy, type QueryConstraint, type DocumentData, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 
 interface Dataset {
   id: string;
@@ -19,17 +19,26 @@ export default function DatasetsPage() {
   const orgId = params.orgId as string;
 
   // Fetch function with pagination
-  const fetchDatasets = useCallback(async (lastDoc?: DocumentData) => {
+  const fetchDatasets = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
+    data: Dataset[];
+    lastDoc: QueryDocumentSnapshot<DocumentData> | null;
+    hasMore: boolean;
+  }> => {
     const constraints: QueryConstraint[] = [
       orderBy('createdAt', 'desc')
     ];
 
-    return FirestoreService.getAllPaginated(
+    const result = await FirestoreService.getAllPaginated(
       `organizations/${orgId}/trainingDatasets`,
       constraints,
       50,
       lastDoc
     );
+    return {
+      data: result.data as Dataset[],
+      lastDoc: result.lastDoc,
+      hasMore: result.hasMore,
+    };
   }, [orgId]);
 
   const {
@@ -39,7 +48,7 @@ export default function DatasetsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination({ fetchFn: fetchDatasets });
+  } = usePagination<Dataset, QueryDocumentSnapshot<DocumentData>>({ fetchFn: fetchDatasets });
 
   // Initial load
   useEffect(() => {

@@ -4,8 +4,8 @@
  */
 
 import type { ProspectData, ProspectResearch } from './prospect-research';
-import { logger } from '@/lib/logger/logger';
 import { generatePersonalizationTokens } from './prospect-research';
+import { logger } from '@/lib/logger/logger';
 
 export interface EmailGenerationRequest {
   prospect: ProspectData;

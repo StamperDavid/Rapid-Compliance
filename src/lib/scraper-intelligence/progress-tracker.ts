@@ -338,7 +338,7 @@ export function createProgressEvent(
   type: ProgressEventType,
   message: string,
   progress?: number,
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ): ProgressEvent {
   return {
     jobId,

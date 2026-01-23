@@ -3,14 +3,15 @@
  * OWASP Top 10 compliance, input validation, XSS/CSRF protection
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import crypto from 'crypto';
+
+type SanitizableValue = string | number | boolean | null | undefined | SanitizableValue[] | { [key: string]: SanitizableValue };
 
 /**
  * Validate and sanitize input to prevent injection attacks
  */
-export function sanitizeInput(input: any): any {
+export function sanitizeInput(input: SanitizableValue): SanitizableValue {
   if (typeof input === 'string') {
     return input
       .trim()
@@ -18,28 +19,28 @@ export function sanitizeInput(input: any): any {
       .replace(/javascript:/gi, '') // Remove javascript: protocol
       .replace(/on\w+\s*=\s*["'][^"']*["']/gi, ''); // Remove inline event handlers
   }
-  
+
   if (Array.isArray(input)) {
     return input.map(sanitizeInput);
   }
-  
+
   if (input && typeof input === 'object') {
-    const sanitized: any = {};
+    const sanitized: { [key: string]: SanitizableValue } = {};
     for (const [key, value] of Object.entries(input)) {
       sanitized[key] = sanitizeInput(value);
     }
     return sanitized;
   }
-  
+
   return input;
 }
 
 /**
  * Validate SQL/NoSQL injection attempts
  */
-export function validateNoSQLInjection(input: any): boolean {
+export function validateNoSQLInjection(input: unknown): boolean {
   if (typeof input !== 'string') {return true;}
-  
+
   // Check for common NoSQL injection patterns
   const dangerousPatterns = [
     /\$where/i,
@@ -48,7 +49,7 @@ export function validateNoSQLInjection(input: any): boolean {
     /\$regex/i,
     /\{\s*\$/,
   ];
-  
+
   return !dangerousPatterns.some(pattern => pattern.test(input));
 }
 

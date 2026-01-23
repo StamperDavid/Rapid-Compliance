@@ -8,8 +8,6 @@
 import type {
   SlackMessage,
   SlackBlock,
-  SlackAttachment,
-  SlackMessagePriority,
 } from './types';
 import type { NotificationVariables } from '@/lib/notifications/types';
 
@@ -26,7 +24,6 @@ export class SlackMessageBuilder {
     variables: NotificationVariables,
     level: 'critical' | 'high'
   ): Partial<SlackMessage> {
-    const color = level === 'critical' ? '#FF0000' : '#FFA500';
     const emoji = level === 'critical' ? '🚨' : '⚠️';
     const priority = variables.riskProbability as number;
     
@@ -68,10 +65,10 @@ export class SlackMessageBuilder {
         elements: [
           {
             type: 'mrkdwn',
-            text: level === 'critical' 
+            text: level === 'critical'
               ? '🔴 *Immediate action required* - This deal needs urgent attention'
               : '🟠 *Action recommended* - Review this deal soon to prevent slippage',
-          } as any,
+          },
         ],
       },
       {

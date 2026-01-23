@@ -13,15 +13,15 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import type {
-  JobQueue,
-  ScrapeJobConfig,
-  ScrapeJobResult,
-  ScrapeJobStatus,
-  ScrapeJobPriority,
-  QueueStats,
+import {
+  generateJobId as _generateJobId,
+  type JobQueue,
+  type ScrapeJobConfig,
+  type ScrapeJobResult,
+  type ScrapeJobStatus,
+  type ScrapeJobPriority,
+  type QueueStats,
 } from './scraper-runner-types';
-import { generateJobId } from './scraper-runner-types';
 
 // ============================================================================
 // CONSTANTS
@@ -82,7 +82,7 @@ export class InMemoryScrapeQueue implements JobQueue {
   /**
    * Add a job to the queue
    */
-  async enqueue(config: ScrapeJobConfig): Promise<void> {
+  enqueue(config: ScrapeJobConfig): Promise<void> {
     const jobId = config.jobId;
     const enqueuedAt = new Date();
     const priority = PRIORITY_ORDER[config.priority] || PRIORITY_ORDER.normal;
@@ -116,28 +116,30 @@ export class InMemoryScrapeQueue implements JobQueue {
       queuePosition: this.pendingQueue.indexOf(jobId),
       queueSize: this.pendingQueue.length,
     });
+
+    return Promise.resolve();
   }
 
   /**
    * Get next job to process
-   * 
+   *
    * Returns the highest priority pending job, or null if queue is empty
    */
-  async dequeue(): Promise<ScrapeJobConfig | null> {
+  dequeue(): Promise<ScrapeJobConfig | null> {
     if (this.pendingQueue.length === 0) {
-      return null;
+      return Promise.resolve(null);
     }
 
     // Get highest priority job (first in queue)
     const jobId = this.pendingQueue.shift();
     if (!jobId) {
-      return null;
+      return Promise.resolve(null);
     }
 
     const job = this.jobs.get(jobId);
     if (!job) {
       logger.error('Job not found in map', new Error('Job not found'), { jobId });
-      return null;
+      return Promise.resolve(null);
     }
 
     // Update status to running
@@ -151,26 +153,26 @@ export class InMemoryScrapeQueue implements JobQueue {
       waitTimeMs: job.result.startedAt.getTime() - job.enqueuedAt.getTime(),
     });
 
-    return job.config;
+    return Promise.resolve(job.config);
   }
 
   /**
    * Get job by ID
    */
-  async getJob(jobId: string): Promise<ScrapeJobResult | null> {
+  getJob(jobId: string): Promise<ScrapeJobResult | null> {
     const job = this.jobs.get(jobId);
-    return job ? job.result : null;
+    return Promise.resolve(job ? job.result : null);
   }
 
   /**
    * Update job result
    */
-  async updateJob(jobId: string, updates: Partial<ScrapeJobResult>): Promise<void> {
+  updateJob(jobId: string, updates: Partial<ScrapeJobResult>): Promise<void> {
     const job = this.jobs.get(jobId);
-    
+
     if (!job) {
       logger.warn('Cannot update non-existent job', { jobId });
-      return;
+      return Promise.resolve();
     }
 
     // Merge updates
@@ -186,6 +188,8 @@ export class InMemoryScrapeQueue implements JobQueue {
       status: job.result.status,
       updates: Object.keys(updates),
     });
+
+    return Promise.resolve();
   }
 
   /**
@@ -196,7 +200,7 @@ export class InMemoryScrapeQueue implements JobQueue {
     result: Omit<ScrapeJobResult, 'config' | 'status' | 'startedAt'>
   ): Promise<void> {
     const job = this.jobs.get(jobId);
-    
+
     if (!job) {
       logger.warn('Cannot complete non-existent job', { jobId });
       return;
@@ -225,7 +229,7 @@ export class InMemoryScrapeQueue implements JobQueue {
    */
   async failJob(jobId: string, error: Error, attemptNumber: number): Promise<void> {
     const job = this.jobs.get(jobId);
-    
+
     if (!job) {
       logger.warn('Cannot fail non-existent job', { jobId });
       return;
@@ -234,13 +238,19 @@ export class InMemoryScrapeQueue implements JobQueue {
     const completedAt = new Date();
     const durationMs = completedAt.getTime() - job.result.startedAt.getTime();
 
+    // Extract error code with proper typing
+    const errorWithCode = error as Error & { code?: string };
+    const errorCode = (errorWithCode.code && errorWithCode.code !== '')
+      ? errorWithCode.code
+      : 'UNKNOWN_ERROR';
+
     await this.updateJob(jobId, {
       status: 'failed',
       completedAt,
       durationMs,
       error: {
         message: error.message,
-        code:((error as any).code !== '' && (error as any).code != null) ? (error as any).code : 'UNKNOWN_ERROR',
+        code: errorCode,
         attemptNumber,
         timestamp: new Date(),
       },
@@ -259,7 +269,7 @@ export class InMemoryScrapeQueue implements JobQueue {
    */
   async cancelJob(jobId: string): Promise<boolean> {
     const job = this.jobs.get(jobId);
-    
+
     if (!job) {
       return false;
     }

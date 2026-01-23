@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         message: e.message ?? 'Validation error',
       })) ?? [];
       
-      return errors.validation('Validation failed', errorDetails);
+      return errors.validation('Validation failed', { errors: errorDetails });
     }
 
     const { organizationId, workspaceId, schemaId, changeType, recordId, recordData } = validation.data;

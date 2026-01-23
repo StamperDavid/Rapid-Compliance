@@ -226,15 +226,15 @@ function getTypeColor(type: OrphanedFileType): string {
  * ```
  */
 export function printOrphanedFilesReport(): void {
-  console.log('\n' + COLORS.bold + COLORS.cyan + '═══════════════════════════════════════════════════════════════' + COLORS.reset);
-  console.log(COLORS.bold + COLORS.cyan + '  ORPHANED FILES REPORT - GROUND TRUTH DISCOVERY AUDIT' + COLORS.reset);
-  console.log(COLORS.bold + COLORS.cyan + '═══════════════════════════════════════════════════════════════' + COLORS.reset + '\n');
+  console.log(`\n${COLORS.bold}${COLORS.cyan}═══════════════════════════════════════════════════════════════${COLORS.reset}`);
+  console.log(`${COLORS.bold}${COLORS.cyan}  ORPHANED FILES REPORT - GROUND TRUTH DISCOVERY AUDIT${COLORS.reset}`);
+  console.log(`${COLORS.bold}${COLORS.cyan}═══════════════════════════════════════════════════════════════${COLORS.reset}\n`);
 
   ORPHANED_FILES.forEach((file, index) => {
     const actionColor = getActionColor(file.action);
     const typeColor = getTypeColor(file.type);
 
-    console.log(COLORS.bold + `${index + 1}. ${file.path}` + COLORS.reset);
+    console.log(`${COLORS.bold}${index + 1}. ${file.path}${COLORS.reset}`);
     console.log(`   Type:   ${typeColor}${file.type.toUpperCase()}${COLORS.reset}`);
     console.log(`   Action: ${actionColor}${file.action}${COLORS.reset}`);
     console.log(`   Reason: ${file.reason}`);
@@ -265,25 +265,25 @@ export function printOrphanedFilesReport(): void {
     return acc;
   }, {} as Record<OrphanedFileType, number>);
 
-  console.log(COLORS.bold + COLORS.cyan + '───────────────────────────────────────────────────────────────' + COLORS.reset);
-  console.log(COLORS.bold + 'SUMMARY' + COLORS.reset);
-  console.log(COLORS.bold + COLORS.cyan + '───────────────────────────────────────────────────────────────' + COLORS.reset + '\n');
+  console.log(`${COLORS.bold}${COLORS.cyan}───────────────────────────────────────────────────────────────${COLORS.reset}`);
+  console.log(`${COLORS.bold}SUMMARY${COLORS.reset}`);
+  console.log(`${COLORS.bold}${COLORS.cyan}───────────────────────────────────────────────────────────────${COLORS.reset}\n`);
 
-  console.log(COLORS.bold + 'Total Files: ' + COLORS.reset + ORPHANED_FILES.length + '\n');
+  console.log(`${COLORS.bold}Total Files: ${COLORS.reset}${ORPHANED_FILES.length}\n`);
 
-  console.log(COLORS.bold + 'By Action:' + COLORS.reset);
+  console.log(`${COLORS.bold}By Action:${COLORS.reset}`);
   Object.entries(actionCounts).forEach(([action, count]) => {
     const color = getActionColor(action as OrphanedFileAction);
     console.log(`  ${color}${action}${COLORS.reset}: ${count}`);
   });
 
-  console.log('\n' + COLORS.bold + 'By Type:' + COLORS.reset);
+  console.log(`\n${COLORS.bold}By Type:${COLORS.reset}`);
   Object.entries(typeCounts).forEach(([type, count]) => {
     const color = getTypeColor(type as OrphanedFileType);
     console.log(`  ${color}${type}${COLORS.reset}: ${count}`);
   });
 
-  console.log('\n' + COLORS.bold + COLORS.cyan + '═══════════════════════════════════════════════════════════════' + COLORS.reset + '\n');
+  console.log(`\n${COLORS.bold}${COLORS.cyan}═══════════════════════════════════════════════════════════════${COLORS.reset}\n`);
 }
 
 /**

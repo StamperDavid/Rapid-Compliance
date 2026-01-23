@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       }));
       const errorDetails = formatValidationErrors({ success: false, errors: { errors: zodErrors } });
 
-      return errors.validation('Validation failed', errorDetails);
+      return errors.validation('Validation failed', { errors: errorDetails });
     }
 
     const { organizationId, ...smsData } = validation.data;

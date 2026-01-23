@@ -14,7 +14,7 @@
 import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
 import crypto from 'crypto';
-import type { TemporaryScrape, ExtractedSignal } from '@/types/scraper-intelligence';
+import type { TemporaryScrape } from '@/types/scraper-intelligence';
 
 // ============================================================================
 // CONSTANTS
@@ -158,7 +158,7 @@ export async function saveTemporaryScrape(params: {
 
     // Filter out undefined values for Firestore
     const cleanData = Object.fromEntries(
-      Object.entries(newScrape).filter(([_, v]) => v !== undefined)
+      Object.entries(newScrape).filter(([_key, v]) => v !== undefined)
     );
 
     await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(newScrape.id).set(cleanData);
@@ -344,10 +344,10 @@ export async function getTemporaryScrape(scrapeId: string): Promise<TemporaryScr
 
     return {
       ...raw,
-      createdAt: toDate(raw.createdAt),
-      lastSeen: toDate(raw.lastSeen),
-      expiresAt: toDate(raw.expiresAt),
-      verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt) : undefined,
+      createdAt: toDate(raw.createdAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+      lastSeen: toDate(raw.lastSeen as Date | FirestoreTimestamp | { seconds: number } | string | number),
+      expiresAt: toDate(raw.expiresAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+      verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt as Date | FirestoreTimestamp | { seconds: number } | string | number) : undefined,
     } as TemporaryScrape;
   } catch (error) {
     logger.error('Failed to get temporary scrape', error instanceof Error ? error : new Error(String(error)), {
@@ -387,10 +387,10 @@ export async function getTemporaryScrapeByHash(
     return {
       id: docs.docs[0].id,
       ...raw,
-      createdAt: toDate(raw.createdAt),
-      lastSeen: toDate(raw.lastSeen),
-      expiresAt: toDate(raw.expiresAt),
-      verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt) : undefined,
+      createdAt: toDate(raw.createdAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+      lastSeen: toDate(raw.lastSeen as Date | FirestoreTimestamp | { seconds: number } | string | number),
+      expiresAt: toDate(raw.expiresAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+      verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt as Date | FirestoreTimestamp | { seconds: number } | string | number) : undefined,
     } as TemporaryScrape;
   } catch (error) {
     logger.error('Failed to get temporary scrape by hash', error instanceof Error ? error : new Error(String(error)), {
@@ -430,10 +430,10 @@ export async function getTemporaryScrapesByUrl(
       const raw = doc.data();
       return {
         ...raw,
-        createdAt: toDate(raw.createdAt),
-        lastSeen: toDate(raw.lastSeen),
-        expiresAt: toDate(raw.expiresAt),
-        verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt) : undefined,
+        createdAt: toDate(raw.createdAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+        lastSeen: toDate(raw.lastSeen as Date | FirestoreTimestamp | { seconds: number } | string | number),
+        expiresAt: toDate(raw.expiresAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+        verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt as Date | FirestoreTimestamp | { seconds: number } | string | number) : undefined,
       } as TemporaryScrape;
     });
   } catch (error) {
@@ -513,17 +513,26 @@ export async function calculateStorageCost(organizationId: string): Promise<{
 }
 
 /**
+ * Firestore Timestamp interface
+ */
+interface FirestoreTimestamp {
+  seconds: number;
+  nanoseconds: number;
+  toDate: () => Date;
+}
+
+/**
  * Convert Firestore Timestamp to JavaScript Date
  * Firestore returns Timestamp objects, not Date objects
  */
-function toDate(timestamp: any): Date {
+function toDate(timestamp: Date | FirestoreTimestamp | { seconds: number } | string | number): Date {
   if (timestamp instanceof Date) {
     return timestamp;
   }
-  if (timestamp && typeof timestamp.toDate === 'function') {
-    return timestamp.toDate();
+  if (timestamp && typeof (timestamp as FirestoreTimestamp).toDate === 'function') {
+    return (timestamp as FirestoreTimestamp).toDate();
   }
-  if (timestamp?.seconds) {
+  if (typeof timestamp === 'object' && 'seconds' in timestamp) {
     return new Date(timestamp.seconds * 1000);
   }
   return new Date(timestamp);
@@ -553,10 +562,10 @@ export async function getStorageStats(organizationId: string): Promise<{
       const raw = doc.data();
       return {
         ...raw,
-        createdAt: toDate(raw.createdAt),
-        lastSeen: toDate(raw.lastSeen),
-        expiresAt: toDate(raw.expiresAt),
-        verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt) : undefined,
+        createdAt: toDate(raw.createdAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+        lastSeen: toDate(raw.lastSeen as Date | FirestoreTimestamp | { seconds: number } | string | number),
+        expiresAt: toDate(raw.expiresAt as Date | FirestoreTimestamp | { seconds: number } | string | number),
+        verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt as Date | FirestoreTimestamp | { seconds: number } | string | number) : undefined,
       } as TemporaryScrape;
     });
 

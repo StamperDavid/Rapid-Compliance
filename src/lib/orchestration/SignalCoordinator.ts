@@ -26,12 +26,7 @@
  * - Firestore security rules enforce orgId isolation
  */
 
-import type {
-  Firestore,
-  Unsubscribe,
-  QueryConstraint} from 'firebase/firestore';
 import {
-  collection,
   addDoc,
   query,
   where,
@@ -40,7 +35,10 @@ import {
   updateDoc,
   doc,
   orderBy,
-  limit as firestoreLimit
+  limit as firestoreLimit,
+  type Firestore,
+  type Unsubscribe,
+  type QueryConstraint
 } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type {

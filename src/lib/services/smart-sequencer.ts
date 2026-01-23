@@ -15,9 +15,7 @@ import { logger } from '@/lib/logger/logger';
 import {
   enrollInSequence,
   getSequence,
-  processDueSequenceSteps,
   type Sequence,
-  type SequenceEnrollment,
 } from './sequencer';
 import { calculateLeadScore } from './lead-scoring-engine';
 import { db } from '@/lib/firebase-admin';
@@ -28,27 +26,51 @@ import type { LeadScore } from '@/types/lead-scoring';
 // TYPES
 // ============================================================================
 
+/**
+ * Firestore document data for sequence enrollment with smart metadata
+ */
+interface EnrollmentDocumentData {
+  organizationId: string;
+  status: 'active' | 'paused' | 'completed' | 'stopped' | 'failed';
+  leadId: string;
+  nextExecutionAt?: FirebaseFirestore.Timestamp;
+  metadata?: {
+    leadPriority?: 'hot' | 'warm' | 'cold';
+    scoredAt?: string;
+    leadScore?: number;
+    leadGrade?: string;
+    delayMultiplier?: number;
+    smartEnrollment?: boolean;
+    topSignals?: string[];
+    timingAdjusted?: boolean;
+    rescored?: boolean;
+    rescoredAt?: FirebaseFirestore.Timestamp;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export interface SmartEnrollmentOptions {
   /** Minimum score required to enroll (default: 0) */
   minScore?: number;
-  
+
   /** Auto-adjust delays based on priority */
   priorityBasedTiming?: boolean;
-  
+
   /** Hot leads get faster follow-ups */
   hotLeadDelayMultiplier?: number; // Default: 0.5 (2x faster)
-  
+
   /** Warm leads get normal timing */
   warmLeadDelayMultiplier?: number; // Default: 1.0 (normal)
-  
+
   /** Cold leads get slower follow-ups */
   coldLeadDelayMultiplier?: number; // Default: 1.5 (slower)
-  
+
   /** Skip low-scoring leads */
   skipBelowScore?: number;
-  
+
   /** Metadata to attach */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PrioritizedLead {
@@ -315,7 +337,7 @@ export async function processSequenceStepsWithPriority(
     const unknown: string[] = [];
 
     snapshot.docs.forEach((doc) => {
-      const data = doc.data();
+      const data = doc.data() as EnrollmentDocumentData;
       const priority = data.metadata?.leadPriority;
 
       switch (priority) {
@@ -404,7 +426,7 @@ export async function rescoreActiveSequenceLeads(
     let rescored = 0;
 
     for (const doc of snapshot.docs) {
-      const enrollment = doc.data();
+      const enrollment = doc.data() as EnrollmentDocumentData;
       const leadId = enrollment.leadId;
       const lastScoredAt = enrollment.metadata?.scoredAt
         ? new Date(enrollment.metadata.scoredAt)
@@ -489,7 +511,7 @@ async function adjustEnrollmentTiming(
       return;
     }
 
-    const enrollment = enrollmentDoc.data();
+    const enrollment = enrollmentDoc.data() as EnrollmentDocumentData | undefined;
     if (!enrollment?.nextExecutionAt) {
       return;
     }
@@ -533,8 +555,8 @@ export async function getRecommendedSequence(params: {
   const { leadId, organizationId, availableSequences } = params;
 
   try {
-    // Calculate lead score
-    const score = await calculateLeadScore({
+    // Calculate lead score (for future smart matching implementation)
+    const _score = await calculateLeadScore({
       leadId,
       organizationId,
     });
@@ -554,9 +576,9 @@ export async function getRecommendedSequence(params: {
     // Hot leads → aggressive sequences
     // Warm leads → standard sequences
     // Cold leads → nurture sequences
-    
+
     // For now, return the first active sequence
-    // TODO: Implement sequence tagging and smart matching
+    // TODO: Implement sequence tagging and smart matching based on _score
 
     return sequences?.[0] ?? null;
   } catch (error) {
