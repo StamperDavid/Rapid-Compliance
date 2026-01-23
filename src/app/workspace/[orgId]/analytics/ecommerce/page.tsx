@@ -1,29 +1,54 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';;
 
+interface TopProduct {
+  name: string;
+  unitsSold: number;
+  revenue: number;
+}
+
+interface EcommerceAnalytics {
+  totalOrders: number;
+  totalRevenue: number;
+  avgOrderValue: number;
+  conversionRate: number;
+  topProducts: TopProduct[];
+}
+
+function isEcommerceAnalytics(data: unknown): data is EcommerceAnalytics {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+
+  return (
+    typeof obj.totalOrders === 'number' &&
+    typeof obj.totalRevenue === 'number' &&
+    typeof obj.avgOrderValue === 'number' &&
+    typeof obj.conversionRate === 'number' &&
+    Array.isArray(obj.topProducts)
+  );
+}
+
 export default function EcommerceAnalyticsPage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  
+
   const { theme } = useOrgTheme();
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<EcommerceAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadAnalytics();
-  }, []);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/analytics/ecommerce?orgId=${orgId}`);
-      const data = await response.json();
-      if (data.success) {
+      const data = await response.json() as { success?: boolean; analytics?: unknown };
+      if (data.success && isEcommerceAnalytics(data.analytics)) {
         setAnalytics(data.analytics);
       }
     } catch (error: unknown) {
@@ -31,7 +56,11 @@ export default function EcommerceAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadAnalytics();
+  }, [loadAnalytics]);
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
 
@@ -112,7 +141,7 @@ export default function EcommerceAnalyticsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {analytics.topProducts.map((product: any, index: number) => (
+                        {analytics.topProducts.map((product: TopProduct, index: number) => (
                           <tr key={index} style={{ borderBottom: '1px solid #222' }}>
                             <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#fff' }}>{product.name}</td>
                             <td style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', color: '#999' }}>{product.unitsSold}</td>

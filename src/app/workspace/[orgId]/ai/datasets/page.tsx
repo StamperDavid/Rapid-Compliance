@@ -4,8 +4,14 @@ import { useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { usePagination } from '@/hooks/usePagination';
-import type { QueryConstraint } from 'firebase/firestore';
-import { orderBy } from 'firebase/firestore';
+import { orderBy, type QueryConstraint, type DocumentData, type Timestamp } from 'firebase/firestore';
+
+interface Dataset {
+  id: string;
+  name: string;
+  exampleCount?: number;
+  createdAt?: Timestamp;
+}
 
 export default function DatasetsPage() {
   const params = useParams();
@@ -13,7 +19,7 @@ export default function DatasetsPage() {
   const orgId = params.orgId as string;
 
   // Fetch function with pagination
-  const fetchDatasets = useCallback(async (lastDoc?: any) => {
+  const fetchDatasets = useCallback(async (lastDoc?: DocumentData) => {
     const constraints: QueryConstraint[] = [
       orderBy('createdAt', 'desc')
     ];
@@ -37,7 +43,7 @@ export default function DatasetsPage() {
 
   // Initial load
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   return (
@@ -58,21 +64,29 @@ export default function DatasetsPage() {
       ) : (
         <>
           <div className="grid gap-4">
-            {datasets.map(dataset => (
-              <div key={dataset.id} className="bg-gray-900 rounded-lg p-6">
-                <h3 className="text-xl font-semibold mb-2">{dataset.name}</h3>
-                <div className="flex gap-4 text-sm text-gray-400">
-                  <span>{dataset.exampleCount ?? 0} examples</span><span>•</span><span>Created {dataset.createdAt ? new Date(dataset.createdAt.toDate()).toLocaleDateString() : 'N/A'}</span>
+            {datasets.map((dataset) => {
+              const typedDataset = dataset as Dataset;
+              const exampleCount = typedDataset.exampleCount ?? 0;
+              const createdDate = typedDataset.createdAt && 'toDate' in typedDataset.createdAt
+                ? new Date(typedDataset.createdAt.toDate()).toLocaleDateString()
+                : 'N/A';
+
+              return (
+                <div key={typedDataset.id} className="bg-gray-900 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold mb-2">{typedDataset.name}</h3>
+                  <div className="flex gap-4 text-sm text-gray-400">
+                    <span>{exampleCount} examples</span><span>•</span><span>Created {createdDate}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination */}
           {(hasMore || loading) && (
             <div className="mt-6 flex justify-center">
               <button
-                onClick={loadMore}
+                onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
                 className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >

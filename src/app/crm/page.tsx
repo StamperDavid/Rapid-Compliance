@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import FilterBuilder from '@/components/FilterBuilder';
@@ -133,7 +134,7 @@ interface ImportPreviewRow {
   [key: string]: string;
 }
 
-interface CapacityCheckResponse {
+interface _CapacityCheckResponse {
   allowed: boolean;
   message: string;
 }
@@ -141,7 +142,7 @@ interface CapacityCheckResponse {
 // Component that uses useSearchParams - wrapped in Suspense
 function CRMContent() {
   const { user } = useAuth();
-  const { theme, loading: themeLoading } = useOrgTheme(); // Load organization-specific theme
+  const { theme } = useOrgTheme(); // Load organization-specific theme
   const searchParams = useSearchParams();
   const [config, setConfig] = useState<CRMConfig | null>(null);
   const [activeView, setActiveView] = useState<ViewType>('leads');
@@ -194,8 +195,8 @@ function CRMContent() {
         // Continue with null config (defaults will be used)
       }
     };
-    
-    loadConfig();
+
+    void loadConfig();
   }, [user?.organizationId]);
 
   // Sample data with setters
@@ -367,7 +368,7 @@ function CRMContent() {
     a.click();
   };
 
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) {return;}
 
@@ -396,22 +397,30 @@ function CRMContent() {
         });
 
         if (capacityResponse.ok) {
-          const capacityCheck = await capacityResponse.json();
-          
-          if (!capacityCheck.allowed) {
-            showToast(
-              `⚠️ Cannot import ${totalRows} records. ${capacityCheck.message}`,
-              'error'
-            );
-            setImportFile(null);
-            return;
-          }
+          const capacityCheck = await capacityResponse.json() as unknown;
 
-          // Show capacity info
-          showToast(
-            `✅ ${capacityCheck.message}`,
-            'success'
-          );
+          if (
+            capacityCheck &&
+            typeof capacityCheck === 'object' &&
+            'allowed' in capacityCheck &&
+            'message' in capacityCheck &&
+            typeof capacityCheck.message === 'string'
+          ) {
+            if (!capacityCheck.allowed) {
+              showToast(
+                `⚠️ Cannot import ${totalRows} records. ${capacityCheck.message}`,
+                'error'
+              );
+              setImportFile(null);
+              return;
+            }
+
+            // Show capacity info
+            showToast(
+              `✅ ${capacityCheck.message}`,
+              'success'
+            );
+          }
         }
       } catch (error: unknown) {
         console.error('Error checking capacity:', error instanceof Error ? error.message : String(error));
@@ -505,7 +514,7 @@ function CRMContent() {
         <div style={{ padding: '1.5rem', borderBottom: '1px solid #1a1a1a' }}>
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', cursor: 'pointer' }}>
             {logoUrl ? (
-              <img src={logoUrl} alt={brandName} style={{ maxHeight: sidebarOpen ? '40px' : '32px', maxWidth: sidebarOpen ? '150px' : '32px', objectFit: 'contain' }} />
+              <Image src={logoUrl} alt={brandName} width={sidebarOpen ? 150 : 32} height={sidebarOpen ? 40 : 32} style={{ maxHeight: sidebarOpen ? '40px' : '32px', maxWidth: sidebarOpen ? '150px' : '32px', objectFit: 'contain' }} />
             ) : (
               <>
                 <div style={{ fontSize: '1.5rem' }}>🚀</div>
@@ -1027,7 +1036,7 @@ function CRMContent() {
               Import {getSchema().pluralName}
             </h3>
             <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '1.5rem' }}>
-              Upload a CSV file. We'll automatically map columns to your {getSchema().singularName} schema.
+              Upload a CSV file. We&apos;ll automatically map columns to your {getSchema().singularName} schema.
             </p>
 
             {!importFile ? (
@@ -1065,7 +1074,7 @@ function CRMContent() {
                     id="import-file-upload"
                     type="file"
                     accept=".csv"
-                    onChange={handleImportFile}
+                    onChange={(e) => void handleImportFile(e)}
                     style={{ display: 'none' }}
                   />
                 </label>

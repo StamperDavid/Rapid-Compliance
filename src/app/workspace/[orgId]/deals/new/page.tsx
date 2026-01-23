@@ -12,9 +12,11 @@ export default function NewDealPage() {
   const orgId = params.orgId as string;
   const [deal, setDeal] = useState({ name: '', company: '', value: 0, probability: 50, stage: 'prospecting', expectedCloseDate: '', notes: '' });
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     try {
       setSaving(true);
       const dealId = `deal-${Date.now()}`;
@@ -22,7 +24,7 @@ export default function NewDealPage() {
       router.push(`/workspace/${orgId}/deals`);
     } catch (error: unknown) {
       logger.error('Error creating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to create deal');
+      setErrorMessage('Failed to create deal. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -32,7 +34,12 @@ export default function NewDealPage() {
     <div className="p-8">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Create New Deal</h1>
-        <form onSubmit={handleSubmit}>
+        {errorMessage && (
+          <div className="mb-4 p-4 bg-red-900/20 border border-red-900 text-red-400 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+        <form onSubmit={(e) => void handleSubmit(e)}>
           <div className="bg-gray-900 rounded-lg p-6 mb-4">
             <div className="space-y-4">
               <div><label className="block text-sm font-medium mb-2">Deal Name *</label><input type="text" value={deal.name} onChange={(e) => setDeal({...deal, name: e.target.value})} required className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>

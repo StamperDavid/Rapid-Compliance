@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { WorkflowMetricsCard } from '@/components/analytics/WorkflowMetricsCard';
 import { EmailMetricsCard } from '@/components/analytics/EmailMetricsCard';
 import { DealPipelineCard } from '@/components/analytics/DealPipelineCard';
@@ -51,7 +51,7 @@ export default function AnalyticsDashboardPage() {
   /**
    * Fetch analytics data
    */
-  const fetchAnalytics = async (showRefreshing = false) => {
+  const fetchAnalytics = useCallback(async (showRefreshing = false) => {
     try {
       if (showRefreshing) {
         setRefreshing(true);
@@ -67,34 +67,35 @@ export default function AnalyticsDashboardPage() {
       });
 
       const response = await fetch(`/api/analytics/dashboard?${params}`);
-      const json: AnalyticsResponse | AnalyticsErrorResponse = await response.json();
+      const json = await response.json() as AnalyticsResponse | AnalyticsErrorResponse;
 
       if (!json.success) {
         throw new Error((json as AnalyticsErrorResponse).error);
       }
 
-      setData((json).data);
-    } catch (err: any) {
+      setData(json.data);
+    } catch (err: unknown) {
       console.error('Failed to fetch analytics:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load analytics');
+      const errorMessage = err instanceof Error && err.message ? err.message : 'Failed to load analytics';
+      setError(errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [organizationId, workspaceId, period]);
 
   /**
    * Load analytics on mount and when period changes
    */
   useEffect(() => {
-    fetchAnalytics();
-  }, [period]);
+    void fetchAnalytics();
+  }, [fetchAnalytics]);
 
   /**
    * Handle refresh
    */
   const handleRefresh = () => {
-    fetchAnalytics(true);
+    void fetchAnalytics(true);
   };
 
   /**
@@ -136,7 +137,7 @@ export default function AnalyticsDashboardPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Analytics</h2>
             <p className="text-gray-600 mb-6">{error}</p>
             <button
-              onClick={() => fetchAnalytics()}
+              onClick={() => void fetchAnalytics()}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               Try Again

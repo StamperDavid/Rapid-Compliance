@@ -6,8 +6,17 @@ import { motion } from 'framer-motion';
 import { Phone, Plus, Play, Clock, Calendar, User, PhoneCall, Download } from 'lucide-react';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { usePagination } from '@/hooks/usePagination';
-import type { QueryConstraint } from 'firebase/firestore';
-import { orderBy } from 'firebase/firestore';
+import { type QueryConstraint, type DocumentData, orderBy } from 'firebase/firestore';
+
+interface Call {
+  id: string;
+  contactName?: string;
+  phoneNumber?: string;
+  duration?: number;
+  status?: string;
+  createdAt?: string | number | Date;
+  recordingUrl?: string;
+}
 
 export default function CallLogPage() {
   const params = useParams();
@@ -15,7 +24,7 @@ export default function CallLogPage() {
   const orgId = params.orgId as string;
 
   // Fetch function with pagination
-  const fetchCalls = useCallback(async (lastDoc?: any) => {
+  const fetchCalls = useCallback(async (lastDoc?: DocumentData) => {
     const constraints: QueryConstraint[] = [
       orderBy('createdAt', 'desc')
     ];
@@ -35,11 +44,11 @@ export default function CallLogPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination({ fetchFn: fetchCalls });
+  } = usePagination<Call>({ fetchFn: fetchCalls });
 
   // Initial load
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const getStatusBadgeStyles = (status: string) => {
@@ -56,14 +65,18 @@ export default function CallLogPage() {
   };
 
   const formatDuration = (seconds?: number) => {
-    if (!seconds) return '-';
+    if (!seconds) {
+      return '-';
+    }
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatDate = (timestamp?: any) => {
-    if (!timestamp) return '-';
+  const formatDate = (timestamp?: string | number | Date) => {
+    if (!timestamp) {
+      return '-';
+    }
     const date = new Date(timestamp);
     return date.toLocaleString('en-US', {
       month: 'short',
@@ -188,12 +201,12 @@ export default function CallLogPage() {
                   >
                     <td className="p-4">
                       <span className="font-medium text-white">
-                        {call.contactName || 'Unknown'}
+                        {call.contactName ?? 'Unknown'}
                       </span>
                     </td>
                     <td className="p-4">
                       <span className="text-gray-400 font-mono text-sm">
-                        {call.phoneNumber || '-'}
+                        {call.phoneNumber ?? '-'}
                       </span>
                     </td>
                     <td className="p-4">
@@ -202,8 +215,8 @@ export default function CallLogPage() {
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide ${getStatusBadgeStyles(call.status)}`}>
-                        {call.status || 'pending'}
+                      <span className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide ${getStatusBadgeStyles(call.status ?? 'pending')}`}>
+                        {call.status ?? 'pending'}
                       </span>
                     </td>
                     <td className="p-4">
@@ -240,7 +253,7 @@ export default function CallLogPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={loadMore}
+                onClick={() => { void loadMore(); }}
                 disabled={loading || !hasMore}
                 className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
               >

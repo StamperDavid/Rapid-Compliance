@@ -4,15 +4,16 @@
  * Production implementation with all action types supported
  */
 
-import { WorkflowTrigger, type Workflow, type WorkflowAction, type WorkflowCondition } from '@/types/workflow';
+import type { Workflow, WorkflowAction, WorkflowCondition, WorkflowTriggerData } from '@/types/workflow';
+import { WorkflowTrigger } from '@/types/workflow';
 import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';
+import { logger } from '@/lib/logger/logger';;
 
 export interface WorkflowExecution {
   id: string;
   workflowId: string;
   triggerId: string;
-  triggerData: Record<string, unknown>;
+  triggerData: WorkflowTriggerData;
   status: 'running' | 'completed' | 'failed' | 'cancelled';
   startedAt: Date;
   completedAt?: Date;
@@ -20,7 +21,7 @@ export interface WorkflowExecution {
   actionResults: Array<{
     actionId: string;
     status: 'success' | 'failed' | 'skipped';
-    result?: any;
+    result?: unknown;
     error?: string;
   }>;
 }
@@ -32,7 +33,7 @@ export interface WorkflowExecution {
  */
 export async function executeWorkflowImpl(
   workflow: Workflow,
-  triggerData: Record<string, unknown>
+  triggerData: WorkflowTriggerData
 ): Promise<WorkflowExecution> {
   const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const execution: WorkflowExecution = {
@@ -48,7 +49,7 @@ export async function executeWorkflowImpl(
   try {
     // Check conditions before executing
     if (workflow.conditions && workflow.conditions.length > 0) {
-      const conditionsMet = await evaluateConditions(workflow.conditions, triggerData, workflow.conditionOperator ?? 'and');
+      const conditionsMet = await evaluateConditions(workflow.conditions, triggerData, workflow.conditionOperator || 'and');
       if (!conditionsMet) {
         execution.status = 'completed';
         execution.completedAt = new Date();
@@ -65,24 +66,17 @@ export async function executeWorkflowImpl(
           status: 'success',
           result,
         });
-      } catch (error: unknown) {
-        const errorObj = error instanceof Error ? error : new Error(String(error));
-        logger.error('[Workflow Engine] Action execution failed', errorObj, {
-          file: 'workflow-engine.ts',
-          actionId: action.id,
-          actionName: action.name,
-        });
-
+      } catch (error: any) {
         execution.actionResults.push({
           actionId: action.id,
           status: 'failed',
-          error: errorObj.message,
+          error: error.message,
         });
-
+        
         // Stop execution if action fails and workflow is set to stop on error
         if (workflow.settings.onError === 'stop') {
           execution.status = 'failed';
-          execution.error = `Action ${action.name} failed: ${errorObj.message}`;
+          execution.error = `Action ${action.name} failed: ${error.message}`;
           execution.completedAt = new Date();
           return execution;
         }
@@ -93,8 +87,8 @@ export async function executeWorkflowImpl(
     execution.completedAt = new Date();
 
     // Store execution in Firestore
-    const orgId = triggerData?.organizationId ?? (workflow as any).organizationId;
-    const workspaceId = triggerData?.workspaceId ?? (workflow as any).workspaceId;
+    const orgId = triggerData?.organizationId || (workflow as any).organizationId;
+    const workspaceId = triggerData?.workspaceId || (workflow as any).workspaceId;
     
     if (orgId && workspaceId) {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -110,15 +104,9 @@ export async function executeWorkflowImpl(
     }
 
     return execution;
-  } catch (error: unknown) {
-    const errorObj = error instanceof Error ? error : new Error(String(error));
-    logger.error('[Workflow Engine] Workflow execution failed', errorObj, {
-      file: 'workflow-engine.ts',
-      workflowId: workflow.id,
-    });
-
+  } catch (error: any) {
     execution.status = 'failed';
-    execution.error = errorObj.message;
+    execution.error = error.message;
     execution.completedAt = new Date();
     return execution;
   }
@@ -130,7 +118,7 @@ export async function executeWorkflowImpl(
  */
 async function evaluateConditions(
   conditions: WorkflowCondition[],
-  triggerData: Record<string, unknown>,
+  triggerData: WorkflowTriggerData,
   operator: 'and' | 'or'
 ): Promise<boolean> {
   const results = await Promise.all(
@@ -147,7 +135,7 @@ async function evaluateConditions(
 /**
  * Evaluate single condition
  */
-function evaluateCondition(condition: WorkflowCondition, triggerData: Record<string, unknown>): boolean {
+function evaluateCondition(condition: WorkflowCondition, triggerData: WorkflowTriggerData): boolean {
   const fieldValue = getNestedValue(triggerData, condition.field);
   
   switch (condition.operator) {
@@ -181,12 +169,12 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: Record<str
  */
 async function executeAction(
   action: WorkflowAction,
-  triggerData: Record<string, unknown>,
+  triggerData: WorkflowTriggerData,
   workflow: Workflow
-): Promise<Record<string, unknown>> {
-  const organizationId = (triggerData?.organizationId ?? workflow.workspaceId) as string;
-
-  if (!organizationId || typeof organizationId !== 'string') {
+): Promise<unknown> {
+  const organizationId = triggerData?.organizationId || workflow.workspaceId;
+  
+  if (!organizationId) {
     throw new Error('Organization ID required for workflow execution');
   }
   
@@ -226,7 +214,7 @@ async function executeAction(
       return executeSlackAction(action as any, triggerData, organizationId);
     
     case 'loop':
-      return executeLoopAction(action as any, triggerData, workflow, organizationId) as unknown as Record<string, unknown>;
+      return executeLoopAction(action as any, triggerData, workflow, organizationId);
     
     case 'ai_agent':
       return executeAIAgentAction(action as any, triggerData, organizationId);
@@ -242,7 +230,7 @@ async function executeAction(
         ...action,
         type: 'create_entity',
         config: {
-          ...((action as any).config ?? {}),
+          ...((action as any).config || {}),
           entityType: 'tasks',
         }
       } as any, triggerData, organizationId);
@@ -255,8 +243,9 @@ async function executeAction(
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: WorkflowTriggerData, path: string): unknown {
+  return path.split('.').reduce((current: unknown, key: string) => 
+    (current as Record<string, unknown>)?.[key], obj);
 }
 
 /**
@@ -343,10 +332,10 @@ export async function getWorkflowExecutions(
   );
   
   // Convert Firestore data back to WorkflowExecution format
-  return executions.map((e: any) => ({
+  return executions.map((e: Record<string, unknown>) => ({
     ...e,
-    startedAt: new Date(e.startedAt),
-    completedAt: e.completedAt ? new Date(e.completedAt) : undefined,
+    startedAt: new Date(e.startedAt as string),
+    completedAt: e.completedAt ? new Date(e.completedAt as string) : undefined,
   })) as WorkflowExecution[];
 }
 
@@ -356,7 +345,7 @@ export async function getWorkflowExecutions(
  */
 export async function testWorkflowExecution(
   workflow: Workflow,
-  testData: any
+  testData: WorkflowTriggerData
 ): Promise<WorkflowExecution> {
   return executeWorkflowImpl(workflow, testData);
 }

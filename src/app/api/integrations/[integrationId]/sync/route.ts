@@ -27,7 +27,7 @@ export async function POST(
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const result = await syncIntegration(user.organizationId, params.integrationId);
+    const result = syncIntegration(user.organizationId, params.integrationId);
 
     return NextResponse.json({
       success: result.success,

@@ -51,7 +51,7 @@ export async function handleEntityChange(
   schemaId: string,
   changeType: 'created' | 'updated' | 'deleted',
   recordId: string,
-  recordData: any
+  recordData: Record<string, unknown>
 ): Promise<void> {
   // Find workflows with matching triggers
   const { where } = await import('firebase/firestore');
@@ -74,7 +74,7 @@ export async function handleEntityChange(
   );
   
   // Filter workflows that match this trigger
-  const matchingWorkflows = workflows.filter((w: any) => {
+  const matchingWorkflows = workflows.filter((w: Record<string, unknown>) => {
     const trigger = w.trigger as EntityTrigger;
     return trigger?.type === `entity.${changeType}` && trigger?.schemaId === schemaId;
   });

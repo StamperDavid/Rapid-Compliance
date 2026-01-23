@@ -5,16 +5,16 @@
 
 import type { EmailOptions } from '@/lib/email/email-service';
 import { sendEmail } from '@/lib/email/email-service';
-import type { SendEmailAction } from '@/types/workflow';
+import type { SendEmailAction, WorkflowTriggerData } from '@/types/workflow';
 
 /**
  * Execute email action
  */
 export async function executeEmailAction(
   action: SendEmailAction,
-  triggerData: any,
+  triggerData: WorkflowTriggerData,
   organizationId: string
-): Promise<any> {
+): Promise<unknown> {
   // Resolve variables in action fields
   const to = resolveVariables(action.to, triggerData);
   const subject = resolveVariables(action.subject, triggerData);
@@ -61,7 +61,7 @@ export async function executeEmailAction(
 /**
  * Resolve variables in config (e.g., {{triggerData.fieldName}})
  */
-function resolveVariables(config: any, triggerData: any): any {
+function resolveVariables(config: unknown, triggerData: WorkflowTriggerData): unknown {
   if (typeof config === 'string') {
     return config.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
       const value = getNestedValue(triggerData, path.trim());
@@ -70,9 +70,9 @@ function resolveVariables(config: any, triggerData: any): any {
   } else if (Array.isArray(config)) {
     return config.map(item => resolveVariables(item, triggerData));
   } else if (config && typeof config === 'object') {
-    const resolved: any = {};
+    const resolved: Record<string, unknown> = {};
     for (const key in config) {
-      resolved[key] = resolveVariables(config[key], triggerData);
+      resolved[key] = resolveVariables((config as Record<string, unknown>)[key], triggerData);
     }
     return resolved;
   }
@@ -82,7 +82,8 @@ function resolveVariables(config: any, triggerData: any): any {
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: WorkflowTriggerData, path: string): unknown {
+  return path.split('.').reduce((current: unknown, key: string) => 
+    (current as Record<string, unknown>)?.[key], obj);
 }
 

@@ -1,28 +1,43 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 
+interface WorkflowAnalyticsData {
+  name: string;
+  executions: number;
+  successRate: number;
+}
+
+interface WorkflowAnalytics {
+  totalExecutions: number;
+  successRate: number;
+  avgDuration: number;
+  activeWorkflows: number;
+  topWorkflows: WorkflowAnalyticsData[];
+}
+
+interface WorkflowAnalyticsApiResponse {
+  success: boolean;
+  analytics: WorkflowAnalytics;
+}
+
 export default function WorkflowAnalyticsPage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  
+
   const { theme } = useOrgTheme();
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<WorkflowAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadAnalytics();
-  }, []);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/analytics/workflows?orgId=${orgId}`);
-      const data = await response.json();
+      const data = await response.json() as WorkflowAnalyticsApiResponse;
       if (data.success) {
         setAnalytics(data.analytics);
       }
@@ -31,7 +46,11 @@ export default function WorkflowAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadAnalytics();
+  }, [loadAnalytics]);
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
   const formatPercent = (num: number) => `${num.toFixed(1)}%`;
@@ -101,7 +120,7 @@ export default function WorkflowAnalyticsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {analytics.topWorkflows.map((workflow: any, index: number) => (
+                        {analytics.topWorkflows.map((workflow: WorkflowAnalyticsData, index: number) => (
                           <tr key={index} style={{ borderBottom: '1px solid #222' }}>
                             <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#fff' }}>{workflow.name}</td>
                             <td style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', color: '#999' }}>{workflow.executions}</td>

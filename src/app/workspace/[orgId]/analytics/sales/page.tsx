@@ -1,24 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import type { SalesVelocityMetrics, PipelineInsight } from '@/lib/crm/sales-velocity';
 
+interface SalesAnalyticsApiResponse {
+  success: boolean;
+  data: {
+    metrics: SalesVelocityMetrics;
+    insights: PipelineInsight[];
+  };
+}
+
 export default function SalesAnalyticsPage() {
   const params = useParams();
-  const orgId = params.orgId as string;
+  const _orgId = params.orgId as string;
   const [metrics, setMetrics] = useState<SalesVelocityMetrics | null>(null);
   const [insights, setInsights] = useState<PipelineInsight[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadAnalytics();
-  }, []);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
       const response = await fetch(`/api/crm/analytics/velocity?workspaceId=default`);
-      const data = await response.json();
+      const data = await response.json() as SalesAnalyticsApiResponse;
       if (data.success) {
         setMetrics(data.data.metrics);
         setInsights(data.data.insights ?? []);
@@ -28,7 +32,11 @@ export default function SalesAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadAnalytics();
+  }, [loadAnalytics]);
 
   if (loading) {
     return (

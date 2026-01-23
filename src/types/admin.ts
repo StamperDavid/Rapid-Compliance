@@ -398,9 +398,9 @@ export interface SystemConfig {
   type: 'string' | 'number' | 'boolean' | 'json';
   description?: string;
   category: 'general' | 'billing' | 'ai' | 'integrations' | 'security' | 'compliance';
-  
+
   updatedBy: string;
-  updatedAt: Timestamp;
+  updatedAt: Date | Timestamp;
 }
 
 

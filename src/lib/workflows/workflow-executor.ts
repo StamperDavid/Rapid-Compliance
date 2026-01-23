@@ -3,7 +3,7 @@
  * Extracted to break circular dependencies between workflow-engine and triggers
  */
 
-import type { Workflow } from '@/types/workflow';
+import type { Workflow, WorkflowTriggerData } from '@/types/workflow';
 import type { WorkflowExecution } from './workflow-engine';
 
 /**
@@ -13,7 +13,7 @@ import type { WorkflowExecution } from './workflow-engine';
  */
 export async function executeWorkflow(
   workflow: Workflow,
-  triggerData: Record<string, unknown>
+  triggerData: WorkflowTriggerData
 ): Promise<WorkflowExecution> {
   // Dynamic import to avoid circular dependency
   const { executeWorkflowImpl } = await import('./workflow-engine');

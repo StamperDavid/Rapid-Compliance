@@ -66,7 +66,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { success: false, error: 'Access denied to this organization' },
         { status: 403 }
       );
-      await logApiRequest(request, response, startTime, {
+      logApiRequest(request, response, startTime, {
         organizationId,
         userId: user.uid,
       });
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { success: false, error: result.error },
         { status: 500 }
       );
-      await logApiRequest(request, response, startTime, {
+      logApiRequest(request, response, startTime, {
         organizationId,
         userId: user.uid,
       });
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const response = NextResponse.json(result);
-    await logApiRequest(request, response, startTime, {
+    logApiRequest(request, response, startTime, {
       organizationId,
       userId: user.uid,
     });
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       response = errors.internal('Failed to send email', errorObj);
     }
 
-    await logApiRequest(request, response, startTime);
+    logApiRequest(request, response, startTime);
     return response;
   }
 }

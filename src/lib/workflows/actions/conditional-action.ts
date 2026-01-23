@@ -3,17 +3,17 @@
  * Executes conditional logic in workflows
  */
 
-import type { ConditionalBranchAction, WorkflowCondition, WorkflowAction } from '@/types/workflow';
+import type { ConditionalBranchAction, WorkflowCondition, WorkflowAction, WorkflowTriggerData, Workflow } from '@/types/workflow';
 
 /**
  * Execute conditional action
  */
 export async function executeConditionalAction(
   action: ConditionalBranchAction,
-  triggerData: any,
-  workflow: any,
+  triggerData: WorkflowTriggerData,
+  workflow: Workflow,
   organizationId: string
-): Promise<any> {
+): Promise<unknown> {
   // Evaluate all branches
   let matchedBranch: ConditionalBranchAction['branches'][0] | null = null;
   
@@ -71,7 +71,7 @@ export async function executeConditionalAction(
  */
 async function evaluateConditions(
   conditions: WorkflowCondition[],
-  triggerData: any,
+  triggerData: WorkflowTriggerData,
   operator: 'and' | 'or'
 ): Promise<boolean> {
   const results = conditions.map(condition => evaluateCondition(condition, triggerData));
@@ -86,7 +86,7 @@ async function evaluateConditions(
 /**
  * Evaluate single condition
  */
-function evaluateCondition(condition: WorkflowCondition, triggerData: any): boolean {
+function evaluateCondition(condition: WorkflowCondition, triggerData: WorkflowTriggerData): boolean {
   // Get value based on source
   let fieldValue: any;
   
@@ -185,10 +185,10 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
  */
 async function executeAction(
   action: WorkflowAction,
-  triggerData: any,
-  workflow: any,
+  triggerData: WorkflowTriggerData,
+  workflow: Workflow,
   organizationId: string
-): Promise<any> {
+): Promise<unknown> {
   // Import action executors
   const { executeEmailAction } = await import('./email-action');
   const { executeSMSAction } = await import('./sms-action');
@@ -223,7 +223,8 @@ async function executeAction(
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: WorkflowTriggerData | Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce((current: unknown, key: string) => 
+    (current as Record<string, unknown>)?.[key], obj);
 }
 

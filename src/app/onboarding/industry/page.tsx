@@ -50,7 +50,9 @@ export default function IndustrySelectionPage() {
 
   // Filter industries based on search
   const filteredIndustries = useMemo(() => {
-    if (!searchQuery.trim()) return INDUSTRIES;
+    if (!searchQuery.trim()) {
+      return INDUSTRIES;
+    }
     const query = searchQuery.toLowerCase();
     return INDUSTRIES.filter(
       (industry) =>
@@ -105,7 +107,9 @@ export default function IndustrySelectionPage() {
   };
 
   const handleContinue = () => {
-    if (!isFormValid()) return;
+    if (!isFormValid()) {
+      return;
+    }
 
     // Save contact info to store
     setContactInfo({

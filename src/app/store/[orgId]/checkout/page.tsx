@@ -1,11 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import { getOrCreateCart } from '@/lib/ecommerce/cart-service';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { useTheme } from '@/contexts/ThemeContext'
 import { logger } from '@/lib/logger/logger';;
+
+interface CartItem {
+  id: string;
+  productId: string;
+  productName: string;
+  price: number;
+  quantity: number;
+  subtotal: number;
+}
+
+interface Cart {
+  id: string;
+  items: CartItem[];
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  total: number;
+}
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -13,7 +32,7 @@ export default function CheckoutPage() {
   const { theme } = useTheme();
   const orgId = params.orgId as string;
 
-  const [cart, setCart] = useState<any>(null);
+  const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   
@@ -30,53 +49,62 @@ export default function CheckoutPage() {
     cardCvc: '',
   });
 
-  useEffect(() => {
-    loadCart();
-  }, []);
-
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
     try {
       const sessionId = localStorage.getItem('cartSessionId');
       if (!sessionId) {
         router.push(`/store/${orgId}/cart`);
         return;
       }
-      
+
       const cartData = await getOrCreateCart(sessionId, 'default', orgId);
       if (!cartData.items || cartData.items.length === 0) {
         router.push(`/store/${orgId}/cart`);
         return;
       }
-      
-      setCart(cartData);
+
+      setCart(cartData as unknown as Cart);
     } catch (error) {
       logger.error('Error loading cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId, router]);
+
+  useEffect(() => {
+    void loadCart();
+  }, [loadCart]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!cart) {return;}
-    
+
     try {
       setProcessing(true);
-      
-      const cartId = localStorage.getItem('cartSessionId')!;
+
+      const cartId = localStorage.getItem('cartSessionId');
+      if (!cartId) {
+        toast.error('Session not found');
+        return;
+      }
+
+      const nameParts = formData.name.split(' ');
+      const firstName = nameParts[0] ?? '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
       const order = await processCheckout({
         cartId,
         organizationId: orgId,
         workspaceId: 'default',
         customer: {
           email: formData.email,
-          firstName: formData.name.split(' ')[0] || '',
-          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          firstName,
+          lastName,
         },
         billingAddress: {
-          firstName: formData.name.split(' ')[0] || '',
-          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          firstName,
+          lastName,
           address1: formData.address,
           city: formData.city,
           state: formData.state,
@@ -84,8 +112,8 @@ export default function CheckoutPage() {
           country: formData.country,
         },
         shippingAddress: {
-          firstName: formData.name.split(' ')[0] || '',
-          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          firstName,
+          lastName,
           address1: formData.address,
           city: formData.city,
           state: formData.state,
@@ -95,13 +123,14 @@ export default function CheckoutPage() {
         paymentMethod: 'card', // In production, create Stripe PaymentMethod first
         paymentToken: formData.cardNumber, // In production, use Stripe token
       });
-      
+
       // Clear cart and redirect to success
       localStorage.removeItem('cartSessionId');
       router.push(`/store/${orgId}/checkout/success?orderId=${order.id}`);
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Checkout error:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert((error.message !== '' && error.message != null) ? error.message : 'Checkout failed. Please try again.');
+      const message = error instanceof Error && error.message ? error.message : 'Checkout failed. Please try again.';
+      toast.error(message);
     } finally {
       setProcessing(false);
     }
@@ -120,7 +149,7 @@ export default function CheckoutPage() {
       </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+        <form onSubmit={(e) => void handleSubmit(e)} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
           {/* Checkout Form */}
           <div>
             <div style={{ backgroundColor: theme.colors.background.paper, border: `1px solid ${theme.colors.border.main}`, borderRadius: '0.75rem', padding: '2rem', marginBottom: '1.5rem' }}>
@@ -153,7 +182,7 @@ export default function CheckoutPage() {
           <div>
             <div style={{ backgroundColor: theme.colors.background.paper, border: `1px solid ${theme.colors.border.main}`, borderRadius: '0.75rem', padding: '1.5rem', position: 'sticky', top: '2rem' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Order Summary</h2>
-              {cart.items.map((item: any) => (
+              {cart.items.map((item) => (
                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: `1px solid ${theme.colors.border.main}` }}>
                   <div>
                     <div style={{ fontWeight: '500' }}>{item.productName}</div>

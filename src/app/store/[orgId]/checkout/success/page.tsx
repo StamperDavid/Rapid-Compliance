@@ -26,7 +26,7 @@ export default function OrderSuccessPage() {
           </div>
         )}
         <p style={{ marginBottom: '2rem', color: theme.colors.text.secondary }}>
-          You'll receive an email confirmation shortly with your order details.
+          You&apos;ll receive an email confirmation shortly with your order details.
         </p>
         <button onClick={() => router.push(`/store/${orgId}/products`)} style={{ padding: '0.75rem 1.5rem', backgroundColor: theme.colors.primary.main, color: theme.colors.primary.contrast, border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: '500' }}>
           Continue Shopping

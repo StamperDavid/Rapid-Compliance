@@ -2,14 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import type { SystemConfig } from '@/types/admin';
+import type { SystemConfig, SystemConfigValue } from '@/types/admin';
 
 export default function SystemSettingsPage() {
   const { adminUser, hasPermission } = useAdminAuth();
   const [configs, setConfigs] = useState<SystemConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<any>('');
+  const [editValue, setEditValue] = useState<string | number | boolean>('');
+
+  // Helper to safely get editable value from config
+  const getEditableValue = (value: SystemConfigValue): string | number | boolean => {
+    if (typeof value === 'object' && value !== null) {
+      return JSON.stringify(value);
+    }
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return value;
+    }
+    // Fallback for null or undefined edge cases
+    return '';
+  };
 
   useEffect(() => {
     setTimeout(() => {
@@ -22,7 +34,7 @@ export default function SystemSettingsPage() {
           description: 'Maximum number of organizations allowed',
           category: 'general',
           updatedBy: 'admin-1',
-          updatedAt: new Date('2024-03-01') as any,
+          updatedAt: new Date('2024-03-01'),
         },
         {
           id: 'config-2',
@@ -32,7 +44,7 @@ export default function SystemSettingsPage() {
           description: 'Enable maintenance mode',
           category: 'general',
           updatedBy: 'admin-1',
-          updatedAt: new Date('2024-03-15') as any,
+          updatedAt: new Date('2024-03-15'),
         },
         {
           id: 'config-3',
@@ -42,7 +54,7 @@ export default function SystemSettingsPage() {
           description: 'AI API calls per minute per organization',
           category: 'ai',
           updatedBy: 'admin-1',
-          updatedAt: new Date('2024-03-10') as any,
+          updatedAt: new Date('2024-03-10'),
         },
         {
           id: 'config-4',
@@ -52,7 +64,7 @@ export default function SystemSettingsPage() {
           description: 'Stripe webhook secret for payment processing',
           category: 'billing',
           updatedBy: 'admin-1',
-          updatedAt: new Date('2024-02-20') as any,
+          updatedAt: new Date('2024-02-20'),
         },
       ]);
       setLoading(false);
@@ -64,7 +76,7 @@ export default function SystemSettingsPage() {
       <div style={{ padding: '2rem', color: '#fff' }}>
         <div style={{ padding: '1.5rem', backgroundColor: '#7f1d1d', border: '1px solid #991b1b', borderRadius: '0.5rem', color: '#fff' }}>
           <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Access Denied</div>
-          <div style={{ fontSize: '0.875rem' }}>You don't have permission to manage system settings.</div>
+          <div style={{ fontSize: '0.875rem' }}>You do not have permission to manage system settings.</div>
         </div>
       </div>
     );
@@ -72,13 +84,13 @@ export default function SystemSettingsPage() {
 
   const handleEdit = (config: SystemConfig) => {
     setEditingKey(config.id);
-    setEditValue(config.value);
+    setEditValue(getEditableValue(config.value));
   };
 
   const handleSave = (configId: string) => {
     setConfigs(configs.map(c => 
       c.id === configId 
-        ? { ...c, value: editValue, updatedAt: new Date() as any, updatedBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : '' }
+        ? { ...c, value: editValue, updatedAt: new Date(), updatedBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : '' }
         : c
     ));
     setEditingKey(null);
@@ -169,7 +181,7 @@ export default function SystemSettingsPage() {
                               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                                 <input
                                   type="checkbox"
-                                  checked={editValue}
+                                  checked={typeof editValue === 'boolean' ? editValue : false}
                                   onChange={(e) => setEditValue(e.target.checked)}
                                   style={{ cursor: 'pointer' }}
                                 />
@@ -178,7 +190,7 @@ export default function SystemSettingsPage() {
                             ) : (
                               <input
                                 type={config.type === 'number' ? 'number' : 'text'}
-                                value={editValue}
+                                value={typeof editValue === 'boolean' ? '' : editValue}
                                 onChange={(e) => setEditValue(config.type === 'number' ? Number(e.target.value) : e.target.value)}
                                 style={{
                                   padding: '0.5rem',
@@ -229,7 +241,11 @@ export default function SystemSettingsPage() {
                           </div>
                         )}
                         <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                          Updated: {new Date(config.updatedAt as any).toLocaleString()}
+                          Updated: {config.updatedAt instanceof Date
+                            ? config.updatedAt.toLocaleString()
+                            : 'toDate' in config.updatedAt
+                              ? config.updatedAt.toDate().toLocaleString()
+                              : String(config.updatedAt)}
                         </div>
                       </div>
                       {editingKey !== config.id && (

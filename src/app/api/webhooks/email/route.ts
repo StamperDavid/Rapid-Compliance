@@ -14,6 +14,20 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+// Raw SendGrid event interface matching the library's expected type
+interface RawSendGridEvent {
+  email: string;
+  timestamp: number;
+  event: string;
+  sg_event_id: string;
+  sg_message_id: string;
+  url?: string;
+  reason?: string;
+  type?: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
 // Fully typed SendGrid webhook event for this route
 interface EmailWebhookEvent {
   email: string;
@@ -28,6 +42,45 @@ interface EmailWebhookEvent {
   enrollmentId?: string;
   stepId?: string;
   organizationId?: string;
+}
+
+/**
+ * Type guard to validate raw SendGrid event structure
+ */
+function isRawSendGridEvent(value: unknown): value is RawSendGridEvent {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const event = value as Record<string, unknown>;
+
+  return (
+    typeof event.email === 'string' &&
+    typeof event.timestamp === 'number' &&
+    typeof event.event === 'string' &&
+    typeof event.sg_event_id === 'string' &&
+    typeof event.sg_message_id === 'string'
+  );
+}
+
+/**
+ * Validates and converts unknown array to RawSendGridEvent array
+ */
+function validateSendGridWebhookPayload(data: unknown[]): RawSendGridEvent[] {
+  const validatedEvents: RawSendGridEvent[] = [];
+
+  for (const item of data) {
+    if (isRawSendGridEvent(item)) {
+      validatedEvents.push(item);
+    } else {
+      logger.warn('Invalid SendGrid event structure', {
+        route: '/api/webhooks/email',
+        receivedData: JSON.stringify(item)
+      });
+    }
+  }
+
+  return validatedEvents;
 }
 
 function toEmailWebhookEvent(raw: Record<string, unknown>): EmailWebhookEvent {
@@ -64,8 +117,16 @@ export async function POST(request: NextRequest) {
 
     logger.info('Email webhook received', { route: '/api/webhooks/email', eventCount: body.length });
 
+    // Validate and type-narrow the incoming payload
+    const validatedEvents = validateSendGridWebhookPayload(body);
+
+    if (validatedEvents.length === 0) {
+      logger.warn('No valid SendGrid events found in webhook payload', { route: '/api/webhooks/email' });
+      return errors.badRequest('No valid events in webhook payload');
+    }
+
     // Parse SendGrid events and convert to typed events
-    const rawEvents = parseSendGridWebhook(body);
+    const rawEvents = parseSendGridWebhook(validatedEvents);
     const events: EmailWebhookEvent[] = rawEvents.map(e => toEmailWebhookEvent(e as Record<string, unknown>));
 
     // Process each event

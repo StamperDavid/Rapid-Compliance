@@ -236,20 +236,20 @@ export default function PlaybookDashboardPage() {
     loadData();
   }, []);
   
-  const loadData = async () => {
+  const loadData = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // TODO: Replace with actual API calls
       // const response = await fetch('/api/playbook/list');
       // const data = await response.json();
-      
+
       // For now, using mock data
       if (mockPlaybooks.length > 0) {
         setSelectedPlaybook(mockPlaybooks[0]);
       }
-      
+
       setLoading(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load playbooks');

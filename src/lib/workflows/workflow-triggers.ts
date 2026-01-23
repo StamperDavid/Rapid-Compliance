@@ -4,7 +4,8 @@
  * MOCK IMPLEMENTATION - Ready for backend integration
  */
 
-import type { Workflow } from '@/types/workflow';
+import type { Workflow, WorkflowTriggerData } from '@/types/workflow';
+import { WorkflowTrigger } from '@/types/workflow';
 import { executeWorkflowImpl as executeWorkflow } from './workflow-engine';
 
 /**
@@ -13,7 +14,7 @@ import { executeWorkflowImpl as executeWorkflow } from './workflow-engine';
  */
 export async function triggerWorkflow(
   workflow: Workflow,
-  triggerData: Record<string, unknown>
+  triggerData: WorkflowTriggerData
 ): Promise<void> {
   // Workflow execution:
   // 1. Verify trigger matches workflow trigger config
@@ -29,7 +30,7 @@ export async function triggerWorkflow(
  */
 export async function handleEntityCreated(
   schemaId: string,
-  entityData: any,
+  entityData: Record<string, unknown>,
   workflows: Workflow[]
 ): Promise<void> {
   const matchingWorkflows = workflows.filter(w => {
@@ -55,8 +56,8 @@ export async function handleEntityCreated(
  */
 export async function handleEntityUpdated(
   schemaId: string,
-  entityData: any,
-  previousData: any,
+  entityData: Record<string, unknown>,
+  previousData: Record<string, unknown>,
   workflows: Workflow[]
 ): Promise<void> {
   const matchingWorkflows = workflows.filter(w => {
@@ -94,7 +95,7 @@ export async function handleEntityUpdated(
  */
 export async function handleEntityDeleted(
   schemaId: string,
-  entityData: any,
+  entityData: Record<string, unknown>,
   workflows: Workflow[]
 ): Promise<void> {
   const matchingWorkflows = workflows.filter(w => {
@@ -148,7 +149,7 @@ export async function handleScheduleTrigger(
  */
 export async function handleWebhookTrigger(
   webhookId: string,
-  payload: any,
+  payload: Record<string, unknown>,
   workflows: Workflow[]
 ): Promise<void> {
   const matchingWorkflows = workflows.filter(w => {
@@ -172,8 +173,9 @@ export async function handleWebhookTrigger(
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce((current: unknown, key: string) => 
+    (current as Record<string, unknown>)?.[key], obj);
 }
 
 

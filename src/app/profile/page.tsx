@@ -7,10 +7,32 @@ import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
 
+interface ThemeBranding {
+  companyName?: string;
+  logoUrl?: string;
+}
+
+interface ThemeColors {
+  primary?: {
+    main?: string;
+  };
+}
+
+interface Theme {
+  branding?: ThemeBranding;
+  colors?: ThemeColors;
+}
+
+interface UserWithExtras {
+  phone?: string;
+  title?: string;
+  department?: string;
+}
+
 export default function ProfilePage() {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const [theme] = useState<Theme | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   
@@ -40,25 +62,29 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
+      const userWithExtras = user as unknown as UserWithExtras;
       setFormData(prev => ({
         ...prev,
-        displayName: user.displayName || '',
-        email: user.email || '',
-        phone: (user as any).phone ?? '',
-        title: (user as any).title ?? '',
-        department: (user as any).department ?? '',
+        displayName: user.displayName ?? '',
+        email: user.email ?? '',
+        phone: userWithExtras.phone ?? '',
+        title: userWithExtras.title ?? '',
+        department: userWithExtras.department ?? '',
       }));
     }
   }, [user]);
 
-  const brandingCompanyName = theme?.branding?.companyName;
-  const brandName = (brandingCompanyName !== '' && brandingCompanyName != null) ? brandingCompanyName : 'AI CRM';
-  const logoUrl = theme?.branding?.logoUrl;
   const colorsPrimaryMain = theme?.colors?.primary?.main;
   const primaryColor = (colorsPrimaryMain !== '' && colorsPrimaryMain != null) ? colorsPrimaryMain : '#6366f1';
 
+  const handleSaveClick = () => {
+    void handleSave();
+  };
+
   const handleSave = async () => {
-    if (!user) {return;}
+    if (!user) {
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -182,7 +208,19 @@ export default function ProfilePage() {
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
-              <Link href="/crm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
+              <Link
+                href="/crm"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: primaryColor,
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  marginBottom: '1.5rem'
+                }}
+              >
                 ← Back to CRM
               </Link>
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>My Profile</h1>
@@ -194,13 +232,24 @@ export default function ProfilePage() {
             {/* Profile Info Card */}
             <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>
-                  {user.displayName?.charAt(0) || 'U'}
+                <div style={{
+                  width: '80px',
+                  height: '80px',
+                  borderRadius: '50%',
+                  backgroundColor: primaryColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '2rem',
+                  fontWeight: 'bold',
+                  color: '#fff'
+                }}>
+                  {user.displayName?.charAt(0) ?? 'U'}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>{user.displayName || 'User'}</h2>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>{user.displayName ?? 'User'}</h2>
                   <p style={{ color: '#666', fontSize: '0.875rem' }}>
-                    {user.email} • <span style={{ textTransform: 'capitalize', color: primaryColor, fontWeight: '600' }}>{user.role}</span>
+                    {user.email} • <span style={{ textTransform: 'capitalize', color: primaryColor, fontWeight: 600 }}>{user.role}</span>
                   </p>
                 </div>
               </div>
@@ -348,7 +397,7 @@ export default function ProfilePage() {
                 Cancel
               </Link>
               <button
-                onClick={handleSave}
+                onClick={handleSaveClick}
                 disabled={isSaving}
                 style={{ 
                   padding: '0.75rem 1.5rem', 

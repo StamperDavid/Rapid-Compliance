@@ -58,18 +58,20 @@ export default function RiskDashboardPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as { message?: string };
         throw new Error((errorData.message !== '' && errorData.message != null) ? errorData.message : 'Failed to fetch risk prediction');
       }
 
-      const result = await response.json();
-      
+      const result = await response.json() as { success: boolean; error?: string; data?: DealRiskPrediction };
+
       if (!result.success) {
         throw new Error((result.error !== '' && result.error != null) ? result.error : 'Failed to fetch risk prediction');
       }
 
-      setPrediction(result.data);
-      
+      if (result.data) {
+        setPrediction(result.data);
+      }
+
       // Fetch deal details
       const dealResponse = await fetch(
         `/api/workspace/${organizationId}/deals?dealId=${dealId}`,
@@ -82,14 +84,15 @@ export default function RiskDashboardPage() {
       );
 
       if (dealResponse.ok) {
-        const dealData = await dealResponse.json();
+        const dealData = await dealResponse.json() as { success?: boolean; data?: Deal };
         if (dealData.success && dealData.data) {
           setDeal(dealData.data);
         }
       }
 
-    } catch (err: any) {
-      setError((err.message !== '' && err.message != null) ? err.message : 'An error occurred while fetching risk prediction');
+    } catch (err: unknown) {
+      const message = err instanceof Error && err.message ? err.message : 'An error occurred while fetching risk prediction';
+      setError(message);
       setPrediction(null);
       setDeal(null);
     } finally {
@@ -100,17 +103,20 @@ export default function RiskDashboardPage() {
   /**
    * Handle intervention start
    */
-  const handleStartIntervention = async (interventionId: string) => {
+  const handleStartIntervention = (interventionId: string) => {
     try {
       // TODO: Implement intervention tracking
+      // eslint-disable-next-line no-console
       console.log('Starting intervention:', interventionId);
-      
-      // Show success message
-      alert('Intervention started! Track progress in your CRM.');
-      
-    } catch (err: any) {
+
+      // TODO: Replace with toast notification
+      // eslint-disable-next-line no-console
+      console.log('Intervention started! Track progress in your CRM.');
+
+    } catch (err: unknown) {
+      // TODO: Show error toast notification
+      // eslint-disable-next-line no-console
       console.error('Failed to start intervention:', err);
-      alert('Failed to start intervention. Please try again.');
     }
   };
 
@@ -187,7 +193,7 @@ export default function RiskDashboardPage() {
 
             <div className="flex items-end">
               <button
-                onClick={fetchRiskPrediction}
+                onClick={() => { void fetchRiskPrediction(); }}
                 disabled={loading || !dealId || !organizationId}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-6 rounded-lg transition-colors"
               >
@@ -242,7 +248,7 @@ export default function RiskDashboardPage() {
             {/* Left Column - Overview */}
             <div className="lg:col-span-1">
               <RiskOverviewCard
-                prediction={prediction!}
+                prediction={prediction ?? ({} as DealRiskPrediction)}
                 dealName={(() => { const v = deal?.name; return (v !== '' && v != null) ? v : 'Loading...'; })()}
                 dealValue={deal?.value ?? 0}
                 loading={loading}

@@ -1,7 +1,8 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+import { NextResponse, type NextRequest } from 'next/server';
 import { handleEntityChange } from '@/lib/workflows/triggers/firestore-trigger';
 import { requireOrganization } from '@/lib/auth/api-auth';
+import { z } from 'zod';
+import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -34,11 +35,16 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate input
     const body: unknown = await request.json();
-    const validation = entityChangeSchema.safeParse(body);
+    const validation = validateInput(entityChangeSchema, body);
 
     if (!validation.success) {
-      const errorMessages = validation.error.errors.map(e => e.message).join(', ');
-      return errors.validation('Validation failed', { errors: errorMessages });
+      const validationError = validation as { success: false; errors: unknown };
+      const errorDetails = (validationError.errors as { errors?: Array<{ path?: string[]; message?: string }> })?.errors?.map((e) => ({
+        path: e.path?.join('.') ?? 'unknown',
+        message: e.message ?? 'Validation error',
+      })) ?? [];
+      
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { organizationId, workspaceId, schemaId, changeType, recordId, recordData } = validation.data;
@@ -66,7 +72,9 @@ export async function POST(request: NextRequest) {
       message: 'Entity change processed, workflows triggered',
     });
   } catch (error: unknown) {
-    logger.error('Error processing entity change', error instanceof Error ? error : new Error(String(error)), { route: '/api/workflows/triggers/entity' });
-    return errors.internal('Failed to process entity change', error instanceof Error ? error : new Error(String(error)));
+    const errorInstance = error instanceof Error ? error : new Error(String(error));
+    logger.error('Error processing entity change', errorInstance, { route: '/api/workflows/triggers/entity' });
+    return errors.internal('Failed to process entity change', errorInstance);
   }
 }
+

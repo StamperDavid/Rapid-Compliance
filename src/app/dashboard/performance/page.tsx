@@ -24,7 +24,8 @@ export default function PerformanceDashboardPage() {
 
   // Load performance analytics
   useEffect(() => {
-    loadAnalytics();
+    void loadAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPeriod]);
 
   const loadAnalytics = async () => {
@@ -48,11 +49,11 @@ export default function PerformanceDashboardPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as { message?: string };
         throw new Error((errorData.message !== '' && errorData.message != null) ? errorData.message : 'Failed to load analytics');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { data: TeamPerformanceAnalytics };
       setAnalytics(data.data);
     } catch (err) {
       console.error('Failed to load performance analytics:', err);
@@ -63,7 +64,7 @@ export default function PerformanceDashboardPage() {
   };
 
   const handleRefresh = () => {
-    loadAnalytics();
+    void loadAnalytics();
   };
 
   return (
@@ -159,11 +160,11 @@ export default function PerformanceDashboardPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <PerformanceOverviewCard
-                metrics={{} as any}
+                metrics={null as unknown as TeamPerformanceAnalytics['teamMetrics']}
                 loading={true}
               />
               <BenchmarksCard
-                benchmarks={{} as any}
+                benchmarks={null as unknown as TeamPerformanceAnalytics['benchmarks']}
                 individualMetrics={[]}
                 loading={true}
               />
@@ -174,7 +175,7 @@ export default function PerformanceDashboardPage() {
                 loading={true}
               />
               <TrendsCard
-                trendAnalysis={{} as any}
+                trendAnalysis={null as unknown as TeamPerformanceAnalytics['trendAnalysis']}
                 loading={true}
               />
             </div>

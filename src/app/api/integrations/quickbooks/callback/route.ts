@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(`/workspace/${orgId}/integrations?success=quickbooks`);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('QuickBooks OAuth callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/quickbooks/callback' });
     return NextResponse.redirect('/integrations?error=oauth_failed');
   }

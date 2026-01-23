@@ -8,17 +8,49 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ResponsiveRenderer } from '@/components/website-builder/ResponsiveRenderer';
-import { MobileNavigation } from '@/components/website-builder/MobileNavigation';
+
+// Type definitions for SEO metadata
+interface SeoMetadata {
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string[];
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string;
+  noIndex?: boolean;
+  canonicalUrl?: string;
+}
+
+// Type definitions for page content sections
+interface ContentSection {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+}
 
 interface PageData {
   id: string;
   title: string;
   slug: string;
-  content: any[];
-  seo: any;
+  content: ContentSection[];
+  seo: SeoMetadata;
   status: string;
+}
+
+// Type guard for API response
+interface PagesApiResponse {
+  pages?: PageData[];
+}
+
+function isPagesApiResponse(data: unknown): data is PagesApiResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'pages' in data &&
+    Array.isArray((data as PagesApiResponse).pages)
+  );
 }
 
 export default function PublicSitePage() {
@@ -27,15 +59,13 @@ export default function PublicSitePage() {
   const slug = (params.slug as string[]) || [''];
   const pagePath = slug.join('/') || 'home';
 
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   const [page, setPage] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
-  useEffect(() => {
-    loadPage();
-  }, [orgId, pagePath]);
-
-  async function loadPage() {
+  const loadPage = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -54,22 +84,47 @@ export default function PublicSitePage() {
         return;
       }
 
-      const data = await response.json();
+      const data: unknown = await response.json();
 
-      if (!data.pages || data.pages.length === 0) {
+      if (!isPagesApiResponse(data) || !data.pages || data.pages.length === 0) {
         setError('Page not found');
         return;
       }
 
       setPage(data.pages[0]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Public Site] Error loading page:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load page');
+      const errorMessage =
+        err instanceof Error && err.message ? err.message : 'Failed to load page';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId, pagePath]);
 
+  useEffect(() => {
+    void loadPage();
+  }, [loadPage]);
+
+  // Detect viewport for responsive rendering
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setBreakpoint('mobile');
+      } else if (width < 1200) {
+        setBreakpoint('tablet');
+      } else {
+        setBreakpoint('desktop');
+      }
+    };
+
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // NOW we can do conditional rendering after all hooks are called
   if (loading) {
     return (
       <div style={{
@@ -102,47 +157,32 @@ export default function PublicSitePage() {
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         }}>
           <h1 style={{ color: '#333', margin: '0 0 1rem' }}>404</h1>
-          <p style={{ color: '#666', margin: 0 }}>{(error !== '' && error != null) ? error : 'Page not found'}</p>
+          <p style={{ color: '#666', margin: 0 }}>{error ?? 'Page not found'}</p>
         </div>
       </div>
     );
   }
 
-  // Detect viewport for responsive rendering
-  const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-
-  useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      if (width < 768) {
-        setBreakpoint('mobile');
-      } else if (width < 1200) {
-        setBreakpoint('tablet');
-      } else {
-        setBreakpoint('desktop');
-      }
-    };
-
-    handleResize(); // Initial check
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Extract SEO metadata with proper types
+  const seoTitle = page.seo.metaTitle ?? page.title;
+  const seoDescription = page.seo.metaDescription ?? '';
+  const seoKeywords = page.seo.metaKeywords?.join(', ') ?? '';
 
   return (
     <>
       <head>
-        <title>{page.seo?.metaTitle ?? page.title}</title>
-        <meta name="description" content={page.seo?.metaDescription ?? ''} />
-        {page.seo?.metaKeywords && (
-          <meta name="keywords" content={page.seo.metaKeywords.join(', ')} />
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        {page.seo.metaKeywords && (
+          <meta name="keywords" content={seoKeywords} />
         )}
-        {page.seo?.ogTitle && <meta property="og:title" content={page.seo.ogTitle} />}
-        {page.seo?.ogDescription && (
+        {page.seo.ogTitle && <meta property="og:title" content={page.seo.ogTitle} />}
+        {page.seo.ogDescription && (
           <meta property="og:description" content={page.seo.ogDescription} />
         )}
-        {page.seo?.ogImage && <meta property="og:image" content={page.seo.ogImage} />}
-        {page.seo?.noIndex && <meta name="robots" content="noindex,nofollow" />}
-        {page.seo?.canonicalUrl && <link rel="canonical" href={page.seo.canonicalUrl} />}
+        {page.seo.ogImage && <meta property="og:image" content={page.seo.ogImage} />}
+        {page.seo.noIndex && <meta name="robots" content="noindex,nofollow" />}
+        {page.seo.canonicalUrl && <link rel="canonical" href={page.seo.canonicalUrl} />}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
 
@@ -173,4 +213,3 @@ export default function PublicSitePage() {
     </>
   );
 }
-

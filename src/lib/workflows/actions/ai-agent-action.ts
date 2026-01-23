@@ -3,7 +3,7 @@
  * Triggers AI agent to process data and optionally respond
  */
 
-import type { BaseAction } from '@/types/workflow';
+import type { BaseAction, WorkflowTriggerData } from '@/types/workflow';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
@@ -24,9 +24,9 @@ export interface AIAgentActionConfig extends BaseAction {
 
 export async function executeAIAgentAction(
   action: AIAgentActionConfig,
-  triggerData: any,
+  triggerData: WorkflowTriggerData,
   organizationId: string
-): Promise<any> {
+): Promise<unknown> {
   const {
     prompt,
     model,
@@ -144,7 +144,7 @@ export async function executeAIAgentAction(
 /**
  * Replace {{variable}} placeholders with values from triggerData
  */
-function replaceTemplateVariables(template: string, data: any): string {
+function replaceTemplateVariables(template: string, data: WorkflowTriggerData): string {
   return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
     const value = getNestedValue(data, path.trim());
     if (value === undefined || value === null) {
@@ -160,8 +160,9 @@ function replaceTemplateVariables(template: string, data: any): string {
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: WorkflowTriggerData, path: string): unknown {
+  return path.split('.').reduce((current: unknown, key: string) => 
+    (current as Record<string, unknown>)?.[key], obj);
 }
 
 

@@ -1,30 +1,71 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';;
 
+interface RevenueBySource {
+  source: string;
+  revenue: number;
+}
+
+interface RevenueByProduct {
+  product: string;
+  revenue: number;
+}
+
+interface RevenueByRep {
+  rep: string;
+  revenue: number;
+  deals: number;
+  avgDeal: number;
+}
+
+interface RevenueAnalytics {
+  totalRevenue: number;
+  growth?: number;
+  avgDealSize: number;
+  dealsCount: number;
+  mrr: number;
+  bySource: RevenueBySource[];
+  byProduct: RevenueByProduct[];
+  byRep: RevenueByRep[];
+}
+
+function isRevenueAnalytics(data: unknown): data is RevenueAnalytics {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+
+  return (
+    typeof obj.totalRevenue === 'number' &&
+    typeof obj.avgDealSize === 'number' &&
+    typeof obj.dealsCount === 'number' &&
+    typeof obj.mrr === 'number' &&
+    Array.isArray(obj.bySource) &&
+    Array.isArray(obj.byProduct) &&
+    Array.isArray(obj.byRep)
+  );
+}
+
 export default function RevenueAnalyticsPage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  
+
   const { theme } = useOrgTheme();
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<RevenueAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
 
-  useEffect(() => {
-    loadAnalytics();
-  }, [period]);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/analytics/revenue?orgId=${orgId}&period=${period}`);
-      const data = await response.json();
-      if (data.success) {
+      const data = await response.json() as { success?: boolean; analytics?: unknown };
+      if (data.success && isRevenueAnalytics(data.analytics)) {
         setAnalytics(data.analytics);
       }
     } catch (error: unknown) {
@@ -32,7 +73,11 @@ export default function RevenueAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId, period]);
+
+  useEffect(() => {
+    void loadAnalytics();
+  }, [loadAnalytics]);
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
 
@@ -139,7 +184,7 @@ export default function RevenueAnalyticsPage() {
                     Revenue by Source
                   </h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {analytics.bySource.map((source: any, index: number) => {
+                    {analytics.bySource.map((source: RevenueBySource, index: number) => {
                       const percentage = analytics.totalRevenue > 0 ? (source.revenue / analytics.totalRevenue) * 100 : 0;
                       return (
                         <div key={index}>
@@ -171,7 +216,7 @@ export default function RevenueAnalyticsPage() {
                     Revenue by Product
                   </h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {analytics.byProduct.map((product: any, index: number) => {
+                    {analytics.byProduct.map((product: RevenueByProduct, index: number) => {
                       const percentage = analytics.totalRevenue > 0 ? (product.revenue / analytics.totalRevenue) * 100 : 0;
                       return (
                         <div key={index}>
@@ -213,7 +258,7 @@ export default function RevenueAnalyticsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {analytics.byRep.map((rep: any, index: number) => (
+                        {analytics.byRep.map((rep: RevenueByRep, index: number) => (
                           <tr key={index} style={{ borderBottom: '1px solid #222' }}>
                             <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: '#fff' }}>{rep.rep}</td>
                             <td style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', color: '#fff', fontWeight: '600' }}>

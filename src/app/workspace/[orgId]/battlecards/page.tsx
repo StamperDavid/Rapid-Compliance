@@ -16,6 +16,19 @@ import React, { useState } from 'react';
 import { CompetitorProfileCard } from '@/components/battlecard/CompetitorProfileCard';
 import { BattlecardView } from '@/components/battlecard/BattlecardView';
 import type { CompetitorProfile, Battlecard, BattlecardOptions } from '@/lib/battlecard';
+import { showSuccessToast } from '@/components/ErrorToast';
+
+interface ApiErrorResponse {
+  error?: string;
+}
+
+interface DiscoverCompetitorResponse {
+  profile: CompetitorProfile;
+}
+
+interface GenerateBattlecardResponse {
+  battlecard: Battlecard;
+}
 
 interface PageProps {
   params: {
@@ -55,13 +68,15 @@ export default function BattlecardsPage({ params }: PageProps) {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as ApiErrorResponse | DiscoverCompetitorResponse;
 
       if (!response.ok) {
-        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to discover competitor');
+        const errorData = data as ApiErrorResponse;
+        throw new Error(errorData.error ?? 'Failed to discover competitor');
       }
 
-      setCompetitorProfile(data.profile);
+      const successData = data as DiscoverCompetitorResponse;
+      setCompetitorProfile(successData.profile);
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -103,13 +118,15 @@ export default function BattlecardsPage({ params }: PageProps) {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as ApiErrorResponse | GenerateBattlecardResponse;
 
       if (!response.ok) {
-        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to generate battlecard');
+        const errorData = data as ApiErrorResponse;
+        throw new Error(errorData.error ?? 'Failed to generate battlecard');
       }
 
-      setBattlecard(data.battlecard);
+      const successData = data as GenerateBattlecardResponse;
+      setBattlecard(successData.battlecard);
       setView('battlecard');
       setError(null);
     } catch (err) {
@@ -197,17 +214,21 @@ export default function BattlecardsPage({ params }: PageProps) {
                     type="text"
                     value={competitorDomain}
                     onChange={(e) => setCompetitorDomain(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleDiscoverCompetitor()}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        void handleDiscoverCompetitor();
+                      }
+                    }}
                     placeholder="competitor.com"
                     className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     disabled={isLoading}
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Enter competitor's website domain (e.g., salesforce.com, hubspot.com)
+                    Enter competitor&apos;s website domain (e.g., salesforce.com, hubspot.com)
                   </p>
                 </div>
                 <button
-                  onClick={handleDiscoverCompetitor}
+                  onClick={() => { void handleDiscoverCompetitor(); }}
                   disabled={isLoading || !competitorDomain.trim()}
                   className="w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center"
                 >
@@ -259,7 +280,7 @@ export default function BattlecardsPage({ params }: PageProps) {
                       />
                     </div>
                     <button
-                      onClick={handleGenerateBattlecard}
+                      onClick={() => { void handleGenerateBattlecard(); }}
                       disabled={isLoading || !ourProduct.trim()}
                       className="w-full px-6 py-3 bg-purple-500 hover:bg-purple-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center"
                     >
@@ -295,7 +316,7 @@ export default function BattlecardsPage({ params }: PageProps) {
                   No Competitor Discovered Yet
                 </h3>
                 <p className="text-gray-600 text-sm max-w-md mx-auto">
-                  Enter a competitor's domain above to start gathering competitive intelligence.
+                  Enter a competitor&apos;s domain above to start gathering competitive intelligence.
                   Our AI will scrape their website, analyze their offering, and identify strengths & weaknesses.
                 </p>
               </div>
@@ -318,7 +339,7 @@ export default function BattlecardsPage({ params }: PageProps) {
               <button
                 onClick={() => {
                   // TODO: Implement export to PDF
-                  alert('Export to PDF - Coming soon!');
+                  showSuccessToast('Export to PDF - Coming soon!');
                 }}
                 className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors flex items-center"
               >

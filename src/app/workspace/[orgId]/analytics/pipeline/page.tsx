@@ -1,29 +1,54 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';;
 
+interface PipelineStage {
+  stage: string;
+  value: number;
+  count: number;
+}
+
+interface PipelineAnalytics {
+  totalValue: number;
+  dealsCount: number;
+  winRate: number;
+  avgDealSize: number;
+  byStage: PipelineStage[];
+}
+
+function isPipelineAnalytics(data: unknown): data is PipelineAnalytics {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+  const obj = data as Record<string, unknown>;
+
+  return (
+    typeof obj.totalValue === 'number' &&
+    typeof obj.dealsCount === 'number' &&
+    typeof obj.winRate === 'number' &&
+    typeof obj.avgDealSize === 'number' &&
+    Array.isArray(obj.byStage)
+  );
+}
+
 export default function PipelineAnalyticsPage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  
+
   const { theme } = useOrgTheme();
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<PipelineAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadAnalytics();
-  }, []);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/analytics/pipeline?orgId=${orgId}`);
-      const data = await response.json();
-      if (data.success) {
+      const data = await response.json() as { success?: boolean; analytics?: unknown };
+      if (data.success && isPipelineAnalytics(data.analytics)) {
         setAnalytics(data.analytics);
       }
     } catch (error: unknown) {
@@ -31,7 +56,11 @@ export default function PipelineAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadAnalytics();
+  }, [loadAnalytics]);
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
 
@@ -105,7 +134,7 @@ export default function PipelineAnalyticsPage() {
                     Pipeline by Stage
                   </h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {analytics.byStage.map((stage: any, index: number) => (
+                    {analytics.byStage.map((stage: PipelineStage, index: number) => (
                       <div key={index}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                           <span style={{ fontSize: '0.875rem', color: '#fff' }}>{stage.stage}</span>

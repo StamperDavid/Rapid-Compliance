@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         if (!data.leadId) {
           return errors.badRequest('leadId is required');
         }
-        const analysis = await analyzeLeadLifecycle(data.leadId);
+        const analysis = analyzeLeadLifecycle(data.leadId);
         return NextResponse.json({ success: true, analysis });
       }
 

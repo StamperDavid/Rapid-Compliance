@@ -474,13 +474,15 @@ function renderWidget(widget: Widget): React.ReactNode {
       const alt = widget.data.alt ?? 'Image';
 
       // Use Next.js Image component for optimization
-      // For external images, we need to check if it's a data URL or external URL
+      // For data URLs and external images, use unoptimized Image
       if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://')) {
-        // eslint-disable-next-line @next/next/no-img-element
         return (
-          <img
+          <Image
             src={src}
             alt={alt}
+            width={800}
+            height={400}
+            unoptimized
             style={{
               width: '100%',
               height: 'auto',
@@ -491,19 +493,17 @@ function renderWidget(widget: Widget): React.ReactNode {
       }
 
       return (
-        <div style={{ position: 'relative', width: '100%', height: 'auto' }}>
-          <Image
-            src={src}
-            alt={alt}
-            width={800}
-            height={400}
-            style={{
-              width: '100%',
-              height: 'auto',
-              borderRadius: '8px',
-            }}
-          />
-        </div>
+        <Image
+          src={src}
+          alt={alt}
+          width={800}
+          height={400}
+          style={{
+            width: '100%',
+            height: 'auto',
+            borderRadius: '8px',
+          }}
+        />
       );
     }
 

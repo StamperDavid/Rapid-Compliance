@@ -57,14 +57,15 @@ export default function ConversationDashboardPage() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as { message?: string };
         throw new Error((errorData.message !== '' && errorData.message != null) ? errorData.message : 'Failed to load analysis');
       }
-      
-      const data = await response.json();
+
+      const data = await response.json() as { data: ConversationAnalysis };
       setAnalysis(data.data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(message);
       console.error('Failed to load analysis:', err);
     } finally {
       setLoading(false);
@@ -110,7 +111,7 @@ export default function ConversationDashboardPage() {
                 <li>• Track coaching progress over time</li>
               </ul>
               <button
-                onClick={loadAnalysis}
+                onClick={() => { void loadAnalysis(); }}
                 disabled={loading}
                 className="mt-3 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -131,7 +132,7 @@ export default function ConversationDashboardPage() {
                 </h3>
                 <p className="text-sm text-red-700">{error}</p>
                 <button
-                  onClick={loadAnalysis}
+                  onClick={() => { void loadAnalysis(); }}
                   className="mt-2 text-sm text-red-600 hover:text-red-800 font-medium"
                 >
                   Try Again
@@ -242,7 +243,8 @@ export default function ConversationDashboardPage() {
                 <button
                   onClick={() => {
                     // TODO: Export analysis
-                    alert('Export coming soon!');
+                    // eslint-disable-next-line no-console
+                    console.log('Export feature coming soon');
                   }}
                   className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 transition-colors"
                 >
@@ -251,7 +253,8 @@ export default function ConversationDashboardPage() {
                 <button
                   onClick={() => {
                     // TODO: Share analysis
-                    alert('Share coming soon!');
+                    // eslint-disable-next-line no-console
+                    console.log('Share feature coming soon');
                   }}
                   className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
                 >
@@ -273,7 +276,7 @@ export default function ConversationDashboardPage() {
               Upload a recording or paste a transcript to get AI-powered insights
             </p>
             <button
-              onClick={loadAnalysis}
+              onClick={() => { void loadAnalysis(); }}
               className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
             >
               Load Demo Analysis

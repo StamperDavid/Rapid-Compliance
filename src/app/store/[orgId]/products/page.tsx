@@ -5,8 +5,9 @@
  * Customer-facing product listing page with organization branding
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { useTheme } from '@/contexts/ThemeContext'
 import { logger } from '@/lib/logger/logger';;
@@ -34,14 +35,10 @@ export default function ProductCatalogPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    loadProducts();
-  }, [orgId]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Load products from Firestore
       const productsData = await FirestoreService.getAll(
         `organizations/${orgId}/workspaces/default/entities/products/records`,
@@ -49,24 +46,32 @@ export default function ProductCatalogPage() {
       );
 
       setProducts(productsData as Product[]);
-      
+
       // Extract unique categories
       const uniqueCategories = Array.from(
-        new Set(productsData.map((p: any) => p.category).filter(Boolean))
+        new Set(
+          (productsData as Product[])
+            .map((p) => p.category)
+            .filter((cat): cat is string => Boolean(cat))
+        )
       );
-      setCategories(uniqueCategories as string[]);
+      setCategories(uniqueCategories);
     } catch (error) {
       logger.error('Error loading products:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadProducts();
+  }, [loadProducts]);
 
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      (product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
     return matchesCategory && matchesSearch;
   });
 
@@ -105,11 +110,14 @@ export default function ProductCatalogPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               {theme.branding.logoUrl && (
-                <img 
-                  src={theme.branding.logoUrl} 
-                  alt={theme.branding.companyName}
-                  style={{ height: '40px' }}
-                />
+                <div style={{ position: 'relative', height: '40px', width: '120px' }}>
+                  <Image
+                    src={theme.branding.logoUrl}
+                    alt={theme.branding.companyName}
+                    fill
+                    style={{ objectFit: 'contain' }}
+                  />
+                </div>
               )}
               <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>
                 {theme.branding.companyName}
@@ -233,13 +241,15 @@ export default function ProductCatalogPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  position: 'relative'
                 }}>
-                  {product.images && product.images[0] ? (
-                    <img 
-                      src={product.images[0]} 
+                  {product.images?.[0] ? (
+                    <Image
+                      src={product.images[0]}
                       alt={product.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      fill
+                      style={{ objectFit: 'cover' }}
                     />
                   ) : (
                     <span style={{ fontSize: '3rem' }}>📦</span>

@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { Timestamp } from 'firebase/firestore';
+import { logger } from '@/lib/logger/logger';
+import { showErrorToast } from '@/components/ErrorToast';
 
 export default function NewABTestPage() {
   const params = useParams();
@@ -21,7 +22,7 @@ export default function NewABTestPage() {
       router.push(`/workspace/${orgId}/ab-tests`);
     } catch (error: unknown) {
       logger.error('Error saving test:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to save test');
+      showErrorToast(error, 'Failed to save test');
     } finally {
       setSaving(false);
     }
@@ -39,7 +40,7 @@ export default function NewABTestPage() {
         </div>
         <div className="flex gap-3">
           <button onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{saving ? 'Creating...' : 'Create Test'}</button>
+          <button onClick={() => void handleSave()} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{saving ? 'Creating...' : 'Create Test'}</button>
         </div>
       </div>
     </div>

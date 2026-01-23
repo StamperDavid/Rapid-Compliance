@@ -15,9 +15,8 @@ import { motion } from 'framer-motion';
 import { useOnboardingStore } from '@/lib/stores/onboarding-store';
 import { useAuth } from '@/hooks/useAuth';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+import { auth, db } from '@/lib/firebase/config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { Building2, Lock, Eye, EyeOff } from 'lucide-react';
 
@@ -92,7 +91,9 @@ export default function AccountCreationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      return;
+    }
 
     setIsLoading(true);
 
@@ -115,10 +116,10 @@ export default function AccountCreationPage() {
 
       await setDoc(doc(db, COLLECTIONS.ORGANIZATIONS, orgId), {
         name: formData.companyName,
-        industry: selectedIndustry?.id || 'other',
-        industryName: selectedIndustry?.name || customIndustry || 'Other',
-        customIndustry: customIndustry || null,
-        nicheDescription: nicheDescription || null,
+        industry: selectedIndustry?.id ?? 'other',
+        industryName: selectedIndustry?.name ?? customIndustry ?? 'Other',
+        customIndustry: customIndustry ?? null,
+        nicheDescription: nicheDescription ?? null,
 
         // Default Trial Plan - no payment required
         subscription: {
@@ -143,9 +144,9 @@ export default function AccountCreationPage() {
       // Create user profile with full contact info
       await setDoc(doc(db, COLLECTIONS.USERS, userId), {
         email: formData.email,
-        displayName: fullName || formData.companyName,
-        fullName: fullName || null,
-        phoneNumber: phoneNumber || null,
+        displayName: fullName ?? formData.companyName,
+        fullName: fullName ?? null,
+        phoneNumber: phoneNumber ?? null,
         organizations: [orgId],
         defaultOrganization: orgId,
         createdAt: serverTimestamp(),
@@ -178,7 +179,11 @@ export default function AccountCreationPage() {
     }
   };
 
-  const industryDisplay = customIndustry || selectedIndustry?.name || 'Your Industry';
+  const industryDisplay = customIndustry ?? selectedIndustry?.name ?? 'Your Industry';
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    void handleSubmit(e);
+  };
 
   return (
     <div className="min-h-screen bg-black">
@@ -209,7 +214,7 @@ export default function AccountCreationPage() {
 
             {/* Industry badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
-              <span className="text-lg">{selectedIndustry?.icon || '🌐'}</span>
+              <span className="text-lg">{selectedIndustry?.icon ?? '🌐'}</span>
               <span className="text-gray-300">{industryDisplay}</span>
               <Link
                 href="/onboarding/industry"
@@ -235,7 +240,7 @@ export default function AccountCreationPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8"
         >
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleFormSubmit} className="space-y-5">
             {/* Company Name */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">

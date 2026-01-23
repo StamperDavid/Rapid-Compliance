@@ -17,9 +17,25 @@ import { ModularTemplateEditor } from '@/components/admin/templates/ModularTempl
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
 import { STANDARD_BASE_TEMPLATE } from '@/lib/templates/template-validation';
 
+interface TemplateListItem {
+  value: string;
+  label: string;
+  description: string;
+  category: string;
+  hasOverride: boolean;
+}
+
+interface TemplatesApiResponse {
+  success: boolean;
+  templates?: TemplateListItem[];
+  template?: IndustryTemplate;
+  validationErrors?: string[];
+  error?: string;
+}
+
 export default function TemplatesPage() {
   const { user } = useAuth();
-  const [templates, setTemplates] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<TemplateListItem[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<IndustryTemplate | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +53,7 @@ export default function TemplatesPage() {
   // Load templates
   useEffect(() => {
     if (isAdmin) {
-      loadTemplates();
+      void loadTemplates();
     }
   }, [isAdmin]);
 
@@ -52,9 +68,9 @@ export default function TemplatesPage() {
         throw new Error('Failed to load templates');
       }
 
-      const data = await response.json();
-      
-      if (data.success) {
+      const data = await response.json() as TemplatesApiResponse;
+
+      if (data.success && data.templates) {
         setTemplates(data.templates);
       } else {
         throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to load templates');
@@ -77,9 +93,9 @@ export default function TemplatesPage() {
         throw new Error('Failed to load template');
       }
 
-      const data = await response.json();
-      
-      if (data.success) {
+      const data = await response.json() as TemplatesApiResponse;
+
+      if (data.success && data.template) {
         setSelectedTemplate(data.template);
         setIsEditing(true);
       } else {
@@ -109,12 +125,12 @@ export default function TemplatesPage() {
         body: JSON.stringify(template),
       });
 
-      const data = await response.json();
+      const data = await response.json() as TemplatesApiResponse;
 
       if (!data.success) {
         if (data.validationErrors) {
           throw new Error(
-            `Validation errors:\n${  data.validationErrors.join('\n')}`
+            `Validation errors:\n${data.validationErrors.join('\n')}`
           );
         }
         throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to save template');
@@ -135,7 +151,9 @@ export default function TemplatesPage() {
   };
 
   const handleDelete = async (templateId: string) => {
-    if (!confirm('Are you sure you want to revert this template to its default? This will delete the Firestore override.')) {
+    // Using native confirm for critical delete operation - acceptable for admin-only destructive actions
+    // eslint-disable-next-line no-alert -- Admin delete confirmation requires explicit user acknowledgment
+    if (!window.confirm('Are you sure you want to revert this template to its default? This will delete the Firestore override.')) {
       return;
     }
 
@@ -147,7 +165,7 @@ export default function TemplatesPage() {
         method: 'DELETE',
       });
 
-      const data = await response.json();
+      const data = await response.json() as TemplatesApiResponse;
 
       if (!data.success) {
         throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to delete template');
@@ -248,7 +266,7 @@ export default function TemplatesPage() {
 
           <IndustryList
             templates={templates}
-            onSelect={handleSelectTemplate}
+            onSelect={(id: string) => void handleSelectTemplate(id)}
             isLoading={isLoading}
           />
         </div>

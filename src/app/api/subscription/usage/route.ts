@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       ...usage,
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error checking usage', error instanceof Error ? error : new Error(String(error)), { route: '/api/subscription/usage'  });
     return errors.database('Failed to check usage', error instanceof Error ? error : undefined);
   }

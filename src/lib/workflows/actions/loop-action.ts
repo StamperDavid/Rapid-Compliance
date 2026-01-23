@@ -3,9 +3,7 @@
  * Iterates over arrays and executes actions for each item
  */
 
-import type { BaseAction, WorkflowAction, Workflow } from '@/types/workflow';
-import type { AIAgentActionConfig } from './ai-agent-action';
-import type { SlackActionConfig } from './slack-action';
+import type { BaseAction, WorkflowAction, Workflow, WorkflowTriggerData } from '@/types/workflow';
 
 export interface LoopActionConfig extends BaseAction {
   type: 'loop';
@@ -21,26 +19,24 @@ export interface LoopActionConfig extends BaseAction {
   };
 }
 
-export interface LoopItemResult {
-  index: number;
-  item: unknown;
-  success: boolean;
-  result?: unknown;
-  error?: string;
-}
-
 export interface LoopResult {
   success: boolean;
   totalItems: number;
   processed: number;
   successful: number;
   failed: number;
-  results: LoopItemResult[];
+  results: Array<{
+    index: number;
+    item: unknown;
+    success: boolean;
+    result?: unknown;
+    error?: string;
+  }>;
 }
 
 export async function executeLoopAction(
   action: LoopActionConfig,
-  triggerData: Record<string, unknown>,
+  triggerData: WorkflowTriggerData,
   workflow: Workflow,
   organizationId: string
 ): Promise<LoopResult> {
@@ -83,12 +79,12 @@ export async function executeLoopAction(
       const itemIndex = i + batchIndex;
       
       // Create item context
-      const itemContext: Record<string, unknown> = {
+      const itemContext = {
         ...triggerData,
-        [itemVariable]: item as unknown,
+        [itemVariable]: item,
         [indexVariable]: itemIndex,
         _loop: {
-          item: item as unknown,
+          item,
           index: itemIndex,
           total: itemsToProcess.length,
           isFirst: itemIndex === 0,
@@ -119,25 +115,24 @@ export async function executeLoopAction(
 
         return {
           index: itemIndex,
-          item: item as unknown,
+          item,
           success: itemSuccess,
-          result: actionResults as unknown,
+          result: actionResults,
         };
-      } catch (error) {
+      } catch (error: any) {
         result.processed++;
         result.failed++;
-
+        
         if (!continueOnError) {
           result.success = false;
           throw error;
         }
 
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return {
           index: itemIndex,
-          item: item as unknown,
+          item,
           success: false,
-          error: errorMessage,
+          error: error.message,
         };
       }
     });
@@ -147,9 +142,7 @@ export async function executeLoopAction(
 
     // Add delay between batches (not after last batch)
     if (delayBetweenItems > 0 && i + batchSize < itemsToProcess.length) {
-      await new Promise<void>(resolve => {
-        setTimeout(resolve, delayBetweenItems);
-      });
+      await new Promise(resolve => setTimeout(resolve, delayBetweenItems));
     }
   }
 
@@ -161,22 +154,15 @@ export async function executeLoopAction(
   return result;
 }
 
-interface ActionResult {
-  actionId: string;
-  status: string;
-  result?: unknown;
-  error?: string;
-}
-
 /**
  * Execute workflow actions (helper for loop)
  */
 async function executeWorkflowActions(
   actions: WorkflowAction[],
-  triggerData: Record<string, unknown>,
+  triggerData: WorkflowTriggerData,
   workflow: Workflow,
   organizationId: string
-): Promise<ActionResult[]> {
+): Promise<Array<{ actionId: string; status: string; result?: unknown; error?: string }>> {
   // Import action executors
   const { executeEmailAction } = await import('./email-action');
   const { executeSMSAction } = await import('./sms-action');
@@ -187,7 +173,7 @@ async function executeWorkflowActions(
   const { executeAIAgentAction } = await import('./ai-agent-action');
   const { executeSlackAction } = await import('./slack-action');
 
-  const results: ActionResult[] = [];
+  const results: Array<{ actionId: string; status: string; result?: unknown; error?: string }> = [];
 
   for (const action of actions) {
     try {
@@ -195,49 +181,33 @@ async function executeWorkflowActions(
 
       switch (action.type) {
         case 'send_email':
-          if (action.type === 'send_email') {
-            result = await executeEmailAction(action, triggerData, organizationId);
-          }
+          result = await executeEmailAction(action as any, triggerData, organizationId);
           break;
         case 'send_sms':
-          if (action.type === 'send_sms') {
-            result = await executeSMSAction(action, triggerData, organizationId);
-          }
+          result = await executeSMSAction(action as any, triggerData, organizationId);
           break;
         case 'create_entity':
         case 'update_entity':
         case 'delete_entity':
-          if (action.type === 'create_entity' || action.type === 'update_entity' || action.type === 'delete_entity') {
-            result = await executeEntityAction(action, triggerData, organizationId);
-          }
+          result = await executeEntityAction(action as any, triggerData, organizationId);
           break;
         case 'http_request':
-          if (action.type === 'http_request') {
-            result = await executeHTTPAction(action, triggerData);
-          }
+          result = await executeHTTPAction(action as any, triggerData);
           break;
         case 'delay':
-          if (action.type === 'delay') {
-            result = await executeDelayAction(action, triggerData);
-          }
+          result = await executeDelayAction(action as any, triggerData);
           break;
         case 'conditional_branch':
-          if (action.type === 'conditional_branch') {
-            result = await executeConditionalAction(action, triggerData, workflow, organizationId);
-          }
+          result = await executeConditionalAction(action as any, triggerData, workflow, organizationId);
           break;
         case 'ai_agent':
-          if (action.type === 'ai_agent') {
-            result = await executeAIAgentAction(action as unknown as AIAgentActionConfig, triggerData, organizationId);
-          }
+          result = await executeAIAgentAction(action as any, triggerData, organizationId);
           break;
         case 'send_slack':
-          if (action.type === 'send_slack') {
-            result = await executeSlackAction(action as unknown as SlackActionConfig, triggerData, organizationId);
-          }
+          result = await executeSlackAction(action as any, triggerData, organizationId);
           break;
         default:
-          throw new Error(`Unknown action type: ${(action as WorkflowAction).type}`);
+          throw new Error(`Unknown action type: ${action.type}`);
       }
 
       results.push({
@@ -245,12 +215,11 @@ async function executeWorkflowActions(
         status: 'success',
         result,
       });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    } catch (error: any) {
       results.push({
         actionId: action.id,
         status: 'failed',
-        error: errorMessage,
+        error: error.message,
       });
       throw error; // Re-throw to be caught by loop
     }
@@ -262,13 +231,9 @@ async function executeWorkflowActions(
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, key) => {
-    if (current && typeof current === 'object' && key in current) {
-      return (current as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
+function getNestedValue(obj: WorkflowTriggerData | Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce((current: unknown, key: string) => 
+    (current as Record<string, unknown>)?.[key], obj);
 }
 
 

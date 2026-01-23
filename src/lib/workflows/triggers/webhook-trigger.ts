@@ -31,7 +31,7 @@ export async function handleWebhook(
   webhookUrl: string,
   method: string,
   headers: Record<string, string>,
-  body: any,
+  body: Record<string, unknown>,
   queryParams?: Record<string, string>
 ): Promise<void> {
   // Extract workflow ID from webhook URL
@@ -63,7 +63,7 @@ export async function handleWebhook(
         [where('status', '==', 'active')]
       );
       
-      const workflow = workflows.find((w: any) => {
+      const workflow = workflows.find((w: Record<string, unknown>) => {
         const trigger = w.trigger as WebhookTrigger;
         return trigger?.type === 'webhook' && trigger?.webhookUrl === webhookUrl;
       });

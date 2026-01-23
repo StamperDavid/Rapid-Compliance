@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   PerformanceScoreCard,
   CoachingRecommendationsCard,
@@ -50,7 +50,7 @@ export default function CoachingDashboardPage() {
   /**
    * Fetch coaching insights
    */
-  const fetchCoachingInsights = async (showRefreshing = false) => {
+  const fetchCoachingInsights = useCallback(async (showRefreshing = false) => {
     try {
       if (showRefreshing) {
         setRefreshing(true);
@@ -75,51 +75,55 @@ export default function CoachingDashboardPage() {
         body: JSON.stringify(requestBody),
       });
 
-      const json: GenerateCoachingResponse = await response.json();
+      const json = await response.json() as GenerateCoachingResponse;
 
       if (!json.success) {
-        throw new Error((json.error !== '' && json.error != null) ? json.error : 'Failed to generate coaching insights');
+        throw new Error(json.error ?? 'Failed to generate coaching insights');
       }
 
       setPerformance(json.performance);
       setInsights(json.insights);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch coaching insights:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load coaching insights');
+      const errorMessage = err instanceof Error && err.message ? err.message : 'Failed to load coaching insights';
+      setError(errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [currentUserId, period]);
 
   /**
    * Load insights on mount and when period changes
    */
   useEffect(() => {
-    fetchCoachingInsights();
-  }, [period]);
+    void fetchCoachingInsights();
+  }, [fetchCoachingInsights]);
 
   /**
    * Handle refresh
    */
   const handleRefresh = () => {
-    fetchCoachingInsights(true);
+    void fetchCoachingInsights(true);
   };
 
   /**
    * Handle recommendation accept
    */
   const handleAcceptRecommendation = (recommendationId: string) => {
-    console.log('Accept recommendation:', recommendationId);
     // TODO: Track acceptance in backend
+    // Placeholder for future implementation
+    void recommendationId;
   };
 
   /**
    * Handle recommendation dismiss
    */
   const handleDismissRecommendation = (recommendationId: string, reason?: string) => {
-    console.log('Dismiss recommendation:', recommendationId, reason);
     // TODO: Track dismissal in backend
+    // Placeholder for future implementation
+    void recommendationId;
+    void reason;
   };
 
   /**
@@ -172,7 +176,7 @@ export default function CoachingDashboardPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Coaching Insights</h2>
             <p className="text-gray-600 mb-6">{error}</p>
             <button
-              onClick={() => fetchCoachingInsights()}
+              onClick={() => void fetchCoachingInsights()}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               Try Again

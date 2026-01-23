@@ -5,8 +5,10 @@
  * Customer-facing product details with add to cart
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
+import toast from 'react-hot-toast';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { addToCart } from '@/lib/ecommerce/cart-service';
 import { useTheme } from '@/contexts/ThemeContext'
@@ -38,11 +40,7 @@ export default function ProductDetailPage() {
   const [adding, setAdding] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
 
-  useEffect(() => {
-    loadProduct();
-  }, [productId]);
-
-  const loadProduct = async () => {
+  const loadProduct = useCallback(async () => {
     try {
       setLoading(true);
       const productData = await FirestoreService.get(
@@ -55,26 +53,30 @@ export default function ProductDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId, productId]);
+
+  useEffect(() => {
+    void loadProduct();
+  }, [loadProduct]);
 
   const handleAddToCart = async () => {
     if (!product) {return;}
-    
+
     try {
       setAdding(true);
-      
+
       // Get or create cart session
-      const sessionId = localStorage.getItem('cartSessionId') || `session-${Date.now()}`;
+      const sessionId = localStorage.getItem('cartSessionId') ?? `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
-      
+
       await addToCart(sessionId, 'default', orgId, productId, quantity);
-      
+
       // Show success and redirect to cart
-      alert('Added to cart!');
+      toast.success('Added to cart!');
       router.push(`/store/${orgId}/cart`);
     } catch (error) {
       logger.error('Error adding to cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to add to cart');
+      toast.error('Failed to add to cart');
     } finally {
       setAdding(false);
     }
@@ -154,22 +156,24 @@ export default function ProductDetailPage() {
               marginBottom: '1rem',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              position: 'relative'
             }}>
-              {product.images && product.images[selectedImage] ? (
-                <img 
-                  src={product.images[selectedImage]} 
+              {product.images?.[selectedImage] ? (
+                <Image
+                  src={product.images[selectedImage]}
                   alt={product.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  fill
+                  style={{ objectFit: 'contain' }}
                 />
               ) : (
                 <span style={{ fontSize: '6rem' }}>📦</span>
               )}
             </div>
             
-            {product.images && product.images.length > 1 && (
+            {(product.images?.length ?? 0) > 1 && (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {product.images.map((img, idx) => (
+                {product.images?.map((img, idx) => (
                   <div
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
@@ -180,10 +184,11 @@ export default function ProductDetailPage() {
                       borderRadius: '0.5rem',
                       overflow: 'hidden',
                       cursor: 'pointer',
-                      border: selectedImage === idx ? `2px solid ${theme.colors.primary.main}` : 'none'
+                      border: selectedImage === idx ? `2px solid ${theme.colors.primary.main}` : 'none',
+                      position: 'relative'
                     }}
                   >
-                    <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <Image src={img} alt="" fill style={{ objectFit: 'cover' }} />
                   </div>
                 ))}
               </div>
@@ -196,15 +201,15 @@ export default function ProductDetailPage() {
               {product.name}
             </h1>
             
-            {product.category && (
-              <p style={{ 
-                fontSize: '0.875rem', 
+            {product.category ? (
+              <p style={{
+                fontSize: '0.875rem',
                 color: theme.colors.text.secondary,
                 marginBottom: '1rem'
               }}>
                 {product.category}
               </p>
-            )}
+            ) : null}
 
             <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: theme.colors.primary.main, marginBottom: '1.5rem' }}>
               ${product.price.toFixed(2)}
@@ -268,7 +273,7 @@ export default function ProductDetailPage() {
 
             {/* Add to Cart Button */}
             <button
-              onClick={handleAddToCart}
+              onClick={() => void handleAddToCart()}
               disabled={!product.inStock || adding}
               style={{
                 width: '100%',
@@ -287,13 +292,13 @@ export default function ProductDetailPage() {
             </button>
 
             {/* Features */}
-            {product.features && product.features.length > 0 && (
+            {(product.features?.length ?? 0) > 0 && (
               <div style={{ marginTop: '2rem' }}>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>
                   Features
                 </h3>
                 <ul style={{ listStyle: 'none', padding: 0 }}>
-                  {product.features.map((feature, idx) => (
+                  {product.features?.map((feature, idx) => (
                     <li key={idx} style={{ marginBottom: '0.5rem', color: theme.colors.text.secondary }}>
                       ✓ {feature}
                     </li>
@@ -303,19 +308,19 @@ export default function ProductDetailPage() {
             )}
 
             {/* Specifications */}
-            {product.specifications && Object.keys(product.specifications).length > 0 && (
+            {(Object.keys(product.specifications ?? {}).length) > 0 && (
               <div style={{ marginTop: '2rem' }}>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>
                   Specifications
                 </h3>
-                <div style={{ 
+                <div style={{
                   backgroundColor: theme.colors.background.paper,
                   borderRadius: '0.5rem',
                   padding: '1rem'
                 }}>
-                  {Object.entries(product.specifications).map(([key, value]) => (
-                    <div key={key} style={{ 
-                      display: 'flex', 
+                  {Object.entries(product.specifications ?? {}).map(([key, value]) => (
+                    <div key={key} style={{
+                      display: 'flex',
                       justifyContent: 'space-between',
                       padding: '0.5rem 0',
                       borderBottom: `1px solid ${theme.colors.border.main}`

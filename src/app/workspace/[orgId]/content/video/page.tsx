@@ -56,11 +56,54 @@ interface GeneratedStoryboard {
  * AI Video Studio - Functional Implementation
  * Connected to Director Service & Stitcher Pipeline
  */
+// API Response Interfaces
+interface StoryboardGenerationResponse {
+  storyboard: GeneratedStoryboard;
+}
+
+interface VideoProjectResponse {
+  projectId: string;
+}
+
+interface ErrorResponse {
+  error: string;
+}
+
+// Type guard for StoryboardGenerationResponse
+function isStoryboardGenerationResponse(data: unknown): data is StoryboardGenerationResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'storyboard' in data &&
+    typeof (data as Record<string, unknown>).storyboard === 'object'
+  );
+}
+
+// Type guard for VideoProjectResponse
+function isVideoProjectResponse(data: unknown): data is VideoProjectResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'projectId' in data &&
+    typeof (data as Record<string, unknown>).projectId === 'string'
+  );
+}
+
+// Type guard for ErrorResponse
+function isErrorResponse(data: unknown): data is ErrorResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'error' in data &&
+    typeof (data as Record<string, unknown>).error === 'string'
+  );
+}
+
 export default function VideoStudioPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   // State Management
   const [activeTab, setActiveTab] = useState<'create' | 'projects' | 'templates'>('create');
@@ -121,11 +164,17 @@ export default function VideoStudioPage() {
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to generate storyboard');
+        const errData: unknown = await response.json();
+        const errorMessage = isErrorResponse(errData)
+          ? errData.error
+          : 'Failed to generate storyboard';
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      const data: unknown = await response.json();
+      if (!isStoryboardGenerationResponse(data)) {
+        throw new Error('Invalid storyboard response from server');
+      }
       setGeneratedStoryboard(data.storyboard);
     } catch (err) {
       console.error('Storyboard generation failed:', err);
@@ -137,7 +186,9 @@ export default function VideoStudioPage() {
 
   // Start Video Generation
   const handleStartGeneration = useCallback(async () => {
-    if (!generatedStoryboard) return;
+    if (!generatedStoryboard) {
+      return;
+    }
 
     try {
       const response = await fetch(`/api/video/generate`, {
@@ -153,7 +204,10 @@ export default function VideoStudioPage() {
         throw new Error('Failed to start video generation');
       }
 
-      const data = await response.json();
+      const data: unknown = await response.json();
+      if (!isVideoProjectResponse(data)) {
+        throw new Error('Invalid project response from server');
+      }
       router.push(`/workspace/${orgId}/content/video/project/${data.projectId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start generation');
@@ -594,7 +648,7 @@ export default function VideoStudioPage() {
 
               {/* Generate Button */}
               <button
-                onClick={handleGenerateStoryboard}
+                onClick={() => void handleGenerateStoryboard()}
                 disabled={isGenerating || !brief.message.trim()}
                 style={{
                   width: '100%',
@@ -775,7 +829,7 @@ export default function VideoStudioPage() {
                 {/* Action Buttons */}
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button
-                    onClick={handleStartGeneration}
+                    onClick={() => void handleStartGeneration()}
                     style={{
                       flex: 1,
                       padding: '0.875rem',

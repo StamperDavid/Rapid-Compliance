@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       authUrl,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to generate auth URL';
+    const _errorMessage = error instanceof Error ? error.message : 'Failed to generate auth URL';
     logger.error('Error generating auth URL', error instanceof Error ? error : undefined, { route: '/api/integrations/oauth/authorize' });
     return errors.externalService('OAuth service', error instanceof Error ? error : undefined);
   }

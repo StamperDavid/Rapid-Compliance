@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     // Start recovery campaign
     const engine = getRecoveryEngine();
-    await engine.startRecoveryCampaign(merchant);
+    engine.startRecoveryCampaign(merchant);
 
     return NextResponse.json({
       success: true,

@@ -73,7 +73,7 @@ export default function SequenceIntelligencePage() {
   
   // Load analysis on mount
   useEffect(() => {
-    fetchAnalysis();
+    void fetchAnalysis();
   }, []);
   
   // ============================================================================
@@ -92,7 +92,7 @@ export default function SequenceIntelligencePage() {
             </p>
           </div>
           <button
-            onClick={fetchAnalysis}
+            onClick={() => { void fetchAnalysis(); }}
             disabled={loading}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
           >
@@ -130,7 +130,7 @@ export default function SequenceIntelligencePage() {
               <h3 className="text-lg font-semibold text-red-900">Analysis Failed</h3>
               <p className="text-red-800 mt-1">{error}</p>
               <button
-                onClick={fetchAnalysis}
+                onClick={() => { void fetchAnalysis(); }}
                 className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
               >
                 Try Again

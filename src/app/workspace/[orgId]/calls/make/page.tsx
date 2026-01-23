@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation'
-import { logger } from '@/lib/logger/logger';;
+import { useParams, useRouter } from 'next/navigation';
+import { logger } from '@/lib/logger/logger';
+import { showErrorToast, showSuccessToast } from '@/components/ErrorToast';
 
 export default function MakeCallPage() {
   const params = useParams();
@@ -12,7 +13,9 @@ export default function MakeCallPage() {
   const [calling, setCalling] = useState(false);
 
   const handleCall = async () => {
-    if (!phoneNumber) {return;}
+    if (!phoneNumber) {
+      return;
+    }
     try {
       setCalling(true);
       // Call Twilio voice API
@@ -21,12 +24,14 @@ export default function MakeCallPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: phoneNumber, organizationId: orgId }),
       });
-      if (!response.ok) {throw new Error('Call failed');}
-      alert('Call initiated!');
+      if (!response.ok) {
+        throw new Error('Call failed');
+      }
+      showSuccessToast('Call initiated!');
       router.push(`/workspace/${orgId}/calls`);
     } catch (error: unknown) {
       logger.error('Error making call:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to make call');
+      showErrorToast(error, 'Failed to make call');
     } finally {
       setCalling(false);
     }
@@ -39,7 +44,7 @@ export default function MakeCallPage() {
         <div className="bg-gray-900 rounded-lg p-6">
           <label className="block text-sm font-medium mb-2">Phone Number</label>
           <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+1 (555) 123-4567" className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg mb-4 text-lg" />
-          <button onClick={handleCall} disabled={calling || !phoneNumber} className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-lg font-semibold">{calling ? 'Calling...' : '📞 Call Now'}</button>
+          <button onClick={() => { void handleCall(); }} disabled={calling || !phoneNumber} className="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-lg font-semibold">{calling ? 'Calling...' : '📞 Call Now'}</button>
         </div>
       </div>
     </div>

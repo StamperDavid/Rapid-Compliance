@@ -166,6 +166,41 @@ export interface WorkflowParameter {
 }
 
 /**
+ * Workflow Trigger Data
+ * Strongly-typed data passed when a workflow is triggered
+ */
+export interface WorkflowTriggerData {
+  // Core identifiers
+  organizationId?: string;
+  workspaceId?: string;
+  recordId?: string;
+  id?: string;
+  
+  // Entity-related triggers
+  entity?: Record<string, unknown>;
+  previousEntity?: Record<string, unknown>;
+  schemaId?: string;
+  
+  // Event metadata
+  event?: string;
+  
+  // Webhook triggers
+  payload?: Record<string, unknown>;
+  webhookId?: string;
+  
+  // Schedule triggers
+  scheduleType?: 'daily' | 'weekly' | 'monthly' | 'hourly';
+  timestamp?: Date;
+  
+  // Workflow variables
+  _variables?: Record<string, unknown>;
+  variables?: Record<string, unknown>;
+  
+  // Dynamic fields (allows any additional properties)
+  [key: string]: unknown;
+}
+
+/**
  * Workflow Condition
  * Gate actions based on conditions
  */

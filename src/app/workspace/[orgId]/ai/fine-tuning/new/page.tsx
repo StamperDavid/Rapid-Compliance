@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { Timestamp } from 'firebase/firestore';
+import { logger } from '@/lib/logger/logger';
+import { showErrorToast } from '@/components/ErrorToast';
 
 export default function NewFineTuningPage() {
   const params = useParams();
@@ -21,7 +22,7 @@ export default function NewFineTuningPage() {
       router.push(`/workspace/${orgId}/ai/fine-tuning`);
     } catch (error: unknown) {
       logger.error('Error creating job:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to create fine-tuning job');
+      showErrorToast(error, 'Failed to create fine-tuning job');
     } finally {
       setCreating(false);
     }
@@ -40,7 +41,7 @@ export default function NewFineTuningPage() {
         </div>
         <div className="flex gap-3">
           <button onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
-          <button onClick={handleSubmit} disabled={creating} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{creating ? 'Starting...' : 'Start Fine-Tuning'}</button>
+          <button onClick={() => void handleSubmit()} disabled={creating} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{creating ? 'Starting...' : 'Start Fine-Tuning'}</button>
         </div>
       </div>
     </div>

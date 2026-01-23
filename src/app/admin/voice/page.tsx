@@ -39,6 +39,11 @@ interface DefaultAgentSettings {
   recordingEnabled: boolean;
 }
 
+interface VoiceStatsApiResponse {
+  stats?: VoiceStats;
+  error?: string;
+}
+
 export default function AdminVoicePage() {
   useAdminAuth();
   const [loading, setLoading] = useState(true);
@@ -57,7 +62,7 @@ export default function AdminVoicePage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'settings'>('overview');
 
   useEffect(() => {
-    loadStats();
+    void loadStats();
   }, []);
 
   const loadStats = async () => {
@@ -71,8 +76,10 @@ export default function AdminVoicePage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setStats(data.stats);
+        const data = await response.json() as VoiceStatsApiResponse;
+        if (data.stats) {
+          setStats(data.stats);
+        }
       } else {
         // Use mock data if API fails
         setStats({
@@ -149,8 +156,8 @@ export default function AdminVoicePage() {
       if (response.ok) {
         setSaveResult({ success: true, message: 'Default agent settings saved successfully!' });
       } else {
-        const data = await response.json();
-        setSaveResult({ success: false, message: data.error || 'Failed to save settings' });
+        const data = await response.json() as VoiceStatsApiResponse;
+        setSaveResult({ success: false, message: data.error ?? 'Failed to save settings' });
       }
     } catch {
       setSaveResult({ success: false, message: 'Network error. Please try again.' });
@@ -190,7 +197,7 @@ export default function AdminVoicePage() {
           </p>
         </div>
         <button
-          onClick={loadStats}
+          onClick={() => void loadStats()}
           style={{
             padding: '0.625rem 1rem',
             backgroundColor: 'transparent',
@@ -496,7 +503,7 @@ export default function AdminVoicePage() {
             {/* Save Button */}
             <div style={{ gridColumn: 'span 2', marginTop: '1rem' }}>
               <button
-                onClick={handleSaveSettings}
+                onClick={() => void handleSaveSettings()}
                 disabled={saving}
                 style={{
                   padding: '0.75rem 1.5rem',

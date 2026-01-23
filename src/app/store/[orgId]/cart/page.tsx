@@ -5,8 +5,10 @@
  * Customer-facing cart with quantity management
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
+import toast from 'react-hot-toast';
 import { getOrCreateCart, removeFromCart, updateCartItemQuantity } from '@/lib/ecommerce/cart-service';
 import { useTheme } from '@/contexts/ThemeContext'
 import { logger } from '@/lib/logger/logger';;
@@ -40,16 +42,12 @@ export default function ShoppingCartPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    loadCart();
-  }, []);
-
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
     try {
       setLoading(true);
-      const sessionId = localStorage.getItem('cartSessionId') || `session-${Date.now()}`;
+      const sessionId = localStorage.getItem('cartSessionId') ?? `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
-      
+
       const cartData = await getOrCreateCart(sessionId, 'default', orgId);
       setCart(cartData as unknown as Cart);
     } catch (error) {
@@ -57,19 +55,27 @@ export default function ShoppingCartPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadCart();
+  }, [loadCart]);
 
   const handleQuantityChange = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 1 || !cart) {return;}
-    
+
     try {
       setUpdating(true);
-      const sessionId = localStorage.getItem('cartSessionId')!;
+      const sessionId = localStorage.getItem('cartSessionId');
+      if (!sessionId) {
+        toast.error('Session not found');
+        return;
+      }
       await updateCartItemQuantity(sessionId, 'default', orgId, itemId, newQuantity);
       await loadCart();
     } catch (error) {
       logger.error('Error updating quantity:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to update quantity');
+      toast.error('Failed to update quantity');
     } finally {
       setUpdating(false);
     }
@@ -77,15 +83,19 @@ export default function ShoppingCartPage() {
 
   const handleRemoveItem = async (itemId: string) => {
     if (!cart) {return;}
-    
+
     try {
       setUpdating(true);
-      const sessionId = localStorage.getItem('cartSessionId')!;
+      const sessionId = localStorage.getItem('cartSessionId');
+      if (!sessionId) {
+        toast.error('Session not found');
+        return;
+      }
       await removeFromCart(sessionId, 'default', orgId, itemId);
       await loadCart();
     } catch (error) {
       logger.error('Error removing item:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to remove item');
+      toast.error('Failed to remove item');
     } finally {
       setUpdating(false);
     }
@@ -198,10 +208,11 @@ export default function ShoppingCartPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    position: 'relative'
                   }}>
                     {item.image ? (
-                      <img src={item.image} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <Image src={item.image} alt={item.productName} fill style={{ objectFit: 'cover' }} />
                     ) : (
                       <span style={{ fontSize: '2rem' }}>📦</span>
                     )}
@@ -219,7 +230,7 @@ export default function ShoppingCartPage() {
                     {/* Quantity Controls */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <button
-                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                        onClick={() => void handleQuantityChange(item.id, item.quantity - 1)}
                         disabled={updating || item.quantity <= 1}
                         style={{
                           width: '32px',
@@ -237,7 +248,7 @@ export default function ShoppingCartPage() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        onClick={() => void handleQuantityChange(item.id, item.quantity + 1)}
                         disabled={updating}
                         style={{
                           width: '32px',
@@ -251,7 +262,7 @@ export default function ShoppingCartPage() {
                         +
                       </button>
                       <button
-                        onClick={() => handleRemoveItem(item.id)}
+                        onClick={() => void handleRemoveItem(item.id)}
                         disabled={updating}
                         style={{
                           marginLeft: '1rem',

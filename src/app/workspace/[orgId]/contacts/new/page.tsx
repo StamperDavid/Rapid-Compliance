@@ -3,14 +3,24 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { Timestamp } from 'firebase/firestore';
+import { logger } from '@/lib/logger/logger';
+import { showErrorToast } from '@/components/ErrorToast';
+import type { NewContactFormData } from '@/types/contact';
 
 export default function NewContactPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
-  const [contact, setContact] = useState({ firstName: '', lastName: '', email: '', phone: '', company: '', title: '', linkedIn: '' });
+  const [contact, setContact] = useState<NewContactFormData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    company: '',
+    title: '',
+    linkedIn: ''
+  });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,7 +32,7 @@ export default function NewContactPage() {
       router.push(`/workspace/${orgId}/contacts`);
     } catch (error: unknown) {
       logger.error('Error creating contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to create contact');
+      showErrorToast(error, 'Failed to create contact');
     } finally {
       setSaving(false);
     }
@@ -32,7 +42,7 @@ export default function NewContactPage() {
     <div className="p-8">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Add New Contact</h1>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => { void handleSubmit(e); }}>
           <div className="bg-gray-900 rounded-lg p-6 mb-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">

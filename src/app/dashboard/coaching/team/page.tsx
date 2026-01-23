@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   TeamOverviewCard,
   SkillGapCard,
@@ -48,7 +48,7 @@ export default function TeamCoachingDashboardPage() {
   /**
    * Fetch team coaching insights
    */
-  const fetchTeamCoachingInsights = async (showRefreshing = false) => {
+  const fetchTeamCoachingInsights = useCallback(async (showRefreshing = false) => {
     try {
       if (showRefreshing) {
         setRefreshing(true);
@@ -71,34 +71,35 @@ export default function TeamCoachingDashboardPage() {
         body: JSON.stringify(requestBody),
       });
 
-      const json: GenerateTeamCoachingResponse = await response.json();
+      const json = await response.json() as GenerateTeamCoachingResponse;
 
       if (!json.success) {
-        throw new Error((json.error !== '' && json.error != null) ? json.error : 'Failed to generate team coaching insights');
+        throw new Error(json.error ?? 'Failed to generate team coaching insights');
       }
 
       setTeamInsights(json.teamInsights);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch team coaching insights:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load team coaching insights');
+      const errorMessage = err instanceof Error && err.message ? err.message : 'Failed to load team coaching insights';
+      setError(errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [currentTeamId, period]);
 
   /**
    * Load insights on mount and when period changes
    */
   useEffect(() => {
-    fetchTeamCoachingInsights();
-  }, [period]);
+    void fetchTeamCoachingInsights();
+  }, [fetchTeamCoachingInsights]);
 
   /**
    * Handle refresh
    */
   const handleRefresh = () => {
-    fetchTeamCoachingInsights(true);
+    void fetchTeamCoachingInsights(true);
   };
 
   /**

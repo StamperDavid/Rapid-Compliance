@@ -3,7 +3,7 @@
  * Sends messages to Slack channels or users
  */
 
-import type { BaseAction } from '@/types/workflow';
+import type { BaseAction, WorkflowTriggerData } from '@/types/workflow';
 
 export interface SlackActionConfig extends BaseAction {
   type: 'send_slack';
@@ -13,7 +13,7 @@ export interface SlackActionConfig extends BaseAction {
     userId?: string;            // User ID for DM
     userEmail?: string;         // User email for DM (alternative to ID)
     message: string;            // Message text with {{variable}} placeholders
-    blocks?: Array<unknown>;             // Slack Block Kit blocks for rich formatting
+    blocks?: unknown[];         // Slack Block Kit blocks for rich formatting
     threadTs?: string;          // Thread timestamp for replies
     unfurlLinks?: boolean;      // Expand link previews
     unfurlMedia?: boolean;      // Expand media previews
@@ -23,34 +23,11 @@ export interface SlackActionConfig extends BaseAction {
   };
 }
 
-// Slack API Response Types
-interface SlackIntegration {
-  accessToken?: string;
-  token?: string;
-}
-
-interface SlackChannel {
-  id: string;
-  name: string;
-}
-
-interface SlackUser {
-  id: string;
-}
-
-interface SlackApiResponse {
-  ok: boolean;
-  error?: string;
-  ts?: string;
-  channels?: SlackChannel[];
-  user?: SlackUser;
-}
-
 export async function executeSlackAction(
   action: SlackActionConfig,
-  triggerData: Record<string, unknown>,
+  triggerData: WorkflowTriggerData,
   organizationId: string
-): Promise<Record<string, unknown>> {
+): Promise<unknown> {
   const {
     channelId,
     channelName,
@@ -68,17 +45,16 @@ export async function executeSlackAction(
 
   // Get Slack credentials
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-
+  
   let slackToken: string | null = null;
-
+  
   try {
     // Check for organization-level Slack integration
     const integration = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
       'slack'
     );
-    const typedIntegration = integration as SlackIntegration | null;
-    slackToken = typedIntegration?.accessToken ?? typedIntegration?.token ?? null;
+    slackToken = (integration as any)?.accessToken || (integration as any)?.token;
   } catch {
     // No integration found
   }
@@ -106,10 +82,10 @@ export async function executeSlackAction(
 
   // Replace template variables in message
   const processedMessage = replaceTemplateVariables(message, triggerData);
-
+  
   // Process blocks if provided
-  const processedBlocks: unknown = blocks
-    ? JSON.parse(replaceTemplateVariables(JSON.stringify(blocks), triggerData)) as unknown
+  const processedBlocks = blocks 
+    ? JSON.parse(replaceTemplateVariables(JSON.stringify(blocks), triggerData))
     : undefined;
 
   // Send message via Slack API
@@ -127,23 +103,23 @@ export async function executeSlackAction(
       unfurl_links: unfurlLinks,
       unfurl_media: unfurlMedia,
       ...(asBot && botName ? { username: botName } : {}),
-      ...(asBot && botIcon ? {
+      ...(asBot && botIcon ? { 
         icon_emoji: botIcon.startsWith(':') ? botIcon : undefined,
         icon_url: !botIcon.startsWith(':') ? botIcon : undefined,
       } : {}),
     }),
   });
 
-  const result = await response.json() as SlackApiResponse;
+  const result = await response.json();
 
   if (!result.ok) {
-    throw new Error(`Slack API error: ${(result.error !== '' && result.error != null) ? result.error : 'Unknown error'}`);
+    throw new Error(`Slack API error: ${result.error || 'Unknown error'}`);
   }
 
   return {
     success: true,
     channel: target,
-    messageTs: result.ts ?? '',
+    messageTs: result.ts,
     message: processedMessage,
   };
 }
@@ -154,7 +130,7 @@ export async function executeSlackAction(
 async function getChannelIdByName(token: string, channelName: string): Promise<string> {
   // Remove # prefix if present
   const name = channelName.replace(/^#/, '');
-
+  
   const response = await fetch('https://slack.com/api/conversations.list', {
     method: 'GET',
     headers: {
@@ -162,14 +138,14 @@ async function getChannelIdByName(token: string, channelName: string): Promise<s
     },
   });
 
-  const result = await response.json() as SlackApiResponse;
+  const result = await response.json();
 
   if (!result.ok) {
-    throw new Error(`Failed to list Slack channels: ${result.error ?? 'Unknown error'}`);
+    throw new Error(`Failed to list Slack channels: ${result.error}`);
   }
 
-  const channel = result.channels?.find((c: SlackChannel) => c.name === name);
-
+  const channel = result.channels?.find((c: Record<string, unknown>) => c.name === name);
+  
   if (!channel) {
     throw new Error(`Slack channel not found: ${channelName}`);
   }
@@ -188,17 +164,13 @@ async function getUserIdByEmail(token: string, email: string): Promise<string> {
     },
   });
 
-  const result = await response.json() as SlackApiResponse;
+  const result = await response.json();
 
   if (!result.ok) {
     if (result.error === 'users_not_found') {
       throw new Error(`Slack user not found with email: ${email}`);
     }
-    throw new Error(`Failed to look up Slack user: ${result.error ?? 'Unknown error'}`);
-  }
-
-  if (!result.user) {
-    throw new Error(`Slack user not found with email: ${email}`);
+    throw new Error(`Failed to look up Slack user: ${result.error}`);
   }
 
   return result.user.id;
@@ -207,8 +179,8 @@ async function getUserIdByEmail(token: string, email: string): Promise<string> {
 /**
  * Replace {{variable}} placeholders with values from triggerData
  */
-function replaceTemplateVariables(template: string, data: Record<string, unknown>): string {
-  return template.replace(/\{\{([^}]+)\}\}/g, (match, path: string) => {
+function replaceTemplateVariables(template: string, data: WorkflowTriggerData): string {
+  return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
     const value = getNestedValue(data, path.trim());
     if (value === undefined || value === null) {
       return match;
@@ -223,13 +195,9 @@ function replaceTemplateVariables(template: string, data: Record<string, unknown
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce<unknown>((current, key) => {
-    if (current != null && typeof current === 'object' && key in current) {
-      return (current as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
+function getNestedValue(obj: WorkflowTriggerData, path: string): unknown {
+  return path.split('.').reduce((current: unknown, key: string) => 
+    (current as Record<string, unknown>)?.[key], obj);
 }
 
 
