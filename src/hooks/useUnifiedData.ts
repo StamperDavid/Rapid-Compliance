@@ -74,14 +74,22 @@ export function useTenantData<T>(
   collectionName: string,
   options: UseDataOptions = {}
 ): UseDataReturn<T> {
-  const { user, isPlatformAdmin } = useUnifiedAuth();
+  const { user, isPlatformAdmin, loading: authLoading } = useUnifiedAuth();
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const { constraints = [], realtime = false, skipInitialFetch = false } = options;
 
+  // Cache admin status to prevent recalculation triggering re-renders
+  const isAdmin = isPlatformAdmin();
+
   const fetchData = useCallback(async () => {
+    // Guard: Wait for auth to resolve before fetching
+    if (authLoading) {
+      return;
+    }
+
     if (!user) {
       setData([]);
       setLoading(false);
@@ -90,7 +98,7 @@ export function useTenantData<T>(
 
     // Platform admin with no tenant selected - return empty for now
     // In the future, this could return aggregated platform-level data
-    if (isPlatformAdmin() && user.tenantId === null) {
+    if (isAdmin && user.tenantId === null) {
       logger.info('Platform admin with no tenant - returning empty data', {
         collection: collectionName,
         file: 'useUnifiedData.ts',
@@ -162,7 +170,7 @@ export function useTenantData<T>(
       setError(errorObj);
       setLoading(false);
     }
-  }, [user, isPlatformAdmin, collectionName, constraints]);
+  }, [user, isAdmin, authLoading, collectionName, constraints]);
 
   // Initial fetch
   useEffect(() => {
@@ -229,14 +237,22 @@ export function useTenantDoc<T>(
   docId: string | null,
   options: { realtime?: boolean } = {}
 ): UseDocReturn<T> {
-  const { user, isPlatformAdmin } = useUnifiedAuth();
+  const { user, isPlatformAdmin, loading: authLoading } = useUnifiedAuth();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const { realtime = false } = options;
 
+  // Cache admin status to prevent recalculation triggering re-renders
+  const isAdmin = isPlatformAdmin();
+
   const fetchData = useCallback(async () => {
+    // Guard: Wait for auth to resolve before fetching
+    if (authLoading) {
+      return;
+    }
+
     if (!user || !docId) {
       setData(null);
       setLoading(false);
@@ -244,7 +260,7 @@ export function useTenantDoc<T>(
     }
 
     // Platform admin with no tenant - return null
-    if (isPlatformAdmin() && user.tenantId === null) {
+    if (isAdmin && user.tenantId === null) {
       setData(null);
       setLoading(false);
       return;
@@ -290,7 +306,7 @@ export function useTenantDoc<T>(
       setError(errorObj);
       setLoading(false);
     }
-  }, [user, isPlatformAdmin, collectionName, docId]);
+  }, [user, isAdmin, authLoading, collectionName, docId]);
 
   // Initial fetch
   useEffect(() => {
@@ -445,13 +461,22 @@ export function useTenantRecords<T>(
  * const { data: organizations, loading } = usePlatformOrganizations();
  */
 export function usePlatformOrganizations(): UseDataReturn<Record<string, unknown>> {
-  const { isPlatformAdmin } = useUnifiedAuth();
+  const { isPlatformAdmin, loading: authLoading } = useUnifiedAuth();
   const [data, setData] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Cache admin status to prevent recalculation triggering re-renders
+  const isAdmin = isPlatformAdmin();
+
   const fetchData = useCallback(async () => {
-    if (!isPlatformAdmin()) {
+    // Guard: Wait for auth to resolve before checking admin status
+    if (authLoading) {
+      return;
+    }
+
+    if (!isAdmin) {
+      // Only log once when auth is resolved and user is not admin
       logger.warn('usePlatformOrganizations called by non-admin user', {
         file: 'useUnifiedData.ts',
       });
@@ -475,7 +500,7 @@ export function usePlatformOrganizations(): UseDataReturn<Record<string, unknown
       setError(errorObj);
       setLoading(false);
     }
-  }, [isPlatformAdmin]);
+  }, [isAdmin, authLoading]);
 
   useEffect(() => {
     void fetchData();
@@ -483,7 +508,7 @@ export function usePlatformOrganizations(): UseDataReturn<Record<string, unknown
 
   return {
     data,
-    loading,
+    loading: authLoading || loading,
     error,
     refetch: fetchData,
   };

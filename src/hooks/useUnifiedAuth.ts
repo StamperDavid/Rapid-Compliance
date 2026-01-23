@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Timestamp } from 'firebase/firestore';
 import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
@@ -347,34 +347,43 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
   }, []);
 
   // Helper: Check if user has a specific permission
-  const hasPermission = (permission: keyof UnifiedPermissions): boolean => {
-    if (!permissions) {
-      return false;
-    }
-    return permissions[permission];
-  };
+  // Memoized to prevent infinite loops when used as useCallback dependency
+  const hasPermission = useCallback(
+    (permission: keyof UnifiedPermissions): boolean => {
+      if (!permissions) {
+        return false;
+      }
+      return permissions[permission];
+    },
+    [permissions]
+  );
 
   // Helper: Check if user is platform admin
-  const isPlatformAdmin = (): boolean => {
+  // Memoized to prevent infinite loops when used as useCallback dependency
+  const isPlatformAdmin = useCallback((): boolean => {
     return isPlatformAdminRole(user?.role);
-  };
+  }, [user?.role]);
 
   // Helper: Check if user is at least a certain role level
-  const isAtLeastRole = (minimumRole: AccountRole): boolean => {
-    if (!user) {
-      return false;
-    }
+  // Memoized to prevent infinite loops when used as useCallback dependency
+  const isAtLeastRole = useCallback(
+    (minimumRole: AccountRole): boolean => {
+      if (!user) {
+        return false;
+      }
 
-    const roleHierarchy: Record<AccountRole, number> = {
-      platform_admin: 5,
-      owner: 4,
-      admin: 3,
-      manager: 2,
-      employee: 1,
-    };
+      const roleHierarchy: Record<AccountRole, number> = {
+        platform_admin: 5,
+        owner: 4,
+        admin: 3,
+        manager: 2,
+        employee: 1,
+      };
 
-    return roleHierarchy[user.role] >= roleHierarchy[minimumRole];
-  };
+      return roleHierarchy[user.role] >= roleHierarchy[minimumRole];
+    },
+    [user]
+  );
 
   return {
     user,
