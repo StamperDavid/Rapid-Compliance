@@ -108,10 +108,10 @@ async function emitSignal(
   });
 
   if (!result.success) {
-    throw new Error(result.error || 'Failed to emit signal');
+    throw new Error(result.error ?? 'Failed to emit signal');
   }
 
-  return result.signalId!;
+  return result.signalId ?? '';
 }
 
 /**
@@ -323,11 +323,11 @@ async function executeNotifySlack(
 
     // Build message with placeholders
     const slackMessage = action.details?.slackMessage as string | undefined;
-    let message = slackMessage ||
+    let message = slackMessage ??
       `New form submission: ${form.name}\n` +
       `Confirmation: ${submission.confirmationNumber}\n` +
-      `Email: ${submission.indexedEmail || 'N/A'}\n` +
-      `Name: ${submission.indexedName || 'N/A'}`;
+      `Email: ${submission.indexedEmail ?? 'N/A'}\n` +
+      `Name: ${submission.indexedName ?? 'N/A'}`;
 
     // Replace placeholders
     message = replacePlaceholders(message, submission);
@@ -376,8 +376,8 @@ async function _executeSendWebhook(
       throw new Error('Webhook URL not specified');
     }
 
-    const method = (action.details?.webhookMethod as string | undefined) || 'POST';
-    const headers = (action.details?.webhookHeaders as Record<string, string> | undefined) || {};
+    const method = (action.details?.webhookMethod as string | undefined) ?? 'POST';
+    const headers = (action.details?.webhookHeaders as Record<string, string> | undefined) ?? {};
 
     // Build payload
     let payload: WebhookPayload | Record<string, unknown>;
@@ -536,10 +536,10 @@ async function executeCRMUpdate(
 function replacePlaceholders(template: string, submission: FormSubmission): string {
   return template.replace(/\{\{(\w+)\}\}/g, (match, fieldName) => {
     // Check indexed fields first
-    if (fieldName === 'email') {return submission.indexedEmail ?? '';}
-    if (fieldName === 'phone') {return submission.indexedPhone ?? '';}
-    if (fieldName === 'name') {return submission.indexedName ?? '';}
-    if (fieldName === 'company') {return submission.indexedCompany ?? '';}
+    if (fieldName === 'email' && submission.indexedEmail) {return submission.indexedEmail;}
+    if (fieldName === 'phone' && submission.indexedPhone) {return submission.indexedPhone;}
+    if (fieldName === 'name' && submission.indexedName) {return submission.indexedName;}
+    if (fieldName === 'company' && submission.indexedCompany) {return submission.indexedCompany;}
     if (fieldName === 'confirmationNumber') {return submission.confirmationNumber;}
     if (fieldName === 'submissionId') {return submission.id;}
     if (fieldName === 'formId') {return submission.formId;}

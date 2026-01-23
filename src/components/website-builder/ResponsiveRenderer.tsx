@@ -7,8 +7,20 @@
 'use client';
 
 import type { PageSection, Widget } from '@/types/website';
+import type {
+  FeatureItem,
+  PricingPlan,
+  LogoItem
+} from '@/types/widget-content';
 import { OptimizedImage } from './OptimizedImage';
 import { AccessibleWidget, SkipToMain } from './AccessibleWidget';
+
+interface SpacingStyle {
+  top?: string;
+  right?: string;
+  bottom?: string;
+  left?: string;
+}
 
 interface ResponsiveRendererProps {
   content: PageSection[];
@@ -185,15 +197,15 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
 }
 
 function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: string }) {
-  const convertSpacing = (spacing?: any): string => {
+  const convertSpacing = (spacing?: SpacingStyle | string): string => {
     if (!spacing) {return '0';}
     if (typeof spacing === 'string') {return spacing;}
     return `${spacing.top ?? 0} ${spacing.right ?? 0} ${spacing.bottom ?? 0} ${spacing.left ?? 0}`;
   };
 
   const getResponsiveStyle = (): React.CSSProperties => {
-    const baseStyle: any = { ...(widget.style ?? {}) };
-    
+    const baseStyle: React.CSSProperties & { padding?: string | SpacingStyle; margin?: string | SpacingStyle } = { ...(widget.style ?? {}) };
+
     // Convert Spacing objects to CSS strings
     if (baseStyle.padding && typeof baseStyle.padding === 'object') {
       baseStyle.padding = convertSpacing(baseStyle.padding);
@@ -201,10 +213,10 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     if (baseStyle.margin && typeof baseStyle.margin === 'object') {
       baseStyle.margin = convertSpacing(baseStyle.margin);
     }
-    
+
     // Apply responsive overrides
     if (breakpoint === 'mobile' && widget.responsive?.mobile) {
-      const mobileStyle: any = { ...widget.responsive.mobile };
+      const mobileStyle: React.CSSProperties & { padding?: string | SpacingStyle; margin?: string | SpacingStyle } = { ...widget.responsive.mobile };
       if (mobileStyle.padding && typeof mobileStyle.padding === 'object') {
         mobileStyle.padding = convertSpacing(mobileStyle.padding);
       }
@@ -214,7 +226,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
       return { ...baseStyle, ...mobileStyle };
     }
     if (breakpoint === 'tablet' && widget.responsive?.tablet) {
-      const tabletStyle: any = { ...widget.responsive.tablet };
+      const tabletStyle: React.CSSProperties & { padding?: string | SpacingStyle; margin?: string | SpacingStyle } = { ...widget.responsive.tablet };
       if (tabletStyle.padding && typeof tabletStyle.padding === 'object') {
         tabletStyle.padding = convertSpacing(tabletStyle.padding);
       }
@@ -223,7 +235,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
       }
       return { ...baseStyle, ...tabletStyle };
     }
-    
+
     return baseStyle;
   };
 
@@ -360,10 +372,10 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     }
 
     case 'features': {
-      const features = (widget.data.features as any[]) || [];
+      const features = (widget.data.features as FeatureItem[]) || [];
       return (
         <div className="feature-grid">
-          {features.map((feature: any, idx: number) => (
+          {features.map((feature, idx: number) => (
             <div
               key={idx}
               style={{
@@ -391,10 +403,10 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     }
 
     case 'pricing': {
-      const plans = (widget.data.plans as any[]) || [];
+      const plans = (widget.data.plans as PricingPlan[]) || [];
       return (
         <div className="pricing-grid">
-          {plans.map((plan: any, idx: number) => (
+          {plans.map((plan, idx: number) => (
             <div
               key={idx}
               style={{
@@ -515,10 +527,11 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
     }
 
     case 'logo-grid': {
-      const logos = (widget.data.logos as any[]) || [];
+      const logos = (widget.data.logos as LogoItem[]) || [];
       return (
         <div className="logo-grid">
-          {logos.map((logo: any, idx: number) => (
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {logos.map((logo, idx: number) => (
             <div
               key={idx}
               style={{
@@ -530,6 +543,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
                 borderRadius: '8px',
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={logo.src}
                 alt={logo.alt}

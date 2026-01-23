@@ -21,8 +21,8 @@ interface AgentConfig {
  */
 export default function WorkforceCommandCenterPage() {
   const params = useParams();
-  const orgId = params.orgId as string;
-  const { user } = useAuth();
+  const _orgId = params.orgId as string;
+  const { user: _user } = useAuth();
 
   // Agent configurations with toggles
   const [agents, setAgents] = useState<AgentConfig[]>([
@@ -147,8 +147,8 @@ export default function WorkforceCommandCenterPage() {
   };
 
   const activeCount = agents.filter(a => a.status === 'active').length;
-  const totalTasks = agents.reduce((sum, a) => sum + (a.tasksCompleted || 0), 0);
-  const avgAccuracy = Math.round(agents.filter(a => a.accuracy).reduce((sum, a) => sum + (a.accuracy || 0), 0) / agents.filter(a => a.accuracy).length);
+  const totalTasks = agents.reduce((sum, a) => sum + (a.tasksCompleted ?? 0), 0);
+  const avgAccuracy = Math.round(agents.filter(a => a.accuracy).reduce((sum, a) => sum + (a.accuracy ?? 0), 0) / agents.filter(a => a.accuracy).length);
 
   return (
     <div style={{
@@ -359,7 +359,7 @@ export default function WorkforceCommandCenterPage() {
                     Tasks
                   </div>
                   <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '600' }}>
-                    {agent.tasksCompleted?.toLocaleString() || '-'}
+                    {agent.tasksCompleted?.toLocaleString() ?? '-'}
                   </div>
                 </div>
                 <div>

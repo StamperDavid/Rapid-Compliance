@@ -24,7 +24,7 @@ export async function executeHTTPAction(
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...headers,
+      ...(typeof headers === 'object' && headers !== null ? headers as Record<string, string> : {}),
     },
     signal: AbortSignal.timeout(timeout),
   };
@@ -37,9 +37,9 @@ export async function executeHTTPAction(
   const response = await fetch(url, fetchOptions);
   
   const responseData = await response.text();
-  let parsedData: any;
+  let parsedData: unknown;
   try {
-    parsedData = JSON.parse(responseData);
+    parsedData = JSON.parse(responseData) as unknown;
   } catch {
     parsedData = responseData;
   }
@@ -61,7 +61,7 @@ export async function executeHTTPAction(
  */
 function resolveVariables(config: unknown, triggerData: WorkflowTriggerData): unknown {
   if (typeof config === 'string') {
-    return config.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+    return config.replace(/\{\{([^}]+)\}\}/g, (match, path: string) => {
       const value = getNestedValue(triggerData, path.trim());
       return value !== undefined ? String(value) : match;
     });

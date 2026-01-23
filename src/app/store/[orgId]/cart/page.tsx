@@ -8,34 +8,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import toast from 'react-hot-toast';
+import { useToast } from '@/hooks/useToast';
 import { getOrCreateCart, removeFromCart, updateCartItemQuantity } from '@/lib/ecommerce/cart-service';
 import { useTheme } from '@/contexts/ThemeContext'
-import { logger } from '@/lib/logger/logger';;
-
-interface CartItem {
-  id: string;
-  productId: string;
-  productName: string;
-  price: number;
-  quantity: number;
-  subtotal: number;
-  image?: string;
-}
-
-interface Cart {
-  id: string;
-  items: CartItem[];
-  subtotal: number;
-  tax: number;
-  shipping: number;
-  total: number;
-}
+import { logger } from '@/lib/logger/logger';
+import type { Cart } from '@/types/ecommerce';
 
 export default function ShoppingCartPage() {
   const params = useParams();
   const router = useRouter();
   const { theme } = useTheme();
+  const toast = useToast();
   const orgId = params.orgId as string;
 
   const [cart, setCart] = useState<Cart | null>(null);
@@ -49,7 +32,7 @@ export default function ShoppingCartPage() {
       localStorage.setItem('cartSessionId', sessionId);
 
       const cartData = await getOrCreateCart(sessionId, 'default', orgId);
-      setCart(cartData as unknown as Cart);
+      setCart(cartData);
     } catch (error) {
       logger.error('Error loading cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {

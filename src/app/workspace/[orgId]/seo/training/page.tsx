@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import type { SEOTrainingSettings, BrandDNA } from '@/types/organization';
 
@@ -63,12 +64,19 @@ interface KnowledgeItem {
   uploadedAt: Date;
 }
 
+interface AdminKeysConfig {
+  openrouter?: {
+    apiKey?: string;
+  };
+}
+
 export default function SEOTrainingPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
-  const primaryColor = theme?.colors?.primary?.main || COLORS.primary;
+  const toast = useToast();
+  const primaryColor = theme?.colors?.primary?.main ?? COLORS.primary;
 
   // Loading & UI States
   const [loading, setLoading] = useState(true);
@@ -95,11 +103,11 @@ export default function SEOTrainingPage() {
 
   // Load data on mount
   useEffect(() => {
-    loadData();
-  }, [orgId]);
+    void loadData();
+  }, [loadData]);
 
   // Data Loading Function
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -151,7 +159,7 @@ export default function SEOTrainingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
 
   // Demo Data Loader
   const loadDemoData = () => {
@@ -218,7 +226,7 @@ export default function SEOTrainingPage() {
 
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
       if (!isFirebaseConfigured) {
-        alert('Settings saved (demo mode)');
+        toast.success('Settings saved (demo mode)');
         setSaving(false);
         return;
       }
@@ -231,17 +239,17 @@ export default function SEOTrainingPage() {
         {
           ...settings,
           updatedAt: new Date().toISOString(),
-          updatedBy: user?.id || 'system',
+          updatedBy: user?.id ?? 'system',
         },
         true
       );
 
       logger.info('SEO training settings saved', { file: 'seo/training/page.tsx' });
-      alert('SEO training settings saved successfully!');
+      toast.success('SEO training settings saved successfully!');
 
     } catch (error) {
       logger.error('Error saving SEO settings:', error instanceof Error ? error : new Error(String(error)), { file: 'seo/training/page.tsx' });
-      alert('Failed to save settings. Please try again.');
+      toast.error('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -275,7 +283,7 @@ export default function SEOTrainingPage() {
   // Content Generation
   const generateContent = async (type: 'outline' | 'article') => {
     if (!testTopic.trim()) {
-      alert('Please enter a topic or keyword to generate content.');
+      toast.warning('Please enter a topic or keyword to generate content.');
       return;
     }
 
@@ -298,7 +306,7 @@ export default function SEOTrainingPage() {
 
     } catch (error) {
       logger.error('Error generating SEO content:', error instanceof Error ? error : new Error(String(error)), { file: 'seo/training/page.tsx' });
-      alert('Failed to generate content. Please try again.');
+      toast.error('Failed to generate content. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -330,10 +338,18 @@ export default function SEOTrainingPage() {
     }
 
     prompt += `\n## Structure Preferences\n`;
-    if (settings.structurePreferences.useHeaders) prompt += `- Use H2 and H3 headers\n`;
-    if (settings.structurePreferences.useLists) prompt += `- Include bullet points and numbered lists\n`;
-    if (settings.structurePreferences.useFAQ) prompt += `- Include a FAQ section\n`;
-    if (settings.structurePreferences.useImages) prompt += `- Suggest image placements with [IMAGE: description]\n`;
+    if (settings.structurePreferences.useHeaders) {
+      prompt += `- Use H2 and H3 headers\n`;
+    }
+    if (settings.structurePreferences.useLists) {
+      prompt += `- Include bullet points and numbered lists\n`;
+    }
+    if (settings.structurePreferences.useFAQ) {
+      prompt += `- Include a FAQ section\n`;
+    }
+    if (settings.structurePreferences.useImages) {
+      prompt += `- Suggest image placements with [IMAGE: description]\n`;
+    }
 
     if (type === 'outline') {
       prompt += `\n## Task\nGenerate a detailed SEO-optimized outline for the given topic. Include:\n`;
@@ -358,14 +374,15 @@ export default function SEOTrainingPage() {
   const callAIProvider = async (topic: string, systemPrompt: string, type: 'outline' | 'article'): Promise<string> => {
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+      const rawKeys = await FirestoreService.get('admin', 'platform-api-keys');
+      const adminKeys = rawKeys as AdminKeysConfig | null | undefined;
 
       if (adminKeys?.openrouter?.apiKey) {
         const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
         const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
 
         const response = await provider.chat({
-          model: 'anthropic/claude-3.5-sonnet' as any,
+          model: 'anthropic/claude-3.5-sonnet',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Generate a ${type} for this topic: ${topic}` },
@@ -379,7 +396,7 @@ export default function SEOTrainingPage() {
       // Fallback to Gemini
       const { sendChatMessage } = await import('@/lib/ai/gemini-service');
       const response = await sendChatMessage(
-        [{ role: 'user', parts: [{ text: `Generate a ${type} for this topic: ${topic}` }] }] as any,
+        [{ role: 'user' as const, parts: [{ text: `Generate a ${type} for this topic: ${topic}` }] }],
         systemPrompt
       );
 
@@ -430,7 +447,9 @@ export default function SEOTrainingPage() {
   const saveToHistory = async (topic: string, type: 'outline' | 'article', seoScore: number) => {
     try {
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
-      if (!isFirebaseConfigured) return;
+      if (!isFirebaseConfigured) {
+        return;
+      }
 
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
@@ -439,18 +458,19 @@ export default function SEOTrainingPage() {
         type,
         generatedAt: new Date().toISOString(),
         seoScore,
-        userId: user?.id || 'system',
+        userId: user?.id ?? 'system',
       };
 
+      const historyId = `history_${Date.now()}`;
       await FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/seoHistory`,
-        `history_${Date.now()}`,
+        historyId,
         historyItem,
         false
       );
 
       setHistory(prev => [{
-        id: `history_${Date.now()}`,
+        id: historyId,
         ...historyItem,
         generatedAt: new Date(),
       }, ...prev]);
@@ -462,16 +482,18 @@ export default function SEOTrainingPage() {
 
   // Copy to Clipboard
   const handleCopyToClipboard = useCallback(async () => {
-    if (!generatedContent) return;
+    if (!generatedContent) {
+      return;
+    }
 
     try {
       await navigator.clipboard.writeText(generatedContent.content);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch {
-      alert('Failed to copy to clipboard');
+      toast.error('Failed to copy to clipboard');
     }
-  }, [generatedContent]);
+  }, [generatedContent, toast]);
 
   // Reusable Styles
   const cardStyle: React.CSSProperties = {
@@ -546,7 +568,7 @@ export default function SEOTrainingPage() {
             ].map((stat, i) => (
               <div key={i} style={cardStyle}>
                 <div style={{ fontSize: '0.75rem', color: COLORS.muted, textTransform: 'uppercase', marginBottom: '0.5rem' }}>{stat.label}</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: stat.color || COLORS.text, textTransform: 'capitalize' }}>{stat.value}</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: stat.color ?? COLORS.text, textTransform: 'capitalize' }}>{stat.value}</div>
               </div>
             ))}
           </div>
@@ -596,7 +618,7 @@ export default function SEOTrainingPage() {
                     <label style={labelStyle}>Target Search Intent</label>
                     <select
                       value={settings.targetSearchIntent}
-                      onChange={e => setSettings(prev => ({ ...prev, targetSearchIntent: e.target.value as any }))}
+                      onChange={e => setSettings(prev => ({ ...prev, targetSearchIntent: e.target.value as 'informational' | 'transactional' | 'navigational' | 'commercial' }))}
                       style={selectStyle}
                     >
                       <option value="informational">Informational</option>
@@ -609,7 +631,7 @@ export default function SEOTrainingPage() {
                     <label style={labelStyle}>Writing Style</label>
                     <select
                       value={settings.writingStyle}
-                      onChange={e => setSettings(prev => ({ ...prev, writingStyle: e.target.value as any }))}
+                      onChange={e => setSettings(prev => ({ ...prev, writingStyle: e.target.value as 'scientific' | 'conversational' | 'journalistic' | 'technical' }))}
                       style={selectStyle}
                     >
                       <option value="scientific">Scientific</option>
@@ -671,7 +693,7 @@ export default function SEOTrainingPage() {
                     <label style={labelStyle}>Content Length Preference</label>
                     <select
                       value={settings.contentLength}
-                      onChange={e => setSettings(prev => ({ ...prev, contentLength: e.target.value as any }))}
+                      onChange={e => setSettings(prev => ({ ...prev, contentLength: e.target.value as 'short' | 'medium' | 'long' | 'comprehensive' }))}
                       style={selectStyle}
                     >
                       <option value="short">Short (500-800 words)</option>
@@ -684,7 +706,7 @@ export default function SEOTrainingPage() {
                     <label style={labelStyle}>Audience Expertise Level</label>
                     <select
                       value={settings.audienceExpertiseLevel}
-                      onChange={e => setSettings(prev => ({ ...prev, audienceExpertiseLevel: e.target.value as any }))}
+                      onChange={e => setSettings(prev => ({ ...prev, audienceExpertiseLevel: e.target.value as 'beginner' | 'intermediate' | 'expert' }))}
                       style={selectStyle}
                     >
                       <option value="beginner">Beginner</option>
@@ -733,7 +755,7 @@ export default function SEOTrainingPage() {
 
                 {/* Save Button */}
                 <button
-                  onClick={handleSaveSettings}
+                  onClick={() => void handleSaveSettings()}
                   disabled={saving}
                   style={{ ...buttonStyle, width: '100%', opacity: saving ? 0.7 : 1, cursor: saving ? 'not-allowed' : 'pointer' }}
                 >
@@ -847,7 +869,7 @@ export default function SEOTrainingPage() {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <button
-                    onClick={() => generateContent('outline')}
+                    onClick={() => void generateContent('outline')}
                     disabled={isGenerating || !testTopic.trim()}
                     style={{
                       ...buttonStyle,
@@ -861,7 +883,7 @@ export default function SEOTrainingPage() {
                     {isGenerating ? 'Generating...' : 'Generate Outline'}
                   </button>
                   <button
-                    onClick={() => generateContent('article')}
+                    onClick={() => void generateContent('article')}
                     disabled={isGenerating || !testTopic.trim()}
                     style={{
                       ...buttonStyle,
@@ -903,7 +925,7 @@ export default function SEOTrainingPage() {
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Content Preview</h2>
                   {generatedContent && (
                     <button
-                      onClick={handleCopyToClipboard}
+                      onClick={() => void handleCopyToClipboard()}
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: copySuccess ? COLORS.success : COLORS.border,
@@ -980,7 +1002,7 @@ export default function SEOTrainingPage() {
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>SEO Knowledge Base</h2>
                   <p style={{ color: COLORS.muted, fontSize: '0.875rem' }}>Upload documents, templates, and examples to improve content generation</p>
                 </div>
-                <button style={buttonStyle} onClick={() => alert('Knowledge upload coming soon!')}>
+                <button style={buttonStyle} onClick={() => toast.info('Knowledge upload coming soon!')}>
                   Upload Knowledge
                 </button>
               </div>
@@ -1011,7 +1033,7 @@ export default function SEOTrainingPage() {
 
 // Markdown to HTML Formatter
 function formatMarkdown(content: string): string {
-  let html = content
+  const html = content
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

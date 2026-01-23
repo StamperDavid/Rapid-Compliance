@@ -22,7 +22,7 @@ export async function executeDelayAction(
       duration = Math.max(0, targetTime - now);
     } else if (action.until.type === 'field_value' && action.until.field) {
       const fieldValue = getNestedValue(triggerData, action.until.field);
-      const targetTime = new Date(fieldValue).getTime();
+      const targetTime = new Date(fieldValue as string | number | Date).getTime();
       const now = Date.now();
       duration = Math.max(0, targetTime - now);
     } else {
@@ -50,7 +50,9 @@ export async function executeDelayAction(
   }
   
   // Wait for specified duration
-  await new Promise(resolve => setTimeout(resolve, duration));
+  await new Promise<void>(resolve => {
+    setTimeout(() => resolve(), duration);
+  });
   
   return {
     delayed: true,
@@ -62,18 +64,18 @@ export async function executeDelayAction(
 /**
  * Resolve variables in config
  */
-function resolveVariables(config: unknown, triggerData: WorkflowTriggerData): unknown {
+function _resolveVariables(config: unknown, triggerData: WorkflowTriggerData): unknown {
   if (typeof config === 'string') {
-    return config.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+    return config.replace(/\{\{([^}]+)\}\}/g, (_match, path: string) => {
       const value = getNestedValue(triggerData, path.trim());
-      return value !== undefined ? String(value) : match;
+      return value !== undefined ? String(value) : _match;
     });
   } else if (Array.isArray(config)) {
-    return config.map(item => resolveVariables(item, triggerData));
+    return config.map(item => _resolveVariables(item, triggerData));
   } else if (config && typeof config === 'object') {
     const resolved: Record<string, unknown> = {};
     for (const key in config) {
-      resolved[key] = resolveVariables((config as Record<string, unknown>)[key], triggerData);
+      resolved[key] = _resolveVariables((config as Record<string, unknown>)[key], triggerData);
     }
     return resolved;
   }

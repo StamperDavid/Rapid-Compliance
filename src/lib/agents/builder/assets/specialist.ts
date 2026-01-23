@@ -16,7 +16,6 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this specialist
@@ -731,7 +730,7 @@ export class AssetGenerator extends BaseSpecialist {
 
     this.log('INFO', `Generating favicon set for ${brandName}`);
 
-    const basePrompt = this.buildLogoPrompt(
+    const _basePrompt = this.buildLogoPrompt(
       brandName,
       brandStyle,
       industry,

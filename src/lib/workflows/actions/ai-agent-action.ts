@@ -57,7 +57,7 @@ export async function executeAIAgentAction(
         `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentConfig`,
         'default'
       );
-      const configSelectedModel = (agentConfig as any)?.selectedModel;
+      const configSelectedModel = (agentConfig as { selectedModel?: string } | null | undefined)?.selectedModel;
       selectedModel = (configSelectedModel !== '' && configSelectedModel != null) ? configSelectedModel : 'gpt-4-turbo';
     } catch {
       selectedModel = 'gpt-4-turbo';
@@ -98,7 +98,7 @@ export async function executeAIAgentAction(
   }
 
   // Create provider and generate response
-  const provider = await AIProviderFactory.createProvider(selectedModel as ModelName, organizationId);
+  const provider = AIProviderFactory.createProvider(selectedModel as ModelName, organizationId);
   
   const response = await provider.generateResponse(
     messages,
@@ -110,15 +110,15 @@ export async function executeAIAgentAction(
   );
 
   // Parse response if JSON format expected
-  let result = response.text;
+  let result: unknown = response.text;
   if (responseFormat === 'json') {
     try {
       // Try to extract JSON from response
-      const jsonMatch = result.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+      const jsonMatch = response.text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
       if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0]);
+        result = JSON.parse(jsonMatch[0]) as unknown;
       } else {
-        result = JSON.parse(result);
+        result = JSON.parse(response.text) as unknown;
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -129,6 +129,8 @@ export async function executeAIAgentAction(
 
   // Store result in trigger data for subsequent actions
   if (storeResult) {
+    // Mutating triggerData is intentional for workflow context sharing
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, require-atomic-updates
     triggerData[resultField] = result;
   }
 
@@ -145,10 +147,10 @@ export async function executeAIAgentAction(
  * Replace {{variable}} placeholders with values from triggerData
  */
 function replaceTemplateVariables(template: string, data: WorkflowTriggerData): string {
-  return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+  return template.replace(/\{\{([^}]+)\}\}/g, (_match, path: string) => {
     const value = getNestedValue(data, path.trim());
     if (value === undefined || value === null) {
-      return match; // Keep original if not found
+      return _match; // Keep original if not found
     }
     if (typeof value === 'object') {
       return JSON.stringify(value);

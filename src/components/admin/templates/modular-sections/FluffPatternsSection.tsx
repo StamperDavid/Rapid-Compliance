@@ -17,8 +17,16 @@ interface FluffPatternsSectionProps {
   errors: Record<string, string>;
 }
 
+interface FluffPatternUpdate {
+  id?: string;
+  pattern?: string;
+  description?: string;
+  context?: string;
+}
+
 export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, canRemove }: FluffPatternsSectionProps) {
   const addFluffPattern = () => {
+    // eslint-disable-next-line no-alert
     const id = prompt('Pattern ID (e.g., copyright):');
     if (!id) {return;}
 
@@ -33,7 +41,7 @@ export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, c
       research: {
         ...template.research,
         fluffPatterns: [...(template.research?.fluffPatterns ?? []), newPattern],
-      } as any,
+      },
     });
   };
 
@@ -43,18 +51,18 @@ export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, c
       research: {
         ...template.research,
         fluffPatterns: patterns.filter((_, i) => i !== index),
-      } as any,
+      },
     });
   };
 
-  const updateFluffPattern = (index: number, updates: any) => {
+  const updateFluffPattern = (index: number, updates: FluffPatternUpdate) => {
     const patterns = [...(template.research?.fluffPatterns ?? [])];
     patterns[index] = { ...patterns[index], ...updates };
     onUpdate({
       research: {
         ...template.research,
         fluffPatterns: patterns,
-      } as any,
+      },
     });
   };
 

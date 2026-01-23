@@ -16,9 +16,9 @@ export async function executeConditionalAction(
 ): Promise<unknown> {
   // Evaluate all branches
   let matchedBranch: ConditionalBranchAction['branches'][0] | null = null;
-  
+
   for (const branch of action.branches) {
-    const conditionsMet = await evaluateConditions(branch.conditions, triggerData, branch.conditionOperator);
+    const conditionsMet = evaluateConditions(branch.conditions, triggerData, branch.conditionOperator);
     if (conditionsMet) {
       matchedBranch = branch;
       break;
@@ -39,7 +39,7 @@ export async function executeConditionalAction(
   
   // Execute actions in sequence
   const results = [];
-  
+
   for (const subAction of actionsToExecute) {
     try {
       const result = await executeAction(subAction, triggerData, workflow, organizationId);
@@ -48,11 +48,12 @@ export async function executeConditionalAction(
         success: true,
         result,
       });
-    } catch (error: any) {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       results.push({
         actionId: subAction.id,
         success: false,
-        error: error.message,
+        error: errorMsg,
       });
       // Stop on first error (can be made configurable)
       break;
@@ -69,13 +70,13 @@ export async function executeConditionalAction(
 /**
  * Evaluate conditions
  */
-async function evaluateConditions(
+function evaluateConditions(
   conditions: WorkflowCondition[],
   triggerData: WorkflowTriggerData,
   operator: 'and' | 'or'
-): Promise<boolean> {
+): boolean {
   const results = conditions.map(condition => evaluateCondition(condition, triggerData));
-  
+
   if (operator === 'and') {
     return results.every(r => r);
   } else {
@@ -88,8 +89,8 @@ async function evaluateConditions(
  */
 function evaluateCondition(condition: WorkflowCondition, triggerData: WorkflowTriggerData): boolean {
   // Get value based on source
-  let fieldValue: any;
-  
+  let fieldValue: unknown;
+
   switch (condition.source) {
     case 'trigger_data': {
       fieldValue = getNestedValue(triggerData, condition.field);
@@ -98,13 +99,13 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: WorkflowTr
     case 'entity': {
       // Query entity from trigger data context
       // The entity data should be populated in triggerData.entity or triggerData.entities
-      const entityData =triggerData?.entity ?? triggerData?.record ?? triggerData;
+      const entityData = (triggerData.entity ?? triggerData.record ?? triggerData) as Record<string, unknown>;
       fieldValue = getNestedValue(entityData, condition.field);
       break;
     }
     case 'variable': {
       // Get from workflow variables stored in triggerData._variables
-      const variables = (triggerData?._variables ?? triggerData?.variables) ?? {};
+      const variables = (triggerData._variables ?? triggerData.variables ?? {});
       fieldValue = getNestedValue(variables, condition.field);
       break;
     }
@@ -117,7 +118,7 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: WorkflowTr
         today.setHours(0, 0, 0, 0);
         fieldValue = today;
       } else {
-        fieldValue = new Date(getNestedValue(triggerData, condition.field));
+        fieldValue = new Date(getNestedValue(triggerData, condition.field) as string | number | Date);
       }
       break;
     }
@@ -174,7 +175,7 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: WorkflowTr
     case 'is_empty':
       return !fieldValue || (Array.isArray(fieldValue) && fieldValue.length === 0);
     case 'is_not_empty':
-      return fieldValue && (!Array.isArray(fieldValue) || fieldValue.length > 0);
+      return Boolean(fieldValue && (!Array.isArray(fieldValue) || fieldValue.length > 0));
     default:
       return false;
   }

@@ -3,7 +3,7 @@
  * Executes SMS actions in workflows
  */
 
-import { sendSMS, SMSOptions } from '@/lib/sms/sms-service';
+import { sendSMS } from '@/lib/sms/sms-service';
 import type { SendSMSAction, WorkflowTriggerData } from '@/types/workflow';
 
 /**
@@ -41,7 +41,7 @@ export async function executeSMSAction(
  */
 function resolveVariables(config: unknown, triggerData: WorkflowTriggerData): unknown {
   if (typeof config === 'string') {
-    return config.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+    return config.replace(/\{\{([^}]+)\}\}/g, (match, path: string) => {
       const value = getNestedValue(triggerData, path.trim());
       return value !== undefined ? String(value) : match;
     });

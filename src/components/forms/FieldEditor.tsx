@@ -288,7 +288,7 @@ interface TabProps {
 function GeneralTab({ field, onUpdate, hasOptions }: TabProps) {
   // Handle option update
   const updateOption = (index: number, updates: Partial<FormFieldOption>) => {
-    const newOptions = [...(field.options || [])];
+    const newOptions = [...(field.options ?? [])];
     newOptions[index] = { ...newOptions[index], ...updates };
     onUpdate({ options: newOptions });
   };
@@ -296,10 +296,10 @@ function GeneralTab({ field, onUpdate, hasOptions }: TabProps) {
   // Handle option add
   const addOption = () => {
     const newOptions = [
-      ...(field.options || []),
+      ...(field.options ?? []),
       {
-        label: `Option ${(field.options?.length || 0) + 1}`,
-        value: `option${(field.options?.length || 0) + 1}`,
+        label: `Option ${(field.options?.length ?? 0) + 1}`,
+        value: `option${(field.options?.length ?? 0) + 1}`,
       },
     ];
     onUpdate({ options: newOptions });
@@ -307,7 +307,7 @@ function GeneralTab({ field, onUpdate, hasOptions }: TabProps) {
 
   // Handle option delete
   const deleteOption = (index: number) => {
-    const newOptions = field.options?.filter((_, i) => i !== index) || [];
+    const newOptions = field.options?.filter((_, i) => i !== index) ?? [];
     onUpdate({ options: newOptions });
   };
 
@@ -348,7 +348,7 @@ function GeneralTab({ field, onUpdate, hasOptions }: TabProps) {
             <label style={styles.label}>Placeholder</label>
             <input
               type="text"
-              value={field.placeholder || ''}
+              value={field.placeholder ?? ''}
               onChange={(e) => onUpdate({ placeholder: e.target.value })}
               style={styles.input}
             />
@@ -359,7 +359,7 @@ function GeneralTab({ field, onUpdate, hasOptions }: TabProps) {
         <div style={styles.field}>
           <label style={styles.label}>Help Text</label>
           <textarea
-            value={field.helpText || ''}
+            value={field.helpText ?? ''}
             onChange={(e) => onUpdate({ helpText: e.target.value })}
             style={styles.textarea}
             rows={2}
@@ -432,7 +432,7 @@ function GeneralTab({ field, onUpdate, hasOptions }: TabProps) {
           <label style={styles.label}>CSS Class (optional)</label>
           <input
             type="text"
-            value={field.cssClass || ''}
+            value={field.cssClass ?? ''}
             onChange={(e) => onUpdate({ cssClass: e.target.value })}
             style={styles.input}
             placeholder="custom-class"
@@ -448,7 +448,7 @@ function GeneralTab({ field, onUpdate, hasOptions }: TabProps) {
 // ============================================================================
 
 function ValidationTab({ field, onUpdate }: TabProps) {
-  const validation = field.validation || {};
+  const validation = field.validation ?? {};
 
   const updateValidation = (updates: Partial<FormFieldValidation>) => {
     onUpdate({
@@ -464,7 +464,7 @@ function ValidationTab({ field, onUpdate }: TabProps) {
       <label style={styles.checkbox}>
         <input
           type="checkbox"
-          checked={validation.required || false}
+          checked={validation.required ?? false}
           onChange={(e) => updateValidation({ required: e.target.checked })}
         />
         <span style={styles.checkboxLabel}>Required field</span>
@@ -477,7 +477,7 @@ function ValidationTab({ field, onUpdate }: TabProps) {
             <label style={styles.label}>Minimum Length</label>
             <input
               type="number"
-              value={validation.minLength || ''}
+              value={validation.minLength ?? ''}
               onChange={(e) =>
                 updateValidation({ minLength: parseInt(e.target.value) || undefined })
               }
@@ -489,7 +489,7 @@ function ValidationTab({ field, onUpdate }: TabProps) {
             <label style={styles.label}>Maximum Length</label>
             <input
               type="number"
-              value={validation.maxLength || ''}
+              value={validation.maxLength ?? ''}
               onChange={(e) =>
                 updateValidation({ maxLength: parseInt(e.target.value) || undefined })
               }
@@ -535,7 +535,7 @@ function ValidationTab({ field, onUpdate }: TabProps) {
             <label style={styles.label}>Max File Size (MB)</label>
             <input
               type="number"
-              value={(validation.maxFileSize || 0) / 1024 / 1024 || ''}
+              value={(validation.maxFileSize ?? 0) / 1024 / 1024 || ''}
               onChange={(e) =>
                 updateValidation({
                   maxFileSize: parseFloat(e.target.value) * 1024 * 1024 || undefined,
@@ -549,7 +549,7 @@ function ValidationTab({ field, onUpdate }: TabProps) {
             <label style={styles.label}>Allowed File Types</label>
             <input
               type="text"
-              value={validation.allowedFileTypes?.join(', ') || ''}
+              value={validation.allowedFileTypes?.join(', ') ?? ''}
               onChange={(e) =>
                 updateValidation({
                   allowedFileTypes: e.target.value
@@ -566,7 +566,7 @@ function ValidationTab({ field, onUpdate }: TabProps) {
             <label style={styles.label}>Max Files</label>
             <input
               type="number"
-              value={validation.maxFiles || ''}
+              value={validation.maxFiles ?? ''}
               onChange={(e) =>
                 updateValidation({ maxFiles: parseInt(e.target.value) || undefined })
               }
@@ -582,7 +582,7 @@ function ValidationTab({ field, onUpdate }: TabProps) {
         <label style={styles.label}>Custom Pattern (Regex)</label>
         <input
           type="text"
-          value={validation.pattern || ''}
+          value={validation.pattern ?? ''}
           onChange={(e) => updateValidation({ pattern: e.target.value || undefined })}
           style={styles.input}
           placeholder="^[A-Z]{2,4}$"
@@ -594,7 +594,7 @@ function ValidationTab({ field, onUpdate }: TabProps) {
         <label style={styles.label}>Custom Error Message</label>
         <input
           type="text"
-          value={validation.customMessage || ''}
+          value={validation.customMessage ?? ''}
           onChange={(e) => updateValidation({ customMessage: e.target.value || undefined })}
           style={styles.input}
           placeholder="Please enter a valid value"
@@ -609,7 +609,7 @@ function ValidationTab({ field, onUpdate }: TabProps) {
 // ============================================================================
 
 function ConditionalTab({ field, onUpdate }: TabProps) {
-  const logic = field.conditionalLogic || {
+  const logic = field.conditionalLogic ?? {
     enabled: false,
     action: 'show' as const,
     logicType: 'all' as const,
@@ -699,7 +699,7 @@ function ConditionalTab({ field, onUpdate }: TabProps) {
 // ============================================================================
 
 function MappingTab({ field, onUpdate }: TabProps) {
-  const mapping = field.crmMapping || { entityField: '' };
+  const mapping = field.crmMapping ?? { entityField: '' };
 
   return (
     <div style={styles.section}>
@@ -713,7 +713,7 @@ function MappingTab({ field, onUpdate }: TabProps) {
       <div style={styles.field}>
         <label style={styles.label}>CRM Field</label>
         <select
-          value={mapping.entityField || ''}
+          value={mapping.entityField ?? ''}
           onChange={(e) =>
             onUpdate({
               crmMapping: { ...mapping, entityField: e.target.value },
@@ -757,7 +757,7 @@ function MappingTab({ field, onUpdate }: TabProps) {
       <div style={styles.field}>
         <label style={styles.label}>Transform</label>
         <select
-          value={mapping.transform || 'none'}
+          value={mapping.transform ?? 'none'}
           onChange={(e) =>
             onUpdate({
               crmMapping: { ...mapping, transform: e.target.value },

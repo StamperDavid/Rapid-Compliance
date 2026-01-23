@@ -55,7 +55,7 @@ export function BattlecardView({ battlecard, className = '' }: BattlecardViewPro
             </svg>
           }
         >
-          Feature & Pricing
+          Feature &amp; Pricing
         </TabButton>
         <TabButton
           active={activeTab === 'tactics'}
@@ -193,8 +193,8 @@ function ComparisonTab({ battlecard }: { battlecard: Battlecard }) {
                 </h3>
               </div>
               <div className="divide-y divide-gray-700">
-                {category.features.map((feature, j) => (
-                  <div key={j} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-800/30 transition-colors">
+                {category.features.map((feature, _j) => (
+                  <div key={_j} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-gray-800/30 transition-colors">
                     <div className="col-span-5 text-sm text-gray-300">
                       {feature.featureName}
                     </div>
@@ -244,7 +244,7 @@ function TacticsTab({ battlecard }: { battlecard: Battlecard }) {
             <p className="text-sm text-gray-400"><strong>Why:</strong> {sit.reasoning}</p>
             <div className="bg-green-500/10 border border-green-500/20 rounded p-3 mt-2">
               <p className="text-sm text-green-400"><strong>Talk Track:</strong></p>
-              <p className="text-sm text-gray-300 mt-1 italic">"{sit.talkTrack}"</p>
+              <p className="text-sm text-gray-300 mt-1 italic">{'"'}{sit.talkTrack}{'"'}</p>
             </div>
           </div>
         ))}
@@ -290,7 +290,7 @@ function TacticsTab({ battlecard }: { battlecard: Battlecard }) {
           <div key={i} className="bg-gray-800/50 rounded-lg p-4 space-y-2">
             <div className="bg-red-500/10 border border-red-500/20 rounded p-3">
               <p className="text-sm text-red-400"><strong>Objection:</strong></p>
-              <p className="text-sm text-gray-300 mt-1 italic">"{obj.objection}"</p>
+              <p className="text-sm text-gray-300 mt-1 italic">{'"'}{obj.objection}{'"'}</p>
             </div>
             <div className="bg-green-500/10 border border-green-500/20 rounded p-3">
               <p className="text-sm text-green-400"><strong>Response:</strong></p>
@@ -336,7 +336,7 @@ function TacticsTab({ battlecard }: { battlecard: Battlecard }) {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide">Delivery</p>
-                  <p className="text-sm text-gray-300 mt-1 italic">"{trap.delivery}"</p>
+                  <p className="text-sm text-gray-300 mt-1 italic">{'"'}{trap.delivery}{'"'}</p>
                 </div>
               </div>
             </div>
@@ -393,7 +393,7 @@ function MessagingTab({ battlecard }: { battlecard: Battlecard }) {
           </svg>
           30-Second Elevator Pitch
         </h3>
-        <p className="text-gray-300 text-lg italic leading-relaxed">"{battlecard.keyMessages.elevator}"</p>
+        <p className="text-gray-300 text-lg italic leading-relaxed">{'"'}{battlecard.keyMessages.elevator}{'"'}</p>
       </div>
 
       {/* Executive Summary */}
@@ -428,14 +428,12 @@ function MessagingTab({ battlecard }: { battlecard: Battlecard }) {
   );
 }
 
-function TacticsSection({ 
-  title, 
-  icon, 
-  iconColor, 
-  bgColor, 
-  borderColor, 
-  children 
-}: { 
+function TacticsSection({
+  title,
+  icon,
+  iconColor,
+  children
+}: {
   title: string;
   icon: React.ReactNode;
   iconColor: string;
@@ -456,7 +454,7 @@ function TacticsSection({
   );
 }
 
-function FeatureBadge({ value, label }: { value: 'yes' | 'no' | 'partial' | 'unknown'; label: string }) {
+function FeatureBadge({ value, _label }: { value: 'yes' | 'no' | 'partial' | 'unknown'; _label: string }) {
   const config = {
     yes: { icon: '✓', color: 'text-green-400 bg-green-500/20' },
     no: { icon: '✗', color: 'text-red-400 bg-red-500/20' },

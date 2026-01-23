@@ -6,8 +6,8 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import type { Notification, NotificationCategory, NotificationStatus } from '@/lib/notifications/types';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { Notification, NotificationCategory } from '@/lib/notifications/types';
 
 interface NotificationCenterProps {
   userId: string;
@@ -19,13 +19,9 @@ export function NotificationCenter({ userId, orgId, className = '' }: Notificati
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread'>('unread');
-  const [categoryFilter, setCategoryFilter] = useState<NotificationCategory | 'all'>('all');
+  const [_categoryFilter, _setCategoryFilter] = useState<NotificationCategory | 'all'>('all');
 
-  useEffect(() => {
-    loadNotifications();
-  }, [filter, categoryFilter]);
-
-  async function loadNotifications() {
+  const loadNotifications = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -34,8 +30,8 @@ export function NotificationCenter({ userId, orgId, className = '' }: Notificati
         limit: '50',
       });
 
-      if (categoryFilter !== 'all') {
-        params.append('categories', categoryFilter);
+      if (_categoryFilter !== 'all') {
+        params.append('categories', _categoryFilter);
       }
 
       const response = await fetch(`/api/notifications/list?${params}`, {
@@ -45,7 +41,7 @@ export function NotificationCenter({ userId, orgId, className = '' }: Notificati
         },
       });
 
-      const data = await response.json();
+      const data = await response.json() as { success: boolean; notifications: Notification[] };
 
       if (data.success) {
         setNotifications(data.notifications);
@@ -55,7 +51,11 @@ export function NotificationCenter({ userId, orgId, className = '' }: Notificati
     } finally {
       setLoading(false);
     }
-  }
+  }, [userId, orgId, filter, _categoryFilter]);
+
+  useEffect(() => {
+    void loadNotifications();
+  }, [loadNotifications]);
 
   async function markAsRead(notificationIds: string[]) {
     try {
@@ -71,7 +71,7 @@ export function NotificationCenter({ userId, orgId, className = '' }: Notificati
 
       if (response.ok) {
         // Refresh notifications
-        loadNotifications();
+        void loadNotifications();
       }
     } catch (error) {
       console.error('Failed to mark as read:', error);
@@ -79,17 +79,17 @@ export function NotificationCenter({ userId, orgId, className = '' }: Notificati
   }
 
   function handleMarkAsRead(id: string) {
-    markAsRead([id]);
+    void markAsRead([id]);
   }
 
   function handleMarkAllAsRead() {
     const unreadIds = notifications
       .filter((n) => !n.metadata.read)
-      .map((n) => n.id!)
-      .filter(Boolean);
-    
+      .map((n) => n.id)
+      .filter((id): id is string => id !== undefined);
+
     if (unreadIds.length > 0) {
-      markAsRead(unreadIds);
+      void markAsRead(unreadIds);
     }
   }
 
@@ -252,10 +252,16 @@ function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps)
   );
 }
 
-function formatTimestamp(timestamp: any): string {
+interface FirestoreTimestamp {
+  toDate: () => Date;
+}
+
+function formatTimestamp(timestamp: FirestoreTimestamp | string | Date | number | undefined): string {
   if (!timestamp) {return '';}
-  
-  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+
+  const date = typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp
+    ? timestamp.toDate()
+    : new Date(timestamp);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
 
@@ -267,7 +273,7 @@ function formatTimestamp(timestamp: any): string {
   if (minutes < 60) {return `${minutes}m ago`;}
   if (hours < 24) {return `${hours}h ago`;}
   if (days < 7) {return `${days}d ago`;}
-  
+
   return date.toLocaleDateString();
 }
 

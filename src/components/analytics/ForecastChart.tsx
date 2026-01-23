@@ -14,6 +14,13 @@ interface ForecastChartProps {
   showConfidence?: boolean;
 }
 
+interface TooltipPayloadEntry {
+  name: string;
+  value: number;
+  color: string;
+  payload?: Record<string, unknown>;
+}
+
 export default function ForecastChart({ data, showConfidence = true }: ForecastChartProps) {
   const primaryColor = typeof window !== 'undefined' 
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
@@ -37,7 +44,7 @@ export default function ForecastChart({ data, showConfidence = true }: ForecastC
 
   const ChartComponent = showConfidence ? AreaChart : LineChart;
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayloadEntry[] }) => {
     if (active && payload?.length) {
       return (
         <div style={{
@@ -47,7 +54,7 @@ export default function ForecastChart({ data, showConfidence = true }: ForecastC
           padding: '0.75rem',
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
         }}>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index) => (
             <div key={index} style={{ color: entry.color, marginBottom: '0.25rem' }}>
               <span style={{ fontWeight: '600' }}>{entry.name}: </span>
               <span>${entry.value.toLocaleString()}</span>
@@ -87,10 +94,10 @@ export default function ForecastChart({ data, showConfidence = true }: ForecastC
             stroke={textColor}
             style={{ fontSize: '0.875rem' }}
           />
-          <YAxis 
+          <YAxis
             stroke={textColor}
             style={{ fontSize: '0.875rem' }}
-            tickFormatter={(value) => `$${value.toLocaleString()}`}
+            tickFormatter={(value: number) => `$${value.toLocaleString()}`}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend 

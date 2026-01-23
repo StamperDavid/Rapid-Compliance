@@ -75,7 +75,7 @@ export async function trackEvent(
       
       // Check if threshold exceeded
       if (existing.count >= config.threshold && !activeAlerts.has(key)) {
-        await triggerAlert(type, existing.count, config.threshold, details, orgId);
+        triggerAlert(type, existing.count, config.threshold, details, orgId);
       }
     }
   } else {
@@ -87,13 +87,13 @@ export async function trackEvent(
 /**
  * Trigger an alert
  */
-async function triggerAlert(
+function triggerAlert(
   type: AlertConfig['type'],
   count: number,
   threshold: number,
   details: Record<string, unknown>,
   orgId?: string
-): Promise<void> {
+): void {
   const alertId = `${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}:${Date.now()}`;
   const counter = alertCounters.get(`${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`);
   

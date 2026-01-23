@@ -86,7 +86,7 @@ export async function researchProspect(
     ]);
 
     // Generate AI insights from the research
-    const insights = await generateInsights({
+    const insights = generateInsights({
       companyInfo,
       news,
       funding,
@@ -288,14 +288,14 @@ async function getSocialPresence(companyName: string, _orgId: string): Promise<S
 /**
  * Generate AI-powered insights for personalization
  */
-async function generateInsights(data: {
+function generateInsights(data: {
   companyInfo: CompanyInfo;
   news: NewsItem[];
   funding?: FundingInfo;
   tech?: string[];
   hiring?: JobPosting[];
   prospect: ProspectData;
-}): Promise<string[]> {
+}): string[] {
   const insights: string[] = [];
 
   // Company size insight

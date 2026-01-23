@@ -6,64 +6,76 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/useToast';
 import type { Page } from '@/types/website';
+
+interface PagesResponse {
+  pages: Page[];
+}
 
 export default function PagesManagementPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
+  const toast = useToast();
 
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'draft' | 'published'>('all');
 
-  useEffect(() => {
-    loadPages();
-  }, [orgId, filter]);
-
-  async function loadPages() {
+  const loadPages = useCallback(async () => {
     try {
       setLoading(true);
-      const url = filter === 'all' 
+      const url = filter === 'all'
         ? `/api/website/pages?organizationId=${orgId}`
         : `/api/website/pages?organizationId=${orgId}&status=${filter}`;
-      
+
       const response = await fetch(url);
-      
-      if (!response.ok) {throw new Error('Failed to load pages');}
-      
-      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error('Failed to load pages');
+      }
+
+      const data = await response.json() as PagesResponse;
       setPages(data.pages ?? []);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Pages] Load error:', error);
-      alert('Failed to load pages');
+      toast.error('Failed to load pages');
     } finally {
       setLoading(false);
     }
+  }, [orgId, filter, toast]);
+
+  useEffect(() => {
+    void loadPages();
+  }, [loadPages]);
+
+  function deletePage(pageId: string) {
+    toast.warning('Are you sure you want to delete this page?');
+
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/website/pages/${pageId}?organizationId=${orgId}`,
+          { method: 'DELETE' }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to delete page');
+        }
+
+        toast.success('Page deleted successfully');
+        void loadPages();
+      } catch (error: unknown) {
+        console.error('[Pages] Delete error:', error);
+        toast.error('Failed to delete page');
+      }
+    })();
   }
 
-  async function deletePage(pageId: string) {
-    if (!confirm('Are you sure you want to delete this page?')) {return;}
-
-    try {
-      const response = await fetch(
-        `/api/website/pages/${pageId}?organizationId=${orgId}`,
-        { method: 'DELETE' }
-      );
-
-      if (!response.ok) {throw new Error('Failed to delete page');}
-
-      alert('Page deleted successfully');
-      loadPages();
-    } catch (error) {
-      console.error('[Pages] Delete error:', error);
-      alert('Failed to delete page');
-    }
-  }
-
-  async function duplicatePage(page: Page) {
+  async function duplicatePage(page: Page): Promise<void> {
     try {
       const duplicatedPage = {
         ...page,
@@ -82,13 +94,15 @@ export default function PagesManagementPage() {
         }),
       });
 
-      if (!response.ok) {throw new Error('Failed to duplicate page');}
+      if (!response.ok) {
+        throw new Error('Failed to duplicate page');
+      }
 
-      alert('Page duplicated successfully');
-      loadPages();
-    } catch (error) {
+      toast.success('Page duplicated successfully');
+      void loadPages();
+    } catch (error: unknown) {
       console.error('[Pages] Duplicate error:', error);
-      alert('Failed to duplicate page');
+      toast.error('Failed to duplicate page');
     }
   }
 
@@ -285,7 +299,7 @@ export default function PagesManagementPage() {
                     Edit
                   </button>
                   <button
-                    onClick={() => duplicatePage(page)}
+                    onClick={() => void duplicatePage(page)}
                     style={{
                       padding: '0.5rem 1rem',
                       background: '#6c757d',

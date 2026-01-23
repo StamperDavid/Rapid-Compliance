@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
 
 export default function NewProductPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
+  const toast = useToast();
 
   const [product, setProduct] = useState({
     name: '',
@@ -23,32 +25,34 @@ export default function NewProductPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    try {
-      setSaving(true);
-      const productId = `prod-${Date.now()}`;
-      
-      await FirestoreService.set(
-        `organizations/${orgId}/workspaces/default/entities/products/records`,
-        productId,
-        {
-          ...product,
-          id: productId,
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
-        },
-        false
-      );
-      
-      router.push(`/workspace/${orgId}/products`);
-    } catch (error) {
-      logger.error('Error creating product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to create product');
-    } finally {
-      setSaving(false);
-    }
+
+    void (async () => {
+      try {
+        setSaving(true);
+        const productId = `prod-${Date.now()}`;
+
+        await FirestoreService.set(
+          `organizations/${orgId}/workspaces/default/entities/products/records`,
+          productId,
+          {
+            ...product,
+            id: productId,
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+          },
+          false
+        );
+
+        router.push(`/workspace/${orgId}/products`);
+      } catch (error) {
+        logger.error('Error creating product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+        toast.error('Failed to create product');
+      } finally {
+        setSaving(false);
+      }
+    })();
   };
 
   return (

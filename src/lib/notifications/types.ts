@@ -98,7 +98,7 @@ export interface NotificationVariables {
   leadCompany?: string;
   
   // Custom data from the event
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -107,7 +107,7 @@ export interface NotificationVariables {
  */
 export interface SlackBlock {
   type: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SlackAttachment {
@@ -236,7 +236,7 @@ export interface NotificationTemplate {
     /**
      * Request body
      */
-    body: Record<string, any>;
+    body: Record<string, unknown>;
     
     /**
      * Additional headers
@@ -480,7 +480,7 @@ export interface Notification {
     webhook?: {
       url: string;
       method: string;
-      body: Record<string, any>;
+      body: Record<string, unknown>;
       headers?: Record<string, string>;
     };
     inApp?: {
@@ -518,7 +518,7 @@ export interface Notification {
     /**
      * Response data per channel (for debugging)
      */
-    responses: Record<NotificationChannel, any>;
+    responses: Record<NotificationChannel, unknown>;
   };
   
   /**

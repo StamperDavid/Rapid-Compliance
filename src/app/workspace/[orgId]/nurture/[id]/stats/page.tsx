@@ -1,34 +1,45 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FirestoreService } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+
+interface NurtureCampaignStats {
+  name: string;
+  description: string | null;
+  enrolled: number;
+  completed: number;
+  active: number;
+  converted: number;
+}
 
 export default function NurtureCampaignStatsPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
   const campaignId = params.id as string;
-  const [campaign, setCampaign] = useState<any>(null);
+  const [campaign, setCampaign] = useState<NurtureCampaignStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadCampaign();
-  }, []);
-
-  const loadCampaign = async () => {
+  const loadCampaign = useCallback(async () => {
     try {
       const data = await FirestoreService.get(`organizations/${orgId}/nurtureSequences`, campaignId);
-      setCampaign(data);
+      setCampaign(data as NurtureCampaignStats);
     } catch (error) {
       logger.error('Error loading campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId, campaignId]);
 
-  if (loading || !campaign) {return <div className="p-8">Loading...</div>;}
+  useEffect(() => {
+    void loadCampaign();
+  }, [loadCampaign]);
+
+  if (loading || !campaign) {
+    return <div className="p-8">Loading...</div>;
+  }
 
   return (
     <div className="p-8">

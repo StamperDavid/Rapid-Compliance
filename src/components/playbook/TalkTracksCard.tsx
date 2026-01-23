@@ -38,8 +38,8 @@ export function TalkTracksCard({ talkTracks, className = '' }: TalkTracksCardPro
   };
   
   // Tonality badge
-  const getTonalityBadge = (tonality: string) => {
-    const colors = {
+  const getTonalityBadge = (tonality: string): string => {
+    const colors: Record<string, string> = {
       consultative: 'bg-blue-100 text-blue-800',
       assertive: 'bg-red-100 text-red-800',
       empathetic: 'bg-purple-100 text-purple-800',
@@ -49,7 +49,7 @@ export function TalkTracksCard({ talkTracks, className = '' }: TalkTracksCardPro
       urgent: 'bg-orange-100 text-orange-800',
       educational: 'bg-indigo-100 text-indigo-800',
     };
-return (colors as any)[tonality] ?? colors.professional;
+    return colors[tonality] ?? colors.professional;
   };
   
   return (
@@ -161,7 +161,7 @@ return (colors as any)[tonality] ?? colors.professional;
                       <div className="flex flex-wrap gap-2">
                         {track.keyPhrases.map((phrase, index) => (
                           <span key={index} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded">
-                            "{phrase}"
+                            &quot;{phrase}&quot;
                           </span>
                         ))}
                       </div>

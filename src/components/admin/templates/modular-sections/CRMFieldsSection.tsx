@@ -18,8 +18,19 @@ interface CRMFieldsSectionProps {
   errors: Record<string, string>;
 }
 
+interface CustomFieldUpdate {
+  key?: string;
+  label?: string;
+  type?: string;
+  description?: string;
+  extractionHints?: string[];
+  required?: boolean;
+  defaultValue?: string;
+}
+
 export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRemove }: CRMFieldsSectionProps) {
   const addCustomField = () => {
+    // eslint-disable-next-line no-alert
     const key = prompt('Field key (e.g., company_size):');
     if (!key) {return;}
 
@@ -37,7 +48,7 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
       research: {
         ...template.research,
         customFields: [...(template.research?.customFields ?? []), newField],
-      } as any,
+      },
     });
   };
 
@@ -47,18 +58,18 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
       research: {
         ...template.research,
         customFields: fields.filter((_, i) => i !== index),
-      } as any,
+      },
     });
   };
 
-  const updateCustomField = (index: number, updates: any) => {
+  const updateCustomField = (index: number, updates: CustomFieldUpdate) => {
     const fields = [...(template.research?.customFields ?? [])];
     fields[index] = { ...fields[index], ...updates };
     onUpdate({
       research: {
         ...template.research,
         customFields: fields,
-      } as any,
+      },
     });
   };
 

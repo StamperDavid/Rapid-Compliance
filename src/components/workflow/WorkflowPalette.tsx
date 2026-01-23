@@ -219,7 +219,9 @@ function WorkflowPalette({ onAddStep, hasTrigger }: WorkflowPaletteProps) {
 
   // Filter items based on search
   const filterItems = (items: PaletteItem[]) => {
-    if (!searchQuery) return items;
+    if (!searchQuery) {
+      return items;
+    }
     const query = searchQuery.toLowerCase();
     return items.filter(
       item =>

@@ -13,8 +13,7 @@
  * ```
  */
 
-import type { SignalCoordinatorConfig } from './SignalCoordinator';
-import { SignalCoordinator } from './SignalCoordinator';
+import { SignalCoordinator, type SignalCoordinatorConfig } from './SignalCoordinator';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase/config';
 

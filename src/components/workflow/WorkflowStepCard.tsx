@@ -156,9 +156,9 @@ function getConfigSummary(step: WorkflowStep): string {
     case 'deal_stage_changed':
       return config.stage ? `Stage: ${config.stage}` : 'Any stage change';
     case 'http_request':
-      return config.url ? `${config.method || 'GET'} request` : 'Configure request';
+      return config.url ? `${config.method ?? 'GET'} request` : 'Configure request';
     default:
-      return step.description || 'Click to configure';
+      return step.description ?? 'Click to configure';
   }
 }
 

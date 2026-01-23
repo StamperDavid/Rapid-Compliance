@@ -6,18 +6,16 @@
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
-import type {
-  TTSEngineType,
-  TTSEngineConfig,
-  TTSProvider,
-  TTSSynthesizeRequest,
-  TTSSynthesizeResponse,
-  TTSVoice,
-  TTSProviderInfo} from './types';
 import {
   TTS_PROVIDER_INFO,
   DEFAULT_TTS_CONFIGS,
-  APIKeyMode
+  type TTSEngineType,
+  type TTSEngineConfig,
+  type TTSProvider,
+  type TTSSynthesizeRequest,
+  type TTSSynthesizeResponse,
+  type TTSVoice,
+  type TTSProviderInfo
 } from './types';
 import { NativeProvider } from './providers/native-provider';
 import { UnrealProvider } from './providers/unreal-provider';
@@ -43,8 +41,8 @@ export class VoiceEngineFactory {
 
     // Get organization's TTS config
     const config = await this.getOrgConfig(organizationId);
-    const effectiveEngine = engineOverride || config.engine;
-    const effectiveVoiceId = voiceId || config.voiceId || this.getDefaultVoiceId(effectiveEngine);
+    const effectiveEngine = engineOverride ?? config.engine;
+    const effectiveVoiceId = voiceId ?? config.voiceId ?? this.getDefaultVoiceId(effectiveEngine);
 
     // Get the provider instance
     const provider = await this.getProvider(organizationId, effectiveEngine, config);
@@ -67,8 +65,8 @@ export class VoiceEngineFactory {
     engine?: TTSEngineType,
     config?: TTSEngineConfig
   ): Promise<TTSProvider> {
-    const orgConfig = config || await this.getOrgConfig(organizationId);
-    const effectiveEngine = engine || orgConfig.engine;
+    const orgConfig = config ?? await this.getOrgConfig(organizationId);
+    const effectiveEngine = engine ?? orgConfig.engine;
     const cacheKey = `${organizationId}-${effectiveEngine}-${orgConfig.keyMode}`;
 
     // Check cache
@@ -78,7 +76,7 @@ export class VoiceEngineFactory {
     }
 
     // Create provider with appropriate API key
-    const apiKey = await this.getApiKey(organizationId, effectiveEngine, orgConfig);
+    const apiKey = this.getApiKey(organizationId, effectiveEngine, orgConfig);
     const provider = this.createProvider(effectiveEngine, apiKey);
 
     // Cache it
@@ -106,11 +104,11 @@ export class VoiceEngineFactory {
   /**
    * Get API key for provider based on org settings
    */
-  private static async getApiKey(
+  private static getApiKey(
     organizationId: string,
     engine: TTSEngineType,
     config: TTSEngineConfig
-  ): Promise<string | undefined> {
+  ): string | undefined {
     if (config.keyMode === 'user' && config.userApiKey) {
       // User's own API key
       return config.userApiKey;
@@ -157,10 +155,15 @@ export class VoiceEngineFactory {
     }
 
     // Return default config (Native provider with platform keys)
+    const nativeSettings = DEFAULT_TTS_CONFIGS.native.settings;
+    if (!nativeSettings) {
+      throw new Error('Default Native TTS settings are not configured');
+    }
+
     const defaultConfig: TTSEngineConfig = {
       engine: 'native',
       keyMode: 'platform',
-      settings: DEFAULT_TTS_CONFIGS.native.settings!,
+      settings: nativeSettings,
     };
 
     return defaultConfig;

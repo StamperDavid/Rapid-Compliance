@@ -185,7 +185,7 @@ export function NextBestActionsCard({
 
       {/* Actions List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {recommendations.actions.map((action, idx) => (
+        {recommendations.actions.map((action, _idx) => (
           <div
             key={action.id}
             style={{

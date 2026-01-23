@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import { logger } from '@/lib/logger/logger';
 
 interface Message {
@@ -142,7 +143,7 @@ export function ChatWidget({
         throw new Error('Failed to get response');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { response?: string };
 
       const assistantMessage: Message = {
         id: `msg_${Date.now()}_assistant`,
@@ -172,7 +173,7 @@ export function ChatWidget({
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      void sendMessage();
     }
   };
 
@@ -266,7 +267,7 @@ export function ChatWidget({
                 }}
               >
                 {agentAvatar ? (
-                  <img src={agentAvatar} alt={agentName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src={agentAvatar} alt={agentName} fill style={{ objectFit: 'cover' }} />
                 ) : (
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
@@ -405,7 +406,7 @@ export function ChatWidget({
               }}
             />
             <button
-              onClick={sendMessage}
+              onClick={() => void sendMessage()}
               disabled={!inputValue.trim() || isTyping}
               style={{
                 width: '44px',

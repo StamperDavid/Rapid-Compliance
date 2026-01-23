@@ -9,19 +9,33 @@ import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
+
+interface WorkflowAction {
+  id: string;
+  type: string;
+  duration?: number;
+  onError: string;
+  [key: string]: unknown;
+}
+
+interface WorkflowCondition {
+  [key: string]: unknown;
+}
 
 export default function WorkflowBuilderPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
 
   const [workflow, setWorkflow] = useState({
     name: '',
     description: '',
     trigger: { type: 'manual', config: {}, requireConfirmation: false },
-    conditions: [] as any[],
-    actions: [] as any[],
+    conditions: [] as WorkflowCondition[],
+    actions: [] as WorkflowAction[],
     status: 'draft' as const,
   });
   const [saving, setSaving] = useState(false);
@@ -33,7 +47,7 @@ export default function WorkflowBuilderPage() {
     }));
   };
 
-  const updateAction = (index: number, updates: any) => {
+  const updateAction = (index: number, updates: Partial<WorkflowAction>) => {
     setWorkflow(prev => ({
       ...prev,
       actions: prev.actions.map((a, i) => i === index ? { ...a, ...updates } : a)
@@ -49,7 +63,7 @@ export default function WorkflowBuilderPage() {
 
   const handleSave = async () => {
     if (!workflow.name) {
-      alert('Please enter a workflow name');
+      toast.error('Please enter a workflow name');
       return;
     }
 
@@ -82,7 +96,7 @@ export default function WorkflowBuilderPage() {
       router.push(`/workspace/${orgId}/workflows`);
     } catch (error) {
       logger.error('Error saving workflow:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to save workflow');
+      toast.error('Failed to save workflow');
     } finally {
       setSaving(false);
     }
@@ -177,7 +191,7 @@ export default function WorkflowBuilderPage() {
           <button onClick={() => router.back()} className="px-6 py-3 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700">
             Cancel
           </button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          <button onClick={() => void handleSave()} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
             {saving ? 'Saving...' : 'Create Workflow'}
           </button>
         </div>

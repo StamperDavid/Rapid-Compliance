@@ -51,9 +51,6 @@ import type {
   CircuitBreakerState,
   ThrottlerState,
   SignalEmissionResult} from './types';
-import {
-  SignalType
-} from './types';
 import type { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 
 /**

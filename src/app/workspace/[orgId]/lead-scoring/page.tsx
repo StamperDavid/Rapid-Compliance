@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';
@@ -43,13 +43,7 @@ export default function LeadScoringDashboard({ params }: LeadScoringDashboardPro
   const [filterGrade, setFilterGrade] = useState<'all' | 'A' | 'B' | 'C' | 'D' | 'F'>('all');
   const [sortBy, setSortBy] = useState<'score' | 'date'>('score');
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user, orgId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -72,8 +66,11 @@ export default function LeadScoringDashboard({ params }: LeadScoringDashboardPro
       );
 
       if (analyticsRes.ok) {
-        const data = await analyticsRes.json();
-        setAnalytics(data.analytics);
+        const rawData: unknown = await analyticsRes.json();
+        const data = rawData as { analytics?: LeadScoreAnalytics };
+        if (data.analytics) {
+          setAnalytics(data.analytics);
+        }
       }
 
       setScores([]);
@@ -82,7 +79,13 @@ export default function LeadScoringDashboard({ params }: LeadScoringDashboardPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
+
+  useEffect(() => {
+    if (user) {
+      void loadData();
+    }
+  }, [user, loadData]);
 
   const filteredScores = scores
     .filter((s) => filterPriority === 'all' || s.priority === filterPriority)
@@ -127,7 +130,7 @@ export default function LeadScoringDashboard({ params }: LeadScoringDashboardPro
 
         <div className="flex items-center gap-3">
           <button
-            onClick={loadData}
+            onClick={() => void loadData()}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl transition-all"
           >
             <RefreshCw className="w-4 h-4" />

@@ -48,11 +48,13 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
   ];
 
   const handleAddAction = () => {
-    if (!selectedActionType) {return;}
+    if (!selectedActionType) {
+      return;
+    }
 
     const newAction: WorkflowAction = {
       id: `action_${Date.now()}`,
-      type: selectedActionType as any,
+      type: selectedActionType as WorkflowAction['type'],
       name: (() => { const v = actionTypes.find(a => a.value === selectedActionType)?.label; return (v !== '' && v != null) ? v : 'Action'; })(),
     } as WorkflowAction;
 
@@ -71,7 +73,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
       description,
       trigger: {
         id: `trigger_${Date.now()}`,
-        type: triggerType as any,
+        type: triggerType as WorkflowTrigger['type'],
         name: (() => { const v = triggerTypes.find(t => t.value === triggerType)?.label; return (v !== '' && v != null) ? v : 'Trigger'; })(),
       } as WorkflowTrigger,
       actions,

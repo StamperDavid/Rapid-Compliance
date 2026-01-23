@@ -25,6 +25,14 @@ export function getSlackAuthUrl(): string {
   return `https://slack.com/oauth/v2/authorize?client_id=${SLACK_CLIENT_ID}&scope=${scopes}&redirect_uri=${encodeURIComponent(SLACK_REDIRECT_URI)}`;
 }
 
+interface SlackTokenResponse {
+  access_token: string;
+  team_id: string;
+  team_name: string;
+  ok?: boolean;
+  error?: string;
+}
+
 /**
  * Exchange code for access token
  */
@@ -39,14 +47,19 @@ export async function getTokensFromCode(code: string): Promise<{
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      client_id: SLACK_CLIENT_ID!,
-      client_secret: SLACK_CLIENT_SECRET!,
+      client_id: SLACK_CLIENT_ID ?? '',
+      client_secret: SLACK_CLIENT_SECRET ?? '',
       code,
       redirect_uri: SLACK_REDIRECT_URI,
     }),
   });
 
-  return response.json();
+  const data = await response.json() as SlackTokenResponse;
+  return {
+    access_token: data.access_token,
+    team_id: data.team_id,
+    team_name: data.team_name,
+  };
 }
 
 /**
@@ -56,15 +69,48 @@ function createSlackClient(accessToken: string): WebClient {
   return new WebClient(accessToken);
 }
 
+interface SlackAttachment {
+  fallback?: string;
+  color?: string;
+  pretext?: string;
+  author_name?: string;
+  title?: string;
+  text?: string;
+  fields?: Array<{
+    title: string;
+    value: string;
+    short?: boolean;
+  }>;
+}
+
+interface SlackBlock {
+  type: string;
+  text?: {
+    type: string;
+    text: string;
+  };
+  [key: string]: unknown;
+}
+
+interface SlackMessageResponse {
+  ok?: boolean;
+  channel?: string;
+  ts?: string;
+  message?: {
+    text?: string;
+    user?: string;
+  };
+}
+
 /**
  * Send message to channel
  */
 export async function sendMessage(accessToken: string, options: {
   channel: string;
   text: string;
-  attachments?: any[];
-  blocks?: any[];
-}): Promise<any> {
+  attachments?: SlackAttachment[];
+  blocks?: SlackBlock[];
+}): Promise<SlackMessageResponse> {
   const client = createSlackClient(accessToken);
   
   return client.chat.postMessage({
@@ -75,10 +121,18 @@ export async function sendMessage(accessToken: string, options: {
   });
 }
 
+interface SlackChannel {
+  id?: string;
+  name?: string;
+  is_channel?: boolean;
+  is_private?: boolean;
+  is_member?: boolean;
+}
+
 /**
  * List channels
  */
-export async function listChannels(accessToken: string): Promise<any[]> {
+export async function listChannels(accessToken: string): Promise<SlackChannel[]> {
   const client = createSlackClient(accessToken);
   const result = await client.conversations.list({
     types: 'public_channel,private_channel',
@@ -87,10 +141,15 @@ export async function listChannels(accessToken: string): Promise<any[]> {
   return result.channels ?? [];
 }
 
+interface SlackChannelCreateResponse {
+  ok?: boolean;
+  channel?: SlackChannel;
+}
+
 /**
  * Create channel
  */
-export async function createChannel(accessToken: string, name: string, isPrivate: boolean = false): Promise<any> {
+export async function createChannel(accessToken: string, name: string, isPrivate: boolean = false): Promise<SlackChannelCreateResponse> {
   const client = createSlackClient(accessToken);
   
   return client.conversations.create({
@@ -99,32 +158,58 @@ export async function createChannel(accessToken: string, name: string, isPrivate
   });
 }
 
+interface SlackUser {
+  id?: string;
+  name?: string;
+  real_name?: string;
+  profile?: {
+    email?: string;
+    image_72?: string;
+  };
+}
+
 /**
  * List users
  */
-export async function listUsers(accessToken: string): Promise<any[]> {
+export async function listUsers(accessToken: string): Promise<SlackUser[]> {
   const client = createSlackClient(accessToken);
   const result = await client.users.list({});
   
   return result.members ?? [];
 }
 
+interface SlackConversationOpenResponse {
+  ok?: boolean;
+  channel?: {
+    id?: string;
+  };
+}
+
 /**
  * Send direct message
  */
-export async function sendDirectMessage(accessToken: string, userId: string, text: string): Promise<any> {
+export async function sendDirectMessage(accessToken: string, userId: string, text: string): Promise<SlackMessageResponse> {
   const client = createSlackClient(accessToken);
   
   // Open DM channel
   const dm = await client.conversations.open({
     users: userId,
-  });
-  
+  }) as SlackConversationOpenResponse;
+
   // Send message
   return client.chat.postMessage({
-    channel: dm.channel!.id!,
+    channel: dm.channel?.id ?? '',
     text,
-  });
+  }) as Promise<SlackMessageResponse>;
+}
+
+interface SlackFileUploadResponse {
+  ok?: boolean;
+  file?: {
+    id?: string;
+    name?: string;
+    url_private?: string;
+  };
 }
 
 /**
@@ -135,7 +220,7 @@ export async function uploadFile(accessToken: string, options: {
   content: string;
   filename: string;
   title?: string;
-}): Promise<any> {
+}): Promise<SlackFileUploadResponse> {
   const client = createSlackClient(accessToken);
   
   return client.files.upload({
@@ -149,7 +234,7 @@ export async function uploadFile(accessToken: string, options: {
 /**
  * Get user info
  */
-export async function getUserInfo(accessToken: string, userId: string): Promise<any> {
+export async function getUserInfo(accessToken: string, userId: string): Promise<SlackUser> {
   const client = createSlackClient(accessToken);
   const result = await client.users.info({
     user: userId,
@@ -158,10 +243,16 @@ export async function getUserInfo(accessToken: string, userId: string): Promise<
   return result.user;
 }
 
+interface SlackTopicResponse {
+  ok?: boolean;
+  channel?: string;
+  topic?: string;
+}
+
 /**
  * Set channel topic
  */
-export async function setChannelTopic(accessToken: string, channel: string, topic: string): Promise<any> {
+export async function setChannelTopic(accessToken: string, channel: string, topic: string): Promise<SlackTopicResponse> {
   const client = createSlackClient(accessToken);
 
   return client.conversations.setTopic({
@@ -176,14 +267,15 @@ export async function setChannelTopic(accessToken: string, channel: string, topi
  *
  * TODO: Implement org credential lookup from integrations collection
  */
-export async function sendSlackMessage(params: {
+export function sendSlackMessage(params: {
   orgId: string;
   channelId: string;
   message: string;
   metadata?: Record<string, unknown>;
-}): Promise<void> {
+}): void {
   // TODO: Look up Slack access token from org's integrations
   // For now, this is a stub that logs the message
+  // eslint-disable-next-line no-console
   console.log('[Slack] sendSlackMessage called:', {
     orgId: params.orgId,
     channelId: params.channelId,

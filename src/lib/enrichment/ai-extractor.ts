@@ -119,11 +119,38 @@ export async function extractCompanyData(
       return fallbackExtraction(scrapedContent, companyName);
     }
     
-    const data = await response.json();
-    const extracted = JSON.parse(data.choices[0].message.content);
-    
+    interface OpenAIResponse {
+      choices: Array<{
+        message: {
+          content: string;
+        };
+      }>;
+    }
+
+    interface ExtractedCompanyData {
+      name: string;
+      description: string;
+      industry: string;
+      size: 'startup' | 'small' | 'medium' | 'enterprise' | 'unknown';
+      employeeCount: number | null;
+      employeeRange: string | null;
+      headquarters: {
+        city: string | null;
+        state: string | null;
+        country: string | null;
+      };
+      foundedYear: number | null;
+      revenue: string | null;
+      fundingStage: string | null;
+      contactEmail: string | null;
+      contactPhone: string | null;
+    }
+
+    const data = await response.json() as OpenAIResponse;
+    const extracted = JSON.parse(data.choices[0].message.content) as ExtractedCompanyData;
+
     logger.info('[AI Extractor] Successfully extracted data', { file: 'ai-extractor.ts' });
-    
+
     return {
       name:extracted.name ?? companyName,
       description:extracted.description ?? scrapedContent.description,

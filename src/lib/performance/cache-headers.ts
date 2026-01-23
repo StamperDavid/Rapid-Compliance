@@ -112,7 +112,7 @@ export function applyCacheHeaders(
 /**
  * Generate ETag from response
  */
-function generateETag(response: Response): string | null {
+function generateETag(_response: Response): string | null {
   try {
     // Simple ETag based on current timestamp
     // In production, use content hash

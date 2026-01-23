@@ -163,7 +163,7 @@ export async function enrichCompany(
       logger.error(`[Enrichment] Scraping failed for ${domain}`, scrapeError, { file: 'enrichment-service.ts' });
 
       // Don't give up yet - try backup sources
-      return await useBackupSources(
+      return await getBackupSources(
         companyIdentifier,
         domain,
         website,
@@ -355,7 +355,7 @@ export async function enrichCompany(
     if (!validation.isValid && validation.confidence < 30) {
       logger.warn(`[Enrichment] Validation failed for ${domain}, trying backup sources...`, { file: 'enrichment-service.ts' });
 
-      return await useBackupSources(
+      return await getBackupSources(
         companyIdentifier,
         domain,
         website,
@@ -455,10 +455,10 @@ export async function enrichCompany(
 }
 
 /**
- * Use free backup sources when scraping fails
+ * Get free backup sources when scraping fails
  * NO FAKE DATA - returns partial data or clear failure
  */
-async function useBackupSources(
+async function getBackupSources(
   companyName: string,
   domain: string,
   website: string,

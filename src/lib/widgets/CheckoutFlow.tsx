@@ -5,12 +5,21 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { loadStripe } from '@stripe/stripe-js'
 import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
 import type { CartItem } from './ShoppingCart';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Cart interface for proper typing
+interface Cart {
+  items: CartItem[];
+  total: number;
+  organizationId: string;
+}
+
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 export interface CheckoutFlowProps {
   organizationId: string;
@@ -22,10 +31,11 @@ export interface CheckoutFlowProps {
   };
 }
 
-export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlowProps) {
+export function CheckoutFlow({ organizationId, _onComplete, theme }: CheckoutFlowProps) {
   const [step, setStep] = useState<'info' | 'payment' | 'complete'>('info');
-  const [cart, setCart] = useState<any>(null);
+  const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(false);
+  const { error: showErrorToast } = useToast();
   
   const [customerInfo, setCustomerInfo] = useState({
     email: '',
@@ -43,17 +53,21 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
   const primaryColor = (themePrimaryColor !== '' && themePrimaryColor != null) ? themePrimaryColor : '#6366f1';
   const fontFamily = (themeFontFamily !== '' && themeFontFamily != null) ? themeFontFamily : 'system-ui, sans-serif';
 
-  useEffect(() => {
-    loadCart();
-  }, []);
-
-  const loadCart = async () => {
-    const response = await fetch(`/api/ecommerce/cart?orgId=${organizationId}`);
-    const data = await response.json();
-    if (data.success) {
-      setCart(data.cart);
+  const loadCart = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/ecommerce/cart?orgId=${organizationId}`);
+      const data = await response.json() as { success: boolean; cart: Cart };
+      if (data.success && data.cart) {
+        setCart(data.cart);
+      }
+    } catch (err) {
+      logger.error('Failed to load cart', err instanceof Error ? err : new Error(String(err)), { file: 'CheckoutFlow.tsx' });
     }
-  };
+  }, [organizationId]);
+
+  useEffect(() => {
+    void loadCart();
+  }, [loadCart]);
 
   const handleSubmitInfo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,16 +87,20 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
         }),
       });
 
-      const { sessionId } = await response.json();
-      
+      const data = await response.json() as { sessionId: string };
+      const { sessionId } = data;
+
       // Redirect to Stripe
       const stripe = await stripePromise;
-      if (stripe) {
-        await stripe.redirectToCheckout({ sessionId });
+      if (stripe && sessionId) {
+        const result = await stripe.redirectToCheckout({ sessionId });
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
       }
     } catch (error) {
       logger.error('Payment error:', error instanceof Error ? error : new Error(String(error)), { file: 'CheckoutFlow.tsx' });
-      alert('Payment failed. Please try again.');
+      showErrorToast('Payment failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -97,7 +115,7 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
 
   const getTotal = () => {
     if (!cart?.items) {return 0;}
-    return cart.items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+    return cart.items.reduce((sum: number, item: CartItem) => sum + item.price * item.quantity, 0);
   };
 
   if (step === 'complete') {
@@ -108,7 +126,7 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
           Order Complete!
         </h2>
         <p style={{ color: '#6b7280', marginBottom: '2rem' }}>
-          Thank you for your purchase. You'll receive a confirmation email shortly.
+          Thank you for your purchase. You&apos;ll receive a confirmation email shortly.
         </p>
       </div>
     );
@@ -268,7 +286,7 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
               
               <div style={{ padding: '2rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
                 <p style={{ marginBottom: '1rem', color: '#6b7280' }}>
-                  You'll be redirected to Stripe to complete your payment securely.
+                  You&apos;ll be redirected to Stripe to complete your payment securely.
                 </p>
                 <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                   Your order will be processed after payment confirmation.
@@ -323,7 +341,7 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
 
             {cart?.items?.map((item: CartItem) => (
               <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
-                <span>{item.name} × {item.quantity}</span>
+                <span>{item.name} &times; {item.quantity}</span>
                 <span style={{ fontWeight: '600' }}>{formatPrice(item.price * item.quantity)}</span>
               </div>
             ))}

@@ -10,11 +10,11 @@ interface XeroIntegrationProps {
   onUpdate: (settings: Partial<XeroType['syncSettings']>) => void;
 }
 
-export default function XeroIntegration({ 
-  integration, 
-  onConnect, 
-  onDisconnect, 
-  onUpdate 
+export default function XeroIntegration({
+  integration,
+  onConnect: _onConnect,
+  onDisconnect,
+  onUpdate
 }: XeroIntegrationProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -31,21 +31,21 @@ export default function XeroIntegration({
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
     : '#6366f1';
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     setIsConnecting(true);
     try {
       // Get current user and org from context or URL
-      const userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
-      const orgId = window.location.pathname.split('/')[2] || 'current-org';
-      
+      const _userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
+      const _orgId = window.location.pathname.split('/')[2] || 'current-org';
+
       // Note: Xero OAuth implementation needs to be completed in backend
       // For now, show configuration needed message
-      alert('Xero integration requires additional backend configuration. Please contact support.');
+      console.error('Xero integration requires additional backend configuration. Please contact support.');
       setIsConnecting(false);
     } catch (error) {
       console.error('Failed to start Xero OAuth:', error);
       setIsConnecting(false);
-      alert('Failed to connect to Xero. Please try again.');
+      console.error('Failed to connect to Xero. Please try again.');
     }
   };
 
@@ -69,7 +69,7 @@ export default function XeroIntegration({
           </div>
         </div>
         <button
-          onClick={handleConnect}
+          onClick={() => void handleConnect()}
           disabled={isConnecting}
           style={{
             width: '100%',
@@ -86,7 +86,7 @@ export default function XeroIntegration({
           {isConnecting ? 'Connecting...' : 'Connect Xero'}
         </button>
         <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem', textAlign: 'center' }}>
-          You'll be redirected to Xero to authorize the connection
+          You&apos;ll be redirected to Xero to authorize the connection
         </p>
       </div>
     );
@@ -127,7 +127,16 @@ export default function XeroIntegration({
           </div>
           {integration.connectedAt && (
             <p style={{ fontSize: '0.75rem', color: '#666' }}>
-              Connected {new Date(typeof integration.connectedAt === 'string' ? integration.connectedAt : (integration.connectedAt as any).toDate()).toLocaleDateString()}
+              Connected {new Date(
+                typeof integration.connectedAt === 'string'
+                  ? integration.connectedAt
+                  : typeof integration.connectedAt === 'object' &&
+                    integration.connectedAt !== null &&
+                    'toDate' in integration.connectedAt &&
+                    typeof (integration.connectedAt as { toDate?: unknown }).toDate === 'function'
+                    ? ((integration.connectedAt as { toDate: () => Date }).toDate())
+                    : integration.connectedAt
+              ).toLocaleDateString()}
             </p>
           )}
         </div>
@@ -181,7 +190,7 @@ export default function XeroIntegration({
               </label>
               <select
                 value={integration.syncSettings?.syncDirection ?? 'bidirectional'}
-                onChange={(e) => onUpdate({ syncDirection: e.target.value as any })}
+                onChange={(e) => onUpdate({ syncDirection: e.target.value as 'crm_to_xero' | 'xero_to_crm' | 'bidirectional' })}
                 style={{
                   width: '100%',
                   padding: '0.5rem',

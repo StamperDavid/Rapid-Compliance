@@ -6,13 +6,16 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { useToast } from '@/hooks/useToast';
 import type { BlogPost } from '@/types/website';
 
 export default function BlogManagementPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
 
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -20,55 +23,54 @@ export default function BlogManagementPage() {
   const [filter, setFilter] = useState<'all' | 'draft' | 'published'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadPosts();
-    loadCategories();
-  }, [orgId, filter, categoryFilter]);
-
-  async function loadPosts() {
+  const loadPosts = useCallback(async () => {
     try {
       setLoading(true);
       let url = `/api/website/blog/posts?organizationId=${orgId}`;
-      
+
       if (filter !== 'all') {
         url += `&status=${filter}`;
       }
-      
+
       if (categoryFilter !== 'all') {
         url += `&category=${encodeURIComponent(categoryFilter)}`;
       }
-      
+
       const response = await fetch(url);
-      
+
       if (!response.ok) {throw new Error('Failed to load posts');}
-      
-      const data = await response.json();
+
+      const data = await response.json() as { posts?: BlogPost[] };
       setPosts(data.posts ?? []);
     } catch (error) {
       console.error('[Blog] Load error:', error);
-      alert('Failed to load blog posts');
+      toast.error('Failed to load blog posts');
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId, filter, categoryFilter, toast]);
 
-  async function loadCategories() {
+  const loadCategories = useCallback(async () => {
     try {
       const response = await fetch(`/api/website/blog/categories?organizationId=${orgId}`);
-      
+
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as { categories?: string[] };
         setCategories(data.categories ?? []);
       }
     } catch (error) {
       console.error('[Blog] Load categories error:', error);
     }
-  }
+  }, [orgId]);
 
-  async function deletePost(postId: string) {
-    if (!confirm('Are you sure you want to delete this post?')) {return;}
+  useEffect(() => {
+    void loadPosts();
+    void loadCategories();
+  }, [loadPosts, loadCategories]);
 
+  async function handleDeletePost(postId: string) {
     try {
       const response = await fetch(
         `/api/website/blog/posts/${postId}?organizationId=${orgId}`,
@@ -77,11 +79,13 @@ export default function BlogManagementPage() {
 
       if (!response.ok) {throw new Error('Failed to delete post');}
 
-      alert('Post deleted successfully');
-      loadPosts();
+      toast.success('Post deleted successfully');
+      await loadPosts();
     } catch (error) {
       console.error('[Blog] Delete error:', error);
-      alert('Failed to delete post');
+      toast.error('Failed to delete post');
+    } finally {
+      setDeleteConfirm(null);
     }
   }
 
@@ -101,11 +105,25 @@ export default function BlogManagementPage() {
 
       if (!response.ok) {throw new Error('Failed to update post');}
 
-      loadPosts();
+      await loadPosts();
     } catch (error) {
       console.error('[Blog] Toggle featured error:', error);
-      alert('Failed to update post');
+      toast.error('Failed to update post');
     }
+  }
+
+  function handleDeleteClick(postId: string) {
+    setDeleteConfirm(postId);
+  }
+
+  function confirmDelete() {
+    if (deleteConfirm) {
+      void handleDeletePost(deleteConfirm);
+    }
+  }
+
+  function cancelDelete() {
+    setDeleteConfirm(null);
   }
 
   function createNewPost() {
@@ -313,13 +331,13 @@ export default function BlogManagementPage() {
                     flexShrink: 0,
                     borderRadius: '4px',
                     overflow: 'hidden',
+                    position: 'relative',
                   }}>
-                    <img
+                    <Image
                       src={post.featuredImage}
                       alt={post.title}
+                      fill
                       style={{
-                        width: '100%',
-                        height: '100%',
                         objectFit: 'cover',
                       }}
                     />
@@ -403,7 +421,7 @@ export default function BlogManagementPage() {
                       Edit
                     </button>
                     <button
-                      onClick={() => toggleFeatured(post)}
+                      onClick={() => void toggleFeatured(post)}
                       style={{
                         padding: '0.5rem 1rem',
                         background: post.featured ? '#6c757d' : '#fd7e14',
@@ -417,7 +435,7 @@ export default function BlogManagementPage() {
                       {post.featured ? 'Unfeature' : 'Feature'}
                     </button>
                     <button
-                      onClick={() => deletePost(post.id)}
+                      onClick={() => handleDeleteClick(post.id)}
                       style={{
                         padding: '0.5rem 1rem',
                         background: '#dc3545',
@@ -437,6 +455,69 @@ export default function BlogManagementPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            padding: '2rem',
+            maxWidth: '400px',
+            width: '90%',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          }}>
+            <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem', color: '#212529' }}>
+              Delete Post
+            </h3>
+            <p style={{ margin: '0 0 1.5rem', color: '#6c757d' }}>
+              Are you sure you want to delete this post? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={cancelDelete}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

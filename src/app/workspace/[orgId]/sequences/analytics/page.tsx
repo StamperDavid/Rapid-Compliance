@@ -18,13 +18,12 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';
-import type { DateRange } from '@/components/analytics/DateRangeFilter';
-import { DateRangeFilter } from '@/components/analytics/DateRangeFilter';
+import { DateRangeFilter, type DateRange } from '@/components/analytics/DateRangeFilter';
 import {
   exportSequencePerformanceToCSV,
   exportSummaryToCSV,
   exportChannelPerformanceToCSV,
-  exportStepPerformanceToCSV,
+  exportStepPerformanceToCSV as _exportStepPerformanceToCSV,
 } from '@/lib/utils/csv-export';
 import { ABTestComparison } from '@/components/analytics/ABTestComparison';
 import { PerformanceTrendsChart, generateTrendDataFromAnalytics } from '@/components/analytics/PerformanceTrendsChart';
@@ -107,7 +106,24 @@ interface SequenceExecution {
   status: 'pending' | 'executing' | 'success' | 'failed' | 'skipped';
   executedAt: Date;
   error?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+}
+
+// API Response Types
+interface AnalyticsApiResponse {
+  summary: AnalyticsSummary;
+  sequences: SequencePerformance[];
+}
+
+interface ExecutionsApiResponse {
+  executions: SequenceExecution[];
+}
+
+interface ChannelStats {
+  sent: number;
+  delivered: number;
+  opened?: number;
+  replied: number;
 }
 
 // ============================================================================
@@ -115,7 +131,7 @@ interface SequenceExecution {
 // ============================================================================
 
 export default function SequenceAnalyticsPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
 
@@ -163,7 +179,7 @@ export default function SequenceAnalyticsPage() {
           throw new Error('Failed to load analytics');
         }
 
-        const data = await response.json();
+        const data = await response.json() as AnalyticsApiResponse;
         setSummary(data.summary);
         setSequences(data.sequences ?? []);
 
@@ -175,7 +191,7 @@ export default function SequenceAnalyticsPage() {
         });
 
         if (executionsResponse.ok) {
-          const executionsData = await executionsResponse.json();
+          const executionsData = await executionsResponse.json() as ExecutionsApiResponse;
           setRecentExecutions(executionsData.executions ?? []);
         }
       } catch (error) {
@@ -185,24 +201,26 @@ export default function SequenceAnalyticsPage() {
       }
     };
 
-    loadAnalytics();
+    void loadAnalytics();
 
     // Auto-refresh executions every 30 seconds
-    const interval = setInterval(async () => {
-      try {
-        const executionsResponse = await fetch(`/api/sequences/executions?limit=50`, {
-          headers: {
-            'x-organization-id': orgId,
-          },
-        });
+    const interval = setInterval(() => {
+      void (async () => {
+        try {
+          const executionsResponse = await fetch(`/api/sequences/executions?limit=50`, {
+            headers: {
+              'x-organization-id': orgId,
+            },
+          });
 
-        if (executionsResponse.ok) {
-          const executionsData = await executionsResponse.json();
-          setRecentExecutions(executionsData.executions ?? []);
+          if (executionsResponse.ok) {
+            const executionsData = await executionsResponse.json() as ExecutionsApiResponse;
+            setRecentExecutions(executionsData.executions ?? []);
+          }
+        } catch (error) {
+          logger.error('Error refreshing executions:', error instanceof Error ? error : new Error(String(error)), { file: 'analytics/page.tsx' });
         }
-      } catch (error) {
-        logger.error('Error refreshing executions:', error instanceof Error ? error : new Error(String(error)), { file: 'analytics/page.tsx' });
-      }
+      })();
     }, 30000);
 
     return () => clearInterval(interval);
@@ -1069,7 +1087,7 @@ function SequenceDetailView({ sequence, onBack }: { sequence: SequencePerformanc
 function ChannelPerformanceCard({ channel, icon, stats }: {
   channel: string;
   icon: string;
-  stats: any;
+  stats: ChannelStats;
 }) {
   const sent = stats.sent ?? 0;
   const delivered = stats.delivered ?? 0;

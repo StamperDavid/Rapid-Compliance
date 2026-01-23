@@ -10,9 +10,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ErrorBoundary, InlineErrorFallback } from '@/components/common/ErrorBoundary';
-import type { SalesIndustryTemplate } from '@/lib/templates';
 
 interface TemplateSelectorProps {
   organizationId: string;
@@ -20,8 +19,23 @@ interface TemplateSelectorProps {
   selectedTemplateId?: string;
 }
 
+interface TemplatesApiResponse {
+  success: boolean;
+  templates: Array<{
+    id: string;
+    name: string;
+    description: string;
+    industry: string;
+    category: string;
+    icon: string;
+    stagesCount: number;
+    fieldsCount: number;
+    workflowsCount: number;
+  }>;
+}
+
 function TemplateSelectorInner({
-  organizationId,
+  organizationId: _organizationId,
   onTemplateSelect,
   selectedTemplateId
 }: TemplateSelectorProps) {
@@ -39,16 +53,12 @@ function TemplateSelectorInner({
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
-
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       const response = await fetch('/api/templates');
-      const data = await response.json();
-      
+      const data = await response.json() as TemplatesApiResponse;
+
       if (data.success) {
         setTemplates(data.templates);
       }
@@ -57,7 +67,11 @@ function TemplateSelectorInner({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchTemplates();
+  }, [fetchTemplates]);
 
   const categories = Array.from(new Set(templates.map(t => t.category)));
   const filteredTemplates = selectedCategory === 'all'

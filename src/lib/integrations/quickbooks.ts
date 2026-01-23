@@ -71,20 +71,33 @@ export async function syncCustomerToQuickBooks(
       }
     );
 
+    interface QuickBooksErrorResponse {
+      Fault?: {
+        Error?: Array<{ Message?: string }>;
+      };
+      [key: string]: unknown;
+    }
+
+    interface CustomerResponse {
+      Customer: {
+        Id: string;
+      };
+    }
+
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json() as QuickBooksErrorResponse;
       throw new Error(`QuickBooks API error: ${JSON.stringify(error)}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as CustomerResponse;
     const customerId = data.Customer.Id;
 
     logger.info('QuickBooks customer synced', { organizationId, customerId });
 
     return customerId;
 
-  } catch (error: any) {
-    logger.error('Failed to sync customer to QuickBooks', error, { organizationId });
+  } catch (error) {
+    logger.error('Failed to sync customer to QuickBooks', error as Error, { organizationId });
     throw error;
   }
 }
@@ -110,7 +123,7 @@ export async function createQuickBooksInvoice(
     }
 
     // Build line items
-    const lines = invoice.lineItems.map((item, index) => ({
+    const lines = invoice.lineItems.map((item, _index) => ({
       DetailType: 'SalesItemLineDetail',
       Amount: item.amount,
       SalesItemLineDetail: {
@@ -138,12 +151,26 @@ export async function createQuickBooksInvoice(
       }
     );
 
+    interface QuickBooksErrorResponse {
+      Fault?: {
+        Error?: Array<{ Message?: string }>;
+      };
+      [key: string]: unknown;
+    }
+
+    interface InvoiceResponse {
+      Invoice: {
+        Id: string;
+        DocNumber: string;
+      };
+    }
+
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json() as QuickBooksErrorResponse;
       throw new Error(`QuickBooks API error: ${JSON.stringify(error)}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as InvoiceResponse;
 
     logger.info('QuickBooks invoice created', {
       organizationId,
@@ -155,8 +182,8 @@ export async function createQuickBooksInvoice(
       invoiceNumber: data.Invoice.DocNumber,
     };
 
-  } catch (error: any) {
-    logger.error('Failed to create QuickBooks invoice', error, { organizationId });
+  } catch (error) {
+    logger.error('Failed to create QuickBooks invoice', error as Error, { organizationId });
     throw error;
   }
 }
@@ -215,7 +242,13 @@ export async function exchangeQuickBooksCode(
       throw new Error('Failed to exchange QuickBooks code');
     }
 
-    const data = await response.json();
+    interface TokenResponse {
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+    }
+
+    const data = await response.json() as TokenResponse;
 
     return {
       accessToken: data.access_token,
@@ -224,8 +257,8 @@ export async function exchangeQuickBooksCode(
       realmId, // Store realm ID for future API calls
     };
 
-  } catch (error: any) {
-    logger.error('QuickBooks OAuth exchange failed', error);
+  } catch (error) {
+    logger.error('QuickBooks OAuth exchange failed', error as Error);
     throw error;
   }
 }

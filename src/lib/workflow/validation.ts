@@ -408,7 +408,7 @@ export function validateWorkflow(data: unknown): {
       error: 'Workflow validation failed',
       details: result.error.issues,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       success: false,
       error: 'Unexpected validation error',
@@ -443,7 +443,7 @@ export function validateWorkflowUpdate(data: unknown): {
       error: 'Workflow update validation failed',
       details: result.error.issues,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       success: false,
       error: 'Unexpected validation error',
@@ -478,7 +478,7 @@ export function validateWorkflowExecution(data: unknown): {
       error: 'Workflow execution validation failed',
       details: result.error.issues,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       success: false,
       error: 'Unexpected validation error',

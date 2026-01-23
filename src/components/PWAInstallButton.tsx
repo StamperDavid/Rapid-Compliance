@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { setupInstallPrompt, showInstallPrompt, isAppInstalled, isInstallPromptAvailable } from '@/lib/pwa/install-prompt';
+import { setupInstallPrompt, showInstallPrompt, isAppInstalled, isInstallPromptAvailable as _isInstallPromptAvailable } from '@/lib/pwa/install-prompt';
 
 export default function PWAInstallButton() {
   const [isInstallable, setIsInstallable] = useState(false);
@@ -43,7 +43,7 @@ export default function PWAInstallButton() {
 
   return (
     <button
-      onClick={handleInstall}
+      onClick={() => { void handleInstall(); }}
       style={{
         position: 'fixed',
         bottom: '1rem',

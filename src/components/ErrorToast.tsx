@@ -5,7 +5,6 @@
 
 'use client';
 
-import { useEffect } from 'react';
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger/logger';
 
@@ -15,7 +14,7 @@ export interface APIErrorResponse {
     message: string;
     code?: string;
     statusCode: number;
-    details?: any;
+    details?: Record<string, unknown>;
   };
   timestamp?: string;
 }
@@ -25,7 +24,7 @@ export interface APIErrorResponse {
  */
 export function showErrorToast(error: unknown, fallbackMessage = 'An error occurred') {
   let message = (fallbackMessage !== '' && fallbackMessage != null) ? fallbackMessage : 'An error occurred';
-  let details: any = null;
+  let details: Record<string, unknown> | null = null;
 
   // Handle API error responses
   if (error && typeof error === 'object' && 'error' in error) {
@@ -111,20 +110,20 @@ export function dismissToast(toastId: string) {
 /**
  * Handle fetch response with error toasts
  */
-export async function fetchWithToast<T = any>(
+export async function fetchWithToast<T = unknown>(
   url: string,
   options?: RequestInit,
   successMessage?: string
-): Promise<{ success: boolean; data?: T; error?: any }> {
+): Promise<{ success: boolean; data?: T; error?: unknown }> {
   const loadingToast = showLoadingToast('Processing...');
 
   try {
     const response = await fetch(url, options);
-    const data = await response.json();
+    const data: unknown = await response.json();
 
     dismissToast(loadingToast);
 
-    if (!response.ok || !data.success) {
+    if (!response.ok || (typeof data === 'object' && data !== null && 'success' in data && !(data as { success: boolean }).success)) {
       showErrorToast(data);
       return { success: false, error: data };
     }
@@ -133,7 +132,7 @@ export async function fetchWithToast<T = any>(
       showSuccessToast(successMessage);
     }
 
-    return { success: true, data };
+    return { success: true, data: data as T };
   } catch (error) {
     dismissToast(loadingToast);
     showErrorToast(error);

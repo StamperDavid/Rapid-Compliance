@@ -3,8 +3,7 @@
  * Provides consistent error responses across all API routes
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import * as Sentry from '@sentry/nextjs';
 
@@ -12,7 +11,7 @@ export interface APIError {
   message: string;
   code?: string;
   statusCode: number;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -40,11 +39,11 @@ export function createErrorResponse(
   error: string | APIError | Error,
   statusCode: number = 500,
   code?: ErrorCode,
-  details?: any
+  details?: Record<string, unknown>
 ): NextResponse {
   let errorMessage: string;
   let errorCode: string | undefined;
-  let errorDetails: any;
+  let errorDetails: Record<string, unknown> | undefined;
 
   if (typeof error === 'string') {
     errorMessage = error;
@@ -52,15 +51,15 @@ export function createErrorResponse(
     errorDetails = details;
   } else if (error instanceof Error) {
     errorMessage = error.message;
-    errorCode =code ?? ErrorCode.INTERNAL_SERVER_ERROR;
+    errorCode = code ?? ErrorCode.INTERNAL_SERVER_ERROR;
     errorDetails = process.env.NODE_ENV === 'development' ? {
       stack: error.stack,
       ...details,
     } : details;
   } else {
     errorMessage = error.message;
-    errorCode =error.code ?? code;
-    errorDetails =error.details ?? details;
+    errorCode = error.code ?? code;
+    errorDetails = error.details ?? details;
     statusCode = error.statusCode || statusCode;
   }
 
@@ -94,9 +93,9 @@ export function createErrorResponse(
  * Wrapper for API route handlers with automatic error handling
  */
 export function withErrorHandler(
-  handler: (request: NextRequest, context?: any) => Promise<NextResponse>
+  handler: (request: NextRequest, context?: Record<string, unknown>) => Promise<NextResponse>
 ) {
-  return async (request: NextRequest, context?: any): Promise<NextResponse> => {
+  return async (request: NextRequest, context?: Record<string, unknown>): Promise<NextResponse> => {
     try {
       return await handler(request, context);
     } catch (error) {
@@ -134,7 +133,7 @@ export function withErrorHandler(
  * Common error helpers
  */
 export const errors = {
-  badRequest: (message: string, details?: any) =>
+  badRequest: (message: string, details?: Record<string, unknown>) =>
     createErrorResponse(message, 400, ErrorCode.BAD_REQUEST, details),
 
   unauthorized: (message: string = 'Unauthorized') =>
@@ -146,7 +145,7 @@ export const errors = {
   notFound: (message: string = 'Resource not found') =>
     createErrorResponse(message, 404, ErrorCode.NOT_FOUND),
 
-  validation: (message: string, details?: any) =>
+  validation: (message: string, details?: Record<string, unknown>) =>
     createErrorResponse(message, 400, ErrorCode.VALIDATION_ERROR, details),
 
   rateLimit: (message: string = 'Rate limit exceeded') =>

@@ -25,8 +25,8 @@ interface PropertiesPanelProps {
 export default function PropertiesPanel({
   selectedElement,
   page,
-  breakpoint,
-  onUpdatePage,
+  breakpoint: _breakpoint,
+  onUpdatePage: _onUpdatePage,
   onUpdateSection,
   onUpdateWidget,
 }: PropertiesPanelProps) {
@@ -178,13 +178,13 @@ interface WidgetContentEditorProps {
 }
 
 function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
-  const updateData = (key: string, value: any) => {
+  const updateData = (key: string, value: Record<string, unknown> | string | number | boolean) => {
     onUpdate({
       data: { ...widget.data, [key]: value },
     });
   };
 
-  const renderField = (key: string, value: any) => {
+  const renderField = (key: string, value: unknown) => {
     if (typeof value === 'string') {
       if (value.length > 50 || key === 'content' || key === 'html') {
         return (
@@ -322,7 +322,7 @@ interface StyleEditorProps {
 }
 
 function StyleEditor({ style, onUpdate }: StyleEditorProps) {
-  const updateStyle = (key: keyof WidgetStyle, value: any) => {
+  const updateStyle = (key: keyof WidgetStyle, value: unknown) => {
     onUpdate({ ...style, [key]: value });
   };
 
@@ -440,7 +440,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <label style={labelStyle}>Text Align</label>
           <select
             value={style.textAlign ?? ''}
-            onChange={(e) => updateStyle('textAlign', e.target.value as any)}
+            onChange={(e) => updateStyle('textAlign', e.target.value)}
             style={inputStyle}
           >
             <option value="">Default</option>

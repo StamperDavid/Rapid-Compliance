@@ -17,9 +17,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts';
 import type { EmailOverviewMetrics } from '@/lib/analytics/dashboard/types';
 
@@ -27,8 +24,6 @@ interface EmailMetricsCardProps {
   data: EmailOverviewMetrics;
   loading?: boolean;
 }
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 /**
  * Email Metrics Card Component
@@ -83,13 +78,13 @@ export function EmailMetricsCard({ data, loading = false }: EmailMetricsCardProp
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="date"
-              tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              tickFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               stroke="#6b7280"
               fontSize={12}
             />
             <YAxis stroke="#6b7280" fontSize={12} />
             <Tooltip
-              labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+              labelFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
               formatter={(value: number) => [value, 'Emails']}
             />
             <Line
@@ -114,12 +109,12 @@ export function EmailMetricsCard({ data, loading = false }: EmailMetricsCardProp
               dataKey="type"
               stroke="#6b7280"
               fontSize={12}
-              tickFormatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
+              tickFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}
             />
             <YAxis stroke="#6b7280" fontSize={12} />
             <Tooltip
               formatter={(value: number) => [value, 'Count']}
-              labelFormatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
+              labelFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}
             />
             <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -130,7 +125,7 @@ export function EmailMetricsCard({ data, loading = false }: EmailMetricsCardProp
       <div>
         <h4 className="text-sm font-medium text-gray-700 mb-3">By Deal Tier</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {data.byTier.map((tier, index) => (
+          {data.byTier.map((tier) => (
             <div key={tier.tier} className="bg-gray-50 rounded-lg p-3">
               <div className="text-xs text-gray-500 mb-1 capitalize">{tier.tier}</div>
               <div className="text-xl font-bold text-gray-900">{tier.count}</div>

@@ -18,24 +18,46 @@ import React, { useState, useEffect } from 'react';
 import { DealHealthCard } from '@/components/crm/DealHealthCard';
 import { NextBestActionsCard } from '@/components/crm/NextBestActionsCard';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import type { Deal } from '@/lib/crm/deal-service';
 import type { DealHealthScore } from '@/lib/crm/deal-health';
 import type { ActionRecommendations } from '@/lib/crm/next-best-action-engine';
 
+// API Response Types
+interface HealthScoreResponse {
+  data: DealHealthScore;
+}
+
+interface RecommendationsResponse {
+  data: ActionRecommendations;
+}
+
+interface HealthCheckSummary {
+  total: number;
+  healthy: number;
+  atRisk: number;
+  critical: number;
+}
+
+interface HealthCheckResponse {
+  data: HealthCheckSummary;
+}
+
 export default function LivingLedgerPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [healthScores, setHealthScores] = useState<Map<string, DealHealthScore>>(new Map());
   const [recommendations, setRecommendations] = useState<ActionRecommendations | null>(null);
   const [loading, setLoading] = useState(true);
   const [monitoringEnabled, setMonitoringEnabled] = useState(false);
-  const [healthCheckSummary, setHealthCheckSummary] = useState<any>(null);
+  const [healthCheckSummary, setHealthCheckSummary] = useState<HealthCheckSummary | null>(null);
 
   // Load deals
   useEffect(() => {
-    const loadDeals = async () => {
+    const loadDeals = () => {
       try {
         // For demo purposes, using mock data
         // In production, this would fetch from Firestore
@@ -114,7 +136,7 @@ export default function LivingLedgerPage() {
         );
 
         if (response.ok) {
-          const data = await response.json();
+          const data = await response.json() as HealthScoreResponse;
           setHealthScores(new Map(healthScores.set(selectedDealId, data.data)));
         }
       } catch (error: unknown) {
@@ -122,8 +144,8 @@ export default function LivingLedgerPage() {
       }
     };
 
-    loadHealthScore();
-  }, [selectedDealId, user]);
+    void loadHealthScore();
+  }, [selectedDealId, user, healthScores]);
 
   // Load recommendations for selected deal
   useEffect(() => {
@@ -142,7 +164,7 @@ export default function LivingLedgerPage() {
         );
 
         if (response.ok) {
-          const data = await response.json();
+          const data = await response.json() as RecommendationsResponse;
           setRecommendations(data.data);
         }
       } catch (error: unknown) {
@@ -150,7 +172,7 @@ export default function LivingLedgerPage() {
       }
     };
 
-    loadRecommendations();
+    void loadRecommendations();
   }, [selectedDealId, user]);
 
   // Start deal monitoring
@@ -192,7 +214,7 @@ export default function LivingLedgerPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as HealthCheckResponse;
         setHealthCheckSummary(data.data);
         logger.info('Health check complete', data.data);
       }
@@ -253,7 +275,7 @@ export default function LivingLedgerPage() {
         }}
       >
         <button
-          onClick={handleStartMonitoring}
+          onClick={() => void handleStartMonitoring()}
           disabled={monitoringEnabled}
           style={{
             padding: '0.75rem 1.5rem',
@@ -271,7 +293,7 @@ export default function LivingLedgerPage() {
         </button>
 
         <button
-          onClick={handleHealthCheck}
+          onClick={() => void handleHealthCheck()}
           style={{
             padding: '0.75rem 1.5rem',
             backgroundColor: '#1a1a1a',
@@ -286,7 +308,7 @@ export default function LivingLedgerPage() {
           🏥 Run Health Check
         </button>
 
-        {healthCheckSummary && (
+        {healthCheckSummary != null && (
           <div
             style={{
               flex: 1,
@@ -423,7 +445,9 @@ export default function LivingLedgerPage() {
                   <div>
                     Close Date:{' '}
                     <span style={{ color: '#fff', fontWeight: '600' }}>
-                      {selectedDeal.expectedCloseDate?.toLocaleDateString()}
+                      {selectedDeal.expectedCloseDate != null && selectedDeal.expectedCloseDate instanceof Date
+                        ? selectedDeal.expectedCloseDate.toLocaleDateString()
+                        : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -453,12 +477,12 @@ export default function LivingLedgerPage() {
 
                 {/* Recommendations */}
                 <div>
-                  {recommendations ? (
+                  {recommendations != null ? (
                     <NextBestActionsCard
                       recommendations={recommendations}
                       onActionClick={(action) => {
                         logger.info('Action clicked', { actionId: action.id, actionTitle: action.title });
-                        alert(`Action: ${action.title}\n\n${action.description}`);
+                        toast.info(`Action: ${action.title}\n\n${action.description}`);
                       }}
                     />
                   ) : (

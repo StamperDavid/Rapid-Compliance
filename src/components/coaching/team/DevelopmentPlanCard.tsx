@@ -208,10 +208,10 @@ export function DevelopmentPlanCard({
                   <li>• Schedule 1-on-1s with {atRiskReps.length} at-risk rep{atRiskReps.length > 1 ? 's' : ''} this week</li>
                 )}
                 {priorities.length > 0 && (
-                  <li>• Address "{priorities[0].area}" affecting {priorities[0].repsAffected} rep{priorities[0].repsAffected > 1 ? 's' : ''}</li>
+                  <li>• Address &quot;{priorities[0].area}&quot; affecting {priorities[0].repsAffected} rep{priorities[0].repsAffected > 1 ? 's' : ''}</li>
                 )}
                 {priorities.length > 1 && (
-                  <li>• Create team workshop for "{priorities[1].area}"</li>
+                  <li>• Create team workshop for &quot;{priorities[1].area}&quot;</li>
                 )}
                 <li>• Review progress in 2 weeks and reassess priorities</li>
               </ul>

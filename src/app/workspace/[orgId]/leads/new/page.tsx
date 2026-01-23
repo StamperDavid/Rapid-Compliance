@@ -1,41 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger/logger';
 import DuplicateWarning from '@/components/DuplicateWarning';
+import { useToast } from '@/hooks/useToast';
 import type { DuplicateDetectionResult } from '@/lib/crm/duplicate-detection';
 import type { DataQualityScore } from '@/lib/crm/data-quality';
 
 export default function NewLeadPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
   const [lead, setLead] = useState({ firstName: '', lastName: '', email: '', phone: '', company: '', title: '', source: '', status: 'new' as const });
   const [saving, setSaving] = useState(false);
   const [duplicateResult, setDuplicateResult] = useState<DuplicateDetectionResult | null>(null);
   const [dataQuality, setDataQuality] = useState<DataQualityScore | null>(null);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  // Check for duplicates when email or phone changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (lead.email || lead.phone) {
-        checkDuplicates();
-      }
-    }, 1000); // Debounce 1 second
-
-    return () => clearTimeout(timer);
-  }, [lead.email, lead.phone, lead.firstName, lead.lastName, lead.company]);
-
-  // Calculate data quality in real-time
-  useEffect(() => {
-    if (lead.firstName || lead.email) {
-      calculateQuality();
-    }
-  }, [lead]);
-
-  const checkDuplicates = async () => {
+  const checkDuplicates = useCallback(async () => {
     setCheckingDuplicates(true);
     try {
       const response = await fetch('/api/crm/duplicates', {
@@ -47,8 +32,9 @@ export default function NewLeadPage() {
           workspaceId: 'default',
         }),
       });
-      const data = await response.json();
-      if (data.success) {
+      const rawData: unknown = await response.json();
+      const data = rawData as { success?: boolean; data?: DuplicateDetectionResult };
+      if (data.success && data.data) {
         setDuplicateResult(data.data);
       }
     } catch (error: unknown) {
@@ -56,9 +42,9 @@ export default function NewLeadPage() {
     } finally {
       setCheckingDuplicates(false);
     }
-  };
+  }, [lead]);
 
-  const calculateQuality = async () => {
+  const calculateQuality = useCallback(async () => {
     try {
       const { calculateLeadDataQuality } = await import('@/lib/crm/data-quality');
       const quality = calculateLeadDataQuality(lead);
@@ -66,20 +52,30 @@ export default function NewLeadPage() {
     } catch (error: unknown) {
       logger.error('Error calculating quality:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     }
-  };
+  }, [lead]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Warn about high-confidence duplicates
-    if (duplicateResult?.hasDuplicates && duplicateResult.highestMatch?.confidence === 'high') {
-      const proceed = confirm('High-confidence duplicate detected. Are you sure you want to create this lead?');
-      if (!proceed) {return;}
+  // Check for duplicates when email or phone changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (lead.email || lead.phone) {
+        void checkDuplicates();
+      }
+    }, 1000); // Debounce 1 second
+
+    return () => clearTimeout(timer);
+  }, [lead.email, lead.phone, lead.firstName, lead.lastName, lead.company, checkDuplicates]);
+
+  // Calculate data quality in real-time
+  useEffect(() => {
+    if (lead.firstName || lead.email) {
+      void calculateQuality();
     }
+  }, [lead, calculateQuality]);
 
+  const proceedWithSubmit = useCallback(async () => {
     try {
       setSaving(true);
-      
+
       const response = await fetch(`/api/workspace/${orgId}/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,21 +84,33 @@ export default function NewLeadPage() {
           leadData: { ...lead, autoEnrich: true }
         })
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to create lead');
       }
-      
+
       router.push(`/workspace/${orgId}/leads`);
     } catch (error: unknown) {
       logger.error('Error creating lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to create lead');
+      toast.error('Failed to create lead');
     } finally {
       setSaving(false);
     }
+  }, [orgId, lead, router, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Warn about high-confidence duplicates
+    if (duplicateResult?.hasDuplicates && duplicateResult.highestMatch?.confidence === 'high') {
+      setShowConfirmDialog(true);
+      return;
+    }
+
+    await proceedWithSubmit();
   };
 
-  const handleMerge = async (keepId: string, mergeId: string) => {
+  const _handleMerge = async (keepId: string, mergeId: string) => {
     try {
       const response = await fetch('/api/crm/duplicates/merge', {
         method: 'POST',
@@ -126,6 +134,35 @@ export default function NewLeadPage() {
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Add New Lead</h1>
+
+        {/* Confirmation Dialog */}
+        {showConfirmDialog && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md">
+              <h2 className="text-xl font-bold mb-4">High-Confidence Duplicate Detected</h2>
+              <p className="text-gray-400 mb-6">
+                A high-confidence duplicate has been detected. Are you sure you want to create this lead?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmDialog(false);
+                    void proceedWithSubmit();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Data Quality Score */}
         {dataQuality && (
@@ -166,7 +203,7 @@ export default function NewLeadPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => void handleSubmit(e)}>
           <div className="bg-gray-900 rounded-lg p-6 mb-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">

@@ -129,7 +129,7 @@ export function InterventionsCard({
             <p className="text-sm">No interventions needed - deal is healthy</p>
           </div>
         ) : (
-          sortedInterventions.map((intervention, index) => {
+          sortedInterventions.map((intervention, _index) => {
             const isExpanded = expandedId === intervention.id;
             
             return (

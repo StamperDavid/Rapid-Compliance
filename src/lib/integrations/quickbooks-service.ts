@@ -41,6 +41,14 @@ export function getQuickBooksAuthUrl(): string {
   return `https://appcenter.intuit.com/connect/oauth2?client_id=${QB_CLIENT_ID}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(QB_REDIRECT_URI)}&response_type=code&state=${state}`;
 }
 
+interface QuickBooksTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type?: string;
+  expires_in?: number;
+  x_refresh_token_expires_in?: number;
+}
+
 /**
  * Exchange code for tokens
  */
@@ -77,10 +85,24 @@ export async function getTokensFromCode(code: string): Promise<{
     throw new Error(`QuickBooks OAuth failed: ${response.status}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as QuickBooksTokenResponse;
   logger.info('QuickBooks: Successfully obtained tokens');
-  
-  return data;
+
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    realmId: '',
+  };
+}
+
+interface QuickBooksCustomerResponse {
+  Customer: {
+    Id: string;
+    DisplayName: string;
+    CompanyName?: string;
+    PrimaryEmailAddr?: { Address: string };
+    PrimaryPhone?: { FreeFormNumber: string };
+  };
 }
 
 /**
@@ -91,7 +113,7 @@ export async function createCustomer(accessToken: string, realmId: string, custo
   companyName?: string;
   email?: string;
   phone?: string;
-}): Promise<any> {
+}): Promise<QuickBooksCustomerResponse> {
   const response = await fetch(`https://quickbooks.api.intuit.com/v3/company/${realmId}/customer`, {
     method: 'POST',
     headers: {
@@ -107,7 +129,16 @@ export async function createCustomer(accessToken: string, realmId: string, custo
     }),
   });
 
-  return response.json();
+  return response.json() as Promise<QuickBooksCustomerResponse>;
+}
+
+interface QuickBooksInvoiceResponse {
+  Invoice: {
+    Id: string;
+    DocNumber: string;
+    TotalAmt: number;
+    Balance: number;
+  };
 }
 
 /**
@@ -121,7 +152,7 @@ export async function createInvoice(accessToken: string, realmId: string, invoic
     quantity: number;
   }>;
   dueDate?: string;
-}): Promise<any> {
+}): Promise<QuickBooksInvoiceResponse> {
   const response = await fetch(`https://quickbooks.api.intuit.com/v3/company/${realmId}/invoice`, {
     method: 'POST',
     headers: {
@@ -146,13 +177,20 @@ export async function createInvoice(accessToken: string, realmId: string, invoic
     }),
   });
 
-  return response.json();
+  return response.json() as Promise<QuickBooksInvoiceResponse>;
+}
+
+interface QuickBooksCustomer {
+  Id: string;
+  DisplayName: string;
+  CompanyName?: string;
+  PrimaryEmailAddr?: { Address: string };
 }
 
 /**
  * List customers
  */
-export async function listCustomers(accessToken: string, realmId: string): Promise<any[]> {
+export async function listCustomers(accessToken: string, realmId: string): Promise<QuickBooksCustomer[]> {
   const response = await fetch(
     `https://quickbooks.api.intuit.com/v3/company/${realmId}/query?query=SELECT * FROM Customer`,
     {
@@ -163,14 +201,27 @@ export async function listCustomers(accessToken: string, realmId: string): Promi
     }
   );
 
-  const data = await response.json();
+  interface QueryResponse {
+    QueryResponse?: {
+      Customer?: QuickBooksCustomer[];
+    };
+  }
+
+  const data = await response.json() as QueryResponse;
   return data.QueryResponse?.Customer ?? [];
+}
+
+interface QuickBooksInvoice {
+  Id: string;
+  DocNumber: string;
+  TotalAmt: number;
+  Balance: number;
 }
 
 /**
  * List invoices
  */
-export async function listInvoices(accessToken: string, realmId: string): Promise<any[]> {
+export async function listInvoices(accessToken: string, realmId: string): Promise<QuickBooksInvoice[]> {
   const response = await fetch(
     `https://quickbooks.api.intuit.com/v3/company/${realmId}/query?query=SELECT * FROM Invoice`,
     {
@@ -181,14 +232,27 @@ export async function listInvoices(accessToken: string, realmId: string): Promis
     }
   );
 
-  const data = await response.json();
+  interface InvoiceQueryResponse {
+    QueryResponse?: {
+      Invoice?: QuickBooksInvoice[];
+    };
+  }
+
+  const data = await response.json() as InvoiceQueryResponse;
   return data.QueryResponse?.Invoice ?? [];
+}
+
+interface QuickBooksCompanyInfo {
+  CompanyName: string;
+  LegalName?: string;
+  Country?: string;
+  Email?: { Address: string };
 }
 
 /**
  * Get company info
  */
-export async function getCompanyInfo(accessToken: string, realmId: string): Promise<any> {
+export async function getCompanyInfo(accessToken: string, realmId: string): Promise<QuickBooksCompanyInfo> {
   const response = await fetch(
     `https://quickbooks.api.intuit.com/v3/company/${realmId}/companyinfo/${realmId}`,
     {
@@ -199,19 +263,38 @@ export async function getCompanyInfo(accessToken: string, realmId: string): Prom
     }
   );
 
-  const data = await response.json();
+  interface CompanyInfoResponse {
+    CompanyInfo: QuickBooksCompanyInfo;
+  }
+
+  const data = await response.json() as CompanyInfoResponse;
   return data.CompanyInfo;
 }
 
+interface CustomerTestData {
+  [key: string]: unknown;
+  synced?: boolean;
+}
+
+interface InvoiceTestData {
+  [key: string]: unknown;
+  id?: string;
+}
+
+interface PaymentTestData {
+  [key: string]: unknown;
+  recorded?: boolean;
+}
+
 // Lightweight helpers for tests
-export function syncCustomerToQuickBooks(customer: any) {
+export function syncCustomerToQuickBooks(customer: CustomerTestData): CustomerTestData {
   return { ...customer, synced: true };
 }
 
-export function createQuickBooksInvoice(invoice: any) {
+export function createQuickBooksInvoice(invoice: InvoiceTestData): InvoiceTestData {
   return { ...invoice, id: 'qb-invoice-test' };
 }
 
-export function recordQuickBooksPayment(payment: any) {
+export function recordQuickBooksPayment(payment: PaymentTestData): PaymentTestData {
   return { ...payment, recorded: true };
 }

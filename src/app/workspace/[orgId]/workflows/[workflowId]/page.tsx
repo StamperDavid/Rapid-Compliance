@@ -1,37 +1,51 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
+
+interface WorkflowData {
+  name: string;
+  description?: string;
+  status: string;
+  [key: string]: unknown;
+}
 
 export default function WorkflowEditPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
   const workflowId = params.workflowId as string;
 
-  const [workflow, setWorkflow] = useState<any>(null);
+  const [workflow, setWorkflow] = useState<WorkflowData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadWorkflow();
-  }, []);
-
-  const loadWorkflow = async () => {
+  const loadWorkflow = useCallback(async () => {
     try {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/workflows`, workflowId);
-      setWorkflow(data);
-    } catch (error) {
-      logger.error('Error loading workflow:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+      setWorkflow(data as WorkflowData);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('Error loading workflow:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId, workflowId]);
+
+  useEffect(() => {
+    void loadWorkflow();
+  }, [loadWorkflow]);
 
   const handleSave = async () => {
+    if (!workflow) {
+      return;
+    }
+
     try {
       setSaving(true);
       await FirestoreService.update(`organizations/${orgId}/workspaces/default/workflows`, workflowId, {
@@ -39,9 +53,10 @@ export default function WorkflowEditPage() {
         updatedAt: Timestamp.now(),
       });
       router.push(`/workspace/${orgId}/workflows`);
-    } catch (error) {
-      logger.error('Error saving workflow:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to save workflow');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('Error saving workflow:', error, { file: 'page.tsx' });
+      toast.error('Failed to save workflow');
     } finally {
       setSaving(false);
     }
@@ -77,7 +92,7 @@ export default function WorkflowEditPage() {
 
         <div className="flex gap-3">
           <button onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button onClick={() => void handleSave()} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>

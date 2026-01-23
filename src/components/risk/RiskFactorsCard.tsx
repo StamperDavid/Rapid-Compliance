@@ -142,7 +142,7 @@ export function RiskFactorsCard({
               <p className="text-sm">No significant risk factors detected</p>
             </div>
           ) : (
-            riskFactors.map((factor, index) => (
+            riskFactors.map((factor, _index) => (
               <div key={factor.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-2">

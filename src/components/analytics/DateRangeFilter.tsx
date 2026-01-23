@@ -2,17 +2,18 @@
 
 /**
  * Date Range Filter Component
- * 
+ *
  * Provides date range selection for analytics with preset options:
  * - Last 7 days
  * - Last 30 days
  * - Last 90 days
  * - Custom range
- * 
+ *
  * Hunter-Closer compliant - native component, no third-party date pickers.
  */
 
 import React, { useState } from 'react';
+import { useToast } from '@/hooks/useToast';
 
 export interface DateRange {
   startDate: Date;
@@ -30,6 +31,7 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [customStart, setCustomStart] = useState(formatDateForInput(value.startDate));
   const [customEnd, setCustomEnd] = useState(formatDateForInput(value.endDate));
+  const { error } = useToast();
 
   const presets = [
     { label: 'Last 7 Days', value: '7d' as const, days: 7 },
@@ -61,12 +63,12 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
     const endDate = new Date(customEnd);
 
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      alert('Please enter valid dates');
+      error('Please enter valid dates');
       return;
     }
 
     if (startDate > endDate) {
-      alert('Start date must be before end date');
+      error('Start date must be before end date');
       return;
     }
 

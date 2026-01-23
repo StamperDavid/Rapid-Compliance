@@ -23,7 +23,7 @@ export function ScraperSection({ template, onUpdate, disabled, onRemove, canRemo
     key.startsWith('research.scrapingStrategy')
   );
 
-  const handleScrapingStrategyChange = (field: string, value: any) => {
+  const handleScrapingStrategyChange = (field: string, value: string | number | boolean) => {
     onUpdate({
       research: {
         ...template.research,
@@ -31,7 +31,7 @@ export function ScraperSection({ template, onUpdate, disabled, onRemove, canRemo
           ...template.research?.scrapingStrategy,
           [field]: value,
         },
-      } as any,
+      } as IndustryTemplate['research'],
     });
   };
 

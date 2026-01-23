@@ -6,9 +6,32 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+
+interface SettingsResponse {
+  settings?: {
+    subdomain?: string;
+    customDomain?: string;
+    customDomainVerified?: boolean;
+    sslEnabled?: boolean;
+    status?: 'draft' | 'published';
+    seo?: {
+      title: string;
+      description: string;
+      keywords: string[];
+      robotsIndex: boolean;
+      robotsFollow: boolean;
+      favicon: string;
+    };
+    analytics?: {
+      googleAnalyticsId: string;
+      googleTagManagerId: string;
+      facebookPixelId: string;
+    };
+  };
+}
 
 export default function WebsiteSettingsPage() {
   const params = useParams();
@@ -40,11 +63,7 @@ export default function WebsiteSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
-    loadSettings();
-  }, [orgId]);
-
-  async function loadSettings() {
+  const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/website/settings?organizationId=${orgId}`);
@@ -53,19 +72,24 @@ export default function WebsiteSettingsPage() {
         throw new Error('Failed to load settings');
       }
 
-      const data = await response.json();
+      const data = await response.json() as SettingsResponse;
       if (data.settings) {
         setSettings(prev => ({ ...prev, ...data.settings }));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Website Settings] Load error:', error);
-      setMessage({ type: 'error', text: (error.message !== '' && error.message != null) ? error.message : 'Failed to load settings' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load settings';
+      setMessage({ type: 'error', text: errorMessage });
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId]);
 
-  async function handleSave() {
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
+
+  async function handleSave(): Promise<void> {
     try {
       setSaving(true);
       setMessage(null);
@@ -84,18 +108,17 @@ export default function WebsiteSettingsPage() {
       }
 
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Website Settings] Save error:', error);
-      setMessage({ type: 'error', text: (error.message !== '' && error.message != null) ? error.message : 'Failed to save settings' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
+      setMessage({ type: 'error', text: errorMessage });
     } finally {
       setSaving(false);
     }
   }
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#3b82f6';
-  const bgPaper = (theme?.colors?.background?.paper !== '' && theme?.colors?.background?.paper != null) ? theme.colors.background.paper : '#1a1a1a';
   const textPrimary = (theme?.colors?.text?.primary !== '' && theme?.colors?.text?.primary != null) ? theme.colors.text.primary : '#ffffff';
-  const textSecondary = (theme?.colors?.text?.secondary !== '' && theme?.colors?.text?.secondary != null) ? theme.colors.text.secondary : '#9ca3af';
 
   if (loading) {
     return (
@@ -369,7 +392,7 @@ export default function WebsiteSettingsPage() {
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
           <button
-            onClick={loadSettings}
+            onClick={() => void loadSettings()}
             disabled={saving}
             style={{
               padding: '0.75rem 1.5rem',
@@ -385,7 +408,7 @@ export default function WebsiteSettingsPage() {
           </button>
 
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             disabled={saving}
             style={{
               padding: '0.75rem 1.5rem',

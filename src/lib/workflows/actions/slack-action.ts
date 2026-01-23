@@ -5,6 +5,38 @@
 
 import type { BaseAction, WorkflowTriggerData } from '@/types/workflow';
 
+// Slack API response types
+interface SlackIntegration {
+  accessToken?: string;
+  token?: string;
+}
+
+interface SlackChannel {
+  id: string;
+  name: string;
+}
+
+interface SlackUser {
+  id: string;
+}
+
+interface SlackApiResponse {
+  ok: boolean;
+  error?: string;
+}
+
+interface SlackPostMessageResponse extends SlackApiResponse {
+  ts?: string;
+}
+
+interface SlackConversationsListResponse extends SlackApiResponse {
+  channels?: SlackChannel[];
+}
+
+interface SlackUserLookupResponse extends SlackApiResponse {
+  user?: SlackUser;
+}
+
 export interface SlackActionConfig extends BaseAction {
   type: 'send_slack';
   config: {
@@ -53,8 +85,12 @@ export async function executeSlackAction(
     const integration = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
       'slack'
-    );
-    slackToken = (integration as any)?.accessToken || (integration as any)?.token;
+    ) as unknown;
+
+    if (integration && typeof integration === 'object') {
+      const slackIntegration = integration as SlackIntegration;
+      slackToken = slackIntegration.accessToken ?? slackIntegration.token ?? null;
+    }
   } catch {
     // No integration found
   }
@@ -64,8 +100,8 @@ export async function executeSlackAction(
   }
 
   // Determine target (channel or user)
-  let target: string;
-  
+  let target: string | undefined;
+
   if (channelId) {
     target = channelId;
   } else if (channelName) {
@@ -80,12 +116,16 @@ export async function executeSlackAction(
     throw new Error('Slack action requires channelId, channelName, userId, or userEmail');
   }
 
+  if (!target) {
+    throw new Error('Failed to determine Slack target');
+  }
+
   // Replace template variables in message
   const processedMessage = replaceTemplateVariables(message, triggerData);
   
   // Process blocks if provided
-  const processedBlocks = blocks 
-    ? JSON.parse(replaceTemplateVariables(JSON.stringify(blocks), triggerData))
+  const processedBlocks = blocks
+    ? JSON.parse(replaceTemplateVariables(JSON.stringify(blocks), triggerData)) as unknown[]
     : undefined;
 
   // Send message via Slack API
@@ -110,10 +150,10 @@ export async function executeSlackAction(
     }),
   });
 
-  const result = await response.json();
+  const result = await response.json() as SlackPostMessageResponse;
 
   if (!result.ok) {
-    throw new Error(`Slack API error: ${result.error || 'Unknown error'}`);
+    throw new Error(`Slack API error: ${result.error ?? 'Unknown error'}`);
   }
 
   return {
@@ -138,14 +178,14 @@ async function getChannelIdByName(token: string, channelName: string): Promise<s
     },
   });
 
-  const result = await response.json();
+  const result = await response.json() as SlackConversationsListResponse;
 
   if (!result.ok) {
-    throw new Error(`Failed to list Slack channels: ${result.error}`);
+    throw new Error(`Failed to list Slack channels: ${result.error ?? 'Unknown error'}`);
   }
 
-  const channel = result.channels?.find((c: Record<string, unknown>) => c.name === name);
-  
+  const channel = result.channels?.find((c) => c.name === name);
+
   if (!channel) {
     throw new Error(`Slack channel not found: ${channelName}`);
   }
@@ -164,13 +204,17 @@ async function getUserIdByEmail(token: string, email: string): Promise<string> {
     },
   });
 
-  const result = await response.json();
+  const result = await response.json() as SlackUserLookupResponse;
 
   if (!result.ok) {
     if (result.error === 'users_not_found') {
       throw new Error(`Slack user not found with email: ${email}`);
     }
-    throw new Error(`Failed to look up Slack user: ${result.error}`);
+    throw new Error(`Failed to look up Slack user: ${result.error ?? 'Unknown error'}`);
+  }
+
+  if (!result.user) {
+    throw new Error(`Slack user not found with email: ${email}`);
   }
 
   return result.user.id;
@@ -180,7 +224,7 @@ async function getUserIdByEmail(token: string, email: string): Promise<string> {
  * Replace {{variable}} placeholders with values from triggerData
  */
 function replaceTemplateVariables(template: string, data: WorkflowTriggerData): string {
-  return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+  return template.replace(/\{\{([^}]+)\}\}/g, (match, path: string) => {
     const value = getNestedValue(data, path.trim());
     if (value === undefined || value === null) {
       return match;

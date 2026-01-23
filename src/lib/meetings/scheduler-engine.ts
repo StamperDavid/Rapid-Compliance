@@ -182,8 +182,9 @@ export async function scheduleMeeting(
 
     return meeting;
 
-  } catch (error: any) {
-    logger.error('Failed to schedule meeting', error, { organizationId });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to schedule meeting', error instanceof Error ? error : new Error(errorMessage), { organizationId });
     throw error;
   }
 }
@@ -349,8 +350,9 @@ Looking forward to speaking with you!
 
     logger.info('Meeting reminder sent', { meetingId });
 
-  } catch (error: any) {
-    logger.error('Failed to send meeting reminder', error, { meetingId });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to send meeting reminder', error instanceof Error ? error : new Error(errorMessage), { meetingId });
   }
 }
 

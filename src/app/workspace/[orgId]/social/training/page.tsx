@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
 import type { SocialTrainingSettings, BrandDNA } from '@/types/organization';
 
 type TabType = 'settings' | 'generate' | 'history' | 'knowledge';
@@ -62,6 +63,7 @@ export default function SocialMediaTrainingPage() {
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
+  const toast = useToast();
 
   // UI State
   const [loading, setLoading] = useState(true);
@@ -118,10 +120,11 @@ export default function SocialMediaTrainingPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       // Load social training settings
-      const socialSettings = await FirestoreService.get(
+      const socialSettingsData = await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/toolTraining`,
         'social'
-      ) as SocialTrainingSettings | null;
+      );
+      const socialSettings = socialSettingsData as SocialTrainingSettings | null | undefined;
 
       if (socialSettings) {
         setEmojiUsage(socialSettings.emojiUsage || 'light');
@@ -142,7 +145,8 @@ export default function SocialMediaTrainingPage() {
       }
 
       // Load Brand DNA
-      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+      const orgDataRaw = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+      const orgData = orgDataRaw as { brandDNA?: BrandDNA } | null | undefined;
       if (orgData?.brandDNA) {
         setBrandDNA(orgData.brandDNA);
       }
@@ -154,7 +158,7 @@ export default function SocialMediaTrainingPage() {
         [orderBy('generatedAt', 'desc')],
         50
       );
-      setHistory(historyResult.data as HistoryItem[] || []);
+      setHistory((historyResult.data as HistoryItem[] | undefined) ?? []);
 
       // Load knowledge items
       const knowledgeResult = await FirestoreService.getAllPaginated(
@@ -162,7 +166,7 @@ export default function SocialMediaTrainingPage() {
         [orderBy('uploadedAt', 'desc')],
         50
       );
-      setKnowledgeItems(knowledgeResult.data as KnowledgeItem[] || []);
+      setKnowledgeItems((knowledgeResult.data as KnowledgeItem[] | undefined) ?? []);
 
     } catch (error) {
       logger.error('Error loading social training settings:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
@@ -172,7 +176,7 @@ export default function SocialMediaTrainingPage() {
   }, [orgId]);
 
   useEffect(() => {
-    loadSettings();
+    void loadSettings();
   }, [loadSettings]);
 
   const loadDemoData = () => {
@@ -232,7 +236,7 @@ export default function SocialMediaTrainingPage() {
 
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
       if (!isFirebaseConfigured) {
-        alert('Settings saved (demo mode)');
+        toast.success('Settings saved (demo mode)');
         setSaving(false);
         return;
       }
@@ -258,17 +262,17 @@ export default function SocialMediaTrainingPage() {
         {
           ...settings,
           updatedAt: new Date().toISOString(),
-          updatedBy: user?.id || 'unknown',
+          updatedBy: user?.id ?? 'unknown',
         },
         true
       );
 
       logger.info('Social training settings saved', { file: 'social/training/page.tsx', orgId });
-      alert('Settings saved successfully!');
+      toast.success('Settings saved successfully!');
 
     } catch (error) {
       logger.error('Error saving social training settings:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
-      alert('Failed to save settings. Please try again.');
+      toast.error('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -277,7 +281,7 @@ export default function SocialMediaTrainingPage() {
   // Generate sample post
   const generateSamplePost = async () => {
     if (!generateTopic.trim()) {
-      alert('Please enter a topic or prompt for the post.');
+      toast.warning('Please enter a topic or prompt for the post.');
       return;
     }
 
@@ -323,21 +327,22 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
       if (isFirebaseConfigured) {
         try {
           const { FirestoreService } = await import('@/lib/db/firestore-service');
-          const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+          const adminKeysRaw = await FirestoreService.get('admin', 'platform-api-keys');
+          const adminKeys = adminKeysRaw as { openrouter?: { apiKey?: string } } | null | undefined;
 
           if (adminKeys?.openrouter?.apiKey) {
             const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
             const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
 
             const response = await provider.chat({
-              model: 'anthropic/claude-3.5-sonnet' as any,
+              model: 'anthropic/claude-3.5-sonnet',
               messages: [{ role: 'user', content: prompt }],
               temperature: 0.7,
             });
 
             responseText = response.content;
           }
-        } catch (aiError) {
+        } catch (_aiError) {
           logger.warn('AI provider failed, using demo response', { file: 'social/training/page.tsx' });
         }
       }
@@ -353,7 +358,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
       }
 
       // Extract hashtags from response
-      const hashtagMatches = responseText.match(/#\w+/g) || [];
+      const hashtagMatches = responseText.match(/#\w+/g) ?? [];
       const hashtags = hashtagMatches.map(tag => tag.substring(1));
 
       const newPost: GeneratedPost = {
@@ -370,7 +375,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
 
     } catch (error) {
       logger.error('Error generating sample post:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
-      alert('Failed to generate post. Please try again.');
+      toast.error('Failed to generate post. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -380,7 +385,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      alert('Copied to clipboard!');
+      toast.success('Copied to clipboard!');
     } catch (error) {
       logger.error('Failed to copy to clipboard:', error instanceof Error ? error : undefined, { file: 'social/training/page.tsx' });
     }
@@ -413,7 +418,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
         saved: true,
       }, ...prev]);
 
-      alert('Saved to history!');
+      toast.success('Saved to history!');
     } catch (error) {
       logger.error('Error saving to history:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
     }
@@ -578,7 +583,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           Company Description
                         </label>
                         <p style={{ fontSize: '0.875rem', color: '#ffffff' }}>
-                          {brandDNA.companyDescription || 'Not set'}
+                          {brandDNA.companyDescription ?? 'Not set'}
                         </p>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -593,7 +598,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             Tone of Voice
                           </label>
                           <p style={{ fontSize: '0.875rem', color: '#ffffff', textTransform: 'capitalize' }}>
-                            {brandDNA.toneOfVoice || 'Not set'}
+                            {brandDNA.toneOfVoice ?? 'Not set'}
                           </p>
                         </div>
                         <div>
@@ -607,7 +612,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             Key Phrases
                           </label>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                            {(brandDNA.keyPhrases || []).slice(0, 4).map((phrase, idx) => (
+                            {(brandDNA.keyPhrases ?? []).slice(0, 4).map((phrase, idx) => (
                               <span
                                 key={idx}
                                 style={{
@@ -1133,7 +1138,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
 
                 {/* Save Button */}
                 <button
-                  onClick={saveSettings}
+                  onClick={() => void saveSettings()}
                   disabled={saving}
                   style={{
                     padding: '0.875rem 2rem',
@@ -1227,7 +1232,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 </div>
 
                 <button
-                  onClick={generateSamplePost}
+                  onClick={() => void generateSamplePost()}
                   disabled={isGenerating}
                   style={{
                     width: '100%',
@@ -1292,7 +1297,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     )}
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
-                        onClick={generateSamplePost}
+                        onClick={() => void generateSamplePost()}
                         style={{
                           flex: 1,
                           padding: '0.5rem',
@@ -1307,7 +1312,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         Regenerate
                       </button>
                       <button
-                        onClick={() => copyToClipboard(generatedPost.content)}
+                        onClick={() => void copyToClipboard(generatedPost.content)}
                         style={{
                           flex: 1,
                           padding: '0.5rem',
@@ -1433,7 +1438,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 </div>
 
                 <button
-                  onClick={generateSamplePost}
+                  onClick={() => void generateSamplePost()}
                   disabled={isGenerating || !generateTopic.trim()}
                   style={{
                     width: '100%',
@@ -1631,7 +1636,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                       <button
-                        onClick={generateSamplePost}
+                        onClick={() => void generateSamplePost()}
                         style={{
                           flex: 1,
                           padding: '0.75rem',
@@ -1646,7 +1651,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         Regenerate
                       </button>
                       <button
-                        onClick={() => copyToClipboard(generatedPost.content)}
+                        onClick={() => void copyToClipboard(generatedPost.content)}
                         style={{
                           flex: 1,
                           padding: '0.75rem',
@@ -1661,7 +1666,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         Copy
                       </button>
                       <button
-                        onClick={() => saveToHistory(generatedPost)}
+                        onClick={() => void saveToHistory(generatedPost)}
                         style={{
                           flex: 1,
                           padding: '0.75rem',
@@ -1758,7 +1763,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       {item.content}
                     </p>
                     <button
-                      onClick={() => copyToClipboard(item.content)}
+                      onClick={() => void copyToClipboard(item.content)}
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: 'transparent',

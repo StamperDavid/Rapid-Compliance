@@ -98,7 +98,7 @@ const FUNNEL_TYPES = {
   },
 };
 
-const LANDING_PAGE_SECTIONS = {
+const _LANDING_PAGE_SECTIONS = {
   hero: {
     elements: ['Headline', 'Subheadline', 'CTA button', 'Hero image/video'],
     purpose: 'Capture attention and communicate core value',
@@ -680,7 +680,7 @@ export class FunnelEngineer extends BaseSpecialist {
    * Design landing page structure
    */
   designLandingPage(request: LandingPageRequest): LandingPageResult {
-    const { pageGoal, targetAudience, offer, pricePoint, competitiveDifferentiator } = request;
+    const { pageGoal, targetAudience, offer, pricePoint, competitiveDifferentiator: _competitiveDifferentiator } = request;
 
     this.log('INFO', `Designing landing page for ${pageGoal}`);
 
@@ -941,7 +941,7 @@ export class FunnelEngineer extends BaseSpecialist {
     businessModel: string,
     pricePoint: string,
     targetAudience: string,
-    productName?: string
+    _productName?: string
   ): string[] {
     const recommendations: string[] = [];
 
@@ -985,7 +985,7 @@ export class FunnelEngineer extends BaseSpecialist {
     pageGoal: string,
     pricePoint: string,
     targetAudience: string,
-    offer: string
+    _offer: string
   ): PageSection[] {
     const sections: PageSection[] = [];
 
@@ -1107,7 +1107,7 @@ export class FunnelEngineer extends BaseSpecialist {
     return elements;
   }
 
-  private getMobileOptimizations(pageGoal: string): string[] {
+  private getMobileOptimizations(_pageGoal: string): string[] {
     return [
       'Single column layout for mobile',
       'CTA buttons full-width and thumb-friendly (minimum 44px height)',
@@ -1148,7 +1148,7 @@ export class FunnelEngineer extends BaseSpecialist {
         formFields: stepFields,
         messaging:
           stepNumber === 1
-            ? `Get instant access to ${incentive || 'your free resource'}`
+            ? `Get instant access to ${incentive ?? 'your free resource'}`
             : 'Just a few more details to personalize your experience',
         validation: stepFields.includes('email') ? 'Email validation required' : 'Required fields only',
         exitRate: `${exitRate}%`,
@@ -1188,7 +1188,7 @@ export class FunnelEngineer extends BaseSpecialist {
       timing: 'Immediate',
       channel: 'email',
       purpose: 'Deliver lead magnet and set expectations',
-      messageTemplate: `Subject: Here's your ${incentive || 'free resource'}! | Body: Deliver value immediately, set expectation for next email`,
+      messageTemplate: `Subject: Here's your ${incentive ?? 'free resource'}! | Body: Deliver value immediately, set expectation for next email`,
     });
 
     if (nurturePlan === 'immediate-sale') {
@@ -1288,7 +1288,7 @@ export class FunnelEngineer extends BaseSpecialist {
     currentConversion: number,
     issues?: string[]
   ): string[] {
-    const bottlenecks: string[] = issues || [];
+    const bottlenecks: string[] = issues ?? [];
 
     if (currentConversion < 0.02) {
       bottlenecks.push('Critically low conversion - likely traffic quality or offer mismatch issue');
@@ -1331,8 +1331,8 @@ export class FunnelEngineer extends BaseSpecialist {
     currentConversion: number,
     funnelStages: string[],
     trafficSource: string,
-    targetAudience: string,
-    issues?: string[]
+    _targetAudience: string,
+    _issues?: string[]
   ): Optimization[] {
     const optimizations: Optimization[] = [];
 

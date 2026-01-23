@@ -225,8 +225,8 @@ async function getWorkflowMetrics(
   const executionTimes = executions
     .filter((e) => e.completedAt && e.startedAt)
     .map((e) => {
-      const start = toDate(e.startedAt!);
-      const end = toDate(e.completedAt!);
+      const start = toDate(e.startedAt);
+      const end = toDate(e.completedAt);
       return end.getTime() - start.getTime();
     });
 
@@ -309,8 +309,8 @@ function calculateTopWorkflows(
       const executionTimes = data.executions
         .filter(e => e.completedAt && e.startedAt)
         .map(e => {
-          const start = toDate(e.startedAt!);
-          const end = toDate(e.completedAt!);
+          const start = toDate(e.startedAt);
+          const end = toDate(e.completedAt);
           return end.getTime() - start.getTime();
         });
       
@@ -729,12 +729,12 @@ function calculateAverageVelocity(closedDeals: DealAnalyticsRecord[]): number {
   const velocities = closedDeals
     .filter((d) => d.createdAt && d.closedAt)
     .map((d) => {
-      const created = toDate(d.createdAt!);
-      const closed = toDate(d.closedAt!);
+      const created = toDate(d.createdAt);
+      const closed = toDate(d.closedAt);
       const days = (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
       return days;
     });
-  
+
   return velocities.length > 0
     ? velocities.reduce((sum, v) => sum + v, 0) / velocities.length
     : 0;

@@ -420,10 +420,12 @@ export function getAllTemplates(): NotificationTemplate[] {
       priority: 'critical',
       channels: ['slack', 'in_app'],
       slack: {
+        // eslint-disable-next-line no-template-curly-in-string -- Template string placeholders for variable interpolation
         text: '🚨 QUOTA AT RISK: {{period}} - ${{gap}} gap ({{attainmentProbability}}% probability)',
       },
       inApp: {
         title: '🚨 Quota At Risk',
+        // eslint-disable-next-line no-template-curly-in-string -- Template string placeholders for variable interpolation
         body: '${{gap}} gap - {{attainmentProbability}}% probability',
         icon: '🚨',
         actionUrl: '/forecasting',

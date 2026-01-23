@@ -6,14 +6,45 @@
 import type { ConnectedIntegration } from '@/types/integrations';
 import { sendGmailEmail, listEmails, getEmail } from '../gmail-service';
 
+export interface GmailTokens {
+  access_token: string;
+  refresh_token?: string;
+}
+
+export interface GmailSendEmailParams {
+  to: string;
+  subject: string;
+  body: string;
+  inReplyTo?: string;
+  references?: string;
+}
+
+export interface GmailSearchParams {
+  query: string;
+  maxResults?: number;
+}
+
+type GmailParameters = {
+  to?: string;
+  subject?: string;
+  body?: string;
+  inReplyTo?: string;
+  references?: string;
+  query?: string;
+  maxResults?: number;
+  messageId?: string;
+};
+
+type GmailResult = unknown;
+
 /**
  * Execute a Gmail function
  */
 export async function executeGmailFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: GmailParameters,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<GmailResult> {
   const tokens = {
     access_token: (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '',
     refresh_token: integration.refreshToken,

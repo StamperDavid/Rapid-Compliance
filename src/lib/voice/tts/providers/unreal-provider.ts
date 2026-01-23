@@ -4,15 +4,13 @@
  * https://unrealspeech.com/
  */
 
-import type {
-  TTSProvider,
-  TTSSynthesizeResponse,
-  TTSVoice,
-  TTSVoiceSettings,
-  TTSProviderInfo,
-  AudioFormat} from '../types';
 import {
-  TTS_PROVIDER_INFO
+  TTS_PROVIDER_INFO,
+  type TTSProvider,
+  type TTSSynthesizeResponse,
+  type TTSVoice,
+  type TTSVoiceSettings,
+  type TTSProviderInfo
 } from '../types';
 
 const UNREAL_API_URL = 'https://api.v7.unrealspeech.com';
@@ -66,7 +64,7 @@ export class UnrealProvider implements TTSProvider {
   private apiKey: string;
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.UNREAL_SPEECH_API_KEY || '';
+    this.apiKey = apiKey ?? process.env.UNREAL_SPEECH_API_KEY ?? '';
   }
 
   async synthesize(
@@ -106,7 +104,11 @@ export class UnrealProvider implements TTSProvider {
         throw new Error(`Unreal Speech API error: ${response.status} - ${error}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as {
+        OutputUri?: string;
+        SynthesisTask?: { OutputUri?: string };
+        TimestampsUri?: string;
+      };
 
       // Calculate metrics
       const charactersUsed = text.length;
@@ -115,9 +117,9 @@ export class UnrealProvider implements TTSProvider {
 
       // Unreal returns OutputUri with the audio URL
       return {
-        audio: data.OutputUri || data.SynthesisTask?.OutputUri || '',
+        audio: data.OutputUri ?? data.SynthesisTask?.OutputUri ?? '',
         format: effectiveSettings.format,
-        durationSeconds: data.TimestampsUri ? this.estimateDuration(text) : this.estimateDuration(text),
+        durationSeconds: this.estimateDuration(text),
         charactersUsed,
         engine: 'unreal',
         estimatedCostCents: Math.round(estimatedCostCents * 100) / 100,
@@ -134,9 +136,9 @@ export class UnrealProvider implements TTSProvider {
     return Math.round((wordCount / wordsPerMinute) * 60 * 10) / 10;
   }
 
-  async listVoices(): Promise<TTSVoice[]> {
+  listVoices(): Promise<TTSVoice[]> {
     // Unreal Speech has a fixed set of voices, no API to list them
-    return UNREAL_VOICES;
+    return Promise.resolve(UNREAL_VOICES);
   }
 
   getProviderInfo(): TTSProviderInfo {
@@ -168,6 +170,6 @@ export class UnrealProvider implements TTSProvider {
 
   async getVoice(voiceId: string): Promise<TTSVoice | null> {
     const voices = await this.listVoices();
-    return voices.find(v => v.id === voiceId) || null;
+    return voices.find(v => v.id === voiceId) ?? null;
   }
 }

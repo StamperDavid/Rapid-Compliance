@@ -26,7 +26,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
   ];
 
   const filteredWidgets = Object.entries(widgetDefinitions)
-    .filter(([type, def]) => {
+    .filter(([_type, def]) => {
       const matchesCategory = def.category === activeCategory;
       const matchesSearch = searchQuery === '' || 
         def.label.toLowerCase().includes(searchQuery.toLowerCase()) ||

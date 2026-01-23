@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createCampaign } from '@/lib/email/campaign-manager'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
 
 export default function NewCampaignPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
+  const toast = useToast();
 
   const [campaign, setCampaign] = useState({
     name: '',
@@ -35,7 +37,7 @@ export default function NewCampaignPage() {
       router.push(`/workspace/${orgId}/email/campaigns`);
     } catch (error: unknown) {
       logger.error('Error creating campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to create campaign');
+      toast.error('Failed to create campaign');
     } finally {
       setCreating(false);
     }
@@ -46,7 +48,7 @@ export default function NewCampaignPage() {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Create Email Campaign</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
           <div className="bg-gray-900 rounded-lg p-6">
             <div className="space-y-4">
               <div>

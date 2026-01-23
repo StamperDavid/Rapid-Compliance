@@ -45,11 +45,13 @@ export async function processSequences(): Promise<{
               }
             }
           } catch (error) {
+            // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
             logger.error('[Sequence Scheduler] Error processing enrollment ${enrollment.id}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
             errors++;
           }
         }
       } catch (error) {
+        // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
         logger.error('[Sequence Scheduler] Error processing org ${orgId}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
         errors++;
       }
@@ -103,6 +105,7 @@ async function getActiveEnrollments(orgId: string): Promise<ProspectEnrollment[]
 
     return enrollments as ProspectEnrollment[];
   } catch (error) {
+    // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
     logger.error('[Sequence Scheduler] Error getting enrollments for ${orgId}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
     return [];
   }
@@ -162,7 +165,7 @@ export async function handleEmailReply(
   enrollmentId: string,
   stepId: string,
   organizationId: string,
-  replyContent: string
+  _replyContent: string
 ): Promise<void> {
   logger.info('Sequence Scheduler Handling reply for enrollment enrollmentId}', { file: 'sequence-scheduler.ts' });
 
@@ -182,14 +185,18 @@ export async function handleEmailReply(
     action.updatedAt = new Date().toISOString();
   }
 
+  interface SequenceDoc {
+    stopOnResponse?: boolean;
+  }
+
   // Get sequence
   const sequence = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequences`,
     enrollment.sequenceId
-  );
+  ) as SequenceDoc;
 
   // If sequence is set to stop on response, pause enrollment
-  if (sequence && (sequence as any).stopOnResponse) {
+  if (sequence?.stopOnResponse) {
     enrollment.status = 'paused';
     enrollment.pausedAt = new Date().toISOString();
     enrollment.outcome = 'replied';

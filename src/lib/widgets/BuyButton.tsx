@@ -25,7 +25,7 @@ export interface BuyButtonProps {
 
 export function BuyButton({
   productId,
-  productName,
+  productName: _productName,
   price,
   currency = 'USD',
   buttonText = 'Buy Now',
@@ -60,7 +60,7 @@ export function BuyButton({
     setLoading(true);
     try {
       if (onCheckout) {
-        await onCheckout(productId);
+        onCheckout(productId);
       } else {
         // Default behavior: Add to cart and redirect to checkout
         const response = await fetch('/api/ecommerce/cart/add', {
@@ -82,7 +82,7 @@ export function BuyButton({
 
   return (
     <button
-      onClick={handleClick}
+      onClick={() => void handleClick()}
       disabled={loading}
       style={{
         ...sizes[size],

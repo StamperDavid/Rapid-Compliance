@@ -36,13 +36,13 @@ export default function PayPalIntegration({
 
   const handleConnect = async () => {
     if (!clientId || !clientSecret) {
-      alert('Please enter your PayPal credentials');
+      console.error('Please enter your PayPal credentials');
       return;
     }
     setIsConnecting(true);
     try {
       const orgId = window.location.pathname.split('/')[2] || 'current-org';
-      
+
       // Save PayPal API keys to backend
       const response = await fetch('/api/settings/api-keys', {
         method: 'POST',
@@ -55,9 +55,9 @@ export default function PayPalIntegration({
           mode: mode,
         }),
       });
-      
+
       if (!response.ok) {throw new Error('Failed to save PayPal credentials');}
-      
+
       onConnect({
         id: 'paypal',
         name: 'PayPal',
@@ -79,7 +79,7 @@ export default function PayPalIntegration({
       setClientSecret('');
     } catch (error) {
       console.error('Failed to configure PayPal:', error);
-      alert('Failed to save PayPal credentials. Please try again.');
+      console.error('Failed to save PayPal credentials. Please try again.');
     } finally {
       setIsConnecting(false);
     }
@@ -164,7 +164,7 @@ export default function PayPalIntegration({
           />
         </div>
         <button
-          onClick={handleConnect}
+          onClick={() => { void handleConnect(); }}
           disabled={isConnecting || !clientId || !clientSecret}
           style={{
             width: '100%',

@@ -40,7 +40,7 @@ export function TrendsCard({
   const hasFallers = trendAnalysis.fallers.length > 0;
   const hasConsistent = trendAnalysis.consistent.length > 0;
 
-  const getTrendIcon = (direction: 'improving' | 'declining' | 'stable') => {
+  const _getTrendIcon = (direction: 'improving' | 'declining' | 'stable') => {
     switch (direction) {
       case 'improving':
         return (
@@ -64,7 +64,7 @@ export function TrendsCard({
     }
   };
 
-  const getTrendColor = (direction: 'improving' | 'declining' | 'stable') => {
+  const _getTrendColor = (direction: 'improving' | 'declining' | 'stable') => {
     switch (direction) {
       case 'improving':
         return 'text-green-600';

@@ -3,18 +3,24 @@
 import React, { useState } from 'react';
 import type { ConnectedIntegration } from '@/types/integrations';
 
+interface GmailSettings {
+  trackOpens?: boolean;
+  trackClicks?: boolean;
+  autoCreateContacts?: boolean;
+}
+
 interface GmailIntegrationProps {
   integration: ConnectedIntegration | null;
   onConnect: (integration: Partial<ConnectedIntegration>) => void;
   onDisconnect: () => void;
-  onUpdate: (settings: any) => void;
+  onUpdate: (settings: GmailSettings) => void;
 }
 
-export default function GmailIntegration({ 
-  integration, 
-  onConnect, 
-  onDisconnect, 
-  onUpdate 
+export default function GmailIntegration({
+  integration,
+  onConnect: _onConnect,
+  onDisconnect,
+  onUpdate
 }: GmailIntegrationProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -27,23 +33,46 @@ export default function GmailIntegration({
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
     : '#333333';
 
-  const primaryColor = typeof window !== 'undefined' 
+  const primaryColor = typeof window !== 'undefined'
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
     : '#6366f1';
 
-  const handleConnect = async () => {
+  // Helper to safely get email from config
+  const getEmail = (): string | null => {
+    const config = integration?.config;
+    if (config && 'email' in config) {
+      const email = config.email;
+      return email ? String(email) : null;
+    }
+    return null;
+  };
+
+  // Helper to safely get settings
+  const getSettings = (): GmailSettings => {
+    const settings = integration?.settings;
+    if (settings) {
+      return {
+        trackOpens: settings.trackOpens as boolean | undefined,
+        trackClicks: settings.trackClicks as boolean | undefined,
+        autoCreateContacts: settings.autoCreateContacts as boolean | undefined,
+      };
+    }
+    return {};
+  };
+
+  const handleConnect = () => {
     setIsConnecting(true);
     try {
       // Get current user and org from context or URL
       const userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
       const orgId = window.location.pathname.split('/')[2] || 'current-org';
-      
+
       // Redirect to real Google OAuth flow
       window.location.href = `/api/integrations/google/auth?userId=${userId}&orgId=${orgId}`;
     } catch (error) {
       console.error('Failed to start Gmail OAuth:', error);
       setIsConnecting(false);
-      alert('Failed to connect to Gmail. Please try again.');
+      console.error('Failed to connect to Gmail. Please try again.');
     }
   };
 
@@ -84,7 +113,7 @@ export default function GmailIntegration({
           {isConnecting ? 'Connecting...' : 'Connect Gmail'}
         </button>
         <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem', textAlign: 'center' }}>
-          You'll be redirected to Google to authorize the connection
+          You&apos;ll be redirected to Google to authorize the connection
         </p>
       </div>
     );
@@ -105,9 +134,9 @@ export default function GmailIntegration({
               <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
                 Gmail
               </h3>
-              {(integration as any).email && (
+              {getEmail() && (
                 <p style={{ fontSize: '0.875rem', color: '#666' }}>
-                  {(integration as any).email}
+                  {getEmail()}
                 </p>
               )}
             </div>
@@ -135,7 +164,7 @@ export default function GmailIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={(integration as any).settings?.trackOpens}
+                checked={getSettings().trackOpens ?? false}
                 onChange={(e) => onUpdate({ trackOpens: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />
@@ -144,7 +173,7 @@ export default function GmailIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={(integration as any).settings?.trackClicks}
+                checked={getSettings().trackClicks ?? false}
                 onChange={(e) => onUpdate({ trackClicks: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />
@@ -153,7 +182,7 @@ export default function GmailIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={(integration as any).settings?.autoCreateContacts}
+                checked={getSettings().autoCreateContacts ?? false}
                 onChange={(e) => onUpdate({ autoCreateContacts: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />

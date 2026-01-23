@@ -11,11 +11,11 @@ interface GoogleCalendarIntegrationProps {
   onUpdate: (settings: Partial<GoogleCalendarType['settings']>) => void;
 }
 
-export default function GoogleCalendarIntegration({ 
-  integration, 
-  onConnect, 
-  onDisconnect, 
-  onUpdate 
+export default function GoogleCalendarIntegration({
+  integration,
+  onConnect: _onConnect,
+  onDisconnect,
+  onUpdate
 }: GoogleCalendarIntegrationProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -32,7 +32,7 @@ export default function GoogleCalendarIntegration({
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
     : '#6366f1';
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     setIsConnecting(true);
     try {
       // Get current user and org from localStorage
@@ -40,7 +40,7 @@ export default function GoogleCalendarIntegration({
       // LEGACY BACKUP (DO NOT USE): const org = JSON.parse(localStorage.getItem('currentOrganization') || '{}');
       const user: { uid?: string } = typeof window !== 'undefined' ? {} : {}; // TODO: Get from auth context
       const org: { id?: string } = typeof window !== 'undefined' ? {} : {}; // TODO: Get from route params
-      
+
       if (!user.uid || !org.id) {
         logger.error('User or organization not found', new Error('User or organization not found'), { file: 'GoogleCalendarIntegration.tsx' });
         setIsConnecting(false);
@@ -92,7 +92,7 @@ export default function GoogleCalendarIntegration({
           {isConnecting ? 'Connecting...' : 'Connect Google Calendar'}
         </button>
         <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem', textAlign: 'center' }}>
-          You'll be redirected to Google to authorize the connection
+          You&apos;ll be redirected to Google to authorize the connection
         </p>
       </div>
     );

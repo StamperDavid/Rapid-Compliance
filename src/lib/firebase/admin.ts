@@ -28,10 +28,10 @@ function initializeAdmin() {
   // For production/development - use service account
   try {
     let serviceAccount: admin.ServiceAccount | undefined;
-    
+
     // Option 1: Full JSON in single env var
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY) as admin.ServiceAccount;
       logger.info('🔑 Using FIREBASE_SERVICE_ACCOUNT_KEY env var', { file: 'admin.ts' });
     }
     
@@ -62,21 +62,22 @@ function initializeAdmin() {
         const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
         logger.info('🔍 Looking for serviceAccountKey.json', { path: keyPath, file: 'admin.ts' });
         if (fs.existsSync(keyPath)) {
-          serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+          serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8')) as admin.ServiceAccount;
           logger.info('🔑 Loaded serviceAccountKey.json successfully', { file: 'admin.ts' });
         } else {
           logger.warn('⚠️ serviceAccountKey.json not found', { path: keyPath, file: 'admin.ts' });
         }
-      } catch (e: any) {
-        logger.warn('⚠️ Could not load serviceAccountKey.json', { error: e.message, file: 'admin.ts' });
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        logger.warn('⚠️ Could not load serviceAccountKey.json', { error: errorMessage, file: 'admin.ts' });
       }
     }
 
     // Get project ID from env as fallback
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-      || process.env.FIREBASE_PROJECT_ID
-      || process.env.FIREBASE_ADMIN_PROJECT_ID
-      || 'ai-sales-platform-dev';
+      ?? process.env.FIREBASE_PROJECT_ID
+      ?? process.env.FIREBASE_ADMIN_PROJECT_ID
+      ?? 'ai-sales-platform-dev';
 
     if (serviceAccount) {
       adminApp = admin.initializeApp({
@@ -91,16 +92,23 @@ function initializeAdmin() {
       });
     }
 
+    // eslint-disable-next-line no-console -- Required for startup handshake confirmation
     console.log('[Auth] Firebase Admin Handshake Successful - Jasper is Online.');
     logger.info('🔥 Firebase Admin initialized', { file: 'admin.ts' });
     return adminApp;
-  } catch (error: any) {
-    if (error.code === 'app/duplicate-app') {
+  } catch (error: unknown) {
+    interface FirebaseError {
+      code?: string;
+      message?: string;
+    }
+    const firebaseError = error as FirebaseError;
+    if (firebaseError.code === 'app/duplicate-app') {
       adminApp = admin.app();
       return adminApp;
     }
-    logger.error('❌ Firebase Admin initialization failed', error, { file: 'admin.ts' });
-    throw error;
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('❌ Firebase Admin initialization failed', err, { file: 'admin.ts' });
+    throw err;
   }
 }
 

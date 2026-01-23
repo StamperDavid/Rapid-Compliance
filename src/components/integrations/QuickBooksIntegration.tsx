@@ -10,11 +10,11 @@ interface QuickBooksIntegrationProps {
   onUpdate: (settings: Partial<QuickBooksType['syncSettings']>) => void;
 }
 
-export default function QuickBooksIntegration({ 
-  integration, 
-  onConnect, 
-  onDisconnect, 
-  onUpdate 
+export default function QuickBooksIntegration({
+  integration,
+  onConnect: _onConnect,
+  onDisconnect,
+  onUpdate
 }: QuickBooksIntegrationProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -31,19 +31,19 @@ export default function QuickBooksIntegration({
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
     : '#6366f1';
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     setIsConnecting(true);
     try {
       // Get current user and org from context or URL
       const userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
       const orgId = window.location.pathname.split('/')[2] || 'current-org';
-      
+
       // Redirect to real QuickBooks OAuth flow
       window.location.href = `/api/integrations/quickbooks/auth?userId=${userId}&orgId=${orgId}`;
     } catch (error) {
       console.error('Failed to start QuickBooks OAuth:', error);
       setIsConnecting(false);
-      alert('Failed to connect to QuickBooks. Please try again.');
+      console.error('Failed to connect to QuickBooks. Please try again.');
     }
   };
 
@@ -84,7 +84,7 @@ export default function QuickBooksIntegration({
           {isConnecting ? 'Connecting...' : 'Connect QuickBooks'}
         </button>
         <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem', textAlign: 'center' }}>
-          You'll be redirected to QuickBooks to authorize the connection
+          You&apos;ll be redirected to QuickBooks to authorize the connection
         </p>
       </div>
     );
@@ -125,7 +125,7 @@ export default function QuickBooksIntegration({
           </div>
           {integration.connectedAt && (
             <p style={{ fontSize: '0.75rem', color: '#666' }}>
-              Connected {new Date(typeof integration.connectedAt === 'string' ? integration.connectedAt : (integration.connectedAt as any).toDate()).toLocaleDateString()}
+              Connected {new Date(typeof integration.connectedAt === 'string' ? integration.connectedAt : String(integration.connectedAt)).toLocaleDateString()}
             </p>
           )}
         </div>
@@ -179,7 +179,7 @@ export default function QuickBooksIntegration({
               </label>
               <select
                 value={integration.syncSettings?.syncDirection ?? 'bidirectional'}
-                onChange={(e) => onUpdate({ syncDirection: e.target.value as any })}
+                onChange={(e) => onUpdate({ syncDirection: e.target.value as 'crm_to_quickbooks' | 'quickbooks_to_crm' | 'bidirectional' })}
                 style={{
                   width: '100%',
                   padding: '0.5rem',

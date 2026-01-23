@@ -4,7 +4,6 @@
  */
 
 import { getDeals, type Deal } from './deal-service';
-import { getActivityStats } from './activity-service';
 import { logger } from '@/lib/logger/logger';
 
 export interface SalesVelocityMetrics {
@@ -63,10 +62,18 @@ export async function calculateSalesVelocity(
     // Get all deals
     const { data: allDeals } = await getDeals(organizationId, workspaceId);
     
+    // Define Firestore timestamp interface
+    interface FirestoreTimestamp {
+      toDate: () => Date;
+    }
+
     // Filter by date range if provided
-    const deals = dateRange 
+    const deals = dateRange
       ? allDeals.filter(d => {
-          const createdAt = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
+          const createdAtValue = d.createdAt;
+          const createdAt = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue
+            ? (createdAtValue as FirestoreTimestamp).toDate()
+            : new Date(createdAtValue as string | number);
           return createdAt >= dateRange.start && createdAt <= dateRange.end;
         })
       : allDeals;
@@ -86,10 +93,23 @@ export async function calculateSalesVelocity(
     let totalCycleDays = 0;
     let cycleCount = 0;
     
+    // Define Firestore timestamp interface
+    interface FirestoreTimestamp {
+      toDate: () => Date;
+    }
+
     closedDeals.forEach(deal => {
       if (deal.actualCloseDate) {
-        const createdAt = deal.createdAt?.toDate ? deal.createdAt.toDate() : new Date(deal.createdAt);
-        const closedAt = deal.actualCloseDate?.toDate ? deal.actualCloseDate.toDate() : new Date(deal.actualCloseDate);
+        const createdAtValue = deal.createdAt;
+        const createdAt = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue
+          ? (createdAtValue as FirestoreTimestamp).toDate()
+          : new Date(createdAtValue as string | number);
+
+        const closedAtValue = deal.actualCloseDate;
+        const closedAt = typeof closedAtValue === 'object' && closedAtValue !== null && 'toDate' in closedAtValue
+          ? (closedAtValue as FirestoreTimestamp).toDate()
+          : new Date(closedAtValue as string | number);
+
         const cycleDays = Math.floor((closedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
         totalCycleDays += cycleDays;
         cycleCount++;
@@ -111,7 +131,7 @@ export async function calculateSalesVelocity(
     const velocity = daysInPeriod > 0 ? totalRevenue / daysInPeriod : 0;
 
     // Calculate stage metrics
-    const stageMetrics = await calculateStageMetrics(organizationId, workspaceId, deals);
+    const stageMetrics = calculateStageMetrics(organizationId, workspaceId, deals);
 
     // Calculate conversion rates
     const conversionRates = calculateConversionRates(deals);
@@ -143,20 +163,21 @@ export async function calculateSalesVelocity(
 
     return metrics;
 
-  } catch (error: any) {
-    logger.error('Sales velocity calculation failed', error, { organizationId });
-    throw new Error(`Sales velocity calculation failed: ${error.message}`);
+  } catch (error: unknown) {
+    const errorInstance = error instanceof Error ? error : new Error(String(error));
+    logger.error('Sales velocity calculation failed', errorInstance, { organizationId });
+    throw new Error(`Sales velocity calculation failed: ${errorInstance.message}`);
   }
 }
 
 /**
  * Calculate metrics for each stage
  */
-async function calculateStageMetrics(
-  organizationId: string,
-  workspaceId: string,
+function calculateStageMetrics(
+  _organizationId: string,
+  _workspaceId: string,
   deals: Deal[]
-): Promise<Map<Deal['stage'], StageMetrics>> {
+): Map<Deal['stage'], StageMetrics> {
   const stages: Deal['stage'][] = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
   const stageMetrics = new Map<Deal['stage'], StageMetrics>();
 
@@ -165,10 +186,18 @@ async function calculateStageMetrics(
     const totalValue = stageDeals.reduce((sum, d) => sum + d.value, 0);
     const avgDealSize = stageDeals.length > 0 ? totalValue / stageDeals.length : 0;
 
+    // Define Firestore timestamp interface
+    interface FirestoreTimestamp {
+      toDate: () => Date;
+    }
+
     // Calculate avg time in stage
     let totalDays = 0;
     stageDeals.forEach(deal => {
-      const createdAt = deal.createdAt?.toDate ? deal.createdAt.toDate() : new Date(deal.createdAt);
+      const createdAtValue = deal.createdAt;
+      const createdAt = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue
+        ? (createdAtValue as FirestoreTimestamp).toDate()
+        : new Date(createdAtValue as string | number);
       const now = new Date();
       const daysInStage = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
       totalDays += daysInStage;
@@ -176,7 +205,7 @@ async function calculateStageMetrics(
     const avgTimeInStage = stageDeals.length > 0 ? Math.round(totalDays / stageDeals.length) : 0;
 
     // Calculate conversion rate (to next stage or closed_won)
-    const nextStageIndex = stages.indexOf(stage) + 1;
+    const _nextStageIndex = stages.indexOf(stage) + 1;
     const movedForward = deals.filter((d) => {
       const currentIndex = stages.indexOf(d.stage);
       return currentIndex > stages.indexOf(stage);
@@ -245,8 +274,8 @@ function calculateConversionRates(deals: Deal[]): Map<string, number> {
  */
 function calculateForecast(
   activeDeals: Deal[],
-  avgDealSize: number,
-  winRate: number
+  _avgDealSize: number,
+  _winRate: number
 ): { forecastedRevenue: number; confidenceLevel: number } {
   let forecastedRevenue = 0;
   let totalConfidence = 0;
@@ -364,8 +393,9 @@ export async function getPipelineInsights(
 
     return insights;
 
-  } catch (error: any) {
-    logger.error('Failed to generate pipeline insights', error, { organizationId });
+  } catch (error: unknown) {
+    const errorInstance = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to generate pipeline insights', errorInstance, { organizationId });
     return [];
   }
 }

@@ -34,23 +34,23 @@ export default function ZapierIntegration({
 
   const handleConnect = async () => {
     if (!webhookUrl) {
-      alert('Please enter your Zapier webhook URL');
+      console.error('Please enter your Zapier webhook URL');
       return;
     }
-    
+
     // Validate webhook URL format
     try {
       new URL(webhookUrl);
       if (!webhookUrl.includes('hooks.zapier.com')) {
         throw new Error('Invalid Zapier webhook URL');
       }
-    } catch (error) {
-      alert('Please enter a valid Zapier webhook URL (e.g., https://hooks.zapier.com/hooks/catch/...)');
+    } catch (_error) {
+      console.error('Please enter a valid Zapier webhook URL (e.g., https://hooks.zapier.com/hooks/catch/...)');
       return;
     }
-    
+
     setIsConnecting(true);
-    
+
     try {
       // Test the webhook connection
       const testResponse = await fetch(webhookUrl, {
@@ -64,11 +64,11 @@ export default function ZapierIntegration({
           message: 'Testing Zapier webhook connection',
         }),
       });
-      
+
       if (!testResponse.ok) {
         throw new Error('Webhook test failed - please verify the URL is correct');
       }
-      
+
       // Connection successful
       onConnect({
         id: 'zapier',
@@ -88,8 +88,9 @@ export default function ZapierIntegration({
         connectedAt: new Date().toISOString(),
       });
       setWebhookUrl('');
-    } catch (error: any) {
-      alert(`Connection failed: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`Connection failed: ${errorMessage}`);
     } finally {
       setIsConnecting(false);
     }
@@ -138,7 +139,7 @@ export default function ZapierIntegration({
           </p>
         </div>
         <button
-          onClick={handleConnect}
+          onClick={() => void handleConnect()}
           disabled={isConnecting || !webhookUrl}
           style={{
             width: '100%',

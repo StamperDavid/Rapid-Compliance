@@ -223,17 +223,29 @@ export default function WorkflowCanvas({
 function getNodeDescription(node: WorkflowNode): string {
   const config = node.config;
   switch (node.type) {
-    case 'trigger':
-      if (config.schemaId) return `When ${config.schemaId} is ${node.name.toLowerCase()}`;
-      if (config.schedule) return `Runs on schedule`;
+    case 'trigger': {
+      if (config.schemaId) {
+        return `When ${config.schemaId} is ${node.name.toLowerCase()}`;
+      }
+      if (config.schedule) {
+        return `Runs on schedule`;
+      }
       return 'Workflow start';
-    case 'condition':
+    }
+    case 'condition': {
       return config.field ? `Check ${config.field}` : 'Conditional branch';
-    case 'action':
-      if (config.to) return `To: ${Array.isArray(config.to) ? config.to[0] : config.to}`;
-      if (config.schemaId) return `Target: ${config.schemaId}`;
+    }
+    case 'action': {
+      if (config.to) {
+        return `To: ${Array.isArray(config.to) ? config.to[0] : config.to}`;
+      }
+      if (config.schemaId) {
+        return `Target: ${config.schemaId}`;
+      }
       return 'Execute action';
-    default:
+    }
+    default: {
       return '';
+    }
   }
 }

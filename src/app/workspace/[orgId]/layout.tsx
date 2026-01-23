@@ -7,6 +7,7 @@ import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import UnifiedSidebar from '@/components/dashboard/UnifiedSidebar';
 import { MerchantOrchestrator } from '@/components/orchestrator';
+import { ToastProvider } from '@/hooks/useToast';
 
 /**
  * Workspace Layout - UNIFIED VERSION
@@ -69,39 +70,41 @@ export default function WorkspaceLayout({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
+    <ToastProvider>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
+        <AdminBar />
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
-        {/* Unified Sidebar - Role-based navigation, NO God Mode indicator */}
-        <UnifiedSidebar
-          user={unifiedUser}
-          organizationId={orgId}
-          isCollapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-          brandName={brandName}
-          primaryColor={primaryColor}
-        />
+        <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
+          {/* Unified Sidebar - Role-based navigation, NO God Mode indicator */}
+          <UnifiedSidebar
+            user={unifiedUser}
+            organizationId={orgId}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            brandName={brandName}
+            primaryColor={primaryColor}
+          />
 
-        {/* Main Content */}
-        <main
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            backgroundColor: '#000',
-            width: '100%',
-            marginLeft: sidebarCollapsed ? '64px' : '280px',
-            transition: 'margin-left 0.3s ease',
-          }}
-          className="md:ml-0"
-        >
-          {children}
-        </main>
+          {/* Main Content */}
+          <main
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              backgroundColor: '#000',
+              width: '100%',
+              marginLeft: sidebarCollapsed ? '64px' : '280px',
+              transition: 'margin-left 0.3s ease',
+            }}
+            className="md:ml-0"
+          >
+            {children}
+          </main>
+        </div>
+
+        {/* Merchant AI Orchestrator - Floating Assistant */}
+        <MerchantOrchestrator orgId={orgId} />
       </div>
-
-      {/* Merchant AI Orchestrator - Floating Assistant */}
-      <MerchantOrchestrator orgId={orgId} />
-    </div>
+    </ToastProvider>
   );
 }
 

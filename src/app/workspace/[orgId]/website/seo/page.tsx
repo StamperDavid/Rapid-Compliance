@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -24,6 +24,12 @@ import {
 } from 'lucide-react';
 import type { SiteConfig } from '@/types/website';
 
+interface SettingsResponse {
+  settings?: Partial<SiteConfig> & {
+    robotsTxt?: string;
+  };
+}
+
 export default function SEOManagementPage() {
   const params = useParams();
   const orgId = params.orgId as string;
@@ -34,19 +40,16 @@ export default function SEOManagementPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    loadSettings();
-  }, [orgId]);
-
-  async function loadSettings() {
+  const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
 
       const response = await fetch(`/api/website/settings?organizationId=${orgId}`);
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as SettingsResponse;
         setSettings(data.settings ?? {});
-        setRobotsTxt((data.settings?.robotsTxt !== '' && data.settings?.robotsTxt != null) ? data.settings.robotsTxt : getDefaultRobotsTxt());
+        const robotsTxtValue = data.settings?.robotsTxt ?? '';
+        setRobotsTxt(robotsTxtValue !== '' ? robotsTxtValue : getDefaultRobotsTxt());
       } else {
         setSettings({
           seo: {
@@ -62,12 +65,16 @@ export default function SEOManagementPage() {
         });
         setRobotsTxt(getDefaultRobotsTxt());
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[SEO] Load error:', error);
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
 
   function getDefaultRobotsTxt(): string {
     return `User-agent: *
@@ -76,8 +83,10 @@ Allow: /
 Sitemap: https://yoursite.com/sitemap.xml`;
   }
 
-  async function saveSettings() {
-    if (!settings) return;
+  async function saveSettings(): Promise<void> {
+    if (!settings) {
+      return;
+    }
 
     try {
       setSaving(true);
@@ -94,31 +103,37 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save settings');
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[SEO] Save error:', error);
     } finally {
       setSaving(false);
     }
   }
 
-  function updateSEO(field: string, value: any) {
-    if (!settings) return;
+  function updateSEO(field: string, value: string | string[] | boolean) {
+    if (!settings) {
+      return;
+    }
 
     setSettings({
       ...settings,
       seo: {
         ...settings.seo,
         [field]: value,
-      } as any,
+      } as SiteConfig['seo'],
     });
   }
 
-  function updateAnalytics(field: string, value: any) {
-    if (!settings) return;
+  function updateAnalytics(field: string, value: string) {
+    if (!settings) {
+      return;
+    }
 
     setSettings({
       ...settings,
@@ -234,7 +249,8 @@ Sitemap: https://yoursite.com/sitemap.xml`;
             {/* OG Image */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                <Image className="w-4 h-4 text-gray-400" />
+                {/* Image is a lucide-react icon component, not an img tag */}
+                <Image className="w-4 h-4 text-gray-400" aria-label="Image icon" />
                 Default OG Image URL
               </label>
               <input
@@ -437,7 +453,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           className="flex justify-end"
         >
           <button
-            onClick={saveSettings}
+            onClick={() => void saveSettings()}
             disabled={saving}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/25"
           >

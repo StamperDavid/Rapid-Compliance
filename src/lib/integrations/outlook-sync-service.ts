@@ -4,7 +4,7 @@
  */
 
 import { Client } from '@microsoft/microsoft-graph-client';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 
 export interface OutlookMessage {
@@ -57,6 +57,26 @@ export interface OutlookSyncStatus {
   errors: number;
 }
 
+interface OutlookContact {
+  id: string;
+  email: string;
+  name?: string;
+}
+
+interface GraphDeltaResponse {
+  value: OutlookMessage[];
+  '@odata.deltaLink'?: string;
+  '@odata.nextLink'?: string;
+}
+
+interface OutlookMessageWithRemoved extends OutlookMessage {
+  '@removed'?: boolean;
+}
+
+interface GraphSendMailResponse {
+  id?: string;
+}
+
 /**
  * Initialize Microsoft Graph client
  */
@@ -74,7 +94,7 @@ function getGraphClient(accessToken: string): Client {
 export async function syncOutlookMessages(
   organizationId: string,
   accessToken: string,
-  maxResults: number = 100
+  maxResults = 100
 ): Promise<OutlookSyncStatus> {
   const client = getGraphClient(accessToken);
   
@@ -113,14 +133,14 @@ async function fullSync(
       .api('/me/messages/delta')
       .select('id,conversationId,subject,bodyPreview,body,from,toRecipients,ccRecipients,bccRecipients,sentDateTime,receivedDateTime,hasAttachments,importance,isRead,isDraft,webLink')
       .top(maxResults)
-      .get();
-    
+      .get() as GraphDeltaResponse;
+
     for (const message of response.value) {
       try {
         await saveMessageToCRM(organizationId, message);
         messagesSynced++;
       } catch (err) {
-        logger.error('[Outlook Sync] Error processing message ${message.id}:', err instanceof Error ? err : new Error(String(err)), { file: 'outlook-sync-service.ts' });
+        logger.error(`[Outlook Sync] Error processing message ${message.id}:`, err instanceof Error ? err : new Error(String(err)), { file: 'outlook-sync-service.ts' });
         errors++;
       }
     }
@@ -161,11 +181,12 @@ async function incrementalSync(
     // Use delta link to get changes
     const response = await client
       .api(deltaLink)
-      .get();
-    
+      .get() as GraphDeltaResponse;
+
     for (const message of response.value) {
       try {
-        if (message['@removed']) {
+        const messageWithRemoved = message as OutlookMessageWithRemoved;
+        if (messageWithRemoved['@removed']) {
           // Message was deleted
           await deleteMessageFromCRM(organizationId, message.id);
         } else {
@@ -174,7 +195,7 @@ async function incrementalSync(
           messagesSynced++;
         }
       } catch (err) {
-        logger.error('[Outlook Sync] Error processing message ${message.id}:', err instanceof Error ? err : new Error(String(err)), { file: 'outlook-sync-service.ts' });
+        logger.error(`[Outlook Sync] Error processing message ${message.id}:`, err instanceof Error ? err : new Error(String(err)), { file: 'outlook-sync-service.ts' });
         errors++;
       }
     }
@@ -198,7 +219,8 @@ async function incrementalSync(
   } catch (error) {
     logger.error('[Outlook Sync] Incremental sync error:', error instanceof Error ? error : new Error(String(error)), { file: 'outlook-sync-service.ts' });
     // If delta link is invalid, fall back to full sync
-    if ((error as any).statusCode === 410) {
+    const statusCode = (error as { statusCode?: number }).statusCode;
+    if (statusCode === 410) {
       logger.info('[Outlook Sync] Delta link invalid, performing full sync', { file: 'outlook-sync-service.ts' });
       return fullSync(client, organizationId, 100);
     }
@@ -322,7 +344,7 @@ export async function sendOutlookEmail(
       .post({
         message,
         saveToSentItems: true,
-      });
+      }) as GraphSendMailResponse;
 
     const responseId = response.id;
     return (responseId !== '' && responseId != null) ? responseId : 'sent';
@@ -335,14 +357,17 @@ export async function sendOutlookEmail(
 /**
  * Find contact by email
  */
-async function findContactByEmail(organizationId: string, email: string): Promise<any | null> {
+async function findContactByEmail(organizationId: string, email: string): Promise<OutlookContact | null> {
   try {
     const contacts = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
     );
-    const contactsFiltered = contacts.filter((c: any) => c.email === email);
-    
-    return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
+    const contactsFiltered = contacts.filter((c: unknown) => {
+      const contact = c as OutlookContact;
+      return contact.email === email;
+    });
+
+    return contactsFiltered.length > 0 ? (contactsFiltered[0] as OutlookContact) : null;
   } catch (error) {
     logger.error('[Outlook Sync] Error finding contact:', error instanceof Error ? error : new Error(String(error)), { file: 'outlook-sync-service.ts' });
     return null;
@@ -359,7 +384,7 @@ async function getLastSyncStatus(organizationId: string): Promise<OutlookSyncSta
       'outlook-sync'
     );
     return status as OutlookSyncStatus | null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -399,8 +424,8 @@ export async function setupOutlookPushNotifications(
     
     const response = await client
       .api('/subscriptions')
-      .post(subscription);
-    
+      .post(subscription) as { id: string };
+
     logger.info('[Outlook Sync] Push notifications enabled', { file: 'outlook-sync-service.ts' });
     return response.id;
   } catch (error) {

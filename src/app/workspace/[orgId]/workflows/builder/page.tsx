@@ -17,6 +17,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
 
 import WorkflowStepCard, { type WorkflowStep } from '@/components/workflow/WorkflowStepCard';
 import WorkflowPalette, { type PaletteItem } from '@/components/workflow/WorkflowPalette';
@@ -34,6 +35,7 @@ export default function WorkflowBuilderPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
   const orgId = params.orgId as string;
   const workflowId = searchParams.get('id');
 
@@ -54,14 +56,7 @@ export default function WorkflowBuilderPage() {
   const [showProperties, setShowProperties] = useState(true);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  // Load existing workflow if editing
-  useEffect(() => {
-    if (workflowId) {
-      loadWorkflow(workflowId);
-    }
-  }, [workflowId]);
-
-  const loadWorkflow = async (id: string) => {
+  const loadWorkflow = useCallback(async (id: string) => {
     try {
       setIsLoading(true);
       const data = await FirestoreService.get(
@@ -74,13 +69,14 @@ export default function WorkflowBuilderPage() {
         const steps: WorkflowStep[] = [];
 
         // Add trigger as first step
-        if (data.trigger) {
+        if (data.trigger && typeof data.trigger === 'object') {
+          const trigger = data.trigger as Record<string, unknown>;
           steps.push({
-            id: data.trigger.id || `trigger-${Date.now()}`,
+            id: (trigger.id as string) ?? `trigger-${Date.now()}`,
             type: 'trigger',
-            actionType: data.trigger.type || 'manual',
-            name: data.trigger.name || 'Trigger',
-            config: data.trigger,
+            actionType: (trigger.type as string) ?? 'manual',
+            name: (trigger.name as string) ?? 'Trigger',
+            config: trigger,
             order: 0,
           });
         }
@@ -89,10 +85,10 @@ export default function WorkflowBuilderPage() {
         if (data.actions && Array.isArray(data.actions)) {
           data.actions.forEach((action: Record<string, unknown>, index: number) => {
             steps.push({
-              id: (action.id as string) || `action-${Date.now()}-${index}`,
+              id: (action.id as string) ?? `action-${Date.now()}-${index}`,
               type: 'action',
-              actionType: (action.type as string) || 'delay',
-              name: (action.name as string) || `Action ${index + 1}`,
+              actionType: (action.type as string) ?? 'delay',
+              name: (action.name as string) ?? `Action ${index + 1}`,
               config: action,
               order: index + 1,
             });
@@ -100,11 +96,11 @@ export default function WorkflowBuilderPage() {
         }
 
         setWorkflow({
-          id: data.id,
-          name: data.name || '',
-          description: data.description || '',
+          id: data.id as string,
+          name: (data.name as string) ?? '',
+          description: (data.description as string) ?? '',
           steps,
-          status: data.status || 'draft',
+          status: (data.status as WorkflowData['status']) ?? 'draft',
         });
       }
     } catch (error) {
@@ -112,10 +108,17 @@ export default function WorkflowBuilderPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [orgId]);
+
+  // Load existing workflow if editing
+  useEffect(() => {
+    if (workflowId) {
+      void loadWorkflow(workflowId);
+    }
+  }, [workflowId, loadWorkflow]);
 
   // Get selected step
-  const selectedStep = workflow.steps.find(s => s.id === selectedStepId) || null;
+  const selectedStep = workflow.steps.find(s => s.id === selectedStepId) ?? null;
 
   // Check if workflow has a trigger
   const hasTrigger = workflow.steps.some(s => s.type === 'trigger');
@@ -190,7 +193,9 @@ export default function WorkflowBuilderPage() {
 
   const handleDrop = useCallback((targetIndex: number) => (e: React.DragEvent) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === targetIndex) return;
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      return;
+    }
 
     setWorkflow(prev => {
       const newSteps = [...prev.steps];
@@ -210,7 +215,7 @@ export default function WorkflowBuilderPage() {
   // Save workflow
   const handleSave = async () => {
     if (!workflow.name) {
-      alert('Please enter a workflow name');
+      toast.error('Please enter a workflow name');
       return;
     }
 
@@ -286,7 +291,7 @@ export default function WorkflowBuilderPage() {
       router.push(`/workspace/${orgId}/workflows`);
     } catch (error) {
       logger.error('Error saving workflow:', error instanceof Error ? error : new Error(String(error)), { file: 'builder/page.tsx' });
-      alert('Failed to save workflow');
+      toast.error('Failed to save workflow');
     } finally {
       setIsSaving(false);
     }
@@ -371,7 +376,7 @@ export default function WorkflowBuilderPage() {
 
           {/* Save Button */}
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             disabled={isSaving}
             className="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
           >

@@ -237,22 +237,22 @@ export class FieldMappingManager {
         switch (event.changeType) {
           case 'field_renamed':
           case 'field_key_changed': {
-            const oldKey = (event.oldFieldKey !== '' && event.oldFieldKey != null) ? event.oldFieldKey : 
+            const oldKey = (event.oldFieldKey !== '' && event.oldFieldKey != null) ? event.oldFieldKey :
               ((event.oldFieldName !== '' && event.oldFieldName != null) ? event.oldFieldName : '');
             const newKey = (event.newFieldKey !== '' && event.newFieldKey != null) ? event.newFieldKey :
               ((event.newFieldName !== '' && event.newFieldName != null) ? event.newFieldName : '');
-            updated = await this.handleFieldRenameInMapping(
+            updated = this.handleFieldRenameInMapping(
               fieldMapping,
               oldKey,
               newKey
             );
             break;
           }
-          
+
           case 'field_deleted': {
             const deletedKey = (event.oldFieldKey !== '' && event.oldFieldKey != null) ? event.oldFieldKey :
               ((event.oldFieldName !== '' && event.oldFieldName != null) ? event.oldFieldName : '');
-            updated = await this.handleFieldDeletionInMapping(
+            updated = this.handleFieldDeletionInMapping(
               fieldMapping,
               deletedKey
             );
@@ -340,11 +340,11 @@ export class FieldMappingManager {
   /**
    * Map local record to external format
    */
-  static async mapLocalToExternal(
+  static mapLocalToExternal(
     localRecord: Record<string, unknown>,
     mapping: IntegrationFieldMapping,
     schema: Schema
-  ): Promise<Record<string, any>> {
+  ): Record<string, unknown> {
     const externalRecord: Record<string, unknown> = {};
 
     for (const rule of mapping.mappings) {
@@ -353,8 +353,8 @@ export class FieldMappingManager {
       }
 
       // Get local value using field resolver
-      const value = FieldResolver.getFieldValue(localRecord, rule.localField, schema);
-      
+      const value: unknown = FieldResolver.getFieldValue(localRecord, rule.localField, schema);
+
       if (value === undefined || value === null) {
         if (rule.required) {
           logger.warn('[Field Mapper] Required field missing', {
@@ -364,16 +364,16 @@ export class FieldMappingManager {
         }
         continue;
       }
-      
+
       // Apply transformation
-      let transformedValue = value;
+      let transformedValue: unknown = value;
       if (rule.transform && this.shouldApplyTransform(rule.transform, 'outbound')) {
-        transformedValue = await this.applyTransform(value, rule.transform);
+        transformedValue = this.applyTransformSync(value, rule.transform);
       }
-      
+
       // Validate
       if (rule.validationRules) {
-        const valid = await this.validateValue(transformedValue, rule.validationRules);
+        const valid = this.validateValue(transformedValue, rule.validationRules);
         if (!valid) {
           logger.warn('[Field Mapper] Validation failed', {
             file: 'field-mapper.ts',
@@ -383,10 +383,10 @@ export class FieldMappingManager {
           continue;
         }
       }
-      
+
       externalRecord[rule.externalField] = transformedValue;
     }
-    
+
     return externalRecord;
   }
   
@@ -397,7 +397,7 @@ export class FieldMappingManager {
     externalRecord: Record<string, unknown>,
     mapping: IntegrationFieldMapping,
     schema: Schema
-  ): Promise<Record<string, any>> {
+  ): Promise<Record<string, unknown>> {
     const localRecord: Record<string, unknown> = {};
 
     for (const rule of mapping.mappings) {
@@ -414,7 +414,7 @@ export class FieldMappingManager {
       // Apply transformation
       let transformedValue: unknown = value;
       if (rule.transform && this.shouldApplyTransform(rule.transform, 'inbound')) {
-        transformedValue = await this.applyTransform(value, rule.transform);
+        transformedValue = this.applyTransformSync(value, rule.transform);
       }
 
       // Resolve local field (in case it was renamed)
@@ -430,7 +430,7 @@ export class FieldMappingManager {
 
       localRecord[resolvedField.fieldKey] = transformedValue;
     }
-    
+
     return localRecord;
   }
   
@@ -448,32 +448,32 @@ export class FieldMappingManager {
   }
   
   /**
-   * Apply field transformation
+   * Apply field transformation synchronously
    */
-  private static async applyTransform(
+  private static applyTransformSync(
     value: unknown,
     transform: FieldTransform
-  ): Promise<unknown> {
+  ): unknown {
     switch (transform.type) {
       case 'uppercase':
         return String(value).toUpperCase();
-      
+
       case 'lowercase':
         return String(value).toLowerCase();
-      
+
       case 'trim':
         return String(value).trim();
-      
+
       case 'phone':
         // Normalize phone number (remove non-digits)
         return String(value).replace(/\D/g, '');
-      
+
       case 'currency': {
         // Format as currency
         const amount = parseFloat(String(value));
         return isNaN(amount) ? value : amount.toFixed(2);
       }
-      
+
       case 'date': {
         // Format date
         if (transform.format) {
@@ -482,7 +482,7 @@ export class FieldMappingManager {
         }
         return value;
       }
-      
+
       case 'custom': {
         // Execute custom transform function from registry
         if (transform.customFunction) {
@@ -491,7 +491,7 @@ export class FieldMappingManager {
             value,
             transform.params
           );
-          
+
           if (result.success) {
             return result.value;
           } else {
@@ -504,7 +504,7 @@ export class FieldMappingManager {
         }
         return value;
       }
-      
+
       default:
         return value;
     }
@@ -513,10 +513,10 @@ export class FieldMappingManager {
   /**
    * Validate value against rules
    */
-  private static async validateValue(
+  private static validateValue(
     value: unknown,
     rules: ValidationRule[]
-  ): Promise<boolean> {
+  ): boolean {
     for (const rule of rules) {
       switch (rule.type) {
         case 'regex': {

@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { EmailTemplate, EmailBlock } from '@/lib/email/email-builder';
-import { buildEmailHTML } from '@/lib/email/email-builder';
+import Image from 'next/image';
+import { buildEmailHTML, type EmailTemplate, type EmailBlock } from '@/lib/email/email-builder';
+import { useToast } from '@/hooks/useToast';
 
 export default function EmailBuilderPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
   
   const [template, setTemplate] = useState<Partial<EmailTemplate>>({
@@ -96,11 +98,11 @@ export default function EmailBuilderPage() {
       });
 
       if (response.ok) {
-        alert('Template saved!');
+        toast.success('Template saved!');
         router.push(`/workspace/${orgId}/marketing/templates`);
       }
-    } catch (error) {
-      alert('Failed to save template');
+    } catch (_error) {
+      toast.error('Failed to save template');
     }
   };
 
@@ -135,7 +137,7 @@ export default function EmailBuilderPage() {
             {previewMode ? '✏️ Edit' : '👁️ Preview'}
           </button>
           <button
-            onClick={saveTemplate}
+            onClick={() => void saveTemplate()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Save Template
@@ -226,7 +228,7 @@ export default function EmailBuilderPage() {
                           </div>
                         )}
                         {block.type === 'image' && (
-                          <img src={block.content} alt="Email" className="w-full rounded" />
+                          <Image src={block.content} alt="Email" width={600} height={300} className="w-full rounded" />
                         )}
                         {block.type === 'button' && (
                           <div style={{ textAlign: block.styling?.alignment ?? 'center' }}>
@@ -336,7 +338,7 @@ export default function EmailBuilderPage() {
                   <select
                     value={selectedBlock.styling?.alignment ?? 'left'}
                     onChange={(e) => updateBlock(selectedBlock.id, {
-                      styling: { ...selectedBlock.styling, alignment: e.target.value as any }
+                      styling: { ...selectedBlock.styling, alignment: e.target.value as 'left' | 'center' | 'right' }
                     })}
                     className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm"
                   >

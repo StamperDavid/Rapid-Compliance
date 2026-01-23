@@ -17,7 +17,7 @@ interface SequenceOverviewCardProps {
 }
 
 export function SequenceOverviewCard({ analysis }: SequenceOverviewCardProps) {
-  const { summary, metrics, patterns, optimizations } = analysis;
+  const { summary, metrics: _metrics, patterns, optimizations } = analysis;
   
   return (
     <div className="bg-white rounded-lg shadow p-6">

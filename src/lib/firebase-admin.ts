@@ -63,7 +63,9 @@ if (!admin.apps.length) {
       ? process.env.FIREBASE_ADMIN_PROJECT_ID
       : 'NOT SET';
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.log('[Firebase Admin] Initialized successfully');
+      // eslint-disable-next-line no-console
       console.log(`[Firebase Admin] 🎯 PROJECT ID: ${projectId}`);
     }
   } catch (error) {

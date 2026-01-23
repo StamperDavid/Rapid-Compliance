@@ -78,21 +78,21 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
 
   // Try SendGrid first
   const sendgridKeys = await apiKeyService.getServiceKey(String(organizationId), 'sendgrid');
-  const sendgridKeysObj = typeof sendgridKeys === 'object' && sendgridKeys !== null ? sendgridKeys as Record<string, unknown> : null;
+  const sendgridKeysObj = typeof sendgridKeys === 'object' && sendgridKeys !== null ? sendgridKeys : null;
   if (sendgridKeysObj && typeof sendgridKeysObj.apiKey === 'string') {
     provider = 'sendgrid';
     credentials = sendgridKeysObj;
   } else {
     // Try Resend
     const resendKeys = await apiKeyService.getServiceKey(String(organizationId), 'resend');
-    const resendKeysObj = typeof resendKeys === 'object' && resendKeys !== null ? resendKeys as Record<string, unknown> : null;
+    const resendKeysObj = typeof resendKeys === 'object' && resendKeys !== null ? resendKeys : null;
     if (resendKeysObj && typeof resendKeysObj.apiKey === 'string') {
       provider = 'resend';
       credentials = resendKeysObj;
     } else {
       // Try SMTP
       const smtpKeys = await apiKeyService.getServiceKey(String(organizationId), 'smtp');
-      const smtpKeysObj = typeof smtpKeys === 'object' && smtpKeys !== null ? smtpKeys as Record<string, unknown> : null;
+      const smtpKeysObj = typeof smtpKeys === 'object' && smtpKeys !== null ? smtpKeys : null;
       if (smtpKeysObj && typeof smtpKeysObj.host === 'string' && typeof smtpKeysObj.username === 'string' && typeof smtpKeysObj.password === 'string') {
         provider = 'smtp';
         credentials = smtpKeysObj;

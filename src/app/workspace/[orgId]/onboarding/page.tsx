@@ -5,14 +5,47 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth'
 import { logger } from '@/lib/logger/logger';
 import type { PrefillResult, FieldConfidence } from '@/lib/onboarding/types';
-import { 
-  PrefillStatusBanner, 
+import {
+  PrefillStatusBanner,
   PrefillLoadingState,
-  PrefilledFieldWrapper 
+  PrefilledFieldWrapper
 } from '@/components/onboarding/PrefillIndicator';
+import { useToast } from '@/hooks/useToast';
+
+// ============================================================================
+// TYPES & INTERFACES
+// ============================================================================
+
+interface FormData {
+  [key: string]: string | number | boolean | File[] | unknown[];
+}
+
+interface TextInputFieldProps {
+  label: string;
+  field: string;
+  placeholder: string;
+  required?: boolean;
+  formData: FormData;
+  updateField: (field: string, value: unknown) => void;
+}
+
+interface TextAreaFieldProps {
+  label: string;
+  field: string;
+  placeholder: string;
+  rows?: number;
+  helper?: string;
+  required?: boolean;
+  formData: FormData;
+  updateField: (field: string, value: unknown) => void;
+}
+
+// ============================================================================
+// COMPONENTS
+// ============================================================================
 
 // Move components OUTSIDE to prevent re-creation on every render
-function TextInputField({ label, field, placeholder, required, formData, updateField }: any) {
+function TextInputField({ label, field, placeholder, required, formData, updateField }: TextInputFieldProps) {
   return (
     <div>
       <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
@@ -37,7 +70,7 @@ function TextInputField({ label, field, placeholder, required, formData, updateF
   );
 }
 
-function TextAreaField({ label, field, placeholder, rows = 4, helper, required, formData, updateField }: any) {
+function TextAreaField({ label, field, placeholder, rows = 4, helper, required, formData, updateField }: TextAreaFieldProps) {
   return (
     <div>
       <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
@@ -72,8 +105,9 @@ function TextAreaField({ label, field, placeholder, rows = 4, helper, required, 
 export default function OnboardingWizard() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const orgId = params.orgId as string;
+  const toast = useToast();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -173,11 +207,11 @@ export default function OnboardingWizard() {
     
     // Step 16: Advanced Configuration (Optional)
     enableAdvanced: false,
-    customFunctions: [] as any[],
+    customFunctions: [] as unknown[],
     conversationFlowLogic: '',
     responseLengthLimit: 0,
     industryTemplate: '',
-    knowledgePriority: [] as any[],
+    knowledgePriority: [] as unknown[],
     
     // Step 17: Idle Timeout (Organization Level)
     idleTimeoutMinutes: 30,
@@ -293,7 +327,7 @@ export default function OnboardingWizard() {
   // Prefill onboarding data from website
   const handlePrefill = async () => {
     if (!formData.website) {
-      alert('Please enter your website URL first');
+      toast.warning('Please enter your website URL first');
       return;
     }
 
@@ -314,7 +348,7 @@ export default function OnboardingWizard() {
         throw new Error('Failed to prefill data');
       }
 
-      const result: PrefillResult = await response.json();
+      const result = await response.json() as PrefillResult;
       setPrefillResult(result);
 
       // Auto-apply high-confidence fields (type-safe)
@@ -351,7 +385,7 @@ export default function OnboardingWizard() {
       });
     } catch (error) {
       logger.error('Prefill failed', error instanceof Error ? error : undefined, { organizationId: orgId });
-      alert('Failed to analyze website. You can still continue with manual entry.');
+      toast.error('Failed to analyze website. You can still continue with manual entry.');
     } finally {
       setIsPrefilling(false);
     }
@@ -511,22 +545,23 @@ export default function OnboardingWizard() {
         }),
       });
 
-      const result = await response.json();
+      const result = await response.json() as { success: boolean; error?: string };
 
       if (result.success) {
         setAnalysisProgress('✅ Complete! Your AI agent is ready for training.');
         setTimeout(() => {
           setIsAnalyzing(false);
-          alert('✅ Onboarding complete! Your AI agent persona has been created and is ready for training. You can now go to the Training Center to train your agent.');
+          toast.success('Onboarding complete! Your AI agent persona has been created and is ready for training. You can now go to the Training Center to train your agent.', 6000);
           router.push(`/workspace/${orgId}/settings/ai-agents/training`);
         }, 2000);
       } else {
         throw new Error((result.error !== '' && result.error != null) ? result.error : 'Failed to process onboarding');
       }
-    } catch (error: any) {
-      logger.error('Failed to complete onboarding:', error, { file: 'page.tsx' });
+    } catch (error) {
+      const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to complete onboarding. Please try again.';
+      logger.error('Failed to complete onboarding:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       setIsAnalyzing(false);
-      alert(`❌ Error: ${(error.message !== '' && error.message != null) ? error.message : 'Failed to complete onboarding. Please try again.'}`);
+      toast.error(`Error: ${errorMessage}`, 6000);
     }
   };
 
@@ -613,13 +648,13 @@ export default function OnboardingWizard() {
                 <div>
                   <TextInputField label="Website URL" field="website" placeholder="https://yourwebsite.com" formData={formData} updateField={updateField} />
                   <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-                    We'll automatically analyze your website to learn about your company, products, and services
+                    We&apos;ll automatically analyze your website to learn about your company, products, and services
                   </div>
                   
                   {/* Auto-fill Button */}
                   {formData.website && !prefillResult && (
                     <button
-                      onClick={handlePrefill}
+                      onClick={() => void handlePrefill()}
                       disabled={isPrefilling}
                       style={{
                         marginTop: '0.75rem',
@@ -644,30 +679,35 @@ export default function OnboardingWizard() {
                 </div>
 
                 {/* Business Name with Prefill */}
-                {getFieldConfidence('businessName') ? (
-                  <PrefilledFieldWrapper
-                    fieldConfidence={getFieldConfidence('businessName')!}
-                    onConfirm={() => handleConfirmField('businessName')}
-                    onReject={() => handleRejectField('businessName')}
-                    isConfirmed={confirmedFields.has('businessName')}
-                    isRejected={rejectedFields.has('businessName')}
-                  >
+                {(() => {
+                  const fieldConfidence = getFieldConfidence('businessName');
+                  return fieldConfidence ? (
+                    <PrefilledFieldWrapper
+                      fieldConfidence={fieldConfidence}
+                      onConfirm={() => handleConfirmField('businessName')}
+                      onReject={() => handleRejectField('businessName')}
+                      isConfirmed={confirmedFields.has('businessName')}
+                      isRejected={rejectedFields.has('businessName')}
+                    >
+                      <TextInputField formData={formData} updateField={updateField} label="Business Name" field="businessName" placeholder="e.g., Acme Outdoor Gear" required />
+                    </PrefilledFieldWrapper>
+                  ) : (
                     <TextInputField formData={formData} updateField={updateField} label="Business Name" field="businessName" placeholder="e.g., Acme Outdoor Gear" required />
-                  </PrefilledFieldWrapper>
-                ) : (
-                  <TextInputField formData={formData} updateField={updateField} label="Business Name" field="businessName" placeholder="e.g., Acme Outdoor Gear" required />
-                )}
+                  );
+                })()}
 
                 {/* Industry with Prefill */}
                 <div>
-                  {getFieldConfidence('industry') && (
-                    <PrefilledFieldWrapper
-                      fieldConfidence={getFieldConfidence('industry')!}
-                      onConfirm={() => handleConfirmField('industry')}
-                      onReject={() => handleRejectField('industry')}
-                      isConfirmed={confirmedFields.has('industry')}
-                      isRejected={rejectedFields.has('industry')}
-                    >
+                  {(() => {
+                    const fieldConfidence = getFieldConfidence('industry');
+                    return fieldConfidence ? (
+                      <PrefilledFieldWrapper
+                        fieldConfidence={fieldConfidence}
+                        onConfirm={() => handleConfirmField('industry')}
+                        onReject={() => handleRejectField('industry')}
+                        isConfirmed={confirmedFields.has('industry')}
+                        isRejected={rejectedFields.has('industry')}
+                      >
                       <div>
                         <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                           Industry *
@@ -702,7 +742,8 @@ export default function OnboardingWizard() {
                         </select>
                       </div>
                     </PrefilledFieldWrapper>
-                  )}
+                    ) : null;
+                  })()}
                   {!getFieldConfidence('industry') && (
                     <div>
                       <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
@@ -865,7 +906,7 @@ export default function OnboardingWizard() {
                   label="What makes you different from competitors?" 
                   field="uniqueValue" 
                   placeholder="e.g., We offer lifetime warranties, free repairs, and expert guides with every purchase. Our gear is tested in extreme conditions."
-                  helper="Your unique selling points - what competitors don't offer"
+                  helper="Your unique selling points - what competitors don&apos;t offer"
                   required
                 />
 
@@ -1564,7 +1605,7 @@ export default function OnboardingWizard() {
                     style={{ width: '100%' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                    <span>Passive (1-3): Helpful, doesn't push</span>
+                    <span>Passive (1-3): Helpful, doesn&apos;t push</span>
                     <span>Balanced (4-7): Guides to purchase</span>
                     <span>Aggressive (8-10): Always closing</span>
                   </div>
@@ -1683,7 +1724,7 @@ export default function OnboardingWizard() {
 
                 <div>
                   <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                    Website URLs (we'll extract the content)
+                    Website URLs (we&apos;ll extract the content)
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <input
@@ -1713,7 +1754,7 @@ export default function OnboardingWizard() {
                     </button>
                   </div>
                   <div style={{ color: '#666', fontSize: '0.75rem' }}>
-                    We'll analyze these pages for products, pricing, FAQs, and policies
+                    We&apos;ll analyze these pages for products, pricing, FAQs, and policies
                   </div>
                 </div>
 
@@ -1815,7 +1856,7 @@ export default function OnboardingWizard() {
                 <TextAreaField formData={formData} updateField={updateField} 
                   label="Prohibited topics (what agent should NOT discuss)" 
                   field="prohibitedTopics" 
-                  placeholder="e.g., Medical advice, Legal advice, Political opinions, Personal opinions on competitors, Guarantees we can't fulfill, Off-label use of products"
+                  placeholder="e.g., Medical advice, Legal advice, Political opinions, Personal opinions on competitors, Guarantees we can&apos;t fulfill, Off-label use of products"
                   rows={5}
                   helper="Topics your agent must avoid to prevent liability"
                   required
@@ -1832,7 +1873,7 @@ export default function OnboardingWizard() {
                     ⚠️ Important: Review Before Launch
                   </div>
                   <div style={{ color: '#ccc', fontSize: '0.875rem' }}>
-                    You'll have a chance to train and test your agent before it goes live. Make sure all information is accurate and compliant with your industry regulations.
+                    You&apos;ll have a chance to train and test your agent before it goes live. Make sure all information is accurate and compliant with your industry regulations.
                   </div>
                 </div>
               </div>
@@ -2109,7 +2150,7 @@ export default function OnboardingWizard() {
                   field="needObjectionStrategy" 
                   placeholder='e.g., "Ask deeper questions to uncover hidden needs. Share case studies of similar customers who didn&apos;t think they needed it but saw great results."'
                   rows={3}
-                  helper="What to do when customer doesn't see the need?"
+                  helper="What to do when customer doesn&apos;t see the need?"
                 />
               </div>
             </div>
@@ -2141,7 +2182,7 @@ export default function OnboardingWizard() {
                   field="confusedCustomerApproach" 
                   placeholder='e.g., "Simplify language, use analogies, break complex concepts into steps. Ask if they want a quick overview or detailed explanation."'
                   rows={3}
-                  helper="How to help customers who don't understand?"
+                  helper="How to help customers who don&apos;t understand?"
                 />
                 
                 <TextAreaField formData={formData} updateField={updateField} 
@@ -2576,7 +2617,7 @@ export default function OnboardingWizard() {
                     </ul>
                   </div>
                   <div style={{ color: '#10b981', fontSize: '0.75rem', fontStyle: 'italic' }}>
-                    Our AI will extract proven strategies and automatically apply them to your agent's persona.
+                    Our AI will extract proven strategies and automatically apply them to your agent&apos;s persona.
                   </div>
                 </div>
 
@@ -2648,7 +2689,7 @@ export default function OnboardingWizard() {
                             </div>
                             <button
                               onClick={() => {
-                                updateField('uploadedSalesMaterials', formData.uploadedSalesMaterials.filter((_: any, i: number) => i !== idx));
+                                updateField('uploadedSalesMaterials', formData.uploadedSalesMaterials.filter((_file, i) => i !== idx));
                               }}
                               style={{
                                 padding: '0.5rem',
@@ -2671,7 +2712,7 @@ export default function OnboardingWizard() {
                 {/* Skip Option */}
                 <div style={{ padding: '1rem', backgroundColor: '#1a1a0a', border: '1px solid #3a3a0a', borderRadius: '0.5rem', textAlign: 'center' }}>
                   <div style={{ color: '#999', fontSize: '0.875rem' }}>
-                    Don't have materials to upload? No problem! Your agent will still work great with the information you've already provided. You can always add materials later.
+                    Don&apos;t have materials to upload? No problem! Your agent will still work great with the information you&apos;ve already provided. You can always add materials later.
                   </div>
                 </div>
               </div>
@@ -2755,7 +2796,7 @@ export default function OnboardingWizard() {
                 </div>
               ) : (
                 <button
-                  onClick={completeOnboarding}
+                  onClick={() => void completeOnboarding()}
                   style={{
                     padding: '1rem 2.5rem',
                     background: `linear-gradient(135deg, ${primaryColor}, #8b5cf6)`,

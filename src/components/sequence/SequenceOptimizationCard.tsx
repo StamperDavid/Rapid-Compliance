@@ -10,7 +10,7 @@
 
 import React from 'react';
 import type { SequenceAnalysis, OptimizationRecommendation } from '@/lib/sequence';
-import { Zap, Clock, Target, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Zap, Clock, Target, CheckCircle, ArrowRight } from 'lucide-react';
 
 interface SequenceOptimizationCardProps {
   analysis: SequenceAnalysis;

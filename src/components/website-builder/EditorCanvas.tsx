@@ -9,15 +9,17 @@ import type { Page, PageSection, Widget } from '@/types/website';
 import WidgetRenderer from '@/components/website-builder/WidgetRenderer';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
 
+interface SelectedElement {
+  type: 'section' | 'widget';
+  sectionId: string;
+  widgetId?: string;
+}
+
 interface EditorCanvasProps {
   page: Page;
   breakpoint: 'desktop' | 'tablet' | 'mobile';
-  selectedElement: {
-    type: 'section' | 'widget';
-    sectionId: string;
-    widgetId?: string;
-  } | null;
-  onSelectElement: (element: any) => void;
+  selectedElement: SelectedElement | null;
+  onSelectElement: (element: SelectedElement) => void;
   onAddSection: (sectionData?: Partial<PageSection>) => void;
   onUpdateSection: (sectionId: string, updates: Partial<PageSection>) => void;
   onDeleteSection: (sectionId: string) => void;
@@ -35,7 +37,7 @@ export default function EditorCanvas({
   onUpdateSection,
   onDeleteSection,
   onAddWidget,
-  onUpdateWidget,
+  onUpdateWidget: _onUpdateWidget,
   onDeleteWidget,
 }: EditorCanvasProps) {
   // Canvas width based on breakpoint
@@ -96,7 +98,7 @@ export default function EditorCanvas({
         ) : (
           // Render sections
           <>
-            {page.content.map((section, sectionIndex) => (
+            {page.content.map((section, _sectionIndex) => (
               <SectionRenderer
                 key={section.id}
                 section={section}
@@ -157,7 +159,7 @@ function SectionRenderer({
   selectedWidgetId,
   onSelectSection,
   onSelectWidget,
-  onUpdateSection,
+  onUpdateSection: _onUpdateSection,
   onDeleteSection,
   onAddWidget,
   onDeleteWidget,

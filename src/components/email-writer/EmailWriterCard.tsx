@@ -132,12 +132,17 @@ function EmailWriterCardInner({
         }),
       });
       
-      const data = await response.json();
-      
+      const data = await response.json() as {
+        success?: boolean;
+        email?: GeneratedEmail;
+        error?: string;
+        suggestedImprovements?: string[];
+      };
+
       if (!response.ok) {
         throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to generate email');
       }
-      
+
       if (!data.success || !data.email) {
         throw new Error((data.error !== '' && data.error != null) ? data.error : 'No email generated');
       }
@@ -184,7 +189,7 @@ function EmailWriterCardInner({
    */
   const handleCopyEmail = useCallback(() => {
     const emailText = `Subject: ${editedSubject}\n\n${editedBody}`;
-    navigator.clipboard.writeText(emailText);
+    void navigator.clipboard.writeText(emailText);
     // TODO: Show toast notification
   }, [editedSubject, editedBody]);
   
@@ -397,7 +402,7 @@ function EmailWriterCardInner({
       
       {/* Generate Button */}
       <button
-        onClick={handleGenerateEmail}
+        onClick={() => { void handleGenerateEmail(); }}
         disabled={generationState.isGenerating || !dealId}
         className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
       >

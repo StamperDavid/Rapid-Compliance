@@ -4,8 +4,8 @@
  */
 
 import type { ProspectData, ProspectResearch } from './prospect-research';
-import { generatePersonalizationTokens } from './prospect-research';
 import { logger } from '@/lib/logger/logger';
+import { generatePersonalizationTokens } from './prospect-research';
 
 export interface EmailGenerationRequest {
   prospect: ProspectData;
@@ -50,7 +50,7 @@ export async function generateColdEmail(
   const emailContent = await buildEmail(request, tokens);
 
   // Generate subject line variants for A/B testing
-  const subjectVariants = await generateSubjectVariants(request, tokens);
+  const subjectVariants = generateSubjectVariants(request, tokens);
 
   // Calculate personalization score
   const personalizationScore = calculatePersonalizationScore(request, tokens);

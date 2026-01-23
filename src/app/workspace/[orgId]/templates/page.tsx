@@ -43,7 +43,7 @@ export default function TemplatesDashboard() {
   const [forecast, setForecast] = useState<RevenueForecast | null>(null);
   const [loadingForecast, setLoadingForecast] = useState(false);
   const [forecastPeriod, setForecastPeriod] = useState<'30-day' | '60-day' | '90-day'>('90-day');
-  const [quota, setQuota] = useState<number>(500000);
+  const [quota, _setQuota] = useState<number>(500000);
 
   // Apply Template
   const handleApplyTemplate = async () => {
@@ -64,7 +64,7 @@ export default function TemplatesDashboard() {
         })
       });
 
-      const data = await response.json();
+      const data = await response.json() as { success: boolean };
       
       if (data.success) {
         setTemplateApplied(true);
@@ -96,8 +96,8 @@ export default function TemplatesDashboard() {
             templateId: selectedTemplateId
           })
         });
-        
-        const data = await response.json();
+
+        const data = await response.json() as { success: boolean; score: DealScore };
         if (data.success) {
           scores.set(dealId, data.score);
         }
@@ -128,8 +128,8 @@ export default function TemplatesDashboard() {
           includeQuotaPerformance: true
         })
       });
-      
-      const data = await response.json();
+
+      const data = await response.json() as { success: boolean; forecast: RevenueForecast };
       if (data.success) {
         setForecast(data.forecast);
       }
@@ -143,14 +143,16 @@ export default function TemplatesDashboard() {
   // Auto-load when switching tabs
   useEffect(() => {
     if (activeTab === 'scoring' && dealScores.size === 0) {
-      loadDealScores();
+      void loadDealScores();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'forecasting' && !forecast) {
-      generateForecast();
+      void generateForecast();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const tabs: Array<{ id: Tab; label: string; icon: string }> = [

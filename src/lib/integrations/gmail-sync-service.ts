@@ -3,12 +3,12 @@
  * Bidirectional email syncing between Gmail and CRM
  */
 
-import type { gmail_v1} from 'googleapis';
-import { google } from 'googleapis';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { google, type gmail_v1 } from 'googleapis';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 
-const GMAIL_SCOPES = [
+// Gmail OAuth scopes
+export const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.modify',
@@ -47,6 +47,17 @@ export interface GmailSyncStatus {
   errors: number;
 }
 
+interface GmailContact {
+  id: string;
+  email: string;
+  name?: string;
+}
+
+interface GmailMessageRef {
+  id?: string;
+  threadId?: string;
+}
+
 /**
  * Initialize Gmail API client
  */
@@ -63,25 +74,23 @@ function getGmailClient(accessToken: string): gmail_v1.Gmail {
 export async function syncGmailMessages(
   organizationId: string,
   accessToken: string,
-  maxResults: number = 100
+  maxResults = 100
 ): Promise<GmailSyncStatus> {
   const gmail = getGmailClient(accessToken);
-  
+
   try {
     // Get last sync status
     const lastSync = await getLastSyncStatus(organizationId);
-    
-    const query = 'in:inbox OR in:sent';
-    
+
     // If we have a history ID, use incremental sync
     if (lastSync?.historyId) {
       return await incrementalSync(gmail, organizationId, lastSync.historyId);
     }
-    
+
     // Full sync (first time)
     return await fullSync(gmail, organizationId, maxResults);
   } catch (error) {
-    logger.error('[Gmail Sync] Error:', error as Error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'gmail-sync-service.ts' });
     throw error;
   }
 }
@@ -125,11 +134,15 @@ async function fullSync(
       const batch = listResponse.data.messages.slice(i, i + batchSize);
       
       await Promise.all(
-        batch.map(async (msg) => {
+        batch.map(async (msg: GmailMessageRef) => {
           try {
+            if (!msg.id) {
+              return;
+            }
+
             const fullMessage = await gmail.users.messages.get({
               userId: 'me',
-              id: msg.id!,
+              id: msg.id,
               format: 'full',
             });
             
@@ -143,7 +156,7 @@ async function fullSync(
               historyId = fullMessage.data.historyId;
             }
           } catch (err) {
-            logger.error('[Gmail Sync] Error processing message ${msg.id}:', err as Error, { file: 'gmail-sync-service.ts' });
+            logger.error(`[Gmail Sync] Error processing message ${msg.id}:`, err instanceof Error ? err : new Error(String(err)), { file: 'gmail-sync-service.ts' });
             errors++;
           }
         })
@@ -203,9 +216,14 @@ async function incrementalSync(
       if (record.messagesAdded) {
         for (const msgAdded of record.messagesAdded) {
           try {
+            const messageId = msgAdded.message?.id;
+            if (!messageId) {
+              continue;
+            }
+
             const fullMessage = await gmail.users.messages.get({
               userId: 'me',
-              id: msgAdded.message!.id!,
+              id: messageId,
               format: 'full',
             });
             
@@ -223,9 +241,14 @@ async function incrementalSync(
       if (record.messagesDeleted) {
         for (const msgDeleted of record.messagesDeleted) {
           try {
-            await deleteMessageFromCRM(organizationId, msgDeleted.message!.id!);
+            const messageId = msgDeleted.message?.id;
+            if (!messageId) {
+              continue;
+            }
+
+            await deleteMessageFromCRM(organizationId, messageId);
           } catch (err) {
-            logger.error('[Gmail Sync] Error deleting message:', err as Error, { file: 'gmail-sync-service.ts' });
+            logger.error('[Gmail Sync] Error deleting message:', err instanceof Error ? err : new Error(String(err)), { file: 'gmail-sync-service.ts' });
             errors++;
           }
         }
@@ -320,9 +343,12 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
     }
   }
   
+  const messageId = message.id ?? `temp-${Date.now()}`;
+  const threadId = message.threadId ?? messageId;
+
   return {
-    id: message.id!,
-    threadId: message.threadId!,
+    id: messageId,
+    threadId,
     labelIds: message.labelIds ?? [],
     snippet: (message.snippet !== '' && message.snippet != null) ? message.snippet : '',
     internalDate: (message.internalDate !== '' && message.internalDate != null) ? message.internalDate : Date.now().toString(),
@@ -440,16 +466,19 @@ async function updateMessageLabels(organizationId: string, messageId: string, la
 /**
  * Find contact by email
  */
-async function findContactByEmail(organizationId: string, email: string): Promise<any | null> {
+async function findContactByEmail(organizationId: string, email: string): Promise<GmailContact | null> {
   try {
     const contacts = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
     );
-    const contactsFiltered = contacts.filter((c: any) => c.email === email);
+    const contactsFiltered = contacts.filter((c: unknown) => {
+      const contact = c as GmailContact;
+      return contact.email === email;
+    });
 
-    return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
+    return contactsFiltered.length > 0 ? (contactsFiltered[0] as GmailContact) : null;
   } catch (error) {
-    logger.error('[Gmail Sync] Error finding contact:', error as Error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error finding contact:', error instanceof Error ? error : new Error(String(error)), { file: 'gmail-sync-service.ts' });
     return null;
   }
 }
@@ -464,7 +493,7 @@ async function getLastSyncStatus(organizationId: string): Promise<GmailSyncStatu
       'gmail-sync'
     );
     return status as GmailSyncStatus | null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

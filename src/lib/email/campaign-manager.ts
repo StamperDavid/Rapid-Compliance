@@ -250,28 +250,44 @@ export async function sendCampaign(campaignId: string, organizationId?: string):
       // Schedule winner to be sent to remaining recipients after test duration
       if (campaign.abTest.testDuration) {
         // In production, schedule this via a job queue
-        setTimeout(async () => {
-          const winner = await determineABTestWinner(campaignId, 'A', 'B');
-          const winnerContent = winner === 'A' 
-            ? { subject: campaign.subject, html: campaign.htmlContent }
-            : { subject:campaign.subjectB ?? campaign.subject, html:campaign.htmlContentB ?? campaign.htmlContent};
-          
-          await sendBulkEmails(remainingRecipients, {
-            ...winnerContent,
-            text: campaign.textContent,
-            from: campaign.fromEmail,
-            fromName: campaign.fromName,
-            replyTo: campaign.replyTo,
-            tracking: {
-              trackOpens: campaign.trackOpens,
-              trackClicks: campaign.trackClicks,
-            },
-            metadata: {
-              campaignId: campaign.id,
-              variant: winner,
-              organizationId: campaign.organizationId,
-            },
-          });
+        // Capture local variables to prevent race conditions
+        const localSubject = campaign.subject;
+        const localSubjectB = campaign.subjectB;
+        const localHtmlContent = campaign.htmlContent;
+        const localHtmlContentB = campaign.htmlContentB;
+        const localTextContent = campaign.textContent;
+        const localFromEmail = campaign.fromEmail;
+        const localFromName = campaign.fromName;
+        const localReplyTo = campaign.replyTo;
+        const localTrackOpens = campaign.trackOpens;
+        const localTrackClicks = campaign.trackClicks;
+        const localCampaignId = campaign.id;
+        const localOrgId = campaign.organizationId;
+
+        setTimeout(() => {
+          void (async () => {
+            const winner = await determineABTestWinner(campaignId, 'A', 'B');
+            const winnerContent = winner === 'A'
+              ? { subject: localSubject, html: localHtmlContent }
+              : { subject: localSubjectB ?? localSubject, html: localHtmlContentB ?? localHtmlContent };
+
+            await sendBulkEmails(remainingRecipients, {
+              ...winnerContent,
+              text: localTextContent,
+              from: localFromEmail,
+              fromName: localFromName,
+              replyTo: localReplyTo,
+              tracking: {
+                trackOpens: localTrackOpens,
+                trackClicks: localTrackClicks,
+              },
+              metadata: {
+                campaignId: localCampaignId,
+                variant: winner,
+                organizationId: localOrgId,
+              },
+            });
+          })();
         }, campaign.abTest.testDuration * 60 * 60 * 1000);
       }
     } else {
@@ -311,24 +327,25 @@ export async function sendCampaign(campaignId: string, organizationId?: string):
     });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     campaign.status = 'draft';
     campaign.updatedAt = new Date();
-    return { success: false, error: error.message };
+    const errorMessage = error instanceof Error ? error.message : 'Failed to send campaign';
+    return { success: false, error: errorMessage };
   }
 }
 
 /**
  * Determine A/B test winner
  */
-async function determineABTestWinner(
-  campaignId: string,
-  variantA: string,
-  variantB: string
+function determineABTestWinner(
+  _campaignId: string,
+  _variantA: string,
+  _variantB: string
 ): Promise<'A' | 'B'> {
   // In production, query database for open/click stats
   // For now, return A as default
-  return 'A';
+  return Promise.resolve('A');
 }
 
 /**
@@ -379,9 +396,9 @@ export async function getCampaignStats(campaignId: string, organizationId?: stri
  * List all campaigns
  */
 export async function listCampaigns(
-  organizationId: string, 
+  organizationId: string,
   pageSize: number = 50,
-  lastDocId?: string
+  _lastDocId?: string
 ): Promise<{ campaigns: EmailCampaign[]; hasMore: boolean }> {
   // Load campaigns from Firestore with pagination
   const { EmailCampaignService } = await import('@/lib/db/firestore-service');
@@ -391,16 +408,24 @@ export async function listCampaigns(
     [orderBy('createdAt', 'desc')],
     Math.min(pageSize, 100) // Max 100 per page
   );
-  
+
+  interface CampaignData {
+    createdAt: string;
+    updatedAt: string;
+    scheduledFor?: string;
+    sentAt?: string;
+    [key: string]: unknown;
+  }
+
   // Convert Firestore data back to EmailCampaign format
-  const campaigns = result.data.map((c: any) => ({
+  const campaigns = result.data.map((c: CampaignData) => ({
     ...c,
     createdAt: new Date(c.createdAt),
     updatedAt: new Date(c.updatedAt),
     scheduledFor: c.scheduledFor ? new Date(c.scheduledFor) : undefined,
     sentAt: c.sentAt ? new Date(c.sentAt) : undefined,
   })) as EmailCampaign[];
-  
+
   return {
     campaigns,
     hasMore: result.hasMore,

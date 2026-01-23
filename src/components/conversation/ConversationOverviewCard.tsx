@@ -18,7 +18,7 @@ interface ConversationOverviewCardProps {
 }
 
 export function ConversationOverviewCard({ analysis, className = '' }: ConversationOverviewCardProps) {
-  const { scores, sentiment, talkRatio, qualityIndicators, redFlags, positiveSignals } = analysis;
+  const { scores, sentiment, talkRatio, redFlags, positiveSignals } = analysis;
   
   // Score colors
   const getScoreColor = (score: number) => {

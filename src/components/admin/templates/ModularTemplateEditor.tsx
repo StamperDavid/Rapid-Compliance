@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save, X, AlertCircle, RotateCcw, Plus } from 'lucide-react';
@@ -109,6 +109,8 @@ export function ModularTemplateEditor({
 
   const handleCancel = () => {
     if (hasChanges) {
+      // TODO: Replace with proper confirmation dialog
+      // eslint-disable-next-line no-alert
       if (!confirm('You have unsaved changes. Are you sure you want to cancel?')) {
         return;
       }
@@ -117,6 +119,8 @@ export function ModularTemplateEditor({
   };
 
   const handleRevert = async () => {
+    // TODO: Replace with proper confirmation dialog
+    // eslint-disable-next-line no-alert
     if (!confirm('Are you sure you want to revert this template to its default? This will delete any customizations.')) {
       return;
     }
@@ -182,7 +186,7 @@ export function ModularTemplateEditor({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleRevert}
+                  onClick={() => { void handleRevert(); }}
                   disabled={isLoading || isSaving}
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
@@ -199,7 +203,7 @@ export function ModularTemplateEditor({
                 </Button>
                 <Button
                   size="sm"
-                  onClick={handleSave}
+                  onClick={() => { void handleSave(); }}
                   disabled={!hasChanges || isLoading || isSaving}
                 >
                   <Save className="h-4 w-4 mr-2" />

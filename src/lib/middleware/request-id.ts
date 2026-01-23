@@ -4,8 +4,7 @@
  * Industry Best Practice: Every request should be traceable
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 
 /**
@@ -49,7 +48,7 @@ export function withRequestId(
     try {
       const response = await handler(request, requestId);
       return addRequestIdToResponse(response, requestId);
-    } catch (error) {
+    } catch (_error) {
       // Even on error, return request ID
       const errorResponse = NextResponse.json(
         { error: 'Internal server error', requestId },

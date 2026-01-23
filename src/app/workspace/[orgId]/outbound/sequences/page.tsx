@@ -3,15 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { SequenceEngine } from '@/lib/outbound/sequence-engine';
 import type { OutboundSequence, ProspectEnrollment } from '@/types/outbound-sequence'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export default function EmailSequencesPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const params = useParams();
   const orgId = params.orgId as string;
 
@@ -19,7 +19,6 @@ export default function EmailSequencesPage() {
   const [enrollments, setEnrollments] = useState<ProspectEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'sequences' | 'enrollments'>('sequences');
-  const [selectedSequence, setSelectedSequence] = useState<OutboundSequence | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Load sequences from Firestore
@@ -50,7 +49,7 @@ export default function EmailSequencesPage() {
       }
     };
 
-    loadData();
+    void loadData();
   }, [orgId]);
 
   const handleCreateSequence = async (name: string, description: string) => {
@@ -114,7 +113,7 @@ export default function EmailSequencesPage() {
       setShowCreateModal(false);
     } catch (error) {
       logger.error('Error creating sequence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to create sequence');
+      toast.error('Failed to create sequence');
     }
   };
 
@@ -126,12 +125,12 @@ export default function EmailSequencesPage() {
         { status: 'active' }
       );
 
-      setSequences(sequences.map(s => 
+      setSequences(sequences.map(s =>
         s.id === sequenceId ? { ...s, status: 'active' as const } : s
       ));
     } catch (error) {
       logger.error('Error activating sequence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to activate sequence');
+      toast.error('Failed to activate sequence');
     }
   };
 
@@ -143,12 +142,12 @@ export default function EmailSequencesPage() {
         { status: 'paused' }
       );
 
-      setSequences(sequences.map(s => 
+      setSequences(sequences.map(s =>
         s.id === sequenceId ? { ...s, status: 'paused' as const } : s
       ));
     } catch (error) {
       logger.error('Error pausing sequence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to pause sequence');
+      toast.error('Failed to pause sequence');
     }
   };
 
@@ -332,7 +331,7 @@ export default function EmailSequencesPage() {
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                       {seq.status === 'draft' && (
                         <button
-                          onClick={() => handleActivateSequence(seq.id)}
+                          onClick={() => void handleActivateSequence(seq.id)}
                           style={{
                             flex: 1,
                             padding: '0.75rem',
@@ -350,7 +349,7 @@ export default function EmailSequencesPage() {
                       )}
                       {seq.status === 'active' && (
                         <button
-                          onClick={() => handlePauseSequence(seq.id)}
+                          onClick={() => void handlePauseSequence(seq.id)}
                           style={{
                             flex: 1,
                             padding: '0.75rem',
@@ -368,7 +367,7 @@ export default function EmailSequencesPage() {
                       )}
                       {seq.status === 'paused' && (
                         <button
-                          onClick={() => handleActivateSequence(seq.id)}
+                          onClick={() => void handleActivateSequence(seq.id)}
                           style={{
                             flex: 1,
                             padding: '0.75rem',
@@ -385,7 +384,7 @@ export default function EmailSequencesPage() {
                         </button>
                       )}
                       <button
-                        onClick={() => setSelectedSequence(seq)}
+                        onClick={() => {/* Edit functionality - currently unused */}}
                         style={{
                           flex: 1,
                           padding: '0.75rem',
@@ -484,7 +483,7 @@ export default function EmailSequencesPage() {
       {showCreateModal && (
         <CreateSequenceModal
           onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreateSequence}
+          onCreate={(name, desc) => void handleCreateSequence(name, desc)}
         />
       )}
     </div>
@@ -492,12 +491,13 @@ export default function EmailSequencesPage() {
 }
 
 function CreateSequenceModal({ onClose, onCreate }: { onClose: () => void; onCreate: (name: string, desc: string) => void }) {
+  const toast = useToast();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      alert('Please enter a sequence name');
+      toast.warning('Please enter a sequence name');
       return;
     }
     onCreate(name, description);

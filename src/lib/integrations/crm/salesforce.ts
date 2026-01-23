@@ -5,14 +5,36 @@
 
 import type { ConnectedIntegration } from '@/types/integrations';
 
+interface SalesforceLeadParams {
+  firstName: string;
+  lastName: string;
+  email: string;
+  company: string;
+  phone?: string;
+  notes?: string;
+}
+
+interface SalesforceApiResponse {
+  id: string;
+  success: boolean;
+  errors?: unknown[];
+}
+
+interface SalesforceLeadResult {
+  leadId: string;
+  created: boolean;
+}
+
+type SalesforceFunctionResult = SalesforceLeadResult;
+
 /**
  * Execute a Salesforce function
  */
 export async function executeSalesforceFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: SalesforceLeadParams,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<SalesforceFunctionResult> {
   if (!integration.config) {
     throw new Error('Salesforce configuration missing');
   }
@@ -71,17 +93,10 @@ export async function executeSalesforceFunction(
  * Create a lead in Salesforce
  */
 async function createLead(
-  params: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    company: string;
-    phone?: string;
-    notes?: string;
-  },
+  params: SalesforceLeadParams,
   instanceUrl: string,
   accessToken: string
-): Promise<{ leadId: string; created: boolean }> {
+): Promise<SalesforceLeadResult> {
   const response = await fetch(`${instanceUrl}/services/data/v58.0/sobjects/Lead`, {
     method: 'POST',
     headers: {
@@ -100,12 +115,12 @@ async function createLead(
   });
   
   if (!response.ok) {
-    const error = await response.json();
+    const error: unknown = await response.json();
     throw new Error(`Failed to create lead: ${JSON.stringify(error)}`);
   }
-  
-  const data = await response.json();
-  
+
+  const data = await response.json() as SalesforceApiResponse;
+
   return {
     leadId: data.id,
     created: data.success,

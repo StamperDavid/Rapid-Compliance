@@ -17,7 +17,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
   Cell,
 } from 'recharts';
 import type { RevenueOverviewMetrics } from '@/lib/analytics/dashboard/types';
@@ -125,17 +124,17 @@ export function RevenueMetricsCard({ data, loading = false }: RevenueMetricsCard
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="date"
-              tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              tickFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               stroke="#6b7280"
               fontSize={12}
             />
             <YAxis
               stroke="#6b7280"
               fontSize={12}
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              tickFormatter={(value: number) => `$${(value / 1000).toFixed(0)}k`}
             />
             <Tooltip
-              labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+              labelFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
               formatter={(value: number) => [formatCurrency(value), 'Revenue']}
             />
             <Line
@@ -160,7 +159,7 @@ export function RevenueMetricsCard({ data, loading = false }: RevenueMetricsCard
             <YAxis
               stroke="#6b7280"
               fontSize={12}
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              tickFormatter={(value: number) => `$${(value / 1000).toFixed(0)}k`}
             />
             <Tooltip formatter={(value: number) => [formatCurrency(value), 'Revenue']} />
             <Bar dataKey="value" radius={[4, 4, 0, 0]}>

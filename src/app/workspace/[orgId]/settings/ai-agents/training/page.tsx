@@ -587,7 +587,7 @@ export default function AgentTrainingPage() {
         const text = await readFileAsText(file);
 
         // Process content (extract knowledge)
-        const extractedContent = await processDocumentContent(text, file.type);
+        const extractedContent = processDocumentContent(text, file.type);
 
         // Save training material
         const materialData: TrainingMaterial = {

@@ -36,8 +36,8 @@ interface Campaign {
  */
 export default function SocialMediaCampaignsPage() {
   const params = useParams();
-  const orgId = params.orgId as string;
-  const { user } = useAuth();
+  const _orgId = params.orgId as string;
+  const { user: _user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'campaigns' | 'posts' | 'analytics' | 'settings'>('campaigns');
 
@@ -307,7 +307,7 @@ export default function SocialMediaCampaignsPage() {
                       </span>
                       <span>{campaign.postsCount} posts</span>
                       <span>{campaign.engagement.toLocaleString()} engagements</span>
-                      <span>{campaign.startDate} - {campaign.endDate || 'Ongoing'}</span>
+                      <span>{campaign.startDate} - {campaign.endDate ?? 'Ongoing'}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>

@@ -1,32 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { getWorkflowExecutions } from '@/lib/workflows/workflow-engine'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+
+interface ActionResult {
+  status: string;
+  [key: string]: unknown;
+}
+
+interface WorkflowExecution {
+  id: string;
+  startedAt: string;
+  completedAt?: string;
+  status: string;
+  error?: string;
+  actionResults?: ActionResult[];
+}
 
 export default function WorkflowRunsPage() {
   const params = useParams();
   const orgId = params.orgId as string;
   const workflowId = params.workflowId as string;
 
-  const [executions, setExecutions] = useState<any[]>([]);
+  const [executions, setExecutions] = useState<WorkflowExecution[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadExecutions();
-  }, []);
-
-  const loadExecutions = async () => {
+  const loadExecutions = useCallback(async () => {
     try {
       const data = await getWorkflowExecutions(workflowId, orgId, 'default');
-      setExecutions(data);
+      setExecutions(data as WorkflowExecution[]);
     } catch (error) {
       logger.error('Error loading executions:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [workflowId, orgId]);
+
+  useEffect(() => {
+    void loadExecutions();
+  }, [loadExecutions]);
 
   if (loading) {return <div className="p-8">Loading...</div>;}
 
@@ -55,7 +69,7 @@ export default function WorkflowRunsPage() {
                   </span>
                 </td>
                 <td className="p-4 text-gray-400">
-                  {execution.actionResults?.filter((a: any) => a.status === 'success').length ?? 0} / {execution.actionResults?.length ?? 0}
+                  {execution.actionResults?.filter((a) => a.status === 'success').length ?? 0} / {execution.actionResults?.length ?? 0}
                 </td>
                 <td className="p-4 text-gray-400">
                   {execution.completedAt ? `${Math.round((new Date(execution.completedAt).getTime() - new Date(execution.startedAt).getTime()) / 1000)}s` : '-'}

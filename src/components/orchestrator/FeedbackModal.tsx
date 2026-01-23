@@ -14,8 +14,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   useOrchestratorStore,
-  type SupportTicket,
-  type FeatureRequest,
   type FeedbackPath,
 } from '@/lib/stores/orchestrator-store';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -77,8 +75,8 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
       await setDoc(doc(db, 'organizations', orgId, 'support_tickets', ticketId), {
         ...pendingSupportTicket,
         status: 'open',
-        userId: userId || null,
-        userEmail: userEmail || null,
+        userId: userId ?? null,
+        userEmail: userEmail ?? null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -115,8 +113,8 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
         ...pendingFeatureRequest,
         status: 'pending',
         votes: 0,
-        userId: userId || null,
-        userEmail: userEmail || null,
+        userId: userId ?? null,
+        userEmail: userEmail ?? null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -140,7 +138,9 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
     setError(null);
   };
 
-  if (!feedbackModalOpen) return null;
+  if (!feedbackModalOpen) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
@@ -254,7 +254,7 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
                   </label>
                   <input
                     type="text"
-                    value={pendingSupportTicket.title || ''}
+                    value={pendingSupportTicket.title ?? ''}
                     onChange={(e) => updateSupportTicket({ title: e.target.value })}
                     placeholder="Brief description of the issue"
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
@@ -298,7 +298,7 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
                     Description <span className="text-red-400">*</span>
                   </label>
                   <textarea
-                    value={pendingSupportTicket.description || ''}
+                    value={pendingSupportTicket.description ?? ''}
                     onChange={(e) => updateSupportTicket({ description: e.target.value })}
                     placeholder="Describe the issue in detail. Include steps to reproduce if applicable."
                     rows={4}
@@ -313,7 +313,7 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
 
                 {/* Submit */}
                 <button
-                  onClick={handleSubmitSupport}
+                  onClick={() => void handleSubmitSupport()}
                   disabled={isSubmitting}
                   className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
                 >
@@ -342,7 +342,7 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
                   </label>
                   <input
                     type="text"
-                    value={pendingFeatureRequest.featureName || ''}
+                    value={pendingFeatureRequest.featureName ?? ''}
                     onChange={(e) => updateFeatureRequest({ featureName: e.target.value })}
                     placeholder="What feature would you like to see?"
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
@@ -355,7 +355,7 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
                     Business Impact <span className="text-red-400">*</span>
                   </label>
                   <textarea
-                    value={pendingFeatureRequest.businessImpact || ''}
+                    value={pendingFeatureRequest.businessImpact ?? ''}
                     onChange={(e) => updateFeatureRequest({ businessImpact: e.target.value })}
                     placeholder="How would this feature help your business? What problem does it solve?"
                     rows={4}
@@ -370,7 +370,7 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
 
                 {/* Submit */}
                 <button
-                  onClick={handleSubmitFeature}
+                  onClick={() => void handleSubmitFeature()}
                   disabled={isSubmitting}
                   className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
                 >

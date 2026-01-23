@@ -126,7 +126,7 @@ export function ConversationCoachingCard({ analysis, className = '' }: Conversat
                 
                 {flag.quote && (
                   <p className="text-sm text-gray-600 italic mb-2">
-                    "{flag.quote}"
+                    {'"'}{flag.quote}{'"'}
                   </p>
                 )}
                 
@@ -200,7 +200,7 @@ export function ConversationCoachingCard({ analysis, className = '' }: Conversat
                     Example from conversation:
                   </div>
                   <p className="text-xs text-gray-600 italic">
-                    "{insight.specificExample}"
+                    {'"'}{insight.specificExample}{'"'}
                   </p>
                 </div>
                 

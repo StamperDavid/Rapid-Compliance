@@ -6,17 +6,33 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { PageSection } from '@/types/website';
+
+interface PageSEO {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+}
+
+interface FirebaseTimestamp {
+  toDate?: () => Date;
+  seconds?: number;
+}
 
 interface PageVersion {
   id: string;
   version: number;
-  content: any[];
-  seo: any;
+  content: PageSection[];
+  seo: PageSEO;
   title: string;
   slug: string;
   status: string;
-  createdAt: any;
+  createdAt: FirebaseTimestamp | Date | string;
   createdBy: string;
+}
+
+interface VersionsResponse {
+  versions: PageVersion[];
 }
 
 interface VersionHistoryProps {
@@ -38,7 +54,8 @@ export default function VersionHistory({
   const [restoring, setRestoring] = useState<number | null>(null);
 
   useEffect(() => {
-    loadVersions();
+    void loadVersions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId, organizationId]);
 
   async function loadVersions() {
@@ -54,49 +71,56 @@ export default function VersionHistory({
         throw new Error('Failed to load version history');
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as VersionsResponse;
       setVersions(data.versions ?? []);
-    } catch (err: any) {
+    } catch (err) {
       console.error('[Version History] Error:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load versions');
+      setError(err instanceof Error ? err.message : 'Failed to load versions');
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleRestore(version: PageVersion) {
-    if (!confirm(`Restore to Version ${version.version}? Current changes will become a new version.`)) {
+  function handleRestore(version: PageVersion) {
+    // eslint-disable-next-line no-alert
+    const confirmed = window.confirm(`Restore to Version ${version.version}? Current changes will become a new version.`);
+    if (!confirmed) {
       return;
     }
 
     try {
       setRestoring(version.version);
-      
+
       // Call the parent's restore handler
       onRestore(version);
-      
+
       // Close the panel after successful restore
       setTimeout(() => {
         onClose();
       }, 500);
-    } catch (err: any) {
+    } catch (err) {
       console.error('[Version History] Restore error:', err);
-      alert(`Failed to restore version: ${err.message}`);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      // eslint-disable-next-line no-alert
+      window.alert(`Failed to restore version: ${errorMessage}`);
     } finally {
       setRestoring(null);
     }
   }
 
-  function formatDate(timestamp: any): string {
-    if (!timestamp) {return 'Unknown';}
-    
+  function formatDate(timestamp: FirebaseTimestamp | Date | string): string {
+    if (!timestamp) {
+      return 'Unknown';
+    }
+
     let date: Date;
-    if (timestamp.toDate) {
-      date = timestamp.toDate();
-    } else if (timestamp.seconds) {
-      date = new Date(timestamp.seconds * 1000);
+    const ts = timestamp as FirebaseTimestamp;
+    if (ts.toDate) {
+      date = ts.toDate();
+    } else if (ts.seconds) {
+      date = new Date(ts.seconds * 1000);
     } else {
-      date = new Date(timestamp);
+      date = new Date(timestamp as Date | string);
     }
 
     return date.toLocaleString('en-US', {
@@ -247,7 +271,9 @@ export default function VersionHistory({
 
                 {/* Restore Button */}
                 <button
-                  onClick={() => handleRestore(version)}
+                  onClick={() => {
+                    handleRestore(version);
+                  }}
                   disabled={restoring === version.version}
                   style={{
                     width: '100%',

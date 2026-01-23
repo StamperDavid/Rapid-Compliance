@@ -6,9 +6,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 interface AuditLogEntry {
   id: string;
@@ -16,32 +15,24 @@ interface AuditLogEntry {
   pageId?: string;
   pageTitle?: string;
   performedBy: string;
-  performedAt: any;
+  performedAt: { toDate?: () => Date; seconds?: number } | Date | string;
   organizationId: string;
   version?: number;
   scheduledFor?: string;
   domain?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export default function AuditLogPage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  const { theme } = useOrgTheme();
 
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
 
-  // Theme colors
-  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#3b82f6';
-
-  useEffect(() => {
-    loadAuditLog();
-  }, [orgId]);
-
-  async function loadAuditLog() {
+  const loadAuditLog = React.useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -52,18 +43,25 @@ export default function AuditLogPage() {
         throw new Error('Failed to load audit log');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { entries?: AuditLogEntry[] };
       setEntries(data.entries ?? []);
-    } catch (err: any) {
-      console.error('[Audit Log] Error:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load audit log');
+    } catch (err) {
+      const error = err as Error;
+      console.error('[Audit Log] Error:', error);
+      setError(error.message ?? 'Failed to load audit log');
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId]);
+
+  React.useEffect(() => {
+    void loadAuditLog();
+  }, [loadAuditLog]);
 
   const filteredEntries = entries.filter(entry => {
-    if (filter === 'all') {return true;}
+    if (filter === 'all') {
+      return true;
+    }
     return entry.type === filter;
   });
 
@@ -88,25 +86,39 @@ export default function AuditLogPage() {
   }
 
   function getEventColor(type: string): string {
-    if (type.includes('published')) {return '#27ae60';}
-    if (type.includes('unpublished')) {return '#e67e22';}
-    if (type.includes('scheduled')) {return '#3498db';}
-    if (type.includes('deleted') || type.includes('removed')) {return '#e74c3c';}
-    if (type.includes('created') || type.includes('added')) {return '#2ecc71';}
-    if (type.includes('verified')) {return '#9b59b6';}
+    if (type.includes('published')) {
+      return '#27ae60';
+    }
+    if (type.includes('unpublished')) {
+      return '#e67e22';
+    }
+    if (type.includes('scheduled')) {
+      return '#3498db';
+    }
+    if (type.includes('deleted') || type.includes('removed')) {
+      return '#e74c3c';
+    }
+    if (type.includes('created') || type.includes('added')) {
+      return '#2ecc71';
+    }
+    if (type.includes('verified')) {
+      return '#9b59b6';
+    }
     return '#95a5a6';
   }
 
-  function formatDate(timestamp: any): string {
-    if (!timestamp) {return 'Unknown';}
-    
+  function formatDate(timestamp: AuditLogEntry['performedAt']): string {
+    if (!timestamp) {
+      return 'Unknown';
+    }
+
     let date: Date;
-    if (timestamp.toDate) {
+    if (typeof timestamp === 'object' && 'toDate' in timestamp && timestamp.toDate) {
       date = timestamp.toDate();
-    } else if (timestamp.seconds) {
+    } else if (typeof timestamp === 'object' && 'seconds' in timestamp && timestamp.seconds) {
       date = new Date(timestamp.seconds * 1000);
     } else {
-      date = new Date(timestamp);
+      date = new Date(timestamp as string | Date);
     }
 
     return date.toLocaleString('en-US', {
@@ -256,7 +268,7 @@ export default function AuditLogPage() {
                 {/* Event Details */}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
-                    {(entry.pageTitle !== '' && entry.pageTitle != null) ? entry.pageTitle : ((entry.domain !== '' && entry.domain != null) ? entry.domain : 'Event')}
+                    {entry.pageTitle ?? entry.domain ?? 'Event'}
                   </div>
                   
                   <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>

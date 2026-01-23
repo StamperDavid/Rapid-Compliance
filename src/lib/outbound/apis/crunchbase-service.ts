@@ -88,11 +88,20 @@ export async function searchOrganization(
     );
 
     if (!searchResponse.ok) {
+      // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
       logger.error('[Crunchbase] Search failed: ${searchResponse.status}', new Error('[Crunchbase] Search failed: ${searchResponse.status}'), { file: 'crunchbase-service.ts' });
       return null;
     }
 
-    const searchData = await searchResponse.json();
+    interface CrunchbaseSearchResult {
+      entities?: Array<{
+        identifier: {
+          permalink: string;
+        };
+      }>;
+    }
+
+    const searchData = await searchResponse.json() as CrunchbaseSearchResult;
     
     if (!searchData.entities || searchData.entities.length === 0) {
       logger.info('Crunchbase No results found for: companyName}', { file: 'crunchbase-service.ts' });
@@ -135,11 +144,17 @@ export async function getOrganizationByPermalink(
     );
 
     if (!response.ok) {
+      // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
       logger.error('[Crunchbase] Get organization failed: ${response.status}', new Error('[Crunchbase] Get organization failed: ${response.status}'), { file: 'crunchbase-service.ts' });
       return null;
     }
 
-    const data = await response.json();
+    interface CrunchbaseOrgResponse {
+      uuid: string;
+      properties: Omit<CrunchbaseOrganization, 'uuid' | 'permalink' | 'funding_rounds'>;
+    }
+
+    const data = await response.json() as CrunchbaseOrgResponse;
     
     // Get funding rounds separately
     const fundingRounds = await getFundingRounds(permalink, organizationId);

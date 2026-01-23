@@ -233,7 +233,7 @@ export async function scrapeAboutPage(baseUrl: string): Promise<ScrapedContent |
       if (content.cleanedText.length > 200) { // Has meaningful content
         return content;
       }
-    } catch (error) {
+    } catch (_error) {
       // Try next URL
       continue;
     }
@@ -294,7 +294,7 @@ export async function scrapeCareersPage(baseUrl: string): Promise<{
         jobCount: jobs.length,
         jobs: jobs.slice(0, 10), // Limit to 10
       };
-    } catch (error) {
+    } catch (_error) {
       continue;
     }
   }

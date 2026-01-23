@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 interface Field {
@@ -20,6 +19,27 @@ interface Schema {
   pluralName: string;
   icon: string;
   fields: Field[];
+}
+
+interface ApiErrorResponse {
+  error?: string;
+}
+
+interface SchemaListResponse {
+  schemas?: Schema[];
+}
+
+interface SchemaCreateResponse {
+  schema?: Schema;
+}
+
+function isErrorWithMessage(error: unknown): error is { message: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as { message: unknown }).message === 'string'
+  );
 }
 
 const FIELD_TYPES = [
@@ -83,15 +103,16 @@ export default function SchemaBuilderPage() {
       if (!res.ok) {
         throw new Error(`Failed to load schemas (${res.status})`);
       }
-      const data = await res.json();
-      const serverSchemas = (data.schemas as Schema[]) || [];
+      const data = await res.json() as SchemaListResponse;
+      const serverSchemas = data.schemas ?? [];
       if (serverSchemas.length === 0) {
         setSchemas(standardSchemasArray);
       } else {
         setSchemas(serverSchemas);
       }
-    } catch (err: any) {
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load schemas');
+    } catch (err: unknown) {
+      const errorMessage = isErrorWithMessage(err) ? err.message : 'Failed to load schemas';
+      setError(errorMessage);
       setSchemas(standardSchemasArray);
     } finally {
       setLoading(false);
@@ -99,7 +120,7 @@ export default function SchemaBuilderPage() {
   }, [orgId, workspaceId, standardSchemasArray]);
 
   useEffect(() => {
-    loadSchemas();
+    void loadSchemas();
   }, [loadSchemas]);
 
   const handleCreateSchema = async () => {
@@ -121,13 +142,13 @@ export default function SchemaBuilderPage() {
       });
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body.error !== '' && body.error != null) ? body.error : `Failed to create schema (${res.status})`);
+        const body = await res.json().catch(() => ({})) as ApiErrorResponse;
+        throw new Error(body.error ?? `Failed to create schema (${res.status})`);
       }
 
-      const data = await res.json();
-      if (data?.schema) {
-        setSchemas(prev => [...prev, data.schema]);
+      const data = await res.json() as SchemaCreateResponse;
+      if (data.schema) {
+        setSchemas(prev => [...prev, data.schema as Schema]);
       }
 
       setIsCreating(false);
@@ -137,8 +158,9 @@ export default function SchemaBuilderPage() {
         icon: '📋',
         fields: [{ id: 'f_new_1', key: 'name', label: 'Name', type: 'text', required: true }]
       });
-    } catch (err: any) {
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to create schema');
+    } catch (err: unknown) {
+      const errorMessage = isErrorWithMessage(err) ? err.message : 'Failed to create schema';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -158,9 +180,12 @@ export default function SchemaBuilderPage() {
     });
   };
 
-  const updateField = (index: number, key: string, value: any) => {
+  const updateField = (index: number, key: string, value: string | boolean) => {
     const updatedFields = [...newSchema.fields];
-    updatedFields[index] = { ...updatedFields[index], [key]: value };
+    const currentField = updatedFields[index];
+    if (currentField) {
+      updatedFields[index] = { ...currentField, [key]: value };
+    }
     setNewSchema({ ...newSchema, fields: updatedFields });
   };
 
@@ -172,6 +197,7 @@ export default function SchemaBuilderPage() {
   };
 
   const deleteSchema = async (id: string) => {
+    // eslint-disable-next-line no-alert, no-restricted-globals
     if (!confirm('Are you sure you want to delete this schema?')) {return;}
     setSaving(true);
     setError(null);
@@ -180,18 +206,19 @@ export default function SchemaBuilderPage() {
         method: 'DELETE'
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body.error !== '' && body.error != null) ? body.error : `Failed to delete schema (${res.status})`);
+        const body = await res.json().catch(() => ({})) as ApiErrorResponse;
+        throw new Error(body.error ?? `Failed to delete schema (${res.status})`);
       }
       setSchemas(prev => prev.filter(s => s.id !== id));
-    } catch (err: any) {
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to delete schema');
+    } catch (err: unknown) {
+      const errorMessage = isErrorWithMessage(err) ? err.message : 'Failed to delete schema';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
   };
 
-  const saveEditedSchema = async () => {
+  const _saveEditedSchema = async () => {
     if (!editingSchema) {return;}
     setSaving(true);
     setError(null);
@@ -208,14 +235,15 @@ export default function SchemaBuilderPage() {
       });
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body.error !== '' && body.error != null) ? body.error : `Failed to update schema (${res.status})`);
+        const body = await res.json().catch(() => ({})) as ApiErrorResponse;
+        throw new Error(body.error ?? `Failed to update schema (${res.status})`);
       }
 
       setSchemas(prev => prev.map(s => s.id === editingSchema.id ? editingSchema : s));
       setEditingSchema(null);
-    } catch (err: any) {
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to update schema');
+    } catch (err: unknown) {
+      const errorMessage = isErrorWithMessage(err) ? err.message : 'Failed to update schema';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -283,7 +311,7 @@ export default function SchemaBuilderPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => deleteSchema(schema.id)}
+                  onClick={() => void deleteSchema(schema.id)}
                   style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}
                   title="Delete"
                 >
@@ -452,7 +480,7 @@ export default function SchemaBuilderPage() {
                     Cancel
                   </button>
                   <button
-                    onClick={handleCreateSchema}
+                    onClick={() => void handleCreateSchema()}
                     disabled={!newSchema.name}
                     style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: newSchema.name ? '#6366f1' : '#333', color: 'white', borderRadius: '0.5rem', cursor: newSchema.name ? 'pointer' : 'not-allowed', fontSize: '0.875rem', fontWeight: '600', border: 'none' }}
                   >

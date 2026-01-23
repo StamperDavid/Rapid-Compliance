@@ -497,7 +497,7 @@ export class UxUiArchitect extends BaseSpecialist {
   /**
    * Generate comprehensive design system
    */
-  private async generateDesignSystem(request: DesignRequest, _taskId: string): Promise<DesignOutput> {
+  private generateDesignSystem(request: DesignRequest, _taskId: string): Promise<DesignOutput> {
     const brandColors = request.requirements?.brandColors ?? ['#3B82F6', '#10B981', '#F59E0B'];
     const targetAudience = request.requirements?.targetAudience ?? 'general';
 
@@ -542,18 +542,18 @@ export class UxUiArchitect extends BaseSpecialist {
       'Establish naming conventions for token additions',
     ];
 
-    return {
+    return Promise.resolve({
       type: 'design_system',
       data: tokens,
       recommendations,
       confidence: 0.95,
-    };
+    });
   }
 
   /**
    * Generate user flow diagrams
    */
-  private async generateUserFlows(request: DesignRequest, _taskId: string): Promise<DesignOutput> {
+  private generateUserFlows(request: DesignRequest, _taskId: string): Promise<DesignOutput> {
     const flowName = request.target?.flowName ?? 'User Journey';
     const context = request.context.toLowerCase();
 
@@ -579,18 +579,18 @@ export class UxUiArchitect extends BaseSpecialist {
       'Implement autosave for long forms',
     ];
 
-    return {
+    return Promise.resolve({
       type: 'user_flow',
       data: flow,
       recommendations,
       confidence: 0.88,
-    };
+    });
   }
 
   /**
    * Perform accessibility audit
    */
-  private async performAccessibilityAudit(request: DesignRequest, _taskId: string): Promise<DesignOutput> {
+  private performAccessibilityAudit(request: DesignRequest, _taskId: string): Promise<DesignOutput> {
     const wcagLevel = request.requirements?.accessibilityLevel ?? 'AA';
     const context = request.context.toLowerCase();
 
@@ -624,18 +624,18 @@ export class UxUiArchitect extends BaseSpecialist {
       'Involve users with disabilities in testing',
     ];
 
-    return {
+    return Promise.resolve({
       type: 'accessibility_audit',
       data: audit,
       recommendations,
       confidence: 0.82,
-    };
+    });
   }
 
   /**
    * Design component structure
    */
-  private async designComponent(request: DesignRequest, _taskId: string): Promise<DesignOutput> {
+  private designComponent(request: DesignRequest, _taskId: string): Promise<DesignOutput> {
     const componentName = request.target?.componentName ?? 'GenericComponent';
     const context = request.context.toLowerCase();
 
@@ -663,12 +663,12 @@ export class UxUiArchitect extends BaseSpecialist {
       'Consider using compound components for complex UIs',
     ];
 
-    return {
+    return Promise.resolve({
       type: 'component_design',
       data: componentDesign,
       recommendations,
       confidence: 0.90,
-    };
+    });
   }
 
   // ==========================================================================

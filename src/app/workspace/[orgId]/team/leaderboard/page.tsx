@@ -6,20 +6,21 @@ import type { LeaderboardEntry } from '@/lib/team/collaboration';
 
 export default function TeamLeaderboardPage() {
   const params = useParams();
-  const orgId = params.orgId as string;
+  const _orgId = params.orgId as string;
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadLeaderboard();
+    void loadLeaderboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
   const loadLeaderboard = async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/team/leaderboard?period=${period}`);
-      const data = await response.json();
+      const data = await response.json() as { success: boolean; data: LeaderboardEntry[] };
       if (data.success) {
         setLeaderboard(data.data);
       }

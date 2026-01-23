@@ -22,7 +22,6 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import {
   getAdminPersona,
   buildPersonaSystemPrompt,
-  generateStatusOpener,
 } from '@/lib/ai/persona-mapper';
 import { auth } from '@/lib/firebase/config';
 
@@ -44,7 +43,7 @@ interface AdminStats {
  * Custom debounce hook for stats fetching.
  * Prevents rapid API calls that could trigger 429 errors.
  */
-function useDebouncedCallback<T extends (...args: any[]) => any>(
+function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T {
@@ -97,11 +96,15 @@ export function AdminOrchestrator() {
   // This ensures all core system data (personas, config, pricing) exists
   useEffect(() => {
     async function runProvisionerViaAPI() {
-      if (adminUser?.role !== 'super_admin') return;
+      if (adminUser?.role !== 'super_admin') {
+        return;
+      }
 
       try {
         const currentUser = auth?.currentUser;
-        if (!currentUser) return;
+        if (!currentUser) {
+          return;
+        }
 
         const token = await currentUser.getIdToken();
         const response = await fetch('/api/admin/provision', {
@@ -113,21 +116,31 @@ export function AdminOrchestrator() {
         });
 
         if (response.ok) {
-          const data = await response.json();
-          if (data.report?.summary?.created > 0) {
+          const data = (await response.json()) as {
+            report?: {
+              summary?: {
+                created: number;
+                skipped: number;
+              };
+            };
+          };
+          if (data.report?.summary?.created && data.report.summary.created > 0) {
+            // eslint-disable-next-line no-console
             console.log(
               `[Provisioner] Database provisioned: ${data.report.summary.created} items created, ${data.report.summary.skipped} skipped`
             );
           }
         } else {
+          // eslint-disable-next-line no-console
           console.error('[Provisioner] API call failed:', response.status);
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('[Provisioner] Error during provisioning:', error);
       }
     }
 
-    runProvisionerViaAPI();
+    void runProvisionerViaAPI();
   }, [adminUser?.role]);
 
   // Debounced stats fetch function
@@ -171,7 +184,16 @@ export function AdminOrchestrator() {
         throw new Error(`Stats fetch failed: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as {
+        stats?: {
+          totalOrgs?: number;
+          activeAgents?: number;
+          pendingTickets?: number;
+          trialOrgs?: number;
+          monthlyRevenue?: number;
+          scope?: string;
+        };
+      };
 
       if (data.stats) {
         const newStats = {
@@ -183,7 +205,9 @@ export function AdminOrchestrator() {
         };
 
         // DEBUG: Log what we received from the API
+        // eslint-disable-next-line no-console
         console.log('[Jasper] Stats received from API:', newStats);
+        // eslint-disable-next-line no-console
         console.log('[Jasper] Stats scope:', data.stats.scope);
 
         setStats(newStats);
@@ -212,7 +236,9 @@ export function AdminOrchestrator() {
               },
             });
             if (orgsResponse.ok) {
-              const orgsData = await orgsResponse.json();
+              const orgsData = (await orgsResponse.json()) as {
+                organizations?: unknown[];
+              };
               const orgCount = orgsData.organizations?.length ?? 0;
 
               setStats((prev) => ({
@@ -221,6 +247,7 @@ export function AdminOrchestrator() {
                 activeAgents: orgCount, // Estimate one agent per org
               }));
               setStatsVerified(true);
+              // eslint-disable-next-line no-console
               console.log(`[Jasper] Fallback succeeded: ${orgCount} organizations found`);
             }
           }
@@ -243,16 +270,16 @@ export function AdminOrchestrator() {
   useEffect(() => {
     // Wait for admin authentication before fetching stats
     if (adminUser && auth?.currentUser) {
-      fetchStats();
+      void fetchStats();
     }
   }, [fetchStats, adminUser]);
 
   // Get admin persona for dynamic generation
-  const adminPersona = getAdminPersona();
+  const _adminPersona = getAdminPersona();
 
   // Generate admin welcome/briefing message with Jasper persona
   const getWelcomeMessage = (): string => {
-    const ownerName = adminUser?.email?.split('@')[0] || 'there';
+    const ownerName = adminUser?.email?.split('@')[0] ?? 'there';
 
     // Build a natural status update based on current state
     const buildStatusUpdate = (): string => {
@@ -271,7 +298,7 @@ export function AdminOrchestrator() {
         parts.push(`${stats.pendingTickets} ticket${stats.pendingTickets !== 1 ? 's' : ''} need attention`);
       }
 
-      return parts.join(', ') + '.';
+      return `${parts.join(', ')}.`;
     };
 
     // Natural greeting based on state
@@ -296,7 +323,7 @@ ${recommendation}`;
   };
 
   // Generate detailed platform briefing
-  const generateBriefing = async (): Promise<string> => {
+  const generateBriefing = (): Promise<string> => {
     // Avoid division by zero
     const trialConversionPct = stats.totalOrgs > 0
       ? Math.round((stats.trialOrgs / stats.totalOrgs) * 100)
@@ -305,7 +332,7 @@ ${recommendation}`;
       ? Math.round(stats.activeAgents / stats.totalOrgs)
       : 0;
 
-    return `**Platform Intelligence Briefing**
+    return Promise.resolve(`**Platform Intelligence Briefing**
 
 **Organization Health:**
 • Total Active: ${stats.totalOrgs} organizations
@@ -331,7 +358,7 @@ ${recommendation}`;
 2. Follow up with trial users approaching expiration
 3. Consider the webhook integration for next sprint
 
-Would you like me to drill into any of these areas?`;
+Would you like me to drill into any of these areas?`);
   };
 
   if (isLoading || !adminUser) {

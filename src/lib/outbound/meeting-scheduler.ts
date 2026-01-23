@@ -239,9 +239,9 @@ export async function scheduleMeeting(
     meeting.meetingLink = calendarEvent.link;
 
     // Send calendar invite
-    await sendCalendarInvite(meeting);
+    sendCalendarInvite(meeting);
 
-    
+
 
     return meeting;
   } catch (error) {

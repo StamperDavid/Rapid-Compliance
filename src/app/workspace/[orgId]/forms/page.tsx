@@ -19,7 +19,6 @@ import {
   Plus,
   Eye,
   Pencil,
-  Archive,
   Mail,
   Target,
   BarChart3,
@@ -41,6 +40,19 @@ interface FormTemplate {
   description: string;
   category: string;
   icon: React.ReactNode;
+}
+
+interface CreateFormResponse {
+  id: string;
+}
+
+function isCreateFormResponse(data: unknown): data is CreateFormResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    typeof (data as Record<string, unknown>).id === 'string'
+  );
 }
 
 // ============================================================================
@@ -155,8 +167,9 @@ export default function FormsPage() {
         throw new Error('Failed to fetch forms');
       }
 
-      const data = await response.json();
-      setForms(data.forms || []);
+      const data: unknown = await response.json();
+      const forms = (data as { forms?: FormDefinition[] }).forms ?? [];
+      setForms(forms);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load forms');
     } finally {
@@ -165,18 +178,22 @@ export default function FormsPage() {
   }, [orgId]);
 
   useEffect(() => {
-    fetchForms();
+    void fetchForms();
   }, [fetchForms]);
 
   // Filter forms
   const filteredForms = forms.filter((form) => {
-    if (activeFilter === 'all') return true;
+    if (activeFilter === 'all') {
+      return true;
+    }
     return form.status === activeFilter;
   });
 
   // Handle create form
   const handleCreateForm = async () => {
-    if (!newFormName.trim()) return;
+    if (!newFormName.trim()) {
+      return;
+    }
 
     try {
       setCreating(true);
@@ -195,7 +212,12 @@ export default function FormsPage() {
         throw new Error('Failed to create form');
       }
 
-      const data = await response.json();
+      const data: unknown = await response.json();
+
+      if (!isCreateFormResponse(data)) {
+        throw new Error('Invalid response from server');
+      }
+
       router.push(`/workspace/${orgId}/forms/${data.id}/edit`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create form');
@@ -216,9 +238,13 @@ export default function FormsPage() {
   };
 
   // Format date
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const formatDate = (timestamp: unknown) => {
+    if (!timestamp) {
+      return 'N/A';
+    }
+    const date = (timestamp as { toDate?: () => Date }).toDate
+      ? (timestamp as { toDate: () => Date }).toDate()
+      : new Date(timestamp as string | number | Date);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -371,7 +397,7 @@ export default function FormsPage() {
                         {form.name}
                       </h3>
                       <p className="text-xs text-gray-400 mt-1 line-clamp-2">
-                        {form.description || 'No description'}
+                        {form.description ?? 'No description'}
                       </p>
                     </div>
                   </div>
@@ -551,7 +577,9 @@ export default function FormsPage() {
                   <motion.button
                     whileHover={{ scale: !newFormName.trim() || creating ? 1 : 1.02 }}
                     whileTap={{ scale: !newFormName.trim() || creating ? 1 : 0.98 }}
-                    onClick={handleCreateForm}
+                    onClick={() => {
+                      void handleCreateForm();
+                    }}
                     disabled={!newFormName.trim() || creating}
                     className={`
                       px-6 py-2.5 text-sm font-semibold rounded-xl transition-all

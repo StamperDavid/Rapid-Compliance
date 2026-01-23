@@ -16,7 +16,6 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this specialist
@@ -461,7 +460,7 @@ export class InventoryManagerAgent extends BaseSpecialist {
   /**
    * Analyze current stock levels and identify issues
    */
-  private async performStockAnalysis(request: InventoryRequest): Promise<StockAnalysisResult> {
+  private performStockAnalysis(request: InventoryRequest): Promise<StockAnalysisResult> {
     const { products, threshold = 20, salesHistory = [] } = request;
     const timestamp = new Date().toISOString();
 
@@ -539,7 +538,7 @@ export class InventoryManagerAgent extends BaseSpecialist {
       return urgencyOrder[a.status] - urgencyOrder[b.status];
     });
 
-    return {
+    return Promise.resolve({
       timestamp,
       totalProducts: products.length,
       stockStatus: {
@@ -554,7 +553,7 @@ export class InventoryManagerAgent extends BaseSpecialist {
         lowStockRisk: Math.round(lowStockRiskValue * 100) / 100,
         overstockWaste: Math.round(overstockWasteValue * 100) / 100,
       },
-    };
+    });
   }
 
   // ==========================================================================
@@ -564,7 +563,7 @@ export class InventoryManagerAgent extends BaseSpecialist {
   /**
    * Forecast future demand based on historical sales data
    */
-  private async performDemandForecast(request: InventoryRequest): Promise<DemandForecastResult> {
+  private performDemandForecast(request: InventoryRequest): Promise<DemandForecastResult> {
     const { products, salesHistory = [], timeframe = 30 } = request;
     const timestamp = new Date().toISOString();
 
@@ -639,13 +638,13 @@ export class InventoryManagerAgent extends BaseSpecialist {
 
     const overallConfidence = forecasts.length > 0 ? totalConfidence / forecasts.length : 0;
 
-    return {
+    return Promise.resolve({
       timestamp,
       forecastPeriod: `${timeframe} days`,
       forecasts,
       totalPredictedDemand,
       confidence: Math.round(overallConfidence * 100) / 100,
-    };
+    });
   }
 
   // ==========================================================================
@@ -655,7 +654,7 @@ export class InventoryManagerAgent extends BaseSpecialist {
   /**
    * Generate reorder recommendations
    */
-  private async performReorderAnalysis(request: InventoryRequest): Promise<ReorderAlertResult> {
+  private performReorderAnalysis(request: InventoryRequest): Promise<ReorderAlertResult> {
     const { products, salesHistory = [], budget } = request;
     const timestamp = new Date().toISOString();
 
@@ -764,24 +763,24 @@ export class InventoryManagerAgent extends BaseSpecialist {
       });
 
       totalReorderCost = runningTotal;
-      return {
+      return Promise.resolve({
         timestamp,
         urgentReorders,
         plannedReorders,
         recommendations: filteredRecs,
         totalReorderCost: Math.round(totalReorderCost * 100) / 100,
         preventedStockouts,
-      };
+      });
     }
 
-    return {
+    return Promise.resolve({
       timestamp,
       urgentReorders,
       plannedReorders,
       recommendations,
       totalReorderCost: Math.round(totalReorderCost * 100) / 100,
       preventedStockouts,
-    };
+    });
   }
 
   // ==========================================================================
@@ -791,7 +790,7 @@ export class InventoryManagerAgent extends BaseSpecialist {
   /**
    * Analyze inventory turnover rates
    */
-  private async performTurnoverAnalysis(request: InventoryRequest): Promise<TurnoverAnalysisResult> {
+  private performTurnoverAnalysis(request: InventoryRequest): Promise<TurnoverAnalysisResult> {
     const { products, salesHistory = [], timeframe = 30 } = request;
     const timestamp = new Date().toISOString();
 
@@ -864,7 +863,7 @@ export class InventoryManagerAgent extends BaseSpecialist {
       products.length
     );
 
-    return {
+    return Promise.resolve({
       timestamp,
       analysisPeriod: `${timeframe} days`,
       metrics: {
@@ -876,7 +875,7 @@ export class InventoryManagerAgent extends BaseSpecialist {
       },
       products: productTurnovers,
       recommendations,
-    };
+    });
   }
 
   // ==========================================================================

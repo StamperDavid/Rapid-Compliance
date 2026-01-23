@@ -84,7 +84,7 @@ export async function handleWebhook(
         }
         
         // Execute workflow
-        const triggerData = {
+        const triggerData: Record<string, unknown> = {
           organizationId: org.id,
           workspaceId: workspace.id,
           method,
@@ -92,7 +92,7 @@ export async function handleWebhook(
           body,
           query: queryParams ?? {},
         };
-        
+
         await executeWorkflow(workflow as Workflow, triggerData);
         return;
       }

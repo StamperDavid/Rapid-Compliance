@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { notFound } from 'next/navigation';
 import AppWrapper from '@/components/custom-tools/AppWrapper';
 import type { CustomTool } from '@/types/custom-tools';
 
@@ -37,7 +36,7 @@ export default function CustomToolPage() {
           return;
         }
 
-        const data = await response.json();
+        const data = await response.json() as { tool?: CustomTool };
         const fetchedTool = data.tool;
 
         if (!fetchedTool) {
@@ -46,12 +45,12 @@ export default function CustomToolPage() {
         }
 
         // Check if tool is enabled
-        if (!fetchedTool.enabled) {
+        if (fetchedTool?.enabled === false) {
           setError('This tool is currently disabled');
           return;
         }
 
-        setTool(fetchedTool);
+        setTool(fetchedTool ?? null);
       } catch (err) {
         console.error('Error fetching tool:', err);
         setError('Failed to load tool');
@@ -60,7 +59,7 @@ export default function CustomToolPage() {
       }
     };
 
-    fetchTool();
+    void fetchTool();
   }, [orgId, toolId]);
 
   // Loading State
@@ -120,7 +119,7 @@ export default function CustomToolPage() {
               ? 'The custom tool you are looking for does not exist or has been removed.'
               : error === 'This tool is currently disabled'
                 ? 'This tool has been temporarily disabled by an administrator.'
-                : error || 'An unexpected error occurred.'}
+                : error ?? 'An unexpected error occurred.'}
           </p>
           <button
             onClick={() => router.push(`/workspace/${orgId}/dashboard`)}

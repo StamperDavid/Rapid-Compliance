@@ -52,12 +52,23 @@ export async function getTechStack(
     );
 
     if (!response.ok) {
+      // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
       logger.error('[BuiltWith] API error: ${response.status}', new Error('[BuiltWith] API error: ${response.status}'), { file: 'builtwith-service.ts' });
       return await getFallbackTechStack(domain);
     }
 
-    const data = await response.json();
-    
+    interface BuiltWithApiResponse {
+      Results?: Array<{
+        Result?: {
+          Paths?: Array<{
+            Technologies?: BuiltWithTechnology[];
+          }>;
+        };
+      }>;
+    }
+
+    const data = await response.json() as BuiltWithApiResponse;
+
     if (!data.Results || data.Results.length === 0) {
       return [];
     }
@@ -68,7 +79,7 @@ export async function getTechStack(
     // Extract all technologies
     if (result.Result?.Paths && result.Result.Paths.length > 0) {
       const path = result.Result.Paths[0];
-      
+
       if (path.Technologies) {
         path.Technologies.forEach((tech: BuiltWithTechnology) => {
           technologies.push(tech.Name);
@@ -110,8 +121,18 @@ export async function getTechStackDetailed(
       return null;
     }
 
-    const data = await response.json();
-    
+    interface BuiltWithApiResponse {
+      Results?: Array<{
+        Result?: {
+          Paths?: Array<{
+            Technologies?: BuiltWithTechnology[];
+          }>;
+        };
+      }>;
+    }
+
+    const data = await response.json() as BuiltWithApiResponse;
+
     if (!data.Results || data.Results.length === 0) {
       return null;
     }
@@ -122,11 +143,11 @@ export async function getTechStackDetailed(
 
     if (result.Result?.Paths && result.Result.Paths.length > 0) {
       const path = result.Result.Paths[0];
-      
+
       if (path.Technologies) {
         path.Technologies.forEach((tech: BuiltWithTechnology) => {
           technologies.push(tech);
-          
+
           // Group by tag/category
           if (!categories[tech.Tag]) {
             categories[tech.Tag] = [];

@@ -6,11 +6,11 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
-import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
 import type { BlogPost, PageSection } from '@/types/website';
 
 export default function BlogPostEditorPage() {
@@ -18,6 +18,7 @@ export default function BlogPostEditorPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
+  const toast = useToast();
   const orgId = params.orgId as string;
   const postId = searchParams.get('postId');
 
@@ -26,48 +27,39 @@ export default function BlogPostEditorPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedElement, setSelectedElement] = useState<any>(null);
+  const [selectedElement, setSelectedElement] = useState<PageSection | null>(null);
 
-  useEffect(() => {
-    loadCategories();
-    if (postId) {
-      loadPost(postId);
-    } else {
-      createBlankPost();
-    }
-  }, [postId]);
-
-  async function loadCategories() {
+  const loadCategories = useCallback(async () => {
     try {
       const response = await fetch(`/api/website/blog/categories?organizationId=${orgId}`);
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as { categories?: string[] };
         setCategories(data.categories ?? []);
       }
     } catch (error) {
       console.error('[Blog Editor] Load categories error:', error);
     }
-  }
+  }, [orgId]);
 
-  async function loadPost(id: string) {
+  const loadPost = useCallback(async (id: string) => {
     try {
       setLoading(true);
       const response = await fetch(`/api/website/blog/posts/${id}?organizationId=${orgId}`);
-      
+
       if (!response.ok) {throw new Error('Failed to load post');}
-      
-      const data = await response.json();
+
+      const data = await response.json() as { post: BlogPost };
       setPost(data.post);
       setTags(data.post.tags ?? []);
     } catch (error) {
       console.error('[Blog Editor] Load error:', error);
-      alert('Failed to load post');
+      toast.error('Failed to load post');
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId, toast]);
 
-  function createBlankPost() {
+  const createBlankPost = useCallback(() => {
     const newPost: BlogPost = {
       id: `post_${Date.now()}`,
       organizationId: orgId,
@@ -94,18 +86,27 @@ export default function BlogPostEditorPage() {
 
     setPost(newPost);
     setLoading(false);
-  }
+  }, [orgId, user?.email, user?.displayName]);
+
+  useEffect(() => {
+    void loadCategories();
+    if (postId) {
+      void loadPost(postId);
+    } else {
+      createBlankPost();
+    }
+  }, [postId, loadCategories, loadPost, createBlankPost]);
 
   async function savePost() {
     if (!post) {return;}
 
     try {
       setSaving(true);
-      
-      const endpoint = postId 
+
+      const endpoint = postId
         ? `/api/website/blog/posts/${postId}`
         : '/api/website/blog/posts';
-      
+
       const method = postId ? 'PUT' : 'POST';
 
       const response = await fetch(endpoint, {
@@ -124,14 +125,14 @@ export default function BlogPostEditorPage() {
 
       if (!response.ok) {throw new Error('Failed to save post');}
 
-      const data = await response.json();
-      alert('Post saved successfully!');
-      
+      await response.json();
+      toast.success('Post saved successfully!');
+
       // Redirect to posts list
       router.push(`/workspace/${orgId}/website/blog`);
     } catch (error) {
       console.error('[Blog Editor] Save error:', error);
-      alert('Failed to save post');
+      toast.error('Failed to save post');
     } finally {
       setSaving(false);
     }
@@ -241,7 +242,7 @@ export default function BlogPostEditorPage() {
             Cancel
           </button>
           <button
-            onClick={savePost}
+            onClick={() => void savePost()}
             disabled={saving}
             style={{
               padding: '0.5rem 1.5rem',
@@ -451,7 +452,7 @@ export default function BlogPostEditorPage() {
               </label>
               <select
                 value={post.status}
-                onChange={(e) => updatePost({ status: e.target.value as any })}
+                onChange={(e) => updatePost({ status: e.target.value as 'draft' | 'published' | 'scheduled' })}
                 style={{
                   width: '100%',
                   padding: '0.5rem',
@@ -491,10 +492,23 @@ export default function BlogPostEditorPage() {
         {/* Center Panel: Content Editor */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <EditorCanvas
-            page={{ ...post, content: post.content } as any}
+            page={{
+              id: post.id,
+              organizationId: post.organizationId,
+              title: post.title,
+              slug: post.slug,
+              content: post.content,
+              seo: post.seo,
+              customCSS: '',
+              createdAt: post.createdAt,
+              updatedAt: post.updatedAt,
+              createdBy: post.createdBy,
+              lastEditedBy: post.lastEditedBy,
+              isPublished: post.status === 'published',
+            }}
             breakpoint="desktop"
             selectedElement={selectedElement}
-            onSelectElement={setSelectedElement}
+            onSelectElement={(element: PageSection | null) => setSelectedElement(element)}
             onAddSection={addSection}
             onUpdateSection={updateSection}
             onDeleteSection={deleteSection}

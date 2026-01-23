@@ -3,7 +3,12 @@
  * Iterates over arrays and executes actions for each item
  */
 
-import type { BaseAction, WorkflowAction, Workflow, WorkflowTriggerData } from '@/types/workflow';
+import type {
+  BaseAction,
+  WorkflowAction,
+  Workflow,
+  WorkflowTriggerData,
+} from '@/types/workflow';
 
 export interface LoopActionConfig extends BaseAction {
   type: 'loop';
@@ -79,17 +84,17 @@ export async function executeLoopAction(
       const itemIndex = i + batchIndex;
       
       // Create item context
-      const itemContext = {
+      const itemContext: WorkflowTriggerData = {
         ...triggerData,
-        [itemVariable]: item,
-        [indexVariable]: itemIndex,
+        [itemVariable]: item as unknown,
+        [indexVariable]: itemIndex as unknown,
         _loop: {
-          item,
+          item: item as unknown,
           index: itemIndex,
           total: itemsToProcess.length,
           isFirst: itemIndex === 0,
           isLast: itemIndex === itemsToProcess.length - 1,
-        },
+        } as unknown,
       };
 
       try {
@@ -115,24 +120,26 @@ export async function executeLoopAction(
 
         return {
           index: itemIndex,
-          item,
+          item: item as unknown,
           success: itemSuccess,
-          result: actionResults,
+          result: actionResults as unknown,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
         result.processed++;
         result.failed++;
-        
+
         if (!continueOnError) {
           result.success = false;
           throw error;
         }
 
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
         return {
           index: itemIndex,
-          item,
+          item: item as unknown,
           success: false,
-          error: error.message,
+          error: errorMessage,
         };
       }
     });
@@ -142,7 +149,9 @@ export async function executeLoopAction(
 
     // Add delay between batches (not after last batch)
     if (delayBetweenItems > 0 && i + batchSize < itemsToProcess.length) {
-      await new Promise(resolve => setTimeout(resolve, delayBetweenItems));
+      await new Promise<void>(resolve => {
+        setTimeout(() => resolve(), delayBetweenItems);
+      });
     }
   }
 
@@ -179,35 +188,24 @@ async function executeWorkflowActions(
     try {
       let result: unknown;
 
-      switch (action.type) {
-        case 'send_email':
-          result = await executeEmailAction(action as any, triggerData, organizationId);
-          break;
-        case 'send_sms':
-          result = await executeSMSAction(action as any, triggerData, organizationId);
-          break;
-        case 'create_entity':
-        case 'update_entity':
-        case 'delete_entity':
-          result = await executeEntityAction(action as any, triggerData, organizationId);
-          break;
-        case 'http_request':
-          result = await executeHTTPAction(action as any, triggerData);
-          break;
-        case 'delay':
-          result = await executeDelayAction(action as any, triggerData);
-          break;
-        case 'conditional_branch':
-          result = await executeConditionalAction(action as any, triggerData, workflow, organizationId);
-          break;
-        case 'ai_agent':
-          result = await executeAIAgentAction(action as any, triggerData, organizationId);
-          break;
-        case 'send_slack':
-          result = await executeSlackAction(action as any, triggerData, organizationId);
-          break;
-        default:
-          throw new Error(`Unknown action type: ${action.type}`);
+      if (action.type === 'send_email') {
+        result = await executeEmailAction(action, triggerData, organizationId);
+      } else if (action.type === 'send_sms') {
+        result = await executeSMSAction(action, triggerData, organizationId);
+      } else if (action.type === 'create_entity' || action.type === 'update_entity' || action.type === 'delete_entity') {
+        result = await executeEntityAction(action, triggerData, organizationId);
+      } else if (action.type === 'http_request') {
+        result = await executeHTTPAction(action, triggerData);
+      } else if (action.type === 'delay') {
+        result = await executeDelayAction(action, triggerData);
+      } else if (action.type === 'conditional_branch') {
+        result = await executeConditionalAction(action, triggerData, workflow, organizationId);
+      } else if (action.type === 'ai_agent') {
+        result = await executeAIAgentAction(action, triggerData, organizationId);
+      } else if (action.type === 'send_slack') {
+        result = await executeSlackAction(action, triggerData, organizationId);
+      } else {
+        throw new Error(`Unknown action type: ${action.type}`);
       }
 
       results.push({
@@ -215,11 +213,13 @@ async function executeWorkflowActions(
         status: 'success',
         result,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       results.push({
         actionId: action.id,
         status: 'failed',
-        error: error.message,
+        error: errorMessage,
       });
       throw error; // Re-throw to be caught by loop
     }

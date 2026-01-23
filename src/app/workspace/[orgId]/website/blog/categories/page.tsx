@@ -6,29 +6,29 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/useToast';
+
 export default function CategoriesManagementPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
 
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadCategories();
-  }, [orgId]);
-
-  async function loadCategories() {
+  const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/website/blog/categories?organizationId=${orgId}`);
-      
+
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as { categories?: string[] };
         setCategories(data.categories ?? []);
       }
     } catch (error) {
@@ -36,7 +36,11 @@ export default function CategoriesManagementPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadCategories();
+  }, [loadCategories]);
 
   async function saveCategories() {
     try {
@@ -53,10 +57,10 @@ export default function CategoriesManagementPage() {
 
       if (!response.ok) {throw new Error('Failed to save categories');}
 
-      alert('Categories saved successfully!');
+      toast.success('Categories saved successfully!');
     } catch (error) {
       console.error('[Categories] Save error:', error);
-      alert('Failed to save categories');
+      toast.error('Failed to save categories');
     } finally {
       setSaving(false);
     }
@@ -64,12 +68,12 @@ export default function CategoriesManagementPage() {
 
   function addCategory() {
     if (!newCategory.trim()) {
-      alert('Please enter a category name');
+      toast.warning('Please enter a category name');
       return;
     }
 
     if (categories.includes(newCategory.trim())) {
-      alert('Category already exists');
+      toast.warning('Category already exists');
       return;
     }
 
@@ -77,9 +81,19 @@ export default function CategoriesManagementPage() {
     setNewCategory('');
   }
 
-  function removeCategory(category: string) {
-    if (!confirm(`Delete category "${category}"?`)) {return;}
-    setCategories(categories.filter(c => c !== category));
+  function handleDeleteClick(category: string) {
+    setDeleteConfirm(category);
+  }
+
+  function confirmDelete() {
+    if (deleteConfirm) {
+      setCategories(categories.filter(c => c !== deleteConfirm));
+      setDeleteConfirm(null);
+    }
+  }
+
+  function cancelDelete() {
+    setDeleteConfirm(null);
   }
 
   if (loading) {
@@ -216,7 +230,7 @@ export default function CategoriesManagementPage() {
                     {category}
                   </div>
                   <button
-                    onClick={() => removeCategory(category)}
+                    onClick={() => handleDeleteClick(category)}
                     style={{
                       padding: '0.5rem 0.75rem',
                       background: '#dc3545',
@@ -238,7 +252,7 @@ export default function CategoriesManagementPage() {
         {/* Save Button */}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button
-            onClick={saveCategories}
+            onClick={() => void saveCategories()}
             disabled={saving}
             style={{
               padding: '0.75rem 2rem',
@@ -255,6 +269,69 @@ export default function CategoriesManagementPage() {
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            padding: '2rem',
+            maxWidth: '400px',
+            width: '90%',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          }}>
+            <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem', color: '#212529' }}>
+              Delete Category
+            </h3>
+            <p style={{ margin: '0 0 1.5rem', color: '#6c757d' }}>
+              Are you sure you want to delete the category &quot;{deleteConfirm}&quot;?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={cancelDelete}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

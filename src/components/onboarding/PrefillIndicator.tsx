@@ -22,7 +22,7 @@ export interface ConfidenceBadgeProps {
 
 export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({
   confidence,
-  suggestedAction,
+  suggestedAction: _suggestedAction,
   showLabel = true,
 }) => {
   const getConfidenceColor = () => {
@@ -232,7 +232,7 @@ export const PrefilledFieldWrapper: React.FC<PrefilledFieldWrapperProps> = ({
         >
           💡 <strong>Suggestion:</strong> {String(fieldConfidence.value)}
           <div style={{ marginTop: '0.25rem', color: '#888', fontSize: '0.7rem' }}>
-            We found this information but aren't very confident. Please verify.
+            We found this information but aren&apos;t very confident. Please verify.
           </div>
         </div>
       )}
@@ -255,7 +255,7 @@ export interface PrefillStatusBannerProps {
 export const PrefillStatusBanner: React.FC<PrefillStatusBannerProps> = ({
   overallConfidence,
   fieldsPrefilledCount,
-  totalFieldsCount,
+  totalFieldsCount: _totalFieldsCount,
   fromCache,
   onStartFresh,
 }) => {
@@ -377,7 +377,7 @@ export const PrefillLoadingState: React.FC = () => {
       </div>
       
       <div style={{ color: '#999', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-        We're discovering information about your business to pre-fill this form.
+        We&apos;re discovering information about your business to pre-fill this form.
         This usually takes 10-30 seconds.
       </div>
       

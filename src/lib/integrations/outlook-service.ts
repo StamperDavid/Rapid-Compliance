@@ -27,48 +27,57 @@ export function getMicrosoftAuthUrl(): string {
   return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${MICROSOFT_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(MICROSOFT_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
 }
 
-/**
- * Exchange code for tokens
- */
-export async function getTokensFromCode(code: string): Promise<{
+interface MicrosoftTokenResponse {
   access_token: string;
   refresh_token: string;
   expires_in: number;
-}> {
+  token_type?: string;
+  scope?: string;
+}
+
+/**
+ * Exchange code for tokens
+ */
+export async function getTokensFromCode(code: string): Promise<MicrosoftTokenResponse> {
+  if (!MICROSOFT_CLIENT_ID || !MICROSOFT_CLIENT_SECRET) {
+    throw new Error('Microsoft credentials not configured');
+  }
+
   const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: MICROSOFT_CLIENT_ID!,
-      client_secret: MICROSOFT_CLIENT_SECRET!,
+      client_id: MICROSOFT_CLIENT_ID,
+      client_secret: MICROSOFT_CLIENT_SECRET,
       code,
       redirect_uri: MICROSOFT_REDIRECT_URI,
       grant_type: 'authorization_code',
     }),
   });
 
-  return response.json();
+  return response.json() as Promise<MicrosoftTokenResponse>;
 }
 
 /**
  * Refresh access token
  */
-export async function refreshAccessToken(refreshToken: string): Promise<{
-  access_token: string;
-  refresh_token: string;
-}> {
+export async function refreshAccessToken(refreshToken: string): Promise<MicrosoftTokenResponse> {
+  if (!MICROSOFT_CLIENT_ID || !MICROSOFT_CLIENT_SECRET) {
+    throw new Error('Microsoft credentials not configured');
+  }
+
   const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: MICROSOFT_CLIENT_ID!,
-      client_secret: MICROSOFT_CLIENT_SECRET!,
+      client_id: MICROSOFT_CLIENT_ID,
+      client_secret: MICROSOFT_CLIENT_SECRET,
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     }),
   });
 
-  return response.json();
+  return response.json() as Promise<MicrosoftTokenResponse>;
 }
 
 /**
@@ -82,6 +91,11 @@ function createGraphClient(accessToken: string): Client {
   });
 }
 
+interface GraphEmailResponse {
+  value: unknown[];
+  '@odata.nextLink'?: string;
+}
+
 /**
  * List emails
  */
@@ -89,20 +103,20 @@ export async function listEmails(accessToken: string, options?: {
   top?: number;
   skip?: number;
   filter?: string;
-}): Promise<any[]> {
+}): Promise<unknown[]> {
   const client = createGraphClient(accessToken);
 
   let request = client.api('/me/messages').top(options?.top ?? 50);
-  
+
   if (options?.skip) {
     request = request.skip(options.skip);
   }
-  
+
   if (options?.filter) {
     request = request.filter(options.filter);
   }
 
-  const response = await request.get();
+  const response = await request.get() as GraphEmailResponse;
   return response.value;
 }
 
@@ -134,17 +148,22 @@ export async function sendEmail(accessToken: string, email: {
   });
 }
 
+interface GraphCalendarResponse {
+  value: unknown[];
+  '@odata.nextLink'?: string;
+}
+
 /**
  * List calendar events
  */
 export async function listCalendarEvents(accessToken: string, options?: {
   startDateTime?: string;
   endDateTime?: string;
-}): Promise<any[]> {
+}): Promise<unknown[]> {
   const client = createGraphClient(accessToken);
-  
+
   let request = client.api('/me/calendar/events');
-  
+
   if (options?.startDateTime && options?.endDateTime) {
     request = request.query({
       startDateTime: options.startDateTime,
@@ -152,8 +171,33 @@ export async function listCalendarEvents(accessToken: string, options?: {
     });
   }
 
-  const response = await request.get();
+  const response = await request.get() as GraphCalendarResponse;
   return response.value;
+}
+
+interface GraphEventData {
+  subject: string;
+  start: {
+    dateTime: string;
+    timeZone: string;
+  };
+  end: {
+    dateTime: string;
+    timeZone: string;
+  };
+  body?: {
+    contentType: string;
+    content: string;
+  };
+  location?: {
+    displayName: string;
+  };
+  attendees?: Array<{
+    emailAddress: {
+      address: string;
+    };
+    type: string;
+  }>;
 }
 
 /**
@@ -166,10 +210,10 @@ export async function createCalendarEvent(accessToken: string, event: {
   end: string;
   attendees?: string[];
   location?: string;
-}): Promise<any> {
+}): Promise<unknown> {
   const client = createGraphClient(accessToken);
-  
-  const eventData: any = {
+
+  const eventData: GraphEventData = {
     subject: event.subject,
     start: {
       dateTime: event.start,
@@ -213,7 +257,7 @@ export async function getFreeBusy(accessToken: string, options: {
   emails: string[];
   startTime: string;
   endTime: string;
-}): Promise<any> {
+}): Promise<unknown> {
   const client = createGraphClient(accessToken);
   
   return client.api('/me/calendar/getSchedule').post({

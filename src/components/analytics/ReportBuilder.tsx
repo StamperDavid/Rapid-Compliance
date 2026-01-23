@@ -189,7 +189,7 @@ export default function ReportBuilder({ report, onSave, onCancel }: ReportBuilde
             />
             <select
               value={filter.operator}
-              onChange={(e) => updateFilter(index, { operator: e.target.value as any })}
+              onChange={(e) => updateFilter(index, { operator: e.target.value as ReportFilter['operator'] })}
               style={{
                 padding: '0.5rem',
                 backgroundColor: 'var(--color-bg-main)',
@@ -275,7 +275,7 @@ export default function ReportBuilder({ report, onSave, onCancel }: ReportBuilde
             />
             <select
               value={metric.aggregation}
-              onChange={(e) => updateMetric(index, { aggregation: e.target.value as any })}
+              onChange={(e) => updateMetric(index, { aggregation: e.target.value as ReportMetric['aggregation'] })}
               style={{
                 padding: '0.5rem',
                 backgroundColor: 'var(--color-bg-main)',
@@ -330,7 +330,7 @@ export default function ReportBuilder({ report, onSave, onCancel }: ReportBuilde
         </label>
         <select
           value={visualization.type}
-          onChange={(e) => setVisualization({ ...visualization, type: e.target.value as any })}
+          onChange={(e) => setVisualization({ ...visualization, type: e.target.value as ReportVisualization['type'] })}
           style={{
             width: '100%',
             padding: '0.625rem',

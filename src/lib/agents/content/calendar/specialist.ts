@@ -759,7 +759,7 @@ export class CalendarCoordinator extends BaseSpecialist {
 
     this.log(
       'INFO',
-      `Analyzing performance data for ${platform ? platform : 'all platforms'}: ${performanceData.length} data points`
+      `Analyzing performance data for ${platform ?? 'all platforms'}: ${performanceData.length} data points`
     );
 
     // Aggregate performance by day/time
@@ -1180,7 +1180,7 @@ export class CalendarCoordinator extends BaseSpecialist {
       if (!map.has(key)) {
         map.set(key, []);
       }
-      map.get(key)!.push(point);
+      map.get(key)?.push(point);
     });
 
     return map;
@@ -1239,7 +1239,7 @@ export class CalendarCoordinator extends BaseSpecialist {
     // Best performing platform
     const platformEngagement = new Map<Platform, number>();
     data.forEach((point) => {
-      const current = platformEngagement.get(point.platform) || 0;
+      const current = platformEngagement.get(point.platform) ?? 0;
       platformEngagement.set(point.platform, current + point.engagement);
     });
 

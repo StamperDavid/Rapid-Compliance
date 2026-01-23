@@ -16,7 +16,6 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger as _logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // HEADLINE FRAMEWORKS LIBRARY - Proven psychological patterns
@@ -69,7 +68,7 @@ const HEADLINE_FRAMEWORKS = {
 // TONE PRESETS - Voice adaptation library
 // ============================================================================
 
-const TONE_PRESETS = {
+const _TONE_PRESETS = {
   professional: {
     characteristics: ['clear', 'authoritative', 'data-driven', 'respectful'],
     avoid: ['slang', 'emojis', 'excessive punctuation', 'casual contractions'],
@@ -927,7 +926,7 @@ export class Copywriter extends BaseSpecialist {
    * Transform features to benefits
    */
   private transformFeaturesToBenefits(features: string[], audience: string, tone: string): KeyFeature[] {
-    return features.map((feature, index) => ({
+    return features.map((feature, _index) => ({
       feature,
       benefit: this.featureToBenefit(feature, audience, tone),
       icon: this.suggestIcon(feature),

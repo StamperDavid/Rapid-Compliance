@@ -3,18 +3,17 @@
  * Our proprietary hosted high-quality TTS service
  */
 
-import type {
-  TTSProvider,
-  TTSSynthesizeResponse,
-  TTSVoice,
-  TTSVoiceSettings,
-  TTSProviderInfo} from '../types';
 import {
   TTS_PROVIDER_INFO,
+  type TTSProvider,
+  type TTSSynthesizeResponse,
+  type TTSVoice,
+  type TTSVoiceSettings,
+  type TTSProviderInfo
 } from '../types';
 
 // Native API endpoint - configurable via environment
-const NATIVE_VOICE_URL = process.env.NATIVE_VOICE_URL || 'https://voice.platform.local/api/v1';
+const NATIVE_VOICE_URL = process.env.NATIVE_VOICE_URL ?? 'https://voice.platform.local/api/v1';
 
 // Default voices available in Native system
 const NATIVE_VOICES: TTSVoice[] = [
@@ -74,10 +73,10 @@ export class NativeProvider implements TTSProvider {
   private apiKey: string;
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.NATIVE_VOICE_API_KEY || '';
+    this.apiKey = apiKey ?? process.env.NATIVE_VOICE_API_KEY ?? '';
   }
 
-  async synthesize(
+  synthesize(
     text: string,
     voiceId: string,
     settings?: TTSVoiceSettings
@@ -118,31 +117,31 @@ export class NativeProvider implements TTSProvider {
 
     // Return placeholder audio for now
     // In production, this would be the actual synthesized audio
-    return {
+    return Promise.resolve({
       audio: PLACEHOLDER_AUDIO_BASE64,
       format: effectiveSettings.format,
       durationSeconds: Math.round(durationSeconds * 10) / 10,
       charactersUsed,
       engine: 'native',
       estimatedCostCents: Math.round(estimatedCostCents * 100) / 100,
-    };
+    });
   }
 
-  async listVoices(): Promise<TTSVoice[]> {
+  listVoices(): Promise<TTSVoice[]> {
     // In production, fetch from API
     // const response = await fetch(`${NATIVE_VOICE_URL}/voices`, {
     //   headers: { 'Authorization': `Bearer ${this.apiKey}` },
     // });
     // return await response.json();
 
-    return NATIVE_VOICES;
+    return Promise.resolve(NATIVE_VOICES);
   }
 
   getProviderInfo(): TTSProviderInfo {
     return TTS_PROVIDER_INFO.native;
   }
 
-  async validateApiKey(apiKey: string): Promise<boolean> {
+  validateApiKey(apiKey: string): Promise<boolean> {
     // In production, make a test API call
     // try {
     //   const response = await fetch(`${NATIVE_VOICE_URL}/validate`, {
@@ -154,11 +153,11 @@ export class NativeProvider implements TTSProvider {
     // }
 
     // For now, accept any non-empty key
-    return apiKey.length > 0;
+    return Promise.resolve(apiKey.length > 0);
   }
 
   async getVoice(voiceId: string): Promise<TTSVoice | null> {
     const voices = await this.listVoices();
-    return voices.find(v => v.id === voiceId) || null;
+    return voices.find(v => v.id === voiceId) ?? null;
   }
 }

@@ -18,8 +18,19 @@ interface ScoringRulesSectionProps {
   errors: Record<string, string>;
 }
 
+interface ScoringRuleUpdate {
+  id?: string;
+  name?: string;
+  description?: string;
+  condition?: string;
+  scoreBoost?: number;
+  priority?: number;
+  enabled?: boolean;
+}
+
 export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, canRemove }: ScoringRulesSectionProps) {
   const addScoringRule = () => {
+    // eslint-disable-next-line no-alert
     const id = prompt('Rule ID (e.g., growing_business):');
     if (!id) {return;}
 
@@ -37,7 +48,7 @@ export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, ca
       research: {
         ...template.research,
         scoringRules: [...(template.research?.scoringRules ?? []), newRule],
-      } as any,
+      },
     });
   };
 
@@ -47,18 +58,18 @@ export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, ca
       research: {
         ...template.research,
         scoringRules: rules.filter((_, i) => i !== index),
-      } as any,
+      },
     });
   };
 
-  const updateScoringRule = (index: number, updates: any) => {
+  const updateScoringRule = (index: number, updates: ScoringRuleUpdate) => {
     const rules = [...(template.research?.scoringRules ?? [])];
     rules[index] = { ...rules[index], ...updates };
     onUpdate({
       research: {
         ...template.research,
         scoringRules: rules,
-      } as any,
+      },
     });
   };
 

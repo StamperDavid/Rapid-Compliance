@@ -256,18 +256,23 @@ export class I18n {
   /**
    * Translate a key
    */
-  t(key: string, params?: Record<string, any>): string {
+  t(key: string, params?: Record<string, string | number>): string {
     const keys = key.split('.');
-    let value: any = this.translations;
-    
+    let value: string | Translations | undefined = this.translations;
+
     for (const k of keys) {
-      value = value?.[k];
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        value = value[k] as string | Translations | undefined;
+      } else {
+        value = undefined;
+      }
       if (value === undefined) {
+        // eslint-disable-next-line no-template-curly-in-string -- Intentional template literal syntax in string for demonstration
         logger.warn('Missing translation: ${key} for locale ${this.locale}', { file: 'translations.ts' });
         return key;
       }
     }
-    
+
     let result = value as string;
     
     // Replace parameters

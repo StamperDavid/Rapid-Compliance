@@ -31,10 +31,6 @@ import type {
   TriggerCondition,
   ActionExecutionResult,
   EmailActionConfig,
-  TaskActionConfig,
-  DealActionConfig,
-  NotificationActionConfig,
-  WaitActionConfig,
 } from './types';
 import type { DealScore } from '@/lib/templates/deal-scoring-engine';
 
@@ -699,7 +695,7 @@ export class WorkflowEngine {
    */
   static async executeWaitAction(
     action: WorkflowAction,
-    context: WorkflowExecutionContext
+    _context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
     const config = action.config as any; // WaitActionConfig
     

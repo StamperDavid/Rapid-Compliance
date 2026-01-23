@@ -35,7 +35,6 @@ interface FormBuilderProps {
   onPreview?: () => void;
 }
 
-type ViewMode = 'edit' | 'preview';
 type ShareTab = 'link' | 'embed' | 'qr';
 
 // ============================================================================
@@ -313,7 +312,7 @@ const styles = {
 // ============================================================================
 
 function generateFieldId(): string {
-  return `field_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `field_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 function getDefaultFieldConfig(type: FormFieldType, pageIndex: number, order: number): Partial<FormFieldConfig> {
@@ -400,7 +399,6 @@ export function FormBuilder({
 }: FormBuilderProps) {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [activeTab, setActiveTab] = useState<'fields' | 'settings'>('fields');
   const [showShareModal, setShowShareModal] = useState(false);
 
@@ -413,7 +411,7 @@ export function FormBuilder({
 
   // Get selected field
   const selectedField = useMemo(() => {
-    return fields.find((f) => f.id === selectedFieldId) || null;
+    return fields.find((f) => f.id === selectedFieldId) ?? null;
   }, [fields, selectedFieldId]);
 
   // Handle field drop from palette
@@ -426,8 +424,8 @@ export function FormBuilder({
         organizationId: form.organizationId,
         workspaceId: form.workspaceId,
         ...getDefaultFieldConfig(type, currentPageIndex, dropIndex),
-        createdAt: new Date() as any,
-        updatedAt: new Date() as any,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       } as FormFieldConfig;
 
       // Reorder existing fields
@@ -448,13 +446,17 @@ export function FormBuilder({
   const handleFieldReorder = useCallback(
     (sourceId: string, targetIndex: number) => {
       const sourceField = fields.find((f) => f.id === sourceId);
-      if (!sourceField) return;
+      if (!sourceField) {
+        return;
+      }
 
       const sourceIndex = sourceField.order;
 
       // Calculate new order
       const updatedFields = fields.map((f) => {
-        if (f.pageIndex !== currentPageIndex) return f;
+        if (f.pageIndex !== currentPageIndex) {
+          return f;
+        }
         if (f.id === sourceId) {
           return { ...f, order: targetIndex };
         }
@@ -481,7 +483,7 @@ export function FormBuilder({
   const handleFieldUpdate = useCallback(
     (fieldId: string, updates: Partial<FormFieldConfig>) => {
       const updatedFields = fields.map((f) =>
-        f.id === fieldId ? { ...f, ...updates, updatedAt: new Date() as any } : f
+        f.id === fieldId ? { ...f, ...updates, updatedAt: new Date() } : f
       );
       onFieldsChange(updatedFields);
     },
@@ -492,7 +494,9 @@ export function FormBuilder({
   const handleFieldDelete = useCallback(
     (fieldId: string) => {
       const deletedField = fields.find((f) => f.id === fieldId);
-      if (!deletedField) return;
+      if (!deletedField) {
+        return;
+      }
 
       // Remove field and reorder remaining
       const updatedFields = fields
@@ -516,7 +520,9 @@ export function FormBuilder({
   const handleFieldDuplicate = useCallback(
     (fieldId: string) => {
       const sourceField = fields.find((f) => f.id === fieldId);
-      if (!sourceField) return;
+      if (!sourceField) {
+        return;
+      }
 
       const newFieldId = generateFieldId();
       const newField: FormFieldConfig = {
@@ -525,8 +531,8 @@ export function FormBuilder({
         name: `${sourceField.name}_copy`,
         label: `${sourceField.label} (Copy)`,
         order: sourceField.order + 1,
-        createdAt: new Date() as any,
-        updatedAt: new Date() as any,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       // Reorder fields after the duplicate
@@ -556,7 +562,9 @@ export function FormBuilder({
   // Handle page delete
   const handleDeletePage = useCallback(
     (pageIndex: number) => {
-      if (form.pages.length <= 1) return;
+      if (form.pages.length <= 1) {
+        return;
+      }
 
       // Remove page
       const updatedPages = form.pages
@@ -591,7 +599,7 @@ export function FormBuilder({
       <header style={styles.header}>
         <div style={styles.headerLeft}>
           <div>
-            <h1 style={styles.title}>{form.name || 'Untitled Form'}</h1>
+            <h1 style={styles.title}>{form.name.length > 0 ? form.name : 'Untitled Form'}</h1>
             <p style={styles.subtitle}>
               {fields.length} fields · {form.pages.length} page{form.pages.length !== 1 ? 's' : ''}
             </p>
@@ -756,7 +764,7 @@ function PageTabs({
               cursor: 'pointer',
             }}
           >
-            {page.title || `Page ${index + 1}`}
+            {page.title.length > 0 ? page.title : `Page ${index + 1}`}
           </button>
           {pages.length > 1 && currentPageIndex === index && (
             <button
@@ -836,7 +844,7 @@ function FormSettings({ form, onFormChange }: FormSettingsProps) {
           Description
         </label>
         <textarea
-          value={form.description || ''}
+          value={form.description ?? ''}
           onChange={(e) => onFormChange({ ...form, description: e.target.value })}
           rows={3}
           style={{
@@ -1003,14 +1011,16 @@ function ShareModal({ form, onClose }: ShareModalProps) {
   title="${form.name}"
 ></iframe>`;
 
-  const handleCopy = useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
+  const handleCopy = useCallback((text: string) => {
+    void (async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    })();
   }, []);
 
   // Generate simple QR code as SVG (basic implementation)
@@ -1111,7 +1121,9 @@ function ShareModal({ form, onClose }: ShareModalProps) {
                       ...styles.copyButton,
                       ...(copied ? styles.copySuccess : {}),
                     }}
-                    onClick={() => handleCopy(formUrl)}
+                    onClick={() => {
+                      handleCopy(formUrl);
+                    }}
                   >
                     {copied ? '✓ Copied!' : 'Copy'}
                   </button>
@@ -1142,7 +1154,9 @@ function ShareModal({ form, onClose }: ShareModalProps) {
                     ...styles.copyButton,
                     ...(copied ? styles.copySuccess : {}),
                   }}
-                  onClick={() => handleCopy(embedCode)}
+                  onClick={() => {
+                    handleCopy(embedCode);
+                  }}
                 >
                   {copied ? '✓ Copied!' : 'Copy Code'}
                 </button>
@@ -1161,8 +1175,8 @@ function ShareModal({ form, onClose }: ShareModalProps) {
               <button
                 style={styles.downloadButton}
                 onClick={() => {
-                  // In production, generate and download actual QR code
-                  alert('QR code download coming soon!');
+                  // TODO: In production, generate and download actual QR code
+                  // For now, this feature is not yet implemented
                 }}
               >
                 Download QR Code

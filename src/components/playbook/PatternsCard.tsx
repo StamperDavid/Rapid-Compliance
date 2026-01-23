@@ -177,7 +177,7 @@ export function PatternsCard({ patterns, className = '' }: PatternsCardProps) {
                                 {example.effectiveness}
                               </span>
                             </div>
-                            <p className="text-gray-600 italic">"{example.quote}"</p>
+                            <p className="text-gray-600 italic">&quot;{example.quote}&quot;</p>
                             <div className="mt-2 text-xs text-gray-500">
                               Sentiment: {example.sentimentBefore.toFixed(2)} → {example.sentimentAfter.toFixed(2)}
                               <span className={`ml-2 ${example.sentimentAfter > example.sentimentBefore ? 'text-green-600' : 'text-red-600'}`}>

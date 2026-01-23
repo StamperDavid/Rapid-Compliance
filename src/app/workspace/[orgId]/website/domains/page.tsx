@@ -6,9 +6,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useToast } from '@/hooks/useToast';
 
 interface CustomDomain {
   id: string;
@@ -32,6 +33,20 @@ interface CustomDomain {
   lastCheckedAt: string;
 }
 
+interface DomainsResponse {
+  domains: CustomDomain[];
+}
+
+interface AddDomainResponse {
+  domain: CustomDomain;
+  error?: string;
+}
+
+interface VerifyDomainResponse {
+  verified: boolean;
+  error?: string;
+}
+
 export default function CustomDomainsPage() {
   const params = useParams();
   const organizationId = params.orgId as string;
@@ -44,17 +59,14 @@ export default function CustomDomainsPage() {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const toast = useToast();
 
   // Get theme colors
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#3b82f6';
   const bgColor = (theme?.colors?.background?.main !== '' && theme?.colors?.background?.main != null) ? theme.colors.background.main : '#000000';
   const textColor = (theme?.colors?.text?.primary !== '' && theme?.colors?.text?.primary != null) ? theme.colors.text.primary : '#ffffff';
 
-  useEffect(() => {
-    loadDomains();
-  }, [organizationId]);
-
-  const loadDomains = async () => {
+  const loadDomains = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -65,15 +77,20 @@ export default function CustomDomainsPage() {
         throw new Error('Failed to load domains');
       }
 
-      const data = await response.json();
+      const data = await response.json() as DomainsResponse;
       setDomains(data.domains ?? []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Domains] Error loading:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load domains');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load domains';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId]);
+
+  useEffect(() => {
+    void loadDomains();
+  }, [loadDomains]);
 
   const handleAddDomain = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,18 +122,19 @@ export default function CustomDomainsPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = await response.json() as AddDomainResponse;
         throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to add domain');
       }
 
-      const data = await response.json();
+      const data = await response.json() as AddDomainResponse;
       setDomains([...domains, data.domain]);
       setNewDomain('');
       setShowAddDomain(false);
       setSuccess('Domain added successfully! Please configure DNS records.');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Domains] Error adding:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to add domain');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add domain';
+      setError(errorMessage);
     } finally {
       setAdding(false);
     }
@@ -134,47 +152,49 @@ export default function CustomDomainsPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = await response.json() as VerifyDomainResponse;
         throw new Error((data.error !== '' && data.error != null) ? data.error : 'Verification failed');
       }
 
-      const data = await response.json();
-      
+      const data = await response.json() as VerifyDomainResponse;
+
       if (data.verified) {
         setSuccess('Domain verified successfully!');
-        loadDomains(); // Reload to get updated status
+        void loadDomains(); // Reload to get updated status
       } else {
         setError('Domain not yet verified. Please check DNS records and try again.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Domains] Error verifying:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to verify domain');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to verify domain';
+      setError(errorMessage);
     }
   };
 
-  const handleRemoveDomain = async (domainId: string) => {
-    if (!confirm('Are you sure you want to remove this domain?')) {
-      return;
-    }
+  const handleRemoveDomain = (domainId: string) => {
+    toast.warning('Are you sure you want to remove this domain?');
 
-    try {
-      setError(null);
-      setSuccess(null);
+    void (async () => {
+      try {
+        setError(null);
+        setSuccess(null);
 
-      const response = await fetch(`/api/website/domains/${domainId}?organizationId=${organizationId}`, {
-        method: 'DELETE',
-      });
+        const response = await fetch(`/api/website/domains/${domainId}?organizationId=${organizationId}`, {
+          method: 'DELETE',
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to remove domain');
+        if (!response.ok) {
+          throw new Error('Failed to remove domain');
+        }
+
+        setDomains(domains.filter(d => d.id !== domainId));
+        setSuccess('Domain removed successfully');
+      } catch (err: unknown) {
+        console.error('[Domains] Error removing:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to remove domain';
+        setError(errorMessage);
       }
-
-      setDomains(domains.filter(d => d.id !== domainId));
-      setSuccess('Domain removed successfully');
-    } catch (err: any) {
-      console.error('[Domains] Error removing:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to remove domain');
-    }
+    })();
   };
 
   if (loading) {
@@ -291,7 +311,7 @@ export default function CustomDomainsPage() {
               Add Custom Domain
             </h2>
 
-            <form onSubmit={handleAddDomain}>
+            <form onSubmit={(e) => void handleAddDomain(e)}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{
                   display: 'block',
@@ -408,8 +428,8 @@ export default function CustomDomainsPage() {
             <DomainCard
               key={domain.id}
               domain={domain}
-              onVerify={handleVerifyDomain}
-              onRemove={handleRemoveDomain}
+              onVerify={(id) => void handleVerifyDomain(id)}
+              onRemove={(id) => handleRemoveDomain(id)}
               primaryColor={primaryColor}
               bgColor={bgColor}
               textColor={textColor}
@@ -427,14 +447,14 @@ function DomainCard({
   onRemove,
   primaryColor,
   bgColor,
-  textColor,
+  _textColor,
 }: {
   domain: CustomDomain;
   onVerify: (id: string) => void;
   onRemove: (id: string) => void;
   primaryColor: string;
   bgColor: string;
-  textColor: string;
+  _textColor: string;
 }) {
   const [showDNS, setShowDNS] = useState(false);
 

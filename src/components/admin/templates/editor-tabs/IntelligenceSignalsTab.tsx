@@ -24,10 +24,39 @@ interface IntelligenceSignalsTabProps {
   disabled: boolean;
 }
 
+interface SignalUpdate {
+  id?: string;
+  label?: string;
+  description?: string;
+  keywords?: string[];
+  priority?: string;
+  action?: string;
+  scoreBoost?: number;
+  platform?: string;
+}
+
+interface FluffPatternUpdate {
+  id?: string;
+  pattern?: string;
+  description?: string;
+  context?: string;
+}
+
+interface ScoringRuleUpdate {
+  id?: string;
+  name?: string;
+  description?: string;
+  condition?: string;
+  scoreBoost?: number;
+  priority?: number;
+  enabled?: boolean;
+}
+
 export function IntelligenceSignalsTab({ template, onUpdate, disabled }: IntelligenceSignalsTabProps) {
   const [activeSection, setActiveSection] = useState('signals');
 
   const addSignal = () => {
+    // eslint-disable-next-line no-alert
     const id = prompt('Signal ID (e.g., hiring_staff):');
     if (!id) {return;}
 
@@ -46,7 +75,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
       research: {
         ...template.research,
         highValueSignals: [...(template.research?.highValueSignals ?? []), newSignal],
-      } as any,
+      },
     });
   };
 
@@ -56,22 +85,23 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
       research: {
         ...template.research,
         highValueSignals: signals.filter((_, i) => i !== index),
-      } as any,
+      },
     });
   };
 
-  const updateSignal = (index: number, updates: any) => {
+  const updateSignal = (index: number, updates: SignalUpdate) => {
     const signals = [...(template.research?.highValueSignals ?? [])];
     signals[index] = { ...signals[index], ...updates };
     onUpdate({
       research: {
         ...template.research,
         highValueSignals: signals,
-      } as any,
+      },
     });
   };
 
   const addFluffPattern = () => {
+    // eslint-disable-next-line no-alert
     const id = prompt('Pattern ID (e.g., copyright):');
     if (!id) {return;}
 
@@ -86,7 +116,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
       research: {
         ...template.research,
         fluffPatterns: [...(template.research?.fluffPatterns ?? []), newPattern],
-      } as any,
+      },
     });
   };
 
@@ -96,22 +126,23 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
       research: {
         ...template.research,
         fluffPatterns: patterns.filter((_, i) => i !== index),
-      } as any,
+      },
     });
   };
 
-  const updateFluffPattern = (index: number, updates: any) => {
+  const updateFluffPattern = (index: number, updates: FluffPatternUpdate) => {
     const patterns = [...(template.research?.fluffPatterns ?? [])];
     patterns[index] = { ...patterns[index], ...updates };
     onUpdate({
       research: {
         ...template.research,
         fluffPatterns: patterns,
-      } as any,
+      },
     });
   };
 
   const addScoringRule = () => {
+    // eslint-disable-next-line no-alert
     const id = prompt('Rule ID (e.g., growing_business):');
     if (!id) {return;}
 
@@ -129,7 +160,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
       research: {
         ...template.research,
         scoringRules: [...(template.research?.scoringRules ?? []), newRule],
-      } as any,
+      },
     });
   };
 
@@ -139,18 +170,18 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
       research: {
         ...template.research,
         scoringRules: rules.filter((_, i) => i !== index),
-      } as any,
+      },
     });
   };
 
-  const updateScoringRule = (index: number, updates: any) => {
+  const updateScoringRule = (index: number, updates: ScoringRuleUpdate) => {
     const rules = [...(template.research?.scoringRules ?? [])];
     rules[index] = { ...rules[index], ...updates };
     onUpdate({
       research: {
         ...template.research,
         scoringRules: rules,
-      } as any,
+      },
     });
   };
 

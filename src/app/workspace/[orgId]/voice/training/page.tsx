@@ -4,10 +4,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import type { VoiceTrainingSettings, BrandDNA } from '@/types/organization';
-import type { TTSEngineType, TTSVoice, APIKeyMode } from '@/lib/voice/tts/types';
-import { TTS_PROVIDER_INFO, DEFAULT_TTS_CONFIGS } from '@/lib/voice/tts/types';
+import { TTS_PROVIDER_INFO, DEFAULT_TTS_CONFIGS, type TTSEngineType, type TTSVoice, type APIKeyMode } from '@/lib/voice/tts/types';
 
 // Types
 interface CallMessage {
@@ -89,7 +89,9 @@ interface FirestoreAdminKeys {
 
 // Type guard functions
 function isVoiceTrainingSettings(value: unknown): value is VoiceTrainingSettings {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
   const v = value as Record<string, unknown>;
   return (
     typeof v.greetingScript === 'string' &&
@@ -102,7 +104,9 @@ function isVoiceTrainingSettings(value: unknown): value is VoiceTrainingSettings
 }
 
 function isBrandDNA(value: unknown): value is BrandDNA {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
   const v = value as Record<string, unknown>;
   return typeof v.companyDescription === 'string';
 }
@@ -160,6 +164,7 @@ export default function VoiceAITrainingLabPage() {
   const params = useParams();
   const orgId = typeof params.orgId === 'string' ? params.orgId : '';
   const { theme } = useOrgTheme();
+  const toast = useToast();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'settings' | 'test-calls' | 'history' | 'knowledge'>('settings');
@@ -214,7 +219,7 @@ export default function VoiceAITrainingLabPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Theme colors
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
 
   // Scroll to bottom of chat
   useEffect(() => {
@@ -374,9 +379,9 @@ export default function VoiceAITrainingLabPage() {
       const response = await fetch(`/api/voice/tts?orgId=${orgId}&action=config`);
       const data = await response.json() as TTSConfigResponse;
       if (data.success && data.config) {
-        setTtsEngine(data.config.engine || 'native');
-        setTtsKeyMode(data.config.keyMode || 'platform');
-        setSelectedVoiceId(data.config.voiceId || '');
+        setTtsEngine(data.config.engine ?? 'native');
+        setTtsKeyMode(data.config.keyMode ?? 'platform');
+        setSelectedVoiceId(data.config.voiceId ?? '');
       }
     } catch (error: unknown) {
       logger.error('Error loading TTS config:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
@@ -426,7 +431,9 @@ export default function VoiceAITrainingLabPage() {
   };
 
   const handleValidateApiKey = async () => {
-    if (!ttsUserApiKey.trim()) return;
+    if (!ttsUserApiKey.trim()) {
+      return;
+    }
     setValidatingKey(true);
     setApiKeyValid(null);
     try {
@@ -473,11 +480,11 @@ export default function VoiceAITrainingLabPage() {
         audioRef.current = audio;
         await audio.play();
       } else {
-        alert(data.error || 'Failed to generate audio');
+        toast.error(data.error ?? 'Failed to generate audio');
       }
     } catch (error: unknown) {
       logger.error('Error testing voice:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
-      alert('Failed to test voice. Please try again.');
+      toast.error('Failed to test voice. Please try again.');
     } finally {
       setTestingVoice(false);
     }
@@ -491,7 +498,7 @@ export default function VoiceAITrainingLabPage() {
         body: JSON.stringify({
           action: 'save-config',
           organizationId: orgId,
-          userId: user?.id || 'unknown',
+          userId: user?.id ?? 'unknown',
           config: {
             engine: ttsEngine,
             keyMode: ttsKeyMode,
@@ -503,7 +510,7 @@ export default function VoiceAITrainingLabPage() {
       });
       const data = await response.json() as TTSSaveResponse;
       if (!data.success) {
-        throw new Error(data.error || 'Failed to save TTS config');
+        throw new Error(data.error ?? 'Failed to save TTS config');
       }
     } catch (error: unknown) {
       logger.error('Error saving TTS config:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
@@ -529,7 +536,7 @@ export default function VoiceAITrainingLabPage() {
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
       if (!isFirebaseConfigured) {
         setVoiceSettings(updatedSettings);
-        alert('Settings saved (demo mode - not persisted)');
+        toast.info('Settings saved (demo mode - not persisted)');
         setSaving(false);
         return;
       }
@@ -545,7 +552,7 @@ export default function VoiceAITrainingLabPage() {
           inheritFromBrandDNA: !overrideForVoice,
           toolSettings: updatedSettings,
           updatedAt: new Date().toISOString(),
-          updatedBy: user?.id || 'unknown',
+          updatedBy: user?.id ?? 'unknown',
         },
         true
       );
@@ -555,11 +562,11 @@ export default function VoiceAITrainingLabPage() {
       // Also save TTS config
       await handleSaveTTSConfig();
 
-      alert('Voice AI settings saved successfully!');
+      toast.success('Voice AI settings saved successfully!');
 
     } catch (error: unknown) {
       logger.error('Error saving voice settings:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
-      alert('Failed to save settings. Please try again.');
+      toast.error('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -567,7 +574,7 @@ export default function VoiceAITrainingLabPage() {
 
   const handleAddObjection = () => {
     if (!newObjectionKey.trim() || !newObjectionResponse.trim()) {
-      alert('Please enter both the objection and the response.');
+      toast.warning('Please enter both the objection and the response.');
       return;
     }
 
@@ -581,7 +588,9 @@ export default function VoiceAITrainingLabPage() {
   };
 
   const handleAddCriteria = () => {
-    if (!newCriteria.trim()) return;
+    if (!newCriteria.trim()) {
+      return;
+    }
     setVoiceSettings(prev => ({
       ...prev,
       qualificationCriteria: [...prev.qualificationCriteria, newCriteria.trim()],
@@ -643,7 +652,9 @@ export default function VoiceAITrainingLabPage() {
   };
 
   const handleSendCallerMessage = async () => {
-    if (!callerInput.trim() || !isCallActive) return;
+    if (!callerInput.trim() || !isCallActive) {
+      return;
+    }
 
     const callerMessage: CallMessage = {
       id: `msg_${Date.now()}`,
@@ -687,7 +698,7 @@ export default function VoiceAITrainingLabPage() {
 
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys') as FirestoreAdminKeys | null;
+      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys') as FirestoreAdminKeys;
 
       if (adminKeys?.openrouter?.apiKey) {
         const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
@@ -733,29 +744,29 @@ export default function VoiceAITrainingLabPage() {
   };
 
   const buildVoiceAgentPrompt = (): string => {
-    let prompt = `You are a professional voice AI sales agent for a phone call.
+    const prompt = `You are a professional voice AI sales agent for a phone call.
 
 ## Tone of Voice
 You should maintain a ${voiceSettings.toneOfVoice} tone throughout the conversation.
 
 ## Company Context
-${brandDNA?.companyDescription || 'A professional sales organization'}
+${brandDNA?.companyDescription ?? 'A professional sales organization'}
 
 ## Unique Value Proposition
-${brandDNA?.uniqueValue || 'Quality service and solutions'}
+${brandDNA?.uniqueValue ?? 'Quality service and solutions'}
 
 ## Key Phrases to Use
-${brandDNA?.keyPhrases?.join(', ') || 'Professional, helpful, solution-focused'}
+${brandDNA?.keyPhrases?.join(', ') ?? 'Professional, helpful, solution-focused'}
 
 ## Phrases to Avoid
-${brandDNA?.avoidPhrases?.join(', ') || 'Avoid pushy or aggressive language'}
+${brandDNA?.avoidPhrases?.join(', ') ?? 'Avoid pushy or aggressive language'}
 
 ## Qualification Criteria
 When speaking with prospects, try to qualify them based on:
 ${voiceSettings.qualificationCriteria.map(c => `- ${c}`).join('\n')}
 
 ## Call Hand-off Instructions
-${voiceSettings.callHandoffInstructions || 'Transfer to a manager if the caller requests escalation.'}
+${voiceSettings.callHandoffInstructions ?? 'Transfer to a manager if the caller requests escalation.'}
 
 ## Guidelines
 - Keep responses conversational and natural for phone
@@ -771,7 +782,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
   const handleAddKnowledge = async () => {
     if (!newKnowledgeTitle.trim() || !newKnowledgeContent.trim()) {
-      alert('Please enter both title and content.');
+      toast.warning('Please enter both title and content.');
       return;
     }
 
@@ -892,7 +903,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     <div>
                       <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Voice Engine</h3>
                       <p style={{ fontSize: '0.875rem', color: '#666666' }}>
-                        Choose the text-to-speech provider for your AI agent's voice
+                        Choose the text-to-speech provider for your AI agent&apos;s voice
                       </p>
                     </div>
                   </div>
@@ -1281,7 +1292,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     {objectionTemplates.map((template, index) => (
                       <div key={index} style={{ padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', marginBottom: '0.75rem', border: '1px solid #333333' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                          <span style={{ fontWeight: '600', color: primaryColor, fontSize: '0.875rem' }}>"{template.key}"</span>
+                          <span style={{ fontWeight: '600', color: primaryColor, fontSize: '0.875rem' }}>&quot;{template.key}&quot;</span>
                           <button
                             onClick={() => handleRemoveObjection(template.key)}
                             style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.875rem' }}

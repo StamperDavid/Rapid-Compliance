@@ -10,8 +10,6 @@ import React from 'react';
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -20,7 +18,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from 'recharts';
 import type { WorkflowOverviewMetrics } from '@/lib/analytics/dashboard/types';
 
@@ -85,13 +82,13 @@ export function WorkflowMetricsCard({ data, loading = false }: WorkflowMetricsCa
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="date"
-              tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              tickFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               stroke="#6b7280"
               fontSize={12}
             />
             <YAxis stroke="#6b7280" fontSize={12} />
             <Tooltip
-              labelFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+              labelFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
               formatter={(value: number) => [value, 'Executions']}
             />
             <Line
@@ -114,13 +111,13 @@ export function WorkflowMetricsCard({ data, loading = false }: WorkflowMetricsCa
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
-                data={data.actionBreakdown.slice(0, 5) as any}
+                data={data.actionBreakdown.slice(0, 5)}
                 dataKey="count"
                 nameKey="actionType"
                 cx="50%"
                 cy="50%"
                 outerRadius={70}
-                label={(props: any) => `${props.actionType}: ${props.percentage.toFixed(0)}%`}
+                label={(props: { actionType: string; percentage: number }) => `${props.actionType}: ${props.percentage.toFixed(0)}%`}
                 labelLine={false}
               >
                 {data.actionBreakdown.slice(0, 5).map((_, index) => (

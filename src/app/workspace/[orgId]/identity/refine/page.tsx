@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
 import type { BrandDNA } from '@/types/organization';
-import type { TTSEngineType, TTSVoice } from '@/lib/voice/tts/types';
-import { TTS_PROVIDER_INFO, DEFAULT_TTS_CONFIGS } from '@/lib/voice/tts/types';
+import { TTS_PROVIDER_INFO, type TTSEngineType, type TTSVoice } from '@/lib/voice/tts/types';
 
 // Workforce Identity Configuration
 interface WorkforceIdentity {
@@ -32,6 +32,33 @@ interface WorkforceIdentity {
   responseStyle: 'concise' | 'balanced' | 'detailed';
   proactivityLevel: number;
   empathyLevel: number;
+}
+
+// API Response Interfaces
+interface VoicesApiResponse {
+  success: boolean;
+  voices?: TTSVoice[];
+  error?: string;
+}
+
+interface TTSApiResponse {
+  success: boolean;
+  audio?: string;
+  error?: string;
+}
+
+interface OnboardingData {
+  agentName?: string;
+  businessName?: string;
+  uniqueValue?: string;
+  problemSolved?: string;
+  targetCustomer?: string;
+  tone?: string;
+  industry?: string;
+}
+
+interface OrganizationData {
+  brandDNA?: BrandDNA;
 }
 
 const PERSONALITY_ARCHETYPES = [
@@ -85,6 +112,7 @@ export default function IdentityRefinementPage() {
   const orgId = params.orgId as string;
   const { user } = useAuth();
   const { theme } = useOrgTheme();
+  const toast = useToast();
 
   // Step state
   const [currentStep, setCurrentStep] = useState(1);
@@ -130,19 +158,9 @@ export default function IdentityRefinementPage() {
   const [newKeyPhrase, setNewKeyPhrase] = useState('');
   const [newAvoidPhrase, setNewAvoidPhrase] = useState('');
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
 
-  // Load existing data
-  useEffect(() => {
-    loadExistingIdentity();
-  }, [orgId]);
-
-  // Load voices when engine changes
-  useEffect(() => {
-    loadVoices(identity.voiceEngine);
-  }, [identity.voiceEngine, orgId]);
-
-  const loadExistingIdentity = async () => {
+  const loadExistingIdentity = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -156,37 +174,37 @@ export default function IdentityRefinementPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       // Load organization data (includes brandDNA)
-      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId) as OrganizationData;
 
       // Load onboarding data for pre-population
       const onboardingData = await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/onboarding`,
         'current'
-      );
+      ) as OnboardingData;
 
       // Load existing workforce identity if exists
       const workforceIdentity = await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
         'workforceIdentity'
-      );
+      ) as WorkforceIdentity;
 
       if (workforceIdentity) {
-        setIdentity(workforceIdentity as WorkforceIdentity);
+        setIdentity(workforceIdentity);
       } else if (onboardingData) {
         // Pre-populate from onboarding
         setIdentity(prev => ({
           ...prev,
-          workforceName: onboardingData.agentName || `${onboardingData.businessName} AI`,
-          tagline: onboardingData.uniqueValue?.substring(0, 100) || '',
+          workforceName: onboardingData.agentName ?? `${onboardingData.businessName ?? 'Your'} AI`,
+          tagline: onboardingData.uniqueValue?.substring(0, 100) ?? '',
           brandDNA: {
             ...prev.brandDNA,
-            companyDescription: onboardingData.problemSolved || '',
-            uniqueValue: onboardingData.uniqueValue || '',
-            targetAudience: onboardingData.targetCustomer || '',
-            toneOfVoice: onboardingData.tone || 'professional',
-            industry: onboardingData.industry || '',
+            companyDescription: onboardingData.problemSolved ?? '',
+            uniqueValue: onboardingData.uniqueValue ?? '',
+            targetAudience: onboardingData.targetCustomer ?? '',
+            toneOfVoice: onboardingData.tone ?? 'professional',
+            industry: onboardingData.industry ?? '',
           },
-          personalityArchetype: mapToneToArchetype(onboardingData.tone),
+          personalityArchetype: mapToneToArchetype(onboardingData.tone ?? 'professional'),
         }));
       }
 
@@ -202,9 +220,9 @@ export default function IdentityRefinementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId, mapToneToArchetype]);
 
-  const mapToneToArchetype = (tone: string): WorkforceIdentity['personalityArchetype'] => {
+  const mapToneToArchetype = useCallback((tone: string): WorkforceIdentity['personalityArchetype'] => {
     const mapping: Record<string, WorkforceIdentity['personalityArchetype']> = {
       'warm': 'friendly',
       'professional': 'professional',
@@ -214,14 +232,14 @@ export default function IdentityRefinementPage() {
       'casual': 'friendly',
       'enthusiastic-professional': 'energetic',
     };
-    return mapping[tone] || 'professional';
-  };
+    return mapping[tone] ?? 'professional';
+  }, []);
 
-  const loadVoices = async (engine: TTSEngineType) => {
+  const loadVoices = useCallback(async (engine: TTSEngineType) => {
     setLoadingVoices(true);
     try {
       const response = await fetch(`/api/voice/tts?orgId=${orgId}&engine=${engine}`);
-      const data = await response.json();
+      const data = await response.json() as VoicesApiResponse;
       if (data.success && data.voices) {
         setVoices(data.voices);
         // Auto-select first voice if none selected
@@ -235,15 +253,26 @@ export default function IdentityRefinementPage() {
       }
     } catch (error: unknown) {
       logger.error('Error loading voices:', error instanceof Error ? error : new Error(String(error)), { file: 'identity-refine-page.tsx' });
+      toast.error('Failed to load voices. Please try again.');
     } finally {
       setLoadingVoices(false);
     }
-  };
+  }, [orgId, identity.voiceId, toast]);
+
+  // Load existing data
+  useEffect(() => {
+    void loadExistingIdentity();
+  }, [loadExistingIdentity]);
+
+  // Load voices when engine changes
+  useEffect(() => {
+    void loadVoices(identity.voiceEngine);
+  }, [identity.voiceEngine, loadVoices]);
 
   const handleTestVoice = async () => {
     setTestingVoice(true);
     try {
-      const testText = `Hi there! I'm ${identity.workforceName || 'your AI assistant'}. ${identity.tagline || 'How can I help you today?'}`;
+      const testText = `Hi there! I'm ${identity.workforceName ?? 'your AI assistant'}. ${identity.tagline ?? 'How can I help you today?'}`;
 
       const response = await fetch('/api/voice/tts', {
         method: 'POST',
@@ -256,7 +285,7 @@ export default function IdentityRefinementPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as TTSApiResponse;
       if (data.success && data.audio) {
         if (audioRef.current) {
           audioRef.current.pause();
@@ -264,12 +293,13 @@ export default function IdentityRefinementPage() {
         const audio = new Audio(data.audio);
         audioRef.current = audio;
         await audio.play();
+        toast.success('Voice test playing!');
       } else {
-        alert(data.error || 'Failed to generate audio');
+        toast.error(data.error ?? 'Failed to generate audio');
       }
     } catch (error: unknown) {
       logger.error('Error testing voice:', error instanceof Error ? error : new Error(String(error)), { file: 'identity-refine-page.tsx' });
-      alert('Failed to test voice');
+      toast.error('Failed to test voice. Please try again.');
     } finally {
       setTestingVoice(false);
     }
@@ -333,7 +363,7 @@ export default function IdentityRefinementPage() {
     try {
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
       if (!isFirebaseConfigured) {
-        alert('Saved (demo mode)');
+        toast.success('Saved (demo mode)');
         router.push(`/workspace/${orgId}/dashboard`);
         return;
       }
@@ -347,7 +377,7 @@ export default function IdentityRefinementPage() {
         {
           ...identity,
           updatedAt: new Date().toISOString(),
-          updatedBy: user?.id || 'unknown',
+          updatedBy: user?.id ?? 'unknown',
           status: 'active',
         },
         true
@@ -370,12 +400,13 @@ export default function IdentityRefinementPage() {
         true
       );
 
+      toast.success('Workforce identity saved successfully!');
       // Navigate to dashboard
       router.push(`/workspace/${orgId}/dashboard`);
 
     } catch (error: unknown) {
       logger.error('Error saving identity:', error instanceof Error ? error : new Error(String(error)), { file: 'identity-refine-page.tsx' });
-      alert('Failed to save. Please try again.');
+      toast.error('Failed to save. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -1024,7 +1055,7 @@ export default function IdentityRefinementPage() {
                   setIdentity(prev => ({
                     ...prev,
                     voiceId: e.target.value,
-                    voiceName: voice?.name || ''
+                    voiceName: voice?.name ?? ''
                   }));
                 }}
                 disabled={loadingVoices}
@@ -1052,7 +1083,7 @@ export default function IdentityRefinementPage() {
 
             {/* Test Voice Button */}
             <button
-              onClick={handleTestVoice}
+              onClick={() => void handleTestVoice()}
               disabled={testingVoice || !identity.voiceId}
               style={{
                 width: '100%',
@@ -1181,7 +1212,7 @@ export default function IdentityRefinementPage() {
                   fontSize: '2rem',
                   color: '#fff',
                 }}>
-                  {AVATAR_STYLES.find(s => s.id === identity.avatarStyle)?.preview || '🤖'}
+                  {AVATAR_STYLES.find(s => s.id === identity.avatarStyle)?.preview ?? '🤖'}
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
@@ -1201,7 +1232,7 @@ export default function IdentityRefinementPage() {
                     color: identity.primaryColor,
                     fontWeight: '600',
                   }}>
-                    {PERSONALITY_ARCHETYPES.find(a => a.id === identity.personalityArchetype)?.name || 'Professional'} Personality
+                    {PERSONALITY_ARCHETYPES.find(a => a.id === identity.personalityArchetype)?.name ?? 'Professional'} Personality
                   </div>
                 </div>
               </div>
@@ -1322,7 +1353,7 @@ export default function IdentityRefinementPage() {
           </button>
 
           <button
-            onClick={handleSaveAndContinue}
+            onClick={() => void handleSaveAndContinue()}
             disabled={saving}
             style={{
               padding: '0.75rem 2rem',

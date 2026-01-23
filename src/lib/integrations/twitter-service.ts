@@ -46,7 +46,7 @@ export class TwitterService {
    */
   isConfigured(): boolean {
     return !!(
-      this.config.bearerToken ||
+      this.config.bearerToken ??
       (this.config.accessToken && this.config.clientId)
     );
   }
@@ -101,7 +101,7 @@ export class TwitterService {
     try {
       logger.debug('Twitter: Making API request', {
         endpoint,
-        method: options.method || 'GET',
+        method: options.method ?? 'GET',
         organizationId: this.organizationId,
       });
 
@@ -120,9 +120,15 @@ export class TwitterService {
         const errorBody = await response.text();
         let errorMessage = `Twitter API error: ${response.status}`;
 
+        interface TwitterErrorResponse {
+          detail?: string;
+          title?: string;
+          errors?: Array<{ message?: string }>;
+        }
+
         try {
-          const errorJson = JSON.parse(errorBody);
-          errorMessage = errorJson.detail || errorJson.title || errorJson.errors?.[0]?.message || errorMessage;
+          const errorJson = JSON.parse(errorBody) as TwitterErrorResponse;
+          errorMessage = errorJson.detail ?? errorJson.title ?? errorJson.errors?.[0]?.message ?? errorMessage;
         } catch {
           // Use default error message
         }
@@ -138,7 +144,7 @@ export class TwitterService {
           return {
             data: null,
             error: 'Rate limit exceeded. Please try again later.',
-            rateLimitInfo: newRateLimitInfo || undefined,
+            rateLimitInfo: newRateLimitInfo ?? undefined,
           };
         }
 
@@ -162,8 +168,8 @@ export class TwitterService {
         };
       }
 
-      const data = await response.json();
-      return { data: data as T, rateLimitInfo: newRateLimitInfo || undefined };
+      const data = await response.json() as T;
+      return { data, rateLimitInfo: newRateLimitInfo ?? undefined };
     } catch (error) {
       logger.error('Twitter: Request failed', error as Error, {
         endpoint,
@@ -235,7 +241,7 @@ export class TwitterService {
     if (request.pollOptions && request.pollOptions.length >= 2) {
       payload.poll = {
         options: request.pollOptions,
-        duration_minutes: request.pollDurationMinutes || 1440, // Default 24 hours
+        duration_minutes: request.pollDurationMinutes ?? 1440, // Default 24 hours
       };
     }
 
@@ -267,10 +273,10 @@ export class TwitterService {
       true // Use OAuth 2.0 user context
     );
 
-    if (result.error || !result.data) {
+    if (result.error ?? !result.data) {
       return {
         success: false,
-        error: result.error || 'Failed to post tweet',
+        error: result.error ?? 'Failed to post tweet',
         rateLimitRemaining: result.rateLimitInfo?.remaining,
         rateLimitReset: result.rateLimitInfo?.reset,
       };
@@ -380,7 +386,7 @@ export class TwitterService {
 
     // Build query parameters
     const params = new URLSearchParams();
-    params.set('max_results', String(Math.min(options.maxResults || 10, 100)));
+    params.set('max_results', String(Math.min(options.maxResults ?? 10, 100)));
     params.set('tweet.fields', 'created_at,public_metrics,conversation_id,in_reply_to_user_id,entities,attachments');
     params.set('user.fields', 'name,username,profile_image_url,verified');
     params.set('expansions', 'author_id,attachments.media_keys');
@@ -436,15 +442,15 @@ export class TwitterService {
       true
     );
 
-    if (result.error || !result.data) {
+    if (result.error ?? !result.data) {
       return {
         tweets: [],
-        error: result.error || 'Failed to fetch timeline',
+        error: result.error ?? 'Failed to fetch timeline',
       };
     }
 
     // Transform API response to our types
-    const tweets: TwitterTweet[] = (result.data.data || []).map((tweet) => ({
+    const tweets: TwitterTweet[] = (result.data.data ?? []).map((tweet) => ({
       id: tweet.id,
       text: tweet.text,
       authorId: tweet.author_id,
@@ -509,10 +515,10 @@ export class TwitterService {
       true
     );
 
-    if (result.error || !result.data) {
+    if (result.error ?? !result.data) {
       return {
         user: null,
-        error: result.error || 'Failed to fetch user profile',
+        error: result.error ?? 'Failed to fetch user profile',
       };
     }
 
@@ -552,10 +558,10 @@ export class TwitterService {
       true
     );
 
-    if (result.error || !result.data) {
+    if (result.error ?? !result.data) {
       return {
         success: false,
-        error: result.error || 'Failed to delete tweet',
+        error: result.error ?? 'Failed to delete tweet',
       };
     }
 
@@ -573,7 +579,7 @@ export class TwitterService {
    * Get rate limit status for an endpoint
    */
   getRateLimitStatus(endpoint: string): TwitterRateLimitInfo | null {
-    return rateLimitCache.get(endpoint) || null;
+    return rateLimitCache.get(endpoint) ?? null;
   }
 
   /**
@@ -597,6 +603,12 @@ export class TwitterService {
       const credentials = Buffer.from(
         `${this.config.clientId}:${this.config.clientSecret}`
       ).toString('base64');
+
+      interface TwitterTokenRefreshResponse {
+        access_token: string;
+        refresh_token?: string;
+        expires_in: number;
+      }
 
       const response = await fetch(TWITTER_OAUTH2_TOKEN_URL, {
         method: 'POST',
@@ -622,7 +634,7 @@ export class TwitterService {
         };
       }
 
-      const data = await response.json();
+      const data = await response.json() as TwitterTokenRefreshResponse;
 
       // Update internal config
       this.config.accessToken = data.access_token;
@@ -673,7 +685,9 @@ export async function createTwitterService(
     }
 
     // Twitter keys can be in social.twitter OR integrations.twitter (support both locations)
-    const twitterConfig = apiKeys.social?.twitter ?? apiKeys.integrations?.twitter;
+    const socialTwitter = apiKeys.social?.twitter;
+    const integrationsTwitter = apiKeys.integrations?.twitter;
+    const twitterConfig = socialTwitter ?? integrationsTwitter;
 
     if (!twitterConfig) {
       logger.debug('Twitter: Twitter integration not configured', {
@@ -683,8 +697,8 @@ export async function createTwitterService(
     }
 
     const config: TwitterConfig = {
-      clientId: twitterConfig.clientId || '',
-      clientSecret: twitterConfig.clientSecret || '',
+      clientId: twitterConfig.clientId ?? '',
+      clientSecret: twitterConfig.clientSecret ?? '',
       accessToken: twitterConfig.accessToken,
       refreshToken: twitterConfig.refreshToken,
       bearerToken: twitterConfig.bearerToken,

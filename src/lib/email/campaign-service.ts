@@ -5,8 +5,7 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
-import { where, orderBy } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 
 export interface EmailCampaign {
@@ -23,8 +22,8 @@ export interface EmailCampaign {
   templateId?: string;
   segmentId?: string;
   status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'paused';
-  scheduledFor?: any;
-  sentAt?: any;
+  scheduledFor?: Date | string;
+  sentAt?: Date | string;
   stats?: {
     sent: number;
     delivered: number;
@@ -35,8 +34,8 @@ export interface EmailCampaign {
     openRate: number;
     clickRate: number;
   };
-  createdAt: any;
-  updatedAt?: any;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
   createdBy?: string;
 }
 

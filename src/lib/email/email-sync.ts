@@ -4,9 +4,7 @@
  * Integrates with gmail-sync-service.ts and outlook-sync-service.ts
  */
 
-import type { GmailSyncStatus} from '@/lib/integrations/gmail-sync-service';
 import { syncGmailMessages, setupGmailPushNotifications, stopGmailPushNotifications } from '@/lib/integrations/gmail-sync-service';
-import type { OutlookSyncStatus } from '@/lib/integrations/outlook-sync-service';
 import { syncOutlookMessages } from '@/lib/integrations/outlook-sync-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
@@ -151,7 +149,12 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
     let synced = 0;
     let errors = 0;
 
-    for (const email of unsentEmails) {
+    interface UnsentEmail {
+      id: string;
+      [key: string]: unknown;
+    }
+
+    for (const email of unsentEmails as UnsentEmail[]) {
       try {
         // Mark as synced (emails are already sent via API)
         await FirestoreService.update(
@@ -269,13 +272,20 @@ export async function stopEmailSync(organizationId: string, provider: 'gmail' | 
       return;
     }
 
+    interface SyncConfig {
+      accessToken: string;
+      [key: string]: unknown;
+    }
+
+    const typedSyncConfig = syncConfig as SyncConfig;
+
     // Stop push notifications
     if (provider === 'gmail') {
-      await stopGmailPushNotifications(syncConfig.accessToken);
+      await stopGmailPushNotifications(typedSyncConfig.accessToken);
       logger.info('Gmail push notifications stopped', { organizationId });
     } else if (provider === 'outlook') {
       // TODO: Implement Outlook webhook removal
-      // await stopOutlookWebhook(syncConfig.accessToken);
+      // await stopOutlookWebhook(typedSyncConfig.accessToken);
       logger.info('Outlook webhooks would be stopped here', { organizationId });
     }
 
@@ -326,20 +336,36 @@ export async function getSyncStatus(organizationId: string, provider: 'gmail' | 
       `${provider}-sync`
     );
 
+    interface SyncConfigType {
+      isActive?: boolean;
+      [key: string]: unknown;
+    }
+
+    interface SyncResultType {
+      lastSyncAt: string;
+      messagesSynced: number;
+      errors: number;
+      [key: string]: unknown;
+    }
+
+    const typedSyncConfig = syncConfig as SyncConfigType | null;
+
     if (!lastSyncResult) {
-  return {
-        isActive: syncConfig?.isActive ?? false,
-    syncedCount: 0,
-    errorCount: 0,
-  };
-}
+      return {
+        isActive: typedSyncConfig?.isActive ?? false,
+        syncedCount: 0,
+        errorCount: 0,
+      };
+    }
+
+    const typedLastSyncResult = lastSyncResult as SyncResultType;
 
     return {
-      isActive: syncConfig?.isActive ?? false,
-      lastSyncAt: new Date(lastSyncResult.lastSyncAt),
+      isActive: typedSyncConfig?.isActive ?? false,
+      lastSyncAt: new Date(typedLastSyncResult.lastSyncAt),
       nextSyncAt: undefined, // Push-based sync, no scheduled next sync
-      syncedCount: lastSyncResult.messagesSynced,
-      errorCount: lastSyncResult.errors,
+      syncedCount: typedLastSyncResult.messagesSynced,
+      errorCount: typedLastSyncResult.errors,
     };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

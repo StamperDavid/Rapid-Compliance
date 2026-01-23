@@ -1,33 +1,47 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getCampaignStats } from '@/lib/email/campaign-manager'
-import { logger } from '@/lib/logger/logger';;
+import { getCampaignStats } from '@/lib/email/campaign-manager';
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
+
+interface CampaignStats {
+  name: string;
+  subject: string;
+  sent: number;
+  opened: number;
+  openRate: number;
+  clicked: number;
+  clickRate: number;
+  bounced: number;
+}
 
 export default function CampaignStatsPage() {
   const params = useParams();
   const router = useRouter();
-  const orgId = params.orgId as string;
+  const _orgId = params.orgId as string;
   const campaignId = params.campaignId as string;
+  const { error: showError } = useToast();
 
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<CampaignStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const data = await getCampaignStats(campaignId);
-      setStats(data);
+      setStats(data as CampaignStats);
     } catch (error: unknown) {
       logger.error('Error loading campaign stats:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+      showError('Failed to load campaign statistics');
     } finally {
       setLoading(false);
     }
-  };
+  }, [campaignId, showError]);
+
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
 
   if (loading || !stats) {return <div className="p-8">Loading...</div>;}
 

@@ -47,11 +47,18 @@ export async function registerScheduleTrigger(
  */
 function calculateNextRun(schedule: ScheduleTrigger['schedule']): string {
   const now = new Date();
-  
+
   if (schedule.type === 'interval') {
-    const interval = schedule.interval!;
+    const interval = schedule.interval;
+    if (!interval) {
+      logger.error('[Schedule] Interval schedule missing interval configuration', new Error('Missing interval'), {
+        file: 'schedule-trigger.ts'
+      });
+      return new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    }
+
     let milliseconds = interval.value;
-    
+
     switch (interval.unit) {
       case 'minutes':
         milliseconds *= 60 * 1000;
@@ -69,11 +76,14 @@ function calculateNextRun(schedule: ScheduleTrigger['schedule']): string {
         milliseconds *= 30 * 24 * 60 * 60 * 1000; // Approximate
         break;
     }
-    
+
     return new Date(now.getTime() + milliseconds).toISOString();
   } else if (schedule.type === 'cron') {
     try {
-      const cronExpression = schedule.cron!;
+      const cronExpression = schedule.cron;
+      if (!cronExpression) {
+        throw new Error('Cron schedule missing cron expression');
+      }
       
       // Validate and parse cron expression
       const interval = CronExpressionParser.parse(cronExpression, {
@@ -129,33 +139,65 @@ export async function executeScheduledWorkflows(): Promise<void> {
       
       for (const trigger of triggers) {
         try {
+          // Type guard for trigger data
+          if (!trigger || typeof trigger !== 'object') {
+            continue;
+          }
+
+          // Ensure workflowId exists
+          const workflowId = 'workflowId' in trigger && typeof trigger.workflowId === 'string'
+            ? trigger.workflowId
+            : null;
+
+          if (!workflowId) {
+            continue;
+          }
+
           // Load workflow
-          const workflow = await FirestoreService.get(
+          const workflowDoc = await FirestoreService.get(
             `${COLLECTIONS.ORGANIZATIONS}/${org.id}/${COLLECTIONS.WORKSPACES}/${workspace.id}/${COLLECTIONS.WORKFLOWS}`,
-            trigger.workflowId
+            workflowId
           );
-          
-          if (!workflow || (workflow as any).status !== 'active') {
+
+          // Type guard for workflow document
+          if (!workflowDoc || typeof workflowDoc !== 'object') {
+            continue;
+          }
+
+          const workflow = workflowDoc as Workflow;
+          if (workflow.status !== 'active') {
             continue; // Skip inactive workflows
           }
-          
-          // Execute workflow
-          const triggerData = {
-            organizationId: org.id,
-            workspaceId: workspace.id,
+
+          const scheduleData = 'schedule' in trigger && trigger.schedule as Record<string, unknown>;
+          const scheduleType = scheduleData && typeof scheduleData === 'object' && 'type' in scheduleData
+            ? scheduleData.type as string
+            : 'unknown';
+
+          // Execute workflow with proper typing
+          interface TriggerData {
+            organizationId: string;
+            workspaceId: string;
+            scheduledAt: string;
+            scheduleType: string;
+          }
+
+          const triggerData: TriggerData = {
+            organizationId: org.id as string,
+            workspaceId: workspace.id as string,
             scheduledAt: now,
-            scheduleType: (trigger as any).schedule.type,
+            scheduleType,
           };
-          
-          await executeWorkflow(workflow as Workflow, triggerData);
-          
+
+          await executeWorkflow(workflow, triggerData);
+
           // Update next run time
           const scheduleTrigger = workflow.trigger as ScheduleTrigger;
           const nextRun = calculateNextRun(scheduleTrigger.schedule);
-          
+
           await FirestoreService.set(
             `${COLLECTIONS.ORGANIZATIONS}/${org.id}/${COLLECTIONS.WORKSPACES}/${workspace.id}/scheduleTriggers`,
-            trigger.workflowId,
+            workflowId,
             {
               ...trigger,
               nextRun,
@@ -164,7 +206,10 @@ export async function executeScheduledWorkflows(): Promise<void> {
             false
           );
         } catch (error) {
-          logger.error(`[Schedule Trigger] Error executing workflow ${trigger.workflowId}`, error instanceof Error ? error : new Error(String(error)), { file: 'schedule-trigger.ts' });
+          const workflowId = trigger && typeof trigger === 'object' && 'workflowId' in trigger && typeof trigger.workflowId === 'string'
+            ? trigger.workflowId
+            : 'unknown';
+          logger.error(`[Schedule Trigger] Error executing workflow ${workflowId}`, error instanceof Error ? error : new Error(String(error)), { file: 'schedule-trigger.ts' });
           // Continue with other workflows
         }
       }

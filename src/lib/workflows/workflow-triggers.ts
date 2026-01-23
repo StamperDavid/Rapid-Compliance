@@ -5,7 +5,6 @@
  */
 
 import type { Workflow, WorkflowTriggerData } from '@/types/workflow';
-import { WorkflowTrigger } from '@/types/workflow';
 import { executeWorkflowImpl as executeWorkflow } from './workflow-engine';
 
 /**
@@ -34,8 +33,9 @@ export async function handleEntityCreated(
   workflows: Workflow[]
 ): Promise<void> {
   const matchingWorkflows = workflows.filter(w => {
-    if (w.trigger.type === 'entity.created' && (w.trigger as any).schemaId === schemaId) {
-      return true;
+    if (w.trigger.type === 'entity.created') {
+      const trigger = w.trigger;
+      return trigger.schemaId === schemaId;
     }
     return false;
   });
@@ -61,9 +61,14 @@ export async function handleEntityUpdated(
   workflows: Workflow[]
 ): Promise<void> {
   const matchingWorkflows = workflows.filter(w => {
-    if (w.trigger.type === 'entity.updated' && (w.trigger as any).schemaId === schemaId) {
+    if (w.trigger.type === 'entity.updated') {
+      const trigger = w.trigger;
+      if (trigger.schemaId !== schemaId) {
+        return false;
+      }
+
       // Check if specific fields are required
-      const specificFields = (w.trigger as any).specificFields;
+      const specificFields = trigger.specificFields;
       if (specificFields && specificFields.length > 0) {
         // Only trigger if specified fields changed
         const fieldsChanged = specificFields.some((field: string) => {
@@ -99,8 +104,9 @@ export async function handleEntityDeleted(
   workflows: Workflow[]
 ): Promise<void> {
   const matchingWorkflows = workflows.filter(w => {
-    if (w.trigger.type === 'entity.deleted' && (w.trigger as any).schemaId === schemaId) {
-      return true;
+    if (w.trigger.type === 'entity.deleted') {
+      const trigger = w.trigger;
+      return trigger.schemaId === schemaId;
     }
     return false;
   });
@@ -126,7 +132,8 @@ export async function handleScheduleTrigger(
 ): Promise<void> {
   const matchingWorkflows = workflows.filter(w => {
     if (w.trigger.type === 'schedule') {
-      const schedule = (w.trigger as any).schedule;
+      const trigger = w.trigger;
+      const schedule = trigger.schedule;
       return schedule === scheduleType || schedule === 'schedule.daily' || schedule === 'schedule.weekly';
     }
     return false;
@@ -154,7 +161,8 @@ export async function handleWebhookTrigger(
 ): Promise<void> {
   const matchingWorkflows = workflows.filter(w => {
     if (w.trigger.type === 'webhook') {
-      return (w.trigger as any).webhookId === webhookId;
+      const trigger = w.trigger;
+      return trigger.webhookUrl === webhookId;
     }
     return false;
   });

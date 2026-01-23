@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -58,6 +58,8 @@ export function TemplateEditor({
 
   const handleCancel = () => {
     if (hasChanges) {
+      // TODO: Replace with proper confirmation dialog
+      // eslint-disable-next-line no-alert
       if (!confirm('You have unsaved changes. Are you sure you want to cancel?')) {
         return;
       }
@@ -66,6 +68,8 @@ export function TemplateEditor({
   };
 
   const handleRevert = async () => {
+    // TODO: Replace with proper confirmation dialog
+    // eslint-disable-next-line no-alert
     if (!confirm('Are you sure you want to revert this template to its default? This will delete any customizations.')) {
       return;
     }
@@ -96,7 +100,7 @@ export function TemplateEditor({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleRevert}
+                onClick={() => { void handleRevert(); }}
                 disabled={isLoading || isSaving}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
@@ -113,7 +117,7 @@ export function TemplateEditor({
               </Button>
               <Button
                 size="sm"
-                onClick={handleSave}
+                onClick={() => { void handleSave(); }}
                 disabled={!hasChanges || isLoading || isSaving}
               >
                 <Save className="h-4 w-4 mr-2" />

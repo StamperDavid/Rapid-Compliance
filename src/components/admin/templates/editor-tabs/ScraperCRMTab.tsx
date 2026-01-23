@@ -22,12 +22,27 @@ interface ScraperCRMTabProps {
   disabled: boolean;
 }
 
+interface CustomFieldUpdate {
+  key?: string;
+  label?: string;
+  type?: string;
+  description?: string;
+  extractionHints?: string[];
+  required?: boolean;
+  defaultValue?: string;
+}
+
+interface ScrapingStrategyField {
+  seedUrls?: string[];
+  [key: string]: unknown;
+}
+
 export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabProps) {
   const handleBasicInfoChange = (field: string, value: string) => {
     onUpdate({ [field]: value });
   };
 
-  const handleScrapingStrategyChange = (field: string, value: any) => {
+  const handleScrapingStrategyChange = (field: string, value: unknown) => {
     onUpdate({
       research: {
         ...template.research,
@@ -35,24 +50,28 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
           ...template.research?.scrapingStrategy,
           [field]: value,
         },
-      } as any,
+      },
     });
   };
 
-  const addSeedUrl = () => {
+  const _addSeedUrl = () => {
+    // eslint-disable-next-line no-alert
     const newUrl = prompt('Enter seed URL:');
     if (newUrl) {
-      const currentUrls = (template.research?.scrapingStrategy as any)?.seedUrls ?? [];
+      const strategy = template.research?.scrapingStrategy as ScrapingStrategyField | undefined;
+      const currentUrls = strategy?.seedUrls ?? [];
       handleScrapingStrategyChange('seedUrls', [...currentUrls, newUrl]);
     }
   };
 
-  const removeSeedUrl = (index: number) => {
-    const currentUrls = (template.research?.scrapingStrategy as any)?.seedUrls ?? [];
-    handleScrapingStrategyChange('seedUrls', currentUrls.filter((_: any, i: number) => i !== index));
+  const _removeSeedUrl = (index: number) => {
+    const strategy = template.research?.scrapingStrategy as ScrapingStrategyField | undefined;
+    const currentUrls = strategy?.seedUrls ?? [];
+    handleScrapingStrategyChange('seedUrls', currentUrls.filter((_, i) => i !== index));
   };
 
   const addCustomField = () => {
+    // eslint-disable-next-line no-alert
     const key = prompt('Field key (e.g., company_size):');
     if (!key) {return;}
 
@@ -70,7 +89,7 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
       research: {
         ...template.research,
         customFields: [...(template.research?.customFields ?? []), newField],
-      } as any,
+      },
     });
   };
 
@@ -80,18 +99,18 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
       research: {
         ...template.research,
         customFields: fields.filter((_, i) => i !== index),
-      } as any,
+      },
     });
   };
 
-  const updateCustomField = (index: number, updates: any) => {
+  const updateCustomField = (index: number, updates: CustomFieldUpdate) => {
     const fields = [...(template.research?.customFields ?? [])];
     fields[index] = { ...fields[index], ...updates };
     onUpdate({
       research: {
         ...template.research,
         customFields: fields,
-      } as any,
+      },
     });
   };
 

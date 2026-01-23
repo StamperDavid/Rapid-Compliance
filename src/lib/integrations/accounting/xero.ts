@@ -6,14 +6,43 @@
 import type { ConnectedIntegration } from '@/types/integrations';
 import { createInvoice, createContact, listContacts, listInvoices } from '../xero-service';
 
+export interface XeroLineItem {
+  description: string;
+  amount: number;
+  quantity?: number;
+}
+
+export interface XeroInvoiceParams {
+  contactId: string;
+  lineItems: XeroLineItem[];
+  dueDate?: string;
+}
+
+export interface XeroContactParams {
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
+type XeroParameters = {
+  contactId?: string;
+  name?: string;
+  lineItems?: unknown[];
+  dueDate?: string;
+  email?: string;
+  phone?: string;
+};
+
+type XeroResult = unknown;
+
 /**
  * Execute a Xero function
  */
 export async function executeXeroFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: XeroParameters,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<XeroResult> {
   const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
   const tenantId = (integration.config?.tenantId ?? integration.settings?.tenantId ?? '') as string;
   
@@ -34,10 +63,10 @@ export async function executeXeroFunction(
       if (!Array.isArray(parameters.lineItems)) {
         throw new Error('lineItems (array) is required for createInvoice');
       }
-      
+
       return createInvoice(accessToken, tenantId, {
         contactId: parameters.contactId,
-        lineItems: parameters.lineItems,
+        lineItems: parameters.lineItems as XeroLineItem[],
         dueDate: parameters.dueDate,
       });
       

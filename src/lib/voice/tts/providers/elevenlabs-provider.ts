@@ -4,18 +4,40 @@
  * https://elevenlabs.io/
  */
 
-import type {
-  TTSProvider,
-  TTSSynthesizeResponse,
-  TTSVoice,
-  TTSVoiceSettings,
-  TTSProviderInfo,
-  AudioFormat} from '../types';
 import {
-  TTS_PROVIDER_INFO
+  TTS_PROVIDER_INFO,
+  type TTSProvider,
+  type TTSSynthesizeResponse,
+  type TTSVoice,
+  type TTSVoiceSettings,
+  type TTSProviderInfo,
+  type AudioFormat,
 } from '../types';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
+
+// ElevenLabs API Response Types
+interface ElevenLabsVoiceResponse {
+  voice_id: string;
+  name: string;
+  description?: string;
+  labels?: {
+    gender?: string;
+    accent?: string;
+  };
+  preview_url?: string;
+  category?: string;
+}
+
+interface ElevenLabsVoicesListResponse {
+  voices: ElevenLabsVoiceResponse[];
+}
+
+interface ElevenLabsSubscriptionResponse {
+  character_count: number;
+  character_limit: number;
+  tier: string;
+}
 
 // Popular ElevenLabs voices (there are many more available via API)
 const ELEVENLABS_DEFAULT_VOICES: TTSVoice[] = [
@@ -90,7 +112,7 @@ export class ElevenLabsProvider implements TTSProvider {
   private apiKey: string;
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.ELEVENLABS_API_KEY || '';
+    this.apiKey = apiKey ?? process.env.ELEVENLABS_API_KEY ?? '';
   }
 
   async synthesize(
@@ -158,14 +180,14 @@ export class ElevenLabsProvider implements TTSProvider {
     }
   }
 
-  private mapOutputFormat(format: AudioFormat | string): string {
+  private mapOutputFormat(format: AudioFormat): string {
     const formatMap: Record<string, string> = {
       mp3: 'mp3_44100_128',
       wav: 'pcm_44100',
       pcm: 'pcm_44100',
       ogg: 'mp3_44100_128', // Fallback to mp3
     };
-    return formatMap[format] || 'mp3_44100_128';
+    return formatMap[format] ?? 'mp3_44100_128';
   }
 
   private estimateDuration(text: string): number {
@@ -187,22 +209,15 @@ export class ElevenLabsProvider implements TTSProvider {
         return ELEVENLABS_DEFAULT_VOICES;
       }
 
-      const data = await response.json();
+      const data = await response.json() as ElevenLabsVoicesListResponse;
 
-      return data.voices.map((voice: {
-        voice_id: string;
-        name: string;
-        description?: string;
-        labels?: { gender?: string; accent?: string };
-        preview_url?: string;
-        category?: string;
-      }) => ({
+      return data.voices.map((voice) => ({
         id: voice.voice_id,
         name: voice.name,
-        description: voice.description || '',
-        gender: voice.labels?.gender || 'neutral',
-        language: voice.labels?.accent || 'en-US',
-        category: voice.category === 'cloned' ? 'cloned' : 'premium',
+        description: voice.description ?? '',
+        gender: (voice.labels?.gender ?? 'neutral') as 'male' | 'female' | 'neutral',
+        language: voice.labels?.accent ?? 'en-US',
+        category: voice.category === 'cloned' ? 'cloned' as const : 'premium' as const,
         previewUrl: voice.preview_url,
       }));
     } catch (error) {
@@ -241,15 +256,15 @@ export class ElevenLabsProvider implements TTSProvider {
         return null;
       }
 
-      const voice = await response.json();
+      const voice = await response.json() as ElevenLabsVoiceResponse;
 
       return {
         id: voice.voice_id,
         name: voice.name,
-        description: voice.description || '',
-        gender: voice.labels?.gender || 'neutral',
-        language: voice.labels?.accent || 'en-US',
-        category: voice.category === 'cloned' ? 'cloned' : 'premium',
+        description: voice.description ?? '',
+        gender: (voice.labels?.gender ?? 'neutral') as 'male' | 'female' | 'neutral',
+        language: voice.labels?.accent ?? 'en-US',
+        category: voice.category === 'cloned' ? 'cloned' as const : 'premium' as const,
         previewUrl: voice.preview_url,
       };
     } catch {
@@ -274,7 +289,7 @@ export class ElevenLabsProvider implements TTSProvider {
 
       if (!response.ok) {return null;}
 
-      const data = await response.json();
+      const data = await response.json() as ElevenLabsSubscriptionResponse;
 
       return {
         characterCount: data.character_count,

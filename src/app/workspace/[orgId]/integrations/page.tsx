@@ -20,11 +20,20 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePagination } from '@/hooks/usePagination';
-import { INTEGRATION_PROVIDERS } from '@/types/integrations';
-import type { IntegrationProvider, ConnectedIntegration } from '@/types/integrations';
-import type { QueryConstraint } from 'firebase/firestore';
-import { orderBy } from 'firebase/firestore';
+import { useToast } from '@/hooks/useToast';
+import { INTEGRATION_PROVIDERS, type IntegrationProvider, type ConnectedIntegration } from '@/types/integrations';
+import { orderBy, type QueryConstraint } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+
+interface IntegrationConfig {
+  apiKey?: string;
+  [key: string]: unknown;
+}
+
+interface PaginationDocument {
+  id: string;
+  [key: string]: unknown;
+}
 
 const categoryIcons = {
   payment: CreditCard,
@@ -38,12 +47,18 @@ export default function IntegrationsPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
+  const toast = useToast();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAPIKeyModal, setShowAPIKeyModal] = useState(false);
+  const [pendingProvider, setPendingProvider] = useState<IntegrationProvider | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+  const [pendingDisconnectId, setPendingDisconnectId] = useState<string | null>(null);
 
   // Fetch connected integrations with pagination
-  const fetchIntegrations = useCallback(async (lastDoc?: any) => {
+  const fetchIntegrations = useCallback(async (lastDoc?: PaginationDocument) => {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
     const constraints: QueryConstraint[] = [
@@ -69,23 +84,31 @@ export default function IntegrationsPage() {
 
   // Initial load
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
-  const handleConnect = async (provider: IntegrationProvider) => {
+  const handleConnect = (provider: IntegrationProvider) => {
     if (provider.requiresOAuth) {
       // Redirect to OAuth flow
       window.location.href = `/api/integrations/oauth/authorize?provider=${provider.id}&orgId=${orgId}`;
     } else if (provider.requiresAPIKey) {
       // Show API key input modal
-      const apiKey = prompt(`Enter your ${provider.name} API key:`);
-      if (apiKey) {
-        await saveIntegration(provider.id, { apiKey });
-      }
+      setPendingProvider(provider);
+      setApiKeyInput('');
+      setShowAPIKeyModal(true);
     }
   };
 
-  const saveIntegration = async (providerId: string, config: any) => {
+  const handleAPIKeySubmit = () => {
+    if (pendingProvider && apiKeyInput.trim()) {
+      void saveIntegration(pendingProvider.id, { apiKey: apiKeyInput.trim() });
+      setShowAPIKeyModal(false);
+      setPendingProvider(null);
+      setApiKeyInput('');
+    }
+  };
+
+  const saveIntegration = async (providerId: string, config: IntegrationConfig) => {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
@@ -112,15 +135,20 @@ export default function IntegrationsPage() {
       );
 
       await refresh(); // Refresh pagination
-      alert(`${INTEGRATION_PROVIDERS[providerId].name} connected successfully!`);
+      toast.success(`${INTEGRATION_PROVIDERS[providerId].name} connected successfully!`);
     } catch (error: unknown) {
       logger.error('Failed to save integration:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to connect integration');
+      toast.error('Failed to connect integration');
     }
   };
 
-  const handleDisconnect = async (integrationId: string) => {
-    if (!confirm('Are you sure you want to disconnect this integration?')) {
+  const promptDisconnect = (integrationId: string) => {
+    setPendingDisconnectId(integrationId);
+    setShowDisconnectModal(true);
+  };
+
+  const handleDisconnect = async () => {
+    if (!pendingDisconnectId) {
       return;
     }
 
@@ -128,12 +156,16 @@ export default function IntegrationsPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.delete(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/integrations`,
-        integrationId
+        pendingDisconnectId
       );
       await refresh(); // Refresh pagination
+      toast.success('Integration disconnected successfully');
     } catch (error: unknown) {
       logger.error('Failed to disconnect integration:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to disconnect integration');
+      toast.error('Failed to disconnect integration');
+    } finally {
+      setShowDisconnectModal(false);
+      setPendingDisconnectId(null);
     }
   };
 
@@ -208,12 +240,13 @@ export default function IntegrationsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {connectedIntegrations.map((integration, index) => {
-                const provider = INTEGRATION_PROVIDERS[integration.providerId];
-                const CategoryIcon = categoryIcons[integration.category as keyof typeof categoryIcons] || Plug;
+                const integrationData = integration as ConnectedIntegration;
+                const _provider = INTEGRATION_PROVIDERS[integrationData.providerId];
+                const CategoryIcon = categoryIcons[integrationData.category as keyof typeof categoryIcons] || Plug;
 
                 return (
                   <motion.div
-                    key={integration.id}
+                    key={integrationData.id}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
@@ -225,7 +258,7 @@ export default function IntegrationsPage() {
                           <CategoryIcon className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                          <div className="font-semibold text-white">{integration.providerName}</div>
+                          <div className="font-semibold text-white">{integrationData.providerName}</div>
                           <div className="flex items-center gap-1 text-xs text-green-400">
                             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                             Connected
@@ -233,7 +266,7 @@ export default function IntegrationsPage() {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleDisconnect(integration.id)}
+                        onClick={() => promptDisconnect(integrationData.id)}
                         className="p-1.5 hover:bg-white/5 rounded-lg transition-colors group"
                         title="Disconnect"
                       >
@@ -242,11 +275,11 @@ export default function IntegrationsPage() {
                     </div>
 
                     <div className="text-sm text-gray-400 mb-3">
-                      Used {integration.usageCount} times
+                      Used {integrationData.usageCount} times
                     </div>
 
                     <button
-                      onClick={() => handleDisconnect(integration.id)}
+                      onClick={() => promptDisconnect(integrationData.id)}
                       className="w-full px-3 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition text-sm font-medium flex items-center justify-center gap-2"
                     >
                       <X className="w-4 h-4" />
@@ -265,7 +298,7 @@ export default function IntegrationsPage() {
                 className="mt-6 text-center"
               >
                 <button
-                  onClick={loadMore}
+                  onClick={() => void loadMore()}
                   disabled={isLoading || !hasMore}
                   className="px-6 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 mx-auto"
                 >
@@ -339,7 +372,7 @@ export default function IntegrationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProviders.map((provider, index) => {
             const isConnected = connectedIntegrations.some(
-              (i) => i.providerId === provider.id
+              (i) => (i as ConnectedIntegration).providerId === provider.id
             );
             const CategoryIcon = categoryIcons[provider.category as keyof typeof categoryIcons] || Plug;
 
@@ -407,10 +440,10 @@ export default function IntegrationsPage() {
                   <button
                     onClick={() => {
                       const integration = connectedIntegrations.find(
-                        (i) => i.providerId === provider.id
-                      );
+                        (i) => (i as ConnectedIntegration).providerId === provider.id
+                      ) as ConnectedIntegration | undefined;
                       if (integration) {
-                        handleDisconnect(integration.id);
+                        promptDisconnect(integration.id);
                       }
                     }}
                     className="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all font-medium flex items-center justify-center gap-2"
@@ -445,6 +478,91 @@ export default function IntegrationsPage() {
             <div className="text-xl font-semibold text-white mb-2">No integrations found</div>
             <div className="text-gray-400">Try adjusting your search or filter criteria</div>
           </motion.div>
+        )}
+
+        {/* API Key Modal */}
+        {showAPIKeyModal && pendingProvider && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-black/90 border border-white/10 rounded-2xl p-6 max-w-md w-full"
+            >
+              <h3 className="text-xl font-bold text-white mb-2">
+                Connect {pendingProvider.name}
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Enter your API key to connect this integration
+              </p>
+              <input
+                type="text"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                placeholder="Enter API key..."
+                className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/50 mb-4"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAPIKeySubmit();
+                  }
+                }}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAPIKeyModal(false);
+                    setPendingProvider(null);
+                    setApiKeyInput('');
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAPIKeySubmit}
+                  disabled={!apiKeyInput.trim()}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Connect
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Disconnect Confirmation Modal */}
+        {showDisconnectModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-black/90 border border-white/10 rounded-2xl p-6 max-w-md w-full"
+            >
+              <h3 className="text-xl font-bold text-white mb-2">
+                Disconnect Integration
+              </h3>
+              <p className="text-gray-400 text-sm mb-6">
+                Are you sure you want to disconnect this integration? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDisconnectModal(false);
+                    setPendingDisconnectId(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => void handleDisconnect()}
+                  className="flex-1 px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all font-semibold flex items-center justify-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Disconnect
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </div>
     </div>

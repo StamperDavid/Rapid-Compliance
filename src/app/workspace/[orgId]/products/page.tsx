@@ -5,19 +5,23 @@
  * Workspace page for managing products
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getProducts, deleteProduct } from '@/lib/ecommerce/product-service';
 import { usePagination } from '@/hooks/usePagination'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
+import type { DocumentSnapshot } from 'firebase/firestore';
 
 export default function ProductManagementPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
+  const toast = useToast();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Fetch function with pagination using service layer
-  const fetchProducts = useCallback(async (lastDoc?: any) => {
+  const fetchProducts = useCallback(async (lastDoc?: DocumentSnapshot) => {
     return getProducts(
       orgId,
       'default',
@@ -37,19 +41,34 @@ export default function ProductManagementPage() {
 
   // Initial load
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
-  const handleDelete = async (productId: string) => {
-    if (!confirm('Delete this product?')) {return;}
-    
-    try {
-      await deleteProduct(orgId, productId, 'default');
-      await refresh(); // Refresh pagination after delete
-    } catch (error) {
-      logger.error('Error deleting product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to delete product');
+  const handleDeleteClick = (productId: string) => {
+    setDeletingId(productId);
+  };
+
+  const confirmDelete = () => {
+    if (!deletingId) {
+      return;
     }
+
+    void (async () => {
+      try {
+        await deleteProduct(orgId, deletingId, 'default');
+        toast.success('Product deleted successfully');
+        await refresh(); // Refresh pagination after delete
+      } catch (error) {
+        logger.error('Error deleting product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+        toast.error('Failed to delete product');
+      } finally {
+        setDeletingId(null);
+      }
+    })();
+  };
+
+  const cancelDelete = () => {
+    setDeletingId(null);
   };
 
   return (
@@ -100,7 +119,7 @@ export default function ProductManagementPage() {
                   </td>
                   <td className="p-4">
                     <button onClick={() => router.push(`/workspace/${orgId}/products/${product.id}/edit`)} className="text-blue-400 hover:text-blue-300 mr-3">Edit</button>
-                    <button onClick={() => handleDelete(product.id)} className="text-red-400 hover:text-red-300">Delete</button>
+                    <button onClick={() => handleDeleteClick(product.id)} className="text-red-400 hover:text-red-300">Delete</button>
                   </td>
                 </tr>
               ))}
@@ -112,7 +131,7 @@ export default function ProductManagementPage() {
           {(hasMore || loading) && (
             <div className="p-4 border-t border-gray-800 flex justify-center">
               <button
-                onClick={loadMore}
+                onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
                 className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -120,6 +139,24 @@ export default function ProductManagementPage() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 max-w-md">
+            <h2 className="text-xl font-bold mb-4">Delete Product</h2>
+            <p className="text-gray-400 mb-6">Are you sure you want to delete this product? This action cannot be undone.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={cancelDelete} className="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

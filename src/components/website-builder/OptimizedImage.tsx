@@ -6,7 +6,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { generateSrcSet, getImageSizes, getOptimalQuality } from '@/lib/performance/image-optimizer';
+import { generateSrcSet, getImageSizes } from '@/lib/performance/image-optimizer';
 
 interface OptimizedImageProps {
   src: string;
@@ -117,6 +117,7 @@ export function OptimizedImage({
       )}
 
       {/* Actual image */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={imgRef}
         src={isVisible ? src : undefined}

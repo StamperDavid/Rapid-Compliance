@@ -10,11 +10,11 @@ interface OutlookCalendarIntegrationProps {
   onUpdate: (settings: Partial<OutlookCalendarType['settings']>) => void;
 }
 
-export default function OutlookCalendarIntegration({ 
-  integration, 
-  onConnect, 
-  onDisconnect, 
-  onUpdate 
+export default function OutlookCalendarIntegration({
+  integration,
+  onConnect: _onConnect,
+  onDisconnect,
+  onUpdate
 }: OutlookCalendarIntegrationProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -31,19 +31,19 @@ export default function OutlookCalendarIntegration({
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
     : '#6366f1';
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     setIsConnecting(true);
     try {
       // Get current user and org from context or URL
       const userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
       const orgId = window.location.pathname.split('/')[2] || 'current-org';
-      
+
       // Redirect to real Microsoft OAuth flow (same as Outlook, includes calendar scopes)
       window.location.href = `/api/integrations/microsoft/auth?userId=${userId}&orgId=${orgId}`;
     } catch (error) {
       console.error('Failed to start Outlook Calendar OAuth:', error);
       setIsConnecting(false);
-      alert('Failed to connect to Outlook Calendar. Please try again.');
+      console.error('Failed to connect to Outlook Calendar. Please try again.');
     }
   };
 
@@ -84,7 +84,7 @@ export default function OutlookCalendarIntegration({
           {isConnecting ? 'Connecting...' : 'Connect Outlook Calendar'}
         </button>
         <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem', textAlign: 'center' }}>
-          You'll be redirected to Microsoft to authorize the connection
+          You&apos;ll be redirected to Microsoft to authorize the connection
         </p>
       </div>
     );

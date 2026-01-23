@@ -13,7 +13,7 @@ export interface SendEmailOptions {
   from?: string;
   replyTo?: string;
   templateId?: string;
-  dynamicTemplateData?: Record<string, any>;
+  dynamicTemplateData?: Record<string, unknown>;
   attachments?: Array<{
     content: string;
     filename: string;
@@ -46,8 +46,29 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
     const fromEnv = process.env.SENDGRID_FROM_EMAIL;
     const fromFallback = (fromEnv !== '' && fromEnv != null) ? fromEnv : 'noreply@example.com';
     const fromEmail = (options.from !== '' && options.from != null) ? options.from : fromFallback;
-    
-    const payload: any = {
+
+    interface SendGridPayload {
+      personalizations: Array<{
+        to: Array<{ email: string }>;
+        dynamic_template_data?: Record<string, unknown>;
+      }>;
+      from: { email: string };
+      subject: string;
+      reply_to?: { email: string };
+      template_id?: string;
+      content?: Array<{
+        type: string;
+        value: string;
+      }>;
+      attachments?: Array<{
+        content: string;
+        filename: string;
+        type?: string;
+        disposition?: string;
+      }>;
+    }
+
+    const payload: SendGridPayload = {
       personalizations: [
         {
           to: Array.isArray(options.to) 
@@ -103,11 +124,12 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       success: true,
       messageId,
     };
-  } catch (error: any) {
-    logger.error('[SendGrid] Error sending email:', error, { file: 'sendgrid-service.ts' });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('[SendGrid] Error sending email:', error as Error, { file: 'sendgrid-service.ts' });
     return {
       success: false,
-      error: error.message,
+      error: errorMessage,
     };
   }
 }

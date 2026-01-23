@@ -40,8 +40,8 @@ const initialNodes: Node[] = [
 const initialEdges: Edge[] = [];
 
 function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkflowBuilderProps) {
-  const [name, setName] = useState(workflow?.name || '');
-  const [description, setDescription] = useState(workflow?.description || '');
+  const [name, setName] = useState(workflow?.name ?? '');
+  const [description, setDescription] = useState(workflow?.description ?? '');
   const [trigger, setTrigger] = useState<string>(workflow?.trigger?.type ?? 'manual');
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -84,7 +84,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
 
   // Get node label based on type
   const getNodeLabel = (type: string): string => {
-    const labels: { [key: string]: string } = {
+    const labels: Record<string, string> = {
       trigger: '⚡ Trigger',
       email: '📧 Send Email',
       sms: '📱 Send SMS',
@@ -97,16 +97,16 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
       notification: '🔔 Notification',
       end: '🏁 End',
     };
-    return (labels[type] !== '' && labels[type] != null) ? labels[type] : `📌 ${type}`;
+    return labels[type] ?? `📌 ${type}`;
   };
 
   // Update node configuration
-  const updateNodeConfig = (config: any) => {
+  const _updateNodeConfig = (config: Record<string, unknown>) => {
     if (selectedNode) {
       setNodes((nds) =>
         nds.map((node) =>
           node.id === selectedNode.id
-            ? { ...node, data: { ...node.data, config } }
+            ? { ...node, data: { ...(node.data as Record<string, unknown>), config } }
             : node
         )
       );
@@ -117,25 +117,42 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
   const convertToWorkflow = (): Partial<Workflow> => {
     // Note: This is a simplified conversion for the visual builder
     // In production, you'd need to properly map node data to WorkflowAction types
-    const actions: any[] = nodes
+    interface NodeDataConfig {
+      nodeType?: string;
+      config?: Record<string, unknown>;
+    }
+
+    const actions: Partial<WorkflowAction>[] = nodes
       .filter(n => n.type !== 'input')
-      .map((node, index) => ({
-        id: node.id,
-        type: node.data.nodeType ?? 'action',
-        order: index + 1,
-        config: node.data.config ?? {},
-        conditions: [],
-      }));
+      .map((node, index) => {
+        const data = node.data as NodeDataConfig;
+        return {
+          id: node.id,
+          type: (data.nodeType ?? 'action') as WorkflowAction['type'],
+          name: node.id,
+          order: index + 1,
+          config: data.config ?? {},
+          conditions: [],
+        };
+      });
+
+    interface WorkflowTriggerPartial {
+      type: string;
+      id: string;
+      name: string;
+    }
+
+    const workflowTrigger: WorkflowTriggerPartial = {
+      type: trigger,
+      id: 'trigger-1',
+      name: 'Workflow Trigger',
+    };
 
     return {
       ...workflow,
       name,
       description,
-      trigger: {
-        type: trigger as any,
-        id: 'trigger-1',
-        name: 'Workflow Trigger',
-      } as any,
+      trigger: workflowTrigger as Workflow['trigger'],
       actions: actions as WorkflowAction[],
     };
   };
@@ -417,10 +434,14 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
           >
             <Background color="#333" gap={16} />
             <Controls />
-            <MiniMap 
-              nodeColor={(node) => {
-                if (node.type === 'input') {return '#10b981';}
-                if (node.type === 'output') {return '#ef4444';}
+            <MiniMap
+              nodeColor={(node: Node) => {
+                if (node.type === 'input') {
+                  return '#10b981';
+                }
+                if (node.type === 'output') {
+                  return '#ef4444';
+                }
                 return '#6366f1';
               }}
               style={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
@@ -451,7 +472,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
             </div>
             
             <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '1.5rem', padding: '0.75rem', backgroundColor: '#0a0a0a', borderRadius: '0.375rem' }}>
-              {selectedNode.data.label}
+              {(selectedNode.data as { label?: string }).label ?? 'Node'}
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
@@ -460,12 +481,12 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               </label>
               <input
                 type="text"
-                value={selectedNode.data.label}
+                value={(selectedNode.data as { label?: string }).label ?? ''}
                 onChange={(e) => {
                   setNodes((nds) =>
                     nds.map((node) =>
                       node.id === selectedNode.id
-                        ? { ...node, data: { ...node.data, label: e.target.value } }
+                        ? { ...node, data: { ...(node.data as Record<string, unknown>), label: e.target.value } }
                         : node
                     )
                   );

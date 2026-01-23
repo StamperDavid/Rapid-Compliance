@@ -18,12 +18,24 @@ interface HighValueSignalsSectionProps {
   errors: Record<string, string>;
 }
 
+interface SignalUpdate {
+  id?: string;
+  label?: string;
+  description?: string;
+  keywords?: string[];
+  priority?: string;
+  action?: string;
+  scoreBoost?: number;
+  platform?: string;
+}
+
 export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove, canRemove, errors }: HighValueSignalsSectionProps) {
   const sectionErrors = Object.entries(errors).filter(([key]) =>
     key.startsWith('research.highValueSignals')
   );
 
   const addSignal = () => {
+    // eslint-disable-next-line no-alert
     const id = prompt('Signal ID (e.g., hiring_staff):');
     if (!id) {return;}
 
@@ -42,7 +54,7 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
       research: {
         ...template.research,
         highValueSignals: [...(template.research?.highValueSignals ?? []), newSignal],
-      } as any,
+      },
     });
   };
 
@@ -52,18 +64,18 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
       research: {
         ...template.research,
         highValueSignals: signals.filter((_, i) => i !== index),
-      } as any,
+      },
     });
   };
 
-  const updateSignal = (index: number, updates: any) => {
+  const updateSignal = (index: number, updates: SignalUpdate) => {
     const signals = [...(template.research?.highValueSignals ?? [])];
     signals[index] = { ...signals[index], ...updates };
     onUpdate({
       research: {
         ...template.research,
         highValueSignals: signals,
-      } as any,
+      },
     });
   };
 

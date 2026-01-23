@@ -21,30 +21,34 @@ export function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   );
 }
 
+interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  loading: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}
+
 export function LoadingButton({
   loading,
   children,
   onClick,
   disabled,
+  style,
   ...props
-}: {
-  loading: boolean;
-  children: React.ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-  [key: string]: any;
-}) {
+}: LoadingButtonProps) {
+  const isDisabled = disabled ?? loading;
+
   return (
     <button
       onClick={onClick}
-      disabled={disabled ?? loading}
+      disabled={isDisabled}
       style={{
-        opacity: loading || disabled ? 0.6 : 1,
-        cursor: loading || disabled ? 'not-allowed' : 'pointer',
+        opacity: isDisabled ? 0.6 : 1,
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
-        ...props.style,
+        ...style,
       }}
       {...props}
     >

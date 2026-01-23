@@ -3,8 +3,7 @@
  * Executes email actions in workflows
  */
 
-import type { EmailOptions } from '@/lib/email/email-service';
-import { sendEmail } from '@/lib/email/email-service';
+import { sendEmail, type EmailOptions } from '@/lib/email/email-service';
 import type { SendEmailAction, WorkflowTriggerData } from '@/types/workflow';
 
 /**
@@ -63,9 +62,9 @@ export async function executeEmailAction(
  */
 function resolveVariables(config: unknown, triggerData: WorkflowTriggerData): unknown {
   if (typeof config === 'string') {
-    return config.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+    return config.replace(/\{\{([^}]+)\}\}/g, (_match, path: string) => {
       const value = getNestedValue(triggerData, path.trim());
-      return value !== undefined ? String(value) : match;
+      return value !== undefined ? String(value) : _match;
     });
   } else if (Array.isArray(config)) {
     return config.map(item => resolveVariables(item, triggerData));

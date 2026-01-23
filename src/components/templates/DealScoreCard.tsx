@@ -36,7 +36,7 @@ function DealScoreCardInner({
     'at-risk': 'from-red-500 to-rose-600'
   };
 
-  const tierTextColors = {
+  const _tierTextColors = {
     hot: 'text-green-400',
     warm: 'text-yellow-400',
     cold: 'text-blue-400',

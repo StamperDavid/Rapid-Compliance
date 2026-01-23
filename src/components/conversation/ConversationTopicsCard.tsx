@@ -91,7 +91,7 @@ export function ConversationTopicsCard({ analysis, className = '' }: Conversatio
                 
                 {topic.quotes.length > 0 && (
                   <div className="mt-2 text-sm text-gray-600 italic">
-                    "{topic.quotes[0].substring(0, 100)}{topic.quotes[0].length > 100 ? '...' : ''}"
+                    {'"'}{topic.quotes[0].substring(0, 100)}{topic.quotes[0].length > 100 ? '...' : ''}{'"'}
                   </div>
                 )}
               </div>
@@ -143,7 +143,7 @@ export function ConversationTopicsCard({ analysis, className = '' }: Conversatio
                 </div>
                 
                 <div className="text-sm text-gray-600 italic mt-1">
-                  "{objection.quote.substring(0, 120)}{objection.quote.length > 120 ? '...' : ''}"
+                  {'"'}{objection.quote.substring(0, 120)}{objection.quote.length > 120 ? '...' : ''}{'"'}
                 </div>
                 
                 {!objection.wasAddressed && objection.recommendedResponse && (
@@ -202,7 +202,7 @@ export function ConversationTopicsCard({ analysis, className = '' }: Conversatio
                 
                 {competitor.context.length > 0 && (
                   <div className="text-sm text-gray-600 italic mt-1">
-                    "{competitor.context[0].substring(0, 120)}{competitor.context[0].length > 120 ? '...' : ''}"
+                    {'"'}{competitor.context[0].substring(0, 120)}{competitor.context[0].length > 120 ? '...' : ''}{'"'}
                   </div>
                 )}
                 
@@ -222,17 +222,17 @@ export function ConversationTopicsCard({ analysis, className = '' }: Conversatio
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Key Moments ({keyMoments.length})</h3>
           
           <div className="space-y-2">
-            {keyMoments.slice(0, 5).map((moment, index) => {
-              const impactIcon = 
+            {keyMoments.slice(0, 5).map((moment, _index) => {
+              const impactIcon =
                 moment.impact === 'positive' ? '✅' :
                 moment.impact === 'negative' ? '⚠️' : 'ℹ️';
-              
-              const impactColor =
+
+              const _impactColor =
                 moment.impact === 'positive' ? 'text-green-600' :
                 moment.impact === 'negative' ? 'text-red-600' : 'text-gray-600';
               
               return (
-                <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded">
+                <div key={_index} className="flex items-start gap-3 p-3 bg-gray-50 rounded">
                   <span className="text-lg">{impactIcon}</span>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -244,7 +244,7 @@ export function ConversationTopicsCard({ analysis, className = '' }: Conversatio
                     <p className="text-sm text-gray-600">{moment.description}</p>
                     {moment.quote && (
                       <p className="text-sm text-gray-500 italic mt-1">
-                        "{moment.quote.substring(0, 100)}{moment.quote.length > 100 ? '...' : ''}"
+                        {'"'}{moment.quote.substring(0, 100)}{moment.quote.length > 100 ? '...' : ''}{'"'}
                       </p>
                     )}
                   </div>

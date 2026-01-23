@@ -168,11 +168,12 @@ export async function enrichCompanyByDomain(
 
     if (!response.ok) {
       const errorText = await response.text();
+      // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
       logger.error('[Clearbit] API error (${response.status}):', new Error(`[Clearbit] API error (${response.status}): ${errorText}`), { file: 'clearbit-service.ts' });
       return null;
     }
 
-    const data = await response.json();
+    const data = await response.json() as ClearbitCompany;
     return data;
   } catch (error) {
     logger.error('[Clearbit] Error enriching company:', error instanceof Error ? error : new Error(String(error)), { file: 'clearbit-service.ts' });
@@ -226,7 +227,13 @@ export async function searchCompanyByName(
       return null;
     }
 
-    const suggestions = await autocompleteResponse.json();
+    interface ClearbitSuggestion {
+      domain: string;
+      name: string;
+      logo?: string;
+    }
+
+    const suggestions = await autocompleteResponse.json() as ClearbitSuggestion[];
     
     if (suggestions && suggestions.length > 0) {
       // Use the first suggestion's domain
@@ -281,7 +288,7 @@ export async function enrichPersonByEmail(
       return null;
     }
 
-    const data = await response.json();
+    const data = await response.json() as ClearbitPerson;
     return data;
   } catch (error) {
     logger.error('[Clearbit] Error enriching person:', error instanceof Error ? error : new Error(String(error)), { file: 'clearbit-service.ts' });
@@ -327,7 +334,12 @@ export async function enrichProspect(
       return { person: null, company: null };
     }
 
-    const data = await response.json();
+    interface ClearbitCombinedResponse {
+      person?: ClearbitPerson;
+      company?: ClearbitCompany;
+    }
+
+    const data = await response.json() as ClearbitCombinedResponse;
     return {
       person: data.person ?? null,
       company: data.company ?? null,

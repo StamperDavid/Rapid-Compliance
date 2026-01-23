@@ -30,7 +30,7 @@ export function SkillsRadarCard({ skills, loading = false }: SkillsRadarCardProp
   // Convert skills object to array
   const skillsArray = Object.entries(skills).map(([name, score]) => ({
     name: name.replace(/([A-Z])/g, ' $1').trim(),
-    score: Math.round(score),
+    score: Math.round(typeof score === 'number' ? score : 0),
     key: name
   }));
 

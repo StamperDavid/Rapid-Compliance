@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { logger } from '@/lib/logger/logger';
 
 export interface CartItem {
@@ -39,11 +39,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
   const borderRadius = (themeBorderRadius !== '' && themeBorderRadius != null) ? themeBorderRadius : '0.5rem';
   const fontFamily = (themeFontFamily !== '' && themeFontFamily != null) ? themeFontFamily : 'system-ui, sans-serif';
 
-  useEffect(() => {
-    void loadCart();
-  }, [organizationId]);
-
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
     try {
       const response = await fetch(`/api/ecommerce/cart?orgId=${organizationId}`);
       const data = await response.json() as { success?: boolean; cart?: { items?: CartItem[] } };
@@ -55,7 +51,11 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId]);
+
+  useEffect(() => {
+    void loadCart();
+  }, [loadCart]);
 
   const updateQuantity = async (itemId: string, quantity: number) => {
     if (quantity < 1) {

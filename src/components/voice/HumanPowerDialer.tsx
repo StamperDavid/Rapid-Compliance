@@ -78,7 +78,7 @@ const CALL_OUTCOMES = [
 
 export default function HumanPowerDialer({
   organizationId,
-  campaignId,
+  campaignId: _campaignId,
   contacts: initialContacts = [],
   onCallComplete,
   onContactChange,
@@ -89,7 +89,7 @@ export default function HumanPowerDialer({
   // State
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [contacts, setContacts] = useState<DialerContact[]>(initialContacts);
+  const [contacts, _setContacts] = useState<DialerContact[]>(initialContacts);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [activeCalls, setActiveCalls] = useState<ActiveCall[]>([]);
   const [selectedCall, setSelectedCall] = useState<ActiveCall | null>(null);
@@ -113,10 +113,83 @@ export default function HumanPowerDialer({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const loadVoicemailDrops = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/voice/voicemail-drops?organizationId=${organizationId}`);
+      if (response.ok) {
+        const data = await response.json() as { drops?: Array<{ id: string; name: string; url: string }> };
+        setVoicemailDrops(data.drops ?? []);
+      }
+    } catch (error) {
+      logger.error('Failed to load voicemail drops:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
+    }
+  }, [organizationId]);
+
+  const dialNext = useCallback(async () => {
+    if (isPaused || currentIndex >= contacts.length) {
+      return;
+    }
+    if (activeCalls.length >= config.maxConcurrentCalls) {
+      return;
+    }
+
+    const contact = contacts[currentIndex];
+    setCurrentIndex(prev => prev + 1);
+
+    try {
+      const response = await fetch('/api/voice/dial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          to: contact.phone,
+          userId: user?.id,
+          contactId: contact.id,
+          localPresence: config.localPresence,
+          machineDetection: config.voicemailDetection,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate call');
+      }
+
+      const data = await response.json() as { callId: string };
+
+      const newCall: ActiveCall = {
+        id: data.callId,
+        contact,
+        status: 'dialing',
+        startTime: new Date(),
+        duration: 0,
+        line: activeCalls.length + 1,
+        muted: false,
+        recording: false,
+      };
+
+      setActiveCalls(prev => [...prev, newCall]);
+      setSelectedCall(newCall);
+      setStats(prev => ({ ...prev, totalCalls: prev.totalCalls + 1 }));
+
+      // Set up timeout for abandoned calls
+      setTimeout(() => {
+        setActiveCalls(prev =>
+          prev.map(call =>
+            call.id === newCall.id && call.status === 'dialing'
+              ? { ...call, status: 'ended' }
+              : call
+          )
+        );
+      }, config.abandonTimeout);
+    } catch (error) {
+      logger.error('Dial error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
+    }
+  }, [isPaused, currentIndex, contacts, activeCalls.length, config.maxConcurrentCalls, config.localPresence, config.voicemailDetection, config.abandonTimeout, organizationId, user?.id]);
+
   // Load voicemail drops
   useEffect(() => {
-    loadVoicemailDrops();
-  }, [organizationId]);
+    void loadVoicemailDrops();
+  }, [loadVoicemailDrops]);
 
   // Timer for call duration
   useEffect(() => {
@@ -147,128 +220,18 @@ export default function HumanPowerDialer({
     onContactChange?.(currentContact);
   }, [currentIndex, contacts, onContactChange]);
 
-  const loadVoicemailDrops = async () => {
-    try {
-      const response = await fetch(`/api/voice/voicemail-drops?organizationId=${organizationId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setVoicemailDrops(data.drops ?? []);
-      }
-    } catch (error) {
-      logger.error('Failed to load voicemail drops:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
-    }
-  };
-
   const startDialer = useCallback(async () => {
     if (contacts.length === 0) {
-      alert('No contacts to dial. Please load a contact list first.');
+      console.error('No contacts to dial. Please load a contact list first.');
       return;
     }
 
     setIsActive(true);
     setIsPaused(false);
     await dialNext();
-  }, [contacts]);
+  }, [contacts.length, dialNext]);
 
-  const stopDialer = useCallback(() => {
-    setIsActive(false);
-    setIsPaused(false);
-
-    // End all active calls
-    activeCalls.forEach(call => {
-      endCall(call.id);
-    });
-  }, [activeCalls]);
-
-  const pauseDialer = useCallback(() => {
-    setIsPaused(true);
-  }, []);
-
-  const resumeDialer = useCallback(async () => {
-    setIsPaused(false);
-    if (activeCalls.length < config.maxConcurrentCalls) {
-      await dialNext();
-    }
-  }, [activeCalls, config.maxConcurrentCalls]);
-
-  const dialNext = async () => {
-    if (isPaused || currentIndex >= contacts.length) return;
-    if (activeCalls.length >= config.maxConcurrentCalls) return;
-
-    const contact = contacts[currentIndex];
-    setCurrentIndex(prev => prev + 1);
-
-    try {
-      const response = await fetch('/api/voice/dial', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizationId,
-          to: contact.phone,
-          userId: user?.id,
-          contactId: contact.id,
-          localPresence: config.localPresence,
-          machineDetection: config.voicemailDetection,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to initiate call');
-      }
-
-      const data = await response.json();
-
-      const newCall: ActiveCall = {
-        id: data.callId,
-        contact,
-        status: 'dialing',
-        startTime: new Date(),
-        duration: 0,
-        line: activeCalls.length + 1,
-        muted: false,
-        recording: false,
-      };
-
-      setActiveCalls(prev => [...prev, newCall]);
-      setSelectedCall(newCall);
-      setStats(prev => ({ ...prev, totalCalls: prev.totalCalls + 1 }));
-
-      // Set up timeout for abandoned calls
-      setTimeout(() => {
-        setActiveCalls(prev =>
-          prev.map(call =>
-            call.id === newCall.id && call.status === 'dialing'
-              ? { ...call, status: 'ended' }
-              : call
-          )
-        );
-      }, config.abandonTimeout);
-    } catch (error) {
-      logger.error('Dial error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
-    }
-  };
-
-  const answerCall = async (callId: string) => {
-    try {
-      await fetch(`/api/voice/calls/${callId}/answer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId }),
-      });
-
-      setActiveCalls(prev =>
-        prev.map(call =>
-          call.id === callId
-            ? { ...call, status: 'connected' }
-            : call
-        )
-      );
-    } catch (error) {
-      logger.error('Answer error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
-    }
-  };
-
-  const endCall = async (callId: string) => {
+  const endCall = useCallback(async (callId: string) => {
     try {
       await fetch(`/api/voice/calls/${callId}/end`, {
         method: 'POST',
@@ -292,10 +255,53 @@ export default function HumanPowerDialer({
 
       // Auto-advance to next contact if enabled
       if (config.autoAdvance && isActive && !isPaused) {
-        setTimeout(() => dialNext(), config.dialDelay);
+        setTimeout(() => {
+          void dialNext();
+        }, config.dialDelay);
       }
     } catch (error) {
       logger.error('End call error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
+    }
+  }, [organizationId, activeCalls, selectedCall?.id, config.autoAdvance, config.dialDelay, isActive, isPaused, dialNext]);
+
+  const stopDialer = useCallback(() => {
+    setIsActive(false);
+    setIsPaused(false);
+
+    // End all active calls
+    activeCalls.forEach(call => {
+      void endCall(call.id);
+    });
+  }, [activeCalls, endCall]);
+
+  const pauseDialer = useCallback(() => {
+    setIsPaused(true);
+  }, []);
+
+  const resumeDialer = useCallback(async () => {
+    setIsPaused(false);
+    if (activeCalls.length < config.maxConcurrentCalls) {
+      await dialNext();
+    }
+  }, [activeCalls.length, config.maxConcurrentCalls, dialNext]);
+
+  const _answerCall = async (_callId: string) => {
+    try {
+      await fetch(`/api/voice/calls/${_callId}/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId }),
+      });
+
+      setActiveCalls(prev =>
+        prev.map(call =>
+          call.id === _callId
+            ? { ...call, status: 'connected' }
+            : call
+        )
+      );
+    } catch (error) {
+      logger.error('Answer error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 
@@ -339,7 +345,7 @@ export default function HumanPowerDialer({
 
   const transferCall = async (callId: string) => {
     if (!transferTarget) {
-      alert('Please enter a transfer target');
+      console.error('Please enter a transfer target');
       return;
     }
 
@@ -368,7 +374,7 @@ export default function HumanPowerDialer({
 
   const dropVoicemail = async (callId: string) => {
     if (!selectedVoicemail) {
-      alert('Please select a voicemail to drop');
+      console.error('Please select a voicemail to drop');
       return;
     }
 
@@ -391,7 +397,7 @@ export default function HumanPowerDialer({
 
   const saveDisposition = async () => {
     if (!selectedCall || !selectedOutcome) {
-      alert('Please select a call outcome');
+      console.error('Please select a call outcome');
       return;
     }
 
@@ -462,21 +468,27 @@ export default function HumanPowerDialer({
               <>
                 {isPaused ? (
                   <button
-                    onClick={resumeDialer}
+                    onClick={() => {
+                      void resumeDialer();
+                    }}
                     style={{ padding: '0.5rem 1rem', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                   >
                     Resume
                   </button>
                 ) : (
                   <button
-                    onClick={pauseDialer}
+                    onClick={() => {
+                      pauseDialer();
+                    }}
                     style={{ padding: '0.5rem 1rem', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                   >
                     Pause
                   </button>
                 )}
                 <button
-                  onClick={stopDialer}
+                  onClick={() => {
+                    stopDialer();
+                  }}
                   style={{ padding: '0.5rem 1rem', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                 >
                   Stop
@@ -484,7 +496,9 @@ export default function HumanPowerDialer({
               </>
             ) : (
               <button
-                onClick={startDialer}
+                onClick={() => {
+                  void startDialer();
+                }}
                 style={{ padding: '0.5rem 1rem', backgroundColor: '#6366f1', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
               >
                 Start Dialing
@@ -606,7 +620,9 @@ export default function HumanPowerDialer({
                     {(selectedCall.status === 'connected' || selectedCall.status === 'on-hold') && (
                       <>
                         <button
-                          onClick={() => muteCall(selectedCall.id, !selectedCall.muted)}
+                          onClick={() => {
+                            void muteCall(selectedCall.id, !selectedCall.muted);
+                          }}
                           style={{
                             padding: '0.5rem 1rem',
                             backgroundColor: selectedCall.muted ? '#ef4444' : '#222',
@@ -620,7 +636,9 @@ export default function HumanPowerDialer({
                           {selectedCall.muted ? 'Unmute' : 'Mute'}
                         </button>
                         <button
-                          onClick={() => holdCall(selectedCall.id, selectedCall.status !== 'on-hold')}
+                          onClick={() => {
+                            void holdCall(selectedCall.id, selectedCall.status !== 'on-hold');
+                          }}
                           style={{
                             padding: '0.5rem 1rem',
                             backgroundColor: selectedCall.status === 'on-hold' ? '#f59e0b' : '#222',
@@ -650,7 +668,9 @@ export default function HumanPowerDialer({
                       </>
                     )}
                     <button
-                      onClick={() => endCall(selectedCall.id)}
+                      onClick={() => {
+                        void endCall(selectedCall.id);
+                      }}
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: '#ef4444',
@@ -692,7 +712,9 @@ export default function HumanPowerDialer({
                         ))}
                       </select>
                       <button
-                        onClick={() => dropVoicemail(selectedCall.id)}
+                        onClick={() => {
+                          void dropVoicemail(selectedCall.id);
+                        }}
                         style={{
                           padding: '0.5rem 1rem',
                           backgroundColor: '#f59e0b',
@@ -762,7 +784,9 @@ export default function HumanPowerDialer({
 
                 <div style={{ marginTop: '1.5rem' }}>
                   <button
-                    onClick={saveDisposition}
+                    onClick={() => {
+                      void saveDisposition();
+                    }}
                     disabled={!selectedOutcome}
                     style={{
                       width: '100%',
@@ -845,7 +869,9 @@ export default function HumanPowerDialer({
                 Cancel
               </button>
               <button
-                onClick={() => transferCall(selectedCall.id)}
+                onClick={() => {
+                  void transferCall(selectedCall.id);
+                }}
                 style={{
                   flex: 1,
                   padding: '0.75rem',

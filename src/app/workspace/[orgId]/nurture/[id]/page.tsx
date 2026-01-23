@@ -1,43 +1,55 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
+
+interface NurtureCampaignData {
+  name: string;
+  description: string | null;
+  status: string;
+}
 
 export default function EditNurtureCampaignPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
   const campaignId = params.id as string;
-  const [campaign, setCampaign] = useState<any>(null);
+  const [campaign, setCampaign] = useState<NurtureCampaignData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadCampaign();
-  }, []);
-
-  const loadCampaign = async () => {
+  const loadCampaign = useCallback(async () => {
     try {
       const data = await FirestoreService.get(`organizations/${orgId}/nurtureSequences`, campaignId);
-      setCampaign(data);
+      setCampaign(data as NurtureCampaignData);
     } catch (error) {
       logger.error('Error loading campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId, campaignId]);
+
+  useEffect(() => {
+    void loadCampaign();
+  }, [loadCampaign]);
 
   const handleSave = async () => {
+    if (!campaign) {
+      return;
+    }
+
     try {
       setSaving(true);
       await FirestoreService.update(`organizations/${orgId}/nurtureSequences`, campaignId, { ...campaign, updatedAt: Timestamp.now() });
       router.push(`/workspace/${orgId}/nurture`);
     } catch (error) {
       logger.error('Error saving campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to save campaign');
+      toast.error('Failed to save campaign');
     } finally {
       setSaving(false);
     }
@@ -58,7 +70,7 @@ export default function EditNurtureCampaignPage() {
         </div>
         <div className="flex gap-3">
           <button onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{saving ? 'Saving...' : 'Save Changes'}</button>
+          <button onClick={() => void handleSave()} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{saving ? 'Saving...' : 'Save Changes'}</button>
         </div>
       </div>
     </div>

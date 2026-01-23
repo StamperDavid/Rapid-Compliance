@@ -21,7 +21,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import type { Firestore, UpdateData, DocumentData } from 'firebase/firestore';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
-import { WorkflowEngine, type WorkflowExecutionContext, type WorkflowExecutionResult } from './workflow-engine';
+import { type WorkflowExecutionContext, type WorkflowExecutionResult } from './workflow-engine';
 import { WorkflowCoordinator } from './workflow-coordinator';
 import type {
   Workflow,
@@ -136,8 +136,8 @@ export class WorkflowService {
     filters: WorkflowFilterInput
   ): Promise<{ workflows: Workflow[]; total: number }> {
     logger.debug('Querying workflows', filters);
-    
-    const workflowsCollection = this.dal.getOrgSubCollection(
+
+    const _workflowsCollection = this.dal.getOrgSubCollection(
       filters.organizationId,
       'workflows'
     );
@@ -272,8 +272,8 @@ export class WorkflowService {
       workflowId,
       limit,
     });
-    
-    const executionsCollection = this.dal.getOrgSubCollection(
+
+    const _executionsCollection = this.dal.getOrgSubCollection(
       organizationId,
       'workflow_executions'
     );

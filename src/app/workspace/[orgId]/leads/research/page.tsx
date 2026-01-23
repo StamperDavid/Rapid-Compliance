@@ -46,8 +46,16 @@ interface LeadResult {
   isGoodLead?: boolean;
 }
 
+interface ApiLeadResearchResponse {
+  success: boolean;
+  message?: string;
+  leads?: LeadResult[];
+  cost?: number;
+  error?: string;
+}
+
 export default function LeadResearchPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
 
@@ -71,7 +79,9 @@ export default function LeadResearchPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading) {
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -94,13 +104,28 @@ export default function LeadResearchPage() {
         }),
       });
 
-      const data = await response.json();
+      const rawData: unknown = await response.json();
+
+      // Type guard for API response
+      const isApiResponse = (obj: unknown): obj is ApiLeadResearchResponse => {
+        if (typeof obj !== 'object' || obj === null) {
+          return false;
+        }
+        const candidate = obj as Record<string, unknown>;
+        return typeof candidate.success === 'boolean';
+      };
+
+      if (!isApiResponse(rawData)) {
+        throw new Error('Invalid API response format');
+      }
+
+      const data = rawData;
 
       if (data.success) {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.message || `I found ${data.leads.length} companies matching your criteria:`,
+          content: data.message ?? `I found ${data.leads?.length ?? 0} companies matching your criteria:`,
           timestamp: new Date(),
           leads: data.leads,
           cost: data.cost,
@@ -111,7 +136,7 @@ export default function LeadResearchPage() {
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `Sorry, I couldn't complete that search: ${data.error}`,
+          content: `Sorry, I couldn't complete that search: ${data.error ?? 'Unknown error'}`,
           timestamp: new Date(),
         };
 
@@ -298,7 +323,7 @@ export default function LeadResearchPage() {
                         {/* Feedback Actions */}
                         <div className="flex gap-3 pt-3 border-t border-white/10">
                           <button
-                            onClick={() => handleLeadFeedback(message.id, lead.domain, true)}
+                            onClick={() => void handleLeadFeedback(message.id, lead.domain, true)}
                             className={`flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
                               lead.isGoodLead === true
                                 ? 'bg-emerald-500 text-white'
@@ -309,7 +334,7 @@ export default function LeadResearchPage() {
                             Good Lead
                           </button>
                           <button
-                            onClick={() => handleLeadFeedback(message.id, lead.domain, false)}
+                            onClick={() => void handleLeadFeedback(message.id, lead.domain, false)}
                             className={`flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
                               lead.isGoodLead === false
                                 ? 'bg-red-500 text-white'
@@ -350,7 +375,7 @@ export default function LeadResearchPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          onSubmit={handleSubmit}
+          onSubmit={(e) => void handleSubmit(e)}
           className="flex gap-3"
         >
           <input

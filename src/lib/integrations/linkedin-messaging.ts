@@ -19,13 +19,13 @@ export interface LinkedInMessageResult {
 /**
  * Send LinkedIn message
  * Note: LinkedIn's official API is restricted. This uses RapidAPI or similar service.
- * 
+ *
  * Configuration:
  * - Set RAPIDAPI_KEY environment variable for automated sends
  * - Without RAPIDAPI_KEY, creates manual tasks for sales reps
  */
 export async function sendLinkedInMessage(
-  accessToken: string,
+  _accessToken: string,
   recipientIdentifier: string, // LinkedIn URL or email
   message: string,
   organizationId: string
@@ -87,23 +87,23 @@ async function sendViaRapidAPI(
       },
       body: JSON.stringify({
         recipient: recipientIdentifier,
-        message: message,
+        message,
       }),
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       logger.warn('LinkedIn: RapidAPI request failed', {
         status: response.status,
         error: errorText,
       });
-      
+
       throw new Error(`RapidAPI error: ${response.status}`);
     }
-    
-    const data = await response.json();
-    
-    const msgId = (data.messageId !== '' && data.messageId != null) ? data.messageId : data.id;
+
+    const data = await response.json() as LinkedInConversationResponse;
+
+    const msgId = (data.messageId !== '' && data.messageId != null) ? data.messageId : (data.id ?? 'unknown');
     logger.info('LinkedIn: Message sent successfully via RapidAPI', {
       messageId: msgId,
     });
@@ -163,7 +163,7 @@ async function logMessageForManualSend(
  * Send connection request on LinkedIn
  */
 export async function sendConnectionRequest(
-  accessToken: string,
+  _accessToken: string,
   profileUrl: string,
   note?: string
 ): Promise<LinkedInMessageResult> {
@@ -190,14 +190,14 @@ export async function sendConnectionRequest(
         note: (note !== '' && note != null) ? note : "I'd like to connect with you on LinkedIn.",
       }),
     });
-    
+
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
-    
-    const data = await response.json();
-    
-    const invId = (data.invitationId !== '' && data.invitationId != null) ? data.invitationId : data.id;
+
+    const data = await response.json() as LinkedInConversationResponse;
+
+    const invId = (data.invitationId !== '' && data.invitationId != null) ? data.invitationId : (data.id ?? 'unknown');
     logger.info('LinkedIn: Connection request sent successfully', {
       invitationId: invId,
     });
@@ -215,13 +215,27 @@ export async function sendConnectionRequest(
   }
 }
 
+interface LinkedInMessage {
+  id: string;
+  text: string;
+  createdAt: string;
+  sender?: string;
+}
+
+interface LinkedInConversationResponse {
+  messages?: LinkedInMessage[];
+  id?: string;
+  messageId?: string;
+  invitationId?: string;
+}
+
 /**
  * Get LinkedIn conversation thread
  */
 export async function getConversationThread(
-  accessToken: string,
+  _accessToken: string,
   conversationId: string
-): Promise<any[]> {
+): Promise<LinkedInMessage[]> {
   try {
     const rapidApiKey = process.env.RAPIDAPI_KEY;
     
@@ -239,7 +253,7 @@ export async function getConversationThread(
         },
       }
     );
-    
+
     if (!response.ok) {
       logger.warn('LinkedIn: Failed to fetch conversation', {
         conversationId,
@@ -247,15 +261,15 @@ export async function getConversationThread(
       });
       return [];
     }
-    
-    const data = await response.json();
+
+    const data = await response.json() as LinkedInConversationResponse;
     const messages = data.messages ?? [];
-    
+
     logger.debug('LinkedIn: Conversation fetched successfully', {
       conversationId,
       messageCount: messages.length,
     });
-    
+
     return messages;
   } catch (error) {
     logger.error('LinkedIn: Error fetching conversation', error as Error, {

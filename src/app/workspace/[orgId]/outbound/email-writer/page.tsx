@@ -4,12 +4,36 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useToast } from '@/hooks/useToast';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface GeneratedEmail {
+  success: boolean;
+  error?: string;
+  email: {
+    subject: string;
+    body: string;
+    personalizationScore: number;
+    subjectVariants?: string[];
+  };
+  research?: {
+    insights: string[];
+  };
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 export default function EmailWriterPage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  
+
   const { theme } = useOrgTheme();
+  const toast = useToast();
   const [prospect, setProspect] = useState({
     name: '',
     company: '',
@@ -22,9 +46,9 @@ export default function EmailWriterPage() {
   const [valueProposition, setValueProposition] = useState('');
   const [cta, setCta] = useState('book a 15-minute call');
   const [skipResearch, setSkipResearch] = useState(false);
-  
+
   const [generating, setGenerating] = useState(false);
-  const [generatedEmail, setGeneratedEmail] = useState<any>(null);
+  const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
 
@@ -56,27 +80,29 @@ export default function EmailWriterPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as GeneratedEmail;
 
       if (!response.ok) {
-        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to generate email');
+        throw new Error(data.error ?? 'Failed to generate email');
       }
 
       if (data.success) {
         setGeneratedEmail(data);
       } else {
-        setError((data.error !== '' && data.error != null) ? data.error : 'Failed to generate email');
+        setError(data.error ?? 'Failed to generate email');
       }
-    } catch (err: any) {
-      setError((err.message !== '' && err.message != null) ? err.message : 'An error occurred');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
     } finally {
       setGenerating(false);
     }
   };
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+    void navigator.clipboard.writeText(text).then(() => {
+      toast.success('Copied to clipboard!');
+    });
   };
 
   return (
@@ -313,7 +339,7 @@ export default function EmailWriterPage() {
 
                 {/* Generate Button */}
                 <button
-                  onClick={handleGenerate}
+                  onClick={() => void handleGenerate()}
                   disabled={generating || !prospect.name || !prospect.company}
                   style={{
                     width: '100%',
@@ -361,7 +387,7 @@ export default function EmailWriterPage() {
                       Generated Email
                     </h2>
                     <div style={{ fontSize: '0.75rem', color: '#999' }}>
-                      Personalization: {generatedEmail.email.personalizationScore}%
+                      Personalization: {generatedEmail.email?.personalizationScore ?? 0}%
                     </div>
                   </div>
 
@@ -370,14 +396,14 @@ export default function EmailWriterPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                       <label style={{ fontSize: '0.875rem', color: '#999' }}>Subject Line</label>
                       <button
-                        onClick={() => handleCopy(generatedEmail.email.subject)}
+                        onClick={() => handleCopy(generatedEmail.email?.subject ?? '')}
                         style={{ padding: '0.25rem 0.75rem', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
                       >
                         Copy
                       </button>
                     </div>
                     <div style={{ padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}>
-                      {generatedEmail.email.subject}
+                      {generatedEmail.email?.subject ?? ''}
                     </div>
                   </div>
 
@@ -386,19 +412,19 @@ export default function EmailWriterPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                       <label style={{ fontSize: '0.875rem', color: '#999' }}>Email Body</label>
                       <button
-                        onClick={() => handleCopy(generatedEmail.email.body)}
+                        onClick={() => handleCopy(generatedEmail.email?.body ?? '')}
                         style={{ padding: '0.25rem 0.75rem', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
                       >
                         Copy
                       </button>
                     </div>
                     <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-                      {generatedEmail.email.body}
+                      {generatedEmail.email?.body ?? ''}
                     </div>
                   </div>
 
                   {/* Subject Variants */}
-                  {generatedEmail.email.subjectVariants && generatedEmail.email.subjectVariants.length > 0 && (
+                  {generatedEmail.email?.subjectVariants && generatedEmail.email.subjectVariants.length > 0 && (
                     <div style={{ marginBottom: '1.5rem' }}>
                       <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>
                         Subject Line Variants (for A/B testing)
@@ -435,7 +461,7 @@ export default function EmailWriterPage() {
                 <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '3rem', textAlign: 'center' }}>
                   <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✉️</div>
                   <div style={{ color: '#999', fontSize: '1rem' }}>
-                    Fill in prospect information and click "Generate Email" to create a personalized cold email
+                    Fill in prospect information and click &quot;Generate Email&quot; to create a personalized cold email
                   </div>
                 </div>
               )}

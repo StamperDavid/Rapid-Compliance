@@ -3,10 +3,14 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { ProposalTemplate, ProposalSection } from '@/lib/documents/proposal-generator';
+import { useToast } from '@/hooks/useToast';
+
+type TemplateType = 'proposal' | 'quote' | 'contract' | 'invoice';
 
 export default function ProposalBuilderPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
 
   const [template, setTemplate] = useState<Partial<ProposalTemplate>>({
@@ -66,12 +70,12 @@ export default function ProposalBuilderPage() {
     setSelectedSection(null);
   };
 
-  const saveTemplate = async () => {
+  const saveTemplate = () => {
     try {
-      alert('Proposal template would be saved to database');
+      toast.info('Proposal template would be saved to database');
       router.push(`/workspace/${orgId}/proposals`);
-    } catch (error) {
-      alert('Failed to save template');
+    } catch (_error) {
+      toast.error('Failed to save template');
     }
   };
 
@@ -89,7 +93,7 @@ export default function ProposalBuilderPage() {
           />
           <select
             value={template.type}
-            onChange={(e) => setTemplate({ ...template, type: e.target.value as any })}
+            onChange={(e) => setTemplate({ ...template, type: e.target.value as TemplateType })}
             className="bg-gray-800 border border-gray-700 rounded px-3 py-1"
           >
             <option value="proposal">Proposal</option>

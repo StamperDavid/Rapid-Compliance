@@ -16,6 +16,16 @@ interface WinLossChartProps {
   type?: 'pie' | 'bar';
 }
 
+interface TooltipPayloadEntry {
+  name: string;
+  value: number;
+  color: string;
+  payload?: {
+    value?: number;
+    [key: string]: unknown;
+  };
+}
+
 export default function WinLossChart({ winLossData, lossReasons, type = 'pie' }: WinLossChartProps) {
   const successColor = typeof window !== 'undefined'
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || '#10b981'
@@ -40,7 +50,7 @@ export default function WinLossChart({ winLossData, lossReasons, type = 'pie' }:
 
   const COLORS = [successColor, errorColor];
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayloadEntry[] }) => {
     if (active && payload?.length) {
       return (
         <div style={{
@@ -50,7 +60,7 @@ export default function WinLossChart({ winLossData, lossReasons, type = 'pie' }:
           padding: '0.75rem',
           boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
         }}>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index) => (
             <div key={index} style={{ color: entry.color, marginBottom: '0.25rem' }}>
               <span style={{ fontWeight: '600' }}>{entry.name}: </span>
               <span>{entry.value}</span>

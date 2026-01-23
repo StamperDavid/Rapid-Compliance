@@ -32,7 +32,7 @@ export function WebsiteBuilderOnboarding({ organizationId, onComplete }: Onboard
           </h2>
           <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '32px', maxWidth: '500px', margin: '0 auto' }}>
             With our drag-and-drop editor, professional templates, and powerful features,
-            you'll have a stunning website up and running in no time.
+            you&apos;ll have a stunning website up and running in no time.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginTop: '40px' }}>
             <FeatureCard icon="🎨" title="35+ Widgets" description="Drag and drop to build" />
@@ -49,7 +49,7 @@ export function WebsiteBuilderOnboarding({ organizationId, onComplete }: Onboard
         <div style={{ padding: '40px' }}>
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-              What's your website name?
+              What&apos;s your website name?
             </label>
             <input
               type="text"
@@ -111,13 +111,13 @@ export function WebsiteBuilderOnboarding({ organizationId, onComplete }: Onboard
             ))}
           </div>
           <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '14px', color: '#6b7280' }}>
-            Don't worry, you can customize everything later or start from scratch!
+            Don&apos;t worry, you can customize everything later or start from scratch!
           </div>
         </div>
       ),
     },
     {
-      title: "You're All Set! 🎊",
+      title: "You&apos;re All Set! 🎊",
       description: 'Your website is ready to customize',
       content: (
         <div style={{ textAlign: 'center', padding: '40px 20px' }}>
@@ -126,8 +126,8 @@ export function WebsiteBuilderOnboarding({ organizationId, onComplete }: Onboard
             Ready to Build!
           </h2>
           <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px' }}>
-            We've set up your website with the {siteData.template} template.
-            Now let's make it yours!
+            We&apos;ve set up your website with the {siteData.template} template.
+            Now let&apos;s make it yours!
           </p>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', maxWidth: '600px', margin: '0 auto' }}>
@@ -302,7 +302,7 @@ export function WebsiteBuilderOnboarding({ organizationId, onComplete }: Onboard
           </div>
 
           <button
-            onClick={handleNext}
+            onClick={() => void handleNext()}
             disabled={!canProceed()}
             style={{
               padding: '12px 32px',

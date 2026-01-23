@@ -22,7 +22,7 @@ import {
   type ConversationContext,
   type AIResponse,
 } from './ai-conversation-service';
-import type { VoiceCall, CallControlOptions, VoiceProvider } from './types';
+import type { VoiceCall, VoiceProvider } from './types';
 import { logger } from '@/lib/logger/logger';
 
 export type VoiceAgentMode = 'prospector' | 'closer';
@@ -102,7 +102,7 @@ interface StateMachineTransition {
   action?: () => Promise<void>;
 }
 
-const STATE_TRANSITIONS: StateMachineTransition[] = [
+const _STATE_TRANSITIONS: StateMachineTransition[] = [
   // GREETING -> QUALIFYING: After initial exchange
   {
     from: 'GREETING',
@@ -211,7 +211,7 @@ class VoiceAgentHandler {
     };
 
     // Initialize AI conversation
-    const { greeting, context } = await aiConversationService.initializeConversation(
+    const { greeting, context } = aiConversationService.initializeConversation(
       call.callId,
       call.from,
       conversationConfig
@@ -267,13 +267,13 @@ class VoiceAgentHandler {
       // Handle different actions
       switch (aiResponse.action) {
         case 'transfer':
-          return this.handleTransfer(callId, aiResponse);
+          return await this.handleTransfer(callId, aiResponse);
 
         case 'close':
-          return this.handleClose(callId, aiResponse);
+          return await this.handleClose(callId, aiResponse);
 
         case 'end_call':
-          return this.handleEndCall(callId, aiResponse);
+          return await this.handleEndCall(callId, aiResponse);
 
         default:
           // Continue conversation
@@ -285,11 +285,12 @@ class VoiceAgentHandler {
             twiml: this.generateConversationTwiML(aiResponse.text, callId),
           };
       }
-    } catch (error: any) {
-      logger.error('[VoiceAgent] Error processing input:', error, { file: 'voice-agent-handler.ts' });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[VoiceAgent] Error processing input:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-agent-handler.ts' });
 
       // Graceful fallback - transfer to human
-      return this.handleGracefulFallback(callId, error.message);
+      return this.handleGracefulFallback(callId, errorMessage);
     }
   }
 
@@ -306,10 +307,14 @@ class VoiceAgentHandler {
     }
 
     // Initiate warm transfer
+    if (!this.config) {
+      throw new Error('Voice agent not initialized');
+    }
+
     await callTransferService.aiToHumanHandoff({
       callId,
-      organizationId: this.config!.organizationId,
-      aiAgentId: this.config!.agentId,
+      organizationId: this.config.organizationId,
+      aiAgentId: this.config.agentId,
       conversationSummary: summary,
       customerSentiment: context?.sentiment ?? 'neutral',
       customerIntent: aiResponse.transferReason ?? 'general inquiry',
@@ -327,10 +332,10 @@ class VoiceAgentHandler {
     });
 
     // Log to CRM
-    if (this.provider && context) {
+    if (this.provider && context && this.config) {
       const call = await this.provider.getCall(callId);
-      await crmVoiceActivity.logCall(this.config!.organizationId, call, {
-        aiAgentId: this.config!.agentId,
+      await crmVoiceActivity.logCall(this.config.organizationId, call, {
+        aiAgentId: this.config.agentId,
         sentiment: context.sentiment,
         outcome: 'transferred_to_human',
         notes: summary,
@@ -348,7 +353,7 @@ class VoiceAgentHandler {
       transferContext: {
         reason: aiResponse.transferReason ?? 'Qualified lead',
         summary,
-        suggestedAgentId: this.config!.transferRules?.transferToAgentId,
+        suggestedAgentId: this.config?.transferRules?.transferToAgentId,
       },
       twiml,
     };
@@ -357,7 +362,7 @@ class VoiceAgentHandler {
   /**
    * Handle deal closing (Closer mode)
    */
-  private async handleClose(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
+  private handleClose(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
     const context = aiConversationService.getConversationContext(callId);
     const closingConfig = this.config?.closingConfig;
 
@@ -393,11 +398,11 @@ class VoiceAgentHandler {
     const context = aiConversationService.endConversation(callId);
 
     // Log final call data
-    if (context && this.provider) {
+    if (context && this.provider && this.config) {
       try {
         const call = await this.provider.getCall(callId);
-        await crmVoiceActivity.logCall(this.config!.organizationId, call, {
-          aiAgentId: this.config!.agentId,
+        await crmVoiceActivity.logCall(this.config.organizationId, call, {
+          aiAgentId: this.config.agentId,
           sentiment: context.sentiment,
           outcome: context.qualificationScore >= 70 ? 'qualified' : 'disqualified',
           notes: aiConversationService.generateTransferSummary(callId),
@@ -432,10 +437,14 @@ class VoiceAgentHandler {
 
     // Attempt transfer
     try {
+      if (!this.config) {
+        throw new Error('Voice agent not initialized');
+      }
+
       await callTransferService.aiToHumanHandoff({
         callId,
-        organizationId: this.config!.organizationId,
-        aiAgentId: this.config!.agentId,
+        organizationId: this.config.organizationId,
+        aiAgentId: this.config.agentId,
         conversationSummary: `AI FALLBACK: ${errorMessage}`,
         customerSentiment: 'neutral',
         customerIntent: 'unknown',
@@ -523,10 +532,14 @@ class VoiceAgentHandler {
    */
   private async storeCallContext(callId: string, context: ConversationContext): Promise<void> {
     try {
+      if (!this.config) {
+        throw new Error('Voice agent not initialized');
+      }
+
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       await FirestoreService.set(
-        `organizations/${this.config!.organizationId}/callContexts`,
+        `organizations/${this.config.organizationId}/callContexts`,
         callId,
         {
           callId,
@@ -643,9 +656,10 @@ class VoiceAgentHandler {
       });
 
       return { success: true };
-    } catch (error: any) {
-      logger.error('[VoiceAgent] Payment failed:', error, { file: 'voice-agent-handler.ts' });
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Payment processing failed';
+      logger.error('[VoiceAgent] Payment failed:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-agent-handler.ts' });
+      return { success: false, error: errorMessage };
     }
   }
 }

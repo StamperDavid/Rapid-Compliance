@@ -38,11 +38,11 @@ export function BenchmarksCard({
     );
   }
 
-  const formatScore = (value: number) => value.toFixed(1);
-  const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
+  const _formatScore = (value: number) => value.toFixed(1);
+  const _formatPercentage = (value: number) => `${value.toFixed(1)}%`;
 
   // Calculate team average for comparison
-  const teamAvgScore = individualMetrics.reduce((sum, m) => sum + m.scores.overall, 0) / individualMetrics.length;
+  const _teamAvgScore = individualMetrics.reduce((sum, m) => sum + m.scores.overall, 0) / individualMetrics.length;
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -246,7 +246,7 @@ function MetricComparison({ label, topValue, medianValue, format }: MetricCompar
   };
 
   const gap = topValue - medianValue;
-  const gapPercentage = medianValue !== 0 ? (gap / Math.abs(medianValue)) * 100 : 0;
+  const _gapPercentage = medianValue !== 0 ? (gap / Math.abs(medianValue)) * 100 : 0;
 
   return (
     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

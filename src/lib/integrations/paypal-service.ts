@@ -42,15 +42,31 @@ async function getAccessToken(organizationId: string): Promise<string> {
     body: 'grant_type=client_credentials',
   });
 
-  const data = await response.json();
+  interface PayPalTokenResponse {
+    access_token: string;
+    token_type?: string;
+    expires_in?: number;
+  }
+
+  const data = await response.json() as PayPalTokenResponse;
   return data.access_token;
+}
+
+interface PayPalOrder {
+  id: string;
+  status: string;
+  links?: Array<{
+    href: string;
+    rel: string;
+    method: string;
+  }>;
 }
 
 export async function createOrder(
   organizationId: string,
   amount: number,
   currency: string = 'USD'
-): Promise<any> {
+): Promise<PayPalOrder> {
   const accessToken = await getAccessToken(organizationId);
   const config = await getPayPalConfig(organizationId);
   const baseUrl = config.mode === 'live' 
@@ -74,13 +90,30 @@ export async function createOrder(
     }),
   });
 
-  return response.json();
+  return response.json() as Promise<PayPalOrder>;
+}
+
+interface PayPalCaptureResponse {
+  id: string;
+  status: string;
+  purchase_units?: Array<{
+    payments?: {
+      captures?: Array<{
+        id: string;
+        status: string;
+        amount: {
+          currency_code: string;
+          value: string;
+        };
+      }>;
+    };
+  }>;
 }
 
 export async function captureOrder(
   organizationId: string,
   orderId: string
-): Promise<any> {
+): Promise<PayPalCaptureResponse> {
   const accessToken = await getAccessToken(organizationId);
   const config = await getPayPalConfig(organizationId);
   const baseUrl = config.mode === 'live' 
@@ -95,13 +128,20 @@ export async function captureOrder(
     },
   });
 
-  return response.json();
+  return response.json() as Promise<PayPalCaptureResponse>;
+}
+
+interface PayPalPayoutResponse {
+  batch_header: {
+    payout_batch_id: string;
+    batch_status: string;
+  };
 }
 
 export async function createPayout(
   organizationId: string,
   recipients: Array<{ email: string; amount: number }>
-): Promise<any> {
+): Promise<PayPalPayoutResponse> {
   const accessToken = await getAccessToken(organizationId);
   const config = await getPayPalConfig(organizationId);
   const baseUrl = config.mode === 'live' 
@@ -130,13 +170,13 @@ export async function createPayout(
     }),
   });
 
-  return response.json();
+  return response.json() as Promise<PayPalPayoutResponse>;
 }
 
 export async function getOrderDetails(
   organizationId: string,
   orderId: string
-): Promise<any> {
+): Promise<PayPalOrder> {
   const accessToken = await getAccessToken(organizationId);
   const config = await getPayPalConfig(organizationId);
   const baseUrl = config.mode === 'live' 
@@ -149,7 +189,7 @@ export async function getOrderDetails(
     },
   });
 
-  return response.json();
+  return response.json() as Promise<PayPalOrder>;
 }
 
 

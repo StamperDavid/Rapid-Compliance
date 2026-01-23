@@ -6,8 +6,8 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import type { NotificationPreferences, NotificationCategory } from '@/lib/notifications/types';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { NotificationPreferences } from '@/lib/notifications/types';
 
 interface NotificationSettingsProps {
   userId: string;
@@ -20,11 +20,7 @@ export function NotificationSettings({ userId, orgId, className = '' }: Notifica
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadPreferences();
-  }, []);
-
-  async function loadPreferences() {
+  const loadPreferences = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -35,7 +31,7 @@ export function NotificationSettings({ userId, orgId, className = '' }: Notifica
         },
       });
 
-      const data = await response.json();
+      const data = await response.json() as { success: boolean; preferences: NotificationPreferences };
 
       if (data.success) {
         setPreferences(data.preferences);
@@ -45,7 +41,11 @@ export function NotificationSettings({ userId, orgId, className = '' }: Notifica
     } finally {
       setLoading(false);
     }
-  }
+  }, [userId, orgId]);
+
+  useEffect(() => {
+    void loadPreferences();
+  }, [loadPreferences]);
 
   async function savePreferences() {
     if (!preferences) {return;}
@@ -63,17 +63,16 @@ export function NotificationSettings({ userId, orgId, className = '' }: Notifica
         body: JSON.stringify(preferences),
       });
 
-      const data = await response.json();
+      const data = await response.json() as { success: boolean; preferences: NotificationPreferences };
 
       if (data.success) {
         setPreferences(data.preferences);
-        alert('Preferences saved successfully!');
+        console.error('Preferences saved successfully');
       } else {
-        alert('Failed to save preferences');
+        console.error('Failed to save preferences');
       }
     } catch (error) {
       console.error('Failed to save preferences:', error);
-      alert('Failed to save preferences');
     } finally {
       setSaving(false);
     }
@@ -290,7 +289,7 @@ export function NotificationSettings({ userId, orgId, className = '' }: Notifica
       {/* Save Button */}
       <div className="p-6 border-t border-gray-200 bg-gray-50">
         <button
-          onClick={savePreferences}
+          onClick={() => void savePreferences()}
           disabled={saving || !preferences.enabled}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
         >

@@ -11,10 +11,10 @@ import { logger } from '@/lib/logger/logger';
  * Wrap an API route handler with rate limiting
  */
 export function withRateLimit(
-  handler: (request: NextRequest, context?: any) => Promise<NextResponse>,
+  handler: (request: NextRequest, context?: Record<string, unknown>) => Promise<NextResponse>,
   endpoint?: string
 ) {
-  return async (request: NextRequest, context?: any): Promise<NextResponse> => {
+  return async (request: NextRequest, context?: Record<string, unknown>): Promise<NextResponse> => {
     // Apply rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, endpoint);
     
@@ -37,7 +37,7 @@ export function withRateLimit(
  * Combine rate limiting and error handling
  */
 export function withMiddleware(
-  handler: (request: NextRequest, context?: any) => Promise<NextResponse>,
+  handler: (request: NextRequest, context?: Record<string, unknown>) => Promise<NextResponse>,
   options?: {
     rateLimit?: boolean;
     endpoint?: string;

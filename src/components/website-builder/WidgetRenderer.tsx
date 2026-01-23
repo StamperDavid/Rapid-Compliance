@@ -6,13 +6,22 @@
 'use client';
 
 import type { Widget, WidgetStyle, Spacing } from '@/types/website';
+import type {
+  FeatureItem,
+  PricingPlan,
+  StatItem,
+  GalleryImage,
+  SocialIcon,
+  TabItem,
+  AccordionItem
+} from '@/types/widget-content';
 
 interface WidgetRendererProps {
   widget: Widget;
   isEditable?: boolean;
 }
 
-export default function WidgetRenderer({ widget, isEditable = false }: WidgetRendererProps) {
+export default function WidgetRenderer({ widget, isEditable: _isEditable = false }: WidgetRendererProps) {
   const style = convertWidgetStyleToCSS(widget.style);
 
   switch (widget.type) {
@@ -58,8 +67,9 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'image':
       return (
         <div style={style}>
-          <img 
-            src={(widget.data.src as string) || 'https://via.placeholder.com/800x400'} 
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={(widget.data.src as string) || 'https://via.placeholder.com/800x400'}
             alt={(widget.data.alt as string) || ''}
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
@@ -159,7 +169,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
           gap: '2rem',
         }}>
-          {((widget.data.features as any[]) || []).map((feature: any, i: number) => (
+          {((widget.data.features as FeatureItem[]) || []).map((feature, i: number) => (
             <div key={i} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{feature.icon}</div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{feature.title}</h3>
@@ -177,7 +187,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: '2rem',
         }}>
-          {((widget.data.plans as any[]) || []).map((plan: any, i: number) => (
+          {((widget.data.plans as PricingPlan[]) || []).map((plan, i: number) => (
             <div 
               key={i} 
               style={{
@@ -226,22 +236,23 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'testimonial':
       return (
         <div style={style}>
-          <p style={{ 
-            fontSize: '1.125rem', 
-            fontStyle: 'italic', 
+          <p style={{
+            fontSize: '1.125rem',
+            fontStyle: 'italic',
             marginBottom: '1.5rem',
             lineHeight: '1.6',
           }}>
-            "{String(widget.data.quote)}"
+            &quot;{String(widget.data.quote)}&quot;
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
             {(widget.data.avatar as string) && (
-              <img 
-                src={widget.data.avatar as string} 
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={widget.data.avatar as string}
                 alt={(widget.data.author as string) || ''}
-                style={{ 
-                  width: '60px', 
-                  height: '60px', 
+                style={{
+                  width: '60px',
+                  height: '60px',
                   borderRadius: '50%',
                   objectFit: 'cover',
                 }}
@@ -288,7 +299,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '2rem',
         }}>
-          {((widget.data.stats as any[]) || []).map((stat: any, i: number) => (
+          {((widget.data.stats as StatItem[]) || []).map((stat, i: number) => (
             <div key={i} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', fontWeight: '700', color: '#007bff', marginBottom: '0.5rem' }}>
                 {stat.number}
@@ -307,13 +318,14 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           gridTemplateColumns: `repeat(${(widget.data.columns as number) || 3}, 1fr)`,
           gap: (widget.data.gap as string) || '1rem',
         }}>
-          {((widget.data.images as any[]) || []).map((img: any, i: number) => (
-            <img 
+          {((widget.data.images as GalleryImage[]) || []).map((img, i: number) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               key={i}
-              src={img.src} 
+              src={img.src}
               alt={img.alt}
-              style={{ 
-                width: '100%', 
+              style={{
+                width: '100%',
                 height: '250px',
                 objectFit: 'cover',
                 borderRadius: '4px',
@@ -364,7 +376,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'social-icons':
       return (
         <div style={{ ...style, display: 'flex', gap: '1rem' }}>
-          {((widget.data.icons as any[]) ?? []).map((icon: any, i: number) => (
+          {((widget.data.icons as SocialIcon[]) ?? []).map((icon, i: number) => (
             <a 
               key={i}
               href={icon.url}
@@ -431,12 +443,12 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     }
 
     case 'tabs': {
-      const tabs = (widget.data.tabs as any[]) ?? [{ title: 'Tab 1', content: 'Content 1' }];
+      const tabs = (widget.data.tabs as TabItem[]) ?? [{ title: 'Tab 1', content: 'Content 1' }];
       const tabContentVal = tabs[0]?.content as string | null | undefined;
       return (
         <div style={style}>
           <div style={{ borderBottom: '2px solid #dee2e6', display: 'flex' }}>
-            {tabs.map((tab: any, index: number) => (
+            {tabs.map((tab, index: number) => (
               <button
                 key={index}
                 style={{
@@ -462,10 +474,10 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     }
 
     case 'accordion': {
-      const accordionItems = (widget.data.items as any[]) || [{ title: 'Accordion Item', content: 'Content' }];
+      const accordionItems = (widget.data.items as AccordionItem[]) || [{ title: 'Accordion Item', content: 'Content' }];
       return (
         <div style={style}>
-          {accordionItems.map((item: any, index: number) => (
+          {accordionItems.map((item, index: number) => (
             <div
               key={index}
               style={{

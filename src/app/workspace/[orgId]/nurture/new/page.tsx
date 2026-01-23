@@ -4,13 +4,28 @@ import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
+
+interface NurtureStep {
+  delayDays: number;
+  subject: string;
+  body: string;
+  type: string;
+}
+
+interface NurtureCampaign {
+  name: string;
+  description: string;
+  steps: NurtureStep[];
+}
 
 export default function NewNurtureCampaignPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
-  const [campaign, setCampaign] = useState({ name: '', description: '', steps: [] as any[] });
+  const [campaign, setCampaign] = useState<NurtureCampaign>({ name: '', description: '', steps: [] });
   const [saving, setSaving] = useState(false);
 
   const addStep = () => {
@@ -35,7 +50,7 @@ export default function NewNurtureCampaignPage() {
       router.push(`/workspace/${orgId}/nurture`);
     } catch (error) {
       logger.error('Error saving campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to save campaign');
+      toast.error('Failed to save campaign');
     } finally {
       setSaving(false);
     }
@@ -69,19 +84,28 @@ export default function NewNurtureCampaignPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <input type="number" placeholder="Delay (days)" value={step.delayDays} onChange={(e) => {
                     const steps = [...campaign.steps];
-                    steps[idx].delayDays = parseInt(e.target.value);
-                    setCampaign({...campaign, steps});
+                    const updatedStep = steps[idx];
+                    if (updatedStep) {
+                      updatedStep.delayDays = parseInt(e.target.value);
+                      setCampaign({...campaign, steps});
+                    }
                   }} className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm" />
                   <input type="text" placeholder="Subject" value={step.subject} onChange={(e) => {
                     const steps = [...campaign.steps];
-                    steps[idx].subject = e.target.value;
-                    setCampaign({...campaign, steps});
+                    const updatedStep = steps[idx];
+                    if (updatedStep) {
+                      updatedStep.subject = e.target.value;
+                      setCampaign({...campaign, steps});
+                    }
                   }} className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm" />
                 </div>
                 <textarea placeholder="Email body..." value={step.body} onChange={(e) => {
                   const steps = [...campaign.steps];
-                  steps[idx].body = e.target.value;
-                  setCampaign({...campaign, steps});
+                  const updatedStep = steps[idx];
+                  if (updatedStep) {
+                    updatedStep.body = e.target.value;
+                    setCampaign({...campaign, steps});
+                  }
                 }} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm mt-3" rows={3} />
               </div>
             ))}
@@ -89,7 +113,7 @@ export default function NewNurtureCampaignPage() {
         </div>
         <div className="flex gap-3">
           <button onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{saving ? 'Creating...' : 'Create Campaign'}</button>
+          <button onClick={() => void handleSave()} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{saving ? 'Creating...' : 'Create Campaign'}</button>
         </div>
       </div>
     </div>

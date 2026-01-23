@@ -21,8 +21,9 @@
 
 import { logger } from '@/lib/logger/logger';
 import type { Deal } from './deal-service';
-import type { DealHealthScore } from './deal-health';
-import { calculateDealHealth } from './deal-health';
+// eslint-disable-next-line no-duplicate-imports -- deal-health depends on deal-service, both imports needed
+import { calculateDealHealth, type DealHealthScore } from './deal-health';
+import type { ActivityStats } from '@/types/activity';
 import { getActivityStats } from './activity-service';
 
 // ============================================================================
@@ -312,7 +313,7 @@ function generateHealthBasedActions(
  */
 function generateStageBasedActions(
   deal: Deal,
-  health: DealHealthScore
+  _health: DealHealthScore
 ): NextBestAction[] {
   const actions: NextBestAction[] = [];
 
@@ -474,8 +475,8 @@ function generateStageBasedActions(
  */
 function generateEngagementBasedActions(
   deal: Deal,
-  health: DealHealthScore,
-  activityStats: any
+  _health: DealHealthScore,
+  activityStats: ActivityStats
 ): NextBestAction[] {
   const actions: NextBestAction[] = [];
 
@@ -531,7 +532,7 @@ function generateEngagementBasedActions(
  */
 function generateTimingBasedActions(
   deal: Deal,
-  health: DealHealthScore
+  _health: DealHealthScore
 ): NextBestAction[] {
   const actions: NextBestAction[] = [];
 
@@ -555,10 +556,11 @@ function generateTimingBasedActions(
     return actions;
   }
 
+  const expectedDateValue = deal.expectedCloseDate;
   const expectedDate =
-    deal.expectedCloseDate?.toDate instanceof Function
-      ? deal.expectedCloseDate.toDate()
-      : new Date(deal.expectedCloseDate);
+    expectedDateValue && typeof expectedDateValue === 'object' && 'toDate' in expectedDateValue && typeof expectedDateValue.toDate === 'function'
+      ? expectedDateValue.toDate()
+      : new Date(expectedDateValue);
   const daysToClose = Math.floor(
     (expectedDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
   );
@@ -644,7 +646,7 @@ function generateTimingBasedActions(
  */
 function generateValueBasedActions(
   deal: Deal,
-  health: DealHealthScore
+  _health: DealHealthScore
 ): NextBestAction[] {
   const actions: NextBestAction[] = [];
 
@@ -752,7 +754,7 @@ function prioritizeActions(actions: NextBestAction[]): NextBestAction[] {
 function calculateUrgency(
   health: DealHealthScore,
   deal: Deal,
-  activityStats: any
+  activityStats: ActivityStats
 ): 'critical' | 'high' | 'medium' | 'low' {
   // Critical if health is critical
   if (health.status === 'critical') {
@@ -761,10 +763,11 @@ function calculateUrgency(
 
   // Critical if high-value deal is overdue
   if (deal.expectedCloseDate && deal.value > 50000) {
+    const expectedDateValue = deal.expectedCloseDate;
     const expectedDate =
-      deal.expectedCloseDate?.toDate instanceof Function
-        ? deal.expectedCloseDate.toDate()
-        : new Date(deal.expectedCloseDate);
+      expectedDateValue && typeof expectedDateValue === 'object' && 'toDate' in expectedDateValue && typeof expectedDateValue.toDate === 'function'
+        ? expectedDateValue.toDate()
+        : new Date(expectedDateValue);
     const daysToClose = Math.floor(
       (expectedDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     );
@@ -800,7 +803,7 @@ function calculateUrgency(
  */
 function calculateOverallConfidence(
   actions: NextBestAction[],
-  health: DealHealthScore
+  _health: DealHealthScore
 ): number {
   if (actions.length === 0) {
     return 0;
@@ -819,9 +822,10 @@ function calculateOverallConfidence(
 /**
  * Get days since last activity
  */
-function getDaysSinceLastActivity(activityStats: any): number | null {
+function getDaysSinceLastActivity(activityStats: ActivityStats): number | null {
   if (!activityStats.lastActivityDate) {return null;}
 
-  const lastDate = new Date(activityStats.lastActivityDate);
+  const lastDateValue = activityStats.lastActivityDate;
+  const lastDate = lastDateValue instanceof Date ? lastDateValue : new Date(lastDateValue);
   return Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
 }

@@ -6,7 +6,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Spinner } from '../ui/LoadingStates';
 
 export interface OnboardingStep {
   id: string;
@@ -28,10 +27,10 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   onSkip,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [completed, setCompleted] = useState<Set<string>>(new Set());
-  
+  const [_completed, setCompleted] = useState<Set<string>>(new Set());
+
   const step = steps[currentStep];
-  const progress = ((currentStep + 1) / steps.length) * 100;
+  const _progress = ((currentStep + 1) / steps.length) * 100;
   
   const handleNext = () => {
     setCompleted(prev => new Set([...prev, step.id]));

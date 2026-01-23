@@ -34,13 +34,13 @@ export default function StripeIntegration({
 
   const handleConnect = async () => {
     if (!apiKey) {
-      alert('Please enter your Stripe API key');
+      console.error('Please enter your Stripe API key');
       return;
     }
     setIsConnecting(true);
     try {
       const orgId = window.location.pathname.split('/')[2] || 'current-org';
-      
+
       // Save Stripe API key to backend
       const response = await fetch('/api/settings/api-keys', {
         method: 'POST',
@@ -51,9 +51,9 @@ export default function StripeIntegration({
           apiKey: apiKey,
         }),
       });
-      
+
       if (!response.ok) {throw new Error('Failed to save Stripe API key');}
-      
+
       onConnect({
         id: 'stripe',
         name: 'Stripe',
@@ -72,7 +72,7 @@ export default function StripeIntegration({
       setApiKey('');
     } catch (error) {
       console.error('Failed to configure Stripe:', error);
-      alert('Failed to save Stripe API key. Please try again.');
+      console.error('Failed to save Stripe API key. Please try again.');
     } finally {
       setIsConnecting(false);
     }
@@ -121,7 +121,7 @@ export default function StripeIntegration({
           </p>
         </div>
         <button
-          onClick={handleConnect}
+          onClick={() => { void handleConnect(); }}
           disabled={isConnecting || !apiKey}
           style={{
             width: '100%',

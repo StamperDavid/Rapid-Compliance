@@ -3,9 +3,9 @@
  * Business logic layer for deal/opportunity management
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { QueryConstraint, QueryDocumentSnapshot} from 'firebase/firestore';
-import { where, orderBy, Timestamp } from 'firebase/firestore';
+import { FirestoreService } from '@/lib/db/firestore-service';
+// eslint-disable-next-line no-duplicate-imports -- Need specific Firestore query types
+import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getClientSignalCoordinator } from '@/lib/orchestration/coordinator-factory-client';
 
@@ -21,15 +21,15 @@ export interface Deal {
   currency?: string;
   stage: 'prospecting' | 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
   probability: number;
-  expectedCloseDate?: any;
-  actualCloseDate?: any;
+  expectedCloseDate?: Date | { toDate: () => Date };
+  actualCloseDate?: Date | { toDate: () => Date };
   ownerId?: string;
   source?: string;
   lostReason?: string;
   notes?: string;
-  customFields?: Record<string, any>;
-  createdAt: any;
-  updatedAt?: any;
+  customFields?: Record<string, unknown>;
+  createdAt: Date | { toDate: () => Date };
+  updatedAt?: Date | { toDate: () => Date };
 }
 
 export interface DealFilters {
@@ -90,9 +90,10 @@ export async function getDeals(
     });
 
     return result;
-  } catch (error: any) {
-    logger.error('Failed to get deals', error, { organizationId, filters: filters ? JSON.stringify(filters) : undefined });
-    throw new Error(`Failed to retrieve deals: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to get deals', error instanceof Error ? error : new Error(String(error)), { organizationId, filters: filters ? JSON.stringify(filters) : undefined });
+    throw new Error(`Failed to retrieve deals: ${errorMessage}`);
   }
 }
 
@@ -117,9 +118,10 @@ export async function getDeal(
 
     logger.info('Deal retrieved', { organizationId, dealId, value: deal.value });
     return deal;
-  } catch (error: any) {
-    logger.error('Failed to get deal', error, { organizationId, dealId });
-    throw new Error(`Failed to retrieve deal: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to get deal', error instanceof Error ? error : new Error(String(error)), { organizationId, dealId });
+    throw new Error(`Failed to retrieve deal: ${errorMessage}`);
   }
 }
 
@@ -170,9 +172,10 @@ export async function createDeal(
     });
 
     return deal;
-  } catch (error: any) {
-    logger.error('Failed to create deal', error, { organizationId, dealName: data.name, value: data.value });
-    throw new Error(`Failed to create deal: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to create deal', error instanceof Error ? error : new Error(String(error)), { organizationId, dealName: data.name, value: data.value });
+    throw new Error(`Failed to create deal: ${errorMessage}`);
   }
 }
 
@@ -209,9 +212,10 @@ export async function updateDeal(
     }
 
     return deal;
-  } catch (error: any) {
-    logger.error('Failed to update deal', error, { organizationId, dealId });
-    throw new Error(`Failed to update deal: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to update deal', error instanceof Error ? error : new Error(String(error)), { organizationId, dealId });
+    throw new Error(`Failed to update deal: ${errorMessage}`);
   }
 }
 
@@ -290,9 +294,10 @@ export async function moveDealToStage(
     }
 
     return deal;
-  } catch (error: any) {
-    logger.error('Failed to move deal', error, { organizationId, dealId, newStage });
-    throw new Error(`Failed to move deal: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to move deal', error instanceof Error ? error : new Error(String(error)), { organizationId, dealId, newStage });
+    throw new Error(`Failed to move deal: ${errorMessage}`);
   }
 }
 
@@ -311,9 +316,10 @@ export async function deleteDeal(
     );
 
     logger.info('Deal deleted', { organizationId, dealId });
-  } catch (error: any) {
-    logger.error('Failed to delete deal', error, { organizationId, dealId });
-    throw new Error(`Failed to delete deal: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to delete deal', error instanceof Error ? error : new Error(String(error)), { organizationId, dealId });
+    throw new Error(`Failed to delete deal: ${errorMessage}`);
   }
 }
 
@@ -341,9 +347,10 @@ export async function getPipelineSummary(
     logger.info('Pipeline summary generated', { organizationId, stageCount: Object.keys(summary).length });
 
     return summary;
-  } catch (error: any) {
-    logger.error('Failed to get pipeline summary', error, { organizationId });
-    throw new Error(`Failed to get pipeline summary: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to get pipeline summary', error instanceof Error ? error : new Error(String(error)), { organizationId });
+    throw new Error(`Failed to get pipeline summary: ${errorMessage}`);
   }
 }
 

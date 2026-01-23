@@ -172,7 +172,6 @@ export function FormCanvas({
   onFieldDuplicate,
 }: FormCanvasProps) {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [isDraggingField, setIsDraggingField] = useState(false);
   const [draggingFieldId, setDraggingFieldId] = useState<string | null>(null);
 
   // Handle drag over
@@ -210,7 +209,6 @@ export function FormCanvas({
   // Handle field drag start (for reordering)
   const handleFieldDragStart = useCallback(
     (e: React.DragEvent, fieldId: string) => {
-      setIsDraggingField(true);
       setDraggingFieldId(fieldId);
       e.dataTransfer.setData('fieldId', fieldId);
       e.dataTransfer.effectAllowed = 'move';
@@ -220,7 +218,6 @@ export function FormCanvas({
 
   // Handle field drag end
   const handleFieldDragEnd = useCallback(() => {
-    setIsDraggingField(false);
     setDraggingFieldId(null);
     setDragOverIndex(null);
   }, []);
@@ -459,7 +456,7 @@ function FieldPreview({ field }: FieldPreviewProps) {
       return (
         <input
           type="text"
-          placeholder={field.placeholder || 'Enter text...'}
+          placeholder={field.placeholder ?? 'Enter text...'}
           style={inputStyle}
           disabled
         />
@@ -468,7 +465,7 @@ function FieldPreview({ field }: FieldPreviewProps) {
     case 'textarea':
       return (
         <textarea
-          placeholder={field.placeholder || 'Enter text...'}
+          placeholder={field.placeholder ?? 'Enter text...'}
           rows={2}
           style={{ ...inputStyle, resize: 'none' }}
           disabled

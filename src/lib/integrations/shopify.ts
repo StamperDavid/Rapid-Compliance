@@ -84,20 +84,31 @@ export async function syncProductToShopify(
       }
     );
 
+    interface ShopifyErrorResponse {
+      errors?: Record<string, unknown>;
+      [key: string]: unknown;
+    }
+
+    interface ShopifyProductResponse {
+      product: {
+        id: number;
+      };
+    }
+
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json() as ShopifyErrorResponse;
       throw new Error(`Shopify API error: ${JSON.stringify(error)}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as ShopifyProductResponse;
     const productId = data.product.id.toString();
 
     logger.info('Product synced to Shopify', { organizationId, productId });
 
     return productId;
 
-  } catch (error: any) {
-    logger.error('Failed to sync product to Shopify', error, { organizationId });
+  } catch (error) {
+    logger.error('Failed to sync product to Shopify', error as Error, { organizationId });
     throw error;
   }
 }
@@ -144,7 +155,9 @@ export async function fetchShopifyOrders(
       throw new Error('Failed to fetch Shopify orders');
     }
 
-    const data = await response.json();
+    interface ShopifyOrdersResponse {
+      orders: ShopifyOrderResponse[];
+    }
 
     interface ShopifyOrderResponse {
       id: number;
@@ -166,6 +179,8 @@ export async function fetchShopifyOrders(
       financial_status?: string;
     }
 
+    const data = await response.json() as ShopifyOrdersResponse;
+
     const orders: ShopifyOrder[] = data.orders.map((order: ShopifyOrderResponse) => ({
       id: order.id.toString(),
       orderNumber: order.order_number.toString(),
@@ -175,14 +190,14 @@ export async function fetchShopifyOrders(
         lastName: order.customer?.last_name,
       },
       lineItems: order.line_items.map((item) => ({
-        productId: item.product_id?.toString(),
+        productId: item.product_id?.toString() ?? '',
         title: item.title,
         quantity: item.quantity,
         price: parseFloat(item.price),
       })),
       totalPrice: parseFloat(order.total_price),
       createdAt: new Date(order.created_at),
-      financialStatus: order.financial_status,
+      financialStatus: order.financial_status === 'paid' || order.financial_status === 'refunded' ? order.financial_status : 'pending',
     }));
 
     logger.info('Shopify orders fetched', {
@@ -192,8 +207,8 @@ export async function fetchShopifyOrders(
 
     return orders;
 
-  } catch (error: any) {
-    logger.error('Failed to fetch Shopify orders', error, { organizationId });
+  } catch (error) {
+    logger.error('Failed to fetch Shopify orders', error as Error, { organizationId });
     throw error;
   }
 }
@@ -257,8 +272,8 @@ export async function syncShopifyOrdersToCRM(
 
     return synced;
 
-  } catch (error: any) {
-    logger.error('Failed to sync Shopify orders to CRM', error, { organizationId });
+  } catch (error) {
+    logger.error('Failed to sync Shopify orders to CRM', error as Error, { organizationId });
     throw error;
   }
 }
@@ -314,7 +329,12 @@ export async function exchangeShopifyCode(
       throw new Error('Failed to exchange Shopify code');
     }
 
-    const data = await response.json();
+    interface ShopifyTokenResponse {
+      access_token: string;
+      scope: string;
+    }
+
+    const data = await response.json() as ShopifyTokenResponse;
 
     return {
       accessToken: data.access_token,
@@ -322,8 +342,8 @@ export async function exchangeShopifyCode(
       shopDomain,
     };
 
-  } catch (error: any) {
-    logger.error('Shopify OAuth exchange failed', error);
+  } catch (error) {
+    logger.error('Shopify OAuth exchange failed', error as Error);
     throw error;
   }
 }

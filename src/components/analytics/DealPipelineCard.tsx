@@ -15,10 +15,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from 'recharts';
 import type { DealOverviewMetrics } from '@/lib/analytics/dashboard/types';
 
@@ -33,8 +29,6 @@ const TIER_COLORS: Record<string, string> = {
   cold: '#3b82f6',
   'at-risk': '#8b5cf6',
 };
-
-const STAGE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 /**
  * Deal Pipeline Card Component
@@ -99,7 +93,7 @@ export function DealPipelineCard({ data, loading = false }: DealPipelineCardProp
               stroke="#6b7280"
               fontSize={12}
               width={120}
-              tickFormatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
+              tickFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}
             />
             <Tooltip
               formatter={(value: number, name: string) => {
@@ -107,7 +101,7 @@ export function DealPipelineCard({ data, loading = false }: DealPipelineCardProp
                 if (name === 'value') {return [formatCurrency(value), 'Value'];}
                 return [value, name];
               }}
-              labelFormatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}
+              labelFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}
             />
             <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
           </BarChart>

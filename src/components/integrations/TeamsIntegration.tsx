@@ -10,11 +10,11 @@ interface TeamsIntegrationProps {
   onUpdate: (settings: Partial<TeamsType['settings']>) => void;
 }
 
-export default function TeamsIntegration({ 
-  integration, 
-  onConnect, 
-  onDisconnect, 
-  onUpdate 
+export default function TeamsIntegration({
+  integration,
+  onConnect: _onConnect,
+  onDisconnect,
+  onUpdate
 }: TeamsIntegrationProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -33,7 +33,7 @@ export default function TeamsIntegration({
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    
+
     try {
       // Microsoft Teams OAuth flow
       // NOTE: Requires TEAMS_CLIENT_ID and TEAMS_CLIENT_SECRET configured in API keys
@@ -41,15 +41,15 @@ export default function TeamsIntegration({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      
-      const data = await response.json();
-      
+
+      const data = await response.json() as { authUrl?: string; error?: string };
+
       if (data.authUrl) {
         // Redirect to Microsoft OAuth
         window.location.href = data.authUrl;
       } else if (data.error) {
         // Teams not configured - show instructions
-        alert(
+        console.error(
           'Microsoft Teams integration requires configuration.\n\n' +
           'Steps:\n' +
           '1. Create a Teams app in Microsoft Azure Portal\n' +
@@ -62,8 +62,9 @@ export default function TeamsIntegration({
       } else {
         throw new Error('Unexpected response from auth endpoint');
       }
-    } catch (error: any) {
-      alert(`Connection error: ${error.message}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Connection error: ${errorMessage}`);
       setIsConnecting(false);
     }
   };
@@ -88,7 +89,7 @@ export default function TeamsIntegration({
           </div>
         </div>
         <button
-          onClick={handleConnect}
+          onClick={() => { void handleConnect(); }}
           disabled={isConnecting}
           style={{
             width: '100%',
@@ -105,7 +106,7 @@ export default function TeamsIntegration({
           {isConnecting ? 'Connecting...' : 'Connect Teams'}
         </button>
         <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem', textAlign: 'center' }}>
-          You'll be redirected to Microsoft to authorize the connection
+          You&apos;ll be redirected to Microsoft to authorize the connection
         </p>
       </div>
     );

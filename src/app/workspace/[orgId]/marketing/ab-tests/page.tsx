@@ -4,20 +4,25 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { ABTest, ABTestResults } from '@/lib/email/email-builder';
 
+interface ABTestResponse {
+  success: boolean;
+  data: (ABTest & { results?: ABTestResults })[];
+}
+
 export default function ABTestsPage() {
   const params = useParams();
-  const orgId = params.orgId as string;
+  const _orgId = params.orgId as string;
   const [tests, setTests] = useState<(ABTest & { results?: ABTestResults })[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTests();
+    void loadTests();
   }, []);
 
   const loadTests = async () => {
     try {
       const response = await fetch('/api/email/ab-tests');
-      const data = await response.json();
+      const data = await response.json() as ABTestResponse;
       if (data.success) {
         setTests(data.data);
       }

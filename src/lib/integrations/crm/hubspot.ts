@@ -5,14 +5,44 @@
 
 import type { ConnectedIntegration } from '@/types/integrations';
 
+interface HubSpotContactProperties {
+  email: string;
+  firstname?: string;
+  lastname?: string;
+  phone?: string;
+  company?: string;
+}
+
+interface HubSpotContactParams {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  company?: string;
+}
+
+interface HubSpotApiResponse {
+  id: string;
+  createdAt?: string;
+  updatedAt?: string;
+  properties?: Record<string, string>;
+}
+
+interface HubSpotContactResult {
+  contactId: string;
+  created: boolean;
+}
+
+type HubSpotFunctionResult = HubSpotContactResult;
+
 /**
  * Execute a HubSpot function
  */
 export async function executeHubSpotFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: HubSpotContactParams,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<HubSpotFunctionResult> {
   const accessToken = integration.accessToken;
   
   if (!accessToken) {
@@ -65,16 +95,10 @@ export async function executeHubSpotFunction(
  * Create a contact in HubSpot
  */
 async function createContact(
-  params: {
-    email: string;
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-    company?: string;
-  },
+  params: HubSpotContactParams,
   accessToken: string
-): Promise<{ contactId: string; created: boolean }> {
-  const properties: any = {
+): Promise<HubSpotContactResult> {
+  const properties: HubSpotContactProperties = {
     email: params.email,
   };
   
@@ -93,14 +117,14 @@ async function createContact(
       properties,
     }),
   });
-  
+
   if (!response.ok) {
-    const error = await response.json();
+    const error: unknown = await response.json();
     throw new Error(`Failed to create contact: ${JSON.stringify(error)}`);
   }
-  
-  const data = await response.json();
-  
+
+  const data = await response.json() as HubSpotApiResponse;
+
   return {
     contactId: data.id,
     created: true,

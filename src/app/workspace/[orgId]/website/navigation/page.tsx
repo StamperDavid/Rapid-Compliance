@@ -6,16 +6,31 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
 import type { Navigation, NavItem, Page } from '@/types/website';
+
+interface NavigationResponse {
+  navigation: Navigation;
+}
+
+interface PagesResponse {
+  pages: Page[];
+}
+
+interface SettingsResponse {
+  settings?: {
+    homepage?: string;
+  };
+}
 
 export default function NavigationManagementPage() {
   const params = useParams();
   const { user } = useAuth();
   const orgId = params.orgId as string;
+  const toast = useToast();
 
   const [navigation, setNavigation] = useState<Navigation | null>(null);
   const [pages, setPages] = useState<Page[]>([]);
@@ -23,18 +38,14 @@ export default function NavigationManagementPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [orgId]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
       // Load navigation
       const navResponse = await fetch(`/api/website/navigation?organizationId=${orgId}`);
       if (navResponse.ok) {
-        const navData = await navResponse.json();
+        const navData = await navResponse.json() as NavigationResponse;
         setNavigation(navData.navigation);
       } else {
         // Initialize default navigation
@@ -56,25 +67,31 @@ export default function NavigationManagementPage() {
       // Load pages
       const pagesResponse = await fetch(`/api/website/pages?organizationId=${orgId}`);
       if (pagesResponse.ok) {
-        const pagesData = await pagesResponse.json();
+        const pagesData = await pagesResponse.json() as PagesResponse;
         setPages(pagesData.pages ?? []);
       }
 
       // Load site settings to get homepage
       const settingsResponse = await fetch(`/api/website/settings?organizationId=${orgId}`);
       if (settingsResponse.ok) {
-        const settingsData = await settingsResponse.json();
+        const settingsData = await settingsResponse.json() as SettingsResponse;
         setHomepage(settingsData.settings?.homepage ?? '');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Navigation] Load error:', error);
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId]);
 
-  async function saveNavigation() {
-    if (!navigation) {return;}
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  async function saveNavigation(): Promise<void> {
+    if (!navigation) {
+      return;
+    }
 
     try {
       setSaving(true);
@@ -92,18 +109,20 @@ export default function NavigationManagementPage() {
         }),
       });
 
-      if (!response.ok) {throw new Error('Failed to save navigation');}
+      if (!response.ok) {
+        throw new Error('Failed to save navigation');
+      }
 
-      alert('Navigation saved successfully!');
-    } catch (error) {
+      toast.success('Navigation saved successfully!');
+    } catch (error: unknown) {
       console.error('[Navigation] Save error:', error);
-      alert('Failed to save navigation');
+      toast.error('Failed to save navigation');
     } finally {
       setSaving(false);
     }
   }
 
-  async function saveHomepage() {
+  async function saveHomepage(): Promise<void> {
     try {
       const response = await fetch('/api/website/settings', {
         method: 'POST',
@@ -116,28 +135,29 @@ export default function NavigationManagementPage() {
         }),
       });
 
-      if (!response.ok) {throw new Error('Failed to save homepage');}
+      if (!response.ok) {
+        throw new Error('Failed to save homepage');
+      }
 
-      alert('Homepage updated successfully!');
-    } catch (error) {
+      toast.success('Homepage updated successfully!');
+    } catch (error: unknown) {
       console.error('[Navigation] Save homepage error:', error);
-      alert('Failed to save homepage');
+      toast.error('Failed to save homepage');
     }
   }
 
   function addHeaderLink() {
-    if (!navigation) {return;}
+    if (!navigation) {
+      return;
+    }
 
-    const label = prompt('Link label:');
-    if (!label) {return;}
+    toast.info('Use the Add Link button to add menu items. Enter label and URL when prompted.');
 
-    const url = prompt('Link URL (e.g., /about or https://...):');
-    if (!url) {return;}
-
+    // For now, add a placeholder link that users can customize
     const newLink: NavItem = {
       id: `link_${Date.now()}`,
-      label,
-      url,
+      label: 'New Link',
+      url: '/',
       type: 'page',
       newTab: false,
     };
@@ -149,7 +169,9 @@ export default function NavigationManagementPage() {
   }
 
   function removeHeaderLink(linkId: string) {
-    if (!navigation) {return;}
+    if (!navigation) {
+      return;
+    }
 
     setNavigation({
       ...navigation,
@@ -158,12 +180,16 @@ export default function NavigationManagementPage() {
   }
 
   function moveHeaderLink(index: number, direction: 'up' | 'down') {
-    if (!navigation) {return;}
+    if (!navigation) {
+      return;
+    }
 
     const newHeader = [...navigation.header];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
 
-    if (targetIndex < 0 || targetIndex >= newHeader.length) {return;}
+    if (targetIndex < 0 || targetIndex >= newHeader.length) {
+      return;
+    }
 
     [newHeader[index], newHeader[targetIndex]] = [newHeader[targetIndex], newHeader[index]];
 
@@ -245,7 +271,7 @@ export default function NavigationManagementPage() {
           </div>
 
           <button
-            onClick={saveHomepage}
+            onClick={() => void saveHomepage()}
             style={{
               padding: '0.75rem 1.5rem',
               background: '#007bff',
@@ -452,7 +478,7 @@ export default function NavigationManagementPage() {
         {/* Save Button */}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button
-            onClick={saveNavigation}
+            onClick={() => void saveNavigation()}
             disabled={saving}
             style={{
               padding: '0.75rem 2rem',

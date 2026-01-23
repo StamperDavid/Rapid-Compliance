@@ -114,7 +114,7 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                 
                 {signal.quote && (
                   <p className="text-xs text-gray-600 italic mb-2">
-                    "{signal.quote.substring(0, 120)}{signal.quote.length > 120 ? '...' : ''}"
+                    {'"'}{signal.quote.substring(0, 120)}{signal.quote.length > 120 ? '...' : ''}{'"'}
                   </p>
                 )}
                 
@@ -210,7 +210,8 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            // TODO: Create task in CRM
+                            // TODO: Create task in CRM - Replace with proper modal/dialog
+                            // eslint-disable-next-line no-alert
                             alert('Task creation coming soon!');
                           }}
                         >
@@ -220,7 +221,8 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                           className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            // TODO: Mark as done
+                            // TODO: Mark as done - Replace with proper modal/dialog
+                            // eslint-disable-next-line no-alert
                             alert('Mark done coming soon!');
                           }}
                         >

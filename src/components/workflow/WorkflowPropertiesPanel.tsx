@@ -270,7 +270,7 @@ function WorkflowPropertiesPanel({ step, onUpdate, onClose }: WorkflowProperties
       setLocalName(step.name || '');
       setHasChanges(false);
     }
-  }, [step?.id]);
+  }, [step]);
 
   const handleConfigChange = useCallback((key: string, value: unknown) => {
     setLocalConfig(prev => ({ ...prev, [key]: value }));

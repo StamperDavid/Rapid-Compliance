@@ -164,12 +164,12 @@ export async function analyzeConversation(
     return analysis;
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Conversation analysis failed', error instanceof Error ? error : new Error(String(error)), {
       conversationId: request.conversationId,
       organizationId: request.organizationId,
     });
-    throw new Error(`Conversation analysis failed: ${errorMessage}`);
+    throw new Error(`Conversation analysis failed: ${_errorMessage}`);
   }
 }
 
@@ -282,11 +282,11 @@ export async function analyzeTranscript(
     return analysis;
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Transcript analysis failed', error instanceof Error ? error : new Error(String(error)), {
       organizationId: request.organizationId,
     });
-    throw new Error(`Transcript analysis failed: ${errorMessage}`);
+    throw new Error(`Transcript analysis failed: ${_errorMessage}`);
   }
 }
 
@@ -323,10 +323,10 @@ export async function analyzeBatchConversations(
 
         analyses.set(conversationId, analysis);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logger.warn('Failed to analyze conversation', {
           conversationId,
-          error: errorMessage,
+          error: _errorMessage,
         });
       }
     }
@@ -347,11 +347,11 @@ export async function analyzeBatchConversations(
     };
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Batch conversation analysis failed', error instanceof Error ? error : new Error(String(error)), {
       organizationId: request.organizationId,
     });
-    throw new Error(`Batch conversation analysis failed: ${errorMessage}`);
+    throw new Error(`Batch conversation analysis failed: ${_errorMessage}`);
   }
 }
 
@@ -519,7 +519,7 @@ function parseAIAnalysis(aiResponse: string): AIAnalysisResponse {
     };
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to parse AI analysis', error instanceof Error ? error : new Error(String(error)));
 
     // Return minimal fallback
@@ -645,7 +645,7 @@ function calculateTalkRatio(
     };
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Talk ratio calculation failed', error instanceof Error ? error : new Error(String(error)));
 
     // Return default/fallback
@@ -986,7 +986,7 @@ async function generateCoachingInsights(
     return insights;
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Coaching insights generation failed', error instanceof Error ? error : new Error(String(error)));
     return [];
   }
@@ -1082,7 +1082,7 @@ async function generateFollowUpActions(
     return actions;
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Follow-up actions generation failed', error instanceof Error ? error : new Error(String(error)));
     return [];
   }

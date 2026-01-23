@@ -10,11 +10,11 @@ interface OutlookIntegrationProps {
   onUpdate: (settings: Partial<OutlookType['settings']>) => void;
 }
 
-export default function OutlookIntegration({ 
-  integration, 
-  onConnect, 
-  onDisconnect, 
-  onUpdate 
+export default function OutlookIntegration({
+  integration,
+  onConnect: _onConnect,
+  onDisconnect,
+  onUpdate
 }: OutlookIntegrationProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -31,19 +31,19 @@ export default function OutlookIntegration({
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
     : '#6366f1';
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     setIsConnecting(true);
     try {
       // Get current user and org from context or URL
       const userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
       const orgId = window.location.pathname.split('/')[2] || 'current-org';
-      
+
       // Redirect to real Microsoft OAuth flow
       window.location.href = `/api/integrations/microsoft/auth?userId=${userId}&orgId=${orgId}`;
     } catch (error) {
       console.error('Failed to start Outlook OAuth:', error);
       setIsConnecting(false);
-      alert('Failed to connect to Outlook. Please try again.');
+      console.error('Failed to connect to Outlook. Please try again.');
     }
   };
 
@@ -84,7 +84,7 @@ export default function OutlookIntegration({
           {isConnecting ? 'Connecting...' : 'Connect Outlook'}
         </button>
         <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem', textAlign: 'center' }}>
-          You'll be redirected to Microsoft to authorize the connection
+          You&apos;ll be redirected to Microsoft to authorize the connection
         </p>
       </div>
     );

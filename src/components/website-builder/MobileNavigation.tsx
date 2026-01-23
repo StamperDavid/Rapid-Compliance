@@ -41,6 +41,7 @@ export function MobileNavigation({ items, logo, brandName }: MobileNavigationPro
           {/* Logo/Brand */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {logo && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logo}
                 alt={(brandName !== '' && brandName != null) ? brandName : 'Logo'}

@@ -6,17 +6,29 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
+import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
 import type { PageTemplate } from '@/types/website';
+
+interface TemplatesResponse {
+  templates: PageTemplate[];
+}
+
+interface CreatePageResponse {
+  page: {
+    id: string;
+  };
+}
 
 export default function TemplateBrowserPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
   const orgId = params.orgId as string;
+  const toast = useToast();
 
   const [templates, setTemplates] = useState<PageTemplate[]>([]);
   const [customTemplates, setCustomTemplates] = useState<PageTemplate[]>([]);
@@ -36,11 +48,7 @@ export default function TemplateBrowserPage() {
     { id: 'other', label: 'Other' },
   ];
 
-  useEffect(() => {
-    loadTemplates();
-  }, [orgId]);
-
-  async function loadTemplates() {
+  const loadTemplates = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -51,15 +59,19 @@ export default function TemplateBrowserPage() {
       // Load custom templates for this org
       const response = await fetch(`/api/website/templates?organizationId=${orgId}`);
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as TemplatesResponse;
         setCustomTemplates(data.templates ?? []);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Templates] Load error:', error);
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadTemplates();
+  }, [loadTemplates]);
 
   function getFilteredTemplates(): PageTemplate[] {
     const allAvailableTemplates = [...templates, ...customTemplates];
@@ -71,8 +83,8 @@ export default function TemplateBrowserPage() {
     return allAvailableTemplates.filter(t => t.category === selectedCategory);
   }
 
-  async function applyTemplate(template: PageTemplate) {
-    if (!confirm(`Create a new page from "${template.name}"?`)) {return;}
+  async function applyTemplate(template: PageTemplate): Promise<void> {
+    toast.info(`Creating a new page from "${template.name}"...`);
 
     try {
       // Create new page from template
@@ -99,17 +111,19 @@ export default function TemplateBrowserPage() {
         }),
       });
 
-      if (!response.ok) {throw new Error('Failed to create page from template');}
+      if (!response.ok) {
+        throw new Error('Failed to create page from template');
+      }
 
-      const data = await response.json();
-      
-      alert('Page created successfully!');
-      
+      const data = await response.json() as CreatePageResponse;
+
+      toast.success('Page created successfully!');
+
       // Redirect to editor
       router.push(`/workspace/${orgId}/website/editor?pageId=${data.page.id}`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Templates] Apply error:', error);
-      alert('Failed to create page from template');
+      toast.error('Failed to create page from template');
     }
   }
 
@@ -305,7 +319,7 @@ export default function TemplateBrowserPage() {
                     Preview
                   </button>
                   <button
-                    onClick={() => applyTemplate(template)}
+                    onClick={() => void applyTemplate(template)}
                     style={{
                       flex: 1,
                       padding: '0.5rem 1rem',
@@ -411,9 +425,11 @@ export default function TemplateBrowserPage() {
                 borderRadius: '4px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}>
-                <img 
-                  src={selectedTemplate.thumbnail} 
+                <Image
+                  src={selectedTemplate.thumbnail}
                   alt={selectedTemplate.name}
+                  width={1200}
+                  height={800}
                   style={{
                     width: '100%',
                     height: 'auto',
@@ -450,7 +466,7 @@ export default function TemplateBrowserPage() {
               <button
                 onClick={() => {
                   setShowPreview(false);
-                  applyTemplate(selectedTemplate);
+                  void applyTemplate(selectedTemplate);
                 }}
                 style={{
                   padding: '0.75rem 1.5rem',

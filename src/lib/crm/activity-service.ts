@@ -33,7 +33,7 @@ interface PaginatedResult<T> {
 /**
  * Helper to safely convert activity occurredAt to Date
  */
-function toDate(value: Date | { toDate?: () => Date } | string | number | unknown): Date {
+function toDate(value: Date | { toDate?: () => Date } | string | number): Date {
   if (value && typeof value === 'object' && 'toDate' in value && typeof (value as { toDate?: () => Date }).toDate === 'function') {
     return (value as { toDate: () => Date }).toDate();
   }

@@ -21,6 +21,13 @@ import type { FormDefinition, FormFieldConfig } from '@/lib/forms/types';
 
 type LoadingState = 'loading' | 'loaded' | 'error' | 'saving';
 
+interface ConfirmDialogState {
+  isOpen: boolean;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
 // ============================================================================
 // STYLES
 // ============================================================================
@@ -125,6 +132,59 @@ const styles = {
     borderColor: '#22c55e',
     color: '#22c55e',
   },
+  confirmModalOverlay: {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  confirmModal: {
+    backgroundColor: '#1a1a1a',
+    border: '1px solid #333',
+    borderRadius: '0.75rem',
+    padding: '1.5rem',
+    maxWidth: '400px',
+    width: '90%',
+  },
+  confirmTitle: {
+    fontSize: '1.125rem',
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: '1rem',
+  },
+  confirmMessage: {
+    fontSize: '0.875rem',
+    color: '#999',
+    marginBottom: '1.5rem',
+    lineHeight: '1.5',
+  },
+  confirmButtons: {
+    display: 'flex',
+    gap: '0.75rem',
+    justifyContent: 'flex-end',
+  },
+  confirmButton: {
+    padding: '0.5rem 1rem',
+    border: 'none',
+    borderRadius: '0.5rem',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+  },
+  confirmButtonCancel: {
+    backgroundColor: '#2a2a2a',
+    color: '#999',
+  },
+  confirmButtonConfirm: {
+    backgroundColor: '#6366f1',
+    color: '#fff',
+  },
 };
 
 // ============================================================================
@@ -180,8 +240,8 @@ const createDefaultForm = (
   publicAccess: true,
   createdBy: '',
   lastModifiedBy: '',
-  createdAt: new Date() as any,
-  updatedAt: new Date() as any,
+  createdAt: new Date(),
+  updatedAt: new Date(),
   fieldCount: 0,
   submissionCount: 0,
   viewCount: 0,
@@ -203,6 +263,12 @@ export default function FormEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
 
   // Fetch form data
   const fetchForm = useCallback(async () => {
@@ -235,9 +301,22 @@ export default function FormEditorPage() {
         throw new Error('Failed to fetch form');
       }
 
-      const data = await response.json();
-      setForm(data.form);
-      setFields(data.fields || []);
+      const data: unknown = await response.json();
+
+      // Type guard for form data
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'form' in data &&
+        typeof data.form === 'object'
+      ) {
+        setForm(data.form as FormDefinition);
+        setFields(
+          'fields' in data && Array.isArray(data.fields) ? data.fields : []
+        );
+      } else {
+        throw new Error('Invalid form data structure');
+      }
       setLoadingState('loaded');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load form');
@@ -246,7 +325,7 @@ export default function FormEditorPage() {
   }, [orgId, formId]);
 
   useEffect(() => {
-    fetchForm();
+    void fetchForm();
   }, [fetchForm]);
 
   // Handle form changes
@@ -263,7 +342,9 @@ export default function FormEditorPage() {
 
   // Save form
   const handleSave = useCallback(async () => {
-    if (!form) return;
+    if (!form) {
+      return;
+    }
 
     try {
       setLoadingState('saving');
@@ -297,7 +378,9 @@ export default function FormEditorPage() {
 
   // Publish form
   const handlePublish = useCallback(async () => {
-    if (!form) return;
+    if (!form) {
+      return;
+    }
 
     try {
       setLoadingState('saving');
@@ -329,19 +412,29 @@ export default function FormEditorPage() {
 
   // Preview form
   const handlePreview = useCallback(() => {
-    if (!form) return;
+    if (!form) {
+      return;
+    }
     window.open(`/forms/${form.id}/preview`, '_blank');
   }, [form]);
 
   // Handle back navigation
   const handleBack = useCallback(() => {
     if (hasUnsavedChanges) {
-      const confirmed = window.confirm(
-        'You have unsaved changes. Are you sure you want to leave?'
-      );
-      if (!confirmed) return;
+      setConfirmDialog({
+        isOpen: true,
+        message: 'You have unsaved changes. Are you sure you want to leave?',
+        onConfirm: () => {
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+          router.push(`/workspace/${orgId}/forms`);
+        },
+        onCancel: () => {
+          setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+        },
+      });
+    } else {
+      router.push(`/workspace/${orgId}/forms`);
     }
-    router.push(`/workspace/${orgId}/forms`);
   }, [router, orgId, hasUnsavedChanges]);
 
   // Warn before unload
@@ -382,7 +475,7 @@ export default function FormEditorPage() {
         <div style={styles.errorIcon}>⚠️</div>
         <h1 style={styles.errorTitle}>Unable to Load Form</h1>
         <p style={styles.errorText}>
-          {error || 'An unexpected error occurred while loading the form.'}
+          {error ?? 'An unexpected error occurred while loading the form.'}
         </p>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button
@@ -391,11 +484,18 @@ export default function FormEditorPage() {
               backgroundColor: '#1a1a1a',
               border: '1px solid #333',
             }}
-            onClick={handleBack}
+            onClick={() => {
+              void handleBack();
+            }}
           >
             ← Back to Forms
           </button>
-          <button style={styles.errorButton} onClick={fetchForm}>
+          <button
+            style={styles.errorButton}
+            onClick={() => {
+              void fetchForm();
+            }}
+          >
             Try Again
           </button>
         </div>
@@ -406,7 +506,12 @@ export default function FormEditorPage() {
   return (
     <div style={styles.container}>
       {/* Back Button */}
-      <button style={styles.backButton} onClick={handleBack}>
+      <button
+        style={styles.backButton}
+        onClick={() => {
+          void handleBack();
+        }}
+      >
         ← Back to Forms
       </button>
 
@@ -416,13 +521,17 @@ export default function FormEditorPage() {
         fields={fields}
         onFormChange={handleFormChange}
         onFieldsChange={handleFieldsChange}
-        onSave={handleSave}
-        onPublish={handlePublish}
+        onSave={() => {
+          void handleSave();
+        }}
+        onPublish={() => {
+          void handlePublish();
+        }}
         onPreview={handlePreview}
       />
 
       {/* Save Indicator */}
-      {(saveMessage || loadingState === 'saving') && (
+      {(saveMessage !== null || loadingState === 'saving') && (
         <div
           style={{
             ...styles.saveIndicator,
@@ -437,17 +546,51 @@ export default function FormEditorPage() {
           ) : (
             <>
               <span>✓</span>
-              <span>{saveMessage}</span>
+              <span>{saveMessage ?? ''}</span>
             </>
           )}
         </div>
       )}
 
       {/* Unsaved Changes Indicator */}
-      {hasUnsavedChanges && !saveMessage && loadingState !== 'saving' && (
+      {hasUnsavedChanges && saveMessage === null && loadingState !== 'saving' && (
         <div style={styles.saveIndicator}>
           <span>●</span>
           <span>Unsaved changes</span>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmDialog.isOpen && (
+        <div style={styles.confirmModalOverlay}>
+          <div style={styles.confirmModal}>
+            <h3 style={styles.confirmTitle}>Confirm Action</h3>
+            <p style={styles.confirmMessage}>{confirmDialog.message}</p>
+            <div style={styles.confirmButtons}>
+              <button
+                style={{
+                  ...styles.confirmButton,
+                  ...styles.confirmButtonCancel,
+                }}
+                onClick={() => {
+                  confirmDialog.onCancel();
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                style={{
+                  ...styles.confirmButton,
+                  ...styles.confirmButtonConfirm,
+                }}
+                onClick={() => {
+                  confirmDialog.onConfirm();
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

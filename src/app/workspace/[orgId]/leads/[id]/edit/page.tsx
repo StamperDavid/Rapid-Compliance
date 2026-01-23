@@ -1,34 +1,49 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
+
+interface Lead {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  phoneNumber?: string;
+  company?: string;
+  companyName?: string;
+  title?: string;
+  status?: string;
+  updatedAt?: Timestamp;
+}
 
 export default function EditLeadPage() {
   const params = useParams();
   const router = useRouter();
+  const toast = useToast();
   const orgId = params.orgId as string;
   const leadId = params.id as string;
-  const [lead, setLead] = useState<any>(null);
+  const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadLead();
-  }, []);
-
-  const loadLead = async () => {
+  const loadLead = useCallback(async () => {
     try {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/leads/records`, leadId);
-      setLead(data);
+      setLead(data as Lead);
     } catch (error: unknown) {
       logger.error('Error loading lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId, leadId]);
+
+  useEffect(() => {
+    void loadLead();
+  }, [loadLead]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +53,7 @@ export default function EditLeadPage() {
       router.push(`/workspace/${orgId}/leads/${leadId}`);
     } catch (error: unknown) {
       logger.error('Error updating lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      alert('Failed to update lead');
+      toast.error('Failed to update lead');
     } finally {
       setSaving(false);
     }
@@ -50,7 +65,7 @@ export default function EditLeadPage() {
     <div className="p-8">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Edit Lead</h1>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => void handleSubmit(e)}>
           <div className="bg-gray-900 rounded-lg p-6 mb-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">

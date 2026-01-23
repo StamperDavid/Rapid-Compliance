@@ -30,6 +30,11 @@ interface ThemeConfig {
   branding: ThemeBranding;
 }
 
+interface StoredThemeConfig {
+  colors?: ThemeColors;
+  branding?: ThemeBranding;
+}
+
 const DEFAULT_THEME: ThemeConfig = {
   colors: {
     primary: { main: '#6366f1', light: '#818cf8', dark: '#4f46e5', contrast: '#ffffff' },
@@ -70,7 +75,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const savedTheme = localStorage.getItem('appTheme');
     if (savedTheme) {
       try {
-        const parsed = JSON.parse(savedTheme);
+        const parsed = JSON.parse(savedTheme) as StoredThemeConfig;
         setTheme({ ...DEFAULT_THEME, ...parsed });
       } catch (error) {
         logger.error('Failed to load theme:', error instanceof Error ? error : new Error(String(error)), { file: 'ThemeContext.tsx' });

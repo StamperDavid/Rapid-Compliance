@@ -6,14 +6,45 @@
 import type { ConnectedIntegration } from '@/types/integrations';
 import { createInvoice, createCustomer, listCustomers, listInvoices } from '../quickbooks-service';
 
+export interface QuickBooksLineItem {
+  description: string;
+  amount: number;
+  quantity?: number;
+}
+
+export interface QuickBooksInvoiceParams {
+  customerId: string;
+  lineItems: QuickBooksLineItem[];
+  dueDate?: string;
+}
+
+export interface QuickBooksCustomerParams {
+  displayName: string;
+  companyName?: string;
+  email?: string;
+  phone?: string;
+}
+
+type QuickBooksParameters = {
+  customerId?: string;
+  displayName?: string;
+  lineItems?: unknown[];
+  dueDate?: string;
+  companyName?: string;
+  email?: string;
+  phone?: string;
+};
+
+type QuickBooksResult = unknown;
+
 /**
  * Execute a QuickBooks function
  */
 export async function executeQuickBooksFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: QuickBooksParameters,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<QuickBooksResult> {
   const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
   const realmId = (integration.config?.realmId ?? integration.settings?.realmId ?? '') as string;
   
@@ -34,10 +65,10 @@ export async function executeQuickBooksFunction(
       if (!Array.isArray(parameters.lineItems)) {
         throw new Error('lineItems (array) is required for createInvoice');
       }
-      
+
       return createInvoice(accessToken, realmId, {
         customerId: parameters.customerId,
-        lineItems: parameters.lineItems,
+        lineItems: parameters.lineItems as QuickBooksLineItem[],
         dueDate: parameters.dueDate,
       });
       

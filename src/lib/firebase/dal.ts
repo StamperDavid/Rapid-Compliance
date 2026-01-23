@@ -10,15 +10,6 @@
  * - Organization-scoped access verification (coming soon)
  */
 
-import type {
-  DocumentReference,
-  CollectionReference,
-  Firestore,
-  QueryConstraint,
-  SetOptions,
-  WithFieldValue,
-  DocumentData,
-  UpdateData} from 'firebase/firestore';
 import {
   collection,
   doc,
@@ -28,7 +19,15 @@ import {
   deleteDoc,
   getDoc,
   getDocs,
-  query
+  query,
+  type DocumentReference,
+  type CollectionReference,
+  type Firestore,
+  type QueryConstraint,
+  type SetOptions,
+  type WithFieldValue,
+  type DocumentData,
+  type UpdateData
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS, getOrgSubCollection } from './collections';
@@ -124,9 +123,9 @@ export class FirestoreDAL {
     
     const setOptions: SetOptions = options?.merge ? { merge: true } : {};
     await setDoc(docRef, data, setOptions);
-    
+
     if (options?.audit) {
-      await this.logAudit('CREATE', collectionRef, docId, data, options?.userId);
+      this.logAudit('CREATE', collectionRef, docId, data as Record<string, unknown>, options?.userId);
     }
   }
   
@@ -169,9 +168,9 @@ export class FirestoreDAL {
     });
     
     await updateDoc(docRef, data);
-    
+
     if (options?.audit) {
-      await this.logAudit('UPDATE', collectionRef, docId, data, options?.userId);
+      this.logAudit('UPDATE', collectionRef, docId, data as Record<string, unknown>, options?.userId);
     }
   }
   
@@ -220,9 +219,9 @@ export class FirestoreDAL {
     });
     
     await deleteDoc(docRef);
-    
+
     if (options?.audit) {
-      await this.logAudit('DELETE', collectionRef, docId, {}, options?.userId);
+      this.logAudit('DELETE', collectionRef, docId, {}, options?.userId);
     }
   }
   
@@ -263,11 +262,11 @@ export class FirestoreDAL {
     });
     
     const docRef = await addDoc(colRef, data);
-    
+
     if (options?.audit) {
-      await this.logAudit('CREATE', collectionRef, docRef.id, data, options?.userId);
+      this.logAudit('CREATE', collectionRef, docRef.id, data as Record<string, unknown>, options?.userId);
     }
-    
+
     return docRef;
   }
   
