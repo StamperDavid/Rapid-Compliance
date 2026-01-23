@@ -8,6 +8,10 @@
 
 import { logger } from '@/lib/logger/logger';
 
+// ============================================================================
+// Request Interfaces
+// ============================================================================
+
 interface QuickBooksCustomer {
   id?: string;
   displayName: string;
@@ -30,6 +34,143 @@ interface QuickBooksInvoice {
   invoiceNumber?: string;
 }
 
+// ============================================================================
+// QuickBooks API Response Interfaces
+// ============================================================================
+
+interface QuickBooksError {
+  Message: string;
+  Detail: string;
+  code: string;
+}
+
+interface QuickBooksErrorResponse {
+  Fault: {
+    Error: QuickBooksError[];
+    type: string;
+  };
+  time: string;
+}
+
+interface QuickBooksCustomerData {
+  Id: string;
+  DisplayName: string;
+  GivenName?: string;
+  FamilyName?: string;
+  CompanyName?: string;
+  PrimaryEmailAddr?: { Address: string };
+  PrimaryPhone?: { FreeFormNumber: string };
+  Active: boolean;
+  SyncToken: string;
+  MetaData: {
+    CreateTime: string;
+    LastUpdatedTime: string;
+  };
+}
+
+interface QuickBooksCustomerResponse {
+  Customer: QuickBooksCustomerData;
+  time: string;
+}
+
+interface QuickBooksInvoiceLineItem {
+  Id: string;
+  LineNum: number;
+  Description: string;
+  Amount: number;
+  DetailType: string;
+  SalesItemLineDetail?: {
+    Qty: number;
+    UnitPrice?: number;
+    ItemRef?: { value: string; name: string };
+  };
+}
+
+interface QuickBooksInvoiceData {
+  Id: string;
+  DocNumber: string;
+  TxnDate: string;
+  DueDate?: string;
+  TotalAmt: number;
+  Balance: number;
+  CustomerRef: { value: string; name: string };
+  Line: QuickBooksInvoiceLineItem[];
+  SyncToken: string;
+  MetaData: {
+    CreateTime: string;
+    LastUpdatedTime: string;
+  };
+}
+
+interface QuickBooksInvoiceResponse {
+  Invoice: QuickBooksInvoiceData;
+  time: string;
+}
+
+interface QuickBooksTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  x_refresh_token_expires_in: number;
+  token_type: string;
+}
+
+interface QuickBooksTokenErrorResponse {
+  error: string;
+  error_description: string;
+}
+
+interface IntegrationCredentials {
+  accessToken: string;
+  metadata?: {
+    realmId?: string;
+    [key: string]: unknown;
+  };
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Type guard to check if response is an error
+ */
+function isQuickBooksError(data: unknown): data is QuickBooksErrorResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'Fault' in data &&
+    typeof (data as Record<string, unknown>).Fault === 'object'
+  );
+}
+
+/**
+ * Type guard to check if token response is an error
+ */
+function isTokenError(data: unknown): data is QuickBooksTokenErrorResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'error' in data &&
+    typeof (data as Record<string, unknown>).error === 'string'
+  );
+}
+
+/**
+ * Extract error message from QuickBooks error response
+ */
+function extractQuickBooksError(errorData: QuickBooksErrorResponse): string {
+  const errors = errorData.Fault?.Error ?? [];
+  const messages = errors
+    .map(err => `${err.Message}${err.Detail ? `: ${err.Detail}` : ''}`)
+    .join('; ');
+  return messages || 'Unknown QuickBooks API error';
+}
+
+// ============================================================================
+// Public API Functions
+// ============================================================================
+
 /**
  * Create or update customer in QuickBooks
  */
@@ -39,14 +180,14 @@ export async function syncCustomerToQuickBooks(
 ): Promise<string> {
   try {
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'quickbooks');
-    
+    const credentials = await getIntegrationCredentials(organizationId, 'quickbooks') as IntegrationCredentials | null;
+
     if (!credentials?.accessToken) {
       throw new Error('QuickBooks not connected');
     }
 
     const realmId = credentials.metadata?.realmId;
-    if (!realmId) {
+    if (!realmId || typeof realmId !== 'string') {
       throw new Error('QuickBooks realm ID not found');
     }
 
@@ -71,26 +212,23 @@ export async function syncCustomerToQuickBooks(
       }
     );
 
-    interface QuickBooksErrorResponse {
-      Fault?: {
-        Error?: Array<{ Message?: string }>;
-      };
-      [key: string]: unknown;
-    }
-
-    interface CustomerResponse {
-      Customer: {
-        Id: string;
-      };
-    }
+    const data: unknown = await response.json();
 
     if (!response.ok) {
-      const error = await response.json() as QuickBooksErrorResponse;
-      throw new Error(`QuickBooks API error: ${JSON.stringify(error)}`);
+      if (isQuickBooksError(data)) {
+        const errorMessage = extractQuickBooksError(data);
+        throw new Error(`QuickBooks API error: ${errorMessage}`);
+      }
+      throw new Error(`QuickBooks API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json() as CustomerResponse;
-    const customerId = data.Customer.Id;
+    // Validate response structure
+    if (!data || typeof data !== 'object' || !('Customer' in data)) {
+      throw new Error('Invalid response structure from QuickBooks API');
+    }
+
+    const customerResponse = data as QuickBooksCustomerResponse;
+    const customerId = customerResponse.Customer.Id;
 
     logger.info('QuickBooks customer synced', { organizationId, customerId });
 
@@ -111,19 +249,19 @@ export async function createQuickBooksInvoice(
 ): Promise<{ invoiceId: string; invoiceNumber: string }> {
   try {
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'quickbooks');
-    
+    const credentials = await getIntegrationCredentials(organizationId, 'quickbooks') as IntegrationCredentials | null;
+
     if (!credentials?.accessToken) {
       throw new Error('QuickBooks not connected');
     }
 
     const realmId = credentials.metadata?.realmId;
-    if (!realmId) {
+    if (!realmId || typeof realmId !== 'string') {
       throw new Error('QuickBooks realm ID not found');
     }
 
-    // Build line items
-    const lines = invoice.lineItems.map((item, _index) => ({
+    // Build line items with proper structure
+    const lines = invoice.lineItems.map((item) => ({
       DetailType: 'SalesItemLineDetail',
       Amount: item.amount,
       SalesItemLineDetail: {
@@ -151,35 +289,31 @@ export async function createQuickBooksInvoice(
       }
     );
 
-    interface QuickBooksErrorResponse {
-      Fault?: {
-        Error?: Array<{ Message?: string }>;
-      };
-      [key: string]: unknown;
-    }
-
-    interface InvoiceResponse {
-      Invoice: {
-        Id: string;
-        DocNumber: string;
-      };
-    }
+    const data: unknown = await response.json();
 
     if (!response.ok) {
-      const error = await response.json() as QuickBooksErrorResponse;
-      throw new Error(`QuickBooks API error: ${JSON.stringify(error)}`);
+      if (isQuickBooksError(data)) {
+        const errorMessage = extractQuickBooksError(data);
+        throw new Error(`QuickBooks API error: ${errorMessage}`);
+      }
+      throw new Error(`QuickBooks API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json() as InvoiceResponse;
+    // Validate response structure
+    if (!data || typeof data !== 'object' || !('Invoice' in data)) {
+      throw new Error('Invalid response structure from QuickBooks API');
+    }
+
+    const invoiceResponse = data as QuickBooksInvoiceResponse;
 
     logger.info('QuickBooks invoice created', {
       organizationId,
-      invoiceId: data.Invoice.Id,
+      invoiceId: invoiceResponse.Invoice.Id,
     });
 
     return {
-      invoiceId: data.Invoice.Id,
-      invoiceNumber: data.Invoice.DocNumber,
+      invoiceId: invoiceResponse.Invoice.Id,
+      invoiceNumber: invoiceResponse.Invoice.DocNumber,
     };
 
   } catch (error) {
@@ -217,8 +351,8 @@ export async function exchangeQuickBooksCode(
   realmId: string
 ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number; realmId: string }> {
   try {
-    const clientId = process.env.QUICKBOOKS_CLIENT_ID;
-    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+    const clientId = process.env.QUICKBOOKS_CLIENT_ID ?? '';
+    const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET ?? '';
 
     if (!clientId || !clientSecret) {
       throw new Error('QuickBooks credentials not configured');
@@ -238,22 +372,26 @@ export async function exchangeQuickBooksCode(
       }).toString(),
     });
 
+    const data: unknown = await response.json();
+
     if (!response.ok) {
-      throw new Error('Failed to exchange QuickBooks code');
+      if (isTokenError(data)) {
+        throw new Error(`QuickBooks OAuth error: ${data.error} - ${data.error_description}`);
+      }
+      throw new Error(`Failed to exchange QuickBooks code: ${response.status} ${response.statusText}`);
     }
 
-    interface TokenResponse {
-      access_token: string;
-      refresh_token: string;
-      expires_in: number;
+    // Validate response structure
+    if (!data || typeof data !== 'object' || !('access_token' in data)) {
+      throw new Error('Invalid token response structure from QuickBooks OAuth');
     }
 
-    const data = await response.json() as TokenResponse;
+    const tokenResponse = data as QuickBooksTokenResponse;
 
     return {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresIn: data.expires_in,
+      accessToken: tokenResponse.access_token,
+      refreshToken: tokenResponse.refresh_token,
+      expiresIn: tokenResponse.expires_in,
       realmId, // Store realm ID for future API calls
     };
 
