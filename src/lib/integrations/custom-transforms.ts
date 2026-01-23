@@ -374,18 +374,18 @@ export function executeCustomTransform(
       };
     }
 
-    const result = transformFn(value, params);
+    const result: unknown = transformFn(value, params);
 
     logger.debug('[Custom Transforms] Transform executed', {
       functionName,
-      inputValue: value,
-      outputValue: result,
+      inputValue: typeof value === 'object' ? JSON.stringify(value) : String(value),
+      outputValue: typeof result === 'object' ? JSON.stringify(result) : String(result),
       file: 'custom-transforms.ts',
     });
 
     return {
       success: true,
-      value: result,
+      value: result as string | number | boolean | null | undefined | Record<string, unknown>,
     };
 
   } catch (error: unknown) {

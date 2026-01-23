@@ -483,18 +483,18 @@ export interface SlackBlock {
 
 /**
  * Slack Block Element
- * 
+ *
  * Interactive element within a block
  */
 export interface SlackBlockElement {
   /** Element type */
   type: SlackActionType | 'image' | 'plain_text' | 'mrkdwn';
-  
+
   /** Action ID (for interactive elements) */
   action_id?: string;
-  
-  /** Button specific */
-  text?: {
+
+  /** Text content (string for mrkdwn/plain_text elements, object for buttons) */
+  text?: string | {
     type: 'plain_text';
     text: string;
     emoji?: boolean;
@@ -502,11 +502,11 @@ export interface SlackBlockElement {
   style?: SlackButtonStyle;
   value?: string;
   url?: string;
-  
+
   /** Image specific */
   image_url?: string;
   alt_text?: string;
-  
+
   /** Select specific */
   placeholder?: {
     type: 'plain_text';

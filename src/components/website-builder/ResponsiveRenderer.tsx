@@ -15,11 +15,9 @@ import type {
 import { OptimizedImage } from './OptimizedImage';
 import { AccessibleWidget, SkipToMain } from './AccessibleWidget';
 
-interface SpacingStyle {
-  top?: string;
-  right?: string;
-  bottom?: string;
-  left?: string;
+interface ConvertedStyle extends Omit<React.CSSProperties, 'padding' | 'margin'> {
+  padding?: string;
+  margin?: string;
 }
 
 interface ResponsiveRendererProps {
@@ -197,42 +195,52 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
 }
 
 function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: string }) {
-  const convertSpacing = (spacing?: SpacingStyle | string): string => {
-    if (!spacing) {return '0';}
-    if (typeof spacing === 'string') {return spacing;}
-    return `${spacing.top ?? 0} ${spacing.right ?? 0} ${spacing.bottom ?? 0} ${spacing.left ?? 0}`;
+  const convertSpacing = (spacing: { top?: string; right?: string; bottom?: string; left?: string }): string => {
+    return `${spacing.top ?? '0'} ${spacing.right ?? '0'} ${spacing.bottom ?? '0'} ${spacing.left ?? '0'}`;
+  };
+
+  const convertStyleToCSS = (style: Partial<typeof widget.style>): ConvertedStyle => {
+    const result: ConvertedStyle = {};
+
+    if (!style) {
+      return result;
+    }
+
+    // Copy all properties except padding and margin
+    const { padding, margin, ...otherProps } = style;
+    Object.assign(result, otherProps);
+
+    // Convert padding if it exists and is an object
+    if (padding) {
+      if (typeof padding === 'string') {
+        result.padding = padding;
+      } else {
+        result.padding = convertSpacing(padding);
+      }
+    }
+
+    // Convert margin if it exists and is an object
+    if (margin) {
+      if (typeof margin === 'string') {
+        result.margin = margin;
+      } else {
+        result.margin = convertSpacing(margin);
+      }
+    }
+
+    return result;
   };
 
   const getResponsiveStyle = (): React.CSSProperties => {
-    const baseStyle: React.CSSProperties & { padding?: string | SpacingStyle; margin?: string | SpacingStyle } = { ...(widget.style ?? {}) };
-
-    // Convert Spacing objects to CSS strings
-    if (baseStyle.padding && typeof baseStyle.padding === 'object') {
-      baseStyle.padding = convertSpacing(baseStyle.padding);
-    }
-    if (baseStyle.margin && typeof baseStyle.margin === 'object') {
-      baseStyle.margin = convertSpacing(baseStyle.margin);
-    }
+    const baseStyle = convertStyleToCSS(widget.style ?? {});
 
     // Apply responsive overrides
     if (breakpoint === 'mobile' && widget.responsive?.mobile) {
-      const mobileStyle: React.CSSProperties & { padding?: string | SpacingStyle; margin?: string | SpacingStyle } = { ...widget.responsive.mobile };
-      if (mobileStyle.padding && typeof mobileStyle.padding === 'object') {
-        mobileStyle.padding = convertSpacing(mobileStyle.padding);
-      }
-      if (mobileStyle.margin && typeof mobileStyle.margin === 'object') {
-        mobileStyle.margin = convertSpacing(mobileStyle.margin);
-      }
+      const mobileStyle = convertStyleToCSS(widget.responsive.mobile);
       return { ...baseStyle, ...mobileStyle };
     }
     if (breakpoint === 'tablet' && widget.responsive?.tablet) {
-      const tabletStyle: React.CSSProperties & { padding?: string | SpacingStyle; margin?: string | SpacingStyle } = { ...widget.responsive.tablet };
-      if (tabletStyle.padding && typeof tabletStyle.padding === 'object') {
-        tabletStyle.padding = convertSpacing(tabletStyle.padding);
-      }
-      if (tabletStyle.margin && typeof tabletStyle.margin === 'object') {
-        tabletStyle.margin = convertSpacing(tabletStyle.margin);
-      }
+      const tabletStyle = convertStyleToCSS(widget.responsive.tablet);
       return { ...baseStyle, ...tabletStyle };
     }
 

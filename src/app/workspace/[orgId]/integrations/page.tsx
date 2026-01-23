@@ -22,16 +22,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePagination } from '@/hooks/usePagination';
 import { useToast } from '@/hooks/useToast';
 import { INTEGRATION_PROVIDERS, type IntegrationProvider, type ConnectedIntegration } from '@/types/integrations';
-import { orderBy, type QueryConstraint } from 'firebase/firestore';
+import { orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 
 interface IntegrationConfig {
   apiKey?: string;
-  [key: string]: unknown;
-}
-
-interface PaginationDocument {
-  id: string;
   [key: string]: unknown;
 }
 
@@ -58,7 +53,7 @@ export default function IntegrationsPage() {
   const [pendingDisconnectId, setPendingDisconnectId] = useState<string | null>(null);
 
   // Fetch connected integrations with pagination
-  const fetchIntegrations = useCallback(async (lastDoc?: PaginationDocument) => {
+  const fetchIntegrations = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
     const constraints: QueryConstraint[] = [

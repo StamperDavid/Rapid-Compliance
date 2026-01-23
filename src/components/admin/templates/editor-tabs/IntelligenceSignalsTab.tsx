@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
+import type { ResearchIntelligence } from '@/types/scraper-intelligence';
 
 interface IntelligenceSignalsTabProps {
   template: IndustryTemplate;
@@ -29,17 +30,17 @@ interface SignalUpdate {
   label?: string;
   description?: string;
   keywords?: string[];
-  priority?: string;
-  action?: string;
+  priority?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  action?: 'increase-score' | 'trigger-workflow' | 'add-to-segment' | 'notify-user' | 'flag-for-review';
   scoreBoost?: number;
-  platform?: string;
+  platform?: 'website' | 'linkedin-jobs' | 'linkedin-company' | 'news' | 'crunchbase' | 'dns' | 'google-business' | 'social-media' | 'any';
 }
 
 interface FluffPatternUpdate {
   id?: string;
   pattern?: string;
   description?: string;
-  context?: string;
+  context?: 'header' | 'footer' | 'sidebar' | 'body' | 'all';
 }
 
 interface ScoringRuleUpdate {
@@ -54,6 +55,26 @@ interface ScoringRuleUpdate {
 
 export function IntelligenceSignalsTab({ template, onUpdate, disabled }: IntelligenceSignalsTabProps) {
   const [activeSection, setActiveSection] = useState('signals');
+
+  // Default research intelligence structure with all required fields
+  const getDefaultResearch = (): ResearchIntelligence => ({
+    scrapingStrategy: template.research?.scrapingStrategy ?? {
+      primarySource: 'website',
+      secondarySources: [],
+      frequency: 'per-lead',
+      enableCaching: true,
+      cacheTtlSeconds: 3600,
+    },
+    highValueSignals: template.research?.highValueSignals ?? [],
+    fluffPatterns: template.research?.fluffPatterns ?? [],
+    scoringRules: template.research?.scoringRules ?? [],
+    customFields: template.research?.customFields ?? [],
+    metadata: template.research?.metadata ?? {
+      lastUpdated: new Date().toISOString(),
+      version: 1,
+      updatedBy: 'user',
+    },
+  });
 
   const addSignal = () => {
     // eslint-disable-next-line no-alert
@@ -71,9 +92,10 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
       platform: 'website' as const,
     };
 
+    const defaults = getDefaultResearch();
     onUpdate({
       research: {
-        ...template.research,
+        ...defaults,
         highValueSignals: [...(template.research?.highValueSignals ?? []), newSignal],
       },
     });
@@ -81,9 +103,10 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
 
   const removeSignal = (index: number) => {
     const signals = template.research?.highValueSignals ?? [];
+    const defaults = getDefaultResearch();
     onUpdate({
       research: {
-        ...template.research,
+        ...defaults,
         highValueSignals: signals.filter((_, i) => i !== index),
       },
     });
@@ -92,9 +115,10 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
   const updateSignal = (index: number, updates: SignalUpdate) => {
     const signals = [...(template.research?.highValueSignals ?? [])];
     signals[index] = { ...signals[index], ...updates };
+    const defaults = getDefaultResearch();
     onUpdate({
       research: {
-        ...template.research,
+        ...defaults,
         highValueSignals: signals,
       },
     });
@@ -112,9 +136,10 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
       context: 'all' as const,
     };
 
+    const defaults = getDefaultResearch();
     onUpdate({
       research: {
-        ...template.research,
+        ...defaults,
         fluffPatterns: [...(template.research?.fluffPatterns ?? []), newPattern],
       },
     });
@@ -122,9 +147,10 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
 
   const removeFluffPattern = (index: number) => {
     const patterns = template.research?.fluffPatterns ?? [];
+    const defaults = getDefaultResearch();
     onUpdate({
       research: {
-        ...template.research,
+        ...defaults,
         fluffPatterns: patterns.filter((_, i) => i !== index),
       },
     });
@@ -133,9 +159,10 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
   const updateFluffPattern = (index: number, updates: FluffPatternUpdate) => {
     const patterns = [...(template.research?.fluffPatterns ?? [])];
     patterns[index] = { ...patterns[index], ...updates };
+    const defaults = getDefaultResearch();
     onUpdate({
       research: {
-        ...template.research,
+        ...defaults,
         fluffPatterns: patterns,
       },
     });
@@ -156,9 +183,10 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
       enabled: true,
     };
 
+    const defaults = getDefaultResearch();
     onUpdate({
       research: {
-        ...template.research,
+        ...defaults,
         scoringRules: [...(template.research?.scoringRules ?? []), newRule],
       },
     });
@@ -166,9 +194,10 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
 
   const removeScoringRule = (index: number) => {
     const rules = template.research?.scoringRules ?? [];
+    const defaults = getDefaultResearch();
     onUpdate({
       research: {
-        ...template.research,
+        ...defaults,
         scoringRules: rules.filter((_, i) => i !== index),
       },
     });
@@ -177,9 +206,10 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
   const updateScoringRule = (index: number, updates: ScoringRuleUpdate) => {
     const rules = [...(template.research?.scoringRules ?? [])];
     rules[index] = { ...rules[index], ...updates };
+    const defaults = getDefaultResearch();
     onUpdate({
       research: {
-        ...template.research,
+        ...defaults,
         scoringRules: rules,
       },
     });
@@ -248,7 +278,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                           <Label className="text-xs">Priority</Label>
                           <Select
                             value={signal.priority}
-                            onValueChange={val => updateSignal(index, { priority: val })}
+                            onValueChange={val => updateSignal(index, { priority: val as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' })}
                           >
                             <SelectTrigger disabled={disabled}>
                               <SelectValue />
@@ -300,16 +330,17 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                         <Label className="text-xs">Action</Label>
                         <Select
                           value={signal.action}
-                          onValueChange={val => updateSignal(index, { action: val })}
+                          onValueChange={val => updateSignal(index, { action: val as 'increase-score' | 'trigger-workflow' | 'add-to-segment' | 'notify-user' | 'flag-for-review' })}
                         >
                           <SelectTrigger disabled={disabled}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="increase-score">Increase Score</SelectItem>
-                            <SelectItem value="decrease-score">Decrease Score</SelectItem>
-                            <SelectItem value="add-to-segment">Add to Segment</SelectItem>
                             <SelectItem value="trigger-workflow">Trigger Workflow</SelectItem>
+                            <SelectItem value="add-to-segment">Add to Segment</SelectItem>
+                            <SelectItem value="notify-user">Notify User</SelectItem>
+                            <SelectItem value="flag-for-review">Flag for Review</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -328,7 +359,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                         <Label className="text-xs">Platform</Label>
                         <Select
                           value={signal.platform}
-                          onValueChange={val => updateSignal(index, { platform: val })}
+                          onValueChange={val => updateSignal(index, { platform: val as 'website' | 'linkedin-jobs' | 'linkedin-company' | 'news' | 'crunchbase' | 'dns' | 'google-business' | 'social-media' | 'any' })}
                         >
                           <SelectTrigger disabled={disabled}>
                             <SelectValue />
@@ -403,7 +434,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                           <Label className="text-xs">Context</Label>
                           <Select
                             value={pattern.context}
-                            onValueChange={val => updateFluffPattern(index, { context: val })}
+                            onValueChange={val => updateFluffPattern(index, { context: val as 'header' | 'footer' | 'sidebar' | 'body' | 'all' })}
                           >
                             <SelectTrigger disabled={disabled}>
                               <SelectValue />

@@ -447,14 +447,14 @@ function DomainCard({
   onRemove,
   primaryColor,
   bgColor,
-  _textColor,
+  textColor,
 }: {
   domain: CustomDomain;
   onVerify: (id: string) => void;
   onRemove: (id: string) => void;
   primaryColor: string;
   bgColor: string;
-  _textColor: string;
+  textColor: string;
 }) {
   const [showDNS, setShowDNS] = useState(false);
 

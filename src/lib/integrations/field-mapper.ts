@@ -6,7 +6,7 @@
 import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
 import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
-import { executeCustomTransform } from './custom-transforms';
+import { executeCustomTransform, type TransformParams } from './custom-transforms';
 import type { QueryConstraint } from 'firebase/firestore';
 import type { Schema } from '@/types/schema';
 
@@ -85,6 +85,30 @@ export interface ValidationRule {
   type: 'regex' | 'min' | 'max' | 'length' | 'enum';
   value: unknown;
   message?: string;
+}
+
+/**
+ * Type guard to validate and convert unknown parameters to TransformParams
+ */
+function toTransformParams(params: Record<string, unknown> | undefined): TransformParams | undefined {
+  if (!params) return undefined;
+
+  // Recursively validate that all values are compatible with TransformParams
+  const result: TransformParams = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      value === null ||
+      value === undefined
+    ) {
+      result[key] = value;
+    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      result[key] = toTransformParams(value as Record<string, unknown>);
+    }
+  }
+  return result;
 }
 
 /**
@@ -378,7 +402,7 @@ export class FieldMappingManager {
           logger.warn('[Field Mapper] Validation failed', {
             file: 'field-mapper.ts',
             field: rule.localField,
-            value: transformedValue,
+            value: typeof transformedValue === 'object' ? JSON.stringify(transformedValue) : String(transformedValue),
           });
           continue;
         }
@@ -489,7 +513,7 @@ export class FieldMappingManager {
           const result = executeCustomTransform(
             transform.customFunction,
             value,
-            transform.params
+            toTransformParams(transform.params)
           );
 
           if (result.success) {

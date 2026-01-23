@@ -4,7 +4,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type { Workflow } from '@/types/workflow';
 
@@ -78,12 +78,17 @@ export async function getWorkflows(
     logger.info('Workflows retrieved', {
       organizationId,
       count: result.data.length,
-      filters,
+      filterStatus: filters?.status,
+      filterTriggerType: filters?.triggerType,
     });
 
     return result;
   } catch (error: unknown) {
-    logger.error('Failed to get workflows', error instanceof Error ? error : undefined, { organizationId, filters });
+    logger.error('Failed to get workflows', error instanceof Error ? error : undefined, {
+      organizationId,
+      filterStatus: filters?.status,
+      filterTriggerType: filters?.triggerType,
+    });
     throw new Error(`Failed to retrieve workflows: ${getErrorMessage(error)}`);
   }
 }
@@ -139,8 +144,8 @@ export async function createWorkflow(
         successfulRuns: 0,
         failedRuns: 0,
       },
-      createdAt: now as unknown as Date,
-      updatedAt: now as unknown as Date,
+      createdAt: Timestamp.fromDate(now),
+      updatedAt: Timestamp.fromDate(now),
       createdBy,
       version: 1,
     };
@@ -161,7 +166,11 @@ export async function createWorkflow(
 
     return workflow;
   } catch (error: unknown) {
-    logger.error('Failed to create workflow', error instanceof Error ? error : undefined, { organizationId, data });
+    logger.error('Failed to create workflow', error instanceof Error ? error : undefined, {
+      organizationId,
+      workflowName: data.name,
+      triggerType: data.trigger?.type,
+    });
     throw new Error(`Failed to create workflow: ${getErrorMessage(error)}`);
   }
 }

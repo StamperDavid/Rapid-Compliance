@@ -4,7 +4,13 @@
  */
 
 import type { ConnectedIntegration } from '@/types/integrations';
-import { sendMessage, listChannels, createChannel } from '../slack-service';
+import {
+  sendMessage,
+  listChannels,
+  createChannel,
+  type SlackAttachment,
+  type SlackBlock,
+} from '../slack-service';
 
 /**
  * Execute a Slack function
@@ -33,8 +39,12 @@ export async function executeSlackFunction(
       return sendMessage(accessToken, {
         channel: parameters.channel,
         text: parameters.text,
-        attachments: parameters.attachments as unknown[] | undefined,
-        blocks: parameters.blocks as unknown[] | undefined,
+        attachments: Array.isArray(parameters.attachments)
+          ? parameters.attachments as SlackAttachment[]
+          : undefined,
+        blocks: Array.isArray(parameters.blocks)
+          ? parameters.blocks as SlackBlock[]
+          : undefined,
       });
 
     case 'createChannel':

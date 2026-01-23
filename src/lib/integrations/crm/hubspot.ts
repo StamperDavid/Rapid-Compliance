@@ -40,7 +40,7 @@ type HubSpotFunctionResult = HubSpotContactResult;
  */
 export async function executeHubSpotFunction(
   functionName: string,
-  parameters: HubSpotContactParams,
+  parameters: Record<string, unknown>,
   integration: ConnectedIntegration
 ): Promise<HubSpotFunctionResult> {
   const accessToken = integration.accessToken;
@@ -77,11 +77,11 @@ export async function executeHubSpotFunction(
       
       return createContact(
         {
-          email: parameters.email,
-          firstName: parameters.firstName,
-          lastName: parameters.lastName,
-          phone: parameters.phone,
-          company: parameters.company,
+          email: parameters.email as string,
+          firstName: parameters.firstName as string | undefined,
+          lastName: parameters.lastName as string | undefined,
+          phone: parameters.phone as string | undefined,
+          company: parameters.company as string | undefined,
         },
         accessToken
       );

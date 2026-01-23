@@ -122,6 +122,13 @@ export async function handleEntityDeleted(
   }
 }
 
+interface ScheduleTypeMapping {
+  daily: string;
+  weekly: string;
+  monthly: string;
+  hourly: string;
+}
+
 /**
  * Handle schedule trigger
  * Called by scheduled jobs (cron) at specified intervals
@@ -134,7 +141,30 @@ export async function handleScheduleTrigger(
     if (w.trigger.type === 'schedule') {
       const trigger = w.trigger;
       const schedule = trigger.schedule;
-      return schedule === scheduleType || schedule === 'schedule.daily' || schedule === 'schedule.weekly';
+
+      // Check if schedule matches the schedule type
+      if (schedule.type === 'interval' && schedule.interval) {
+        const intervalUnit = schedule.interval.unit;
+        const intervalValue = schedule.interval.value;
+
+        // Map schedule type to interval unit
+        const scheduleMapping: ScheduleTypeMapping = {
+          daily: 'days',
+          weekly: 'weeks',
+          monthly: 'months',
+          hourly: 'hours'
+        };
+
+        return intervalUnit === scheduleMapping[scheduleType] && intervalValue === 1;
+      }
+
+      // For cron-based schedules, we would need to parse the cron expression
+      // This is a simplified check - in production you'd use a cron parser
+      if (schedule.type === 'cron' && schedule.cron) {
+        return false; // Requires cron parser implementation
+      }
+
+      return false;
     }
     return false;
   });

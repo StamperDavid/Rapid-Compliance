@@ -216,7 +216,12 @@ export default function LivingLedgerPage() {
       if (response.ok) {
         const data = await response.json() as HealthCheckResponse;
         setHealthCheckSummary(data.data);
-        logger.info('Health check complete', data.data);
+        logger.info('Health check complete', {
+          total: data.data.total,
+          healthy: data.data.healthy,
+          atRisk: data.data.atRisk,
+          critical: data.data.critical
+        });
       }
     } catch (error: unknown) {
       logger.error('Failed to run health check', error instanceof Error ? error : new Error(String(error)));

@@ -201,9 +201,9 @@ async function executeWorkflowActions(
       } else if (action.type === 'conditional_branch') {
         result = await executeConditionalAction(action, triggerData, workflow, organizationId);
       } else if (action.type === 'ai_agent') {
-        result = await executeAIAgentAction(action, triggerData, organizationId);
+        result = await executeAIAgentAction(convertToAIAgentConfig(action), triggerData, organizationId);
       } else if (action.type === 'send_slack') {
-        result = await executeSlackAction(action, triggerData, organizationId);
+        result = await executeSlackAction(convertToSlackConfig(action), triggerData, organizationId);
       } else {
         throw new Error(`Unknown action type: ${action.type}`);
       }
@@ -232,8 +232,113 @@ async function executeWorkflowActions(
  * Get nested value from object using dot notation
  */
 function getNestedValue(obj: WorkflowTriggerData | Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((current: unknown, key: string) => 
+  return path.split('.').reduce((current: unknown, key: string) =>
     (current as Record<string, unknown>)?.[key], obj);
+}
+
+/**
+ * Convert AIAgentAction to AIAgentActionConfig format
+ */
+function convertToAIAgentConfig(action: WorkflowAction): BaseAction & {
+  type: 'ai_agent';
+  config: {
+    prompt: string;
+    model?: string;
+    storeResult?: boolean;
+    resultField?: string;
+    maxTokens?: number;
+    temperature?: number;
+    systemPrompt?: string;
+    useKnowledgeBase?: boolean;
+    responseFormat?: 'text' | 'json';
+  };
+} {
+  if (action.type !== 'ai_agent') {
+    throw new Error('Action is not an AI agent action');
+  }
+
+  const agentAction = action as unknown as {
+    id: string;
+    name: string;
+    type: 'ai_agent';
+    continueOnError: boolean;
+    retry?: {
+      enabled: boolean;
+      maxAttempts: number;
+      backoffMultiplier: number;
+    };
+    agentId?: string;
+    prompt?: string;
+    context?: Record<string, unknown>;
+    saveResponseAs?: string;
+  };
+
+  return {
+    type: 'ai_agent',
+    id: action.id,
+    name: action.name,
+    continueOnError: agentAction.continueOnError,
+    retry: agentAction.retry,
+    config: {
+      prompt: agentAction.prompt || '',
+      resultField: agentAction.saveResponseAs || 'aiResponse',
+      storeResult: true,
+    },
+  };
+}
+
+/**
+ * Convert SendSlackAction to SlackActionConfig format
+ */
+function convertToSlackConfig(action: WorkflowAction): BaseAction & {
+  type: 'send_slack';
+  config: {
+    channelId?: string;
+    channelName?: string;
+    userId?: string;
+    userEmail?: string;
+    message: string;
+    blocks?: unknown[];
+    threadTs?: string;
+    unfurlLinks?: boolean;
+    unfurlMedia?: boolean;
+    asBot?: boolean;
+    botName?: string;
+    botIcon?: string;
+  };
+} {
+  if (action.type !== 'send_slack') {
+    throw new Error('Action is not a Slack action');
+  }
+
+  const slackAction = action as unknown as {
+    id: string;
+    name: string;
+    type: 'send_slack';
+    continueOnError: boolean;
+    retry?: {
+      enabled: boolean;
+      maxAttempts: number;
+      backoffMultiplier: number;
+    };
+    channel?: string;
+    message?: string;
+    blocks?: Record<string, unknown>[];
+    mentions?: string[];
+  };
+
+  return {
+    type: 'send_slack',
+    id: action.id,
+    name: action.name,
+    continueOnError: slackAction.continueOnError,
+    retry: slackAction.retry,
+    config: {
+      channelName: slackAction.channel,
+      message: slackAction.message || '',
+      blocks: slackAction.blocks,
+    },
+  };
 }
 
 

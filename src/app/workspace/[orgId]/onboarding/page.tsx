@@ -16,9 +16,11 @@ import { useToast } from '@/hooks/useToast';
 // TYPES & INTERFACES
 // ============================================================================
 
-interface FormData {
-  [key: string]: string | number | boolean | File[] | unknown[];
+interface FormDataBase {
+  [key: string]: string | number | boolean | File[] | unknown[] | string[];
 }
+
+type FormData = FormDataBase;
 
 interface TextInputFieldProps {
   label: string;
@@ -46,6 +48,9 @@ interface TextAreaFieldProps {
 
 // Move components OUTSIDE to prevent re-creation on every render
 function TextInputField({ label, field, placeholder, required, formData, updateField }: TextInputFieldProps) {
+  const value = formData[field];
+  const stringValue = typeof value === 'string' ? value : '';
+
   return (
     <div>
       <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
@@ -53,7 +58,7 @@ function TextInputField({ label, field, placeholder, required, formData, updateF
       </label>
       <input
         type="text"
-        value={formData[field] ?? ''}
+        value={stringValue}
         onChange={(e) => updateField(field, e.target.value)}
         placeholder={placeholder}
         style={{
@@ -71,13 +76,16 @@ function TextInputField({ label, field, placeholder, required, formData, updateF
 }
 
 function TextAreaField({ label, field, placeholder, rows = 4, helper, required, formData, updateField }: TextAreaFieldProps) {
+  const value = formData[field];
+  const stringValue = typeof value === 'string' ? value : '';
+
   return (
     <div>
       <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
         {label} {required && '*'}
       </label>
       <textarea
-        value={formData[field] ?? ''}
+        value={stringValue}
         onChange={(e) => updateField(field, e.target.value)}
         placeholder={placeholder}
         rows={rows}
@@ -357,14 +365,14 @@ export default function OnboardingWizard() {
         for (const [fieldName, fieldConfidence] of Object.entries(result.fieldConfidences)) {
           if (fieldConfidence.suggestedAction === 'auto-fill' && fieldConfidence.value) {
             const value = fieldConfidence.value;
-            
+
             // Type-safe assignment: only assign to compatible fields
             if (Array.isArray(value) && isStringArrayField(fieldName)) {
               // Assign string array to string array fields
-              updatedFormData[fieldName as keyof typeof updatedFormData] = value as never;
+              (updatedFormData as Record<string, unknown>)[fieldName] = value as string[];
             } else if (typeof value === 'string' && isStringField(fieldName)) {
               // Assign string to string fields
-              updatedFormData[fieldName as keyof typeof updatedFormData] = value as never;
+              (updatedFormData as Record<string, unknown>)[fieldName] = value;
             } else {
               // Log warning for incompatible field types (shouldn't happen with proper prefill engine)
               logger.warn('Prefill field type mismatch', {

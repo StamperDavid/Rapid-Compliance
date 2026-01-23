@@ -17,6 +17,7 @@
 import { logger } from '@/lib/logger/logger';
 import { processAndStoreScrape } from './scraper-intelligence-service';
 import { getIndustryTemplate } from '@/lib/persona/industry-templates';
+import { type ExtractedSignal } from '@/types/scraper-intelligence';
 import {
   type ScraperRunner,
   type ScraperRunnerConfig,
@@ -292,6 +293,27 @@ export class ProductionScraperRunner implements ScraperRunner {
   }
 
   // ==========================================================================
+  // PRIVATE METHODS - HELPERS
+  // ==========================================================================
+
+  /**
+   * Convert ExtractedSignal to the signal format expected by ScrapeJobResult
+   */
+  private mapExtractedSignalToResultSignal(signal: ExtractedSignal): {
+    signalId: string;
+    signalLabel: string;
+    value: import('./scraper-runner-types').MetadataValue;
+    confidence: number;
+  } {
+    return {
+      signalId: signal.signalId,
+      signalLabel: signal.signalLabel,
+      value: signal.sourceText,
+      confidence: signal.confidence,
+    };
+  }
+
+  // ==========================================================================
   // PRIVATE METHODS - PROCESSING
   // ==========================================================================
 
@@ -376,7 +398,7 @@ export class ProductionScraperRunner implements ScraperRunner {
         const cached = await this.checkCache(config);
         if (cached) {
           await this.queue.completeJob(jobId, {
-            signals: cached.signals,
+            signals: cached.signals.map(s => this.mapExtractedSignalToResultSignal(s)),
             leadScore: cached.leadScore,
             tempScrapeId: cached.tempScrapeId,
             cached: true,
@@ -422,20 +444,28 @@ export class ProductionScraperRunner implements ScraperRunner {
       if (this.config.enableCaching) {
         const ttl = calculateCacheTTL(platform);
         const cacheKey = getScrapeCacheKey(url, platform, organizationId);
-        
+
         const resultToCache: ScrapeJobResult = {
           config,
           status: 'completed',
           startedAt: new Date(),
           completedAt: new Date(),
-          ...result,
+          signals: result.signals.map(s => this.mapExtractedSignalToResultSignal(s)),
+          leadScore: result.leadScore,
+          tempScrapeId: result.tempScrapeId,
+          storageReduction: result.storageReduction,
         };
 
         await this.cache.set(cacheKey, resultToCache, ttl);
       }
 
       // Step 5: Mark job as completed
-      await this.queue.completeJob(jobId, result);
+      await this.queue.completeJob(jobId, {
+        signals: result.signals.map(s => this.mapExtractedSignalToResultSignal(s)),
+        leadScore: result.leadScore,
+        tempScrapeId: result.tempScrapeId,
+        storageReduction: result.storageReduction,
+      });
       this.stats.completedJobs++;
 
       if (this.config.enableProgressTracking) {
@@ -464,7 +494,7 @@ export class ProductionScraperRunner implements ScraperRunner {
    * Check cache for existing result
    */
   private async checkCache(config: ScrapeJobConfig): Promise<{
-    signals: unknown[];
+    signals: ExtractedSignal[];
     leadScore: number;
     tempScrapeId: string;
     cacheAgeMs: number;
@@ -488,8 +518,19 @@ export class ProductionScraperRunner implements ScraperRunner {
         hits: cached.hits,
       });
 
+      // Convert cached result signals back to ExtractedSignal format
+      const cachedSignals: ExtractedSignal[] = (cached.result.signals ?? []).map(s => ({
+        signalId: s.signalId,
+        signalLabel: s.signalLabel,
+        sourceText: String(s.value),
+        confidence: s.confidence,
+        platform: config.platform,
+        extractedAt: new Date(),
+        sourceScrapeId: cached.result.tempScrapeId ?? '',
+      }));
+
       return {
-        signals: cached.result.signals ?? [],
+        signals: cachedSignals,
         leadScore: cached.result.leadScore ?? 0,
         tempScrapeId: cached.result.tempScrapeId ?? '',
         cacheAgeMs: ageMs,
@@ -505,7 +546,7 @@ export class ProductionScraperRunner implements ScraperRunner {
    * Execute the actual scrape operation
    */
   private async executeScrape(config: ScrapeJobConfig): Promise<{
-    signals: unknown[];
+    signals: ExtractedSignal[];
     leadScore: number;
     tempScrapeId: string;
     storageReduction?: {

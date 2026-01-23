@@ -409,22 +409,25 @@ export async function listCampaigns(
     Math.min(pageSize, 100) // Max 100 per page
   );
 
-  interface CampaignData {
-    createdAt: string;
-    updatedAt: string;
-    scheduledFor?: string;
-    sentAt?: string;
-    [key: string]: unknown;
-  }
-
   // Convert Firestore data back to EmailCampaign format
-  const campaigns = result.data.map((c: CampaignData) => ({
-    ...c,
-    createdAt: new Date(c.createdAt),
-    updatedAt: new Date(c.updatedAt),
-    scheduledFor: c.scheduledFor ? new Date(c.scheduledFor) : undefined,
-    sentAt: c.sentAt ? new Date(c.sentAt) : undefined,
-  })) as EmailCampaign[];
+  const campaigns = result.data.map((c) => {
+    const createdAt = typeof c.createdAt === 'string' ? c.createdAt : String(c.createdAt);
+    const updatedAt = typeof c.updatedAt === 'string' ? c.updatedAt : String(c.updatedAt);
+    const scheduledFor = c.scheduledFor
+      ? (typeof c.scheduledFor === 'string' ? c.scheduledFor : String(c.scheduledFor))
+      : undefined;
+    const sentAt = c.sentAt
+      ? (typeof c.sentAt === 'string' ? c.sentAt : String(c.sentAt))
+      : undefined;
+
+    return {
+      ...c,
+      createdAt: new Date(createdAt),
+      updatedAt: new Date(updatedAt),
+      scheduledFor: scheduledFor ? new Date(scheduledFor) : undefined,
+      sentAt: sentAt ? new Date(sentAt) : undefined,
+    };
+  }) as EmailCampaign[];
 
   return {
     campaigns,

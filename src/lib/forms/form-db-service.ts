@@ -1091,7 +1091,7 @@ export async function createFormFromTemplate(
 
   const template = templateSnap.data() as FormTemplate;
 
-  return runTransaction(getDb(), (transaction) => {
+  return runTransaction(getDb(), async (transaction) => {
     // Create form
     const formsRef = collection(getDb(), PATHS.forms(orgId, workspaceId));
     const formDoc = doc(formsRef);

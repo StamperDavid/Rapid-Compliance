@@ -7,6 +7,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import type { SEOTrainingSettings, BrandDNA } from '@/types/organization';
+import type { ModelName } from '@/types/ai-models';
 
 // SaaS Premium Dark Theme Colors
 const COLORS = {
@@ -101,11 +102,6 @@ export default function SEOTrainingPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [knowledge, setKnowledge] = useState<KnowledgeItem[]>([]);
 
-  // Load data on mount
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
-
   // Data Loading Function
   const loadData = useCallback(async () => {
     try {
@@ -160,6 +156,11 @@ export default function SEOTrainingPage() {
       setLoading(false);
     }
   }, [orgId]);
+
+  // Load data on mount
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   // Demo Data Loader
   const loadDemoData = () => {
@@ -381,8 +382,9 @@ export default function SEOTrainingPage() {
         const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
         const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
 
+        const modelName: ModelName = 'openrouter/anthropic/claude-3.5-sonnet' as const;
         const response = await provider.chat({
-          model: 'anthropic/claude-3.5-sonnet',
+          model: modelName,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Generate a ${type} for this topic: ${topic}` },

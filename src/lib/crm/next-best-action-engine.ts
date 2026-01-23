@@ -506,7 +506,7 @@ function generateEngagementBasedActions(
   }
 
   // Low engagement score
-  if (activityStats.engagementScore < 50) {
+  if (activityStats.engagementScore !== undefined && activityStats.engagementScore < 50) {
     actions.push({
       id: `action-engage-increase-${Date.now()}`,
       type: 'meeting',
@@ -557,10 +557,14 @@ function generateTimingBasedActions(
   }
 
   const expectedDateValue = deal.expectedCloseDate;
-  const expectedDate =
-    expectedDateValue && typeof expectedDateValue === 'object' && 'toDate' in expectedDateValue && typeof expectedDateValue.toDate === 'function'
-      ? expectedDateValue.toDate()
-      : new Date(expectedDateValue);
+  let expectedDate: Date;
+  if (expectedDateValue && typeof expectedDateValue === 'object' && 'toDate' in expectedDateValue && typeof expectedDateValue.toDate === 'function') {
+    expectedDate = expectedDateValue.toDate();
+  } else if (expectedDateValue instanceof Date) {
+    expectedDate = expectedDateValue;
+  } else {
+    expectedDate = new Date();
+  }
   const daysToClose = Math.floor(
     (expectedDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
   );
@@ -764,10 +768,14 @@ function calculateUrgency(
   // Critical if high-value deal is overdue
   if (deal.expectedCloseDate && deal.value > 50000) {
     const expectedDateValue = deal.expectedCloseDate;
-    const expectedDate =
-      expectedDateValue && typeof expectedDateValue === 'object' && 'toDate' in expectedDateValue && typeof expectedDateValue.toDate === 'function'
-        ? expectedDateValue.toDate()
-        : new Date(expectedDateValue);
+    let expectedDate: Date;
+    if (expectedDateValue && typeof expectedDateValue === 'object' && 'toDate' in expectedDateValue && typeof expectedDateValue.toDate === 'function') {
+      expectedDate = expectedDateValue.toDate();
+    } else if (expectedDateValue instanceof Date) {
+      expectedDate = expectedDateValue;
+    } else {
+      expectedDate = new Date();
+    }
     const daysToClose = Math.floor(
       (expectedDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     );
@@ -791,7 +799,7 @@ function calculateUrgency(
   }
 
   // Medium if low engagement
-  if (activityStats.engagementScore < 40) {
+  if (activityStats.engagementScore !== undefined && activityStats.engagementScore < 40) {
     return 'medium';
   }
 

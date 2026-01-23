@@ -11,6 +11,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import { Timestamp } from 'firebase/firestore';
 import { FieldPalette } from './FieldPalette';
 import { FormCanvas } from './FormCanvas';
 import { FieldEditor } from './FieldEditor';
@@ -311,6 +312,13 @@ const styles = {
 // HELPER FUNCTIONS
 // ============================================================================
 
+/**
+ * Convert JavaScript Date to Firestore Timestamp
+ */
+function dateToTimestamp(date: Date): Timestamp {
+  return Timestamp.fromDate(date);
+}
+
 function generateFieldId(): string {
   return `field_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
@@ -418,15 +426,25 @@ export function FormBuilder({
   const handleFieldDrop = useCallback(
     (type: FormFieldType, dropIndex: number) => {
       const newFieldId = generateFieldId();
+      const defaultConfig = getDefaultFieldConfig(type, currentPageIndex, dropIndex);
+      const timestamp = dateToTimestamp(new Date());
+
       const newField: FormFieldConfig = {
         id: newFieldId,
         formId: form.id,
         organizationId: form.organizationId,
         workspaceId: form.workspaceId,
-        ...getDefaultFieldConfig(type, currentPageIndex, dropIndex),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as FormFieldConfig;
+        type: defaultConfig.type ?? type,
+        label: defaultConfig.label ?? '',
+        name: defaultConfig.name ?? `field_${Date.now()}`,
+        placeholder: defaultConfig.placeholder,
+        width: defaultConfig.width ?? 'full',
+        pageIndex: defaultConfig.pageIndex ?? currentPageIndex,
+        order: defaultConfig.order ?? dropIndex,
+        options: defaultConfig.options,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
 
       // Reorder existing fields
       const updatedFields = fields.map((f) => {
@@ -482,8 +500,9 @@ export function FormBuilder({
   // Handle field update
   const handleFieldUpdate = useCallback(
     (fieldId: string, updates: Partial<FormFieldConfig>) => {
+      const timestamp = dateToTimestamp(new Date());
       const updatedFields = fields.map((f) =>
-        f.id === fieldId ? { ...f, ...updates, updatedAt: new Date() } : f
+        f.id === fieldId ? { ...f, ...updates, updatedAt: timestamp } : f
       );
       onFieldsChange(updatedFields);
     },
@@ -525,14 +544,15 @@ export function FormBuilder({
       }
 
       const newFieldId = generateFieldId();
+      const timestamp = dateToTimestamp(new Date());
       const newField: FormFieldConfig = {
         ...sourceField,
         id: newFieldId,
         name: `${sourceField.name}_copy`,
         label: `${sourceField.label} (Copy)`,
         order: sourceField.order + 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: timestamp,
+        updatedAt: timestamp,
       };
 
       // Reorder fields after the duplicate

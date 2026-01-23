@@ -37,24 +37,25 @@ export async function executeSMSAction(
 }
 
 /**
- * Resolve variables in config
+ * Resolve variables in string template
  */
-function resolveVariables(config: unknown, triggerData: WorkflowTriggerData): unknown {
+function resolveVariables(config: string, triggerData: WorkflowTriggerData): string;
+function resolveVariables(config: string[], triggerData: WorkflowTriggerData): string[];
+function resolveVariables(config: string | string[], triggerData: WorkflowTriggerData): string | string[] {
   if (typeof config === 'string') {
     return config.replace(/\{\{([^}]+)\}\}/g, (match, path: string) => {
       const value = getNestedValue(triggerData, path.trim());
       return value !== undefined ? String(value) : match;
     });
   } else if (Array.isArray(config)) {
-    return config.map(item => resolveVariables(item, triggerData));
-  } else if (config && typeof config === 'object') {
-    const resolved: Record<string, unknown> = {};
-    for (const key in config) {
-      resolved[key] = resolveVariables((config as Record<string, unknown>)[key], triggerData);
-    }
-    return resolved;
+    return config.map(item => {
+      if (typeof item !== 'string') {
+        throw new Error('SMS action: array elements must be strings');
+      }
+      return resolveVariables(item, triggerData);
+    });
   }
-  return config;
+  throw new Error('SMS action: config must be string or string[]');
 }
 
 /**

@@ -3,9 +3,11 @@
  * Executes entity CRUD actions in workflows
  */
 
-import type { CreateEntityAction, UpdateEntityAction, DeleteEntityAction, WorkflowTriggerData } from '@/types/workflow';
+import type { CreateEntityAction, UpdateEntityAction, DeleteEntityAction, WorkflowTriggerData, FieldTransform } from '@/types/workflow';
 import type { Schema } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
+import type { QueryConstraint } from 'firebase/firestore';
+import { where, limit as firestoreLimit } from 'firebase/firestore';
 
 /**
  * Entity data record with flexible field structure
@@ -356,20 +358,21 @@ export async function executeEntityAction(
   }
 
   if (action.type === 'create_entity') {
-    return executeCreateEntityAction(action, triggerData, organizationId, workspaceId);
+    return executeCreateEntityAction(action as CreateEntityAction, triggerData, organizationId, workspaceId);
   } else if (action.type === 'update_entity') {
-    return executeUpdateEntityAction(action, triggerData, organizationId, workspaceId);
+    return executeUpdateEntityAction(action as UpdateEntityAction, triggerData, organizationId, workspaceId);
   } else if (action.type === 'delete_entity') {
-    return executeDeleteEntityAction(action, triggerData, organizationId, workspaceId);
+    return executeDeleteEntityAction(action as DeleteEntityAction, triggerData, organizationId, workspaceId);
   } else {
-    throw new Error(`Unknown entity action type: ${action.type}`);
+    const exhaustiveCheck: never = action;
+    throw new Error(`Unknown entity action type: ${(exhaustiveCheck as { type: string }).type}`);
   }
 }
 
 /**
  * Apply field transform
  */
-function applyTransform(value: unknown, transform: Record<string, unknown>): unknown {
+function applyTransform(value: unknown, transform: FieldTransform): unknown {
   switch (transform.type) {
     case 'uppercase':
       return String(value).toUpperCase();
@@ -377,8 +380,23 @@ function applyTransform(value: unknown, transform: Record<string, unknown>): unk
       return String(value).toLowerCase();
     case 'trim':
       return String(value).trim();
-    default:
+    case 'format':
+      // Format transformation - could be extended with date formatting, number formatting, etc.
+      return String(value);
+    case 'calculate':
+      // Calculate transformation - could be extended with formula evaluation
       return value;
+    case 'custom':
+      // Custom transformation - could be extended with custom function execution
+      return value;
+    default: {
+      const exhaustiveCheck: never = transform.type;
+      logger.warn('[Entity Action] Unknown transform type', {
+        file: 'entity-action.ts',
+        type: exhaustiveCheck,
+      });
+      return value;
+    }
   }
 }
 
@@ -437,11 +455,15 @@ Generate ONLY the value for this field. Do not include any explanation or format
       temperature: 0.7,
       maxTokens: 500,
     });
-    
+
     return response.text.trim();
   } catch (error) {
-    logger.error('[Entity Action] AI generation failed:', error, { file: 'entity-action.ts' });
-    return `[AI Error: ${error}]`;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('[Entity Action] AI generation failed:', error instanceof Error ? error : undefined, {
+      file: 'entity-action.ts',
+      errorMessage,
+    });
+    return `[AI Error: ${errorMessage}]`;
   }
 }
 
@@ -452,34 +474,32 @@ async function queryEntities(params: QueryEntitiesParams): Promise<EntityRecord[
   const { entityPath, query, triggerData } = params;
   const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
 
-  // Build Firestore query from criteria
-  const filters: EntityFilter[] = [];
+  // Build Firestore QueryConstraints from criteria
+  const constraints: QueryConstraint[] = [];
 
   if (query.filters && Array.isArray(query.filters)) {
     for (const filter of query.filters) {
       let value: unknown = filter.value;
-      
+
       // Resolve dynamic values
       if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
         const path = value.slice(2, -2).trim();
         value = getNestedValue(triggerData, path);
       }
-      
-      filters.push({
-        field: filter.field,
-        operator: mapOperator(filter.operator),
-        value,
-      });
+
+      // Convert EntityFilter to QueryConstraint using where()
+      const firestoreOperator = mapOperator(filter.operator);
+      constraints.push(where(filter.field, firestoreOperator as any, value));
     }
   }
-  
-  // Get matching records
-  const results = await FS.getAll(entityPath, filters);
 
-  // Apply limit if specified
+  // Add limit constraint if specified
   if (query.limit && typeof query.limit === 'number') {
-    return (results as EntityRecord[]).slice(0, query.limit);
+    constraints.push(firestoreLimit(query.limit));
   }
+
+  // Get matching records
+  const results = await FS.getAll(entityPath, constraints);
 
   return results as EntityRecord[];
 }

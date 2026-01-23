@@ -22,6 +22,7 @@ import type {
   SlackWorkspace,
   SlackChannelMapping,
   SlackMessagePriority,
+  SlackMessage,
 } from './types';
 
 /**

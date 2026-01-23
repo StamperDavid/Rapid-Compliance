@@ -8,8 +8,8 @@ import { createInvoice, createContact, listContacts, listInvoices } from '../xer
 
 export interface XeroLineItem {
   description: string;
-  amount: number;
-  quantity?: number;
+  quantity: number;
+  unitAmount: number;
 }
 
 export interface XeroInvoiceParams {

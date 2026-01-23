@@ -30,7 +30,22 @@ export default function WorkflowRunsPage() {
   const loadExecutions = useCallback(async () => {
     try {
       const data = await getWorkflowExecutions(workflowId, orgId, 'default');
-      setExecutions(data as WorkflowExecution[]);
+      // Map WorkflowEngineExecution to WorkflowExecution format
+      const mappedExecutions: WorkflowExecution[] = data.map((exec) => ({
+        id: exec.id,
+        startedAt: exec.startedAt instanceof Date ? exec.startedAt.toISOString() : String(exec.startedAt),
+        completedAt: exec.completedAt instanceof Date ? exec.completedAt.toISOString() : exec.completedAt ? String(exec.completedAt) : undefined,
+        status: exec.status,
+        error: exec.error,
+        actionResults: exec.actionResults.map((result) => {
+          const { status: _status, ...rest } = result;
+          return {
+            ...rest,
+            status: result.status
+          };
+        })
+      }));
+      setExecutions(mappedExecutions);
     } catch (error) {
       logger.error('Error loading executions:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {

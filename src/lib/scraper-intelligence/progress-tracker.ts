@@ -16,6 +16,7 @@ import type {
   ProgressTracker,
   ProgressEvent,
   ProgressEventType,
+  MetadataObject,
 } from './scraper-runner-types';
 
 // ============================================================================
@@ -338,7 +339,7 @@ export function createProgressEvent(
   type: ProgressEventType,
   message: string,
   progress?: number,
-  data?: Record<string, unknown>
+  data?: MetadataObject
 ): ProgressEvent {
   return {
     jobId,

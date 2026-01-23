@@ -52,26 +52,30 @@ export interface AnalyticsConfig {
 export interface Page {
   id: string;
   organizationId: string; // CRITICAL: Isolation
-  
+
   // Basic info
   slug: string; // URL path
   title: string;
-  
+
   // Content (drag-drop page builder)
   content: PageSection[];
-  
+
   // SEO
   seo: PageSEO;
-  
+
+  // Styling
+  customCSS?: string;
+
   // Status
-  status: 'draft' | 'published' | 'scheduled';
+  status?: 'draft' | 'published' | 'scheduled';
   publishedAt?: string;
   scheduledFor?: string;
-  
+  isPublished?: boolean;
+
   // Version control
-  version: number;
+  version?: number;
   lastPublishedVersion?: number;
-  
+
   // Metadata
   createdAt: string;
   updatedAt: string;

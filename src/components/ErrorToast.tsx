@@ -30,7 +30,7 @@ export function showErrorToast(error: unknown, fallbackMessage = 'An error occur
   if (error && typeof error === 'object' && 'error' in error) {
     const apiError = error as APIErrorResponse;
     message = (apiError.error.message !== '' && apiError.error.message != null) ? apiError.error.message : message;
-    details = apiError.error.details;
+    details = apiError.error.details ?? null;
     
     // Add helpful context for common errors
     if (apiError.error.code === 'MISSING_API_KEY') {
@@ -61,7 +61,7 @@ export function showErrorToast(error: unknown, fallbackMessage = 'An error occur
 
   // Log details for debugging
   if (details) {
-    logger.error('[Error Details]', details, { file: 'ErrorToast.tsx' });
+    logger.error('[Error Details]', new Error(JSON.stringify(details)), { file: 'ErrorToast.tsx' });
   }
 }
 

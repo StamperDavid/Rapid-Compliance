@@ -4,7 +4,7 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { Workflow, ScheduleTrigger } from '@/types/workflow';
+import type { Workflow, ScheduleTrigger, WorkflowTriggerData } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
 import { CronExpressionParser } from 'cron-parser';
@@ -170,19 +170,19 @@ export async function executeScheduledWorkflows(): Promise<void> {
           }
 
           const scheduleData = 'schedule' in trigger && trigger.schedule as Record<string, unknown>;
-          const scheduleType = scheduleData && typeof scheduleData === 'object' && 'type' in scheduleData
+          const scheduleTypeRaw = scheduleData && typeof scheduleData === 'object' && 'type' in scheduleData
             ? scheduleData.type as string
             : 'unknown';
 
-          // Execute workflow with proper typing
-          interface TriggerData {
-            organizationId: string;
-            workspaceId: string;
-            scheduledAt: string;
-            scheduleType: string;
-          }
+          // Map schedule type to valid WorkflowTriggerData scheduleType
+          const validScheduleTypes = ['daily', 'weekly', 'monthly', 'hourly'] as const;
+          const scheduleType: 'daily' | 'weekly' | 'monthly' | 'hourly' | undefined =
+            validScheduleTypes.includes(scheduleTypeRaw as typeof validScheduleTypes[number])
+              ? (scheduleTypeRaw as typeof validScheduleTypes[number])
+              : undefined;
 
-          const triggerData: TriggerData = {
+          // Execute workflow with proper typing
+          const triggerData: WorkflowTriggerData = {
             organizationId: org.id as string,
             workspaceId: workspace.id as string,
             scheduledAt: now,

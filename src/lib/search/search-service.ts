@@ -8,6 +8,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import type { DocumentData } from 'firebase/firestore';
 
 export interface SearchResult {
   id: string;
@@ -23,13 +24,6 @@ export interface SearchOptions {
   limit?: number;
   filters?: Record<string, unknown>;
   sortBy?: string;
-}
-
-interface RecordData {
-  id: string;
-  notes?: string;
-  description?: string;
-  [key: string]: unknown;
 }
 
 interface SchemaField {
@@ -79,10 +73,10 @@ export async function searchWorkspace(
       const records = await FirestoreService.getAll(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${schema.id}`,
         []
-      );
+      ) as DocumentData[];
 
       // Filter records that match search term
-      const matchingRecords = records.filter((record: RecordData) => {
+      const matchingRecords = records.filter((record: DocumentData) => {
         const searchableText = Object.values(record)
           .filter(v => typeof v === 'string')
           .join(' ')
@@ -98,7 +92,7 @@ export async function searchWorkspace(
         const titleValue = titleField ? (record[titleField.key] as string | undefined) : undefined;
         const title = titleValue && titleValue !== '' ? titleValue : 'Untitled';
 
-        const recordId = typeof record.id === 'string' ? record.id : String(record.id);
+        const recordId = typeof record.id === 'string' ? record.id : (record.id ? String(record.id) : '');
         const recordNotes = typeof record.notes === 'string' ? record.notes : undefined;
         const recordDescription = typeof record.description === 'string' ? record.description : undefined;
 

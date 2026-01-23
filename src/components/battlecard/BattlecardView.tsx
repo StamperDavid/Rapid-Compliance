@@ -199,10 +199,10 @@ function ComparisonTab({ battlecard }: { battlecard: Battlecard }) {
                       {feature.featureName}
                     </div>
                     <div className="col-span-2 text-center">
-                      <FeatureBadge value={feature.us} label="Us" />
+                      <FeatureBadge value={feature.us} _label="Us" />
                     </div>
                     <div className="col-span-2 text-center">
-                      <FeatureBadge value={feature.them} label="Them" />
+                      <FeatureBadge value={feature.them} _label="Them" />
                     </div>
                     <div className="col-span-3 text-center">
                       <AdvantageBadge advantage={feature.advantage} />

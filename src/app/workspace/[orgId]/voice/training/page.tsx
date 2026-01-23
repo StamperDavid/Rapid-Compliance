@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import type { VoiceTrainingSettings, BrandDNA } from '@/types/organization';
 import { TTS_PROVIDER_INFO, DEFAULT_TTS_CONFIGS, type TTSEngineType, type TTSVoice, type APIKeyMode } from '@/lib/voice/tts/types';
+import type { ModelName } from '@/types/ai-models';
 
 // Types
 interface CallMessage {
@@ -713,8 +714,9 @@ export default function VoiceAITrainingLabPage() {
           { role: 'user' as const, content: callerMessage },
         ];
 
+        const modelName: ModelName = 'openrouter/anthropic/claude-3.5-sonnet' as const;
         const response = await provider.chat({
-          model: 'anthropic/claude-3.5-sonnet',
+          model: modelName,
           messages,
           temperature: 0.7,
         });

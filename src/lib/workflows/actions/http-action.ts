@@ -13,12 +13,17 @@ export async function executeHTTPAction(
   triggerData: WorkflowTriggerData
 ): Promise<unknown> {
   // Resolve variables
-  const url = resolveVariables(action.url, triggerData);
+  const resolvedUrl = resolveVariables(action.url, triggerData);
+  const url = typeof resolvedUrl === 'string' ? resolvedUrl : String(resolvedUrl);
   const method = action.method;
   const headers = action.headers ? resolveVariables(action.headers, triggerData) : {};
   const body = action.body ? resolveVariables(action.body, triggerData) : undefined;
   const timeout = 30000;
-  
+
+  // Create AbortController for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
   // Build fetch options
   const fetchOptions: RequestInit = {
     method,
@@ -26,34 +31,40 @@ export async function executeHTTPAction(
       'Content-Type': 'application/json',
       ...(typeof headers === 'object' && headers !== null ? headers as Record<string, string> : {}),
     },
-    signal: AbortSignal.timeout(timeout),
+    signal: controller.signal,
   };
   
   if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
     fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
   }
-  
+
   // Make request
-  const response = await fetch(url, fetchOptions);
-  
-  const responseData = await response.text();
-  let parsedData: unknown;
   try {
-    parsedData = JSON.parse(responseData) as unknown;
-  } catch {
-    parsedData = responseData;
+    const response = await fetch(url, fetchOptions);
+    clearTimeout(timeoutId);
+
+    const responseData = await response.text();
+    let parsedData: unknown;
+    try {
+      parsedData = JSON.parse(responseData) as unknown;
+    } catch {
+      parsedData = responseData;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${JSON.stringify(parsedData)}`);
+    }
+
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      data: parsedData,
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
   }
-  
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${JSON.stringify(parsedData)}`);
-  }
-  
-  return {
-    status: response.status,
-    statusText: response.statusText,
-    headers: Object.fromEntries(response.headers.entries()),
-    data: parsedData,
-  };
 }
 
 /**

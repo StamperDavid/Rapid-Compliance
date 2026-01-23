@@ -16,6 +16,7 @@
  */
 
 import type { Organization } from '@/types/organization';
+import { Timestamp } from 'firebase/firestore';
 
 export interface CompleteTestOrganization extends Organization {
   onboardingData: OnboardingData;
@@ -172,8 +173,8 @@ export const MOCK_TEST_ORGANIZATIONS: CompleteTestOrganization[] = [
       dateFormat: 'MM/DD/YYYY',
       timeFormat: '12h',
     },
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date(),
+    createdAt: Timestamp.fromDate(new Date('2024-01-15')),
+    updatedAt: Timestamp.fromDate(new Date()),
     createdBy: 'system',
     status: 'active',
     testIndustry: 'B2B SaaS - Business Analytics',
@@ -305,8 +306,8 @@ export const MOCK_TEST_ORGANIZATIONS: CompleteTestOrganization[] = [
       dateFormat: 'MM/DD/YYYY',
       timeFormat: '12h',
     },
-    createdAt: new Date('2024-02-01'),
-    updatedAt: new Date(),
+    createdAt: Timestamp.fromDate(new Date('2024-02-01')),
+    updatedAt: Timestamp.fromDate(new Date()),
     createdBy: 'system',
     status: 'active',
     testIndustry: 'Home Services - Landscaping',
@@ -440,8 +441,8 @@ export const MOCK_TEST_ORGANIZATIONS: CompleteTestOrganization[] = [
       dateFormat: 'MM/DD/YYYY',
       timeFormat: '12h',
     },
-    createdAt: new Date('2024-01-20'),
-    updatedAt: new Date(),
+    createdAt: Timestamp.fromDate(new Date('2024-01-20')),
+    updatedAt: Timestamp.fromDate(new Date()),
     createdBy: 'system',
     status: 'active',
     testIndustry: 'E-commerce - Outdoor Equipment',
@@ -575,8 +576,8 @@ export const MOCK_TEST_ORGANIZATIONS: CompleteTestOrganization[] = [
       dateFormat: 'MM/DD/YYYY',
       timeFormat: '12h',
     },
-    createdAt: new Date('2023-11-01'),
-    updatedAt: new Date(),
+    createdAt: Timestamp.fromDate(new Date('2023-11-01')),
+    updatedAt: Timestamp.fromDate(new Date()),
     createdBy: 'system',
     status: 'active',
     testIndustry: 'Financial Services - Wealth Management',
@@ -709,8 +710,8 @@ export const MOCK_TEST_ORGANIZATIONS: CompleteTestOrganization[] = [
       dateFormat: 'MM/DD/YYYY',
       timeFormat: '12h',
     },
-    createdAt: new Date('2024-03-01'),
-    updatedAt: new Date(),
+    createdAt: Timestamp.fromDate(new Date('2024-03-01')),
+    updatedAt: Timestamp.fromDate(new Date()),
     createdBy: 'system',
     status: 'active',
     testIndustry: 'Creative Services - Design Agency',

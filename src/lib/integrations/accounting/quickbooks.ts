@@ -9,7 +9,7 @@ import { createInvoice, createCustomer, listCustomers, listInvoices } from '../q
 export interface QuickBooksLineItem {
   description: string;
   amount: number;
-  quantity?: number;
+  quantity: number;
 }
 
 export interface QuickBooksInvoiceParams {

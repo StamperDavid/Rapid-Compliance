@@ -18,16 +18,18 @@ interface HighValueSignalsSectionProps {
   errors: Record<string, string>;
 }
 
-interface SignalUpdate {
-  id?: string;
-  label?: string;
-  description?: string;
-  keywords?: string[];
-  priority?: string;
-  action?: string;
-  scoreBoost?: number;
-  platform?: string;
-}
+type SignalUpdate = Partial<{
+  id: string;
+  label: string;
+  description: string;
+  keywords: string[];
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  action: 'increase-score' | 'trigger-workflow' | 'add-to-segment' | 'notify-user' | 'flag-for-review';
+  scoreBoost: number;
+  platform: 'website' | 'linkedin-company' | 'linkedin-jobs' | 'google-business' | 'any';
+  regexPattern: string;
+  examples: string[];
+}>;
 
 export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove, canRemove, errors }: HighValueSignalsSectionProps) {
   const sectionErrors = Object.entries(errors).filter(([key]) =>
@@ -39,27 +41,35 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
     const id = prompt('Signal ID (e.g., hiring_staff):');
     if (!id) {return;}
 
-    const newSignal = {
+    const newSignal: import('@/types/scraper-intelligence').HighValueSignal = {
       id,
       label: id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
       description: 'Signal description',
       keywords: ['keyword1', 'keyword2'],
-      priority: 'MEDIUM' as const,
-      action: 'increase-score' as const,
+      priority: 'MEDIUM',
+      action: 'increase-score',
       scoreBoost: 10,
-      platform: 'website' as const,
+      platform: 'website',
     };
+
+    if (!template.research) {
+      return;
+    }
 
     onUpdate({
       research: {
         ...template.research,
-        highValueSignals: [...(template.research?.highValueSignals ?? []), newSignal],
+        highValueSignals: [...(template.research.highValueSignals ?? []), newSignal],
       },
     });
   };
 
   const removeSignal = (index: number) => {
-    const signals = template.research?.highValueSignals ?? [];
+    if (!template.research) {
+      return;
+    }
+
+    const signals = template.research.highValueSignals ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -69,7 +79,11 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
   };
 
   const updateSignal = (index: number, updates: SignalUpdate) => {
-    const signals = [...(template.research?.highValueSignals ?? [])];
+    if (!template.research) {
+      return;
+    }
+
+    const signals = [...(template.research.highValueSignals ?? [])];
     signals[index] = { ...signals[index], ...updates };
     onUpdate({
       research: {
@@ -146,7 +160,7 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
                       <Label className="text-xs">Priority</Label>
                       <Select
                         value={signal.priority}
-                        onValueChange={val => updateSignal(index, { priority: val })}
+                        onValueChange={val => updateSignal(index, { priority: val as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' })}
                       >
                         <SelectTrigger disabled={disabled}>
                           <SelectValue />
@@ -198,16 +212,17 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
                     <Label className="text-xs">Action</Label>
                     <Select
                       value={signal.action}
-                      onValueChange={val => updateSignal(index, { action: val })}
+                      onValueChange={val => updateSignal(index, { action: val as 'increase-score' | 'trigger-workflow' | 'add-to-segment' | 'notify-user' | 'flag-for-review' })}
                     >
                       <SelectTrigger disabled={disabled}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="increase-score">Increase Score</SelectItem>
-                        <SelectItem value="decrease-score">Decrease Score</SelectItem>
-                        <SelectItem value="add-to-segment">Add to Segment</SelectItem>
                         <SelectItem value="trigger-workflow">Trigger Workflow</SelectItem>
+                        <SelectItem value="add-to-segment">Add to Segment</SelectItem>
+                        <SelectItem value="notify-user">Notify User</SelectItem>
+                        <SelectItem value="flag-for-review">Flag for Review</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -226,7 +241,7 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
                     <Label className="text-xs">Platform</Label>
                     <Select
                       value={signal.platform}
-                      onValueChange={val => updateSignal(index, { platform: val })}
+                      onValueChange={val => updateSignal(index, { platform: val as 'website' | 'linkedin-company' | 'linkedin-jobs' | 'google-business' | 'any' })}
                     >
                       <SelectTrigger disabled={disabled}>
                         <SelectValue />

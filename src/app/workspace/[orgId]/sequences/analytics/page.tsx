@@ -49,10 +49,10 @@ interface AnalyticsSummary {
   topSequencesByReplyRate: Array<{ id: string; name: string; replyRate: number }>;
   topSequencesByEngagement: Array<{ id: string; name: string; engagementScore: number }>;
   channelPerformance: {
-    email: { sent: number; delivered: number; opened: number; replied: number };
-    linkedin: { sent: number; delivered: number; opened: number; replied: number };
+    email: { sent: number; delivered: number; opened: number; replied: number; clicked?: number };
+    linkedin: { sent: number; delivered: number; opened: number; replied: number; clicked?: number };
     sms: { sent: number; delivered: number; replied: number };
-    phone: { sent: number; replied: number };
+    phone: { sent: number; delivered: number; replied: number };
   };
 }
 
@@ -124,6 +124,7 @@ interface ChannelStats {
   delivered: number;
   opened?: number;
   replied: number;
+  clicked?: number;
 }
 
 // ============================================================================

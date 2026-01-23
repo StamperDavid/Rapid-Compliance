@@ -69,7 +69,7 @@ function createSlackClient(accessToken: string): WebClient {
   return new WebClient(accessToken);
 }
 
-interface SlackAttachment {
+export interface SlackAttachment {
   fallback?: string;
   color?: string;
   pretext?: string;
@@ -83,7 +83,7 @@ interface SlackAttachment {
   }>;
 }
 
-interface SlackBlock {
+export interface SlackBlock {
   type: string;
   text?: {
     type: string;
@@ -239,8 +239,8 @@ export async function getUserInfo(accessToken: string, userId: string): Promise<
   const result = await client.users.info({
     user: userId,
   });
-  
-  return result.user;
+
+  return (result.user ?? {}) as SlackUser;
 }
 
 interface SlackTopicResponse {
@@ -254,11 +254,12 @@ interface SlackTopicResponse {
  */
 export async function setChannelTopic(accessToken: string, channel: string, topic: string): Promise<SlackTopicResponse> {
   const client = createSlackClient(accessToken);
-
-  return client.conversations.setTopic({
+  const result = await client.conversations.setTopic({
     channel,
     topic,
   });
+
+  return result as SlackTopicResponse;
 }
 
 /**

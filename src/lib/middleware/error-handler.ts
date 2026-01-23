@@ -68,13 +68,13 @@ export function createErrorResponse(
     logger.error(errorMessage, error instanceof Error ? error : undefined, {
       statusCode,
       code: errorCode,
-      details: errorDetails,
+      ...(errorDetails ?? {}),
     });
   } else {
     logger.warn(errorMessage, {
       statusCode,
       code: errorCode,
-      details: errorDetails,
+      ...(errorDetails ?? {}),
     });
   }
 

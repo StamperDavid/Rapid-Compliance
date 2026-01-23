@@ -160,6 +160,19 @@ export default function IdentityRefinementPage() {
 
   const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
 
+  const mapToneToArchetype = useCallback((tone: string): WorkforceIdentity['personalityArchetype'] => {
+    const mapping: Record<string, WorkforceIdentity['personalityArchetype']> = {
+      'warm': 'friendly',
+      'professional': 'professional',
+      'direct': 'consultative',
+      'friendly': 'friendly',
+      'formal': 'professional',
+      'casual': 'friendly',
+      'enthusiastic-professional': 'energetic',
+    };
+    return mapping[tone] ?? 'professional';
+  }, []);
+
   const loadExistingIdentity = useCallback(async () => {
     try {
       setLoading(true);
@@ -222,32 +235,20 @@ export default function IdentityRefinementPage() {
     }
   }, [orgId, mapToneToArchetype]);
 
-  const mapToneToArchetype = useCallback((tone: string): WorkforceIdentity['personalityArchetype'] => {
-    const mapping: Record<string, WorkforceIdentity['personalityArchetype']> = {
-      'warm': 'friendly',
-      'professional': 'professional',
-      'direct': 'consultative',
-      'friendly': 'friendly',
-      'formal': 'professional',
-      'casual': 'friendly',
-      'enthusiastic-professional': 'energetic',
-    };
-    return mapping[tone] ?? 'professional';
-  }, []);
-
   const loadVoices = useCallback(async (engine: TTSEngineType) => {
     setLoadingVoices(true);
     try {
       const response = await fetch(`/api/voice/tts?orgId=${orgId}&engine=${engine}`);
       const data = await response.json() as VoicesApiResponse;
-      if (data.success && data.voices) {
+      if (data.success && data.voices && data.voices.length > 0) {
         setVoices(data.voices);
         // Auto-select first voice if none selected
-        if (!identity.voiceId && data.voices.length > 0) {
+        if (!identity.voiceId) {
+          const firstVoice = data.voices[0];
           setIdentity(prev => ({
             ...prev,
-            voiceId: data.voices[0].id,
-            voiceName: data.voices[0].name,
+            voiceId: firstVoice.id,
+            voiceName: firstVoice.name,
           }));
         }
       }

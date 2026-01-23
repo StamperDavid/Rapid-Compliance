@@ -73,7 +73,7 @@ export async function calculateSalesVelocity(
           const createdAtValue = d.createdAt;
           const createdAt = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue
             ? (createdAtValue as FirestoreTimestamp).toDate()
-            : new Date(createdAtValue as string | number);
+            : createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue);
           return createdAt >= dateRange.start && createdAt <= dateRange.end;
         })
       : allDeals;
@@ -103,12 +103,12 @@ export async function calculateSalesVelocity(
         const createdAtValue = deal.createdAt;
         const createdAt = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue
           ? (createdAtValue as FirestoreTimestamp).toDate()
-          : new Date(createdAtValue as string | number);
+          : createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue);
 
         const closedAtValue = deal.actualCloseDate;
         const closedAt = typeof closedAtValue === 'object' && closedAtValue !== null && 'toDate' in closedAtValue
           ? (closedAtValue as FirestoreTimestamp).toDate()
-          : new Date(closedAtValue as string | number);
+          : closedAtValue instanceof Date ? closedAtValue : new Date(closedAtValue);
 
         const cycleDays = Math.floor((closedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
         totalCycleDays += cycleDays;
@@ -197,7 +197,7 @@ function calculateStageMetrics(
       const createdAtValue = deal.createdAt;
       const createdAt = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue
         ? (createdAtValue as FirestoreTimestamp).toDate()
-        : new Date(createdAtValue as string | number);
+        : createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue);
       const now = new Date();
       const daysInStage = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
       totalDays += daysInStage;

@@ -25,7 +25,7 @@ import type { CallInstance } from 'twilio/lib/rest/api/v2010/account/call';
 import type { MessageInstance } from 'twilio/lib/rest/api/v2010/account/message';
 import type { RecordingInstance } from 'twilio/lib/rest/api/v2010/account/recording';
 import type { IncomingPhoneNumberInstance } from 'twilio/lib/rest/api/v2010/account/incomingPhoneNumber';
-import type { AvailablePhoneNumberInstance } from 'twilio/lib/rest/api/v2010/account/availablePhoneNumberCountry/local';
+import type { LocalInstance as AvailablePhoneNumberInstance } from 'twilio/lib/rest/api/v2010/account/availablePhoneNumberCountry/local';
 
 export class TwilioProvider implements VoiceProvider {
   readonly providerType: VoiceProviderType = 'twilio';
@@ -43,6 +43,16 @@ export class TwilioProvider implements VoiceProvider {
   constructor(config: VoiceProviderConfig, organizationId: string) {
     this.config = config;
     this.organizationId = organizationId;
+  }
+
+  /**
+   * Converts unknown error to Error type for logger
+   */
+  private toError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+    return new Error(String(error));
   }
 
   private async getClient(): Promise<Twilio> {
@@ -71,7 +81,7 @@ export class TwilioProvider implements VoiceProvider {
 
       return this.mapCallToVoiceCall(call);
     } catch (error: unknown) {
-      logger.error('[Twilio] Call initiation error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Call initiation error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to initiate call: ${errorMessage}`);
     }
@@ -83,7 +93,7 @@ export class TwilioProvider implements VoiceProvider {
       const call = await client.calls(callId).fetch();
       return this.mapCallToVoiceCall(call);
     } catch (error: unknown) {
-      logger.error('[Twilio] Get call error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Get call error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to get call: ${errorMessage}`);
     }
@@ -104,7 +114,7 @@ export class TwilioProvider implements VoiceProvider {
 
       await client.calls(callId).update(updateParams);
     } catch (error: unknown) {
-      logger.error('[Twilio] Update call error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Update call error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to update call: ${errorMessage}`);
     }
@@ -115,7 +125,7 @@ export class TwilioProvider implements VoiceProvider {
       const client = await this.getClient();
       await client.calls(callId).update({ status: 'completed' });
     } catch (error: unknown) {
-      logger.error('[Twilio] End call error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] End call error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to end call: ${errorMessage}`);
     }
@@ -133,7 +143,7 @@ export class TwilioProvider implements VoiceProvider {
 
       await client.calls(callId).update({ twiml });
     } catch (error: unknown) {
-      logger.error('[Twilio] Transfer error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Transfer error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to transfer call: ${errorMessage}`);
     }
@@ -157,7 +167,7 @@ export class TwilioProvider implements VoiceProvider {
 
       await client.calls(callId).update({ twiml });
     } catch (error: unknown) {
-      logger.error('[Twilio] Conference error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Conference error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to add to conference: ${errorMessage}`);
     }
@@ -169,7 +179,7 @@ export class TwilioProvider implements VoiceProvider {
       // This is a simplified implementation
       logger.warn('[Twilio] Mute requires conference context', { file: 'twilio-provider.ts' });
     } catch (error: unknown) {
-      logger.error('[Twilio] Mute error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Mute error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to mute call: ${errorMessage}`);
     }
@@ -189,7 +199,7 @@ export class TwilioProvider implements VoiceProvider {
         logger.warn('[Twilio] Hold resume requires state management', { file: 'twilio-provider.ts' });
       }
     } catch (error: unknown) {
-      logger.error('[Twilio] Hold error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Hold error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to hold call: ${errorMessage}`);
     }
@@ -214,7 +224,7 @@ export class TwilioProvider implements VoiceProvider {
         sentAt: new Date(),
       };
     } catch (error: unknown) {
-      logger.error('[Twilio] SMS error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] SMS error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to send SMS: ${errorMessage}`);
     }
@@ -235,7 +245,7 @@ export class TwilioProvider implements VoiceProvider {
         sentAt: msg.dateSent ? new Date(msg.dateSent) : undefined,
       };
     } catch (error: unknown) {
-      logger.error('[Twilio] Get SMS error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Get SMS error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to get SMS: ${errorMessage}`);
     }
@@ -324,7 +334,7 @@ export class TwilioProvider implements VoiceProvider {
 
       return `https://api.twilio.com${recordings[0].uri.replace('.json', '.mp3')}`;
     } catch (error: unknown) {
-      logger.error('[Twilio] Get recording error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Get recording error:', this.toError(error), { file: 'twilio-provider.ts' });
       return null;
     }
   }
@@ -334,7 +344,7 @@ export class TwilioProvider implements VoiceProvider {
       const client = await this.getClient();
       await client.recordings(recordingId).remove();
     } catch (error: unknown) {
-      logger.error('[Twilio] Delete recording error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Delete recording error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to delete recording: ${errorMessage}`);
     }
@@ -354,7 +364,7 @@ export class TwilioProvider implements VoiceProvider {
         ].filter(Boolean) as string[],
       }));
     } catch (error: unknown) {
-      logger.error('[Twilio] List numbers error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] List numbers error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to list phone numbers: ${errorMessage}`);
     }
@@ -385,7 +395,7 @@ export class TwilioProvider implements VoiceProvider {
 
       return purchased.phoneNumber;
     } catch (error: unknown) {
-      logger.error('[Twilio] Purchase number error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Purchase number error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to purchase phone number: ${errorMessage}`);
     }
@@ -400,7 +410,7 @@ export class TwilioProvider implements VoiceProvider {
         await client.incomingPhoneNumbers(numbers[0].sid).remove();
       }
     } catch (error: unknown) {
-      logger.error('[Twilio] Release number error:', error, { file: 'twilio-provider.ts' });
+      logger.error('[Twilio] Release number error:', this.toError(error), { file: 'twilio-provider.ts' });
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to release phone number: ${errorMessage}`);
     }

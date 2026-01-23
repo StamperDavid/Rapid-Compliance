@@ -256,7 +256,7 @@ export async function submitFeedback(params: {
  *
  * @param feedback - The feedback to process
  */
-function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
+async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
   try {
     const { organizationId, signalId, sourceText, feedbackType } = feedback;
 
@@ -267,7 +267,7 @@ function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
 
     if (!pattern || pattern.length < 3) {
       // Skip very short patterns
-      return;
+      return Promise.resolve();
     }
 
     // Look for existing training data with this pattern

@@ -165,11 +165,19 @@ export function deferScript(src: string, onLoad?: () => void): void {
 }
 
 /**
+ * Idle callback function type
+ */
+interface IdleDeadline {
+  readonly didTimeout: boolean;
+  timeRemaining(): number;
+}
+
+/**
  * Window with requestIdleCallback support
  */
 interface WindowWithIdleCallback extends Window {
   requestIdleCallback: (
-    callback: () => void,
+    callback: (deadline: IdleDeadline) => void,
     options?: { timeout: number }
   ) => number;
 }
@@ -181,7 +189,9 @@ export function loadWhenIdle(callback: () => void, timeout: number = 2000): void
   if (typeof window === 'undefined') {return;}
 
   if ('requestIdleCallback' in window) {
-    (window as WindowWithIdleCallback).requestIdleCallback(callback, { timeout });
+    (window as WindowWithIdleCallback).requestIdleCallback(() => {
+      callback();
+    }, { timeout });
   } else {
     setTimeout(callback, timeout);
   }

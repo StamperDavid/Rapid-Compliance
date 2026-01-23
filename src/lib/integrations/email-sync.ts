@@ -7,6 +7,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase/firestore';
+import type { Activity as ActivityType, RelatedEntityType } from '@/types/activity';
 
 export interface EmailMessage {
   id: string;
@@ -108,11 +109,8 @@ interface EmailSyncDoc {
   lastSyncAt: Timestamp | Date | string;
 }
 
-interface Activity {
-  id: string;
-  type: string;
-  metadata?: Record<string, unknown>;
-  relatedTo?: string[];
+interface TimestampLike {
+  toDate(): Date;
 }
 
 /**
@@ -321,7 +319,7 @@ export async function processEmailReply(
         subject: reply.subject,
         body: reply.body,
         summary: `Reply received: ${reply.subject}`,
-        relatedTo: Array.isArray(originalEmail.relatedTo) ? originalEmail.relatedTo : [],
+        relatedTo: originalEmail.relatedTo,
         metadata: {
           emailId: reply.id,
           fromEmail: reply.from,
@@ -366,7 +364,7 @@ async function findOriginalEmail(
   organizationId: string,
   inReplyTo?: string,
   threadId?: string
-): Promise<Activity | null> {
+): Promise<ActivityType | null> {
   try {
     // Search activities for sent email with matching thread ID or message ID
     const { getActivities } = await import('@/lib/crm/activity-service');
@@ -453,11 +451,12 @@ async function getLastSyncTime(organizationId: string, provider: string): Promis
     if (doc?.lastSyncAt) {
       const syncAt = doc.lastSyncAt;
       // Handle Firestore Timestamp
-      if (typeof syncAt === 'object' && syncAt !== null && 'toDate' in syncAt && typeof syncAt.toDate === 'function') {
-        return syncAt.toDate();
+      if (typeof syncAt === 'object' && syncAt !== null && 'toDate' in syncAt) {
+        const timestampLike = syncAt as TimestampLike;
+        return timestampLike.toDate();
       }
       // Handle Date or string
-      return new Date(syncAt);
+      return new Date(syncAt as Date | string);
     }
 
     return null;

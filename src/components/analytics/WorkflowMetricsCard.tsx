@@ -19,7 +19,15 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import type { WorkflowOverviewMetrics } from '@/lib/analytics/dashboard/types';
+import type { WorkflowOverviewMetrics, ActionTypeMetrics } from '@/lib/analytics/dashboard/types';
+
+interface PieChartData extends Record<string, unknown> {
+  actionType: string;
+  count: number;
+  percentage: number;
+  successRate: number;
+  averageTime: number;
+}
 
 interface WorkflowMetricsCardProps {
   data: WorkflowOverviewMetrics;
@@ -111,13 +119,16 @@ export function WorkflowMetricsCard({ data, loading = false }: WorkflowMetricsCa
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
-                data={data.actionBreakdown.slice(0, 5)}
+                data={data.actionBreakdown.slice(0, 5) as PieChartData[]}
                 dataKey="count"
                 nameKey="actionType"
                 cx="50%"
                 cy="50%"
                 outerRadius={70}
-                label={(props: { actionType: string; percentage: number }) => `${props.actionType}: ${props.percentage.toFixed(0)}%`}
+                label={(entry: unknown) => {
+                  const chartData = entry as PieChartData;
+                  return `${chartData.actionType}: ${chartData.percentage.toFixed(0)}%`;
+                }}
                 labelLine={false}
               >
                 {data.actionBreakdown.slice(0, 5).map((_, index) => (

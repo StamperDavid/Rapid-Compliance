@@ -181,11 +181,15 @@ export async function fetchShopifyOrders(
 
     const data = await response.json() as ShopifyOrdersResponse;
 
-    const orders: ShopifyOrder[] = data.orders.map((order: ShopifyOrderResponse) => ({
+    const orders = data.orders.map((order: ShopifyOrderResponse): ShopifyOrder => ({
       id: order.id.toString(),
       orderNumber: order.order_number.toString(),
       customer: {
-        email: (order.customer?.email !== '' && order.customer?.email != null) ? order.customer.email : order.email,
+        email: (order.customer?.email !== '' && order.customer?.email != null)
+          ? order.customer.email
+          : (order.email !== '' && order.email != null)
+            ? order.email
+            : '',
         firstName: order.customer?.first_name,
         lastName: order.customer?.last_name,
       },

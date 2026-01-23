@@ -13,6 +13,12 @@ import { useToast } from '@/hooks/useToast';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import type { BlogPost, PageSection } from '@/types/website';
 
+interface SelectedElement {
+  type: 'section' | 'widget';
+  sectionId: string;
+  widgetId?: string;
+}
+
 export default function BlogPostEditorPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -27,7 +33,7 @@ export default function BlogPostEditorPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedElement, setSelectedElement] = useState<PageSection | null>(null);
+  const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -508,7 +514,7 @@ export default function BlogPostEditorPage() {
             }}
             breakpoint="desktop"
             selectedElement={selectedElement}
-            onSelectElement={(element: PageSection | null) => setSelectedElement(element)}
+            onSelectElement={setSelectedElement}
             onAddSection={addSection}
             onUpdateSection={updateSection}
             onDeleteSection={deleteSection}

@@ -32,7 +32,7 @@ type SalesforceFunctionResult = SalesforceLeadResult;
  */
 export async function executeSalesforceFunction(
   functionName: string,
-  parameters: SalesforceLeadParams,
+  parameters: Record<string, unknown>,
   integration: ConnectedIntegration
 ): Promise<SalesforceFunctionResult> {
   if (!integration.config) {
@@ -49,7 +49,7 @@ export async function executeSalesforceFunction(
   switch (functionName) {
     case 'createSalesforceLead': {
       // Validate required parameters
-      const requiredFields = ['firstName', 'lastName', 'email', 'company'];
+      const requiredFields: Array<keyof SalesforceLeadParams> = ['firstName', 'lastName', 'email', 'company'];
       const missingFields = requiredFields.filter(field => !parameters[field]);
       
       if (missingFields.length > 0) {
@@ -72,12 +72,12 @@ export async function executeSalesforceFunction(
       
       return createLead(
         {
-          firstName: parameters.firstName,
-          lastName: parameters.lastName,
-          email: parameters.email,
-          company: parameters.company,
-          phone: parameters.phone,
-          notes: parameters.notes,
+          firstName: parameters.firstName as string,
+          lastName: parameters.lastName as string,
+          email: parameters.email as string,
+          company: parameters.company as string,
+          phone: parameters.phone as string | undefined,
+          notes: parameters.notes as string | undefined,
         },
         instanceUrl,
         accessToken

@@ -15,6 +15,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2 } from 'lucide-react';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
+import type {
+  FieldType,
+  ScrapingPlatform,
+  ScrapingFrequency,
+  ScrapingStrategy,
+  ResearchIntelligence
+} from '@/types/scraper-intelligence';
 
 interface ScraperCRMTabProps {
   template: IndustryTemplate;
@@ -25,16 +32,20 @@ interface ScraperCRMTabProps {
 interface CustomFieldUpdate {
   key?: string;
   label?: string;
-  type?: string;
+  type?: FieldType;
   description?: string;
   extractionHints?: string[];
   required?: boolean;
-  defaultValue?: string;
+  defaultValue?: unknown;
 }
 
-interface ScrapingStrategyField {
-  seedUrls?: string[];
-  [key: string]: unknown;
+interface ScrapingStrategyUpdate {
+  primarySource?: ScrapingPlatform;
+  secondarySources?: ScrapingPlatform[];
+  frequency?: ScrapingFrequency;
+  timeoutMs?: number;
+  cacheTtlSeconds?: number;
+  enableCaching?: boolean;
 }
 
 export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabProps) {
@@ -42,38 +53,56 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
     onUpdate({ [field]: value });
   };
 
-  const handleScrapingStrategyChange = (field: string, value: unknown) => {
+  const getDefaultScrapingStrategy = (): ScrapingStrategy => ({
+    primarySource: 'website',
+    secondarySources: [],
+    frequency: 'per-lead',
+    timeoutMs: 30000,
+    enableCaching: true,
+    cacheTtlSeconds: 300,
+  });
+
+  const getDefaultResearchIntelligence = (): ResearchIntelligence => ({
+    scrapingStrategy: getDefaultScrapingStrategy(),
+    highValueSignals: [],
+    fluffPatterns: [],
+    scoringRules: [],
+    customFields: [],
+    metadata: {
+      lastUpdated: new Date().toISOString(),
+      version: 1,
+      updatedBy: 'user',
+    },
+  });
+
+  const handleScrapingStrategyChange = (
+    field: keyof ScrapingStrategyUpdate,
+    value: ScrapingPlatform | ScrapingPlatform[] | ScrapingFrequency | number | boolean
+  ) => {
+    const currentResearch = template.research ?? getDefaultResearchIntelligence();
+    const currentStrategy = currentResearch.scrapingStrategy ?? getDefaultScrapingStrategy();
+
+    const updatedStrategy: ScrapingStrategy = {
+      ...currentStrategy,
+      [field]: value,
+    };
+
+    const updatedResearch: ResearchIntelligence = {
+      ...currentResearch,
+      scrapingStrategy: updatedStrategy,
+    };
+
     onUpdate({
-      research: {
-        ...template.research,
-        scrapingStrategy: {
-          ...template.research?.scrapingStrategy,
-          [field]: value,
-        },
-      },
+      research: updatedResearch,
     });
-  };
-
-  const _addSeedUrl = () => {
-    // eslint-disable-next-line no-alert
-    const newUrl = prompt('Enter seed URL:');
-    if (newUrl) {
-      const strategy = template.research?.scrapingStrategy as ScrapingStrategyField | undefined;
-      const currentUrls = strategy?.seedUrls ?? [];
-      handleScrapingStrategyChange('seedUrls', [...currentUrls, newUrl]);
-    }
-  };
-
-  const _removeSeedUrl = (index: number) => {
-    const strategy = template.research?.scrapingStrategy as ScrapingStrategyField | undefined;
-    const currentUrls = strategy?.seedUrls ?? [];
-    handleScrapingStrategyChange('seedUrls', currentUrls.filter((_, i) => i !== index));
   };
 
   const addCustomField = () => {
     // eslint-disable-next-line no-alert
     const key = prompt('Field key (e.g., company_size):');
     if (!key) {return;}
+
+    const currentResearch = template.research ?? getDefaultResearchIntelligence();
 
     const newField = {
       key,
@@ -85,33 +114,51 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
       defaultValue: '',
     };
 
+    const updatedResearch: ResearchIntelligence = {
+      ...currentResearch,
+      customFields: [...currentResearch.customFields, newField],
+    };
+
     onUpdate({
-      research: {
-        ...template.research,
-        customFields: [...(template.research?.customFields ?? []), newField],
-      },
+      research: updatedResearch,
     });
   };
 
   const removeCustomField = (index: number) => {
-    const fields = template.research?.customFields ?? [];
+    const currentResearch = template.research ?? getDefaultResearchIntelligence();
+    const fields = currentResearch.customFields;
+
+    const updatedResearch: ResearchIntelligence = {
+      ...currentResearch,
+      customFields: fields.filter((_, i) => i !== index),
+    };
+
     onUpdate({
-      research: {
-        ...template.research,
-        customFields: fields.filter((_, i) => i !== index),
-      },
+      research: updatedResearch,
     });
   };
 
   const updateCustomField = (index: number, updates: CustomFieldUpdate) => {
-    const fields = [...(template.research?.customFields ?? [])];
-    fields[index] = { ...fields[index], ...updates };
-    onUpdate({
-      research: {
-        ...template.research,
+    const currentResearch = template.research ?? getDefaultResearchIntelligence();
+    const fields = [...currentResearch.customFields];
+    const existingField = fields[index];
+
+    if (existingField) {
+      fields[index] = {
+        ...existingField,
+        ...updates,
+        defaultValue: updates.defaultValue !== undefined ? updates.defaultValue : existingField.defaultValue,
+      };
+
+      const updatedResearch: ResearchIntelligence = {
+        ...currentResearch,
         customFields: fields,
-      },
-    });
+      };
+
+      onUpdate({
+        research: updatedResearch,
+      });
+    }
   };
 
   return (
@@ -200,7 +247,7 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
               <Label>Primary Source</Label>
               <Select
                 value={template.research?.scrapingStrategy?.primarySource ?? 'website'}
-                onValueChange={val => handleScrapingStrategyChange('primarySource', val)}
+                onValueChange={val => handleScrapingStrategyChange('primarySource', val as ScrapingPlatform)}
               >
                 <SelectTrigger disabled={disabled}>
                   <SelectValue />
@@ -217,7 +264,7 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
               <Label>Frequency</Label>
               <Select
                 value={template.research?.scrapingStrategy?.frequency ?? 'per-lead'}
-                onValueChange={val => handleScrapingStrategyChange('frequency', val)}
+                onValueChange={val => handleScrapingStrategyChange('frequency', val as ScrapingFrequency)}
               >
                 <SelectTrigger disabled={disabled}>
                   <SelectValue />
@@ -226,7 +273,6 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
                   <SelectItem value="per-lead">Per Lead</SelectItem>
                   <SelectItem value="daily">Daily</SelectItem>
                   <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -238,7 +284,7 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
               <Input
                 type="number"
                 value={template.research?.scrapingStrategy?.timeoutMs ?? 30000}
-                onChange={e => handleScrapingStrategyChange('timeoutMs', parseInt(e.target.value))}
+                onChange={e => handleScrapingStrategyChange('timeoutMs', parseInt(e.target.value, 10))}
                 disabled={disabled}
                 min={1000}
                 max={60000}
@@ -250,7 +296,7 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
               <Input
                 type="number"
                 value={template.research?.scrapingStrategy?.cacheTtlSeconds ?? 300}
-                onChange={e => handleScrapingStrategyChange('cacheTtlSeconds', parseInt(e.target.value))}
+                onChange={e => handleScrapingStrategyChange('cacheTtlSeconds', parseInt(e.target.value, 10))}
                 disabled={disabled}
                 min={0}
                 max={3600}
@@ -323,7 +369,7 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
                         <Label className="text-xs">Type</Label>
                         <Select
                           value={field.type}
-                          onValueChange={val => updateCustomField(index, { type: val })}
+                          onValueChange={val => updateCustomField(index, { type: val as FieldType })}
                         >
                           <SelectTrigger disabled={disabled}>
                             <SelectValue />

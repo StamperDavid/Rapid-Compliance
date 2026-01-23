@@ -179,7 +179,7 @@ export default function QuickBooksIntegration({
               </label>
               <select
                 value={integration.syncSettings?.syncDirection ?? 'bidirectional'}
-                onChange={(e) => onUpdate({ syncDirection: e.target.value as 'crm_to_quickbooks' | 'quickbooks_to_crm' | 'bidirectional' })}
+                onChange={(e) => onUpdate({ syncDirection: e.target.value as 'from-crm' | 'to-crm' | 'bidirectional' })}
                 style={{
                   width: '100%',
                   padding: '0.5rem',
@@ -190,8 +190,8 @@ export default function QuickBooksIntegration({
                   fontSize: '0.875rem'
                 }}
               >
-                <option value="crm_to_quickbooks">CRM → QuickBooks</option>
-                <option value="quickbooks_to_crm">QuickBooks → CRM</option>
+                <option value="from-crm">CRM → QuickBooks</option>
+                <option value="to-crm">QuickBooks → CRM</option>
                 <option value="bidirectional">Bidirectional</option>
               </select>
             </div>

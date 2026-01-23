@@ -134,7 +134,7 @@ async function fullSync(
       const batch = listResponse.data.messages.slice(i, i + batchSize);
       
       await Promise.all(
-        batch.map(async (msg: GmailMessageRef) => {
+        batch.map(async (msg) => {
           try {
             if (!msg.id) {
               return;

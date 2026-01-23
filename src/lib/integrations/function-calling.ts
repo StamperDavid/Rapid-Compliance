@@ -23,6 +23,14 @@ import { executeZoomFunction } from './video/zoom';
 import { logger } from '@/lib/logger/logger';
 
 /**
+ * Type guard to safely pass unknown parameters to integration functions
+ * Each integration validates its own parameters internally
+ */
+function toIntegrationParams<T extends Record<string, unknown>>(params: Record<string, unknown>): T {
+  return params as T;
+}
+
+/**
  * Execute a function call from the AI agent
  */
 export async function executeFunctionCall(

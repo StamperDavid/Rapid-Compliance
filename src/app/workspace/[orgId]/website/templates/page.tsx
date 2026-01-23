@@ -426,7 +426,7 @@ export default function TemplateBrowserPage() {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}>
                 <Image
-                  src={selectedTemplate.thumbnail}
+                  src={selectedTemplate.thumbnail ?? '/placeholder-template.png'}
                   alt={selectedTemplate.name}
                   width={1200}
                   height={800}

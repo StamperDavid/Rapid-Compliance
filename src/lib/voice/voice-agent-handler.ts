@@ -362,7 +362,7 @@ class VoiceAgentHandler {
   /**
    * Handle deal closing (Closer mode)
    */
-  private handleClose(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
+  private async handleClose(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
     const context = aiConversationService.getConversationContext(callId);
     const closingConfig = this.config?.closingConfig;
 

@@ -60,7 +60,7 @@ export class ThemeGenerator {
    * Check if value is a gradient
    */
   private static isGradient(value: unknown): value is GradientColor {
-    return value && typeof value === 'object' && 'type' in value && 'stops' in value;
+    return Boolean(value && typeof value === 'object' && 'type' in value && 'stops' in value);
   }
 
   /**

@@ -14,15 +14,16 @@ interface FluffPatternsSectionProps {
   disabled: boolean;
   onRemove?: () => void;
   canRemove?: boolean;
-  errors: Record<string, string>;
+  errors?: Record<string, string>;
 }
 
-interface FluffPatternUpdate {
-  id?: string;
-  pattern?: string;
-  description?: string;
-  context?: string;
-}
+type FluffPatternUpdate = Partial<{
+  id: string;
+  pattern: string;
+  description: string;
+  context: 'header' | 'footer' | 'sidebar' | 'body' | 'all';
+  examples: string[];
+}>;
 
 export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, canRemove }: FluffPatternsSectionProps) {
   const addFluffPattern = () => {
@@ -30,23 +31,31 @@ export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, c
     const id = prompt('Pattern ID (e.g., copyright):');
     if (!id) {return;}
 
-    const newPattern = {
+    const newPattern: import('@/types/scraper-intelligence').FluffPattern = {
       id,
       pattern: 'pattern_regex',
       description: 'Pattern description',
-      context: 'all' as const,
+      context: 'all',
     };
+
+    if (!template.research) {
+      return;
+    }
 
     onUpdate({
       research: {
         ...template.research,
-        fluffPatterns: [...(template.research?.fluffPatterns ?? []), newPattern],
+        fluffPatterns: [...(template.research.fluffPatterns ?? []), newPattern],
       },
     });
   };
 
   const removeFluffPattern = (index: number) => {
-    const patterns = template.research?.fluffPatterns ?? [];
+    if (!template.research) {
+      return;
+    }
+
+    const patterns = template.research.fluffPatterns ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -56,7 +65,11 @@ export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, c
   };
 
   const updateFluffPattern = (index: number, updates: FluffPatternUpdate) => {
-    const patterns = [...(template.research?.fluffPatterns ?? [])];
+    if (!template.research) {
+      return;
+    }
+
+    const patterns = [...(template.research.fluffPatterns ?? [])];
     patterns[index] = { ...patterns[index], ...updates };
     onUpdate({
       research: {
@@ -123,7 +136,7 @@ export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, c
                       <Label className="text-xs">Context</Label>
                       <Select
                         value={pattern.context}
-                        onValueChange={val => updateFluffPattern(index, { context: val })}
+                        onValueChange={val => updateFluffPattern(index, { context: val as 'header' | 'footer' | 'sidebar' | 'body' | 'all' })}
                       >
                         <SelectTrigger disabled={disabled}>
                           <SelectValue />

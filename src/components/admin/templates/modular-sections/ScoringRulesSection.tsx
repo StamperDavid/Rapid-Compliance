@@ -15,18 +15,18 @@ interface ScoringRulesSectionProps {
   disabled: boolean;
   onRemove?: () => void;
   canRemove?: boolean;
-  errors: Record<string, string>;
+  errors?: Record<string, string>;
 }
 
-interface ScoringRuleUpdate {
-  id?: string;
-  name?: string;
-  description?: string;
-  condition?: string;
-  scoreBoost?: number;
-  priority?: number;
-  enabled?: boolean;
-}
+type ScoringRuleUpdate = Partial<{
+  id: string;
+  name: string;
+  description: string;
+  condition: string;
+  scoreBoost: number;
+  priority: number;
+  enabled: boolean;
+}>;
 
 export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, canRemove }: ScoringRulesSectionProps) {
   const addScoringRule = () => {
@@ -34,7 +34,7 @@ export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, ca
     const id = prompt('Rule ID (e.g., growing_business):');
     if (!id) {return;}
 
-    const newRule = {
+    const newRule: import('@/types/scraper-intelligence').ScoringRule = {
       id,
       name: id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
       description: 'Rule description',
@@ -44,16 +44,24 @@ export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, ca
       enabled: true,
     };
 
+    if (!template.research) {
+      return;
+    }
+
     onUpdate({
       research: {
         ...template.research,
-        scoringRules: [...(template.research?.scoringRules ?? []), newRule],
+        scoringRules: [...(template.research.scoringRules ?? []), newRule],
       },
     });
   };
 
   const removeScoringRule = (index: number) => {
-    const rules = template.research?.scoringRules ?? [];
+    if (!template.research) {
+      return;
+    }
+
+    const rules = template.research.scoringRules ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -63,7 +71,11 @@ export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, ca
   };
 
   const updateScoringRule = (index: number, updates: ScoringRuleUpdate) => {
-    const rules = [...(template.research?.scoringRules ?? [])];
+    if (!template.research) {
+      return;
+    }
+
+    const rules = [...(template.research.scoringRules ?? [])];
     rules[index] = { ...rules[index], ...updates };
     onUpdate({
       research: {

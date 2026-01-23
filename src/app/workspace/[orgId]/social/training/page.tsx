@@ -7,6 +7,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 import type { SocialTrainingSettings, BrandDNA } from '@/types/organization';
+import type { ModelName } from '@/types/ai-models';
 
 type TabType = 'settings' | 'generate' | 'history' | 'knowledge';
 type PlatformType = 'twitter' | 'linkedin' | 'instagram';
@@ -334,8 +335,9 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
             const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
             const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
 
+            const modelName: ModelName = 'openrouter/anthropic/claude-3.5-sonnet' as const;
             const response = await provider.chat({
-              model: 'anthropic/claude-3.5-sonnet',
+              model: modelName,
               messages: [{ role: 'user', content: prompt }],
               temperature: 0.7,
             });

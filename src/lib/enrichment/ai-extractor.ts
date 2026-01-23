@@ -155,15 +155,19 @@ export async function extractCompanyData(
       name:extracted.name ?? companyName,
       description:extracted.description ?? scrapedContent.description,
       industry:(extracted.industry !== '' && extracted.industry != null) ? extracted.industry : 'Unknown',
-      size:(extracted.size !== '' && extracted.size != null) ? extracted.size : 'unknown',
-      employeeCount: extracted.employeeCount,
-      employeeRange: extracted.employeeRange,
-      headquarters: extracted.headquarters.city ? extracted.headquarters : undefined,
-      foundedYear: extracted.foundedYear,
-      revenue: extracted.revenue,
-      fundingStage: extracted.fundingStage,
-      contactEmail: extracted.contactEmail,
-      contactPhone: extracted.contactPhone,
+      size: extracted.size ?? 'unknown',
+      employeeCount: extracted.employeeCount ?? undefined,
+      employeeRange: extracted.employeeRange ?? undefined,
+      headquarters: extracted.headquarters.city ? {
+        city: extracted.headquarters.city ?? undefined,
+        state: extracted.headquarters.state ?? undefined,
+        country: extracted.headquarters.country ?? undefined,
+      } : undefined,
+      foundedYear: extracted.foundedYear ?? undefined,
+      revenue: extracted.revenue ?? undefined,
+      fundingStage: extracted.fundingStage ?? undefined,
+      contactEmail: extracted.contactEmail ?? undefined,
+      contactPhone: extracted.contactPhone ?? undefined,
     };
   } catch (error: unknown) {
     const extractorError = error instanceof Error ? error : new Error(String(error));

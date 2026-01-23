@@ -1111,9 +1111,9 @@ async function emitRiskSignal(
 ): Promise<void> {
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     await coordinator.emitSignal({
-      type: 'risk.detected' as const,
+      type: 'deal.risk.detected',
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,

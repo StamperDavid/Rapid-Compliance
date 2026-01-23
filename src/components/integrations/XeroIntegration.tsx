@@ -190,7 +190,7 @@ export default function XeroIntegration({
               </label>
               <select
                 value={integration.syncSettings?.syncDirection ?? 'bidirectional'}
-                onChange={(e) => onUpdate({ syncDirection: e.target.value as 'crm_to_xero' | 'xero_to_crm' | 'bidirectional' })}
+                onChange={(e) => onUpdate({ syncDirection: e.target.value as 'from-crm' | 'to-crm' | 'bidirectional' })}
                 style={{
                   width: '100%',
                   padding: '0.5rem',
@@ -201,8 +201,8 @@ export default function XeroIntegration({
                   fontSize: '0.875rem'
                 }}
               >
-                <option value="crm_to_xero">CRM → Xero</option>
-                <option value="xero_to_crm">Xero → CRM</option>
+                <option value="from-crm">CRM → Xero</option>
+                <option value="to-crm">Xero → CRM</option>
                 <option value="bidirectional">Bidirectional</option>
               </select>
             </div>

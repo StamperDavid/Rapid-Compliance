@@ -494,7 +494,7 @@ async function triggerOrderWorkflows(workspaceId: string, organizationId: string
     'orders', // Order schema
     'created',
     order.id,
-    order
+    order as unknown as Record<string, unknown>
   );
 }
 

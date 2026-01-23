@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger/logger';
 import ActivityTimeline from '@/components/ActivityTimeline';
 import type { PredictiveScore } from '@/lib/crm/predictive-scoring';
 import type { DataQualityScore } from '@/lib/crm/data-quality';
-import type { Lead } from '@/types/crm-entities';
+import type { Lead } from '@/lib/crm/lead-service';
 
 /**
  * Extended Lead interface with legacy fields for backward compatibility
@@ -56,14 +56,36 @@ export default function LeadDetailPage() {
 
   const loadIntelligence = async (leadData: ExtendedLead): Promise<void> => {
     try {
-      // Calculate predictive score
+      // Calculate predictive score - use only Lead fields
       const { calculatePredictiveLeadScore } = await import('@/lib/crm/predictive-scoring');
-      const score = await calculatePredictiveLeadScore(orgId, 'default', leadData);
+      const leadForScoring: Lead = {
+        id: leadData.id,
+        organizationId: leadData.organizationId,
+        workspaceId: leadData.workspaceId,
+        firstName: leadData.firstName,
+        lastName: leadData.lastName,
+        email: leadData.email,
+        phone: leadData.phone,
+        company: leadData.company,
+        companyName: leadData.companyName,
+        title: leadData.title,
+        source: leadData.source,
+        status: leadData.status,
+        score: leadData.score,
+        ownerId: leadData.ownerId,
+        tags: leadData.tags,
+        customFields: leadData.customFields,
+        enrichmentData: leadData.enrichmentData,
+        createdAt: leadData.createdAt,
+        updatedAt: leadData.updatedAt,
+        name: leadData.name
+      };
+      const score = await calculatePredictiveLeadScore(orgId, 'default', leadForScoring);
       setPredictiveScore(score);
 
       // Calculate data quality
       const { calculateLeadDataQuality } = await import('@/lib/crm/data-quality');
-      const quality = calculateLeadDataQuality(leadData);
+      const quality = calculateLeadDataQuality(leadForScoring);
       setDataQuality(quality);
     } catch (error: unknown) {
       logger.error('Error loading intelligence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -235,7 +257,11 @@ export default function LeadDetailPage() {
                   <div className="text-gray-400 mb-2">Enrichment Data:</div>
                   <div className="bg-gray-800 rounded p-3 space-y-1">
                     {lead.enrichmentData.companySize && (
-                      <div>Company Size: {lead.enrichmentData.companySize} employees</div>
+                      <div>Company Size: {
+                        typeof lead.enrichmentData.companySize === 'number'
+                          ? `${lead.enrichmentData.companySize} employees`
+                          : lead.enrichmentData.companySize
+                      }</div>
                     )}
                     {lead.enrichmentData.revenue && typeof lead.enrichmentData.revenue === 'string' && (
                       <div>Revenue: {lead.enrichmentData.revenue}</div>

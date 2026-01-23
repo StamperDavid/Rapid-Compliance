@@ -7,22 +7,31 @@ import { sendEmail, type EmailOptions } from '@/lib/email/email-service';
 import type { SendEmailAction, WorkflowTriggerData } from '@/types/workflow';
 
 /**
+ * Result of email action execution
+ */
+interface EmailActionResult {
+  messageId?: string;
+  provider?: string;
+  success: boolean;
+}
+
+/**
  * Execute email action
  */
 export async function executeEmailAction(
   action: SendEmailAction,
   triggerData: WorkflowTriggerData,
   organizationId: string
-): Promise<unknown> {
-  // Resolve variables in action fields
-  const to = resolveVariables(action.to, triggerData);
-  const subject = resolveVariables(action.subject, triggerData);
-  const body = resolveVariables(action.body, triggerData);
-  const cc = action.cc ? resolveVariables(action.cc, triggerData) : undefined;
-  const bcc = action.bcc ? resolveVariables(action.bcc, triggerData) : undefined;
-  const from = action.from ? resolveVariables(action.from, triggerData) : undefined;
-  const replyTo = action.replyTo ? resolveVariables(action.replyTo, triggerData) : undefined;
-  
+): Promise<EmailActionResult> {
+  // Resolve variables in action fields with proper type narrowing
+  const to = resolveVariablesAsStringOrArray(action.to, triggerData);
+  const subject = resolveVariablesAsString(action.subject, triggerData);
+  const body = resolveVariablesAsString(action.body, triggerData);
+  const cc = action.cc ? resolveVariablesAsStringOrArray(action.cc, triggerData) : undefined;
+  const bcc = action.bcc ? resolveVariablesAsStringOrArray(action.bcc, triggerData) : undefined;
+  const from = action.from ? resolveVariablesAsString(action.from, triggerData) : undefined;
+  const replyTo = action.replyTo ? resolveVariablesAsString(action.replyTo, triggerData) : undefined;
+
   // Build email options
   const emailOptions: EmailOptions = {
     to: Array.isArray(to) ? to : [to],
@@ -42,14 +51,14 @@ export async function executeEmailAction(
       actionId: action.id,
     },
   };
-  
+
   // Send email
   const result = await sendEmail(emailOptions);
-  
+
   if (!result.success) {
     throw new Error(`Failed to send email: ${result.error}`);
   }
-  
+
   return {
     messageId: result.messageId,
     provider: result.provider,
@@ -58,31 +67,46 @@ export async function executeEmailAction(
 }
 
 /**
- * Resolve variables in config (e.g., {{triggerData.fieldName}})
+ * Resolve variables as a string
  */
-function resolveVariables(config: unknown, triggerData: WorkflowTriggerData): unknown {
-  if (typeof config === 'string') {
-    return config.replace(/\{\{([^}]+)\}\}/g, (_match, path: string) => {
-      const value = getNestedValue(triggerData, path.trim());
-      return value !== undefined ? String(value) : _match;
-    });
-  } else if (Array.isArray(config)) {
-    return config.map(item => resolveVariables(item, triggerData));
-  } else if (config && typeof config === 'object') {
-    const resolved: Record<string, unknown> = {};
-    for (const key in config) {
-      resolved[key] = resolveVariables((config as Record<string, unknown>)[key], triggerData);
-    }
-    return resolved;
+function resolveVariablesAsString(config: string, triggerData: WorkflowTriggerData): string {
+  return config.replace(/\{\{([^}]+)\}\}/g, (_match, path: string) => {
+    const value = getNestedValue(triggerData, path.trim());
+    return value !== undefined ? String(value) : _match;
+  });
+}
+
+/**
+ * Resolve variables as string or string array
+ */
+function resolveVariablesAsStringOrArray(
+  config: string | string[],
+  triggerData: WorkflowTriggerData
+): string | string[] {
+  if (Array.isArray(config)) {
+    return config.map(item => resolveVariablesAsString(item, triggerData));
   }
-  return config;
+  return resolveVariablesAsString(config, triggerData);
 }
 
 /**
  * Get nested value from object using dot notation
  */
 function getNestedValue(obj: WorkflowTriggerData, path: string): unknown {
-  return path.split('.').reduce((current: unknown, key: string) => 
-    (current as Record<string, unknown>)?.[key], obj);
+  const keys = path.split('.');
+  let current: unknown = obj;
+
+  for (const key of keys) {
+    if (current === null || current === undefined) {
+      return undefined;
+    }
+    if (typeof current === 'object' && !Array.isArray(current)) {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+
+  return current;
 }
 

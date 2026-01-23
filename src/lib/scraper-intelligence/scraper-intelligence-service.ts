@@ -172,8 +172,16 @@ export class ScraperIntelligenceError extends Error {
   }
 }
 
-function handleFirestoreError(error: unknown, operation: string, context: Record<string, unknown>): never {
-  logger.error(`Firestore ${operation} failed`, error, context);
+function handleFirestoreError(error: unknown, operation: string, context: Record<string, string | number | boolean | null>): never {
+  const logContext: Record<string, string | number | boolean | null> = {};
+  for (const [key, value] of Object.entries(context)) {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) {
+      logContext[key] = value;
+    } else {
+      logContext[key] = String(value);
+    }
+  }
+  logger.error(`Firestore ${operation} failed`, error instanceof Error ? error : new Error(String(error)), logContext);
 
   if (error instanceof ScraperIntelligenceError) {
     throw error;
@@ -241,15 +249,17 @@ export async function getResearchIntelligence(
       return null;
     }
 
-    // Convert Firestore timestamps to Dates
-    const metadata = data.metadata as { lastUpdated?: unknown } | undefined;
+    // Convert Firestore timestamps to proper format
+    const rawMetadata = data.metadata as { lastUpdated?: unknown; version?: number; updatedBy?: 'system' | 'user'; notes?: string } | undefined;
     const research: ResearchIntelligence = {
-      ...data,
+      ...(data as Omit<ResearchIntelligence, 'metadata'>),
       metadata: {
-        ...(metadata ?? {}),
-        lastUpdated: toDate(metadata?.lastUpdated),
+        lastUpdated: rawMetadata?.lastUpdated ? toDate(rawMetadata.lastUpdated).toISOString() : new Date().toISOString(),
+        version: rawMetadata?.version ?? 1,
+        updatedBy: rawMetadata?.updatedBy ?? 'system',
+        notes: rawMetadata?.notes,
       },
-    } as ResearchIntelligence;
+    };
 
     // Validate with Zod (this ensures type safety)
     ResearchIntelligenceSchema.parse(research);
@@ -365,17 +375,19 @@ export async function listResearchIntelligence(
     const results = snapshot.docs.map((doc) => {
       const data = doc.data() as Record<string, unknown>;
       const industryId = doc.id.replace(`${organizationId}_`, '');
-      const metadata = data.metadata as { lastUpdated?: unknown } | undefined;
+      const rawMetadata = data.metadata as { lastUpdated?: unknown; version?: number; updatedBy?: 'system' | 'user'; notes?: string } | undefined;
 
       return {
         industryId,
         research: {
-          ...data,
+          ...(data as Omit<ResearchIntelligence, 'metadata'>),
           metadata: {
-            ...(metadata ?? {}),
-            lastUpdated: toDate(metadata?.lastUpdated),
+            lastUpdated: rawMetadata?.lastUpdated ? toDate(rawMetadata.lastUpdated).toISOString() : new Date().toISOString(),
+            version: rawMetadata?.version ?? 1,
+            updatedBy: rawMetadata?.updatedBy ?? 'system',
+            notes: rawMetadata?.notes,
           },
-        } as ResearchIntelligence,
+        },
       };
     });
 

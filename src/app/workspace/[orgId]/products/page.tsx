@@ -11,7 +11,7 @@ import { getProducts, deleteProduct } from '@/lib/ecommerce/product-service';
 import { usePagination } from '@/hooks/usePagination'
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
-import type { DocumentSnapshot } from 'firebase/firestore';
+import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function ProductManagementPage() {
   const params = useParams();
@@ -21,7 +21,7 @@ export default function ProductManagementPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Fetch function with pagination using service layer
-  const fetchProducts = useCallback(async (lastDoc?: DocumentSnapshot) => {
+  const fetchProducts = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getProducts(
       orgId,
       'default',

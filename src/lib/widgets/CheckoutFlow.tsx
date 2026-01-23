@@ -31,7 +31,7 @@ export interface CheckoutFlowProps {
   };
 }
 
-export function CheckoutFlow({ organizationId, _onComplete, theme }: CheckoutFlowProps) {
+export function CheckoutFlow({ organizationId, onComplete: _onComplete, theme }: CheckoutFlowProps) {
   const [step, setStep] = useState<'info' | 'payment' | 'complete'>('info');
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(false);

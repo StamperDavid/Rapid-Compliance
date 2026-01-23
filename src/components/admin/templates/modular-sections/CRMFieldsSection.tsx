@@ -15,18 +15,19 @@ interface CRMFieldsSectionProps {
   disabled: boolean;
   onRemove?: () => void;
   canRemove?: boolean;
-  errors: Record<string, string>;
+  errors?: Record<string, string>;
 }
 
-interface CustomFieldUpdate {
-  key?: string;
-  label?: string;
-  type?: string;
-  description?: string;
-  extractionHints?: string[];
-  required?: boolean;
-  defaultValue?: string;
-}
+type CustomFieldUpdate = Partial<{
+  key: string;
+  label: string;
+  type: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
+  description: string;
+  extractionHints: string[];
+  required: boolean;
+  defaultValue: unknown;
+  validation: string;
+}>;
 
 export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRemove }: CRMFieldsSectionProps) {
   const addCustomField = () => {
@@ -34,26 +35,34 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
     const key = prompt('Field key (e.g., company_size):');
     if (!key) {return;}
 
-    const newField = {
+    const newField: import('@/types/scraper-intelligence').CustomField = {
       key,
       label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      type: 'string' as const,
+      type: 'string',
       description: 'Custom field description',
       extractionHints: [],
       required: false,
       defaultValue: '',
     };
 
+    if (!template.research) {
+      return;
+    }
+
     onUpdate({
       research: {
         ...template.research,
-        customFields: [...(template.research?.customFields ?? []), newField],
+        customFields: [...(template.research.customFields ?? []), newField],
       },
     });
   };
 
   const removeCustomField = (index: number) => {
-    const fields = template.research?.customFields ?? [];
+    if (!template.research) {
+      return;
+    }
+
+    const fields = template.research.customFields ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -63,7 +72,11 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
   };
 
   const updateCustomField = (index: number, updates: CustomFieldUpdate) => {
-    const fields = [...(template.research?.customFields ?? [])];
+    if (!template.research) {
+      return;
+    }
+
+    const fields = [...(template.research.customFields ?? [])];
     fields[index] = { ...fields[index], ...updates };
     onUpdate({
       research: {
@@ -130,7 +143,7 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
                       <Label className="text-xs">Type</Label>
                       <Select
                         value={field.type}
-                        onValueChange={val => updateCustomField(index, { type: val })}
+                        onValueChange={val => updateCustomField(index, { type: val as 'string' | 'number' | 'boolean' | 'array' | 'date' | 'object' })}
                       >
                         <SelectTrigger disabled={disabled}>
                           <SelectValue />
@@ -141,6 +154,7 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
                           <SelectItem value="boolean">Boolean</SelectItem>
                           <SelectItem value="array">Array</SelectItem>
                           <SelectItem value="date">Date</SelectItem>
+                          <SelectItem value="object">Object</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

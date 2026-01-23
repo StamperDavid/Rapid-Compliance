@@ -122,7 +122,11 @@ export async function executeAIAgentAction(
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.warn('[AI Agent Action] Failed to parse JSON response', { result, error: errorMsg, file: 'ai-agent-action.ts' });
+      logger.warn('[AI Agent Action] Failed to parse JSON response', {
+        result: typeof result === 'object' ? JSON.stringify(result) : String(result),
+        error: errorMsg,
+        file: 'ai-agent-action.ts'
+      });
       // Keep as string if parsing fails
     }
   }
