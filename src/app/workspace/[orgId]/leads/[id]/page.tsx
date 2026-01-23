@@ -8,29 +8,45 @@ import { logger } from '@/lib/logger/logger';
 import ActivityTimeline from '@/components/ActivityTimeline';
 import type { PredictiveScore } from '@/lib/crm/predictive-scoring';
 import type { DataQualityScore } from '@/lib/crm/data-quality';
+import type { Lead } from '@/types/crm-entities';
+
+/**
+ * Extended Lead interface with legacy fields for backward compatibility
+ */
+interface ExtendedLead extends Lead {
+  phoneNumber?: string; // Legacy field - use `phone` instead
+  notes?: string;
+}
 
 export default function LeadDetailPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
   const leadId = params.id as string;
-  const [lead, setLead] = useState<any>(null);
+  const [lead, setLead] = useState<ExtendedLead | null>(null);
   const [loading, setLoading] = useState(true);
   const [predictiveScore, setPredictiveScore] = useState<PredictiveScore | null>(null);
   const [dataQuality, setDataQuality] = useState<DataQualityScore | null>(null);
-  const [loadingIntelligence, setLoadingIntelligence] = useState(false);
 
   useEffect(() => {
-    loadLead();
+    void loadLead();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadLead = async () => {
+  const loadLead = async (): Promise<void> => {
     try {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/leads/records`, leadId);
-      setLead(data);
-      
+
+      // Type guard for lead data
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid lead data received');
+      }
+
+      const leadData = data as ExtendedLead;
+      setLead(leadData);
+
       // Load intelligence features
-      loadIntelligence(data);
+      void loadIntelligence(leadData);
     } catch (error: unknown) {
       logger.error('Error loading lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
@@ -38,8 +54,7 @@ export default function LeadDetailPage() {
     }
   };
 
-  const loadIntelligence = async (leadData: any) => {
-    setLoadingIntelligence(true);
+  const loadIntelligence = async (leadData: ExtendedLead): Promise<void> => {
     try {
       // Calculate predictive score
       const { calculatePredictiveLeadScore } = await import('@/lib/crm/predictive-scoring');
@@ -52,12 +67,44 @@ export default function LeadDetailPage() {
       setDataQuality(quality);
     } catch (error: unknown) {
       logger.error('Error loading intelligence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-    } finally {
-      setLoadingIntelligence(false);
     }
   };
 
   if (loading || !lead) {return <div className="p-8">Loading...</div>;}
+
+  // Helper functions for safe field access
+  const getDisplayName = (): string => {
+    if (lead.name && lead.name !== '') {
+      return lead.name;
+    }
+    return `${lead.firstName} ${lead.lastName}`;
+  };
+
+  const getCompanyName = (): string => {
+    if (lead.company && lead.company !== '') {
+      return lead.company;
+    }
+    return lead.companyName ?? '';
+  };
+
+  const getPhoneNumber = (): string => {
+    if (lead.phone && lead.phone !== '') {
+      return lead.phone;
+    }
+    return lead.phoneNumber ?? '';
+  };
+
+  const getEmailValue = (): string => {
+    return lead.email ?? '';
+  };
+
+  const getTitle = (): string => {
+    return lead.title ?? '';
+  };
+
+  const getSource = (): string => {
+    return lead.source ?? 'Unknown';
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -65,8 +112,8 @@ export default function LeadDetailPage() {
         <button onClick={() => router.back()} className="text-blue-400 hover:text-blue-300 mb-4">← Back to Leads</button>
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold mb-2">{(lead.name !== '' && lead.name != null) ? lead.name : `${lead.firstName} ${lead.lastName}`}</h1>
-            <p className="text-gray-400">{(lead.company !== '' && lead.company != null) ? lead.company : lead.companyName}</p>
+            <h1 className="text-3xl font-bold mb-2">{getDisplayName()}</h1>
+            <p className="text-gray-400">{getCompanyName() || '-'}</p>
           </div>
           <div className="flex items-center gap-3">
             {predictiveScore && (
@@ -142,10 +189,10 @@ export default function LeadDetailPage() {
           <div className="bg-gray-900 rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div><div className="text-sm text-gray-400 mb-1">Email</div><div>{(lead.email !== '' && lead.email != null) ? lead.email : '-'}</div></div>
-              <div><div className="text-sm text-gray-400 mb-1">Phone</div><div>{(lead.phone !== '' && lead.phone != null) ? lead.phone : ((lead.phoneNumber !== '' && lead.phoneNumber != null) ? lead.phoneNumber : '-')}</div></div>
-              <div><div className="text-sm text-gray-400 mb-1">Company</div><div>{(lead.company !== '' && lead.company != null) ? lead.company : ((lead.companyName !== '' && lead.companyName != null) ? lead.companyName : '-')}</div></div>
-              <div><div className="text-sm text-gray-400 mb-1">Title</div><div>{(lead.title !== '' && lead.title != null) ? lead.title : '-'}</div></div>
+              <div><div className="text-sm text-gray-400 mb-1">Email</div><div>{getEmailValue() || '-'}</div></div>
+              <div><div className="text-sm text-gray-400 mb-1">Phone</div><div>{getPhoneNumber() || '-'}</div></div>
+              <div><div className="text-sm text-gray-400 mb-1">Company</div><div>{getCompanyName() || '-'}</div></div>
+              <div><div className="text-sm text-gray-400 mb-1">Title</div><div>{getTitle() || '-'}</div></div>
             </div>
           </div>
 
@@ -166,19 +213,45 @@ export default function LeadDetailPage() {
           <div className="bg-gray-900 rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Additional Details</h2>
             <div className="space-y-2 text-sm">
-              <div><span className="text-gray-400">Source:</span> {(lead.source !== '' && lead.source != null) ? lead.source : 'Unknown'}</div>
-              <div><span className="text-gray-400">Created:</span> {lead.createdAt ? new Date(lead.createdAt.toDate ? lead.createdAt.toDate() : lead.createdAt).toLocaleDateString() : '-'}</div>
+              <div><span className="text-gray-400">Source:</span> {getSource()}</div>
+              <div>
+                <span className="text-gray-400">Created:</span>{' '}
+                {(() => {
+                  if (!lead.createdAt) {return '-';}
+                  if (lead.createdAt instanceof Date) {
+                    return lead.createdAt.toLocaleDateString();
+                  }
+                  if (typeof lead.createdAt === 'string') {
+                    return new Date(lead.createdAt).toLocaleDateString();
+                  }
+                  if ('toDate' in lead.createdAt && typeof lead.createdAt.toDate === 'function') {
+                    return lead.createdAt.toDate().toLocaleDateString();
+                  }
+                  return '-';
+                })()}
+              </div>
               {lead.enrichmentData && (
                 <div className="mt-4">
                   <div className="text-gray-400 mb-2">Enrichment Data:</div>
                   <div className="bg-gray-800 rounded p-3 space-y-1">
-                    {lead.enrichmentData.companySize && <div>Company Size: {lead.enrichmentData.companySize} employees</div>}
-                    {lead.enrichmentData.revenue && <div>Revenue: ${(lead.enrichmentData.revenue / 1000000).toFixed(1)}M</div>}
-                    {lead.enrichmentData.industry && <div>Industry: {lead.enrichmentData.industry}</div>}
+                    {lead.enrichmentData.companySize && (
+                      <div>Company Size: {lead.enrichmentData.companySize} employees</div>
+                    )}
+                    {lead.enrichmentData.revenue && typeof lead.enrichmentData.revenue === 'string' && (
+                      <div>Revenue: {lead.enrichmentData.revenue}</div>
+                    )}
+                    {lead.enrichmentData.industry && (
+                      <div>Industry: {lead.enrichmentData.industry}</div>
+                    )}
                   </div>
                 </div>
               )}
-              {lead.notes && <div className="mt-4"><div className="text-gray-400 mb-2">Notes:</div><div className="bg-gray-800 rounded p-3">{lead.notes}</div></div>}
+              {lead.notes && (
+                <div className="mt-4">
+                  <div className="text-gray-400 mb-2">Notes:</div>
+                  <div className="bg-gray-800 rounded p-3">{lead.notes}</div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -220,55 +293,85 @@ export default function LeadDetailPage() {
           <div className="bg-gray-900 rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
             <div className="space-y-2">
-              <button 
+              <button
                 onClick={() => {
-                  const subject = `Following up - ${(lead.company !== '' && lead.company != null) ? lead.company : lead.companyName}`;
-                  const body = `Hi ${(lead.firstName !== '' && lead.firstName != null) ? lead.firstName : lead.name?.split(' ')[0]},\n\n`;
-                  window.location.href = `mailto:${lead.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                  const companyName = getCompanyName();
+                  const firstName = lead.firstName ?? lead.name?.split(' ')[0] ?? '';
+                  const emailAddress = getEmailValue();
+
+                  if (!emailAddress) {
+                    // eslint-disable-next-line no-alert
+                    alert('No email address available for this lead');
+                    return;
+                  }
+
+                  const subject = `Following up - ${companyName}`;
+                  const body = `Hi ${firstName},\n\n`;
+                  window.location.href = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                 }}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-left"
               >
                 ✉️ Send Email
               </button>
-              <button 
-                onClick={() => router.push(`/workspace/${orgId}/calls/make?phone=${encodeURIComponent((lead.phone !== '' && lead.phone != null) ? lead.phone : lead.phoneNumber)}&contactId=${leadId}`)}
+              <button
+                onClick={() => {
+                  const phoneNumber = getPhoneNumber();
+                  if (!phoneNumber) {
+                    // eslint-disable-next-line no-alert
+                    alert('No phone number available for this lead');
+                    return;
+                  }
+                  router.push(`/workspace/${orgId}/calls/make?phone=${encodeURIComponent(phoneNumber)}&contactId=${leadId}`);
+                }}
                 className="w-full px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-left"
               >
                 📞 Make Call
               </button>
-              <button 
+              <button
                 onClick={() => router.push(`/workspace/${orgId}/outbound/sequences?enrollLead=${leadId}`)}
                 className="w-full px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-left"
               >
                 ➕ Add to Sequence
               </button>
-              <button 
-                onClick={async () => {
+              <button
+                onClick={() => {
+                  // eslint-disable-next-line no-alert
                   if (!confirm('Convert this lead to a deal?')) {return;}
-                  try {
-                    const dealId = `deal-${Date.now()}`;
-                    await FirestoreService.set(
-                      `organizations/${orgId}/workspaces/default/entities/deals/records`,
-                      dealId,
-                      {
-                        id: dealId,
-                        name: `Deal - ${(lead.company !== '' && lead.company != null) ? lead.company : lead.companyName}`,
-                        company: (lead.company !== '' && lead.company != null) ? lead.company : lead.companyName,
-                        contactName: (lead.name !== '' && lead.name != null) ? lead.name : `${lead.firstName} ${lead.lastName}`,
-                        value: 0,
-                        stage: 'qualification',
-                        probability: 50,
-                        sourceLeadId: leadId,
-                        createdAt: Timestamp.now(),
-                      },
-                      false
-                    );
-                    alert('Lead converted to deal!');
-                    router.push(`/workspace/${orgId}/deals/${dealId}`);
-                  } catch (error: unknown) {
-                    logger.error('Error converting lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-                    alert('Failed to convert lead');
-                  }
+
+                  // Async handler wrapped properly
+                  const convertToDeal = async (): Promise<void> => {
+                    try {
+                      const dealId = `deal-${Date.now()}`;
+                      const companyName = getCompanyName();
+                      const displayName = getDisplayName();
+
+                      await FirestoreService.set(
+                        `organizations/${orgId}/workspaces/default/entities/deals/records`,
+                        dealId,
+                        {
+                          id: dealId,
+                          name: `Deal - ${companyName}`,
+                          company: companyName,
+                          contactName: displayName,
+                          value: 0,
+                          stage: 'qualification',
+                          probability: 50,
+                          sourceLeadId: leadId,
+                          createdAt: Timestamp.now(),
+                        },
+                        false
+                      );
+                      // eslint-disable-next-line no-alert
+                      alert('Lead converted to deal!');
+                      router.push(`/workspace/${orgId}/deals/${dealId}`);
+                    } catch (error: unknown) {
+                      logger.error('Error converting lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+                      // eslint-disable-next-line no-alert
+                      alert('Failed to convert lead');
+                    }
+                  };
+
+                  void convertToDeal();
                 }}
                 className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-left font-medium"
               >

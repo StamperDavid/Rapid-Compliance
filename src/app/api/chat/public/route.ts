@@ -1,9 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import type { ChatMessage, ModelName } from '@/types/ai-models';
+import type { Organization } from '@/types/organization';
+import type { ConversationMessage } from '@/types/agent-memory';
 
 // Force Node.js runtime (required for Firebase Admin SDK)
 export const runtime = 'nodejs';
@@ -22,8 +25,8 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    const body = await request.json();
-    const { customerId, orgId, message } = body;
+    const body: unknown = await request.json();
+    const { customerId, orgId, message } = body as { customerId?: string; orgId?: string; message?: string };
 
     // Validate required fields
     if (!customerId || !orgId || !message) {
@@ -31,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate message length
-    if (message.length > 2000) {
+    if (typeof message === 'string' && message.length > 2000) {
       return errors.badRequest('Message too long. Maximum 2000 characters.');
     }
 
@@ -40,15 +43,15 @@ export async function POST(request: NextRequest) {
     // and spawns ephemeral agents the same way as regular organizations
 
     // Verify organization exists and has chat enabled (prefer Admin SDK, fallback to client SDK)
-    let organization: any = null;
-    let chatConfig: any = null;
+    let organization: Organization | null = null;
+    let chatConfig: { enabled?: boolean } | null = null;
     try {
       const { adminDb } = await import('@/lib/firebase/admin');
       const { getOrgSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
         const orgSnap = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).doc(orgId).get();
         if (orgSnap.exists) {
-          organization = { id: orgSnap.id, ...orgSnap.data() };
+          organization = { id: orgSnap.id, ...orgSnap.data() } as Organization;
         }
         const settingsPath = getOrgSubCollection(orgId, 'settings');
         const chatSnap = await adminDb
@@ -56,16 +59,14 @@ export async function POST(request: NextRequest) {
           .doc('chatWidget')
           .get();
         if (chatSnap.exists) {
-          chatConfig = chatSnap.data();
+          chatConfig = chatSnap.data() as { enabled?: boolean };
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // Ignore and fallback
     }
 
-    if (!organization) {
-      organization = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
-    }
+    organization ??= await FirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, orgId);
     if (!organization) {
       return NextResponse.json(
         { success: false, error: 'Invalid organization' },
@@ -73,15 +74,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!chatConfig) {
-      chatConfig = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
-        'chatWidget'
-      );
-    }
+    chatConfig ??= await FirestoreService.get<{ enabled?: boolean }>(
+      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
+      'chatWidget'
+    );
 
     // Default to enabled if no config exists
-    if (chatConfig && chatConfig.enabled === false) {
+    if (chatConfig?.enabled === false) {
       return NextResponse.json(
         { success: false, error: 'Chat is not available for this organization' },
         { status: 403 }
@@ -94,9 +93,9 @@ export async function POST(request: NextRequest) {
     let instance;
     try {
       instance = await instanceManager.spawnInstance(customerId, orgId);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If no Golden Master exists, provide a helpful response
-      if (error.message?.includes('Golden Master')) {
+      if (error instanceof Error && error.message.includes('Golden Master')) {
         return NextResponse.json({
           success: true,
           response: "Thanks for reaching out! Our team is still setting up the AI assistant. Please check back soon or contact us directly.",
@@ -108,7 +107,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get agent configuration (prefer Admin SDK)
-    let agentConfig: any = null;
+    interface AgentConfigData {
+      selectedModel?: string;
+      modelConfig?: {
+        temperature?: number;
+        maxTokens?: number;
+        topP?: number;
+      };
+    }
+
+    let agentConfig: AgentConfigData | null = null;
     try {
       const { adminDb } = await import('@/lib/firebase/admin');
       const { getOrgSubCollection } = await import('@/lib/firebase/collections');
@@ -119,31 +127,29 @@ export async function POST(request: NextRequest) {
           .doc('default')
           .get();
         if (cfgSnap.exists) {
-          agentConfig = cfgSnap.data();
+          agentConfig = cfgSnap.data() as AgentConfigData;
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // Ignore and fallback
     }
-    if (!agentConfig) {
-      agentConfig = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
-        'default'
-      );
-    }
-    
-    const selectedModel = (agentConfig as any)?.selectedModel || 'openrouter/anthropic/claude-3.5-sonnet';
-    const modelConfig = (agentConfig as any)?.modelConfig || {
+    agentConfig ??= await FirestoreService.get<AgentConfigData>(
+      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
+      'default'
+    );
+
+    const selectedModel = (agentConfig?.selectedModel ?? 'openrouter/anthropic/claude-3.5-sonnet') as ModelName;
+    const modelConfig = agentConfig?.modelConfig ?? {
       temperature: 0.7,
       maxTokens: 2048,
       topP: 0.9,
     };
 
     // Build conversation history
-    const messages = [
-      ...instance.customerMemory.conversationHistory.map((msg: any) => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content || msg.text,
+    const messages: ChatMessage[] = [
+      ...instance.customerMemory.conversationHistory.map((msg: ConversationMessage): ChatMessage => ({
+        role: msg.role === 'customer' ? 'user' : 'assistant',
+        content: msg.content,
       })),
       {
         role: 'user' as const,
@@ -161,7 +167,7 @@ export async function POST(request: NextRequest) {
       }));
       const ragResult = await enhanceChatWithRAG(ragMessages, orgId, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
-    } catch (error) {
+    } catch (error: unknown) {
       logger.warn('RAG enhancement failed, using base prompt', {
         route: '/api/chat/public',
         error: error instanceof Error ? error.message : String(error),
@@ -170,7 +176,7 @@ export async function POST(request: NextRequest) {
 
     // Generate response using AI
     const { AIProviderFactory } = await import('@/lib/ai/provider-factory');
-    const provider = await AIProviderFactory.createProvider(selectedModel, orgId);
+    const provider = AIProviderFactory.createProvider(selectedModel, orgId);
     
     const startTime = Date.now();
     const response = await provider.generateResponse(
@@ -197,13 +203,13 @@ export async function POST(request: NextRequest) {
           customerId,
           userMessage: message,
           assistantResponse: response.text,
-          model: selectedModel,
+          model: selectedModel as string,
           processingTime,
           timestamp: new Date().toISOString(),
         },
         false
       );
-    } catch (error) {
+    } catch (error: unknown) {
       logger.warn('Failed to track chat message', {
         route: '/api/chat/public',
         error: error instanceof Error ? error.message : String(error),
@@ -214,15 +220,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       response: response.text,
-      model: selectedModel,
+      model: selectedModel as string,
       processingTime,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Public chat error', error instanceof Error ? error : new Error(String(error)), { route: '/api/chat/public' });
-    
+
     // Handle API key issues
-    if (error?.message?.includes('API key')) {
+    if (error instanceof Error && error.message.includes('API key')) {
       return NextResponse.json({
         success: true,
         response: "I'm having trouble connecting right now. Please try again in a moment, or contact support if the issue persists.",
@@ -230,9 +236,9 @@ export async function POST(request: NextRequest) {
         processingTime: 0,
       });
     }
-    
+
     // Handle rate limiting
-    if (error?.message?.includes('rate limit')) {
+    if (error instanceof Error && error.message.includes('rate limit')) {
       return NextResponse.json(
         { success: false, error: 'Too many requests. Please wait a moment.' },
         { status: 429 }
@@ -250,9 +256,9 @@ export async function POST(request: NextRequest) {
 }
 
 // Handle OPTIONS for CORS preflight
-export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin') || '*';
-  
+export function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin') ?? '*';
+
   return new NextResponse(null, {
     status: 200,
     headers: {

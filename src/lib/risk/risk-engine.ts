@@ -206,12 +206,12 @@ export async function predictDealRisk(
     
     return prediction;
     
-  } catch (error: any) {
-    logger.error('Risk prediction failed', error, {
+  } catch (error: unknown) {
+    logger.error('Risk prediction failed', error instanceof Error ? error : new Error(String(error)), {
       dealId: request.dealId,
       organizationId: request.organizationId,
     });
-    throw new Error(`Risk prediction failed: ${error.message}`);
+    throw new Error(`Risk prediction failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -254,12 +254,13 @@ export async function predictBatchDealRisk(
             prediction.riskLevel === 'high') {
           predictions.set(dealId, prediction);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         logger.warn('Failed to predict risk for deal', {
           dealId,
-          error: error.message,
+          error: errorMessage,
         });
-        errors.push(`${dealId}: ${error.message}`);
+        errors.push(`${dealId}: ${errorMessage}`);
       }
     }
     
@@ -279,11 +280,11 @@ export async function predictBatchDealRisk(
       calculatedAt: new Date(),
     };
     
-  } catch (error: any) {
-    logger.error('Batch risk prediction failed', error, {
+  } catch (error: unknown) {
+    logger.error('Batch risk prediction failed', error instanceof Error ? error : new Error(String(error)), {
       organizationId: request.organizationId,
     });
-    throw new Error(`Batch risk prediction failed: ${error.message}`);
+    throw new Error(`Batch risk prediction failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -323,7 +324,7 @@ async function analyzeRiskFactors(
   
   // Close date risk
   if (deal.expectedCloseDate) {
-    const daysToClose = getDaysToClose(deal.expectedCloseDate);
+    const daysToClose = getDaysToClose(deal.expectedCloseDate as Date | { toDate: () => Date } | string | number);
     if (daysToClose < 0) {
       factors.push({
         id: 'timing_overdue',
@@ -545,7 +546,7 @@ function identifyProtectiveFactors(
   
   // 6. Close date soon (urgency)
   if (deal.expectedCloseDate) {
-    const daysToClose = getDaysToClose(deal.expectedCloseDate);
+    const daysToClose = getDaysToClose(deal.expectedCloseDate as Date | { toDate: () => Date } | string | number);
     if (daysToClose > 0 && daysToClose <= 14) {
       factors.push({
         id: 'urgency_close_soon',
@@ -690,8 +691,8 @@ function predictSlippageTimeline(
   if (!deal.expectedCloseDate) {
     return { daysUntilSlippage: null, predictedSlippageDate: null };
   }
-  
-  const daysToClose = getDaysToClose(deal.expectedCloseDate);
+
+  const daysToClose = getDaysToClose(deal.expectedCloseDate as Date | { toDate: () => Date } | string | number);
   
   // Already overdue
   if (daysToClose < 0) {
@@ -714,8 +715,18 @@ function predictSlippageTimeline(
   const riskMultiplier = 1 + (criticalRisks * 0.5) + (highRisks * 0.3);
   
   const slippageDays = Math.round(baseSlippageDays * riskMultiplier);
-  
-  const expectedDate = new Date(deal.expectedCloseDate);
+
+  const expectedDateValue: unknown = deal.expectedCloseDate;
+  let expectedDate: Date;
+
+  if (expectedDateValue instanceof Date) {
+    expectedDate = expectedDateValue;
+  } else if (typeof expectedDateValue === 'object' && expectedDateValue !== null && 'toDate' in expectedDateValue) {
+    expectedDate = (expectedDateValue as { toDate: () => Date }).toDate();
+  } else {
+    expectedDate = new Date(expectedDateValue as string | number);
+  }
+
   const slippageDate = new Date(expectedDate);
   slippageDate.setDate(slippageDate.getDate() + slippageDays);
   
@@ -780,11 +791,11 @@ async function generateAIInterventions(
       tokensUsed: response.usage?.totalTokens ?? 0,
     };
     
-  } catch (error: any) {
-    logger.error('AI intervention generation failed', error, {
+  } catch (error: unknown) {
+    logger.error('AI intervention generation failed', error instanceof Error ? error : new Error(String(error)), {
       dealId: deal.id,
     });
-    
+
     // Return fallback interventions
     return {
       interventions: generateFallbackInterventions(riskFactors),
@@ -812,7 +823,18 @@ DEAL INFORMATION:
 - Value: $${deal.value.toLocaleString()}
 - Stage: ${deal.stage}
 - Probability: ${deal.probability}%
-- Expected Close: ${deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString() : 'Not set'}
+- Expected Close: ${deal.expectedCloseDate ? (() => {
+    const dateValue: unknown = deal.expectedCloseDate;
+    let date: Date;
+    if (dateValue instanceof Date) {
+      date = dateValue;
+    } else if (typeof dateValue === 'object' && dateValue !== null && 'toDate' in dateValue) {
+      date = (dateValue as { toDate: () => Date }).toDate();
+    } else {
+      date = new Date(dateValue as string | number);
+    }
+    return date.toLocaleDateString();
+  })() : 'Not set'}
 - Deal Score: ${dealScore.score}/100 (${dealScore.tier})
 - Health Score: ${dealHealth.overall}/100 (${dealHealth.status})
 
@@ -844,6 +866,23 @@ Format your response as a JSON array of interventions. Focus on the HIGHEST impa
 }
 
 /**
+ * AI intervention response item interface
+ */
+interface AIInterventionItem {
+  type?: string;
+  priority?: string;
+  title?: string;
+  description?: string;
+  expectedImpact?: number;
+  estimatedEffort?: number;
+  actionSteps?: string[];
+  successMetrics?: string[];
+  suggestedOwner?: string;
+  deadlineDays?: number;
+  reasoning?: string;
+}
+
+/**
  * Parse AI response into interventions
  */
 function parseAIInterventions(
@@ -858,32 +897,43 @@ function parseAIInterventions(
       logger.warn('No JSON array found in AI response, using fallback');
       return generateFallbackInterventions(riskFactors);
     }
-    
-    const parsed = JSON.parse(jsonMatch[0]);
-    
+
+    const parsed: unknown = JSON.parse(jsonMatch[0]);
+
+    // Type guard for array
+    if (!Array.isArray(parsed)) {
+      logger.warn('AI response is not an array, using fallback');
+      return generateFallbackInterventions(riskFactors);
+    }
+
     // Convert to Intervention objects
     const interventions: Intervention[] = parsed
       .slice(0, maxInterventions)
-      .map((item: any, index: number) => ({
-        id: `intervention_${Date.now()}_${index}`,
-        type:(item.type !== '' && item.type != null) ? item.type : 'risk_mitigation',
-        priority:(item.priority !== '' && item.priority != null) ? item.priority : 'medium',
-        title:(item.title !== '' && item.title != null) ? item.title : 'Intervention Required',
-        description: item.description ?? '',
-        expectedImpact: item.expectedImpact ?? 30,
-        estimatedEffort: item.estimatedEffort ?? 2,
-        roiScore: (item.expectedImpact ?? 30) / (item.estimatedEffort ?? 2),
-        actionSteps:item.actionSteps ?? ['Execute intervention'],
-        successMetrics:item.successMetrics ?? ['Risk reduced'],
-        suggestedOwner:(item.suggestedOwner !== '' && item.suggestedOwner != null) ? item.suggestedOwner : 'Account Executive',
-        deadlineDays: item.deadlineDays ?? 7,
-        reasoning:(item.reasoning !== '' && item.reasoning != null) ? item.reasoning : 'AI-recommended intervention',
-      }));
-    
+      .map((item: unknown, index: number) => {
+        // Type guard for object
+        const aiItem = item as AIInterventionItem;
+
+        return {
+          id: `intervention_${Date.now()}_${index}`,
+          type:(aiItem.type !== '' && aiItem.type != null) ? aiItem.type : 'risk_mitigation',
+          priority:(aiItem.priority !== '' && aiItem.priority != null) ? aiItem.priority : 'medium',
+          title:(aiItem.title !== '' && aiItem.title != null) ? aiItem.title : 'Intervention Required',
+          description: aiItem.description ?? '',
+          expectedImpact: aiItem.expectedImpact ?? 30,
+          estimatedEffort: aiItem.estimatedEffort ?? 2,
+          roiScore: (aiItem.expectedImpact ?? 30) / (aiItem.estimatedEffort ?? 2),
+          actionSteps:aiItem.actionSteps ?? ['Execute intervention'],
+          successMetrics:aiItem.successMetrics ?? ['Risk reduced'],
+          suggestedOwner:(aiItem.suggestedOwner !== '' && aiItem.suggestedOwner != null) ? aiItem.suggestedOwner : 'Account Executive',
+          deadlineDays: aiItem.deadlineDays ?? 7,
+          reasoning:(aiItem.reasoning !== '' && aiItem.reasoning != null) ? aiItem.reasoning : 'AI-recommended intervention',
+        } as Intervention;
+      });
+
     // Sort by ROI score
     return interventions.sort((a, b) => b.roiScore - a.roiScore);
-    
-  } catch (error) {
+
+  } catch (error: unknown) {
     logger.warn('Failed to parse AI interventions, using fallback', { error: error instanceof Error ? error.message : String(error) });
     return generateFallbackInterventions(riskFactors);
   }
@@ -1106,7 +1156,7 @@ async function emitRiskSignal(
     const coordinator = getServerSignalCoordinator();
     
     await coordinator.emitSignal({
-      type: 'risk.detected' as any,
+      type: 'risk.detected' as 'risk.detected',
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
@@ -1130,7 +1180,7 @@ async function emitRiskSignal(
       riskLevel: prediction.riskLevel,
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to emit risk signal', error instanceof Error ? error : new Error(String(error)), {
       dealId: prediction.dealId,
     });
@@ -1145,14 +1195,34 @@ async function emitRiskSignal(
  * Get deal age in days
  */
 function getDealAge(deal: Deal): number {
-  const createdAt = deal.createdAt?.toDate ? deal.createdAt.toDate() : new Date(deal.createdAt);
+  const createdAtValue: unknown = deal.createdAt;
+  let createdAt: Date;
+
+  if (createdAtValue instanceof Date) {
+    createdAt = createdAtValue;
+  } else if (typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue) {
+    createdAt = (createdAtValue as { toDate: () => Date }).toDate();
+  } else {
+    createdAt = new Date(createdAtValue as string | number);
+  }
+
   return Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 /**
  * Get days until close date
  */
-function getDaysToClose(expectedCloseDate: any): number {
-  const closeDate = expectedCloseDate?.toDate ? expectedCloseDate.toDate() : new Date(expectedCloseDate);
+function getDaysToClose(expectedCloseDate: Date | { toDate: () => Date } | string | number): number {
+  let closeDate: Date;
+
+  if (expectedCloseDate instanceof Date) {
+    closeDate = expectedCloseDate;
+  } else if (typeof expectedCloseDate === 'object' && expectedCloseDate !== null && 'toDate' in expectedCloseDate) {
+    closeDate = expectedCloseDate.toDate();
+  } else {
+    // expectedCloseDate is string | number
+    closeDate = new Date(expectedCloseDate as string | number);
+  }
+
   return Math.floor((closeDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }

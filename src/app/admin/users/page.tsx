@@ -3,12 +3,49 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import type { User } from '@/types/user'
+import type { User } from '@/types/user';
 import { logger } from '@/lib/logger/logger';
+import type { Timestamp } from 'firebase/firestore';
+
+// API response type from the admin users endpoint
+interface ApiUserData {
+  id: string;
+  email?: string | null;
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  timezone?: string | null;
+  preferences?: {
+    theme: 'light' | 'dark' | 'system';
+    language: string;
+    notifications: {
+      email: boolean;
+      push: boolean;
+      slack: boolean;
+    };
+  } | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  lastLoginAt: Timestamp;
+  status?: 'active' | 'suspended' | null;
+  emailVerified?: boolean | null;
+  organizationId?: string | null;
+  organizationName?: string | null;
+}
+
+interface ApiUsersResponse {
+  users: ApiUserData[];
+}
+
+// Extended User type with organization info
+type UserWithOrg = User & {
+  organizationId: string;
+  organizationName: string;
+};
 
 export default function UsersPage() {
   const { hasPermission } = useAdminAuth();
-  const [users, setUsers] = useState<(User & { organizationId: string; organizationName: string })[]>([]);
+  const [users, setUsers] = useState<UserWithOrg[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterOrg, setFilterOrg] = useState<string>('all');
@@ -40,33 +77,36 @@ export default function UsersPage() {
         });
 
         if (response.ok) {
-          const data = await response.json();
-          const mappedUsers = (data.users ?? []).map((u: any) => {
-            const firstNameFallback = (u.displayName !== '' && u.displayName != null) ? u.displayName.split(' ')[0] : '';
-            const lastNameFallback = (u.displayName !== '' && u.displayName != null) ? u.displayName.split(' ').slice(1).join(' ') : '';
-            const emailUsernameFallback = (u.email !== '' && u.email != null) ? u.email.split('@')[0] : 'Unknown';
-            
+          const data = await response.json() as ApiUsersResponse;
+          const mappedUsers: UserWithOrg[] = (data.users ?? []).map((u: ApiUserData) => {
+            const displayName = u.displayName ?? '';
+            const email = u.email ?? '';
+
+            const firstNameFallback = (displayName !== '') ? displayName.split(' ')[0] ?? '' : '';
+            const lastNameFallback = (displayName !== '') ? displayName.split(' ').slice(1).join(' ') : '';
+            const emailUsernameFallback = (email !== '') ? email.split('@')[0] ?? 'Unknown' : 'Unknown';
+
             return {
               id: u.id,
-              email: (u.email !== '' && u.email != null) ? u.email : '',
+              email: email,
               profile: {
-                firstName: (u.firstName !== '' && u.firstName != null) ? u.firstName : firstNameFallback,
-                lastName: (u.lastName !== '' && u.lastName != null) ? u.lastName : lastNameFallback,
-                displayName: (u.displayName !== '' && u.displayName != null) ? u.displayName : emailUsernameFallback,
-                timezone: (u.timezone !== '' && u.timezone != null) ? u.timezone : 'UTC',
+                firstName: u.firstName ?? firstNameFallback,
+                lastName: u.lastName ?? lastNameFallback,
+                displayName: displayName !== '' ? displayName : emailUsernameFallback,
+                timezone: u.timezone ?? 'UTC',
               },
               preferences: u.preferences ?? {
-                theme: 'dark',
+                theme: 'dark' as const,
                 language: 'en',
                 notifications: { email: true, push: true, slack: false },
               },
               createdAt: u.createdAt,
               updatedAt: u.updatedAt,
               lastLoginAt: u.lastLoginAt,
-              status: (u.status !== '' && u.status != null) ? u.status : 'active',
+              status: u.status ?? 'active',
               emailVerified: u.emailVerified ?? true,
-              organizationId: (u.organizationId !== '' && u.organizationId != null) ? u.organizationId : 'unknown',
-              organizationName: (u.organizationName !== '' && u.organizationName != null) ? u.organizationName : ((u.organizationId !== '' && u.organizationId != null) ? u.organizationId : 'Unknown Org'),
+              organizationId: u.organizationId ?? 'unknown',
+              organizationName: u.organizationName ?? (u.organizationId ?? 'Unknown Org'),
             };
           });
           setUsers(mappedUsers);
@@ -78,7 +118,7 @@ export default function UsersPage() {
           // Set empty array on error
           setUsers([]);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         logger.error('Error loading users:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         setUsers([]);
       } finally {
@@ -86,7 +126,7 @@ export default function UsersPage() {
       }
     }
 
-    loadUsers();
+    void loadUsers();
   }, []);
 
   const uniqueOrgs = Array.from(new Set(users.map(u => u.organizationId)));
@@ -211,7 +251,7 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#999' }}>
-                    {user.lastLoginAt ? new Date(user.lastLoginAt as any).toLocaleDateString() : 'Never'}
+                    {user.lastLoginAt ? new Date(user.lastLoginAt.toDate()).toLocaleDateString() : 'Never'}
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>

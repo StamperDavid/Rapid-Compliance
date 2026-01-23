@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useRecords } from '@/hooks/useRecords';
 import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas'
 import { logger } from '@/lib/logger/logger';
 import LookupFieldPicker from '@/components/LookupFieldPicker';
 
+// Proper type for dynamic record data
+type RecordValue = string | number | boolean | null;
+
 interface EntityRecord {
   id: string;
-  [key: string]: any;
+  [key: string]: RecordValue;
 }
 
 interface SchemaField {
@@ -23,6 +25,19 @@ interface SchemaField {
   options?: string[];
   config?: { linkedSchema?: string };
   lookupEntity?: string;
+}
+
+interface ApiSchema {
+  id?: string;
+  name?: string;
+  pluralName?: string;
+  singularName?: string;
+  icon?: string;
+  fields?: SchemaField[];
+}
+
+interface SchemaResponse {
+  schemas?: ApiSchema[];
 }
 
 export default function EntityTablePage() {
@@ -46,23 +61,21 @@ export default function EntityTablePage() {
     realTime: true,
   });
 
-  const [schemaList, setSchemaList] = useState<any[]>([]);
+  const [schemaList, setSchemaList] = useState<ApiSchema[]>([]);
 
   // Load schemas from API
   useEffect(() => {
     let isMounted = true;
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch(`/api/schemas?organizationId=${orgId}&workspaceId=${workspaceId}`);
         if (!res.ok) {throw new Error(`Failed to load schemas (${res.status})`);}
-        const data = await res.json();
+        const data = await res.json() as SchemaResponse;
         if (isMounted) {
           setSchemaList(data.schemas ?? []);
         }
       } catch (err: unknown) {
         logger.error('Error loading schemas for entity page', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
-      } finally {
-        // no-op
       }
     })();
     return () => {
@@ -71,22 +84,23 @@ export default function EntityTablePage() {
   }, [orgId, workspaceId]);
 
   // Get schema dynamically based on entity name
-  const schema = useMemo(() => {
+  const schema = useMemo((): ApiSchema | null => {
     const schemaKey = entityName.toLowerCase();
     const fromApi = (schemaList || []).find(
-      (s: any) =>
+      (s: ApiSchema) =>
         s.id?.toLowerCase() === schemaKey ||
         s.name?.toLowerCase() === schemaKey ||
         s.pluralName?.toLowerCase() === schemaKey
     );
     if (fromApi) {return fromApi;}
-    return STANDARD_SCHEMAS[schemaKey as keyof typeof STANDARD_SCHEMAS] || null;
+    const standardSchema = STANDARD_SCHEMAS[schemaKey as keyof typeof STANDARD_SCHEMAS];
+    return standardSchema ? standardSchema as ApiSchema : null;
   }, [entityName, schemaList]);
 
   // Get fields from schema or fallback to generic
   const fields: SchemaField[] = useMemo(() => {
     if (schema?.fields) {
-      return schema.fields as SchemaField[];
+      return schema.fields;
     }
     // Fallback for custom entities
     return [
@@ -96,7 +110,7 @@ export default function EntityTablePage() {
   }, [schema]);
 
   // Generate default form data based on schema fields
-  const getDefaultFormData = (): EntityRecord => {
+  const getDefaultFormData = useCallback((): EntityRecord => {
     const defaults: EntityRecord = { id: '' };
     fields.forEach(field => {
       switch (field.type) {
@@ -119,7 +133,7 @@ export default function EntityTablePage() {
       }
     });
     return defaults;
-  };
+  }, [fields]);
 
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -129,19 +143,19 @@ export default function EntityTablePage() {
   // Reset form data when entity changes
   useEffect(() => {
     setFormData(getDefaultFormData());
-  }, [entityName]);
+  }, [getDefaultFormData]);
 
   // Get picklist options for a field
   const getPicklistOptions = (field: SchemaField): string[] => {
     if (field.options) {return field.options;}
-    
+
     // Map field keys to picklist values
     const picklistMap: Record<string, keyof typeof PICKLIST_VALUES> = {
       'lead_source': 'lead_source',
       'lead_status': 'lead_status',
       'rating': 'lead_rating',
       'industry': 'industry',
-      'status': entityName === 'leads' ? 'lead_status' 
+      'status': entityName === 'leads' ? 'lead_status'
               : entityName === 'contacts' ? 'contact_status'
               : entityName === 'companies' ? 'company_status'
               : entityName === 'deals' ? 'deal_stage'
@@ -156,12 +170,12 @@ export default function EntityTablePage() {
       'category': 'product_category',
       'payment_method': 'payment_method',
     };
-    
+
     const picklistKey = picklistMap[field.key];
     if (picklistKey && PICKLIST_VALUES[picklistKey]) {
       return PICKLIST_VALUES[picklistKey];
     }
-    
+
     return [];
   };
 
@@ -169,7 +183,7 @@ export default function EntityTablePage() {
   const filteredRecords = useMemo(() => {
     if (!searchTerm.trim()) {return records;}
     const term = searchTerm.toLowerCase();
-    return records.filter(record => 
+    return records.filter(record =>
       fields.some(field => {
         const value = record[field.key];
         return value && String(value).toLowerCase().includes(term);
@@ -186,12 +200,14 @@ export default function EntityTablePage() {
 
   const handleAdd = async () => {
     try {
-      const { id, ...data } = formData;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id: _id, ...data } = formData;
       await createRecord(data);
       setIsAdding(false);
       setFormData(getDefaultFormData());
     } catch (err: unknown) {
       logger.error('Error creating record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
       alert('Failed to create record.');
     }
   };
@@ -200,8 +216,10 @@ export default function EntityTablePage() {
     setEditingId(record.id);
     // Populate form with record data
     const editData: EntityRecord = { id: record.id };
+    const defaults = getDefaultFormData();
     fields.forEach(field => {
-      editData[field.key] = record[field.key] ?? getDefaultFormData()[field.key];
+      const value = record[field.key];
+      editData[field.key] = value ?? defaults[field.key];
     });
     setFormData(editData);
   };
@@ -209,24 +227,30 @@ export default function EntityTablePage() {
   const handleUpdate = async () => {
     if (!editingId) {return;}
     try {
-      const { id, createdAt, updatedAt, ...updateData } = formData;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = formData;
       await updateRecord(editingId, updateData);
       setEditingId(null);
       setFormData(getDefaultFormData());
     } catch (err: unknown) {
       logger.error('Error updating record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
       alert('Failed to update record.');
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
+    // eslint-disable-next-line no-alert
     if (confirm('Delete this record?')) {
-      try {
-        await deleteRecord(id);
-      } catch (err: unknown) {
-        logger.error('Error deleting record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
-        alert('Failed to delete record.');
-      }
+      void (async () => {
+        try {
+          await deleteRecord(id);
+        } catch (err: unknown) {
+          logger.error('Error deleting record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+          // eslint-disable-next-line no-alert
+          alert('Failed to delete record.');
+        }
+      })();
     }
   };
 
@@ -237,21 +261,21 @@ export default function EntityTablePage() {
   };
 
   // Format value for display
-  const formatValue = (value: any, field: SchemaField): string => {
+  const formatValue = (value: RecordValue, field: SchemaField): string => {
     if (value === null || value === undefined || value === '') {return '—';}
-    
+
     switch (field.type) {
       case 'currency':
         return `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       case 'percent':
-        return `${value}%`;
+        return `${String(value)}%`;
       case 'checkbox':
         return value ? 'Yes' : 'No';
       case 'date':
         try {
-          return new Date(value).toLocaleDateString();
+          return new Date(value as string | number).toLocaleDateString();
         } catch {
-          return value;
+          return String(value);
         }
       default:
         return String(value);
@@ -289,9 +313,10 @@ export default function EntityTablePage() {
 
       case 'singleSelect': {
         const options = getPicklistOptions(field);
+        const selectValue = value ?? '';
         return (
           <select
-            value={value ?? ''}
+            value={String(selectValue)}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={{ ...baseInputStyle, cursor: 'pointer' }}
           >
@@ -306,7 +331,7 @@ export default function EntityTablePage() {
       case 'longText':
         return (
           <textarea
-            value={value ?? ''}
+            value={String(value ?? '')}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={{ ...baseInputStyle, minHeight: '100px', resize: 'vertical' }}
             placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -319,7 +344,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="number"
-            value={value ?? 0}
+            value={Number(value ?? 0)}
             onChange={(e) => setFormData({ ...formData, [field.key]: parseFloat(e.target.value) || 0 })}
             style={baseInputStyle}
             placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -331,7 +356,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="date"
-            value={value ?? ''}
+            value={String(value ?? '')}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
           />
@@ -341,7 +366,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="email"
-            value={value ?? ''}
+            value={String(value ?? '')}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
             placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -352,7 +377,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="url"
-            value={value ?? ''}
+            value={String(value ?? '')}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
             placeholder="https://..."
@@ -363,7 +388,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="tel"
-            value={value ?? ''}
+            value={String(value ?? '')}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
             placeholder="+1 (555) 123-4567"
@@ -378,7 +403,7 @@ export default function EntityTablePage() {
             workspaceId="default"
             targetEntity={(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : 'contacts'}
             value={value}
-            onChange={(recordId: string | null, record: any | null) => {
+            onChange={(recordId: string | null) => {
               setFormData({ ...formData, [field.key]: recordId });
             }}
             label={field.label}
@@ -392,7 +417,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="text"
-            value={value ?? ''}
+            value={String(value ?? '')}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
             placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -404,6 +429,7 @@ export default function EntityTablePage() {
   const entityDisplayName = schema?.pluralName ?? entityName.charAt(0).toUpperCase() + entityName.slice(1);
   const schemaIcon = schema?.icon;
   const entityIcon = (schemaIcon ?? '📋');
+  const singularName = (schema?.singularName && schema.singularName !== '') ? schema.singularName : 'Record';
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
@@ -451,7 +477,7 @@ export default function EntityTablePage() {
                 onClick={() => setIsAdding(true)}
                 style={{ padding: '0.625rem 1.5rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
               >
-                + Add {(() => { const v = schema?.singularName; return (v !== '' && v != null) ? v : 'Record'; })()}
+                + Add {singularName}
               </button>
             </div>
           </div>
@@ -463,7 +489,7 @@ export default function EntityTablePage() {
         {loading && (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-            <p>Loading {entityDisplayName.toLowerCase()}...</p>
+            <p>Loading {typeof entityDisplayName === 'string' ? entityDisplayName.toLowerCase() : 'records'}...</p>
           </div>
         )}
 
@@ -496,22 +522,22 @@ export default function EntityTablePage() {
                     {tableFields.map(field => (
                       <td key={field.key} style={{ padding: '1rem 1.5rem', color: '#fff' }}>
                         {field.type === 'checkbox' ? (
-                          <span style={{ 
-                            padding: '0.25rem 0.5rem', 
-                            backgroundColor: record[field.key] ? '#065f46' : '#333', 
-                            color: record[field.key] ? '#6ee7b7' : '#999', 
-                            borderRadius: '0.25rem', 
-                            fontSize: '0.75rem' 
+                          <span style={{
+                            padding: '0.25rem 0.5rem',
+                            backgroundColor: record[field.key] ? '#065f46' : '#333',
+                            color: record[field.key] ? '#6ee7b7' : '#999',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.75rem'
                           }}>
                             {record[field.key] ? 'Yes' : 'No'}
                           </span>
                         ) : field.type === 'singleSelect' && record[field.key] ? (
-                          <span style={{ 
-                            padding: '0.25rem 0.5rem', 
-                            backgroundColor: '#1e1b4b', 
-                            color: '#a5b4fc', 
-                            borderRadius: '0.25rem', 
-                            fontSize: '0.75rem' 
+                          <span style={{
+                            padding: '0.25rem 0.5rem',
+                            backgroundColor: '#1e1b4b',
+                            color: '#a5b4fc',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.75rem'
                           }}>
                             {String(record[field.key])}
                           </span>
@@ -544,9 +570,9 @@ export default function EntityTablePage() {
             {filteredRecords.length === 0 && (
               <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
                 {searchTerm ? (
-                  <p>No {entityDisplayName.toLowerCase()} matching "{searchTerm}"</p>
+                  <p>No {typeof entityDisplayName === 'string' ? entityDisplayName.toLowerCase() : 'records'} matching &quot;{searchTerm}&quot;</p>
                 ) : (
-                  <p>No {entityDisplayName.toLowerCase()} yet. Click "Add {(() => { const v = schema?.singularName; return (v !== '' && v != null) ? v : 'Record'; })()}" to get started.</p>
+                  <p>No {typeof entityDisplayName === 'string' ? entityDisplayName.toLowerCase() : 'records'} yet. Click &quot;Add {singularName}&quot; to get started.</p>
                 )}
               </div>
             )}
@@ -560,7 +586,7 @@ export default function EntityTablePage() {
               <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>{entityIcon}</span>
-                  {isAdding ? `Add ${(() => { const v = schema?.singularName; return (v !== '' && v != null) ? v : 'Record'; })()}` : `Edit ${(() => { const v = schema?.singularName; return (v !== '' && v != null) ? v : 'Record'; })()}`}
+                  {isAdding ? `Add ${singularName}` : `Edit ${singularName}`}
                 </h2>
                 <button
                   onClick={closeModal}
@@ -588,7 +614,7 @@ export default function EntityTablePage() {
                     Cancel
                   </button>
                   <button
-                    onClick={isAdding ? handleAdd : handleUpdate}
+                    onClick={() => void (isAdding ? handleAdd() : handleUpdate())}
                     style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', border: 'none' }}
                   >
                     {isAdding ? 'Add' : 'Update'}

@@ -7,23 +7,145 @@
 import type { CompanyEnrichmentData } from './types'
 import { logger } from '../logger/logger';
 
+// Type definitions for external API responses
+
+interface WhoisRegistrant {
+  city?: string;
+  state?: string;
+  country?: string;
+  email?: string;
+  telephone?: string;
+}
+
+interface WhoisRecord {
+  registrant?: WhoisRegistrant;
+}
+
+interface WhoisResponse {
+  WhoisRecord?: WhoisRecord;
+}
+
+interface CrunchbaseEntity {
+  identifier: {
+    uuid: string;
+  };
+}
+
+interface CrunchbaseAutocompleteResponse {
+  entities?: CrunchbaseEntity[];
+}
+
+interface CrunchbaseProperties {
+  short_description?: string;
+  founded_on?: {
+    year?: number;
+  };
+  location_identifiers?: Array<{
+    value?: string;
+    location_type?: string;
+  }>;
+  num_employees_enum?: string;
+  funding_stage?: string;
+  revenue_range?: string;
+}
+
+interface CrunchbaseDetailsResponse {
+  properties?: CrunchbaseProperties;
+}
+
+interface GoogleKnowledgeGraphResult {
+  name?: string;
+  description?: string;
+  detailedDescription?: {
+    articleBody?: string;
+  };
+  url?: string;
+}
+
+interface GoogleKnowledgeGraphItem {
+  result?: GoogleKnowledgeGraphResult;
+}
+
+interface GoogleKnowledgeGraphResponse {
+  itemListElement?: GoogleKnowledgeGraphItem[];
+}
+
+interface WikipediaSearchItem {
+  title?: string;
+}
+
+interface WikipediaSearchResponse {
+  query?: {
+    search?: WikipediaSearchItem[];
+  };
+}
+
+interface WikipediaPage {
+  extract?: string;
+}
+
+interface WikipediaExtractResponse {
+  query?: {
+    pages?: Record<string, WikipediaPage>;
+  };
+}
+
+// Type guards
+
+function isWhoisResponse(data: unknown): data is WhoisResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isCrunchbaseAutocompleteResponse(data: unknown): data is CrunchbaseAutocompleteResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isCrunchbaseDetailsResponse(data: unknown): data is CrunchbaseDetailsResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isGoogleKnowledgeGraphResponse(data: unknown): data is GoogleKnowledgeGraphResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isWikipediaSearchResponse(data: unknown): data is WikipediaSearchResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isWikipediaExtractResponse(data: unknown): data is WikipediaExtractResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isWikipediaPage(data: unknown): data is WikipediaPage {
+  return typeof data === 'object' && data !== null && 'extract' in data;
+}
+
 /**
  * Get company data from WHOIS (free)
  */
 export async function getWhoisData(domain: string): Promise<Partial<CompanyEnrichmentData>> {
   try {
     logger.info('WHOIS Looking up domain}...', { file: 'backup-sources.ts' });
-    
+
     // Use a free WHOIS API
     const response = await fetch(`https://www.whoisxmlapi.com/whoisserver/WhoisService?domainName=${domain}&apiKey=at_00000000000000000000000000000&outputFormat=JSON`);
-    
+
     if (!response.ok) {
       return {};
     }
-    
-    const data = await response.json();
-    const registrant = data.WhoisRecord?.registrant ?? {};
-    
+
+    const rawData: unknown = await response.json();
+
+    if (!isWhoisResponse(rawData)) {
+      return {};
+    }
+
+    const registrant = rawData.WhoisRecord?.registrant;
+
+    if (!registrant) {
+      return {};
+    }
+
     return {
       headquarters: {
         city: registrant.city,
@@ -51,42 +173,42 @@ export async function getTechStackFromDNS(domain: string): Promise<string[]> {
     const techStack: string[] = [];
     
     // Only try DNS if we're in Node.js environment
-    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    if (typeof process !== 'undefined' && process.versions?.node) {
       try {
         // Dynamic import to avoid edge runtime issues
         const dns = await import('dns').then(mod => mod.promises);
-        
+
         // Check MX records for email provider
         try {
           const mxRecords = await dns.resolveMx(domain);
-          
+
           if (mxRecords && mxRecords.length > 0) {
             const mx = mxRecords[0].exchange.toLowerCase();
-            
+
             if (mx.includes('google')) {techStack.push('Google Workspace');}
             if (mx.includes('outlook') || mx.includes('microsoft')) {techStack.push('Microsoft 365');}
             if (mx.includes('mailgun')) {techStack.push('Mailgun');}
             if (mx.includes('sendgrid')) {techStack.push('SendGrid');}
           }
         } catch { /* MX records not available */ }
-        
+
         // Check TXT records for verification codes
         try {
           const txtRecords = await dns.resolveTxt(domain);
           const txtString = txtRecords.flat().join(' ').toLowerCase();
-          
+
           if (txtString.includes('google-site-verification')) {techStack.push('Google Analytics');}
           if (txtString.includes('facebook-domain-verification')) {techStack.push('Facebook Pixel');}
           if (txtString.includes('stripe-verification')) {techStack.push('Stripe');}
           if (txtString.includes('v=spf') && txtString.includes('mailchimp')) {techStack.push('Mailchimp');}
           if (txtString.includes('hubspot')) {techStack.push('HubSpot');}
         } catch { /* MX records not available */ }
-      } catch (error) {
+      } catch (_error: unknown) {
         logger.warn('[DNS] DNS module not available in this environment', { file: 'backup-sources.ts' });
       }
     }
 
-    return [...new Set(techStack)];
+    return Array.from(new Set(techStack));
   } catch (error: unknown) {
     const dnsError = error instanceof Error ? error : new Error(String(error));
     logger.error('[DNS] Error:', dnsError, { file: 'backup-sources.ts' });
@@ -100,41 +222,55 @@ export async function getTechStackFromDNS(domain: string): Promise<string[]> {
 export async function getCrunchbaseData(companyName: string): Promise<Partial<CompanyEnrichmentData>> {
   try {
     const apiKey = process.env.CRUNCHBASE_API_KEY;
-    
+
     if (!apiKey) {
       logger.warn('[Crunchbase] API key not configured', { file: 'backup-sources.ts' });
       return {};
     }
-    
+
     logger.info('Crunchbase Looking up companyName}...', { file: 'backup-sources.ts' });
-    
+
     const response = await fetch(
       `https://api.crunchbase.com/api/v4/autocompletes?query=${encodeURIComponent(companyName)}&collection_ids=organizations&user_key=${apiKey}`
     );
-    
+
     if (!response.ok) {
       return {};
     }
-    
-    const data = await response.json();
-    const org = data.entities?.[0];
-    
+
+    const rawData: unknown = await response.json();
+
+    if (!isCrunchbaseAutocompleteResponse(rawData)) {
+      return {};
+    }
+
+    const org = rawData.entities?.[0];
+
     if (!org) {
       return {};
     }
-    
+
     // Get organization details
     const detailsResponse = await fetch(
       `https://api.crunchbase.com/api/v4/entities/organizations/${org.identifier.uuid}?user_key=${apiKey}`
     );
-    
+
     if (!detailsResponse.ok) {
       return {};
     }
-    
-    const details = await detailsResponse.json();
-    const props = details.properties ?? {};
-    
+
+    const rawDetails: unknown = await detailsResponse.json();
+
+    if (!isCrunchbaseDetailsResponse(rawDetails)) {
+      return {};
+    }
+
+    const props = rawDetails.properties;
+
+    if (!props) {
+      return {};
+    }
+
     return {
       description: props.short_description,
       foundedYear: props.founded_on?.year,
@@ -142,7 +278,7 @@ export async function getCrunchbaseData(companyName: string): Promise<Partial<Co
         city: props.location_identifiers?.[0]?.value,
         country: props.location_identifiers?.[0]?.location_type,
       },
-      employeeCount: props.num_employees_enum,
+      employeeCount: props.num_employees_enum ? parseInt(props.num_employees_enum, 10) : undefined,
       fundingStage: props.funding_stage,
       revenue: props.revenue_range,
     };
@@ -159,32 +295,37 @@ export async function getCrunchbaseData(companyName: string): Promise<Partial<Co
 export async function getGoogleKnowledgeGraph(companyName: string): Promise<Partial<CompanyEnrichmentData>> {
   try {
     const apiKey = process.env.GOOGLE_KNOWLEDGE_GRAPH_API_KEY;
-    
+
     if (!apiKey) {
       logger.warn('[Google KG] API key not configured', { file: 'backup-sources.ts' });
       return {};
     }
-    
+
     logger.info('Google KG Looking up companyName}...', { file: 'backup-sources.ts' });
-    
+
     const response = await fetch(
       `https://kgsearch.googleapis.com/v1/entities:search?query=${encodeURIComponent(companyName)}&types=Organization&key=${apiKey}&limit=1`
     );
-    
+
     if (!response.ok) {
       return {};
     }
-    
-    const data = await response.json();
-    const entity = data.itemListElement?.[0]?.result;
-    
+
+    const rawData: unknown = await response.json();
+
+    if (!isGoogleKnowledgeGraphResponse(rawData)) {
+      return {};
+    }
+
+    const entity = rawData.itemListElement?.[0]?.result;
+
     if (!entity) {
       return {};
     }
-    
+
     return {
       name: entity.name,
-      description:entity.description ?? entity.detailedDescription?.articleBody,
+      description: entity.description ?? entity.detailedDescription?.articleBody,
       website: entity.url,
     };
   } catch (error: unknown) {
@@ -200,47 +341,68 @@ export async function getGoogleKnowledgeGraph(companyName: string): Promise<Part
 export async function getWikipediaData(companyName: string): Promise<Partial<CompanyEnrichmentData>> {
   try {
     logger.info('Wikipedia Looking up companyName}...', { file: 'backup-sources.ts' });
-    
+
     // Search for page
     const searchResponse = await fetch(
       `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(companyName)}&format=json&origin=*`
     );
-    
+
     if (!searchResponse.ok) {
       return {};
     }
-    
-    const searchData = await searchResponse.json();
-    const pageTitle = searchData.query?.search?.[0]?.title;
-    
-    if (!pageTitle) {
+
+    const rawSearchData: unknown = await searchResponse.json();
+
+    if (!isWikipediaSearchResponse(rawSearchData)) {
       return {};
     }
-    
+
+    const pageTitle = rawSearchData.query?.search?.[0]?.title;
+
+    if (!pageTitle || typeof pageTitle !== 'string') {
+      return {};
+    }
+
     // Get page extract
     const extractResponse = await fetch(
       `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(pageTitle)}&prop=extracts&exintro=true&format=json&origin=*`
     );
-    
+
     if (!extractResponse.ok) {
       return {};
     }
-    
-    const extractData = await extractResponse.json();
-    const pages = extractData.query?.pages ?? {};
-    const page = Object.values(pages)[0] as any;
-    
-    if (!page?.extract) {
+
+    const rawExtractData: unknown = await extractResponse.json();
+
+    if (!isWikipediaExtractResponse(rawExtractData)) {
       return {};
     }
-    
+
+    const pages = rawExtractData.query?.pages;
+
+    if (!pages) {
+      return {};
+    }
+
+    const pagesArray = Object.values(pages);
+
+    if (pagesArray.length === 0) {
+      return {};
+    }
+
+    const page = pagesArray[0];
+
+    if (!isWikipediaPage(page) || !page.extract || typeof page.extract !== 'string') {
+      return {};
+    }
+
     // Clean HTML from extract
     const description = page.extract
       .replace(/<[^>]*>/g, '')
       .replace(/\s+/g, ' ')
       .trim()
       .substring(0, 500);
-    
+
     return {
       description,
     };

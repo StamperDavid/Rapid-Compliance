@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import type { VoiceTrainingSettings, BrandDNA } from '@/types/organization';
-import type { TTSEngineType, TTSEngineConfig, TTSVoice, TTSProviderInfo, APIKeyMode } from '@/lib/voice/tts/types';
+import type { TTSEngineType, TTSVoice, APIKeyMode } from '@/lib/voice/tts/types';
 import { TTS_PROVIDER_INFO, DEFAULT_TTS_CONFIGS } from '@/lib/voice/tts/types';
 
 // Types
@@ -38,6 +38,113 @@ interface KnowledgeItem {
   uploadedAt: string;
 }
 
+// API Response Types
+interface TTSConfigResponse {
+  success: boolean;
+  config?: {
+    engine?: TTSEngineType;
+    keyMode?: APIKeyMode;
+    voiceId?: string;
+  };
+  error?: string;
+}
+
+interface TTSVoicesResponse {
+  success: boolean;
+  voices?: TTSVoice[];
+  error?: string;
+}
+
+interface TTSValidateResponse {
+  success: boolean;
+  valid: boolean;
+  error?: string;
+}
+
+interface TTSGenerateResponse {
+  success: boolean;
+  audio?: string;
+  error?: string;
+}
+
+interface TTSSaveResponse {
+  success: boolean;
+  error?: string;
+}
+
+interface FirestoreVoiceData {
+  toolSettings?: unknown;
+  inheritFromBrandDNA?: boolean;
+}
+
+interface FirestoreOrgData {
+  brandDNA?: unknown;
+}
+
+interface FirestoreAdminKeys {
+  openrouter?: {
+    apiKey?: string;
+  };
+}
+
+// Type guard functions
+function isVoiceTrainingSettings(value: unknown): value is VoiceTrainingSettings {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.greetingScript === 'string' &&
+    typeof v.toneOfVoice === 'string' &&
+    typeof v.callHandoffInstructions === 'string' &&
+    typeof v.objectionResponses === 'object' &&
+    Array.isArray(v.qualificationCriteria) &&
+    Array.isArray(v.closingTechniques)
+  );
+}
+
+function isBrandDNA(value: unknown): value is BrandDNA {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.companyDescription === 'string';
+}
+
+function isCallHistoryItemArray(value: unknown): value is CallHistoryItem[] {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  return value.every((item: unknown) => {
+    if (!item || typeof item !== 'object') {
+      return false;
+    }
+    const obj = item as Record<string, unknown>;
+    return (
+      typeof obj.id === 'string' &&
+      typeof obj.duration === 'string' &&
+      typeof obj.status === 'string' &&
+      typeof obj.timestamp === 'string' &&
+      typeof obj.summary === 'string'
+    );
+  });
+}
+
+function isKnowledgeItemArray(value: unknown): value is KnowledgeItem[] {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  return value.every((item: unknown) => {
+    if (!item || typeof item !== 'object') {
+      return false;
+    }
+    const obj = item as Record<string, unknown>;
+    return (
+      typeof obj.id === 'string' &&
+      typeof obj.title === 'string' &&
+      typeof obj.content === 'string' &&
+      typeof obj.type === 'string' &&
+      typeof obj.uploadedAt === 'string'
+    );
+  });
+}
+
 // Default settings
 const defaultVoiceSettings: VoiceTrainingSettings = {
   greetingScript: '',
@@ -51,7 +158,7 @@ const defaultVoiceSettings: VoiceTrainingSettings = {
 export default function VoiceAITrainingLabPage() {
   const { user } = useAuth();
   const params = useParams();
-  const orgId = params.orgId as string;
+  const orgId = typeof params.orgId === 'string' ? params.orgId : '';
   const { theme } = useOrgTheme();
 
   // Tab state
@@ -116,7 +223,8 @@ export default function VoiceAITrainingLabPage() {
 
   // Load data on mount
   useEffect(() => {
-    loadVoiceTrainingData();
+    void loadVoiceTrainingData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
   // Call timer
@@ -156,24 +264,29 @@ export default function VoiceAITrainingLabPage() {
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/toolTraining`,
         'voice'
       );
+      const typedVoiceData = voiceData as FirestoreVoiceData | null;
 
-      if (voiceData?.toolSettings) {
-        setVoiceSettings(voiceData.toolSettings as VoiceTrainingSettings);
+      if (typedVoiceData?.toolSettings && isVoiceTrainingSettings(typedVoiceData.toolSettings)) {
+        setVoiceSettings(typedVoiceData.toolSettings);
         // Convert objectionResponses to array format for UI
-        const templates = Object.entries(voiceData.toolSettings.objectionResponses || {}).map(
-          ([key, response]) => ({ key, response: response as string })
-        );
-        setObjectionTemplates(templates);
+        const objectionResponses = typedVoiceData.toolSettings.objectionResponses;
+        if (objectionResponses && typeof objectionResponses === 'object') {
+          const templates = Object.entries(objectionResponses).map(
+            ([key, response]) => ({ key, response: typeof response === 'string' ? response : String(response) })
+          );
+          setObjectionTemplates(templates);
+        }
       }
 
-      if (voiceData?.inheritFromBrandDNA !== undefined) {
-        setOverrideForVoice(!voiceData.inheritFromBrandDNA);
+      if (typedVoiceData?.inheritFromBrandDNA !== undefined) {
+        setOverrideForVoice(!typedVoiceData.inheritFromBrandDNA);
       }
 
       // Load Brand DNA
       const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
-      if (orgData?.brandDNA) {
-        setBrandDNA(orgData.brandDNA as BrandDNA);
+      const typedOrgData = orgData as FirestoreOrgData | null;
+      if (typedOrgData?.brandDNA && isBrandDNA(typedOrgData.brandDNA)) {
+        setBrandDNA(typedOrgData.brandDNA);
       }
 
       // Load call history
@@ -183,7 +296,9 @@ export default function VoiceAITrainingLabPage() {
         [orderBy('timestamp', 'desc')],
         50
       );
-      setCallHistory(historyResult.data as CallHistoryItem[] || []);
+      if (isCallHistoryItemArray(historyResult.data)) {
+        setCallHistory(historyResult.data);
+      }
 
       // Load knowledge base
       const knowledgeResult = await FirestoreService.getAllPaginated(
@@ -191,9 +306,11 @@ export default function VoiceAITrainingLabPage() {
         [orderBy('uploadedAt', 'desc')],
         100
       );
-      setKnowledgeItems(knowledgeResult.data as KnowledgeItem[] || []);
+      if (isKnowledgeItemArray(knowledgeResult.data)) {
+        setKnowledgeItems(knowledgeResult.data);
+      }
 
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error loading voice training data:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
     } finally {
       setLoading(false);
@@ -255,13 +372,13 @@ export default function VoiceAITrainingLabPage() {
   const loadTTSConfig = async () => {
     try {
       const response = await fetch(`/api/voice/tts?orgId=${orgId}&action=config`);
-      const data = await response.json();
+      const data = await response.json() as TTSConfigResponse;
       if (data.success && data.config) {
         setTtsEngine(data.config.engine || 'native');
         setTtsKeyMode(data.config.keyMode || 'platform');
         setSelectedVoiceId(data.config.voiceId || '');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error loading TTS config:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
     }
   };
@@ -270,7 +387,7 @@ export default function VoiceAITrainingLabPage() {
     setLoadingVoices(true);
     try {
       const response = await fetch(`/api/voice/tts?orgId=${orgId}&engine=${engine}`);
-      const data = await response.json();
+      const data = await response.json() as TTSVoicesResponse;
       if (data.success && data.voices) {
         setTtsVoices(data.voices);
         // Set default voice if none selected
@@ -278,7 +395,7 @@ export default function VoiceAITrainingLabPage() {
           setSelectedVoiceId(data.voices[0].id);
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error loading TTS voices:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
     } finally {
       setLoadingVoices(false);
@@ -287,12 +404,14 @@ export default function VoiceAITrainingLabPage() {
 
   // Load TTS config on mount
   useEffect(() => {
-    loadTTSConfig();
+    void loadTTSConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
   // Load voices when engine changes
   useEffect(() => {
-    loadTTSVoices(ttsEngine);
+    void loadTTSVoices(ttsEngine);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ttsEngine, orgId]);
 
   const handleEngineChange = (engine: TTSEngineType) => {
@@ -320,9 +439,9 @@ export default function VoiceAITrainingLabPage() {
           apiKey: ttsUserApiKey,
         }),
       });
-      const data = await response.json();
+      const data = await response.json() as TTSValidateResponse;
       setApiKeyValid(data.valid);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error validating API key:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
       setApiKeyValid(false);
     } finally {
@@ -344,7 +463,7 @@ export default function VoiceAITrainingLabPage() {
           voiceId: selectedVoiceId,
         }),
       });
-      const data = await response.json();
+      const data = await response.json() as TTSGenerateResponse;
       if (data.success && data.audio) {
         // Play the audio
         if (audioRef.current) {
@@ -356,7 +475,7 @@ export default function VoiceAITrainingLabPage() {
       } else {
         alert(data.error || 'Failed to generate audio');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error testing voice:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
       alert('Failed to test voice. Please try again.');
     } finally {
@@ -382,11 +501,11 @@ export default function VoiceAITrainingLabPage() {
           },
         }),
       });
-      const data = await response.json();
+      const data = await response.json() as TTSSaveResponse;
       if (!data.success) {
         throw new Error(data.error || 'Failed to save TTS config');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error saving TTS config:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
       throw error;
     }
@@ -438,7 +557,7 @@ export default function VoiceAITrainingLabPage() {
 
       alert('Voice AI settings saved successfully!');
 
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error saving voice settings:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
       alert('Failed to save settings. Please try again.');
     } finally {
@@ -518,7 +637,7 @@ export default function VoiceAITrainingLabPage() {
           false
         );
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error saving call history:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
     }
   };
@@ -547,7 +666,7 @@ export default function VoiceAITrainingLabPage() {
         timestamp: new Date().toISOString(),
       };
       setCallMessages(prev => [...prev, agentMessage]);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error generating agent response:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
     } finally {
       setIsAgentTyping(false);
@@ -568,7 +687,7 @@ export default function VoiceAITrainingLabPage() {
 
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys') as FirestoreAdminKeys | null;
 
       if (adminKeys?.openrouter?.apiKey) {
         const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
@@ -584,7 +703,7 @@ export default function VoiceAITrainingLabPage() {
         ];
 
         const response = await provider.chat({
-          model: 'anthropic/claude-3.5-sonnet' as any,
+          model: 'anthropic/claude-3.5-sonnet',
           messages,
           temperature: 0.7,
         });
@@ -594,16 +713,20 @@ export default function VoiceAITrainingLabPage() {
 
       // Fallback to Gemini
       const { sendChatMessage } = await import('@/lib/ai/gemini-service');
-      const conversationHistory = callMessages.map(msg => ({
+      interface GeminiMessage {
+        role: 'user' | 'model';
+        parts: Array<{ text: string }>;
+      }
+      const conversationHistory: GeminiMessage[] = callMessages.map(msg => ({
         role: msg.role === 'caller' ? 'user' : 'model',
         parts: [{ text: msg.content }],
       }));
       conversationHistory.push({ role: 'user', parts: [{ text: callerMessage }] });
 
-      const result = await sendChatMessage(conversationHistory as any, systemPrompt);
+      const result = await sendChatMessage(conversationHistory, systemPrompt);
       return result.text;
 
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error calling AI provider:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
       return 'I understand. Let me help you with that. Could you please provide more details?';
     }
@@ -674,7 +797,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
           false
         );
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error saving knowledge item:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
     }
 
@@ -691,7 +814,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         await FirestoreService.delete(`${COLLECTIONS.ORGANIZATIONS}/${orgId}/voiceKnowledge`, id);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error deleting knowledge item:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
     }
   };
@@ -728,15 +851,15 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid #1a1a1a', backgroundColor: '#0a0a0a' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '2rem' }}>
-          {[
-            { id: 'settings', label: 'Settings' },
-            { id: 'test-calls', label: 'Test Calls' },
-            { id: 'history', label: 'History' },
-            { id: 'knowledge', label: 'Knowledge' },
-          ].map(tab => (
+          {([
+            { id: 'settings' as const, label: 'Settings' },
+            { id: 'test-calls' as const, label: 'Test Calls' },
+            { id: 'history' as const, label: 'History' },
+            { id: 'knowledge' as const, label: 'Knowledge' },
+          ] as const).map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               style={{
                 padding: '1rem 0',
                 backgroundColor: 'transparent',
@@ -906,7 +1029,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                               }}
                             />
                             <button
-                              onClick={handleValidateApiKey}
+                              onClick={() => void handleValidateApiKey()}
                               disabled={validatingKey || !ttsUserApiKey.trim()}
                               style={{
                                 padding: '0.75rem 1rem',
@@ -971,7 +1094,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                   {/* Test Voice Button */}
                   <button
-                    onClick={handleTestVoice}
+                    onClick={() => void handleTestVoice()}
                     disabled={testingVoice || !selectedVoiceId}
                     style={{
                       width: '100%',
@@ -1099,7 +1222,12 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     </label>
                     <select
                       value={voiceSettings.toneOfVoice}
-                      onChange={(e) => setVoiceSettings(prev => ({ ...prev, toneOfVoice: e.target.value as any }))}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === 'warm' || value === 'direct' || value === 'professional') {
+                          setVoiceSettings(prev => ({ ...prev, toneOfVoice: value }));
+                        }
+                      }}
                       style={{
                         width: '100%',
                         padding: '0.75rem',
@@ -1246,7 +1374,11 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       value={newCriteria}
                       onChange={(e) => setNewCriteria(e.target.value)}
                       placeholder="Add qualification criteria..."
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddCriteria()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddCriteria();
+                        }
+                      }}
                       style={{
                         flex: 1,
                         padding: '0.5rem',
@@ -1276,7 +1408,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                 {/* Save Button */}
                 <button
-                  onClick={handleSaveSettings}
+                  onClick={() => void handleSaveSettings()}
                   disabled={saving}
                   style={{
                     width: '100%',
@@ -1393,7 +1525,11 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             type="text"
                             value={callerInput}
                             onChange={(e) => setCallerInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSendCallerMessage()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                void handleSendCallerMessage();
+                              }
+                            }}
                             placeholder="Speak as caller..."
                             style={{
                               flex: 1,
@@ -1406,7 +1542,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             }}
                           />
                           <button
-                            onClick={handleSendCallerMessage}
+                            onClick={() => void handleSendCallerMessage()}
                             disabled={!callerInput.trim()}
                             style={{
                               padding: '0.75rem 1rem',
@@ -1423,7 +1559,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           </button>
                         </div>
                         <button
-                          onClick={handleEndCall}
+                          onClick={() => void handleEndCall()}
                           style={{
                             width: '100%',
                             padding: '0.75rem',
@@ -1612,7 +1748,11 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             type="text"
                             value={callerInput}
                             onChange={(e) => setCallerInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSendCallerMessage()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                void handleSendCallerMessage();
+                              }
+                            }}
                             placeholder="Speak as caller..."
                             style={{
                               flex: 1,
@@ -1625,7 +1765,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             }}
                           />
                           <button
-                            onClick={handleSendCallerMessage}
+                            onClick={() => void handleSendCallerMessage()}
                             disabled={!callerInput.trim()}
                             style={{
                               padding: '0.75rem 1rem',
@@ -1642,7 +1782,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           </button>
                         </div>
                         <button
-                          onClick={handleEndCall}
+                          onClick={() => void handleEndCall()}
                           style={{
                             width: '100%',
                             padding: '0.75rem',
@@ -1739,7 +1879,12 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   />
                   <select
                     value={newKnowledgeType}
-                    onChange={(e) => setNewKnowledgeType(e.target.value as any)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === 'script' || value === 'faq' || value === 'product' || value === 'policy') {
+                        setNewKnowledgeType(value);
+                      }
+                    }}
                     style={{
                       padding: '0.75rem',
                       backgroundColor: '#1a1a1a',
@@ -1776,7 +1921,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 />
 
                 <button
-                  onClick={handleAddKnowledge}
+                  onClick={() => void handleAddKnowledge()}
                   disabled={!newKnowledgeTitle.trim() || !newKnowledgeContent.trim()}
                   style={{
                     padding: '0.75rem 1.5rem',
@@ -1819,7 +1964,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           </span>
                         </div>
                         <button
-                          onClick={() => handleRemoveKnowledge(item.id)}
+                          onClick={() => void handleRemoveKnowledge(item.id)}
                           style={{
                             background: 'none',
                             border: 'none',

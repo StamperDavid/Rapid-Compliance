@@ -13,12 +13,137 @@ import { logger } from '@/lib/logger/logger';
 
 type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
 
+// Type definitions for CRM entities
+interface BaseRecord {
+  id: string;
+}
+
+interface Lead extends BaseRecord {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  company: string;
+  title: string;
+  lead_source: string;
+  lead_status: string;
+  rating: string;
+  estimated_value: number;
+}
+
+interface Company extends BaseRecord {
+  name: string;
+  website: string;
+  phone: string;
+  industry: string;
+  status: string;
+  annual_revenue: number;
+}
+
+interface Contact extends BaseRecord {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  title: string;
+  company_id: string;
+  status: string;
+}
+
+interface Deal extends BaseRecord {
+  name: string;
+  company_id: string;
+  contact_id: string;
+  amount: number;
+  stage: string;
+  probability: number;
+  expected_close_date: string;
+}
+
+interface Product extends BaseRecord {
+  name: string;
+  sku: string;
+  price: number;
+  category: string;
+  active: boolean;
+  stock_quantity: number;
+}
+
+interface Quote extends BaseRecord {
+  quote_number: string;
+  company_id: string;
+  quote_date: string;
+  expiry_date: string;
+  total: number;
+  status: string;
+}
+
+interface Invoice extends BaseRecord {
+  invoice_number: string;
+  company_id: string;
+  invoice_date: string;
+  due_date: string;
+  total: number;
+  paid_amount: number;
+  balance: number;
+  status: string;
+}
+
+interface Payment extends BaseRecord {
+  payment_number: string;
+  invoice_id: string;
+  payment_date: string;
+  amount: number;
+  payment_method: string;
+  transaction_id: string;
+  status: string;
+}
+
+interface Order extends BaseRecord {
+  order_number: string;
+  company_id: string;
+  order_date: string;
+  total: number;
+  status: string;
+}
+
+interface Task extends BaseRecord {
+  subject: string;
+  due_date: string;
+  priority: string;
+  status: string;
+}
+
+type CRMRecord = Lead | Company | Contact | Deal | Product | Quote | Invoice | Payment | Order | Task;
+
+interface CRMConfig {
+  businessName?: string;
+  industry?: string;
+  [key: string]: unknown;
+}
+
+interface SchemaField {
+  key: string;
+  label: string;
+  type: string;
+  options?: string[];
+}
+
+interface ImportPreviewRow {
+  [key: string]: string;
+}
+
+interface CapacityCheckResponse {
+  allowed: boolean;
+  message: string;
+}
+
 // Component that uses useSearchParams - wrapped in Suspense
 function CRMContent() {
   const { user } = useAuth();
   const { theme, loading: themeLoading } = useOrgTheme(); // Load organization-specific theme
   const searchParams = useSearchParams();
-  const [config, setConfig] = useState<any>(null);
+  const [config, setConfig] = useState<CRMConfig | null>(null);
   const [activeView, setActiveView] = useState<ViewType>('leads');
   
   // Update activeView based on URL query parameter
@@ -35,12 +160,12 @@ function CRMContent() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFilterBuilder, setShowFilterBuilder] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ViewFilter | null>(null);
-  const [selectedRecord, setSelectedRecord] = useState<any>(null);
-  const [formData, setFormData] = useState<any>({});
+  const [selectedRecord, setSelectedRecord] = useState<CRMRecord | null>(null);
+  const [formData, setFormData] = useState<Partial<CRMRecord>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
 
   // Show toast notification
@@ -62,9 +187,9 @@ function CRMContent() {
         );
         
         if (configData) {
-          setConfig(configData);
+          setConfig(configData as CRMConfig);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         logger.error('Failed to load CRM config:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         // Continue with null config (defaults will be used)
       }
@@ -74,96 +199,97 @@ function CRMContent() {
   }, [user?.organizationId]);
 
   // Sample data with setters
-  const [leads, setLeads] = useState([
+  const [leads, setLeads] = useState<Lead[]>([
     { id: '1', first_name: 'Sarah', last_name: 'Williams', email: 'sarah@newtech.com', phone: '555-0400', company: 'NewTech Inc', title: 'Marketing Director', lead_source: 'Website', lead_status: 'New', rating: 'Hot', estimated_value: 75000 },
     { id: '2', first_name: 'Michael', last_name: 'Brown', email: 'mbrown@startup.io', phone: '555-0500', company: 'Startup.io', title: 'CEO', lead_source: 'Referral', lead_status: 'Contacted', rating: 'Warm', estimated_value: 150000 },
     { id: '3', first_name: 'Emily', last_name: 'Davis', email: 'emily@enterprise.com', phone: '555-0600', company: 'Enterprise Corp', title: 'VP Operations', lead_source: 'Cold Call', lead_status: 'Qualified', rating: 'Hot', estimated_value: 200000 },
   ]);
 
-  const [companies, setCompanies] = useState([
+  const [companies, setCompanies] = useState<Company[]>([
     { id: '1', name: 'Acme Corp', website: 'acme.com', phone: '555-0100', industry: 'Technology', status: 'Active', annual_revenue: 5000000 },
     { id: '2', name: 'Global Industries', website: 'global.com', phone: '555-0200', industry: 'Manufacturing', status: 'Active', annual_revenue: 12000000 },
     { id: '3', name: 'Tech Solutions', website: 'techsol.com', phone: '555-0300', industry: 'Technology', status: 'Prospect', annual_revenue: 2500000 },
   ]);
 
-  const [contacts, setContacts] = useState([
+  const [contacts, setContacts] = useState<Contact[]>([
     { id: '1', first_name: 'John', last_name: 'Doe', email: 'john@acme.com', phone: '555-0101', title: 'CEO', company_id: '1', status: 'Active' },
     { id: '2', first_name: 'Jane', last_name: 'Smith', email: 'jane@global.com', phone: '555-0201', title: 'VP Sales', company_id: '2', status: 'Active' },
     { id: '3', first_name: 'Bob', last_name: 'Johnson', email: 'bob@techsol.com', phone: '555-0301', title: 'CTO', company_id: '3', status: 'Active' },
   ]);
 
-  const [deals, setDeals] = useState([
+  const [deals, setDeals] = useState<Deal[]>([
     { id: '1', name: 'Q1 2024 Contract', company_id: '1', contact_id: '1', amount: 50000, stage: 'Proposal', probability: 60, expected_close_date: '2024-03-31' },
     { id: '2', name: 'Enterprise License', company_id: '2', contact_id: '2', amount: 125000, stage: 'Negotiation', probability: 80, expected_close_date: '2024-02-28' },
     { id: '3', name: 'Consulting Package', company_id: '3', contact_id: '3', amount: 75000, stage: 'Qualification', probability: 40, expected_close_date: '2024-04-15' },
   ]);
 
-  const [products, setProducts] = useState([
+  const [products, setProducts] = useState<Product[]>([
     { id: '1', name: 'Premium Plan', sku: 'PLAN-PREM', price: 299, category: 'Subscription', active: true, stock_quantity: 999 },
     { id: '2', name: 'Enterprise Plan', sku: 'PLAN-ENT', price: 999, category: 'Subscription', active: true, stock_quantity: 999 },
     { id: '3', name: 'Consulting Hours', sku: 'CONS-HR', price: 200, category: 'Service', active: true, stock_quantity: 0 },
   ]);
 
-  const [quotes, setQuotes] = useState([
+  const [quotes, setQuotes] = useState<Quote[]>([
     { id: '1', quote_number: 'QUO-001', company_id: '1', quote_date: '2024-01-10', expiry_date: '2024-02-10', total: 50000, status: 'Sent' },
     { id: '2', quote_number: 'QUO-002', company_id: '2', quote_date: '2024-01-15', expiry_date: '2024-02-15', total: 125000, status: 'Accepted' },
   ]);
 
-  const [invoices, setInvoices] = useState([
+  const [invoices, setInvoices] = useState<Invoice[]>([
     { id: '1', invoice_number: 'INV-001', company_id: '1', invoice_date: '2024-01-15', due_date: '2024-02-15', total: 50000, paid_amount: 25000, balance: 25000, status: 'Partial' },
     { id: '2', invoice_number: 'INV-002', company_id: '2', invoice_date: '2024-01-20', due_date: '2024-02-20', total: 125000, paid_amount: 125000, balance: 0, status: 'Paid' },
   ]);
 
-  const [payments, setPayments] = useState([
+  const [payments, setPayments] = useState<Payment[]>([
     { id: '1', payment_number: 'PAY-001', invoice_id: '1', payment_date: '2024-01-20', amount: 25000, payment_method: 'Stripe', transaction_id: 'ch_3abc123xyz', status: 'Completed' },
     { id: '2', payment_number: 'PAY-002', invoice_id: '2', payment_date: '2024-01-25', amount: 125000, payment_method: 'Bank Transfer', transaction_id: 'ACH-987654', status: 'Completed' },
     { id: '3', payment_number: 'PAY-003', invoice_id: '1', payment_date: '2024-02-01', amount: 25000, payment_method: 'Credit Card', transaction_id: 'ch_4def456uvw', status: 'Completed' },
   ]);
 
-  const [orders, setOrders] = useState([
+  const [orders, setOrders] = useState<Order[]>([
     { id: '1', order_number: 'ORD-001', company_id: '1', order_date: '2024-01-15', total: 50000, status: 'Processing' },
   ]);
 
-  const [tasks, setTasks] = useState([
+  const [tasks, setTasks] = useState<Task[]>([
     { id: '1', subject: 'Follow up with Acme', due_date: '2024-01-25', priority: 'High', status: 'In Progress' },
     { id: '2', subject: 'Send proposal to Global', due_date: '2024-01-26', priority: 'Urgent', status: 'Not Started' },
     { id: '3', subject: 'Schedule demo with Tech Solutions', due_date: '2024-01-27', priority: 'Normal', status: 'Not Started' },
   ]);
 
-  const dataMap: Record<ViewType, any[]> = {
+  const dataMap: Record<ViewType, CRMRecord[]> = {
     leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks
   };
 
-  const setterMap: Record<ViewType, React.Dispatch<React.SetStateAction<any[]>>> = {
-    leads: setLeads,
-    companies: setCompanies,
-    contacts: setContacts,
-    deals: setDeals,
-    products: setProducts,
-    quotes: setQuotes,
-    invoices: setInvoices,
-    payments: setPayments,
-    orders: setOrders,
-    tasks: setTasks,
+  const setterMap: Record<ViewType, React.Dispatch<React.SetStateAction<CRMRecord[]>>> = {
+    leads: setLeads as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    companies: setCompanies as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    contacts: setContacts as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    deals: setDeals as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    products: setProducts as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    quotes: setQuotes as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    invoices: setInvoices as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    payments: setPayments as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    orders: setOrders as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    tasks: setTasks as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
   };
 
-  const getActiveData = () => {
-    let data = dataMap[activeView] || [];
-    
+  const getActiveData = (): CRMRecord[] => {
+    let data: CRMRecord[] = dataMap[activeView] || [];
+
     // Apply filters first
     if (activeFilter) {
-      data = FilterEngine.applyFilter(data, activeFilter);
+      const filtered = FilterEngine.applyFilter(data as unknown as Record<string, unknown>[], activeFilter);
+      data = filtered as unknown as CRMRecord[];
     }
-    
+
     // Then apply search
     if (searchQuery) {
-      data = data.filter((record: any) => {
-        return Object.values(record).some((value: any) => 
+      data = data.filter((record: CRMRecord) => {
+        return Object.values(record).some((value: unknown) =>
           String(value).toLowerCase().includes(searchQuery.toLowerCase())
         );
       });
     }
-    
+
     return data;
   };
 
@@ -181,13 +307,13 @@ function CRMContent() {
     setShowAddModal(true);
   };
 
-  const handleEdit = (record: any) => {
+  const handleEdit = (record: CRMRecord) => {
     setSelectedRecord(record);
     setFormData({ ...record });
     setShowEditModal(true);
   };
 
-  const handleDelete = (record: any) => {
+  const handleDelete = (record: CRMRecord) => {
     setSelectedRecord(record);
     setShowDeleteConfirm(true);
   };
@@ -196,19 +322,20 @@ function CRMContent() {
     const newRecord = {
       ...formData,
       id: Date.now().toString(),
-    };
-    
+    } as CRMRecord;
+
     const setter = setterMap[activeView];
-    setter((prev: any[]) => [...prev, newRecord]);
+    setter((prev: CRMRecord[]) => [...prev, newRecord]);
     setShowAddModal(false);
     setFormData({});
     showToast(`${getSchema().singularName} added successfully!`, 'success');
   };
 
   const handleSaveEdit = () => {
+    if (!selectedRecord) {return;}
     const setter = setterMap[activeView];
-    setter((prev: any[]) => 
-      prev.map(item => item.id === selectedRecord.id ? { ...item, ...formData } : item)
+    setter((prev: CRMRecord[]) =>
+      prev.map(item => item.id === selectedRecord.id ? { ...item, ...formData } as CRMRecord : item)
     );
     setShowEditModal(false);
     setFormData({});
@@ -217,8 +344,9 @@ function CRMContent() {
   };
 
   const confirmDelete = () => {
+    if (!selectedRecord) {return;}
     const setter = setterMap[activeView];
-    setter((prev: any[]) => prev.filter(item => item.id !== selectedRecord.id));
+    setter((prev: CRMRecord[]) => prev.filter(item => item.id !== selectedRecord.id));
     setShowDeleteConfirm(false);
     setSelectedRecord(null);
     showToast(`${getSchema().singularName} deleted successfully!`, 'success');
@@ -228,9 +356,9 @@ function CRMContent() {
     const data = getActiveData();
     const csv = [
       Object.keys(data[0] ?? {}).join(','),
-      ...data.map((row: any) => Object.values(row).join(','))
+      ...data.map((row: CRMRecord) => Object.values(row).join(','))
     ].join('\n');
-    
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -278,24 +406,24 @@ function CRMContent() {
             setImportFile(null);
             return;
           }
-          
+
           // Show capacity info
           showToast(
             `✅ ${capacityCheck.message}`,
             'success'
           );
         }
-      } catch (error) {
-        console.error('Error checking capacity:', error);
+      } catch (error: unknown) {
+        console.error('Error checking capacity:', error instanceof Error ? error.message : String(error));
         // Continue anyway - don't block import on capacity check failure
       }
 
       const data = lines.slice(1, 6).map(line => {
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-        return headers.reduce((obj: any, header, idx) => {
+        return headers.reduce((obj: ImportPreviewRow, header, idx) => {
           obj[header] = values[idx] || '';
           return obj;
-        }, {});
+        }, {} as ImportPreviewRow);
       });
 
       setImportPreview(data);
@@ -305,8 +433,8 @@ function CRMContent() {
       const mapping: Record<string, string> = {};
       headers.forEach(header => {
         const lowerHeader = header.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        const matchedField = schema.fields.find((f: any) => 
-          f.key.toLowerCase() === lowerHeader || 
+        const matchedField = schema.fields.find((f: SchemaField) =>
+          f.key.toLowerCase() === lowerHeader ||
           f.label.toLowerCase() === header.toLowerCase() ||
           lowerHeader.includes(f.key.toLowerCase())
         );
@@ -330,20 +458,20 @@ function CRMContent() {
       
       const newRecords = lines.slice(1).map((line, idx) => {
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-        const record: any = { id: `import-${Date.now()}-${idx}` };
-        
+        const record: Partial<CRMRecord> = { id: `import-${Date.now()}-${idx}` };
+
         headers.forEach((header, i) => {
           const targetField = columnMapping[header];
           if (targetField && values[i]) {
-            record[targetField] = values[i];
+            (record as Record<string, unknown>)[targetField] = values[i];
           }
         });
-        
-        return record;
+
+        return record as CRMRecord;
       });
 
       const setter = setterMap[activeView];
-      setter((prev: any[]) => [...prev, ...newRecords]);
+      setter((prev: CRMRecord[]) => [...prev, ...newRecords]);
       
       setShowImportModal(false);
       setImportFile(null);
@@ -611,7 +739,7 @@ function CRMContent() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ backgroundColor: '#111' }}>
                 <tr>
-                  {getSchema().fields.slice(0, 6).map((field: any) => (
+                  {getSchema().fields.slice(0, 6).map((field: SchemaField) => (
                     <th key={field.key} style={{
                       padding: '1rem 1.5rem',
                       textAlign: 'left',
@@ -638,54 +766,57 @@ function CRMContent() {
                 </tr>
               </thead>
               <tbody>
-                {getActiveData().map((record: any, idx: number) => (
+                {getActiveData().map((record: CRMRecord) => {
+                  const recordData = record as unknown as Record<string, unknown>;
+                  return (
                   <tr key={record.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
-                    {getSchema().fields.slice(0, 6).map((field: any) => (
+                    {getSchema().fields.slice(0, 6).map((field: SchemaField) => (
                       <td key={field.key} style={{ padding: '1rem 1.5rem', color: '#ffffff' }}>
                         {field.type === 'currency' ? (
-                          <span style={{ fontWeight: '600' }}>${Number(record[field.key] ?? 0).toLocaleString()}</span>
+                          <span style={{ fontWeight: '600' }}>${Number(recordData[field.key] ?? 0).toLocaleString()}</span>
                         ) : field.type === 'lookup' && field.key === 'company_id' ? (
-                          <span style={{ color: primaryColor }}>{getCompanyName(record[field.key])}</span>
+                          <span style={{ color: primaryColor }}>{getCompanyName(String(recordData[field.key] ?? ''))}</span>
                         ) : field.type === 'checkbox' ? (
                           <span style={{
                             padding: '0.25rem 0.5rem',
-                            backgroundColor: record[field.key] ? '#065f46' : '#333',
-                            color: record[field.key] ? '#6ee7b7' : '#999',
+                            backgroundColor: recordData[field.key] ? '#065f46' : '#333',
+                            color: recordData[field.key] ? '#6ee7b7' : '#999',
                             borderRadius: '0.25rem',
                             fontSize: '0.75rem'
                           }}>
-                            {record[field.key] ? 'Yes' : 'No'}
+                            {recordData[field.key] ? 'Yes' : 'No'}
                           </span>
                         ) : field.key.includes('status') || field.key.includes('stage') ? (
                           <span style={{
                             padding: '0.25rem 0.75rem',
                             backgroundColor: '#1a1a1a',
-                            color: record[field.key] === 'Active' || record[field.key] === 'Paid' ? theme?.colors?.success?.main || '#10b981' : primaryColor,
+                            color: recordData[field.key] === 'Active' || recordData[field.key] === 'Paid' ? theme?.colors?.success?.main || '#10b981' : primaryColor,
                             borderRadius: '9999px',
                             fontSize: '0.75rem',
                             border: '1px solid #333'
                           }}>
-                            {record[field.key]}
+                            {String(recordData[field.key] ?? '')}
                           </span>
                         ) : (
-(record[field.key] !== '' && record[field.key] != null) ? record[field.key] : '-'
+(recordData[field.key] !== '' && recordData[field.key] != null) ? String(recordData[field.key]) : '-'
                         )}
                       </td>
                     ))}
                     <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                      <button 
+                      <button
                         onClick={() => handleEdit(record)}
                         style={{ color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem' }}>
                         Edit
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDelete(record)}
                         style={{ color: theme?.colors?.error?.main || '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}>
                         Delete
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -699,16 +830,18 @@ function CRMContent() {
             <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
               Add New {getSchema().singularName}
             </h3>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {getSchema().fields.map((field: any) => (
+              {getSchema().fields.map((field: SchemaField) => {
+                const formDataRecord = formData as Record<string, unknown>;
+                return (
                 <div key={field.key}>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
                     {field.label}
                   </label>
                   {field.type === 'select' ? (
                     <select
-                      value={formData[field.key] ?? ''}
+                      value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
@@ -720,13 +853,13 @@ function CRMContent() {
                   ) : field.type === 'checkbox' ? (
                     <input
                       type="checkbox"
-                      checked={formData[field.key] ?? false}
+                      checked={Boolean(formDataRecord[field.key] ?? false)}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
                       style={{ width: '1.25rem', height: '1.25rem' }}
                     />
                   ) : field.type === 'lookup' && field.key === 'company_id' ? (
                     <select
-                      value={formData[field.key] ?? ''}
+                      value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
@@ -738,13 +871,14 @@ function CRMContent() {
                   ) : (
                     <input
                       type={field.type === 'currency' || field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                      value={formData[field.key] ?? ''}
+                      value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     />
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
@@ -772,16 +906,18 @@ function CRMContent() {
             <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
               Edit {getSchema().singularName}
             </h3>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {getSchema().fields.map((field: any) => (
+              {getSchema().fields.map((field: SchemaField) => {
+                const formDataRecord = formData as Record<string, unknown>;
+                return (
                 <div key={field.key}>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
                     {field.label}
                   </label>
                   {field.type === 'select' ? (
                     <select
-                      value={formData[field.key] ?? ''}
+                      value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
@@ -793,13 +929,13 @@ function CRMContent() {
                   ) : field.type === 'checkbox' ? (
                     <input
                       type="checkbox"
-                      checked={formData[field.key] ?? false}
+                      checked={Boolean(formDataRecord[field.key] ?? false)}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
                       style={{ width: '1.25rem', height: '1.25rem' }}
                     />
                   ) : field.type === 'lookup' && field.key === 'company_id' ? (
                     <select
-                      value={formData[field.key] ?? ''}
+                      value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
@@ -811,13 +947,14 @@ function CRMContent() {
                   ) : (
                     <input
                       type={field.type === 'currency' || field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                      value={formData[field.key] ?? ''}
+                      value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     />
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
@@ -870,7 +1007,7 @@ function CRMContent() {
       {/* Filter Builder Modal */}
       {showFilterBuilder && (
         <FilterBuilder
-          fields={getSchema().fields.map((f: any) => ({
+          fields={getSchema().fields.map((f: SchemaField) => ({
             key: f.key,
             label: f.label,
             type: f.type,
@@ -938,7 +1075,7 @@ function CRMContent() {
                     💡 Expected Columns for {getSchema().pluralName}:
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {getSchema().fields.slice(0, 8).map((field: any) => (
+                    {getSchema().fields.slice(0, 8).map((field: SchemaField) => (
                       <span key={field.key} style={{ padding: '0.25rem 0.75rem', backgroundColor: '#222', color: primaryColor, borderRadius: '9999px', fontSize: '0.75rem', border: '1px solid #333' }}>
                         {field.label}
                       </span>
@@ -985,7 +1122,7 @@ function CRMContent() {
                           style={{ flex: 1, padding: '0.375rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.75rem' }}
                         >
                           <option value="">Skip</option>
-                          {getSchema().fields.map((field: any) => (
+                          {getSchema().fields.map((field: SchemaField) => (
                             <option key={field.key} value={field.key}>{field.label}</option>
                           ))}
                         </select>
@@ -1013,7 +1150,7 @@ function CRMContent() {
                       <tbody>
                         {importPreview.map((row, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #1a1a1a' }}>
-                            {Object.values(row).map((val: any, i) => (
+                            {Object.values(row).map((val: string, i) => (
                               <td key={i} style={{ padding: '0.75rem', color: '#fff' }}>{val}</td>
                             ))}
                           </tr>

@@ -4,9 +4,9 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import type { Workflow } from '@/types/workflow';
+import type { Workflow, WorkflowExecution } from '@/types/workflow';
 
 export interface WorkflowFilters {
   status?: 'draft' | 'active' | 'paused' | 'archived';
@@ -62,7 +62,7 @@ export async function getWorkflows(
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to get workflows', err, { organizationId, filters: JSON.stringify(filters ?? {}) });
     throw new Error(`Failed to retrieve workflows: ${err.message}`);
@@ -90,9 +90,10 @@ export async function getWorkflow(
 
     logger.info('Workflow retrieved', { organizationId, workflowId });
     return workflow;
-  } catch (error: any) {
-    logger.error('Failed to get workflow', error, { organizationId, workflowId });
-    throw new Error(`Failed to retrieve workflow: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to get workflow', err, { organizationId, workflowId });
+    throw new Error(`Failed to retrieve workflow: ${err.message}`);
   }
 }
 
@@ -107,7 +108,7 @@ export async function createWorkflow(
 ): Promise<Workflow> {
   try {
     const workflowId = `workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const now = new Date();
+    const now = Timestamp.now();
 
     const workflow: Workflow = {
       ...data,
@@ -120,8 +121,8 @@ export async function createWorkflow(
         successfulRuns: 0,
         failedRuns: 0,
       },
-      createdAt: now as any,
-      updatedAt: now as any,
+      createdAt: now,
+      updatedAt: now,
       createdBy,
       version: 1,
     };
@@ -141,7 +142,7 @@ export async function createWorkflow(
     });
 
     return workflow;
-  } catch (error: any) {
+  } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to create workflow', err, { organizationId, workflowName: data.name ?? 'unknown' });
     throw new Error(`Failed to create workflow: ${err.message}`);
@@ -160,7 +161,7 @@ export async function updateWorkflow(
   try {
     const updatedData = {
       ...updates,
-      updatedAt: new Date(),
+      updatedAt: Timestamp.now(),
     };
 
     await FirestoreService.update(
@@ -181,9 +182,10 @@ export async function updateWorkflow(
     }
 
     return workflow;
-  } catch (error: any) {
-    logger.error('Failed to update workflow', error, { organizationId, workflowId });
-    throw new Error(`Failed to update workflow: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to update workflow', err, { organizationId, workflowId });
+    throw new Error(`Failed to update workflow: ${err.message}`);
   }
 }
 
@@ -202,9 +204,10 @@ export async function deleteWorkflow(
     );
 
     logger.info('Workflow deleted', { organizationId, workflowId });
-  } catch (error: any) {
-    logger.error('Failed to delete workflow', error, { organizationId, workflowId });
-    throw new Error(`Failed to delete workflow: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to delete workflow', err, { organizationId, workflowId });
+    throw new Error(`Failed to delete workflow: ${err.message}`);
   }
 }
 
@@ -227,9 +230,10 @@ export async function setWorkflowStatus(
     });
 
     return workflow;
-  } catch (error: any) {
-    logger.error('Failed to change workflow status', error, { organizationId, workflowId, status });
-    throw new Error(`Failed to change workflow status: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to change workflow status', err, { organizationId, workflowId, status });
+    throw new Error(`Failed to change workflow status: ${err.message}`);
   }
 }
 
@@ -239,7 +243,7 @@ export async function setWorkflowStatus(
 export async function executeWorkflow(
   organizationId: string,
   workflowId: string,
-  context: Record<string, any>,
+  context: Record<string, unknown>,
   workspaceId: string = 'default'
 ): Promise<{ success: boolean; executionId: string; error?: string }> {
   try {
@@ -250,7 +254,7 @@ export async function executeWorkflow(
 
     // Execute via workflow engine
     const { executeWorkflowImpl: runEngine } = await import('./workflow-engine');
-    
+
     const result = await runEngine(workflow, context);
 
     logger.info('Workflow executed', {
@@ -264,12 +268,13 @@ export async function executeWorkflow(
       success: result.status === 'completed',
       executionId: result.id,
     };
-  } catch (error: any) {
-    logger.error('Workflow execution failed', error, { organizationId, workflowId });
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Workflow execution failed', err, { organizationId, workflowId });
     return {
       success: false,
       executionId: '',
-      error: error.message,
+      error: err.message,
     };
   }
 }
@@ -282,14 +287,14 @@ export async function getWorkflowRuns(
   workflowId: string,
   workspaceId: string = 'default',
   options?: PaginationOptions
-): Promise<PaginatedResult<any>> {
+): Promise<PaginatedResult<WorkflowExecution>> {
   try {
     const constraints: QueryConstraint[] = [
       where('workflowId', '==', workflowId),
       orderBy('startedAt', 'desc'),
     ];
 
-    const result = await FirestoreService.getAllPaginated(
+    const result = await FirestoreService.getAllPaginated<WorkflowExecution>(
       `organizations/${organizationId}/workspaces/${workspaceId}/workflowExecutions`,
       constraints,
       options?.pageSize ?? 50,
@@ -303,9 +308,10 @@ export async function getWorkflowRuns(
     });
 
     return result;
-  } catch (error: any) {
-    logger.error('Failed to get workflow runs', error, { organizationId, workflowId });
-    throw new Error(`Failed to retrieve workflow runs: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to get workflow runs', err, { organizationId, workflowId });
+    throw new Error(`Failed to retrieve workflow runs: ${err.message}`);
   }
 }
 

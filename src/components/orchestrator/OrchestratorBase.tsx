@@ -48,6 +48,76 @@ import { auth } from '@/lib/firebase/config';
 // TYPES
 // ============================================================================
 
+// Web Speech API types
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  readonly length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  readonly isFinal: boolean;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  readonly transcript: string;
+  readonly confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+  readonly message: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
+  onspeechstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+  onspeechend: ((this: SpeechRecognition, ev: Event) => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+interface SpeechRecognitionConstructor {
+  new(): SpeechRecognition;
+}
+
+interface WindowWithSpeechRecognition extends Window {
+  SpeechRecognition?: SpeechRecognitionConstructor;
+  webkitSpeechRecognition?: SpeechRecognitionConstructor;
+}
+
+// API Response types
+interface ChatApiResponse {
+  success: boolean;
+  response: string;
+  metadata?: {
+    toolExecuted?: string;
+  };
+  audio?: {
+    data: string;
+    format: string;
+  };
+}
+
+interface ChatApiErrorResponse {
+  error?: string;
+}
+
 export interface VoiceSettings {
   enabled: boolean;
   voiceId?: string;
@@ -115,7 +185,7 @@ function useVoiceActivityDetection(
 ) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -129,7 +199,8 @@ function useVoiceActivityDetection(
     }
 
     // Check for browser support
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const windowWithSpeech = window as WindowWithSpeechRecognition;
+    const SpeechRecognition = windowWithSpeech.SpeechRecognition ?? windowWithSpeech.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn('[VAD] Speech recognition not supported');
       return;
@@ -166,26 +237,23 @@ function useVoiceActivityDetection(
       }, 1000); // 1 second of silence before processing
     };
 
-    recognition.onresult = (event: any) => {
-      let interimTranscript = '';
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += transcript + ' ';
-        } else {
-          interimTranscript += transcript;
+          finalTranscript += `${transcript} `;
         }
       }
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('[VAD] Recognition error:', event.error);
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
         // Restart on errors except no-speech
         setTimeout(() => {
           try {
             recognition.start();
-          } catch (e) {
+          } catch (_error) {
             // Ignore restart errors
           }
         }, 1000);
@@ -199,7 +267,7 @@ function useVoiceActivityDetection(
         setTimeout(() => {
           try {
             recognition.start();
-          } catch (e) {
+          } catch (_error) {
             // Ignore restart errors
           }
         }, 100);
@@ -210,8 +278,8 @@ function useVoiceActivityDetection(
 
     try {
       recognition.start();
-    } catch (e) {
-      console.error('[VAD] Failed to start recognition:', e);
+    } catch (error: unknown) {
+      console.error('[VAD] Failed to start recognition:', error);
     }
 
     return () => {
@@ -221,7 +289,7 @@ function useVoiceActivityDetection(
       if (recognition) {
         try {
           recognition.stop();
-        } catch (e) {
+        } catch (_error) {
           // Ignore stop errors
         }
       }
@@ -303,7 +371,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     ttsEngine: config.voiceSettings?.ttsEngine ?? 'elevenlabs',
     liveMode: config.voiceSettings?.liveMode ?? false,
   });
-  const [selectedModel, setSelectedModel] = useState(config.modelId || 'google/gemini-2.0-flash-exp');
+  const [selectedModel, setSelectedModel] = useState(config.modelId ?? 'google/gemini-2.0-flash-exp');
 
   // Audio playback hook
   const { playAudio, stopAudio, isPlaying } = useAudioPlayback();
@@ -322,7 +390,9 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
       // Auto-send after a brief delay to allow correction
       setTimeout(() => {
         const sendButton = document.getElementById('orchestrator-send-btn');
-        if (sendButton) sendButton.click();
+        if (sendButton) {
+          sendButton.click();
+        }
       }, 500);
     }
   }, [voiceSettings.liveMode]);
@@ -362,7 +432,9 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
    * JASPER BRAIN ACTIVATION - Live OpenRouter API Integration with Voice
    */
   const handleSendMessage = useCallback(async () => {
-    if (!input.trim() || isTyping) return;
+    if (!input.trim() || isTyping) {
+      return;
+    }
 
     const userMessage = input.trim();
     setInput('');
@@ -379,7 +451,6 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
         throw new Error('Not authenticated. Please log in.');
       }
       const idToken = await currentUser.getIdToken(true);
-      console.log('[Jasper] Auth token acquired for user:', currentUser.email);
 
       // Build conversation history for context (last 15 messages for memory)
       const conversationHistory = chatHistory.slice(-15).map((msg) => ({
@@ -411,11 +482,11 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `API error: ${response.status}`);
+        const errorData = await response.json().catch((_err: unknown) => ({} as ChatApiErrorResponse)) as ChatApiErrorResponse;
+        throw new Error(errorData.error ?? `API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as ChatApiResponse;
 
       if (data.success && data.response) {
         addMessage({
@@ -433,11 +504,11 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
       } else {
         throw new Error('Invalid response from API');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Jasper] Chat error:', error);
 
       // Show raw error message for debugging - NO fallback masking
-      const errorMessage = error?.message || String(error) || 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
       addMessage({
         role: 'assistant',
@@ -451,14 +522,16 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      void handleSendMessage();
     }
   };
 
   const quickInvokeSpecialist = (specialist: Specialist) => {
     setInput(`Help me with ${specialist.name}`);
     setShowCommands(false);
-    setTimeout(() => handleSendMessage(), 100);
+    setTimeout(() => {
+      void handleSendMessage();
+    }, 100);
   };
 
   const toggleLiveMode = () => {
@@ -543,7 +616,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-sm">
-                    {config.assistantName || (config.context === 'admin' ? 'Jasper' : config.merchantInfo?.assistantName || 'AI Assistant')}
+                    {config.assistantName ?? (config.context === 'admin' ? 'Jasper' : config.merchantInfo?.assistantName ?? 'AI Assistant')}
                   </h3>
                   <p className="text-gray-400 text-xs">
                     {voiceSettings.liveMode ? (
@@ -624,7 +697,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                       <label className="text-xs text-gray-400 block mb-1">Voice Engine</label>
                       <select
                         value={voiceSettings.ttsEngine}
-                        onChange={(e) => setVoiceSettings(prev => ({ ...prev, ttsEngine: e.target.value as any }))}
+                        onChange={(e) => setVoiceSettings(prev => ({ ...prev, ttsEngine: e.target.value as 'native' | 'unreal' | 'elevenlabs' }))}
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       >
                         <option value="elevenlabs" className="bg-gray-900">ElevenLabs (Ultra Quality)</option>
@@ -773,7 +846,9 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                 />
                 <button
                   id="orchestrator-send-btn"
-                  onClick={handleSendMessage}
+                  onClick={() => {
+                    void handleSendMessage();
+                  }}
                   disabled={!input.trim() || isTyping}
                   className="p-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:from-indigo-500 hover:to-purple-500 transition-all"
                 >

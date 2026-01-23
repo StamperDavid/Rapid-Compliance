@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import Link from 'next/link'
-import { logger } from '@/lib/logger/logger';;
+import Link from 'next/link';
+import { logger } from '@/lib/logger/logger';
+import type { Timestamp } from 'firebase/firestore';
 
 interface UserDetails {
   id: string;
@@ -20,6 +21,63 @@ interface UserDetails {
   organizationName: string;
 }
 
+interface FirestoreUserData {
+  id: string;
+  email?: string;
+  displayName?: string;
+  profile?: {
+    displayName?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  status?: string;
+  emailVerified?: boolean;
+  createdAt?: Timestamp | string;
+  lastLoginAt?: Timestamp | string | null;
+  organizationId?: string;
+}
+
+interface FirestoreOrganizationData {
+  id: string;
+  name?: string;
+}
+
+function isTimestamp(value: unknown): value is Timestamp {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as Timestamp).toDate === 'function'
+  );
+}
+
+function extractStringValue(value: unknown, fallback = ''): string {
+  if (typeof value === 'string' && value !== '') {
+    return value;
+  }
+  return fallback;
+}
+
+function extractTimestampString(value: unknown): string {
+  if (isTimestamp(value)) {
+    return value.toDate().toISOString();
+  }
+  if (typeof value === 'string' && value !== '') {
+    return value;
+  }
+  return '';
+}
+
+function extractTimestampStringOrNull(value: unknown): string | null {
+  if (isTimestamp(value)) {
+    return value.toDate().toISOString();
+  }
+  if (typeof value === 'string' && value !== '') {
+    return value;
+  }
+  return null;
+}
+
 export default function UserDetailPage() {
   const params = useParams();
   const { hasPermission } = useAdminAuth();
@@ -33,47 +91,52 @@ export default function UserDetailPage() {
       try {
         setLoading(true);
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        
+
         // Try to load user from Firestore
-        const userData = await FirestoreService.get(COLLECTIONS.USERS, userId) as any;
-        
-        if (userData) {
+        const userDataRaw = await FirestoreService.get(COLLECTIONS.USERS, userId);
+
+        if (userDataRaw) {
+          const userData = userDataRaw as FirestoreUserData;
+
           // Get organization info
           let orgName = 'Unknown';
           if (userData.organizationId) {
-            const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, userData.organizationId) as any;
-            orgName = (org?.name !== '' && org?.name != null) ? org.name : 'Unknown';
+            const orgDataRaw = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, userData.organizationId);
+            if (orgDataRaw) {
+              const orgData = orgDataRaw as FirestoreOrganizationData;
+              orgName = extractStringValue(orgData.name, 'Unknown');
+            }
           }
-          
-          const profileDisplayName = (userData.profile?.displayName !== '' && userData.profile?.displayName != null) ? userData.profile.displayName : '';
-          const fallbackDisplayName = (userData.displayName !== '' && userData.displayName != null) ? userData.displayName : 'Unknown';
-          const createdAtIso = (userData.createdAt?.toDate?.()?.toISOString() !== '' && userData.createdAt?.toDate?.()?.toISOString() != null) ? userData.createdAt.toDate().toISOString() : '';
-          const createdAtFallback = (userData.createdAt !== '' && userData.createdAt != null) ? userData.createdAt : '';
-          const lastLoginIso = (userData.lastLoginAt?.toDate?.()?.toISOString() !== '' && userData.lastLoginAt?.toDate?.()?.toISOString() != null) ? userData.lastLoginAt.toDate().toISOString() : null;
-          const lastLoginFallback = userData.lastLoginAt ?? null;
-          
+
+          const profileDisplayName = extractStringValue(userData.profile?.displayName);
+          const fallbackDisplayName = extractStringValue(userData.displayName, 'Unknown');
+          const finalDisplayName = profileDisplayName || fallbackDisplayName;
+
+          const createdAtString = extractTimestampString(userData.createdAt);
+          const lastLoginAtString = extractTimestampStringOrNull(userData.lastLoginAt);
+
           setUser({
             id: userId,
-            email: (userData.email !== '' && userData.email != null) ? userData.email : '',
-            displayName: (profileDisplayName !== '' && profileDisplayName != null) ? profileDisplayName : fallbackDisplayName,
-            firstName: (userData.profile?.firstName !== '' && userData.profile?.firstName != null) ? userData.profile.firstName : '',
-            lastName: (userData.profile?.lastName !== '' && userData.profile?.lastName != null) ? userData.profile.lastName : '',
-            status: (userData.status !== '' && userData.status != null) ? userData.status : 'active',
+            email: extractStringValue(userData.email),
+            displayName: finalDisplayName,
+            firstName: extractStringValue(userData.profile?.firstName),
+            lastName: extractStringValue(userData.profile?.lastName),
+            status: extractStringValue(userData.status, 'active'),
             emailVerified: userData.emailVerified ?? false,
-            createdAt: (createdAtIso !== '' && createdAtIso != null) ? createdAtIso : createdAtFallback,
-            lastLoginAt: (lastLoginIso !== '' && lastLoginIso != null) ? lastLoginIso : lastLoginFallback,
-            organizationId: (userData.organizationId !== '' && userData.organizationId != null) ? userData.organizationId : '',
+            createdAt: createdAtString,
+            lastLoginAt: lastLoginAtString,
+            organizationId: extractStringValue(userData.organizationId),
             organizationName: orgName,
           });
         }
         setLoading(false);
-      } catch (error) {
+      } catch (error: unknown) {
         logger.error('Failed to load user:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         setLoading(false);
       }
     }
-    
-    loadUser();
+
+    void loadUser();
   }, [userId]);
 
   const bgPaper = '#1a1a1a';
@@ -98,7 +161,7 @@ export default function UserDetailPage() {
             User Not Found
           </h2>
           <p style={{ color: '#666', marginBottom: '2rem' }}>
-            The user you're looking for doesn't exist or couldn't be loaded.
+            The user you&apos;re looking for doesn&apos;t exist or couldn&apos;t be loaded.
           </p>
           <Link
             href="/dashboard/users"
@@ -269,7 +332,10 @@ export default function UserDetailPage() {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <button
-              onClick={() => alert('Password reset email would be sent')}
+              onClick={() => {
+                // TODO: Implement password reset functionality
+                logger.info('Password reset requested for user', { userId: user.id, file: 'page.tsx' });
+              }}
               style={{
                 padding: '0.625rem 1rem',
                 backgroundColor: 'transparent',
@@ -284,7 +350,10 @@ export default function UserDetailPage() {
               Send Password Reset Email
             </button>
             <button
-              onClick={() => alert('User status would be toggled')}
+              onClick={() => {
+                // TODO: Implement user status toggle functionality
+                logger.info('User status toggle requested', { userId: user.id, currentStatus: user.status, file: 'page.tsx' });
+              }}
               style={{
                 padding: '0.625rem 1rem',
                 backgroundColor: user.status === 'active' ? '#7f1d1d' : '#065f46',

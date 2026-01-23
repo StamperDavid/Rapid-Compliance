@@ -18,7 +18,7 @@ export interface OAuthConfig {
 }
 
 // Lightweight config map for tests and fallback defaults
-export const OAuthConfig: Record<string, Partial<OAuthConfig>> = {
+export const OAuthConfigDefaults: Record<string, Partial<OAuthConfig>> = {
   google: { provider: 'google', authorizationUrl: 'https://accounts.google.com/o/oauth2/auth', tokenUrl: 'https://oauth2.googleapis.com/token', scopes: [] },
   microsoft: { provider: 'microsoft', authorizationUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize', tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token', scopes: [] },
   quickbooks: { provider: 'quickbooks', authorizationUrl: 'https://appcenter.intuit.com/connect/oauth2', tokenUrl: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', scopes: [] },
@@ -32,6 +32,91 @@ export interface OAuthState {
   integrationId: string;
   provider: string;
   createdAt: Date;
+}
+
+export interface OAuthTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  token_type?: string;
+  scope?: string;
+  // Slack-specific fields
+  team?: {
+    id: string;
+    name: string;
+  };
+  bot_user_id?: string;
+}
+
+export interface GoogleUserInfo {
+  email: string;
+  name: string;
+  picture?: string;
+  verified_email?: boolean;
+}
+
+export interface MicrosoftUserInfo {
+  displayName: string;
+  mail: string | null;
+  userPrincipalName: string;
+  id: string;
+}
+
+export interface IntegrationData {
+  id: string;
+  organizationId: string;
+  workspaceId?: string;
+  provider: string;
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+  status: string;
+  connectedAt: string;
+  updatedAt: string;
+  email?: string;
+  name?: string;
+  tenantId?: string;
+  teamId?: string;
+  teamName?: string;
+  botUserId?: string;
+}
+
+export interface StoredIntegration {
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+  provider: string;
+  [key: string]: unknown;
+}
+
+export interface IntegrationsConfig {
+  googleWorkspace?: {
+    clientId: string;
+    clientSecret: string;
+  };
+  microsoft365?: {
+    clientId: string;
+    clientSecret: string;
+    tenantId?: string;
+  };
+  slack?: {
+    clientId: string;
+    clientSecret: string;
+  };
+  quickbooks?: {
+    clientId: string;
+    clientSecret: string;
+    environment?: string;
+  };
+  xero?: {
+    clientId: string;
+    clientSecret: string;
+  };
+}
+
+export interface ApiKeysResponse {
+  integrations?: IntegrationsConfig;
+  [key: string]: unknown;
 }
 
 /**
@@ -84,33 +169,36 @@ export async function generateAuthUrl(
 export async function exchangeCodeForTokens(
   code: string,
   state: string
-): Promise<{
-  accessToken: string;
-  refreshToken?: string;
-  expiresIn?: number;
-  tokenType?: string;
-  [key: string]: any;
-}> {
+): Promise<OAuthTokenResponse> {
   // Verify state
   const stateData = await FirestoreService.get<OAuthState>(
     `${COLLECTIONS.ORGANIZATIONS}/*/oauthStates`,
     state
   );
-  
+
   if (!stateData) {
     throw new Error('Invalid state token');
   }
-  
+
   // Check if state is expired (5 minutes)
   const createdAt = new Date(stateData.createdAt);
   const now = new Date();
   if (now.getTime() - createdAt.getTime() > 5 * 60 * 1000) {
     throw new Error('State token expired');
   }
-  
+
+  // Validate provider type
+  const validProviders = ['google', 'microsoft', 'slack', 'quickbooks', 'xero'] as const;
+  if (!validProviders.includes(stateData.provider as typeof validProviders[number])) {
+    throw new Error(`Invalid provider: ${stateData.provider}`);
+  }
+
   // Get OAuth config
-  const config = await getOAuthConfig(stateData.organizationId, stateData.provider as any);
-  
+  const config = await getOAuthConfig(
+    stateData.organizationId,
+    stateData.provider as 'google' | 'microsoft' | 'slack' | 'quickbooks' | 'xero'
+  );
+
   // Exchange code for tokens
   const tokenResponse = await fetch(config.tokenUrl, {
     method: 'POST',
@@ -125,14 +213,14 @@ export async function exchangeCodeForTokens(
       redirect_uri: config.redirectUri,
     }),
   });
-  
+
   if (!tokenResponse.ok) {
     const error = await tokenResponse.text();
     throw new Error(`Token exchange failed: ${error}`);
   }
-  
-  const tokens = await tokenResponse.json();
-  
+
+  const tokens = await tokenResponse.json() as OAuthTokenResponse;
+
   // Save tokens to integration
   await saveIntegrationTokens(
     stateData.organizationId,
@@ -141,13 +229,13 @@ export async function exchangeCodeForTokens(
     stateData.provider,
     tokens
   );
-  
+
   // Delete state token
   await FirestoreService.delete(
     `${COLLECTIONS.ORGANIZATIONS}/${stateData.organizationId}/oauthStates`,
     state
   );
-  
+
   return tokens;
 }
 
@@ -160,23 +248,32 @@ export async function refreshAccessToken(
   provider: string
 ): Promise<string> {
   // Get integration
-  const integration = await FirestoreService.get(
+  const integration = await FirestoreService.get<StoredIntegration>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
     integrationId
   );
-  
+
   if (!integration) {
     throw new Error('Integration not found');
   }
-  
-  const refreshToken = (integration as any).refreshToken;
+
+  const refreshToken = integration.refreshToken;
   if (!refreshToken) {
     throw new Error('No refresh token available');
   }
-  
+
+  // Validate provider type
+  const validProviders = ['google', 'microsoft', 'slack', 'quickbooks', 'xero'] as const;
+  if (!validProviders.includes(provider as typeof validProviders[number])) {
+    throw new Error(`Invalid provider: ${provider}`);
+  }
+
   // Get OAuth config
-  const config = await getOAuthConfig(organizationId, provider as any);
-  
+  const config = await getOAuthConfig(
+    organizationId,
+    provider as 'google' | 'microsoft' | 'slack' | 'quickbooks' | 'xero'
+  );
+
   // Refresh token
   const tokenResponse = await fetch(config.tokenUrl, {
     method: 'POST',
@@ -190,13 +287,13 @@ export async function refreshAccessToken(
       grant_type: 'refresh_token',
     }),
   });
-  
+
   if (!tokenResponse.ok) {
     throw new Error('Token refresh failed');
   }
-  
-  const tokens = await tokenResponse.json();
-  
+
+  const tokens = await tokenResponse.json() as OAuthTokenResponse;
+
   // Update integration with new tokens
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
@@ -212,7 +309,7 @@ export async function refreshAccessToken(
     },
     true // Update only
   );
-  
+
   return tokens.access_token;
 }
 
@@ -232,10 +329,13 @@ async function getOAuthConfig(
   const baseUrlEnv = process.env.NEXT_PUBLIC_APP_URL;
   const baseUrl = (baseUrlEnv !== '' && baseUrlEnv != null) ? baseUrlEnv : 'https://app.example.com';
 
-  // Type guard to ensure apiKeys is a Record with integrations property
-  const integrations = typeof apiKeys === 'object' && apiKeys !== null && 'integrations' in apiKeys
-    ? (apiKeys as Record<string, any>).integrations
-    : undefined;
+  // Type guard to ensure apiKeys has integrations property
+  if (typeof apiKeys !== 'object' || apiKeys === null || !('integrations' in apiKeys)) {
+    throw new Error('Integration API keys not properly configured');
+  }
+
+  const apiKeysTyped = apiKeys as ApiKeysResponse;
+  const integrations = apiKeysTyped.integrations;
 
   if (!integrations || typeof integrations !== 'object') {
     throw new Error('Integration API keys not properly configured');
@@ -358,15 +458,15 @@ async function saveIntegrationTokens(
   workspaceId: string | undefined,
   integrationId: string,
   provider: string,
-  tokens: any
+  tokens: OAuthTokenResponse
 ): Promise<void> {
   // Get or create integration
-  const integration = await FirestoreService.get(
+  const integration = await FirestoreService.get<Record<string, unknown>>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
     integrationId
   );
-  
-  const integrationData: any = {
+
+  const integrationData: IntegrationData = {
     id: integrationId,
     organizationId,
     workspaceId,
@@ -380,34 +480,35 @@ async function saveIntegrationTokens(
     connectedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  
+
   // Provider-specific data
   if (provider === 'google') {
     // Get user info
-    const userInfo = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
         Authorization: `Bearer ${tokens.access_token}`,
       },
-    }).then(r => r.json());
-    
+    });
+    const userInfo = await userInfoResponse.json() as GoogleUserInfo;
+
     integrationData.email = userInfo.email;
     integrationData.name = userInfo.name;
   } else if (provider === 'microsoft') {
-    const userInfo = await fetch('https://graph.microsoft.com/v1.0/me', {
+    const userInfoResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
       headers: {
         Authorization: `Bearer ${tokens.access_token}`,
       },
-    }).then(r => r.json());
+    });
+    const userInfo = await userInfoResponse.json() as MicrosoftUserInfo;
 
     integrationData.email = (userInfo.mail !== '' && userInfo.mail != null) ? userInfo.mail : userInfo.userPrincipalName;
     integrationData.name = userInfo.displayName;
-    integrationData.tenantId = userInfo.tenantId;
   } else if (provider === 'slack') {
     integrationData.teamId = tokens.team?.id;
     integrationData.teamName = tokens.team?.name;
     integrationData.botUserId = tokens.bot_user_id;
   }
-  
+
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
     integrationId,
@@ -423,31 +524,35 @@ export async function getValidAccessToken(
   organizationId: string,
   integrationId: string
 ): Promise<string> {
-  const integration = await FirestoreService.get(
+  const integration = await FirestoreService.get<StoredIntegration>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
     integrationId
   );
-  
+
   if (!integration) {
     throw new Error('Integration not found');
   }
-  
-  const accessToken = (integration as any).accessToken;
-  const tokenExpiresAt = (integration as any).tokenExpiresAt;
-  const provider = (integration as any).provider;
-  
+
+  const accessToken = integration.accessToken;
+  const tokenExpiresAt = integration.tokenExpiresAt;
+  const provider = integration.provider;
+
+  if (!accessToken) {
+    throw new Error('No access token available');
+  }
+
   // Check if token is expired or about to expire (within 5 minutes)
   if (tokenExpiresAt) {
     const expiresAt = new Date(tokenExpiresAt);
     const now = new Date();
     const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-    
+
     if (expiresAt <= fiveMinutesFromNow) {
       // Refresh token
       return refreshAccessToken(organizationId, integrationId, provider);
     }
   }
-  
+
   return accessToken;
 }
 

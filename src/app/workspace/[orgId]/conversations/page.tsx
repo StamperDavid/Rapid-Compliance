@@ -11,7 +11,6 @@ import {
   Phone,
   MessageCircle,
   AlertCircle,
-  TrendingUp,
   RefreshCw,
   Eye,
   GraduationCap,
@@ -21,29 +20,35 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
-import type { ChatSession, ChatMessage } from '@/lib/agent/chat-session-service';
-import { ChatSessionService } from '@/lib/agent/chat-session-service';
+import { ChatSessionService, type ChatSession, type ChatMessage } from '@/lib/agent/chat-session-service';
 import { logger } from '@/lib/logger/logger';
+
+// Extended interface for UI-specific features
+interface ExtendedChatSession extends ChatSession {
+  channel?: 'email' | 'sms' | 'chat';
+  flaggedForTraining?: boolean;
+  trainingIssue?: string;
+}
 
 export default function ConversationsPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
-  const { theme } = useOrgTheme();
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
 
   // Real data states
   const [liveConversations, setLiveConversations] = useState<ChatSession[]>([]);
-  const [completedConversations, setCompletedConversations] = useState<ChatSession[]>([]);
+  const [completedConversations, setCompletedConversations] = useState<ExtendedChatSession[]>([]);
   const [selectedMessages, setSelectedMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Subscribe to real-time active sessions
   useEffect(() => {
-    if (!orgId) return;
+    if (!orgId) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -60,8 +65,9 @@ export default function ConversationsPage() {
     // Load history
     ChatSessionService.getSessionHistory(orgId, 50)
       .then(setCompletedConversations)
-      .catch((err) => {
-        logger.error('Failed to load history:', err, { file: 'page.tsx' });
+      .catch((err: unknown) => {
+        const error = err instanceof Error ? err : new Error(String(err));
+        logger.error('Failed to load history:', error, { file: 'page.tsx' });
       });
 
     return () => unsubscribe();
@@ -89,23 +95,33 @@ export default function ConversationsPage() {
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+    if (diffMins < 1) {
+      return 'Just now';
+    }
+    if (diffMins < 60) {
+      return `${diffMins} min ago`;
+    }
+    if (diffMins < 1440) {
+      return `${Math.floor(diffMins / 60)} hours ago`;
+    }
     return date.toLocaleDateString();
   };
 
   const handleTakeOver = async (conversationId: string) => {
     try {
       if (!user?.id) {
-        alert('You must be logged in to take over a conversation.');
+        // eslint-disable-next-line no-alert
+        window.alert('You must be logged in to take over a conversation.');
         return;
       }
       await ChatSessionService.requestTakeover(orgId, conversationId, user.id, 'Manual takeover');
-      alert(`Taking over conversation. You are now connected to the customer chat.`);
+      // eslint-disable-next-line no-alert
+      window.alert('Taking over conversation. You are now connected to the customer chat.');
     } catch (err: unknown) {
-      logger.error('Failed to take over:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
-      alert('Failed to take over conversation. Please try again.');
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('Failed to take over:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
+      window.alert('Failed to take over conversation. Please try again.');
     }
   };
 
@@ -115,18 +131,21 @@ export default function ConversationsPage() {
 
       // Update local state
       setCompletedConversations(prev =>
-        prev.map(c => c.id === conversationId ? { ...c, flaggedForTraining: true, trainingIssue: issue } as any : c)
+        prev.map(c => c.id === conversationId ? { ...c, flaggedForTraining: true, trainingIssue: issue } : c)
       );
 
-      alert(`Conversation sent to Training Center for improvement.`);
+      // eslint-disable-next-line no-alert
+      window.alert('Conversation sent to Training Center for improvement.');
     } catch (err: unknown) {
-      logger.error('Failed to flag for training:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
-      alert('Failed to send to training. Please try again.');
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('Failed to flag for training:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
+      window.alert('Failed to send to training. Please try again.');
     }
   };
 
   const needsAttentionCount = liveConversations.filter(c => c.status === 'needs_help').length;
-  const flaggedCount = completedConversations.filter((c: any) => c.flaggedForTraining).length;
+  const flaggedCount = completedConversations.filter(c => c.flaggedForTraining === true).length;
 
   const getChannelBadge = (channel?: string) => {
     switch (channel) {
@@ -212,13 +231,13 @@ export default function ConversationsPage() {
         className="flex gap-4 px-8 border-b border-white/10"
       >
         {[
-          { id: 'active', label: 'Active Conversations', badge: needsAttentionCount, icon: Activity },
-          { id: 'history', label: 'Conversation History', badge: flaggedCount, icon: Clock }
+          { id: 'active' as const, label: 'Active Conversations', badge: needsAttentionCount, icon: Activity },
+          { id: 'history' as const, label: 'Conversation History', badge: flaggedCount, icon: Clock }
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => {
-              setActiveTab(tab.id as any);
+              setActiveTab(tab.id);
               setSelectedConversation(null);
             }}
             className="relative px-6 py-4 flex items-center gap-2 text-sm font-semibold transition-all"
@@ -292,7 +311,8 @@ export default function ConversationsPage() {
                       {/* Conversation List */}
                       <div className="flex flex-col gap-4">
                         {liveConversations.map((conv, index) => {
-                          const channelBadge = getChannelBadge((conv as any).channel);
+                          const extendedConv = conv as ExtendedChatSession;
+                          const channelBadge = getChannelBadge(extendedConv.channel);
                           return (
                             <motion.div
                               key={conv.id}
@@ -345,7 +365,7 @@ export default function ConversationsPage() {
                               {conv.lastMessage && (
                                 <div className="bg-black/60 border border-white/10 rounded-xl p-3 mb-4">
                                   <p className="text-sm text-white/80 line-clamp-2 italic">
-                                    "{conv.lastMessage}"
+                                    &ldquo;{conv.lastMessage}&rdquo;
                                   </p>
                                 </div>
                               )}
@@ -372,7 +392,7 @@ export default function ConversationsPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleTakeOver(conv.id);
+                                  void handleTakeOver(conv.id);
                                 }}
                                 className={`w-full px-4 py-3 rounded-xl font-semibold text-white shadow-lg transition-all ${
                                   conv.status === 'needs_help'
@@ -403,11 +423,11 @@ export default function ConversationsPage() {
                             <div className="flex items-center justify-between p-6 border-b border-white/10">
                               <div>
                                 <h3 className="text-xl font-bold text-white mb-1">
-                                  {liveConversations.find(c => c.id === selectedConversation)?.customerName || 'Anonymous'}
+                                  {liveConversations.find(c => c.id === selectedConversation)?.customerName ?? 'Anonymous'}
                                 </h3>
                                 <div className="flex items-center gap-2 text-sm text-white/60">
                                   <Mail className="w-4 h-4" />
-                                  {liveConversations.find(c => c.id === selectedConversation)?.customerEmail || 'No email provided'}
+                                  {liveConversations.find(c => c.id === selectedConversation)?.customerEmail ?? 'No email provided'}
                                 </div>
                               </div>
                               <button
@@ -454,7 +474,7 @@ export default function ConversationsPage() {
                             {/* Action Footer */}
                             <div className="p-6 border-t border-white/10">
                               <button
-                                onClick={() => handleTakeOver(selectedConversation)}
+                                onClick={() => void handleTakeOver(selectedConversation)}
                                 className="w-full px-6 py-4 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 transition-all"
                               >
                                 <div className="flex items-center justify-center gap-2">
@@ -494,7 +514,7 @@ export default function ConversationsPage() {
                     </motion.div>
                   ) : (
                     <div className="space-y-4">
-                      {completedConversations.map((conv: any, index) => {
+                      {completedConversations.map((conv, index) => {
                         const channelBadge = getChannelBadge(conv.channel);
                         return (
                           <motion.div
@@ -527,7 +547,7 @@ export default function ConversationsPage() {
                                 <div className="flex items-center gap-2 mb-1">
                                   <User className="w-4 h-4 text-sky-500" />
                                   <h3 className="text-white font-semibold">
-                                    {conv.customerName || 'Anonymous'}
+                                    {conv.customerName ?? 'Anonymous'}
                                   </h3>
                                 </div>
                                 <div className="flex items-center gap-2 text-xs text-white/60">
@@ -548,7 +568,7 @@ export default function ConversationsPage() {
                                 <div className={`text-xs font-bold ${
                                   conv.status === 'completed' ? 'text-green-500' : 'text-yellow-500'
                                 }`}>
-                                  {conv.status?.toUpperCase() || 'COMPLETED'}
+                                  {conv.status.toUpperCase()}
                                 </div>
                               </div>
 
@@ -560,7 +580,7 @@ export default function ConversationsPage() {
                                   conv.sentiment === 'frustrated' ? 'text-red-500' :
                                   'text-yellow-500'
                                 }`}>
-                                  {conv.sentiment?.toUpperCase() || 'NEUTRAL'}
+                                  {conv.sentiment.toUpperCase()}
                                 </div>
                               </div>
 
@@ -569,7 +589,7 @@ export default function ConversationsPage() {
                                 <button
                                   onClick={() => {
                                     setSelectedConversation(conv.id);
-                                    ChatSessionService.getSessionMessages(orgId, conv.id).then(setSelectedMessages);
+                                    void ChatSessionService.getSessionMessages(orgId, conv.id).then(setSelectedMessages);
                                   }}
                                   className="flex-1 px-3 py-2 bg-black/60 hover:bg-black/80 text-white border border-white/10 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1"
                                 >
@@ -578,7 +598,7 @@ export default function ConversationsPage() {
                                 </button>
                                 {!conv.flaggedForTraining && (
                                   <button
-                                    onClick={() => handleSendToTraining(conv.id, 'Manual review')}
+                                    onClick={() => void handleSendToTraining(conv.id, 'Manual review')}
                                     className="flex-1 px-3 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-sky-500/25 transition-all flex items-center justify-center gap-1"
                                   >
                                     <GraduationCap className="w-3 h-3" />

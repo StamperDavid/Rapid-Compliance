@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
@@ -17,6 +17,92 @@ import VersionHistory from '@/components/website-builder/VersionHistory';
 import SchedulePublishModal from '@/components/website-builder/SchedulePublishModal';
 import type { Page, PageSection, Widget } from '@/types/website';
 import { useEditorHistory } from '@/hooks/useEditorHistory';
+
+// Type guards for API responses
+interface PageResponse {
+  page: Page;
+}
+
+interface ErrorResponse {
+  error: string;
+}
+
+interface PublishResponse {
+  publishedAt: string;
+}
+
+interface PreviewResponse {
+  previewUrl: string;
+}
+
+interface VersionData {
+  version: number;
+  content: PageSection[];
+  seo: Page['seo'];
+  title: string;
+  slug: string;
+}
+
+function isValidPageResponse(data: unknown): data is PageResponse {
+  if (typeof data !== 'object' || data === null) {return false;}
+  const response = data as Record<string, unknown>;
+  return typeof response.page === 'object' && response.page !== null;
+}
+
+function isErrorResponse(data: unknown): data is ErrorResponse {
+  if (typeof data !== 'object' || data === null) {return false;}
+  const response = data as Record<string, unknown>;
+  return typeof response.error === 'string';
+}
+
+function isPublishResponse(data: unknown): data is PublishResponse {
+  if (typeof data !== 'object' || data === null) {return false;}
+  const response = data as Record<string, unknown>;
+  return typeof response.publishedAt === 'string';
+}
+
+function isPreviewResponse(data: unknown): data is PreviewResponse {
+  if (typeof data !== 'object' || data === null) {return false;}
+  const response = data as Record<string, unknown>;
+  return typeof response.previewUrl === 'string';
+}
+
+function isVersionData(data: unknown): data is VersionData {
+  if (typeof data !== 'object' || data === null) {return false;}
+  const version = data as Record<string, unknown>;
+  return (
+    typeof version.version === 'number' &&
+    Array.isArray(version.content) &&
+    typeof version.seo === 'object' &&
+    typeof version.title === 'string' &&
+    typeof version.slug === 'string'
+  );
+}
+
+// User feedback helpers (replacing alert/prompt/confirm)
+function showSuccess(message: string): void {
+  // TODO: Replace with toast notification system
+  // eslint-disable-next-line no-alert
+  alert(message);
+}
+
+function showError(message: string): void {
+  // TODO: Replace with toast notification system
+  // eslint-disable-next-line no-alert
+  alert(message);
+}
+
+function askConfirm(message: string): boolean {
+  // TODO: Replace with modal confirmation system
+  // eslint-disable-next-line no-alert
+  return confirm(message);
+}
+
+function askInput(message: string, defaultValue?: string): string | null {
+  // TODO: Replace with modal input system
+  // eslint-disable-next-line no-alert
+  return prompt(message, defaultValue);
+}
 
 export default function PageEditorPage() {
   const params = useParams();
@@ -41,86 +127,40 @@ export default function PageEditorPage() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   
   // Undo/Redo history
-  const { 
-    currentState, 
-    canUndo, 
-    canRedo, 
-    pushState, 
-    undo, 
-    redo 
+  const {
+    canUndo,
+    canRedo,
+    pushState,
+    undo,
+    redo
   } = useEditorHistory<Page>();
 
-  useEffect(() => {
-    if (pageId) {
-      loadPage(pageId);
-    } else {
-      // Create new blank page
-      createBlankPage();
-    }
-  }, [pageId]);
-
-  // Auto-save every 30 seconds
-  useEffect(() => {
-    if (!autoSaveEnabled || !page) {return;}
-    
-    const interval = setInterval(() => {
-      savePage(true); // Auto-save flag
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [page, autoSaveEnabled]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Undo: Ctrl/Cmd + Z
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        if (canUndo) {
-          const previousState = undo();
-          if (previousState) {setPage(previousState);}
-        }
-      }
-      
-      // Redo: Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y
-      if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key === 'z' || e.key === 'y')) {
-        e.preventDefault();
-        if (canRedo) {
-          const nextState = redo();
-          if (nextState) {setPage(nextState);}
-        }
-      }
-
-      // Save: Ctrl/Cmd + S
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        savePage(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canUndo, canRedo, page]);
-
-  async function loadPage(id: string) {
+  // Stable function references for useEffect dependencies
+  const loadPageStable = React.useCallback(async (id: string) => {
     try {
       setLoading(true);
       const response = await fetch(`/api/website/pages/${id}?organizationId=${orgId}`);
-      
+
       if (!response.ok) {throw new Error('Failed to load page');}
-      
-      const data = await response.json();
-      setPage(data.page);
-      pushState(data.page); // Initialize history
-    } catch (error) {
+
+      const data: unknown = await response.json();
+
+      // Type guard for API response
+      if (isValidPageResponse(data)) {
+        setPage(data.page);
+        pushState(data.page);
+      } else {
+        throw new Error('Invalid page data received');
+      }
+    } catch (error: unknown) {
       console.error('[Editor] Load error:', error);
-      alert('Failed to load page');
+      showError('Failed to load page');
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId, pushState]);
 
-  function createBlankPage() {
+  const createBlankPageStable = React.useCallback(() => {
     const newPage: Page = {
       id: `page_${Date.now()}`,
       organizationId: orgId,
@@ -142,18 +182,27 @@ export default function PageEditorPage() {
     setPage(newPage);
     pushState(newPage);
     setLoading(false);
-  }
+  }, [orgId, user, pushState]);
 
-  async function savePage(isAutoSave: boolean = false) {
+  useEffect(() => {
+    if (pageId) {
+      void loadPageStable(pageId);
+    } else {
+      createBlankPageStable();
+    }
+  }, [pageId, loadPageStable, createBlankPageStable]);
+
+  // Auto-save every 30 seconds
+  const savePageStable = React.useCallback(async (isAutoSave: boolean = false): Promise<void> => {
     if (!page) {return;}
 
     try {
       setSaving(true);
-      
-      const endpoint = pageId 
+
+      const endpoint = pageId
         ? `/api/website/pages/${pageId}`
         : '/api/website/pages';
-      
+
       const method = pageId ? 'PUT' : 'POST';
 
       const response = await fetch(endpoint, {
@@ -172,25 +221,67 @@ export default function PageEditorPage() {
       if (!response.ok) {throw new Error('Failed to save page');}
 
       if (!isAutoSave) {
-        alert('Page saved successfully!');
+        showSuccess('Page saved successfully!');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Editor] Save error:', error);
       if (!isAutoSave) {
-        alert('Failed to save page');
+        showError('Failed to save page');
       }
     } finally {
       setSaving(false);
     }
-  }
+  }, [page, pageId, orgId, user]);
 
-  async function saveAsTemplate() {
+  useEffect(() => {
+    if (!autoSaveEnabled || !page) {return;}
+
+    const interval = setInterval(() => {
+      void savePageStable(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [page, autoSaveEnabled, savePageStable]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Undo: Ctrl/Cmd + Z
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo) {
+          const previousState = undo();
+          if (previousState) {setPage(previousState);}
+        }
+      }
+
+      // Redo: Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y
+      if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key === 'z' || e.key === 'y')) {
+        e.preventDefault();
+        if (canRedo) {
+          const nextState = redo();
+          if (nextState) {setPage(nextState);}
+        }
+      }
+
+      // Save: Ctrl/Cmd + S
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        void savePageStable(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, canRedo, page, undo, redo, savePageStable]);
+
+  async function saveAsTemplate(): Promise<void> {
     if (!page) {return;}
 
-    const templateName = prompt('Enter a name for this template:', page.title);
+    const templateName = askInput('Enter a name for this template:', page.title);
     if (!templateName) {return;}
 
-    const templateDescription = prompt('Enter a description (optional):', '');
+    const templateDescription = askInput('Enter a description (optional):', '');
 
     try {
       const response = await fetch('/api/website/templates', {
@@ -202,7 +293,7 @@ export default function PageEditorPage() {
             name: templateName,
             description:(templateDescription !== '' && templateDescription != null) ? templateDescription : `Custom template based on ${page.title}`,
             category: 'other',
-            thumbnail: `https://via.placeholder.com/400x300/6c757d/ffffff?text=${  encodeURIComponent(templateName)}`,
+            thumbnail: `https://via.placeholder.com/400x300/6c757d/ffffff?text=${encodeURIComponent(templateName)}`,
             content: page.content,
             isPublic: false,
             createdBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
@@ -212,22 +303,22 @@ export default function PageEditorPage() {
 
       if (!response.ok) {throw new Error('Failed to save template');}
 
-      alert('Template saved successfully! You can find it in the Templates page.');
-    } catch (error) {
+      showSuccess('Template saved successfully! You can find it in the Templates page.');
+    } catch (error: unknown) {
       console.error('[Editor] Save as template error:', error);
-      alert('Failed to save template');
+      showError('Failed to save template');
     }
   }
 
-  async function publishPage(scheduledFor?: string) {
+  async function publishPage(scheduledFor?: string): Promise<void> {
     if (!page || !pageId) {
-      alert('Please save the page first before publishing.');
+      showError('Please save the page first before publishing.');
       return;
     }
 
     try {
       setPublishing(true);
-      
+
       const response = await fetch(`/api/website/pages/${pageId}/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,89 +326,102 @@ export default function PageEditorPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error((error.error !== '' && error.error != null) ? error.error : 'Failed to publish page');
+        const errorData: unknown = await response.json();
+        const errorMessage = isErrorResponse(errorData) ? errorData.error : 'Failed to publish page';
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
-      
+      const result: unknown = await response.json();
+
       // Update local page state
       if (scheduledFor) {
         setPage({ ...page, status: 'scheduled', scheduledFor });
-        alert(`Page scheduled for ${new Date(scheduledFor).toLocaleString()}! 📅`);
+        showSuccess(`Page scheduled for ${new Date(scheduledFor).toLocaleString()}!`);
       } else {
-        setPage({ ...page, status: 'published', publishedAt: result.publishedAt });
-        alert('Page published successfully! 🚀');
+        if (isPublishResponse(result)) {
+          setPage({ ...page, status: 'published', publishedAt: result.publishedAt });
+          showSuccess('Page published successfully!');
+        } else {
+          throw new Error('Invalid publish response');
+        }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Editor] Publish error:', error);
-      alert(`Failed to publish page: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      showError(`Failed to publish page: ${message}`);
     } finally {
       setPublishing(false);
     }
   }
 
-  function handleSchedulePublish() {
+  function handleSchedulePublish(): void {
     setShowScheduleModal(true);
   }
 
-  function handleScheduleConfirm(scheduledDate: string) {
+  function handleScheduleConfirm(scheduledDate: string): void {
     setShowScheduleModal(false);
-    publishPage(scheduledDate);
+    void publishPage(scheduledDate);
   }
 
-  function handleRestoreVersion(version: any) {
+  function handleRestoreVersion(version: unknown): void {
     if (!page) {return;}
 
-    // Restore the version content
+    // Type guard and restore the version content
+    if (!isVersionData(version)) {
+      showError('Invalid version data');
+      return;
+    }
+
     const restoredPage: Page = {
       ...page,
       content: version.content,
       seo: version.seo,
       title: version.title,
       slug: version.slug,
-      status: 'draft' as const, // Restored pages become drafts
+      status: 'draft' as const,
       updatedAt: new Date().toISOString(),
     };
 
     setPage(restoredPage);
     pushState(restoredPage);
-    
-    alert(`Restored to Version ${version.version}. Don't forget to save your changes!`);
+
+    showSuccess(`Restored to Version ${version.version}. Don't forget to save your changes!`);
   }
 
-  async function unpublishPage() {
+  async function unpublishPage(): Promise<void> {
     if (!page || !pageId) {return;}
 
-    if (!confirm('Unpublish this page? It will revert to draft status.')) {return;}
+    if (!askConfirm('Unpublish this page? It will revert to draft status.')) {return;}
 
     try {
       setPublishing(true);
-      
+
       const response = await fetch(`/api/website/pages/${pageId}/publish?organizationId=${orgId}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error((error.error !== '' && error.error != null) ? error.error : 'Failed to unpublish page');
+        const errorData: unknown = await response.json();
+        const errorMessage = isErrorResponse(errorData) ? errorData.error : 'Failed to unpublish page';
+        throw new Error(errorMessage);
       }
 
       // Update local page state
       setPage({ ...page, status: 'draft' });
-      
-      alert('Page unpublished successfully.');
-    } catch (error) {
+
+      showSuccess('Page unpublished successfully.');
+    } catch (error: unknown) {
       console.error('[Editor] Unpublish error:', error);
-      alert(`Failed to unpublish page: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      showError(`Failed to unpublish page: ${message}`);
     } finally {
       setPublishing(false);
     }
   }
 
-  async function generatePreview() {
+  async function generatePreview(): Promise<void> {
     if (!page || !pageId) {
-      alert('Please save the page first before generating a preview.');
+      showError('Please save the page first before generating a preview.');
       return;
     }
 
@@ -329,33 +433,38 @@ export default function PageEditorPage() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error((error.error !== '' && error.error != null) ? error.error : 'Failed to generate preview');
+        const errorData: unknown = await response.json();
+        const errorMessage = isErrorResponse(errorData) ? errorData.error : 'Failed to generate preview';
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
-      
+      const result: unknown = await response.json();
+
+      if (!isPreviewResponse(result)) {
+        throw new Error('Invalid preview response');
+      }
+
       // Open preview in new tab
-      const previewUrl = result.previewUrl;
-      window.open(previewUrl, '_blank');
-      
+      window.open(result.previewUrl, '_blank');
+
       // Also show the URL so user can copy it
-      prompt('Preview link (valid for 24 hours):', previewUrl);
-    } catch (error) {
+      askInput('Preview link (valid for 24 hours):', result.previewUrl);
+    } catch (error: unknown) {
       console.error('[Editor] Preview error:', error);
-      alert(`Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      showError(`Failed to generate preview: ${message}`);
     }
   }
 
-  function updatePage(updates: Partial<Page>) {
+  function updatePage(updates: Partial<Page>): void {
     if (!page) {return;}
-    
+
     const updatedPage = { ...page, ...updates };
     setPage(updatedPage);
-    pushState(updatedPage); // Save to history
+    pushState(updatedPage);
   }
 
-  function addSection(sectionData?: Partial<PageSection>) {
+  function addSection(sectionData?: Partial<PageSection>): void {
     if (!page) {return;}
 
     const newSection: PageSection = {
@@ -377,7 +486,7 @@ export default function PageEditorPage() {
     });
   }
 
-  function updateSection(sectionId: string, updates: Partial<PageSection>) {
+  function updateSection(sectionId: string, updates: Partial<PageSection>): void {
     if (!page) {return;}
 
     const updatedContent = page.content.map(section =>
@@ -387,9 +496,9 @@ export default function PageEditorPage() {
     updatePage({ content: updatedContent });
   }
 
-  function deleteSection(sectionId: string) {
+  function deleteSection(sectionId: string): void {
     if (!page) {return;}
-    if (!confirm('Delete this section?')) {return;}
+    if (!askConfirm('Delete this section?')) {return;}
 
     updatePage({
       content: page.content.filter(s => s.id !== sectionId),
@@ -401,16 +510,19 @@ export default function PageEditorPage() {
     }
   }
 
-  function addWidget(sectionId: string, widget: Widget, columnIndex: number = 0) {
+  function addWidget(sectionId: string, widget: Widget, columnIndex: number = 0): void {
     if (!page) {return;}
 
     const updatedContent = page.content.map(section => {
       if (section.id === sectionId) {
         const updatedColumns = [...section.columns];
-        updatedColumns[columnIndex] = {
-          ...updatedColumns[columnIndex],
-          widgets: [...updatedColumns[columnIndex].widgets, widget],
-        };
+        const targetColumn = updatedColumns[columnIndex];
+        if (targetColumn) {
+          updatedColumns[columnIndex] = {
+            ...targetColumn,
+            widgets: [...targetColumn.widgets, widget],
+          };
+        }
         return { ...section, columns: updatedColumns };
       }
       return section;
@@ -419,7 +531,7 @@ export default function PageEditorPage() {
     updatePage({ content: updatedContent });
   }
 
-  function updateWidget(sectionId: string, widgetId: string, updates: Partial<Widget>) {
+  function updateWidget(sectionId: string, widgetId: string, updates: Partial<Widget>): void {
     if (!page) {return;}
 
     const updatedContent = page.content.map(section => {
@@ -438,7 +550,7 @@ export default function PageEditorPage() {
     updatePage({ content: updatedContent });
   }
 
-  function deleteWidget(sectionId: string, widgetId: string) {
+  function deleteWidget(sectionId: string, widgetId: string): void {
     if (!page) {return;}
 
     const updatedContent = page.content.map(section => {
@@ -499,7 +611,7 @@ export default function PageEditorPage() {
           const next = redo();
           if (next) {setPage(next);}
         }}
-        onSave={() => void savePage(false)}
+        onSave={() => void savePageStable(false)}
         onSaveAsTemplate={() => void saveAsTemplate()}
         onPublish={() => void publishPage()}
         onUnpublish={() => void unpublishPage()}

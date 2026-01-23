@@ -6,7 +6,6 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { logEmailOpened } from '@/lib/crm/activity-logger';
 import { Timestamp } from 'firebase/firestore';
 
 export interface EmailMessage {
@@ -33,6 +32,13 @@ export interface EmailThread {
   messageCount: number;
 }
 
+interface OutlookRecipient {
+  emailAddress?: {
+    address?: string;
+    name?: string;
+  };
+}
+
 interface OutlookEmailMessage {
   id: string;
   conversationId: string;
@@ -42,18 +48,8 @@ interface OutlookEmailMessage {
       name?: string;
     };
   };
-  toRecipients?: Array<{
-    emailAddress?: {
-      address?: string;
-      name?: string;
-    };
-  }>;
-  ccRecipients?: Array<{
-    emailAddress?: {
-      address?: string;
-      name?: string;
-    };
-  }>;
+  toRecipients?: OutlookRecipient[];
+  ccRecipients?: OutlookRecipient[];
   subject?: string;
   body?: {
     content?: string;
@@ -63,6 +59,60 @@ interface OutlookEmailMessage {
   isRead: boolean;
   hasAttachments: boolean;
   inReplyTo?: string;
+}
+
+interface GmailHeader {
+  name: string;
+  value: string;
+}
+
+interface GmailPayloadPart {
+  mimeType?: string;
+  body?: {
+    data?: string;
+  };
+  parts?: GmailPayloadPart[];
+}
+
+interface GmailMessagePayload {
+  headers?: GmailHeader[];
+  mimeType?: string;
+  body?: {
+    data?: string;
+  };
+  parts?: GmailPayloadPart[];
+}
+
+interface GmailMessageData {
+  id: string;
+  threadId: string;
+  internalDate: string;
+  labelIds?: string[];
+  payload: GmailMessagePayload;
+}
+
+interface GmailListItem {
+  id: string;
+  threadId: string;
+}
+
+interface GmailListResponse {
+  messages?: GmailListItem[];
+}
+
+interface OutlookListResponse {
+  value: OutlookEmailMessage[];
+}
+
+interface EmailSyncDoc {
+  lastSyncAt: Timestamp | Date | string;
+}
+
+interface Activity {
+  id: string;
+  type: string;
+  metadata?: Record<string, unknown>;
+  relatedTo?: string[];
 }
 
 /**
@@ -101,13 +151,13 @@ export async function fetchGmailInbox(
       throw new Error('Failed to fetch Gmail messages');
     }
 
-    const listData = await listResponse.json();
+    const listData = await listResponse.json() as GmailListResponse;
     const messageIds = listData.messages ?? [];
 
     // Fetch full message details
     const messages: EmailMessage[] = [];
 
-    for (const { id, threadId } of messageIds) {
+    for (const { id } of messageIds) {
       try {
         const messageResponse = await fetch(
           `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`,
@@ -120,7 +170,7 @@ export async function fetchGmailInbox(
 
         if (!messageResponse.ok) {continue;}
 
-        const messageData = await messageResponse.json();
+        const messageData = await messageResponse.json() as GmailMessageData;
         const message = parseGmailMessage(messageData);
         messages.push(message);
 
@@ -134,8 +184,9 @@ export async function fetchGmailInbox(
 
     return messages;
 
-  } catch (error: any) {
-    logger.error('Failed to fetch Gmail inbox', error, { organizationId });
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to fetch Gmail inbox', errorToLog, { organizationId });
     throw error;
   }
 }
@@ -143,16 +194,18 @@ export async function fetchGmailInbox(
 /**
  * Parse Gmail API message format
  */
-function parseGmailMessage(data: any): EmailMessage {
+function parseGmailMessage(data: GmailMessageData): EmailMessage {
   const headers = data.payload?.headers ?? [];
-  const getHeader = (name: string) => {
-    const headerValue = headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value;
+  const getHeader = (name: string): string => {
+    const headerValue = headers.find((h: GmailHeader) => h.name.toLowerCase() === name.toLowerCase())?.value;
     return (headerValue !== '' && headerValue != null) ? headerValue : '';
   };
 
   const from = getHeader('from');
-  const to = getHeader('to').split(',').map((e: string) => e.trim());
-  const cc = getHeader('cc') ? getHeader('cc').split(',').map((e: string) => e.trim()) : [];
+  const toValue = getHeader('to');
+  const to = toValue ? toValue.split(',').map((e: string) => e.trim()) : [];
+  const ccValue = getHeader('cc');
+  const cc = ccValue ? ccValue.split(',').map((e: string) => e.trim()) : [];
   const subject = getHeader('subject');
   const inReplyTo = getHeader('in-reply-to');
 
@@ -160,7 +213,7 @@ function parseGmailMessage(data: any): EmailMessage {
   let body = '';
   let htmlBody = '';
 
-  const getBody = (part: any): void => {
+  const getBody = (part: GmailPayloadPart): void => {
     if (part.mimeType === 'text/plain' && part.body?.data) {
       body = Buffer.from(part.body.data, 'base64').toString('utf-8');
     } else if (part.mimeType === 'text/html' && part.body?.data) {
@@ -219,21 +272,14 @@ export async function fetchOutlookInbox(
       throw new Error('Failed to fetch Outlook messages');
     }
 
-    const data = await response.json();
-    
-    interface OutlookRecipient {
-      emailAddress?: {
-        address?: string;
-        name?: string;
-      };
-    }
-    
+    const data = await response.json() as OutlookListResponse;
+
     const messages: EmailMessage[] = data.value.map((msg: OutlookEmailMessage) => ({
       id: msg.id,
       threadId: msg.conversationId,
       from: (msg.from?.emailAddress?.address !== '' && msg.from?.emailAddress?.address != null) ? msg.from.emailAddress.address : '',
-      to: msg.toRecipients?.map((r: OutlookRecipient) => r.emailAddress?.address) ?? [],
-      cc: msg.ccRecipients?.map((r: OutlookRecipient) => r.emailAddress?.address) ?? [],
+      to: msg.toRecipients?.map((r: OutlookRecipient) => r.emailAddress?.address).filter((addr): addr is string => addr !== undefined) ?? [],
+      cc: msg.ccRecipients?.map((r: OutlookRecipient) => r.emailAddress?.address).filter((addr): addr is string => addr !== undefined) ?? [],
       subject: (msg.subject !== '' && msg.subject != null) ? msg.subject : '',
       body: (msg.body?.content !== '' && msg.body?.content != null) ? msg.body.content : '',
       htmlBody: msg.body?.contentType === 'html' ? msg.body?.content : undefined,
@@ -246,8 +292,9 @@ export async function fetchOutlookInbox(
 
     return messages;
 
-  } catch (error: any) {
-    logger.error('Failed to fetch Outlook inbox', error, { organizationId });
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to fetch Outlook inbox', errorToLog, { organizationId });
     throw error;
   }
 }
@@ -267,14 +314,14 @@ export async function processEmailReply(
     if (originalEmail) {
       // Found match - log as reply activity
       const { createActivity } = await import('@/lib/crm/activity-service');
-      
+
       await createActivity(organizationId, workspaceId, {
         type: 'email_received',
         direction: 'inbound',
         subject: reply.subject,
         body: reply.body,
         summary: `Reply received: ${reply.subject}`,
-        relatedTo: originalEmail.relatedTo ?? [],
+        relatedTo: Array.isArray(originalEmail.relatedTo) ? originalEmail.relatedTo : [],
         metadata: {
           emailId: reply.id,
           fromEmail: reply.from,
@@ -306,8 +353,9 @@ export async function processEmailReply(
       logger.debug('Email reply has no matching sent email', { replyId: reply.id });
     }
 
-  } catch (error: any) {
-    logger.error('Failed to process email reply', error, { replyId: reply.id });
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to process email reply', errorToLog, { replyId: reply.id });
   }
 }
 
@@ -318,11 +366,11 @@ async function findOriginalEmail(
   organizationId: string,
   inReplyTo?: string,
   threadId?: string
-): Promise<any | null> {
+): Promise<Activity | null> {
   try {
     // Search activities for sent email with matching thread ID or message ID
     const { getActivities } = await import('@/lib/crm/activity-service');
-    
+
     const activities = await getActivities(
       organizationId,
       'default',
@@ -333,15 +381,20 @@ async function findOriginalEmail(
     // Find match by thread ID or in-reply-to
     const match = activities.data.find(activity => {
       const metadata = activity.metadata;
-      const matchByReplyTo = inReplyTo && metadata?.emailId === inReplyTo;
-      const matchByThread = threadId && metadata?.threadId === threadId;
+      if (!metadata) {
+        return false;
+      }
+
+      const matchByReplyTo = inReplyTo && metadata.emailId === inReplyTo;
+      const matchByThread = threadId && metadata.threadId === threadId;
       return matchByReplyTo ? true : (matchByThread ? true : false);
     });
 
     return match ?? null;
 
-  } catch (error) {
-    logger.error('Failed to find original email', error instanceof Error ? error : new Error(String(error)));
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to find original email', errorToLog);
     return null;
   }
 }
@@ -380,8 +433,9 @@ export async function syncInbox(
 
     return messages.length;
 
-  } catch (error: any) {
-    logger.error('Inbox sync failed', error, { organizationId, provider });
+  } catch (error: unknown) {
+    const errorToLog = error instanceof Error ? error : new Error(String(error));
+    logger.error('Inbox sync failed', errorToLog, { organizationId, provider });
     throw error;
   }
 }
@@ -391,17 +445,23 @@ export async function syncInbox(
  */
 async function getLastSyncTime(organizationId: string, provider: string): Promise<Date | null> {
   try {
-    const doc = await FirestoreService.get<{ lastSyncAt: any }>(
+    const doc = await FirestoreService.get<EmailSyncDoc>(
       `organizations/${organizationId}/emailSync`,
       provider
     );
 
     if (doc?.lastSyncAt) {
-      return doc.lastSyncAt.toDate ? doc.lastSyncAt.toDate() : new Date(doc.lastSyncAt);
+      const syncAt = doc.lastSyncAt;
+      // Handle Firestore Timestamp
+      if (typeof syncAt === 'object' && syncAt !== null && 'toDate' in syncAt && typeof syncAt.toDate === 'function') {
+        return syncAt.toDate();
+      }
+      // Handle Date or string
+      return new Date(syncAt);
     }
 
     return null;
-  } catch (error) {
+  } catch (_error: unknown) {
     return null;
   }
 }

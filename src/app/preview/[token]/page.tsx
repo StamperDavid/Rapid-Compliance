@@ -6,48 +6,138 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
+
+// Type definitions for page content structure
+interface WidgetData {
+  level?: number;
+  text?: string;
+  content?: string;
+  color?: string;
+  src?: string;
+  alt?: string;
+}
+
+interface Widget {
+  id?: string;
+  type: string;
+  data: WidgetData;
+  style?: React.CSSProperties;
+}
+
+interface Column {
+  id?: string;
+  widgets?: Widget[];
+}
+
+interface Section {
+  id?: string;
+  padding?: {
+    top?: string;
+    bottom?: string;
+    left?: string;
+    right?: string;
+  };
+  backgroundColor?: string;
+  columns?: Column[];
+}
+
+interface SeoData {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+  ogImage?: string;
+}
 
 interface PageData {
   id: string;
   organizationId: string;
   title: string;
   slug: string;
-  content: any[];
-  seo: any;
+  content: Section[];
+  seo: SeoData;
   status: string;
   updatedAt: string;
+}
+
+interface ErrorResponse {
+  error?: string;
+}
+
+interface TokenValidationResponse {
+  pageId: string;
+  organizationId: string;
+}
+
+interface PageDataResponse {
+  page: PageData;
+}
+
+type Breakpoint = 'desktop' | 'tablet' | 'mobile';
+
+function isErrorResponse(data: unknown): data is ErrorResponse {
+  return typeof data === 'object' && data !== null && 'error' in data;
+}
+
+function isTokenValidationResponse(data: unknown): data is TokenValidationResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'pageId' in data &&
+    'organizationId' in data &&
+    typeof (data as TokenValidationResponse).pageId === 'string' &&
+    typeof (data as TokenValidationResponse).organizationId === 'string'
+  );
+}
+
+function isPageDataResponse(data: unknown): data is PageDataResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'page' in data &&
+    typeof (data as PageDataResponse).page === 'object'
+  );
 }
 
 export default function PreviewPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const token = params.token as string;
-  const breakpoint =(searchParams.get('breakpoint') !== '' && searchParams.get('breakpoint') != null) ? searchParams.get('breakpoint') : 'desktop';
+  const breakpointParam = searchParams.get('breakpoint');
+  const breakpoint: Breakpoint =
+    breakpointParam === 'mobile' || breakpointParam === 'tablet' || breakpointParam === 'desktop'
+      ? breakpointParam
+      : 'desktop';
 
   const [page, setPage] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchPreview();
-  }, [token]);
-
-  const fetchPreview = async () => {
+  const fetchPreview = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
       // First, validate the token and get page info
       const tokenResponse = await fetch(`/api/website/preview/validate?token=${token}`);
-      
+
       if (!tokenResponse.ok) {
-        const errorData = await tokenResponse.json();
-        throw new Error((errorData.error !== '' && errorData.error != null) ? errorData.error : 'Invalid preview token');
+        const errorData: unknown = await tokenResponse.json();
+        const errorMessage =
+          isErrorResponse(errorData) && errorData.error
+            ? errorData.error
+            : 'Invalid preview token';
+        throw new Error(errorMessage);
       }
 
-      const tokenData = await tokenResponse.json();
+      const tokenData: unknown = await tokenResponse.json();
+
+      if (!isTokenValidationResponse(tokenData)) {
+        throw new Error('Invalid token validation response');
+      }
+
       const { pageId, organizationId } = tokenData;
 
       // Fetch the page data
@@ -56,19 +146,36 @@ export default function PreviewPage() {
       );
 
       if (!pageResponse.ok) {
-        const errorData = await pageResponse.json();
-        throw new Error((errorData.error !== '' && errorData.error != null) ? errorData.error : 'Failed to load preview');
+        const errorData: unknown = await pageResponse.json();
+        const errorMessage =
+          isErrorResponse(errorData) && errorData.error
+            ? errorData.error
+            : 'Failed to load preview';
+        throw new Error(errorMessage);
       }
 
-      const pageData = await pageResponse.json();
+      const pageData: unknown = await pageResponse.json();
+
+      if (!isPageDataResponse(pageData)) {
+        throw new Error('Invalid page data response');
+      }
+
       setPage(pageData.page);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Preview] Error:', err);
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load preview');
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : 'Failed to load preview';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    void fetchPreview();
+  }, [fetchPreview]);
 
   if (loading) {
     return (
@@ -142,7 +249,7 @@ export default function PreviewPage() {
   }
 
   // Get breakpoint dimensions
-  const getBreakpointWidth = () => {
+  const getBreakpointWidth = (): string => {
     switch (breakpoint) {
       case 'mobile':
         return '375px';
@@ -198,7 +305,7 @@ export default function PreviewPage() {
         top: '46px',
         zIndex: 999,
       }}>
-        {['desktop', 'tablet', 'mobile'].map(bp => (
+        {(['desktop', 'tablet', 'mobile'] as const).map(bp => (
           <a
             key={bp}
             href={`/preview/${token}?breakpoint=${bp}`}
@@ -258,32 +365,47 @@ export default function PreviewPage() {
           {/* Page Content */}
           <div style={{ padding: '40px 20px' }}>
             {page.content && page.content.length > 0 ? (
-              page.content.map((section: any, idx: number) => (
-                <div
-                  key={section.id ?? idx}
-                  style={{
-                    marginBottom: '32px',
-                    padding: (() => { const v = section.padding?.top; return (v !== '' && v != null) ? v : '20px'; })(),
-                    backgroundColor: (section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : 'transparent',
-                  }}
-                >
-                  {section.columns?.map((column: any, colIdx: number) => (
-                    <div key={column.id ?? colIdx}>
-                      {column.widgets?.map((widget: any, widgetIdx: number) => (
-                        <div
-                          key={widget.id ?? widgetIdx}
-                          style={{
-                            marginBottom: '16px',
-                            ...widget.style,
-                          }}
-                        >
-                          {renderWidget(widget)}
+              page.content.map((section: Section, idx: number) => {
+                const sectionKey = section.id ?? `section-${idx}`;
+                const paddingTop = section.padding?.top ?? '20px';
+                const bgColor = section.backgroundColor ?? 'transparent';
+
+                return (
+                  <div
+                    key={sectionKey}
+                    style={{
+                      marginBottom: '32px',
+                      padding: paddingTop,
+                      backgroundColor: bgColor,
+                    }}
+                  >
+                    {section.columns?.map((column: Column, colIdx: number) => {
+                      const columnKey = column.id ?? `column-${idx}-${colIdx}`;
+
+                      return (
+                        <div key={columnKey}>
+                          {column.widgets?.map((widget: Widget, widgetIdx: number) => {
+                            const widgetKey = widget.id ?? `widget-${idx}-${colIdx}-${widgetIdx}`;
+                            const widgetStyle: React.CSSProperties = {
+                              marginBottom: '16px',
+                              ...(widget.style ?? {}),
+                            };
+
+                            return (
+                              <div
+                                key={widgetKey}
+                                style={widgetStyle}
+                              >
+                                {renderWidget(widget)}
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ))
+                      );
+                    })}
+                  </div>
+                );
+              })
             ) : (
               <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>
                 This page has no content yet.
@@ -296,34 +418,44 @@ export default function PreviewPage() {
   );
 }
 
-function renderWidget(widget: any) {
+function renderWidget(widget: Widget): React.ReactNode {
   switch (widget.type) {
-    case 'heading':
+    case 'heading': {
+      const level = widget.data.level ?? 1;
+      const text = widget.data.text ?? 'Heading';
+
       return (
         <div
           style={{
-            fontSize: widget.data.level === 1 ? '36px' : '24px',
+            fontSize: level === 1 ? '36px' : '24px',
             fontWeight: 'bold',
             color: '#111827',
           }}
         >
-          {(widget.data.text !== '' && widget.data.text != null) ? widget.data.text : 'Heading'}
+          {text}
         </div>
       );
-    
-    case 'text':
+    }
+
+    case 'text': {
+      const content = widget.data.content ?? 'Text content';
+
       return (
         <p style={{ color: '#374151', lineHeight: '1.6' }}>
-          {(widget.data.content !== '' && widget.data.content != null) ? widget.data.content : 'Text content'}
+          {content}
         </p>
       );
-    
-    case 'button':
+    }
+
+    case 'button': {
+      const color = widget.data.color ?? '#3b82f6';
+      const text = widget.data.text ?? 'Button';
+
       return (
         <button
           style={{
             padding: '12px 24px',
-            backgroundColor:(widget.data.color !== '' && widget.data.color != null) ? widget.data.color : '#3b82f6',
+            backgroundColor: color,
             color: 'white',
             border: 'none',
             borderRadius: '6px',
@@ -332,24 +464,52 @@ function renderWidget(widget: any) {
             cursor: 'pointer',
           }}
         >
-          {(widget.data.text !== '' && widget.data.text != null) ? widget.data.text : 'Button'}
+          {text}
         </button>
       );
-    
-    case 'image':
+    }
+
+    case 'image': {
+      const src = widget.data.src ?? 'https://via.placeholder.com/800x400';
+      const alt = widget.data.alt ?? 'Image';
+
+      // Use Next.js Image component for optimization
+      // For external images, we need to check if it's a data URL or external URL
+      if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://')) {
+        // eslint-disable-next-line @next/next/no-img-element
+        return (
+          <img
+            src={src}
+            alt={alt}
+            style={{
+              width: '100%',
+              height: 'auto',
+              borderRadius: '8px',
+            }}
+          />
+        );
+      }
+
       return (
-        <img
-          src={(widget.data.src !== '' && widget.data.src != null) ? widget.data.src : 'https://via.placeholder.com/800x400'}
-          alt={(widget.data.alt !== '' && widget.data.alt != null) ? widget.data.alt : 'Image'}
-          style={{
-            width: '100%',
-            height: 'auto',
-            borderRadius: '8px',
-          }}
-        />
+        <div style={{ position: 'relative', width: '100%', height: 'auto' }}>
+          <Image
+            src={src}
+            alt={alt}
+            width={800}
+            height={400}
+            style={{
+              width: '100%',
+              height: 'auto',
+              borderRadius: '8px',
+            }}
+          />
+        </div>
       );
-    
-    default:
+    }
+
+    default: {
+      const widgetType = widget.type;
+
       return (
         <div
           style={{
@@ -359,10 +519,9 @@ function renderWidget(widget: any) {
             color: '#6b7280',
           }}
         >
-          {widget.type} widget
+          {widgetType} widget
         </div>
       );
+    }
   }
 }
-
-

@@ -9,6 +9,37 @@ import type { Schema } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
 
 /**
+ * Type guard to check if value is a record with an id field
+ */
+function hasIdField(value: unknown): value is { id: string } {
+  return typeof value === 'object' && value !== null && 'id' in value && typeof (value as Record<string, unknown>).id === 'string';
+}
+
+/**
+ * Interface for transform config
+ */
+interface TransformConfig {
+  type: string;
+}
+
+/**
+ * Interface for query filter
+ */
+interface QueryFilter {
+  field: string;
+  operator: string;
+  value: unknown;
+}
+
+/**
+ * Interface for query config
+ */
+interface QueryConfig {
+  filters?: QueryFilter[];
+  limit?: number;
+}
+
+/**
  * Execute create entity action
  */
 export async function executeCreateEntityAction(
@@ -73,7 +104,6 @@ export async function executeCreateEntityAction(
       case 'ai':
         // Generate using AI
         value = await generateWithAI({
-          organizationId,
           field: resolvedTarget.fieldKey,
           prompt:(mapping.aiPrompt !== '' && mapping.aiPrompt != null) ? mapping.aiPrompt : `Generate a value for field "${resolvedTarget.fieldLabel}"`,
           context: triggerData,
@@ -92,7 +122,7 @@ export async function executeCreateEntityAction(
     entityData[resolvedTarget.fieldKey] = value;
   }
   
-  const entityName = (schema.name ?? action.schemaId) as string;
+  const entityName = schema.name ?? action.schemaId;
   const entityPath = `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
   
   const recordId = `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -147,18 +177,20 @@ export async function executeUpdateEntityAction(
       query: action.query,
       triggerData,
     });
-    recordIds = queryResults.map((r: any) => r.id);
+    recordIds = queryResults
+      .filter(hasIdField)
+      .map((r) => r.id);
     if (recordIds.length === 0) {
       throw new Error('No records found matching query');
     }
   }
-  
+
   // Build update data from field mappings with dynamic field resolution
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, unknown> = {};
   const { FieldResolver } = await import('@/lib/schema/field-resolver');
-  
+
   for (const mapping of action.fieldMappings) {
-    let value: any;
+    let value: unknown;
     
     // Resolve target field
     const resolvedTarget = await FieldResolver.resolveFieldWithCommonAliases(
@@ -252,7 +284,9 @@ export async function executeDeleteEntityAction(
       query: action.query,
       triggerData,
     });
-    recordIds = queryResults.map((r: any) => r.id);
+    recordIds = queryResults
+      .filter(hasIdField)
+      .map((r) => r.id);
     if (recordIds.length === 0) {
       logger.info('[Entity Action] No records found matching query for delete', { file: 'entity-action.ts' });
       return { recordIds: [], success: true, message: 'No records matched query' };
@@ -289,11 +323,16 @@ export async function executeEntityAction(
   triggerData: Record<string, unknown>,
   organizationId: string
 ): Promise<Record<string, unknown>> {
-  const workspaceId = triggerData?.workspaceId ?? (action as any).workspaceId;
-  if (!workspaceId) {
+  // Type guard to check if action has workspaceId
+  const actionWithWorkspaceId = action as unknown as Record<string, unknown>;
+  const workspaceIdFromTrigger = triggerData?.workspaceId;
+  const workspaceIdFromAction = actionWithWorkspaceId?.workspaceId;
+  const workspaceId = workspaceIdFromTrigger ?? workspaceIdFromAction;
+
+  if (!workspaceId || typeof workspaceId !== 'string') {
     throw new Error('Workspace ID required for entity actions');
   }
-  
+
   if (action.type === 'create_entity') {
     return executeCreateEntityAction(action, triggerData, organizationId, workspaceId);
   } else if (action.type === 'update_entity') {
@@ -301,16 +340,24 @@ export async function executeEntityAction(
   } else if (action.type === 'delete_entity') {
     return executeDeleteEntityAction(action, triggerData, organizationId, workspaceId);
   } else {
-    const actionType = (action as any).type;
-    throw new Error(`Unknown entity action type: ${actionType}`);
+    const exhaustiveCheck: never = action;
+    const unknownAction = exhaustiveCheck as { type?: unknown };
+    throw new Error(`Unknown entity action type: ${String(unknownAction.type)}`);
   }
 }
 
 /**
  * Apply field transform
  */
-function applyTransform(value: any, transform: any): any {
-  switch (transform.type) {
+function applyTransform(value: unknown, transform: unknown): unknown {
+  // Type guard for transform config
+  if (typeof transform !== 'object' || transform === null) {
+    return value;
+  }
+
+  const transformConfig = transform as TransformConfig;
+
+  switch (transformConfig.type) {
     case 'uppercase':
       return String(value).toUpperCase();
     case 'lowercase':
@@ -323,47 +370,34 @@ function applyTransform(value: any, transform: any): any {
 }
 
 /**
- * Resolve variables in config
- */
-function resolveVariables(config: any, triggerData: Record<string, unknown>): any {
-  if (typeof config === 'string') {
-    return config.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-      const value = getNestedValue(triggerData, path.trim());
-      return value !== undefined ? String(value) : match;
-    });
-  } else if (Array.isArray(config)) {
-    return config.map(item => resolveVariables(item, triggerData));
-  } else if (config && typeof config === 'object') {
-    const resolved: any = {};
-    for (const key in config) {
-      resolved[key] = resolveVariables(config[key], triggerData);
-    }
-    return resolved;
-  }
-  return config;
-}
-
-/**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: unknown, path: string): unknown {
+  if (typeof obj !== 'object' || obj === null) {
+    return undefined;
+  }
+
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (typeof current === 'object' && current !== null) {
+      return (current as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
 }
 
 /**
  * Generate value using AI
  */
 async function generateWithAI(params: {
-  organizationId: string;
   field: string;
   prompt: string;
-  context: any;
+  context: Record<string, unknown>;
 }): Promise<string> {
-  const { organizationId, field, prompt, context } = params;
-  
+  const { field, prompt, context } = params;
+
   try {
     const { sendUnifiedChatMessage } = await import('@/lib/ai/unified-ai-service');
-    
+
     // Build context-aware prompt
     const fullPrompt = `You are helping generate data for a workflow automation.
 
@@ -381,9 +415,9 @@ Generate ONLY the value for this field. Do not include any explanation or format
       temperature: 0.7,
       maxTokens: 500,
     });
-    
+
     return response.text.trim();
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error('[Entity Action] AI generation failed', error instanceof Error ? error : new Error(String(error)), { file: 'entity-action.ts' });
     return `[AI Error: ${errorMsg}]`;
@@ -395,18 +429,26 @@ Generate ONLY the value for this field. Do not include any explanation or format
  */
 async function queryEntities(params: {
   entityPath: string;
-  query: any;
+  query: unknown;
   triggerData: Record<string, unknown>;
-}): Promise<any[]> {
+}): Promise<unknown[]> {
   const { entityPath, query, triggerData } = params;
   const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
   const { where } = await import('firebase/firestore');
+  type WhereFilterOp = import('firebase/firestore').WhereFilterOp;
+
+  // Type guard for query config
+  if (typeof query !== 'object' || query === null) {
+    return [];
+  }
+
+  const queryConfig = query as QueryConfig;
 
   // Build Firestore query from criteria
-  const filters: any[] = [];
+  const filters: ReturnType<typeof where>[] = [];
 
-  if (query.filters && Array.isArray(query.filters)) {
-    for (const filter of query.filters) {
+  if (queryConfig.filters && Array.isArray(queryConfig.filters)) {
+    for (const filter of queryConfig.filters) {
       let value = filter.value;
 
       // Resolve dynamic values
@@ -415,7 +457,8 @@ async function queryEntities(params: {
         value = getNestedValue(triggerData, path);
       }
 
-      filters.push(where(filter.field, mapOperator(filter.operator) as any, value));
+      const operator = mapOperator(filter.operator) as WhereFilterOp;
+      filters.push(where(filter.field, operator, value));
     }
   }
 
@@ -423,8 +466,8 @@ async function queryEntities(params: {
   const results = await FS.getAll(entityPath, filters);
 
   // Apply limit if specified
-  if (query.limit && typeof query.limit === 'number') {
-    return results.slice(0, query.limit);
+  if (queryConfig.limit && typeof queryConfig.limit === 'number') {
+    return results.slice(0, queryConfig.limit);
   }
 
   return results;

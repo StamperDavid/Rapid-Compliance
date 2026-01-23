@@ -9,9 +9,46 @@ import { logger } from '@/lib/logger/logger';
 import type { Lead } from './lead-service';
 import type { RelatedEntityType } from '@/types/activity';
 
+/**
+ * Base interface for CRM records with common fields
+ */
+interface BaseRecord {
+  id: string;
+  organizationId?: string;
+  workspaceId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+/**
+ * Contact record interface
+ */
+export interface Contact extends BaseRecord {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Company record interface
+ */
+export interface Company extends BaseRecord {
+  name?: string;
+  website?: string;
+  phone?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Union type for all supported CRM entity types
+ */
+type CRMRecord = Lead | Contact | Company;
+
 export interface DuplicateMatch {
   id: string;
-  record: any;
+  record: CRMRecord;
   matchScore: number; // 0-100
   matchReasons: string[];
   confidence: 'high' | 'medium' | 'low';
@@ -216,9 +253,10 @@ export async function detectLeadDuplicates(
 
     return result;
 
-  } catch (error: any) {
-    logger.error('Duplicate detection failed', error, { organizationId });
-    throw new Error(`Duplicate detection failed: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Duplicate detection failed', error instanceof Error ? error : undefined, { organizationId });
+    throw new Error(`Duplicate detection failed: ${errorMessage}`);
   }
 }
 
@@ -228,10 +266,10 @@ export async function detectLeadDuplicates(
 export async function detectContactDuplicates(
   organizationId: string,
   workspaceId: string,
-  contact: Partial<any>
+  contact: Partial<Contact>
 ): Promise<DuplicateDetectionResult> {
   try {
-    const existingContacts = await FirestoreService.getAll<any>(
+    const existingContacts = await FirestoreService.getAll<Contact>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/contacts/records`
     );
     const matches: DuplicateMatch[] = [];
@@ -253,7 +291,7 @@ export async function detectContactDuplicates(
       if (contact.phone && existingContact.phone) {
         const contactPhone = normalizePhone(contact.phone);
         const existingPhone = normalizePhone(existingContact.phone);
-        
+
         if (contactPhone === existingPhone && contactPhone.length >= 10) {
           matchScore += 75;
           matchReasons.push('Exact phone match');
@@ -265,7 +303,7 @@ export async function detectContactDuplicates(
         const fullName = normalizeString(`${contact.firstName}${contact.lastName}`);
         const existingFullName = normalizeString(`${existingContact.firstName}${existingContact.lastName}`);
         const nameSimilarity = stringSimilarity(fullName, existingFullName);
-        
+
         if (nameSimilarity > 0.95) {
           matchScore += 40;
           matchReasons.push('Very similar name');
@@ -277,7 +315,7 @@ export async function detectContactDuplicates(
 
       if (matchScore > 0 && matchReasons.length > 0) {
         matchScore = Math.min(matchScore, 100);
-        
+
         let confidence: 'high' | 'medium' | 'low';
         if (matchScore >= 85) {confidence = 'high';}
         else if (matchScore >= 60) {confidence = 'medium';}
@@ -301,9 +339,10 @@ export async function detectContactDuplicates(
       highestMatch: matches[0],
     };
 
-  } catch (error: any) {
-    logger.error('Contact duplicate detection failed', error);
-    throw new Error(`Duplicate detection failed: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Contact duplicate detection failed', error instanceof Error ? error : undefined);
+    throw new Error(`Duplicate detection failed: ${errorMessage}`);
   }
 }
 
@@ -313,10 +352,10 @@ export async function detectContactDuplicates(
 export async function detectCompanyDuplicates(
   organizationId: string,
   workspaceId: string,
-  company: Partial<any>
+  company: Partial<Company>
 ): Promise<DuplicateDetectionResult> {
   try {
-    const existingCompanies = await FirestoreService.getAll<any>(
+    const existingCompanies = await FirestoreService.getAll<Company>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/companies/records`
     );
     const matches: DuplicateMatch[] = [];
@@ -332,7 +371,7 @@ export async function detectCompanyDuplicates(
         const companyName = normalizeString(company.name);
         const existingName = normalizeString(existingCompany.name);
         const nameSimilarity = stringSimilarity(companyName, existingName);
-        
+
         if (nameSimilarity > 0.95) {
           matchScore += 85;
           matchReasons.push('Very similar company name');
@@ -346,7 +385,7 @@ export async function detectCompanyDuplicates(
       if (company.website && existingCompany.website) {
         const companyWebsite = normalizeString(company.website);
         const existingWebsite = normalizeString(existingCompany.website);
-        
+
         if (companyWebsite === existingWebsite) {
           matchScore += 95;
           matchReasons.push('Exact website match');
@@ -357,7 +396,7 @@ export async function detectCompanyDuplicates(
       if (company.phone && existingCompany.phone) {
         const companyPhone = normalizePhone(company.phone);
         const existingPhone = normalizePhone(existingCompany.phone);
-        
+
         if (companyPhone === existingPhone && companyPhone.length >= 10) {
           matchScore += 70;
           matchReasons.push('Exact phone match');
@@ -366,7 +405,7 @@ export async function detectCompanyDuplicates(
 
       if (matchScore > 0 && matchReasons.length > 0) {
         matchScore = Math.min(matchScore, 100);
-        
+
         let confidence: 'high' | 'medium' | 'low';
         if (matchScore >= 85) {confidence = 'high';}
         else if (matchScore >= 60) {confidence = 'medium';}
@@ -390,10 +429,18 @@ export async function detectCompanyDuplicates(
       highestMatch: matches[0],
     };
 
-  } catch (error: any) {
-    logger.error('Company duplicate detection failed', error);
-    throw new Error(`Duplicate detection failed: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Company duplicate detection failed', error instanceof Error ? error : undefined);
+    throw new Error(`Duplicate detection failed: ${errorMessage}`);
   }
+}
+
+/**
+ * Helper to safely check if array contains unknown elements
+ */
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
 }
 
 /**
@@ -405,35 +452,39 @@ export async function mergeRecords(
   entityType: RelatedEntityType,
   keepId: string,
   mergeId: string
-): Promise<any> {
+): Promise<CRMRecord> {
   try {
     const collectionPath = `organizations/${organizationId}/workspaces/${workspaceId}/entities/${entityType}s/records`;
-    
-    // Get both records
-    const keepRecord = await FirestoreService.get<any>(collectionPath, keepId);
-    const mergeRecord = await FirestoreService.get<any>(collectionPath, mergeId);
-    
+
+    // Get both records - use Record<string, unknown> as base type
+    const keepRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, keepId);
+    const mergeRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, mergeId);
+
     if (!keepRecord || !mergeRecord) {
       throw new Error('One or both records not found');
     }
 
     // Merge logic: keep newer/non-empty values
-    const merged = { ...keepRecord };
-    
+    const merged: Record<string, unknown> = { ...keepRecord };
+
     for (const key in mergeRecord) {
       // Skip metadata fields
       if (['id', 'createdAt', 'updatedAt', 'organizationId', 'workspaceId'].includes(key)) {
         continue;
       }
-      
+
+      const mergedValue = merged[key];
+      const mergeValue = mergeRecord[key];
+
       // If keepRecord doesn't have value but mergeRecord does, use merge value
-      if (!merged[key] && mergeRecord[key]) {
-        merged[key] = mergeRecord[key];
+      if (!mergedValue && mergeValue) {
+        merged[key] = mergeValue;
       }
-      
+
       // For arrays, combine unique values
-      if (Array.isArray(merged[key]) && Array.isArray(mergeRecord[key])) {
-        merged[key] = [...new Set([...merged[key], ...mergeRecord[key]])];
+      if (isUnknownArray(mergedValue) && isUnknownArray(mergeValue)) {
+        const combined = [...mergedValue, ...mergeValue];
+        merged[key] = Array.from(new Set(combined));
       }
     }
 
@@ -452,11 +503,12 @@ export async function mergeRecords(
       mergeId,
     });
 
-    return merged;
+    return merged as CRMRecord;
 
-  } catch (error: any) {
-    logger.error('Record merge failed', error);
-    throw new Error(`Merge failed: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Record merge failed', error instanceof Error ? error : undefined);
+    throw new Error(`Merge failed: ${errorMessage}`);
   }
 }
 
