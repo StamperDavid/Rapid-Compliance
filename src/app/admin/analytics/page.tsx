@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Timestamp } from 'firebase/firestore';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { PlatformMetrics } from '@/types/admin';
+import { createMockTimestamp } from '@/lib/utils/firestore-utils';
 
 export default function AnalyticsPage() {
   useAdminAuth();
@@ -33,7 +33,7 @@ export default function AnalyticsPage() {
         churnRate: 2.3,
         growthRate: 12.5,
         conversionRate: 8.7,
-        updatedAt: new Date() as unknown as Timestamp,
+        updatedAt: createMockTimestamp(),
       });
       setLoading(false);
     }, 500);

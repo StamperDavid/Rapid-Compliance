@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { MetricCard, QuickActionCard, SocialComposerWidget, LeadPipelineWidget, SwarmMonitorWidget } from '@/components/shared';
 import type { PlatformMetrics, SystemHealth } from '@/types/admin';
 import { logger } from '@/lib/logger/logger';
-import type { Timestamp } from 'firebase/firestore';
+import { createMockTimestamp } from '@/lib/utils/firestore-utils';
 
 // Types for API responses
 interface Organization {
@@ -132,19 +132,19 @@ export default function CEOCommandCenter() {
           churnRate: 0,
           growthRate: 0,
           conversionRate: trialOrganizations > 0 ? (activeOrganizations / (activeOrganizations + trialOrganizations)) * 100 : 0,
-          updatedAt: new Date() as unknown as Timestamp,
+          updatedAt: createMockTimestamp(),
         });
 
         setSystemHealth({
           status: 'healthy',
-          timestamp: new Date() as unknown as Timestamp,
+          timestamp: createMockTimestamp(),
           services: {
-            database: { status: 'healthy', responseTime: 12, lastChecked: new Date() as unknown as Timestamp },
-            storage: { status: 'healthy', responseTime: 45, lastChecked: new Date() as unknown as Timestamp },
-            ai: { status: 'healthy', responseTime: 234, lastChecked: new Date() as unknown as Timestamp },
-            email: { status: 'healthy', responseTime: 89, lastChecked: new Date() as unknown as Timestamp },
-            sms: { status: 'healthy', responseTime: 156, lastChecked: new Date() as unknown as Timestamp },
-            api: { status: 'healthy', responseTime: 23, lastChecked: new Date() as unknown as Timestamp },
+            database: { status: 'healthy', responseTime: 12, lastChecked: createMockTimestamp() },
+            storage: { status: 'healthy', responseTime: 45, lastChecked: createMockTimestamp() },
+            ai: { status: 'healthy', responseTime: 234, lastChecked: createMockTimestamp() },
+            email: { status: 'healthy', responseTime: 89, lastChecked: createMockTimestamp() },
+            sms: { status: 'healthy', responseTime: 156, lastChecked: createMockTimestamp() },
+            api: { status: 'healthy', responseTime: 23, lastChecked: createMockTimestamp() },
           },
           performance: {
             averageResponseTime: 89,
@@ -191,7 +191,7 @@ export default function CEOCommandCenter() {
           churnRate: 0,
           growthRate: 0,
           conversionRate: 0,
-          updatedAt: new Date() as unknown as Timestamp,
+          updatedAt: createMockTimestamp(),
         });
         setLoading(false);
       }

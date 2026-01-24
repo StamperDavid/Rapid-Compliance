@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import type { Timestamp } from 'firebase/firestore';
 import { auth } from '@/lib/firebase/config';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { logger } from '@/lib/logger/logger';
+import { createMockTimestamp } from '@/lib/utils/firestore-utils';
 
 interface FirebaseError {
   code: string;
@@ -107,8 +107,8 @@ export default function AdminLoginPage() {
           canManageTemplates: true,
           canManageCompliance: true,
         },
-        createdAt: new Date() as unknown as Timestamp,
-        updatedAt: new Date() as unknown as Timestamp,
+        createdAt: createMockTimestamp(),
+        updatedAt: createMockTimestamp(),
         status: 'active' as const,
         mfaEnabled: false,
       };

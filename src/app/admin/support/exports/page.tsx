@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { BulkOperation } from '@/types/admin'
-import type { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { createMockTimestamp } from '@/lib/utils/firestore-utils';
 
 export default function DataExportsPage() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -44,7 +44,7 @@ export default function DataExportsPage() {
         successCount: 0,
         errorCount: 0,
         createdBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : '',
-        createdAt: new Date().toISOString() as unknown as Timestamp,
+        createdAt: createMockTimestamp(),
       };
       setExports([newExport, ...exports]);
 
@@ -198,7 +198,7 @@ export default function DataExportsPage() {
                     {exp.resourceType} Export ({exp.format ?? 'json'})
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                    Created: {new Date(exp.createdAt as unknown as string).toLocaleString()}
+                    Created: {exp.createdAt.toDate().toLocaleString()}
                   </div>
                   {exp.status === 'processing' && (
                     <div style={{ fontSize: '0.875rem', color: '#f59e0b', marginTop: '0.25rem' }}>

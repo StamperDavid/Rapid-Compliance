@@ -83,8 +83,9 @@ export async function createForm(
     id: formId,
     organizationId: orgId,
     workspaceId,
-    createdAt: serverTimestamp() as unknown as Timestamp,
-    updatedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    createdAt: serverTimestamp() as Timestamp,
+    updatedAt: serverTimestamp() as Timestamp,
     submissionCount: 0,
     viewCount: 0,
   };
@@ -310,7 +311,8 @@ export async function createSubmission(
     responses,
     metadata,
     confirmationNumber,
-    submittedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    submittedAt: serverTimestamp() as Timestamp,
     isPartial,
     resumeToken: isPartial ? (resumeToken ?? generateResumeToken()) : undefined,
   };
@@ -413,7 +415,8 @@ export async function updatePartialSubmission(
   const updateData: Partial<FormSubmission> = {
     responses: updates.responses,
     isPartial: updates.isPartial,
-    lastSavedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    lastSavedAt: serverTimestamp() as Timestamp,
   };
 
   if (updates.metadata) {
@@ -422,7 +425,8 @@ export async function updatePartialSubmission(
 
   if (!updates.isPartial) {
     updateData.status = 'pending';
-    updateData.submittedAt = serverTimestamp() as unknown as Timestamp;
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    updateData.submittedAt = serverTimestamp() as Timestamp;
 
     // Update form submission count
     const formRef = doc(getDb(), getFormsCollectionPath(orgId, workspaceId), formId);
@@ -546,7 +550,8 @@ export async function trackFormView(
     id: viewId,
     formId,
     organizationId: orgId,
-    viewedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    viewedAt: serverTimestamp() as Timestamp,
     sessionId,
     converted: false,
     metadata,

@@ -131,8 +131,9 @@ export async function createForm(
     fieldCount: 0,
     submissionCount: 0,
     viewCount: 0,
-    createdAt: serverTimestamp() as unknown as Timestamp,
-    updatedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    createdAt: serverTimestamp() as Timestamp,
+    updatedAt: serverTimestamp() as Timestamp,
   };
 
   await setDoc(formDoc, form);
@@ -362,8 +363,9 @@ export async function duplicateForm(
       submissionCount: 0,
       viewCount: 0,
       publishedAt: undefined,
-      createdAt: serverTimestamp() as unknown as Timestamp,
-      updatedAt: serverTimestamp() as unknown as Timestamp,
+      // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+      createdAt: serverTimestamp() as Timestamp,
+      updatedAt: serverTimestamp() as Timestamp,
     };
 
     transaction.set(newFormRef, newForm);
@@ -375,8 +377,9 @@ export async function duplicateForm(
         ...field,
         id: newFieldRef.id,
         formId: newFormId,
-        createdAt: serverTimestamp() as unknown as Timestamp,
-        updatedAt: serverTimestamp() as unknown as Timestamp,
+        // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+        createdAt: serverTimestamp() as Timestamp,
+        updatedAt: serverTimestamp() as Timestamp,
       };
       transaction.set(newFieldRef, newField);
     }
@@ -411,8 +414,9 @@ export async function addFormField(
     formId,
     organizationId: orgId,
     workspaceId,
-    createdAt: serverTimestamp() as unknown as Timestamp,
-    updatedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    createdAt: serverTimestamp() as Timestamp,
+    updatedAt: serverTimestamp() as Timestamp,
   };
 
   // Batch: create field + increment form counter
@@ -588,9 +592,10 @@ export async function createSubmission(
     resumeToken,
     pageProgress,
     metadata,
-    submittedAt: serverTimestamp() as unknown as Timestamp,
-    startedAt: serverTimestamp() as unknown as Timestamp,
-    lastSavedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    submittedAt: serverTimestamp() as Timestamp,
+    startedAt: serverTimestamp() as Timestamp,
+    lastSavedAt: serverTimestamp() as Timestamp,
   };
 
   // Batch: create submission + update form counter (if not partial)
@@ -701,7 +706,8 @@ export async function updateSubmission(
   // If completing a partial submission
   if (updates.isPartial === false) {
     updates.status = 'pending';
-    updates.submittedAt = serverTimestamp() as unknown as Timestamp;
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    updates.submittedAt = serverTimestamp() as Timestamp;
 
     // Update form counter
     await updateDoc(doc(getDb(), PATHS.form(orgId, workspaceId, formId)), {
@@ -860,7 +866,8 @@ export async function trackFormView(
     id: viewId,
     formId,
     organizationId: orgId,
-    viewedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    viewedAt: serverTimestamp() as Timestamp,
     sessionId,
     converted: false,
     metadata,
@@ -954,7 +961,8 @@ export async function updateDailyAnalytics(
           byUtmSource: metadata?.utmSource ? { [metadata.utmSource]: 1 } : {},
           byUtmMedium: metadata?.utmMedium ? { [metadata.utmMedium]: 1 } : {},
           byUtmCampaign: metadata?.utmCampaign ? { [metadata.utmCampaign]: 1 } : {},
-          lastUpdated: serverTimestamp() as unknown as Timestamp,
+          // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+          lastUpdated: serverTimestamp() as Timestamp,
         };
 
         transaction.set(analyticsRef, newAnalytics);
@@ -1060,8 +1068,9 @@ export async function createFormTemplate(
     organizationId: orgId,
     workspaceId,
     usageCount: 0,
-    createdAt: serverTimestamp() as unknown as Timestamp,
-    updatedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    createdAt: serverTimestamp() as Timestamp,
+    updatedAt: serverTimestamp() as Timestamp,
   };
 
   await setDoc(templateDoc, template);
@@ -1143,8 +1152,9 @@ export async function createFormFromTemplate(
       fieldCount: template.fields.length,
       submissionCount: 0,
       viewCount: 0,
-      createdAt: serverTimestamp() as unknown as Timestamp,
-      updatedAt: serverTimestamp() as unknown as Timestamp,
+      // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+      createdAt: serverTimestamp() as Timestamp,
+      updatedAt: serverTimestamp() as Timestamp,
     };
 
     transaction.set(formDoc, form);
@@ -1158,8 +1168,9 @@ export async function createFormFromTemplate(
         formId,
         organizationId: orgId,
         workspaceId,
-        createdAt: serverTimestamp() as unknown as Timestamp,
-        updatedAt: serverTimestamp() as unknown as Timestamp,
+        // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+        createdAt: serverTimestamp() as Timestamp,
+        updatedAt: serverTimestamp() as Timestamp,
       };
       transaction.set(fieldRef, field);
     }

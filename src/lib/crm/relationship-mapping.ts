@@ -161,8 +161,8 @@ export async function getDealStakeholderMap(
       
       stakeholders.push({
         contactId,
-        contactName:(rel.fromEntityName !== '' && rel.fromEntityName != null) ? rel.fromEntityName : 'Unknown',
-        role:(rel.role !== '' && rel.role != null) ? rel.role : 'Stakeholder',
+        contactName: rel.fromEntityName ?? 'Unknown',
+        role: rel.role ?? 'Stakeholder',
         influence: rel.influence ?? 50,
         engagement: activityStats.engagementScore ?? 0,
         sentiment: determineSentiment(activityStats),

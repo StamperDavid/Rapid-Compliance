@@ -142,7 +142,7 @@ export async function createDeal(
       id: dealId,
       organizationId,
       workspaceId,
-      currency:(data.currency !== '' && data.currency != null) ? data.currency : 'USD',
+      currency: data.currency ?? 'USD',
       stage: data.stage || 'prospecting',
       probability: data.probability || 10,
       createdAt: now,

@@ -82,14 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const organizationId = userProfile?.organizationId ?? 'demo';
 
               // Extract display name with fallback chain
-              let displayName = 'User';
-              if (authUser.displayName !== '' && authUser.displayName != null) {
-                displayName = authUser.displayName;
-              } else if (userProfile?.displayName !== '' && userProfile?.displayName != null) {
-                displayName = userProfile.displayName;
-              } else if (userProfile?.name !== '' && userProfile?.name != null) {
-                displayName = userProfile.name;
-              }
+              const displayName = authUser.displayName ?? userProfile?.displayName ?? userProfile?.name ?? 'User';
 
               const roleValue = userProfile?.role;
               setUser({
@@ -105,9 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUser({
                 id: authUser.uid,
                 email: authUser.email ?? '',
-                displayName: (authUser.displayName !== '' && authUser.displayName != null)
-                  ? authUser.displayName
-                  : 'User',
+                displayName: authUser.displayName ?? 'User',
                 role: 'admin',
                 organizationId: 'demo',
               });

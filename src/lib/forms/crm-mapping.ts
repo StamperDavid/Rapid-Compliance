@@ -381,8 +381,9 @@ export async function createCRMRecord(
     source: 'form',
     sourceFormId,
     sourceSubmissionId,
-    createdAt: serverTimestamp() as unknown as Timestamp,
-    updatedAt: serverTimestamp() as unknown as Timestamp,
+    // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
+    createdAt: serverTimestamp() as Timestamp,
+    updatedAt: serverTimestamp() as Timestamp,
   };
 
   await setDoc(recordRef, record);
