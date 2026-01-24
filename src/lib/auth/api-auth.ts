@@ -161,7 +161,7 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
             });
           }
         }
-      } catch (adminError) {
+      } catch (adminError: unknown) {
         const errorMessage = adminError instanceof Error ? adminError.message : 'Unknown error';
         logger.debug('[API Auth] Admin SDK Firestore failed', { file: 'api-auth.ts', error: errorMessage });
         // Try client SDK as last resort
@@ -173,7 +173,7 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
             organizationId = organizationId ?? profileData.organizationId;
             logger.debug('[API Auth] User profile loaded via client SDK', { file: 'api-auth.ts', role, organizationId });
           }
-        } catch (clientError) {
+        } catch (clientError: unknown) {
           const clientErrorMessage = clientError instanceof Error ? clientError.message : 'Unknown error';
           logger.debug('[API Auth] Client SDK also failed', { file: 'api-auth.ts', error: clientErrorMessage });
         }
@@ -223,7 +223,7 @@ export async function optionalAuth(
   try {
     const user = await verifyAuthToken(request);
     return user;
-  } catch (_error) {
+  } catch (_error: unknown) {
     return null;
   }
 }

@@ -5,6 +5,19 @@ import type { Timestamp } from 'firebase/firestore';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { ComplianceRecord } from '@/types/admin';
 
+/**
+ * Creates a mock Timestamp object for demo data that satisfies the Timestamp interface
+ */
+function createMockTimestamp(date: Date): Timestamp {
+  return {
+    seconds: Math.floor(date.getTime() / 1000),
+    nanoseconds: (date.getTime() % 1000) * 1000000,
+    toDate: () => date,
+    toMillis: () => date.getTime(),
+    isEqual: (other: Timestamp) => other.toMillis() === date.getTime(),
+  } as Timestamp;
+}
+
 export default function CompliancePage() {
   const { hasPermission } = useAdminAuth();
   const [records, setRecords] = useState<ComplianceRecord[]>([]);
@@ -24,9 +37,9 @@ export default function CompliancePage() {
             { id: 'req-2', name: 'Right to Access', description: 'Users can export their data', status: 'met', evidence: 'Export feature implemented' },
             { id: 'req-3', name: 'Right to Deletion', description: 'Users can delete their data', status: 'met', evidence: 'Delete functionality available' },
           ],
-          lastAuditAt: new Date('2024-03-01') as unknown as Timestamp,
-          nextAuditAt: new Date('2024-06-01') as unknown as Timestamp,
-          updatedAt: new Date() as unknown as Timestamp,
+          lastAuditAt: createMockTimestamp(new Date('2024-03-01')),
+          nextAuditAt: createMockTimestamp(new Date('2024-06-01')),
+          updatedAt: createMockTimestamp(new Date()),
         },
         {
           id: 'comp-2',
@@ -38,9 +51,9 @@ export default function CompliancePage() {
             { id: 'req-5', name: 'Opt-Out Rights', description: 'Users can opt-out of data sales', status: 'met', evidence: 'Do Not Sell option available' },
             { id: 'req-6', name: 'Data Deletion', description: 'Users can request deletion', status: 'met', evidence: 'Deletion workflow implemented' },
           ],
-          lastAuditAt: new Date('2024-02-15') as unknown as Timestamp,
-          nextAuditAt: new Date('2024-05-15') as unknown as Timestamp,
-          updatedAt: new Date() as unknown as Timestamp,
+          lastAuditAt: createMockTimestamp(new Date('2024-02-15')),
+          nextAuditAt: createMockTimestamp(new Date('2024-05-15')),
+          updatedAt: createMockTimestamp(new Date()),
         },
       ]);
       setLoading(false);
@@ -147,8 +160,8 @@ export default function CompliancePage() {
                     </span>
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                    Last audit: {record.lastAuditAt ? new Date(record.lastAuditAt as unknown as Date).toLocaleDateString() : 'Never'} • 
-                    Next audit: {record.nextAuditAt ? new Date(record.nextAuditAt as unknown as Date).toLocaleDateString() : 'Not scheduled'}
+                    Last audit: {record.lastAuditAt ? record.lastAuditAt.toDate().toLocaleDateString() : 'Never'} •
+                    Next audit: {record.nextAuditAt ? record.nextAuditAt.toDate().toLocaleDateString() : 'Not scheduled'}
                   </div>
                 </div>
               </div>

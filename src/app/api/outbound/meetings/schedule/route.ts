@@ -80,9 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // NEW PRICING MODEL: All features available to all active subscriptions
-    // Feature check no longer needed - everyone gets meeting scheduling!
-    // const featureCheck = await requireFeature(request, orgId, 'multiChannelOutreach' as any);
-    // if (featureCheck) return featureCheck;
+    // Meeting scheduling is now available to all users
 
     // Validate meetingType and urgency
     const validMeetingType: MeetingType = isValidMeetingType(meetingType) ? meetingType : 'discovery';

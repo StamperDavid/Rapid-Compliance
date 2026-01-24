@@ -58,9 +58,7 @@ export async function POST(request: NextRequest) {
     const validatedReply: EmailReply = emailReply;
 
     // NEW PRICING MODEL: All features available to all active subscriptions
-    // Feature check no longer needed - everyone gets reply handling!
-    // const featureCheck = await requireFeature(request, orgId, 'replyHandler' as any);
-    // if (featureCheck) return featureCheck;
+    // Reply handling is now available to all users
 
     // Classify the reply
     logger.info('Processing reply', { route: '/api/outbound/reply/process', from: validatedReply.from });
