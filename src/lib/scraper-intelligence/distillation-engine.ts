@@ -467,8 +467,8 @@ function evaluateCondition(
       expression = expression.replace(regex, JSON.stringify(value));
     }
 
-    // Use Function constructor (safer than eval)
-    // eslint-disable-next-line no-new-func -- Required for dynamic condition evaluation in scoring rules
+    // Use Function constructor (safer than eval) for dynamic condition evaluation
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval -- Intentional for formula evaluation
     const fn = new Function(`return ${expression}`) as () => unknown;
     return Boolean(fn());
   } catch (error) {

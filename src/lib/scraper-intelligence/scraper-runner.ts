@@ -205,7 +205,7 @@ export class ProductionScraperRunner implements ScraperRunner {
   ): Promise<ScrapeJobResult> {
     const startTime = Date.now();
 
-    // eslint-disable-next-line no-constant-condition
+     
     while (true) {
       const result = await this.queue.getJob(jobId);
 

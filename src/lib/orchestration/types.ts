@@ -66,8 +66,8 @@ export type SignalType =
   | 'email.sent'                // Email sent to recipient
   | 'email.variant.created'     // Email variant created for A/B testing
   | 'email.delivery.failed'     // Email delivery failed
-  | 'email.opened'              // Email opened by recipient (duplicate from engagement)
-  | 'email.clicked'             // Email clicked by recipient (duplicate from engagement)
+                 // Email opened by recipient (duplicate from engagement)
+                // Email clicked by recipient (duplicate from engagement)
   
   // Sequence Signals
   | 'sequence.started'          // Lead entered sequence

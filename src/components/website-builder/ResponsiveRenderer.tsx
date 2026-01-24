@@ -538,7 +538,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
       const logos = (widget.data.logos as LogoItem[]) || [];
       return (
         <div className="logo-grid">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           {logos.map((logo, idx: number) => (
             <div
               key={idx}

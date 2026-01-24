@@ -197,7 +197,7 @@ export default function SchemaBuilderPage() {
   };
 
   const deleteSchema = async (id: string) => {
-    // eslint-disable-next-line no-alert, no-restricted-globals
+    // eslint-disable-next-line no-alert
     if (!confirm('Are you sure you want to delete this schema?')) {return;}
     setSaving(true);
     setError(null);

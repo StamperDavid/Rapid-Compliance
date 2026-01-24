@@ -203,7 +203,7 @@ export default function WorkflowsPage() {
             animate="visible"
             className="grid gap-4"
           >
-            {/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment -- Workflow type inference affected by upstream type issues */}
+            { }
             {workflows.map((workflow) => (
               <motion.div
                 key={workflow.id}
@@ -310,7 +310,7 @@ export default function WorkflowsPage() {
                 </div>
               </motion.div>
             ))}
-            {/* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */}
+            { }
           </motion.div>
 
           {/* Pagination */}

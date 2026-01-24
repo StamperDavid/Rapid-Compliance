@@ -131,8 +131,9 @@ export class WorkflowService {
   
   /**
    * Query workflows with filters
+   * Note: Returns Promise for API consistency - will use await when Firestore queries are implemented
    */
-  async getWorkflows(
+  getWorkflows(
     filters: WorkflowFilterInput
   ): Promise<{ workflows: Workflow[]; total: number }> {
     logger.debug('Querying workflows', filters);
@@ -141,15 +142,15 @@ export class WorkflowService {
       filters.organizationId,
       'workflows'
     );
-    
+
     // In production, implement proper Firestore querying with filters
     // For now, return empty array
     // TODO: Implement with Firestore queries
-    
-    return {
+
+    return Promise.resolve({
       workflows: [],
       total: 0,
-    };
+    });
   }
   
   /**
@@ -261,11 +262,12 @@ export class WorkflowService {
   
   /**
    * Get workflow executions
+   * Note: Returns Promise for API consistency - will use await when Firestore queries are implemented
    */
-  async getWorkflowExecutions(
+  getWorkflowExecutions(
     organizationId: string,
     workflowId?: string,
-    limit: number = 50
+    limit = 50
   ): Promise<WorkflowExecution[]> {
     logger.debug('Getting workflow executions', {
       organizationId,
@@ -277,12 +279,12 @@ export class WorkflowService {
       organizationId,
       'workflow_executions'
     );
-    
+
     // In production, implement proper Firestore querying with filters
     // For now, return empty array
     // TODO: Implement with Firestore queries
-    
-    return [];
+
+    return Promise.resolve([]);
   }
   
   /**

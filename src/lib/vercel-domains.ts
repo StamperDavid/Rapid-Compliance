@@ -76,7 +76,7 @@ export async function addVercelDomain(domain: string): Promise<{
 
     if (!response.ok) {
       const errorData = (await response.json()) as VercelErrorResponse;
-      // eslint-disable-next-line no-console
+       
       console.error('[Vercel Domains] Add domain error:', errorData);
       const errorMessage = errorData.error?.message ?? '';
       return {
@@ -94,7 +94,7 @@ export async function addVercelDomain(domain: string): Promise<{
       domain: data,
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
+     
     console.error('[Vercel Domains] Add domain exception:', error);
     const errorMessage = error instanceof Error ? error.message : '';
     return {
@@ -133,7 +133,7 @@ export async function verifyVercelDomain(domain: string): Promise<{
 
     if (!response.ok) {
       const errorData = (await response.json()) as VercelErrorResponse;
-      // eslint-disable-next-line no-console
+       
       console.error('[Vercel Domains] Verify domain error:', errorData);
       const errorMessage = errorData.error?.message ?? '';
       return {
@@ -151,7 +151,7 @@ export async function verifyVercelDomain(domain: string): Promise<{
       verified: data.verified ?? false,
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
+     
     console.error('[Vercel Domains] Verify domain exception:', error);
     const errorMessage = error instanceof Error ? error.message : '';
     return {
@@ -204,7 +204,7 @@ export async function getVercelDomain(domain: string): Promise<{
       domain: data,
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
+     
     console.error('[Vercel Domains] Get domain exception:', error);
     const errorMessage = error instanceof Error ? error.message : '';
     return {
@@ -242,7 +242,7 @@ export async function removeVercelDomain(domain: string): Promise<{
 
     if (!response.ok) {
       const errorData = (await response.json()) as VercelErrorResponse;
-      // eslint-disable-next-line no-console
+       
       console.error('[Vercel Domains] Remove domain error:', errorData);
       const errorMessage = errorData.error?.message ?? '';
       return {
@@ -258,7 +258,7 @@ export async function removeVercelDomain(domain: string): Promise<{
       success: true,
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
+     
     console.error('[Vercel Domains] Remove domain exception:', error);
     const errorMessage = error instanceof Error ? error.message : '';
     return {
@@ -364,7 +364,7 @@ export async function provisionSSL(domain: string): Promise<{
       status: 'pending',
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
+     
     console.error('[Vercel Domains] SSL provisioning error:', error);
     const errorMessage = error instanceof Error ? error.message : '';
     return {

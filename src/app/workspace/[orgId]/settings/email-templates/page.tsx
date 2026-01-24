@@ -414,7 +414,7 @@ Best regards,
                         <button
                           onClick={() => {
                             if (!testEmailAddress) {
-                              // eslint-disable-next-line no-alert
+                               
                               alert('Please enter a test email address');
                               return;
                             }

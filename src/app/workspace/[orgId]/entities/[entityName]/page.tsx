@@ -200,7 +200,7 @@ export default function EntityTablePage() {
 
   const handleAdd = async () => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       const { id: _id, ...data } = formData;
       await createRecord(data);
       setIsAdding(false);
@@ -227,7 +227,7 @@ export default function EntityTablePage() {
   const handleUpdate = async () => {
     if (!editingId) {return;}
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = formData;
       await updateRecord(editingId, updateData);
       setEditingId(null);

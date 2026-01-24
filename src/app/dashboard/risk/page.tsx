@@ -115,7 +115,7 @@ export default function RiskDashboardPage() {
 
     } catch (err: unknown) {
       // TODO: Show error toast notification
-      // eslint-disable-next-line no-console
+       
       console.error('Failed to start intervention:', err);
     }
   };

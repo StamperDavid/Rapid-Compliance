@@ -21,7 +21,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import type { Deal } from './deal-service';
-// eslint-disable-next-line no-duplicate-imports -- deal-health depends on deal-service, both imports needed
+ 
 import { calculateDealHealth, type DealHealthScore } from './deal-health';
 import type { ActivityStats } from '@/types/activity';
 import { getActivityStats } from './activity-service';

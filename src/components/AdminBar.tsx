@@ -114,7 +114,7 @@ export default function AdminBar() {
             </Link>
           )}
           <button
-            /* eslint-disable-next-line no-alert -- Intentional: Simple feedback UI pending backend integration */
+             
             onClick={() => {
               // eslint-disable-next-line no-alert -- Intentional: Simple feedback UI pending backend integration
               const feedback = prompt('What feedback or feature request would you like to share?');

@@ -4,7 +4,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-// eslint-disable-next-line no-duplicate-imports -- Need specific Firestore query types
+ 
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getClientSignalCoordinator } from '@/lib/orchestration/coordinator-factory-client';

@@ -483,7 +483,7 @@ export async function getEmailTracking(messageId: string, organizationId?: strin
   }
 
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+   
   const trackingData = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
     messageId
@@ -531,7 +531,7 @@ export async function recordEmailOpen(
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
   // Get existing tracking or create new
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+   
   const existing = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
     messageId
@@ -574,7 +574,7 @@ export async function recordEmailClick(
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
   // Get existing tracking or create new
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+   
   const existing = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
     messageId

@@ -514,7 +514,7 @@ export class WorkflowEngine {
         if (attempt > 0) {
           const backoff = retry.backoffMultiplier ?? 1;
           const delay = retry.delayMs * Math.pow(backoff, attempt - 1);
-          await new Promise<void>((resolve) => setTimeout(resolve, delay));
+          await new Promise<void>((resolve) => { setTimeout(resolve, delay); });
         }
         
         return await this.executeAction(action, context, workflow);
@@ -600,26 +600,27 @@ export class WorkflowEngine {
   
   /**
    * Execute task action
+   * Note: Returns Promise for API consistency - will be async when CRM integration is added
    */
-  static async executeTaskAction(
+  static executeTaskAction(
     action: WorkflowAction,
     context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
     const config = action.config as TaskActionConfig;
-    
+
     // Resolve assignee
-    const assignToUserId = config.assignToUserId ?? 
+    const assignToUserId = config.assignToUserId ??
       this.getFieldValue((config.assignToField ?? 'deal.ownerId'), context) as string;
-    
+
     if (!assignToUserId) {
-      throw new Error('No assignee found for task');
+      return Promise.reject(new Error('No assignee found for task'));
     }
-    
+
     // Calculate due date
-    const dueDate = config.dueInDays 
+    const dueDate = config.dueInDays
       ? new Date(Date.now() + config.dueInDays * 24 * 60 * 60 * 1000)
       : undefined;
-    
+
     // In production, this would create a task in the CRM
     // For now, we'll just return metadata
     logger.info('Task would be created', {
@@ -628,29 +629,30 @@ export class WorkflowEngine {
       dueDate: dueDate?.toISOString() ?? null,
       dealId: context.dealId,
     });
-    
-    return {
+
+    return Promise.resolve({
       taskId: `task_${Date.now()}`,
       title: config.title,
       assignedTo: assignToUserId,
       dueDate: dueDate?.toISOString() ?? null,
       priority: config.priority ?? 'medium',
-    };
+    });
   }
   
   /**
    * Execute deal action
+   * Note: Returns Promise for API consistency - will be async when Firestore integration is added
    */
-  static async executeDealAction(
+  static executeDealAction(
     action: WorkflowAction,
     context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
     const config = action.config as DealActionConfig;
-    
+
     if (!context.dealId) {
-      throw new Error('No deal ID in context for deal action');
+      return Promise.reject(new Error('No deal ID in context for deal action'));
     }
-    
+
     // In production, this would update the deal in Firestore
     // For now, we'll just return metadata
     logger.info('Deal would be updated', {
@@ -660,32 +662,33 @@ export class WorkflowEngine {
       operation: config.operation ?? 'set',
     });
 
-    return {
+    return Promise.resolve({
       dealId: context.dealId,
       field: config.field,
       value: config.value,
       operation: config.operation ?? 'set',
       updatedAt: new Date().toISOString(),
-    };
+    });
   }
   
   /**
    * Execute notification action
+   * Note: Returns Promise for API consistency - will be async when notification integration is added
    */
-  static async executeNotificationAction(
+  static executeNotificationAction(
     action: WorkflowAction,
     context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
     const config = action.config as NotificationActionConfig;
-    
+
     // Resolve recipient
-    const recipientId = config.recipientId ?? 
+    const recipientId = config.recipientId ??
       this.getFieldValue((config.recipientField ?? 'deal.ownerId'), context) as string;
-    
+
     if (!recipientId) {
-      throw new Error('No recipient found for notification');
+      return Promise.reject(new Error('No recipient found for notification'));
     }
-    
+
     // In production, this would send the notification
     // For now, we'll just return metadata
     logger.info('Notification would be sent', {
@@ -694,42 +697,43 @@ export class WorkflowEngine {
       message: config.message,
       dealId: context.dealId,
     });
-    
-    return {
+
+    return Promise.resolve({
       notificationId: `notif_${Date.now()}`,
       channel: config.channel,
       recipientId,
       title: config.title,
       message: config.message,
       sentAt: new Date().toISOString(),
-    };
+    });
   }
   
   /**
    * Execute wait action
+   * Note: Returns Promise for API consistency - will be async when scheduler integration is added
    */
-  static async executeWaitAction(
+  static executeWaitAction(
     action: WorkflowAction,
     _context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
     const config = action.config as WaitActionConfig;
-    
+
     if (config.type === 'delay') {
-      const delayMs = (config.delayHours ?? 0) * 60 * 60 * 1000 + 
+      const delayMs = (config.delayHours ?? 0) * 60 * 60 * 1000 +
                      (config.delayDays ?? 0) * 24 * 60 * 60 * 1000;
-      
+
       // In production, this would schedule the next action
       // For now, we'll just log it
       logger.info('Wait action registered', {
         delayMs,
         resumeAt: new Date(Date.now() + delayMs).toISOString(),
       });
-      
-      return {
+
+      return Promise.resolve({
         waitType: 'delay',
         delayMs,
         resumeAt: new Date(Date.now() + delayMs).toISOString(),
-      };
+      });
     } else {
       // Wait until condition is met
       const conditionDescription = config.condition
@@ -740,11 +744,11 @@ export class WorkflowEngine {
         maxWaitDays: config.maxWaitDays,
       });
 
-      return {
+      return Promise.resolve({
         waitType: 'until',
         condition: conditionDescription,
         maxWaitDays: config.maxWaitDays,
-      };
+      });
     }
   }
 }
