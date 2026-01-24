@@ -138,7 +138,7 @@ async function testSustainedAttack() {
     requestCount++;
 
     // Wait for next interval
-    await new Promise(resolve => setTimeout(resolve, interval));
+    await new Promise(resolve => { setTimeout(resolve, interval); });
   }
 
   const duration = Date.now() - startTime;

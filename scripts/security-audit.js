@@ -230,7 +230,7 @@ async function testRateLimiting() {
     await Promise.allSettled(batch);
     
     // Small delay between batches
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => { setTimeout(resolve, 100); });
   }
 
   log(`\nResults after ${requestsToSend} requests:`, colors.yellow);

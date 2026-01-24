@@ -483,7 +483,7 @@ async function seedAllAccounts() {
     results.push({ ...account, ...result });
     
     // Small delay between creations
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => { setTimeout(resolve, 1000); });
   }
   
   // Summary

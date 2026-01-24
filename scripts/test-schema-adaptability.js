@@ -345,7 +345,7 @@ async function runTests() {
     
     // Wait a moment for events to be created
     info('Waiting 2 seconds for events to be created...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => { setTimeout(resolve, 2000); });
 
     const eventsSnapshot = await db
       .collection('organizations')

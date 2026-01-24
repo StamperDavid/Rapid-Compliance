@@ -397,7 +397,7 @@ async function cleanupTestData(dryRun = true) {
   console.log(`Test organizations to delete: ${testOrgs.length}`);
   console.log('\n⏳ Starting deletion in 3 seconds... (Press Ctrl+C to cancel)\n');
   
-  await new Promise(resolve => setTimeout(resolve, 3000));
+  await new Promise(resolve => { setTimeout(resolve, 3000); });
   
   // Step 3: Delete test organizations
   console.log('🗑️  DELETING TEST ORGANIZATIONS...\n');

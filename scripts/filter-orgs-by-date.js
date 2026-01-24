@@ -195,7 +195,7 @@ async function filterByDate() {
     console.log('═══════════════════════════════════════════════════════════════════════════\n');
     console.log('⏳ Starting in 3 seconds... (Press Ctrl+C to cancel)\n');
     
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => { setTimeout(resolve, 3000); });
     
     let deletedOrgs = 0;
     let deletedUsers = 0;
