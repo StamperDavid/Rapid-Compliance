@@ -31,6 +31,10 @@ import type {
   TriggerCondition,
   ActionExecutionResult,
   EmailActionConfig,
+  TaskActionConfig,
+  DealActionConfig,
+  NotificationActionConfig,
+  WaitActionConfig,
 } from './types';
 import type { DealScore } from '@/lib/templates/deal-scoring-engine';
 
@@ -482,8 +486,19 @@ export class WorkflowEngine {
     context: WorkflowExecutionContext,
     workflow: Workflow
   ): Promise<ActionExecutionResult> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const retry = action.retry!;
+    const retry = action.retry;
+    if (!retry) {
+      // No retry config - return a failed result
+      return {
+        actionId: action.id,
+        actionType: action.type,
+        status: 'failed',
+        startedAt: Timestamp.now(),
+        completedAt: Timestamp.now(),
+        durationMs: 0,
+        error: 'Retry configuration missing',
+      };
+    }
     let lastError: Error | undefined;
 
     for (let attempt = 0; attempt < retry.maxAttempts; attempt++) {
@@ -590,7 +605,7 @@ export class WorkflowEngine {
     action: WorkflowAction,
     context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
-    const config = action.config as any; // TaskActionConfig
+    const config = action.config as TaskActionConfig;
     
     // Resolve assignee
     const assignToUserId = config.assignToUserId ?? 
@@ -619,7 +634,7 @@ export class WorkflowEngine {
       title: config.title,
       assignedTo: assignToUserId,
       dueDate: dueDate?.toISOString() ?? null,
-      priority:(config.priority !== '' && config.priority != null) ? config.priority : 'medium',
+      priority: config.priority ?? 'medium',
     };
   }
   
@@ -630,7 +645,7 @@ export class WorkflowEngine {
     action: WorkflowAction,
     context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
-    const config = action.config as any; // DealActionConfig
+    const config = action.config as DealActionConfig;
     
     if (!context.dealId) {
       throw new Error('No deal ID in context for deal action');
@@ -642,14 +657,14 @@ export class WorkflowEngine {
       dealId: context.dealId,
       field: config.field,
       value: config.value,
-      operation:(config.operation !== '' && config.operation != null) ? config.operation : 'set',
+      operation: config.operation ?? 'set',
     });
-    
+
     return {
       dealId: context.dealId,
       field: config.field,
       value: config.value,
-      operation:(config.operation !== '' && config.operation != null) ? config.operation : 'set',
+      operation: config.operation ?? 'set',
       updatedAt: new Date().toISOString(),
     };
   }
@@ -661,7 +676,7 @@ export class WorkflowEngine {
     action: WorkflowAction,
     context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
-    const config = action.config as any; // NotificationActionConfig
+    const config = action.config as NotificationActionConfig;
     
     // Resolve recipient
     const recipientId = config.recipientId ?? 
@@ -697,7 +712,7 @@ export class WorkflowEngine {
     action: WorkflowAction,
     _context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
-    const config = action.config as any; // WaitActionConfig
+    const config = action.config as WaitActionConfig;
     
     if (config.type === 'delay') {
       const delayMs = (config.delayHours ?? 0) * 60 * 60 * 1000 + 
@@ -717,14 +732,17 @@ export class WorkflowEngine {
       };
     } else {
       // Wait until condition is met
+      const conditionDescription = config.condition
+        ? `${config.condition.field} ${config.condition.operator} ${String(config.condition.value)}`
+        : undefined;
       logger.info('Wait until action registered', {
-        condition: config.condition,
+        condition: conditionDescription,
         maxWaitDays: config.maxWaitDays,
       });
-      
+
       return {
         waitType: 'until',
-        condition: config.condition,
+        condition: conditionDescription,
         maxWaitDays: config.maxWaitDays,
       };
     }
