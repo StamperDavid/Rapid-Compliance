@@ -57,8 +57,8 @@ export const dashboardRoutes = {
 } as const;
 
 /**
- * Legacy admin routes that still exist
- * These are referenced in navigation but may need migration to /dashboard
+ * Admin routes for platform administration
+ * These routes are under /admin and available to platform admins
  */
 export const legacyAdminRoutes = {
   organizations: () => '/admin/organizations',
@@ -67,37 +67,37 @@ export const legacyAdminRoutes = {
   systemLogs: () => '/admin/system/logs',
   systemSettings: () => '/admin/system/settings',
 
-  // Legacy sales routes
-  voiceAgents: () => '/sales/voice-agents',
-  aiAgent: () => '/sales/ai-agent',
+  // Voice & AI Agent routes (now properly mapped to /admin)
+  voiceAgents: () => '/admin/voice',
+  aiAgent: () => '/admin/sales-agent',
 } as const;
 
 /**
- * Routes that are referenced in navigation but don't exist yet in /dashboard
- * These need to be created or redirected to existing pages
+ * Routes that map to existing admin functionality
+ * These are remapped from legacy /dashboard paths to their correct /admin locations
  */
 export const pendingDashboardRoutes = {
-  // Analytics sub-routes
-  analyticsRevenue: () => '/dashboard/analytics/revenue',
-  analyticsPipeline: () => '/dashboard/analytics/pipeline',
-  analyticsPlatform: () => '/dashboard/analytics/platform',
+  // Analytics sub-routes (mapped to admin analytics)
+  analyticsRevenue: () => '/admin/revenue',
+  analyticsPipeline: () => '/admin/analytics/pipeline',
+  analyticsPlatform: () => '/admin/analytics/usage',
 
-  // Marketing sub-routes
-  marketingEmailTemplates: () => '/dashboard/marketing/email-templates',
-  marketingWebsite: () => '/dashboard/marketing/website',
+  // Marketing sub-routes (mapped to admin tools)
+  marketingEmailTemplates: () => '/admin/templates',
+  marketingWebsite: () => '/admin/website-editor',
 
-  // Swarm sub-routes
-  swarmTraining: () => '/dashboard/swarm/training',
-  swarmPersona: () => '/dashboard/swarm/persona',
-  swarmKnowledge: () => '/dashboard/swarm/knowledge',
+  // Swarm sub-routes (mapped to admin sales-agent)
+  swarmTraining: () => '/admin/sales-agent/training',
+  swarmPersona: () => '/admin/sales-agent/persona',
+  swarmKnowledge: () => '/admin/sales-agent/knowledge',
 
-  // Settings sub-routes
-  settingsTeam: () => '/dashboard/settings/team',
-  settingsApiKeys: () => '/dashboard/settings/api-keys',
-  settingsIntegrations: () => '/dashboard/settings/integrations',
-  settingsBilling: () => '/dashboard/settings/billing',
-  settingsEcommerce: () => '/dashboard/settings/ecommerce',
-  settingsProducts: () => '/dashboard/settings/products',
+  // Settings sub-routes (mapped to admin tools)
+  settingsTeam: () => '/admin/users',
+  settingsApiKeys: () => '/admin/system/api-keys',
+  settingsIntegrations: () => '/admin/settings/integrations',
+  settingsBilling: () => '/admin/billing',
+  settingsEcommerce: () => '/admin/merchandiser',
+  settingsProducts: () => '/admin/merchandiser',
 } as const;
 
 /**

@@ -291,7 +291,7 @@ export default function OrganizationsPage() {
           </p>
         </div>
         <Link
-          href="/dashboard/organizations/new"
+          href="/admin/organizations/new"
           style={{
             padding: '0.75rem 1.5rem',
             backgroundColor: '#6366f1',
@@ -507,7 +507,7 @@ export default function OrganizationsPage() {
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                         <Tooltip content={`View details for ${org.name}: users, workspaces, usage, billing, and settings`}>
                           <Link
-                            href={`/dashboard/organizations/${org.id}`}
+                            href={`/admin/organizations/${org.id}`}
                             style={{
                               padding: '0.375rem 0.75rem',
                               backgroundColor: 'transparent',
@@ -524,7 +524,7 @@ export default function OrganizationsPage() {
                         {hasPermission('canEditOrganizations') && (
                           <Tooltip content={`Edit ${org.name}: change plan, update settings, modify limits, or suspend/activate`}>
                             <Link
-                              href={`/dashboard/organizations/${org.id}/edit`}
+                              href={`/admin/organizations/${org.id}/edit`}
                               style={{
                                 padding: '0.375rem 0.75rem',
                                 backgroundColor: 'transparent',

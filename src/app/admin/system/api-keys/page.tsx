@@ -298,7 +298,7 @@ export default function AdminAPIKeysPageNew() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/dashboard/system/settings" className="text-indigo-400 hover:text-indigo-300 mb-4 inline-block">
+          <Link href="/admin/system/settings" className="text-indigo-400 hover:text-indigo-300 mb-4 inline-block">
             ← Back to System Settings
           </Link>
           <div className="flex justify-between items-start">

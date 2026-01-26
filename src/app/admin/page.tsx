@@ -362,28 +362,28 @@ export default function CEOCommandCenter() {
           <QuickActionCard
             title="Organizations"
             description="Manage all customer organizations"
-            href="/dashboard/organizations"
+            href="/admin/organizations"
             icon="🏢"
             tooltip="View, create, and manage customer organizations"
           />
           <QuickActionCard
             title="Agent Swarm"
             description="Control 35-agent workforce"
-            href="/dashboard/swarm"
+            href="/admin/swarm"
             icon="🤖"
             tooltip="Execute agents, monitor status, view execution history"
           />
           <QuickActionCard
             title="Social Media"
             description="Compose and schedule posts"
-            href="/dashboard/social"
+            href="/admin/social"
             icon="📱"
             tooltip="Full social media composer with analytics"
           />
           <QuickActionCard
             title="System Health"
             description="Monitor system status"
-            href="/dashboard/system/health"
+            href="/admin/system/health"
             icon="🏥"
             tooltip="Detailed system health and performance metrics"
           />

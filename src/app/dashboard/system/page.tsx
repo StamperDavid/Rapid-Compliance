@@ -116,37 +116,37 @@ export default function SystemPage(): React.ReactElement {
             icon={<Building2 className="w-6 h-6" />}
             title="Organizations"
             description="Manage all organizations"
-            href="/dashboard/organizations"
+            href="/admin/organizations"
           />
           <SystemToolCard
             icon={<Users className="w-6 h-6" />}
             title="All Users"
             description="View all platform users"
-            href="/dashboard/users"
+            href="/admin/users"
           />
           <SystemToolCard
             icon={<Flag className="w-6 h-6" />}
             title="Feature Flags"
             description="Toggle platform features"
-            href="/dashboard/system/flags"
+            href="/admin/system/flags"
           />
           <SystemToolCard
             icon={<FileCode className="w-6 h-6" />}
             title="Audit Logs"
             description="View system audit logs"
-            href="/dashboard/system/logs"
+            href="/admin/system/logs"
           />
           <SystemToolCard
             icon={<Settings className="w-6 h-6" />}
             title="System Settings"
             description="Configure platform settings"
-            href="/dashboard/system/settings"
+            href="/admin/system/settings"
           />
           <SystemToolCard
             icon={<Activity className="w-6 h-6" />}
             title="System Health"
             description="Monitor system health"
-            href="/dashboard/system/health"
+            href="/admin/system/health"
           />
         </div>
       </div>

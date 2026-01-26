@@ -256,7 +256,7 @@ export default function UsersPage() {
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                       <Link
-                        href={`/dashboard/users/${user.id}`}
+                        href={`/admin/users/${user.id}`}
                         style={{
                           padding: '0.375rem 0.75rem',
                           backgroundColor: 'transparent',
