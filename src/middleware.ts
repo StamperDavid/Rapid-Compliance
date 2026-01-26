@@ -130,8 +130,10 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/admin')) {
     const newUrl = request.nextUrl.clone();
 
-    // Special cases that stay in /admin namespace
+    // All admin routes that should stay in /admin namespace (not redirect to /dashboard)
+    // This includes ALL actual admin routes to prevent 404 redirects
     const adminExceptions = [
+      '/admin', // Root admin page
       '/admin/login',
       '/admin/organizations',
       '/admin/users',
@@ -145,6 +147,24 @@ export async function middleware(request: NextRequest) {
       '/admin/system',
       '/admin/support',
       '/admin/advanced',
+      // Additional admin routes discovered in codebase
+      '/admin/customers',
+      '/admin/growth',
+      '/admin/pricing-tiers',
+      '/admin/settings',
+      '/admin/website-editor',
+      '/admin/social',
+      '/admin/command-center',
+      '/admin/deals',
+      '/admin/email-campaigns',
+      '/admin/jasper-lab',
+      '/admin/leads',
+      '/admin/specialists',
+      '/admin/voice-training',
+      '/admin/swarm',
+      '/admin/merchandiser',
+      '/admin/templates',
+      '/admin/voice',
     ];
 
     // Check if the path should stay in /admin
