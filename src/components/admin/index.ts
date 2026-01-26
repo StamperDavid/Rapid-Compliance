@@ -5,7 +5,6 @@
  */
 
 // Core Components
-export { default as CommandCenterSidebar } from './CommandCenterSidebar';
 export { default as JasperTrainingLab } from './JasperTrainingLab';
 export { UnderConstruction } from './UnderConstruction';
 export type { UnderConstructionProps, ConstructionStatus } from './UnderConstruction';

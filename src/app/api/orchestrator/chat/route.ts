@@ -245,9 +245,9 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Determine admin context based on role
-    // super_admin and admin get full admin capabilities (tool calling, etc.)
+    // platform_admin and admin get full admin capabilities (tool calling, etc.)
     // owner, user, member get merchant capabilities
-    const isAdminContext = user.role === 'super_admin' || user.role === 'admin';
+    const isAdminContext = user.role === 'platform_admin' || user.role === 'admin';
 
     logger.info('[Jasper] Authenticated', {
       uid: user.uid,

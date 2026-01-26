@@ -3,7 +3,7 @@
  * Single source of truth for the Command Center unification
  *
  * This file consolidates:
- * - AdminRole (super_admin, admin, support, viewer) from admin.ts
+ * - AdminRole (platform_admin, admin, support, viewer) from admin.ts
  * - UserRole (platform_admin, owner, admin, manager, employee) from permissions.ts
  *
  * Into a single AccountRole system that the unified dashboard uses.

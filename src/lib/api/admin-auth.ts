@@ -4,7 +4,7 @@
  *
  * Uses Firebase Custom Claims for authorization:
  * - tenant_id: Organization scope
- * - admin: Super admin flag for global access
+ * - admin: Platform admin flag for global access
  * - role: User's role within the platform
  */
 
@@ -24,7 +24,7 @@ import { PLATFORM_MASTER_ORG } from '@/lib/constants/platform';
 export interface AdminUser {
   uid: string;
   email: string;
-  role: 'platform_admin' | 'super_admin' | 'admin';
+  role: 'platform_admin' | 'admin';
   organizationId: string;
   isGlobalAdmin?: boolean;
   isPlatformAdmin?: boolean;
@@ -55,7 +55,7 @@ interface UserData {
 }
 
 /**
- * Verify the request is from an authenticated admin (super_admin or admin).
+ * Verify the request is from an authenticated admin (platform_admin or admin).
  * Uses Firebase Custom Claims as the source of truth for authorization.
  *
  * @param request - The incoming request
@@ -128,7 +128,8 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
 
     // Check if user has platform admin role in token claims
     // Platform admins can proceed without a user document
-    const hasPlatformAdminClaim = claims.role === 'platform_admin' || claims.role === 'super_admin';
+    // Note: 'super_admin' is a legacy alias for 'platform_admin' and is normalized during claim validation
+    const hasPlatformAdminClaim = claims.role === 'platform_admin';
 
     // Get user document to enrich with database role
     const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(userId).get();
@@ -163,7 +164,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     };
 
     // Check for admin roles using claims-based validation
-    // Allow platform_admin, super_admin, and admin roles
+    // Allow platform_admin and admin roles
     if (!hasAdminRole(effectiveClaims)) {
       logger.warn('Non-admin access attempt', {
         userId,
@@ -199,7 +200,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       user: {
         uid: userId,
         email: userData.email ?? decodedToken.email ?? '',
-        role: (effectiveClaims.role as 'platform_admin' | 'super_admin' | 'admin') ?? (userData.role as 'platform_admin' | 'super_admin' | 'admin'),
+        role: (effectiveClaims.role as 'platform_admin' | 'admin') ?? (userData.role as 'platform_admin' | 'admin'),
         organizationId:
           effectiveClaims.tenant_id ?? userData.organizationId ?? 'platform',
         isGlobalAdmin,

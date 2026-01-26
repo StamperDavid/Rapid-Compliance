@@ -112,12 +112,12 @@ async function initMasterOrg(): Promise<void> {
   // -------------------------------------------------------------------------
   // Step 1: Find Platform Admin User
   // -------------------------------------------------------------------------
-  console.log('📍 Step 1: Locating platform_admin or super_admin user...');
+  console.log('📍 Step 1: Locating platform_admin user...');
 
   // Try prefixed collection first, then non-prefixed (for existing deployments)
   let usersSnapshot = await db
     .collection(COLLECTIONS.USERS)
-    .where('role', 'in', ['platform_admin', 'super_admin'])
+    .where('role', '==', 'platform_admin')
     .limit(10)
     .get();
 
@@ -128,15 +128,15 @@ async function initMasterOrg(): Promise<void> {
     console.log(`   No admins in ${COLLECTIONS.USERS}, checking non-prefixed users...`);
     usersSnapshot = await db
       .collection('users')
-      .where('role', 'in', ['platform_admin', 'super_admin'])
+      .where('role', '==', 'platform_admin')
       .limit(10)
       .get();
     usersCollectionUsed = 'users';
   }
 
   if (usersSnapshot.empty) {
-    console.error('❌ No user found with role "platform_admin" or "super_admin"');
-    console.log('   Hint: Run the create-super-admin script first.');
+    console.error('❌ No user found with role "platform_admin"');
+    console.log('   Hint: Run the create-platform-admin script first.');
     process.exit(1);
   }
 

@@ -245,7 +245,7 @@ export async function requireRole(
   const { user } = authResult;
 
   // Unified RBAC: Check if user's role is in the allowed list
-  // platform_admin and super_admin must be explicitly included in allowedRoles
+  // platform_admin and platform_admin must be explicitly included in allowedRoles
   if (!user.role || !allowedRoles.includes(user.role)) {
     return NextResponse.json(
       { success: false, error: 'Insufficient permissions' },
@@ -275,7 +275,7 @@ export async function requireOrganization(
   // All users must have an organization - no exceptions
   if (!user.organizationId) {
     // Allow onboarding for admin/owner roles who are setting up their first org
-    if (['admin', 'owner', 'platform_admin', 'super_admin'].includes(user.role ?? '')) {
+    if (['admin', 'owner', 'platform_admin', 'platform_admin'].includes(user.role ?? '')) {
       // Return user without org - they're in onboarding flow
       return { user };
     }

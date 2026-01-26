@@ -14,7 +14,7 @@ interface OrganizationData {
 
 /**
  * DELETE /api/admin/organizations/[orgId]
- * Deletes a single organization (super_admin only)
+ * Deletes a single organization (platform_admin only)
  */
 export async function DELETE(
   request: NextRequest,
@@ -27,9 +27,9 @@ export async function DELETE(
     return createErrorResponse(authResult.error, authResult.status);
   }
 
-  // Only super_admins can delete organizations
-  if (authResult.user.role !== 'super_admin') {
-    return createErrorResponse('Only super_admins can delete organizations', 403);
+  // Only platform_admins can delete organizations
+  if (authResult.user.role !== 'platform_admin') {
+    return createErrorResponse('Only platform_admins can delete organizations', 403);
   }
 
   try {

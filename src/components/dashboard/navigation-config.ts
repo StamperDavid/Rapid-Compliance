@@ -2,6 +2,9 @@
  * Unified Navigation Configuration
  * Defines the complete navigation structure for the unified sidebar
  * Role-based visibility is controlled via requiredPermission fields
+ *
+ * ARCHITECTURE NOTE: SYSTEM section is positioned at the bottom for platform_admin users
+ * as it contains administrative tools that should be visually separated from daily operations.
  */
 
 import {
@@ -26,7 +29,6 @@ import {
   GraduationCap,
   UserCog,
   Book,
-  ShoppingCart,
   Package,
   TrendingUp,
   DollarSign,
@@ -41,62 +43,6 @@ import { dashboardRoutes, legacyAdminRoutes, pendingDashboardRoutes } from '@/li
  */
 export const UNIFIED_NAVIGATION: NavigationStructure = {
   sections: [
-    // =======================================================================
-    // SYSTEM SECTION (Platform Admin Only)
-    // =======================================================================
-    {
-      id: 'system',
-      label: 'System',
-      icon: Wrench,
-      allowedRoles: ['platform_admin'],
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        {
-          id: 'system-overview',
-          label: 'System Overview',
-          href: dashboardRoutes.system(),
-          icon: Activity,
-          requiredPermission: 'canViewSystemHealth',
-        },
-        {
-          id: 'system-organizations',
-          label: 'Organizations',
-          href: legacyAdminRoutes.organizations(),
-          icon: Building2,
-          requiredPermission: 'canManageAllOrganizations',
-        },
-        {
-          id: 'system-users',
-          label: 'All Users',
-          href: legacyAdminRoutes.users(),
-          icon: Users,
-          requiredPermission: 'canManageAllOrganizations',
-        },
-        {
-          id: 'system-flags',
-          label: 'Feature Flags',
-          href: legacyAdminRoutes.systemFlags(),
-          icon: Flag,
-          requiredPermission: 'canManageFeatureFlags',
-        },
-        {
-          id: 'system-logs',
-          label: 'Audit Logs',
-          href: legacyAdminRoutes.systemLogs(),
-          icon: FileCode,
-          requiredPermission: 'canViewAuditLogs',
-        },
-        {
-          id: 'system-settings',
-          label: 'System Settings',
-          href: legacyAdminRoutes.systemSettings(),
-          icon: Settings,
-          requiredPermission: 'canManageSystemSettings',
-        },
-      ],
-    },
-
     // =======================================================================
     // DASHBOARD SECTION (All Roles)
     // =======================================================================
@@ -293,6 +239,7 @@ export const UNIFIED_NAVIGATION: NavigationStructure = {
 
     // =======================================================================
     // SETTINGS SECTION (Owner and Admin only)
+    // NOTE: Products points to /admin/merchandiser (E-Commerce functionality)
     // =======================================================================
     {
       id: 'settings',
@@ -317,6 +264,13 @@ export const UNIFIED_NAVIGATION: NavigationStructure = {
           requiredPermission: 'canInviteUsers',
         },
         {
+          id: 'products',
+          label: 'Products',
+          href: pendingDashboardRoutes.settingsProducts(),
+          icon: Package,
+          requiredPermission: 'canManageProducts',
+        },
+        {
           id: 'api-keys',
           label: 'API Keys',
           href: pendingDashboardRoutes.settingsApiKeys(),
@@ -337,19 +291,63 @@ export const UNIFIED_NAVIGATION: NavigationStructure = {
           icon: DollarSign,
           requiredPermission: 'canManageBilling',
         },
+      ],
+    },
+
+    // =======================================================================
+    // SYSTEM SECTION (Platform Admin Only)
+    // CRITICAL: This section MUST remain at the ABSOLUTE BOTTOM
+    // Positioned last to visually separate platform admin tools from daily operations
+    // =======================================================================
+    {
+      id: 'system',
+      label: 'System',
+      icon: Wrench,
+      allowedRoles: ['platform_admin'],
+      collapsible: true,
+      defaultCollapsed: false,
+      items: [
         {
-          id: 'ecommerce',
-          label: 'E-Commerce',
-          href: pendingDashboardRoutes.settingsEcommerce(),
-          icon: ShoppingCart,
-          requiredPermission: 'canManageEcommerce',
+          id: 'system-overview',
+          label: 'System Overview',
+          href: dashboardRoutes.system(),
+          icon: Activity,
+          requiredPermission: 'canViewSystemHealth',
         },
         {
-          id: 'products',
-          label: 'Products',
-          href: pendingDashboardRoutes.settingsProducts(),
-          icon: Package,
-          requiredPermission: 'canManageProducts',
+          id: 'system-organizations',
+          label: 'Organizations',
+          href: legacyAdminRoutes.organizations(),
+          icon: Building2,
+          requiredPermission: 'canManageAllOrganizations',
+        },
+        {
+          id: 'system-users',
+          label: 'All Users',
+          href: legacyAdminRoutes.users(),
+          icon: Users,
+          requiredPermission: 'canManageAllOrganizations',
+        },
+        {
+          id: 'system-flags',
+          label: 'Feature Flags',
+          href: legacyAdminRoutes.systemFlags(),
+          icon: Flag,
+          requiredPermission: 'canManageFeatureFlags',
+        },
+        {
+          id: 'system-logs',
+          label: 'Audit Logs',
+          href: legacyAdminRoutes.systemLogs(),
+          icon: FileCode,
+          requiredPermission: 'canViewAuditLogs',
+        },
+        {
+          id: 'system-settings',
+          label: 'System Settings',
+          href: legacyAdminRoutes.systemSettings(),
+          icon: Settings,
+          requiredPermission: 'canManageSystemSettings',
         },
       ],
     },

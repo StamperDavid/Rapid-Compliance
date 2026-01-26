@@ -3,7 +3,7 @@
  * Allows platform_admin to set custom claims for role-based access control
  *
  * POST /api/admin/set-claims
- * Body: { userId: string, role: 'platform_admin' | 'super_admin' | 'admin', tenantId?: string }
+ * Body: { userId: string, role: 'platform_admin' | 'platform_admin' | 'admin', tenantId?: string }
  *
  * Security:
  * - Requires platform_admin authentication
@@ -30,7 +30,7 @@ import { logger } from '@/lib/logger/logger';
 /**
  * Valid role types for the platform
  */
-type RoleType = 'platform_admin' | 'super_admin' | 'admin';
+type RoleType = 'platform_admin'   | 'admin';
 
 /**
  * Request body for setting custom claims
@@ -71,7 +71,7 @@ interface SetClaimsResponse {
 function isValidRole(role: unknown): role is RoleType {
   return (
     typeof role === 'string' &&
-    (role === 'platform_admin' || role === 'super_admin' || role === 'admin')
+    (role === 'platform_admin' || role === 'platform_admin' || role === 'admin')
   );
 }
 
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
 
     if (!isSetClaimsRequestBody(rawBody)) {
       return createErrorResponse(
-        'Invalid request body. Required: userId (string), role (platform_admin|super_admin|admin), tenantId (string, optional)',
+        'Invalid request body. Required: userId (string), role (platform_admin|platform_admin|admin), tenantId (string, optional)',
         400
       );
     }

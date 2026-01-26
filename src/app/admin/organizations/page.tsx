@@ -114,7 +114,7 @@ export default function OrganizationsPage() {
           file: 'page.tsx'
         });
       } else if (response.status === 403) {
-        logger.error('🔍 Not authorized as super_admin', new Error('🔍 Not authorized as super_admin'), { file: 'page.tsx' });
+        logger.error('🔍 Not authorized as platform_admin', new Error('🔍 Not authorized as platform_admin'), { file: 'page.tsx' });
         setAuthError('NOT_SUPER_ADMIN');
         setLoading(false);
         return;
@@ -252,7 +252,7 @@ export default function OrganizationsPage() {
           <p style={{ color: '#666', marginBottom: '2rem' }}>
             {authError === 'NOT_LOGGED_IN' 
               ? 'You need to login as a super admin to view organizations.'
-              : 'Your account does not have super_admin privileges.'}
+              : 'Your account does not have platform_admin privileges.'}
           </p>
           <Link
             href="/admin-login"

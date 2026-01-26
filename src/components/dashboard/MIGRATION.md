@@ -54,7 +54,7 @@ import CommandCenterSidebar from '@/components/admin/CommandCenterSidebar';
 
 <CommandCenterSidebar
   organizationId={organizationId}
-  adminUser={{ displayName: "Admin", role: "super_admin" }}
+  adminUser={{ displayName: "Admin", role: "platform_admin" }}
   isCollapsed={collapsed}
   onToggleCollapse={() => setCollapsed(!collapsed)}
 />
@@ -137,7 +137,7 @@ Map old roles to new unified roles:
 **Admin System (CommandCenterSidebar):**
 ```typescript
 const roleMapping = {
-  'super_admin': 'platform_admin',
+  // Legacy 'super_admin' is automatically normalized to 'platform_admin'
   'admin': 'platform_admin',
   'support': 'admin',
   'viewer': 'employee',
@@ -155,8 +155,8 @@ const roleMapping = {
 
 **Old:**
 ```typescript
-if (user.role === 'super_admin') {
-  // Show admin features
+if (user.role === 'platform_admin') {
+  // Show platform admin features
 }
 ```
 
@@ -205,8 +205,8 @@ If you added custom items to the old sidebars, add them to `navigation-config.ts
 
 **Admin System:**
 ```typescript
-const canViewSystemHealth = adminUser.role === 'super_admin';
-const canManageOrgs = ['super_admin', 'admin'].includes(adminUser.role);
+const canViewSystemHealth = adminUser.role === 'platform_admin';
+const canManageOrgs = ['platform_admin', 'admin'].includes(adminUser.role);
 ```
 
 **Tenant System:**

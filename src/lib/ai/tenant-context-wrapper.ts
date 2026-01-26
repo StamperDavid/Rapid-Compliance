@@ -246,7 +246,7 @@ export function buildJasperContext(
     orgId: 'platform',
     orgName: 'SalesVelocity Platform',
     industry: 'platform_administration',
-    role: 'super_admin',
+    role: 'platform_admin',
     isGlobalAdmin: true,
   };
 }

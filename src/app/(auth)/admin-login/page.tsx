@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
       
       logger.info('✅ Firebase Auth successful', { email: user.email, file: 'page.tsx' });
       
-      // Verify user is a super_admin by checking their Firestore document
+      // Verify user is a platform_admin by checking their Firestore document
       const token = await user.getIdToken();
       
       // Call API to verify admin status and get user data
@@ -79,27 +79,27 @@ export default function AdminLoginPage() {
         id: user.uid,
         email: user.email ?? email,
         displayName: userData.name ?? user.displayName ?? 'Admin User',
-        role: userData.role as 'super_admin' | 'admin',
+        role: userData.role as 'platform_admin' | 'admin',
         permissions: {
           canViewOrganizations: true,
           canCreateOrganizations: true,
           canEditOrganizations: true,
           canSuspendOrganizations: true,
-          canDeleteOrganizations: userData.role === 'super_admin',
+          canDeleteOrganizations: userData.role === 'platform_admin',
           canViewUsers: true,
           canCreateUsers: true,
           canEditUsers: true,
           canSuspendUsers: true,
-          canDeleteUsers: userData.role === 'super_admin',
+          canDeleteUsers: userData.role === 'platform_admin',
           canImpersonateUsers: true,
           canViewBilling: true,
           canManageSubscriptions: true,
-          canProcessRefunds: userData.role === 'super_admin',
+          canProcessRefunds: userData.role === 'platform_admin',
           canViewPaymentHistory: true,
           canViewSystemHealth: true,
-          canManageFeatureFlags: userData.role === 'super_admin',
+          canManageFeatureFlags: userData.role === 'platform_admin',
           canViewAuditLogs: true,
-          canManageSystemSettings: userData.role === 'super_admin',
+          canManageSystemSettings: userData.role === 'platform_admin',
           canAccessSupportTools: true,
           canExportData: true,
           canViewUsageAnalytics: true,
@@ -269,7 +269,7 @@ export default function AdminLoginPage() {
 
         <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#0a0a0a', borderRadius: '0.5rem' }}>
           <div style={{ fontSize: '0.75rem', color: '#666', lineHeight: '1.5' }}>
-            <strong>Super Admin Access:</strong> This login requires a super_admin account.
+            <strong>Super Admin Access:</strong> This login requires a platform_admin account.
             Contact your platform administrator if you need access.
           </div>
         </div>

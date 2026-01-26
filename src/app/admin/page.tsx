@@ -56,7 +56,7 @@ export default function CEOCommandCenter() {
 
           // Check for platform_admin role
           const userRole = tokenResult.claims.role as string | undefined;
-          setIsPlatformAdmin(userRole === 'platform_admin' || userRole === 'super_admin');
+          setIsPlatformAdmin(userRole === 'platform_admin' || userRole === 'platform_admin');
 
           // Fetch organizations and users in parallel
           const [orgsResponse, usersResponse] = await Promise.all([
@@ -214,7 +214,7 @@ export default function CEOCommandCenter() {
           <p className="text-[var(--color-text-secondary)] mb-6">
             {authError === 'NOT_LOGGED_IN'
               ? 'You need to login as a super admin to access the CEO Command Center.'
-              : 'Your account does not have super_admin privileges. Contact your platform administrator.'}
+              : 'Your account does not have platform_admin privileges. Contact your platform administrator.'}
           </p>
           <Link
             href="/admin-login"

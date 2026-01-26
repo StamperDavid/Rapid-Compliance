@@ -59,7 +59,7 @@ export interface NavItem {
  * Permissions are hierarchical:
  * - 'view_*' permissions allow read-only access
  * - 'manage_*' permissions allow full CRUD operations
- * - 'super_admin' grants all permissions
+ * - 'platform_admin' grants all permissions
  */
 export type AdminPermission =
   | 'view_organizations'
@@ -71,7 +71,7 @@ export type AdminPermission =
   | 'view_analytics'
   | 'manage_system'
   | 'manage_agents'
-  | 'super_admin';
+  | 'platform_admin';
 
 // ============================================================================
 // AI Specialist Categories and Configuration
@@ -214,10 +214,10 @@ export interface CommandCenterContext {
  * Admin role levels defining access scope
  */
 export type AdminRole =
-  | 'super_admin'  // Full platform access
-  | 'admin'        // Organization-level access
-  | 'support'      // Read + limited write access
-  | 'viewer';      // Read-only access
+  | 'platform_admin'  // Full platform access (formerly super_admin)
+  | 'admin'           // Organization-level access
+  | 'support'         // Read + limited write access
+  | 'viewer';         // Read-only access
 
 /**
  * Administrative user information

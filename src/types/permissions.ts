@@ -402,7 +402,7 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
  * Note: This role has full permissions but no org bypass
  */
 export function isPlatformAdmin(role: string | null | undefined): boolean {
-  return role === 'platform_admin' || role === 'super_admin';
+  return role === 'platform_admin';
 }
 
 /**

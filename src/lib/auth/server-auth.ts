@@ -102,7 +102,7 @@ export async function hasRole(request: NextRequest, role: string): Promise<boole
  */
 export async function isAdmin(request: NextRequest): Promise<boolean> {
   const user = await getAuthToken(request);
-  return user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'owner';
+  return user?.role === 'admin' || user?.role === 'platform_admin' || user?.role === 'owner';
 }
 
 

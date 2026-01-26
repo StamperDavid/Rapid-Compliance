@@ -1,6 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
+**Last Updated:** January 26, 2026 (UI Consolidation Sprint)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification
@@ -71,7 +72,7 @@
 /admin/analytics/pipeline           # Pipeline analytics
 /admin/analytics/usage              # Usage analytics by org
 /admin/billing                      # Subscription management
-/admin/command-center               # [STUB - redirect to /admin]
+/admin/command-center               # [DEPRECATED - redirects to /admin]
 /admin/customers                    # Customer management
 /admin/deals                        # Platform deals view
 /admin/email-campaigns              # Campaign management
@@ -191,10 +192,10 @@
 
 ### Route Issues
 
-| Issue | Location | Severity | Recommendation |
-|-------|----------|----------|----------------|
-| Stub Page | `/admin/command-center` | LOW | Redirect to `/admin` |
-| Duplicate Destination | `settingsEcommerce` + `settingsProducts` → `/admin/merchandiser` | INFO | Intentional |
+| Issue | Location | Severity | Status |
+|-------|----------|----------|--------|
+| ~~Stub Page~~ | `/admin/command-center` | ~~LOW~~ | ✅ RESOLVED - Proper 308 redirect to `/admin` |
+| Duplicate Destination | `settingsEcommerce` + `settingsProducts` → `/admin/merchandiser` | INFO | Intentional (per design) |
 
 ---
 
@@ -585,10 +586,10 @@ src/lib/agents/
 
 ### Security Concerns
 
-| Severity | Issue | Location | Recommendation |
-|----------|-------|----------|----------------|
-| MEDIUM | Demo mode fallback in useAuth.ts | `src/hooks/useAuth.ts` | Remove demo fallback or restrict to dev only |
-| LOW | Inconsistent role naming (super_admin vs platform_admin) | Multiple files | Standardize on single role name |
+| Severity | Issue | Location | Status |
+|----------|-------|----------|--------|
+| ~~MEDIUM~~ | ~~Demo mode fallback in useAuth.ts~~ | `src/hooks/useAuth.ts` | ✅ RESOLVED - Wrapped in `NODE_ENV === 'development'` check |
+| ~~LOW~~ | ~~Inconsistent role naming (super_admin vs platform_admin)~~ | Multiple files | ✅ RESOLVED - Standardized to `platform_admin` with backwards-compatible normalization |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
 | LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
 
@@ -824,11 +825,20 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 
 ### Sidebar Architecture
 
-Two sidebar implementations exist:
-- **UnifiedSidebar** (modern): `src/components/dashboard/UnifiedSidebar.tsx`
-- **CommandCenterSidebar** (legacy): `src/components/admin/CommandCenterSidebar.tsx`
+Single unified sidebar implementation:
+- **UnifiedSidebar**: `src/components/dashboard/UnifiedSidebar.tsx`
+- ~~CommandCenterSidebar~~ (DELETED - Jan 26, 2026)
 
 Navigation structure defined in: `src/components/dashboard/navigation-config.ts`
+
+**Section Order:**
+1. Dashboard (All Roles)
+2. Sales (All Roles)
+3. Marketing (Admin+ and Manager)
+4. AI Swarm (Owner and Admin only)
+5. Analytics (All Roles)
+6. Settings (Owner and Admin only)
+7. **SYSTEM (Platform Admin Only)** - Always at absolute bottom
 
 ### Agent Communication
 

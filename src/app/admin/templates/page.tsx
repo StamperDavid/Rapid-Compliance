@@ -45,7 +45,7 @@ export default function TemplatesPage() {
   // Check admin access
   useEffect(() => {
     if (user) {
-      const adminRoles = ['admin', 'super_admin', 'owner'];
+      const adminRoles = ['admin', 'platform_admin', 'owner'];
       setIsAdmin(adminRoles.includes(user.role || ''));
     }
   }, [user]);

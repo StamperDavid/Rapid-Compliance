@@ -54,7 +54,7 @@ interface CreateOrganizationRequest {
 
 /**
  * GET /api/admin/organizations
- * Fetches organizations for super_admin users with pagination
+ * Fetches organizations for platform_admin users with pagination
  * Uses Admin SDK to bypass client-side Firestore rules
  * 
  * Query params:
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/admin/organizations
- * Creates a new organization (super_admin only)
+ * Creates a new organization (platform_admin only)
  */
 export async function POST(request: NextRequest) {
   // Verify admin authentication

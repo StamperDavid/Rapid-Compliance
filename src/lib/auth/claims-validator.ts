@@ -23,8 +23,8 @@ export interface TenantClaims {
   tenant_id: string | null;
   /** Legacy admin flag - deprecated, use role-based checks instead */
   admin: boolean;
-  /** User's role within the organization */
-  role: 'platform_admin' | 'super_admin' | 'admin' | 'owner' | 'member' | 'viewer' | null;
+  /** User's role within the organization. Note: 'super_admin' is normalized to 'platform_admin' during validation */
+  role: 'platform_admin' | 'admin' | 'owner' | 'member' | 'viewer' | null;
   /** User's email */
   email: string | null;
   /** User ID */
@@ -48,10 +48,10 @@ export interface TenantAccessResult {
 // ============================================================================
 
 /** Roles that grant admin-level access within an organization */
-const ADMIN_ROLES = ['platform_admin', 'super_admin', 'admin'] as const;
+const ADMIN_ROLES = ['platform_admin', 'admin'] as const;
 
 /** Platform-level admin roles - these have full RBAC permissions but NO org bypass */
-export const PLATFORM_ADMIN_ROLES = ['platform_admin', 'super_admin'] as const;
+export const PLATFORM_ADMIN_ROLES = ['platform_admin'] as const;
 
 // ============================================================================
 // CLAIMS EXTRACTION
@@ -120,6 +120,7 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
 
 /**
  * Validate and normalize role string to expected values.
+ * Legacy 'super_admin' is normalized to 'platform_admin' for backwards compatibility.
  */
 function validateRole(role: string | null): TenantClaims['role'] {
   if (!role) {return null;}
@@ -131,7 +132,8 @@ function validateRole(role: string | null): TenantClaims['role'] {
       return 'platform_admin';
     case 'super_admin':
     case 'superadmin':
-      return 'super_admin';
+      // Legacy alias: normalize to platform_admin
+      return 'platform_admin';
     case 'admin':
       return 'admin';
     case 'owner':
@@ -167,7 +169,7 @@ export function checkTenantAccess(
   requestedOrgId: string | null
 ): TenantAccessResult {
   // Platform admins can access platform-admin org without tenant_id
-  const isPlatformAdmin = claims.role === 'platform_admin' || claims.role === 'super_admin';
+  const isPlatformAdmin = claims.role === 'platform_admin';
   const isPlatformOrgRequest = requestedOrgId === PLATFORM_MASTER_ORG.id || requestedOrgId === null;
 
   if (isPlatformAdmin && isPlatformOrgRequest) {
@@ -254,11 +256,12 @@ export function hasAdminRole(claims: TenantClaims): boolean {
  * These roles have full RBAC permissions within their organization.
  * Note: This does NOT grant cross-org access.
  *
+ * @deprecated Use isPlatformAdminClaims() instead - 'super_admin' has been renamed to 'platform_admin'
  * @param claims - User's tenant claims
  * @returns true if user has platform admin role
  */
 export function isSuperAdmin(claims: TenantClaims): boolean {
-  return claims.role === 'super_admin' || claims.role === 'platform_admin';
+  return claims.role === 'platform_admin';
 }
 
 /**
@@ -270,7 +273,7 @@ export function isSuperAdmin(claims: TenantClaims): boolean {
  * @returns true if user is platform admin
  */
 export function isPlatformAdminClaims(claims: TenantClaims): boolean {
-  return claims.role === 'platform_admin' || claims.role === 'super_admin';
+  return claims.role === 'platform_admin';
 }
 
 /**

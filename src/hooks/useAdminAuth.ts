@@ -98,8 +98,16 @@ export function useAdminAuth() {
     return adminUser.permissions[permission];
   };
 
+  /**
+   * Check if user has platform admin role
+   * @deprecated Use isPlatformAdmin() instead - super_admin has been renamed to platform_admin
+   */
   const isSuperAdmin = (): boolean => {
-    return adminUser?.role === 'super_admin';
+    return adminUser?.role === 'platform_admin';
+  };
+
+  const isPlatformAdmin = (): boolean => {
+    return adminUser?.role === 'platform_admin';
   };
 
   return {
@@ -108,6 +116,7 @@ export function useAdminAuth() {
     loading,
     hasPermission,
     isSuperAdmin,
+    isPlatformAdmin,
   };
 }
 

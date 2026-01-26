@@ -2,6 +2,8 @@
  * Permission Check Hook
  * Client-side hook for checking user permissions
  * Now uses Firebase Auth
+ *
+ * SECURITY: Demo mode is restricted to development environment only
  */
 
 'use client';
@@ -29,6 +31,13 @@ export interface AppUser {
   workspaceId?: string;
 }
 
+/**
+ * Check if demo mode is allowed (development environment only)
+ */
+const isDemoModeAllowed = (): boolean => {
+  return process.env.NODE_ENV === 'development';
+};
+
 export function useAuth() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,14 +46,20 @@ export function useAuth() {
     // Check if Firebase is configured
     import('@/lib/firebase/config').then(({ isFirebaseConfigured }) => {
       if (!isFirebaseConfigured) {
-        // Demo mode - use demo user with admin permissions
-        setUser({
-          id: 'demo-user',
-          email: 'admin@demo.com',
-          displayName: 'Demo Admin',
-          role: 'admin', // Admin role has canAccessSettings = true
-          organizationId: 'demo',
-        });
+        // Demo mode - ONLY allowed in development environment
+        if (isDemoModeAllowed()) {
+          setUser({
+            id: 'demo-user',
+            email: 'admin@demo.com',
+            displayName: 'Demo Admin',
+            role: 'admin',
+            organizationId: 'demo',
+          });
+        } else {
+          // In production, no Firebase config means unauthenticated
+          logger.warn('Firebase not configured in production - user unauthenticated', { file: 'useAuth.ts' });
+          setUser(null);
+        }
         setLoading(false);
         return;
       }
@@ -75,24 +90,40 @@ export function useAuth() {
               });
             } catch (error) {
               logger.error('Error loading user profile:', error instanceof Error ? error : new Error(String(error)), { file: 'useAuth.ts' });
-              // Fallback to basic user info with admin role
-              setUser({
-                id: authUser.uid,
-                email: authUser.email ?? '',
-                displayName:(authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
-                role: 'admin', // Default to admin so settings are accessible
-                organizationId: 'demo',
-              });
+              // Fallback - only grant demo access in development
+              if (isDemoModeAllowed()) {
+                setUser({
+                  id: authUser.uid,
+                  email: authUser.email ?? '',
+                  displayName: (authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
+                  role: 'admin',
+                  organizationId: 'demo',
+                });
+              } else {
+                // In production, profile load failure means limited access
+                setUser({
+                  id: authUser.uid,
+                  email: authUser.email ?? '',
+                  displayName: (authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
+                  role: 'employee', // Minimal access role in production
+                  organizationId: 'unknown',
+                });
+              }
             }
           } else {
-            // No auth user - use demo mode
-            setUser({
-              id: 'demo-user',
-              email: 'admin@demo.com',
-              displayName: 'Demo Admin',
-              role: 'admin',
-              organizationId: 'demo',
-            });
+            // No auth user - demo mode only in development
+            if (isDemoModeAllowed()) {
+              setUser({
+                id: 'demo-user',
+                email: 'admin@demo.com',
+                displayName: 'Demo Admin',
+                role: 'admin',
+                organizationId: 'demo',
+              });
+            } else {
+              // In production, no auth = unauthenticated
+              setUser(null);
+            }
           }
           setLoading(false);
         })();
@@ -101,14 +132,19 @@ export function useAuth() {
       return () => unsubscribe();
     }).catch((error: unknown) => {
       logger.error('Error checking Firebase config:', error instanceof Error ? error : new Error(String(error)), { file: 'useAuth.ts' });
-      // Fallback to demo mode
-      setUser({
-        id: 'demo-user',
-        email: 'admin@demo.com',
-        displayName: 'Demo Admin',
-        role: 'admin',
-        organizationId: 'demo',
-      });
+      // Fallback - only to demo mode in development
+      if (isDemoModeAllowed()) {
+        setUser({
+          id: 'demo-user',
+          email: 'admin@demo.com',
+          displayName: 'Demo Admin',
+          role: 'admin',
+          organizationId: 'demo',
+        });
+      } else {
+        // In production, config error means unauthenticated
+        setUser(null);
+      }
       setLoading(false);
     });
   }, []);
@@ -126,5 +162,3 @@ export function useRole(): UserRole | null {
   const { user } = useAuth();
   return user?.role ?? null;
 }
-
-

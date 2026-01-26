@@ -5,7 +5,11 @@ import type { Timestamp } from 'firebase/firestore';
  * For managing the entire SaaS platform
  */
 
-export type AdminRole = 'super_admin' | 'admin' | 'support' | 'viewer';
+/**
+ * Admin role type - standardized to use platform_admin
+ * @deprecated 'super_admin' has been renamed to 'platform_admin' for clarity
+ */
+export type AdminRole = 'platform_admin' | 'admin' | 'support' | 'viewer';
 
 export interface AdminUser {
   id: string;
@@ -67,7 +71,7 @@ export interface AdminPermissions {
 }
 
 export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
-  super_admin: {
+  platform_admin: {
     canViewOrganizations: true,
     canCreateOrganizations: true,
     canEditOrganizations: true,

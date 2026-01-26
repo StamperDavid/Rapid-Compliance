@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         const isOwner = org.ownerId === user.uid;
         const isMember = Array.isArray(org.members) && org.members.includes(user.uid);
         const userRole = user.role ?? '';
-        const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+        const isAdmin = userRole === 'admin' || userRole === 'platform_admin';
 
         if (!isOwner && !isMember && !isAdmin) {
           return NextResponse.json<ApiErrorResponse>(

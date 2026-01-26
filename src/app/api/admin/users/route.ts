@@ -169,7 +169,7 @@ function transformFirestoreUser(docId: string, data: FirestoreUserData): UserDat
 
 /**
  * GET /api/admin/users
- * Fetches users for super_admin with pagination
+ * Fetches users for platform_admin with pagination
  * Uses Admin SDK to bypass client-side Firestore rules
  * 
  * Query params:
@@ -267,7 +267,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/admin/users
- * Updates a user (super_admin only)
+ * Updates a user (platform_admin only)
  */
 export async function PATCH(request: NextRequest) {
   // Verify admin authentication  
