@@ -852,6 +852,12 @@ This document MUST be updated when:
 4. **Integration Changes:** New integrations added or existing ones modified
 5. **Collection Changes:** Firestore schema modifications
 
+### Mandatory Cleanup Rule
+
+**All temporary audit logs, discovery documents, or draft architecture files MUST be deleted or archived within 24 hours of creation.**
+
+This prevents documentation drift and ensures single_source_of_truth.md remains the sole authoritative reference.
+
 ### Update Procedure
 
 ```bash
@@ -860,14 +866,36 @@ This document MUST be updated when:
 2. Update relevant section(s)
 3. Update "Generated" date at top
 4. Commit with message: "docs: update single_source_of_truth.md - [change description]"
+
+# For temporary audit/discovery documents:
+1. Create in project root during session
+2. Extract relevant findings into this document
+3. Move original to docs/archive/legacy/ within 24 hours
+4. Update archive README.md
 ```
 
 ### Archived Documents
 
 Legacy documentation moved to: `docs/archive/legacy/`
 
-- `SYSTEM_MAP_JAN_2026.md` - Previous route audit (superseded)
-- `src/lib/orchestrator/system-blueprint.md` - Previous system blueprint (reference only)
+**Forensic Audits:**
+- `GROUND_TRUTH_DISCOVERY.md` - Jan 20, 2026 forensic audit
+- `FEATURE_PARITY_AUDIT.md` - Admin vs workspace parity audit
+- `FORENSIC_AUDIT_V3.md` - God Mode removal record
+- `FORENSIC_AUDIT_BRIEFING.md` - Initial forensic briefing
+
+**Architecture:**
+- `SYSTEM_MAP_JAN_2026.md` - Previous route audit
+- `SYSTEM_BLUEPRINT.md` - Previous architecture guide
+- `ARCHITECTURE_GRAPH.md` - Previous dependency map
+- `orchestrator-system-blueprint.md` - Jasper AI blueprint
+
+**Operational:**
+- `REDIRECT_*.md` - Redirect implementation docs
+- `VERIFIED.md` - Progress log
+- `workflow_state.md` - Temporary state
+
+See `docs/archive/legacy/README.md` for full archive index.
 
 ---
 
