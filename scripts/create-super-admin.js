@@ -1,5 +1,5 @@
 /**
- * Create Super Admin Account
+ * Create Platform Admin Account
  * Run this ONCE to create your platform super admin account
  * This user will have full access to ALL organizations for IT support
  */
@@ -34,11 +34,11 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const auth = admin.auth();
 
-// Super Admin Configuration
-const SUPER_ADMIN = {
+// Platform Admin Configuration
+const PLATFORM_ADMIN = {
   email: 'admin@your-platform.com', // Change this
   password: 'SuperSecurePassword123!', // Change this - use a strong password
-  displayName: 'Platform Super Admin',
+  displayName: 'Platform Admin',
 };
 
 async function promptForCredentials() {
@@ -48,7 +48,7 @@ async function promptForCredentials() {
   });
 
   return new Promise((resolve) => {
-    console.log('\n🔐 CREATE SUPER ADMIN ACCOUNT');
+    console.log('\n🔐 CREATE PLATFORM ADMIN ACCOUNT');
     console.log('='.repeat(50));
     console.log('This account will have FULL access to ALL organizations.\n');
     
@@ -63,7 +63,7 @@ async function promptForCredentials() {
   });
 }
 
-async function createSuperAdmin(credentials) {
+async function createPlatformAdmin(credentials) {
   try {
     console.log(`\n📝 Creating super admin: ${credentials.email}...`);
     
@@ -72,7 +72,7 @@ async function createSuperAdmin(credentials) {
     try {
       userRecord = await auth.getUserByEmail(credentials.email);
       console.log(`⚠️ User already exists: ${credentials.email}`);
-      console.log('Updating to super_admin role...');
+      console.log('Updating to platform_admin role...');
     } catch (error) {
       // Create new user
       userRecord = await auth.createUser({
@@ -84,18 +84,18 @@ async function createSuperAdmin(credentials) {
       console.log(`✅ Created Firebase Auth user: ${credentials.email}`);
     }
     
-    // Create/update user document with super_admin role
+    // Create/update user document with platform_admin role
     await db.collection('users').doc(userRecord.uid).set({
       email: credentials.email,
       name: credentials.displayName,
-      role: 'super_admin', // THE KEY - this grants full access
+      role: 'platform_admin', // THE KEY - this grants full access
       organizationId: 'platform', // Special platform org ID
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      isSuperAdmin: true,
+      isPlatformAdmin: true,
     }, { merge: true });
     
-    console.log(`✅ Created/updated user document with super_admin role`);
+    console.log(`✅ Created/updated user document with platform_admin role`);
     
     // Create platform organization if it doesn't exist
     const platformOrgRef = db.collection('organizations').doc('platform');
@@ -120,7 +120,7 @@ async function createSuperAdmin(credentials) {
     await platformOrgRef.collection('members').doc(userRecord.uid).set({
       userId: userRecord.uid,
       email: credentials.email,
-      role: 'super_admin',
+      role: 'platform_admin',
       addedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
@@ -129,7 +129,7 @@ async function createSuperAdmin(credentials) {
     return { success: true, userId: userRecord.uid };
     
   } catch (error) {
-    console.error(`❌ Error creating super admin:`, error.message);
+    console.error(`❌ Error creating platform admin:`, error.message);
     return { success: false, error: error.message };
   }
 }
@@ -144,7 +144,7 @@ async function main() {
     credentials = {
       email: args[0],
       password: args[1],
-      displayName: args[2] || 'Platform Super Admin'
+      displayName: args[2] || 'Platform Platform Admin'
     };
   } else {
     // Interactive mode
@@ -161,11 +161,11 @@ async function main() {
     process.exit(1);
   }
   
-  const result = await createSuperAdmin(credentials);
+  const result = await createPlatformAdmin(credentials);
   
   if (result.success) {
     console.log('\n' + '='.repeat(50));
-    console.log('🎉 SUPER ADMIN CREATED SUCCESSFULLY!');
+    console.log('🎉 PLATFORM ADMIN CREATED SUCCESSFULLY!');
     console.log('='.repeat(50));
     console.log(`\nEmail: ${credentials.email}`);
     console.log(`Password: ${credentials.password}`);
@@ -176,7 +176,7 @@ async function main() {
     console.log('3. Use for IT support and platform administration only');
     console.log('\nLogin at: http://localhost:3000/admin/login');
   } else {
-    console.error('\n❌ Failed to create super admin:', result.error);
+    console.error('\n❌ Failed to create platform admin:', result.error);
     process.exit(1);
   }
 }

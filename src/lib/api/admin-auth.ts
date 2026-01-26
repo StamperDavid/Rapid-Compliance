@@ -128,7 +128,6 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
 
     // Check if user has platform admin role in token claims
     // Platform admins can proceed without a user document
-    // Note: 'super_admin' is a legacy alias for 'platform_admin' and is normalized during claim validation
     const hasPlatformAdminClaim = claims.role === 'platform_admin';
 
     // Get user document to enrich with database role

@@ -56,14 +56,14 @@ async function impersonateUser(adminEmail, targetUserEmail, reason) {
     const adminUser = adminSnapshot.docs[0];
     const adminData = adminUser.data();
     
-    // Verify admin has super_admin role
-    if (adminData.role !== 'super_admin') {
-      console.error(`❌ Error: User ${adminEmail} is not a super_admin (role: ${adminData.role})`);
-      console.log('Only super_admin users can impersonate other users');
+    // Verify admin has platform_admin role
+    if (adminData.role !== 'platform_admin') {
+      console.error(`❌ Error: User ${adminEmail} is not a platform_admin (role: ${adminData.role})`);
+      console.log('Only platform_admin users can impersonate other users');
       process.exit(1);
     }
     
-    console.log('   ✅ Admin verified (super_admin)');
+    console.log('   ✅ Admin verified (platform_admin)');
     
     // Get target user
     console.log(`   Target: ${targetUserEmail}`);
@@ -158,11 +158,11 @@ if (!adminEmail || !targetEmail) {
   console.log('\nUsage: node scripts/impersonate-user.js <adminEmail> <targetUserEmail> <reason>');
   console.log('Example: node scripts/impersonate-user.js admin@example.com customer@acme.com "Debugging workflow issue"');
   console.log('\nArguments:');
-  console.log('  adminEmail       Email of admin performing impersonation (must be super_admin)');
+  console.log('  adminEmail       Email of admin performing impersonation (must be platform_admin)');
   console.log('  targetUserEmail  Email of user to impersonate');
   console.log('  reason           Reason for impersonation (required for audit trail)');
   console.log('\nSecurity:');
-  console.log('  - Only super_admin users can impersonate');
+  console.log('  - Only platform_admin users can impersonate');
   console.log('  - All impersonation sessions are logged and audited');
   console.log('  - Sessions remain active until explicitly ended');
   process.exit(1);

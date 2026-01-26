@@ -52,16 +52,16 @@ async function removeDuplicates() {
       console.log(`\n✅ No duplicates found - all clean!`);
     }
     
-    // Ensure the correct document has super_admin role
-    console.log(`\n🔧 Ensuring correct document has super_admin role...`);
+    // Ensure the correct document has platform_admin role
+    console.log(`\n🔧 Ensuring correct document has platform_admin role...`);
     await db.collection('users').doc(authUser.uid).set({
       email: email,
       name: 'David Stamper',
       displayName: 'David Stamper',
-      role: 'super_admin',
+      role: 'platform_admin',
       organizationId: 'platform',
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      isSuperAdmin: true,
+      isPlatformAdmin: true,
       status: 'active',
     }, { merge: true });
     
@@ -74,7 +74,7 @@ async function removeDuplicates() {
     console.log(`   UID: ${authUser.uid}`);
     console.log(`   Email: ${finalData.email}`);
     console.log(`   Role: ${finalData.role}`);
-    console.log(`   Is Super Admin: ${finalData.isSuperAdmin}`);
+    console.log(`   Is Platform Admin: ${finalData.isPlatformAdmin}`);
     
     console.log(`\n✅ Try logging in again at http://localhost:3000/admin/login`);
     

@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 26, 2026 (UI Consolidation Sprint)
+**Last Updated:** January 26, 2026 (Role Standardization & Security Resolution)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification
@@ -589,9 +589,25 @@ src/lib/agents/
 | Severity | Issue | Location | Status |
 |----------|-------|----------|--------|
 | ~~MEDIUM~~ | ~~Demo mode fallback in useAuth.ts~~ | `src/hooks/useAuth.ts` | ✅ RESOLVED - Wrapped in `NODE_ENV === 'development'` check |
-| ~~LOW~~ | ~~Inconsistent role naming (super_admin vs platform_admin)~~ | Multiple files | ✅ RESOLVED - Standardized to `platform_admin` with backwards-compatible normalization |
+| ~~LOW~~ | ~~Inconsistent role naming (super_admin vs platform_admin)~~ | Multiple files | ✅ RESOLVED - Fully standardized to `platform_admin` across codebase. All source files updated, claims-validator provides runtime normalization for any legacy data. |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
 | LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
+
+### Admin Account Bootstrap
+
+To properly configure a platform admin account, Firebase custom claims must be set:
+
+```bash
+# Run the bootstrap script (one-time setup)
+node scripts/bootstrap-platform-admin.js
+```
+
+This script:
+- Sets Firebase custom claims: `{ role: "platform_admin", admin: true }`
+- Updates Firestore user document with standardized role
+- Verifies claims were successfully applied
+
+**Note:** Custom claims are required for `/api/admin/verify` to recognize admin status. Firestore document alone is insufficient.
 
 ### Protected Route Patterns
 

@@ -39,9 +39,9 @@ async function fixUserRoles() {
         let role = userData.role;
         
         // If no role or invalid role, assign based on email
-        if (!role || !['super_admin', 'admin', 'user', 'member'].includes(role)) {
+        if (!role || !['platform_admin', 'admin', 'user', 'member'].includes(role)) {
           if (userData.email === 'dstamper@rapidcompliance.us') {
-            role = 'super_admin';
+            role = 'platform_admin';
           } else {
             role = 'user';
           }

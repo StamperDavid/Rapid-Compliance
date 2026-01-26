@@ -40,18 +40,18 @@ async function fixAdminAccess() {
       console.log(`\n⚠️ No Firestore document found - creating one...`);
     }
     
-    // Update to super_admin
-    console.log(`\n🔧 Updating to super_admin...`);
+    // Update to platform_admin
+    console.log(`\n🔧 Updating to platform_admin...`);
     
     await db.collection('users').doc(userRecord.uid).set({
       email: email,
       name: 'David Stamper',
       displayName: 'David Stamper',
-      role: 'super_admin',
+      role: 'platform_admin',
       organizationId: 'platform',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      isSuperAdmin: true,
+      isPlatformAdmin: true,
       status: 'active',
     }, { merge: true });
     
@@ -64,23 +64,23 @@ async function fixAdminAccess() {
     console.log(`   Email: ${updatedData.email}`);
     console.log(`   Role: ${updatedData.role}`);
     console.log(`   Org ID: ${updatedData.organizationId}`);
-    console.log(`   Is Super Admin: ${updatedData.isSuperAdmin}`);
+    console.log(`   Is Platform Admin: ${updatedData.isPlatformAdmin}`);
     
     // Check for other super admins
-    console.log(`\n🔍 Checking for other super_admin accounts...`);
+    console.log(`\n🔍 Checking for other platform_admin accounts...`);
     const superAdminsSnapshot = await db.collection('users')
-      .where('role', '==', 'super_admin')
+      .where('role', '==', 'platform_admin')
       .get();
     
-    console.log(`\nFound ${superAdminsSnapshot.size} super_admin account(s):`);
+    console.log(`\nFound ${superAdminsSnapshot.size} platform_admin account(s):`);
     superAdminsSnapshot.forEach(doc => {
       const data = doc.data();
       console.log(`   - ${data.email} (${doc.id})`);
     });
     
     if (superAdminsSnapshot.size > 1) {
-      console.log(`\n⚠️ WARNING: Multiple super_admin accounts exist!`);
-      console.log(`   Only you should have super_admin access.`);
+      console.log(`\n⚠️ WARNING: Multiple platform_admin accounts exist!`);
+      console.log(`   Only you should have platform_admin access.`);
     }
     
     console.log(`\n✅ You can now login at http://localhost:3000/admin/login`);

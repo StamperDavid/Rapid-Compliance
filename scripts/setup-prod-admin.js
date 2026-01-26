@@ -40,12 +40,12 @@ async function setupAdmin() {
     
     await db.collection('users').doc(ADMIN_UID).set({
       email: ADMIN_EMAIL,
-      role: 'super_admin',
+      role: 'platform_admin',
       displayName: 'David Stamper',
       name: 'David Stamper',
       organizationId: 'platform',
       currentOrganizationId: 'platform',
-      isSuperAdmin: true,
+      isPlatformAdmin: true,
       status: 'active',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
