@@ -13,11 +13,12 @@
 2. [Verified Live Route Map](#verified-live-route-map)
 3. [Agent Registry](#agent-registry)
 4. [Unified RBAC Matrix](#unified-rbac-matrix)
-5. [Tooling Inventory](#tooling-inventory)
-6. [Integration Status](#integration-status)
-7. [Firestore Collections](#firestore-collections)
-8. [Architecture Notes](#architecture-notes)
-9. [Document Maintenance](#document-maintenance)
+5. [Security Audit Findings](#security-audit-findings)
+6. [Tooling Inventory](#tooling-inventory)
+7. [Integration Status](#integration-status)
+8. [Firestore Collections](#firestore-collections)
+9. [Architecture Notes](#architecture-notes)
+10. [Document Maintenance](#document-maintenance)
 
 ---
 
@@ -519,6 +520,124 @@ src/lib/agents/
 - **Definitions:** `src/types/unified-rbac.ts`
 - **Middleware:** `src/middleware.ts` (role-based segment routing)
 - **Layouts:** `src/app/admin/layout.tsx`, `src/app/workspace/[orgId]/layout.tsx`
+
+---
+
+## Security Audit Findings
+
+### Authentication Flow
+
+#### Client-Side (`useUnifiedAuth` hook)
+
+```
+1. Firebase user signs in
+   ↓
+2. Get Firebase ID token
+   ↓
+3. Check if user is platform_admin via /api/admin/verify
+   ├─ If YES → UnifiedUser with role='platform_admin', tenantId=null
+   └─ If NO → Check Firestore USERS collection
+      ├─ If document exists → Load tenant user profile
+      │  └─ Extract tenantId, role (owner|admin|manager|employee)
+      └─ If document missing → User is unauthenticated
+   ↓
+4. Set permissions via getUnifiedPermissions(role)
+   ↓
+5. Return UnifiedUser + UnifiedPermissions
+```
+
+#### Server-Side (`src/lib/auth/api-auth.ts`)
+
+```
+1. Extract Bearer token from Authorization header
+   ↓
+2. Verify token using Firebase Admin SDK
+   ↓
+3. Extract custom claims from decoded token
+   ├─ role, organizationId, admin flag
+   ↓
+4. If no role in claims → Try Firestore lookup
+   ├─ Check USERS collection for user document
+   ↓
+5. Return AuthenticatedUser with uid, email, organizationId, role
+   ↓
+6. Route-level checks (requireRole, requireOrganization) enforce access
+```
+
+### API Protection Functions
+
+| Function | Purpose | Returns |
+|----------|---------|---------|
+| `requireAuth(request)` | Basic authentication | 401 if invalid token |
+| `requireRole(request, allowedRoles[])` | Role-based access | 403 if role not in whitelist |
+| `requireOrganization(request, orgId?)` | Organization membership | 403 if org mismatch |
+| `optionalAuth(request)` | Non-blocking authentication | User or null |
+
+### Security Strengths
+
+| Strength | Implementation | Files |
+|----------|----------------|-------|
+| Tenant Isolation | Claims-validator enforces tenant_id on ALL requests | `claims-validator.ts`, `api-auth.ts` |
+| No Admin Bypass | platform_admin respects organization boundaries | `claims-validator.ts` |
+| Token Verification | Firebase Admin SDK validates ID tokens server-side | `api-auth.ts` |
+| Layout-Level Auth | Admin routes protected at layout level before render | `admin/layout.tsx` |
+| Permission Matrix | Comprehensive 47-permission definitions per role | `unified-rbac.ts` |
+
+### Security Concerns
+
+| Severity | Issue | Location | Recommendation |
+|----------|-------|----------|----------------|
+| MEDIUM | Demo mode fallback in useAuth.ts | `src/hooks/useAuth.ts` | Remove demo fallback or restrict to dev only |
+| LOW | Inconsistent role naming (super_admin vs platform_admin) | Multiple files | Standardize on single role name |
+| LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
+| LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
+
+### Protected Route Patterns
+
+#### Middleware Routing (`src/middleware.ts`)
+
+| Route Pattern | Authentication | Enforcement |
+|---------------|----------------|-------------|
+| `/admin/*` | Any user (layout enforces role) | Admin Layout |
+| `/workspace/platform-admin/*` | N/A | 308 redirect to `/admin/*` |
+| `/sites/{orgId}/*` | Not required | Middleware rewrite |
+| `/api/*` | Skipped at middleware | Per-route enforcement |
+
+#### Admin Layout Enforcement (`src/app/admin/layout.tsx`)
+
+- Unauthenticated → `/admin-login`
+- Non-platform-admin → `/workspace/{orgId}/dashboard`
+- Only `isPlatformAdmin()` users allowed through
+
+### Public Routes (No Auth Required)
+
+```
+/                    # Landing page
+/login               # User login
+/admin-login         # Admin login
+/signup              # User signup
+/security            # Security page
+/privacy             # Privacy policy
+/terms               # Terms of service
+```
+
+### Files Containing RBAC Logic
+
+**Authentication & Authorization:**
+- `src/lib/auth/api-auth.ts` - API endpoint auth middleware
+- `src/lib/auth/auth-service.ts` - Firebase auth operations
+- `src/lib/auth/claims-validator.ts` - Claims-based authorization
+- `src/lib/auth/server-auth.ts` - Server-side auth utilities
+
+**Type Definitions:**
+- `src/types/unified-rbac.ts` - Unified role/permission definitions
+- `src/types/admin.ts` - Admin-specific types
+- `src/types/permissions.ts` - Legacy permission types
+
+**Client Hooks:**
+- `src/hooks/useUnifiedAuth.ts` - Primary client-side auth hook
+- `src/hooks/useAuth.ts` - Legacy auth hook (has demo mode)
+- `src/hooks/useAdminAuth.ts` - Admin-specific auth hook
 
 ---
 
