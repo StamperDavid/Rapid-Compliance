@@ -5,12 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { AdminOrchestrator } from '@/components/orchestrator';
 import UnifiedSidebar from '@/components/dashboard/UnifiedSidebar';
-import { PLATFORM_INTERNAL_ORG_ID } from '@/lib/routes/workspace-routes';
+import { PLATFORM_INTERNAL_ORG_ID, workspaceRoutes } from '@/lib/routes/workspace-routes';
 
 /**
  * Admin Layout - UNIFIED VERSION
  * Now uses UnifiedSidebar and useUnifiedAuth for consistent experience
  * This layout serves /admin/* routes during migration period
+ *
+ * ROLE-BASED ACCESS:
+ * - Unauthenticated users → /admin-login
+ * - Non-platform-admin users → /workspace/{orgId}/dashboard (with proper context)
+ * - Platform admins → allowed through
  */
 export default function AdminLayout({
   children,
@@ -27,8 +32,16 @@ export default function AdminLayout({
       router.push('/admin-login');
     }
     // Only platform_admin can access /admin routes
+    // Non-admins are redirected to their workspace dashboard (with proper orgId context)
     if (!loading && user && !isPlatformAdmin()) {
-      router.push('/dashboard');
+      const userOrgId = user.tenantId ?? user.workspaceId;
+      if (userOrgId) {
+        // Redirect to user's workspace dashboard with proper context
+        router.push(workspaceRoutes.dashboard(userOrgId));
+      } else {
+        // User has no org - redirect to onboarding or login
+        router.push('/onboarding');
+      }
     }
   }, [user, loading, router, isPlatformAdmin]);
 

@@ -1,17 +1,27 @@
 "use client";
 
+import { Target } from "lucide-react";
+import { UnderConstruction } from "@/components/admin/UnderConstruction";
+
 export default function LeadsPage() {
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">
-          Lead Management
-        </h1>
-        <p className="text-[var(--color-text-secondary)]">
-          View, filter, and manage all leads in your sales pipeline
-        </p>
-      </div>
-
+    <UnderConstruction
+      title="Lead Management"
+      description="View, filter, and manage all leads in your sales pipeline"
+      status="coming-soon"
+      icon={<Target className="w-6 h-6" />}
+      plannedFeatures={[
+        "Lead list with advanced filtering",
+        "Lead scoring and prioritization",
+        "Status updates and activity tracking",
+        "Bulk actions and imports",
+      ]}
+      redirectTo={{
+        href: "/admin/command-center",
+        label: "Go to Command Center",
+      }}
+    >
+      {/* Scaffolded UI for preview */}
       <div className="bg-[var(--color-background-secondary)] border border-[var(--color-border)] rounded-lg mb-6">
         <div className="p-4 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-4">
@@ -29,19 +39,7 @@ export default function LeadsPage() {
             </button>
           </div>
         </div>
-
-        <div className="p-16 text-center">
-          <span className="inline-block px-3 py-1 text-xs font-medium bg-[var(--color-accent-primary)] text-white rounded-full mb-4">
-            Coming Soon
-          </span>
-          <p className="text-[var(--color-text-secondary)] mb-2">
-            Lead list, filtering, and management features
-          </p>
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            Including lead scoring, status updates, and activity tracking
-          </p>
-        </div>
       </div>
-    </div>
+    </UnderConstruction>
   );
 }

@@ -125,66 +125,30 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // LEGACY ROUTE REDIRECTS (308 Permanent Redirect)
-  // Redirect old admin routes to new unified dashboard
+  // ============================================================================
+  // ROLE-BASED SEGMENT ROUTING
+  // ============================================================================
+  // Admin routes use Role-Based Segment Logic instead of whitelist:
+  // - All /admin/* paths are allowed through middleware
+  // - Authentication & authorization handled by /admin/layout.tsx
+  // - Non-admin users are redirected to their workspace by the layout, not middleware
+  // - This prevents 404s from middleware redirecting to non-existent /dashboard/* paths
+  //
+  // The admin layout (src/app/admin/layout.tsx) enforces:
+  // - Unauthenticated users → /admin-login
+  // - Non-platform-admin users → /workspace/{orgId}/dashboard (with proper context)
+  // ============================================================================
+
+  // Allow all /admin/* routes through - let layout handle auth
   if (pathname.startsWith('/admin')) {
-    const newUrl = request.nextUrl.clone();
-
-    // All admin routes that should stay in /admin namespace (not redirect to /dashboard)
-    // This includes ALL actual admin routes to prevent 404 redirects
-    const adminExceptions = [
-      '/admin', // Root admin page
-      '/admin/login',
-      '/admin/organizations',
-      '/admin/users',
-      '/admin/billing',
-      '/admin/subscriptions',
-      '/admin/global-config',
-      '/admin/analytics',
-      '/admin/revenue',
-      '/admin/recovery',
-      '/admin/sales-agent',
-      '/admin/system',
-      '/admin/support',
-      '/admin/advanced',
-      // Additional admin routes discovered in codebase
-      '/admin/customers',
-      '/admin/growth',
-      '/admin/pricing-tiers',
-      '/admin/settings',
-      '/admin/website-editor',
-      '/admin/social',
-      '/admin/command-center',
-      '/admin/deals',
-      '/admin/email-campaigns',
-      '/admin/jasper-lab',
-      '/admin/leads',
-      '/admin/specialists',
-      '/admin/voice-training',
-      '/admin/swarm',
-      '/admin/merchandiser',
-      '/admin/templates',
-      '/admin/voice',
-    ];
-
-    // Check if the path should stay in /admin
-    const shouldStayInAdmin = adminExceptions.some((exception) =>
-      pathname === exception || pathname.startsWith(`${exception}/`)
-    );
-
-    if (!shouldStayInAdmin) {
-      // Redirect /admin/* to /dashboard/* (preserving sub-paths and query params)
-      newUrl.pathname = pathname.replace(/^\/admin/, '/dashboard');
-      newUrl.search = search;
-      return NextResponse.redirect(newUrl, { status: 308 });
-    }
+    return NextResponse.next();
   }
 
-  // Redirect legacy workspace platform-admin routes to new dashboard
+  // Redirect legacy /workspace/platform-admin/* to /admin/*
+  // These are old routes that should now use the /admin namespace
   if (pathname.startsWith('/workspace/platform-admin')) {
     const newUrl = request.nextUrl.clone();
-    // /workspace/platform-admin/* → /dashboard/*
-    newUrl.pathname = pathname.replace(/^\/workspace\/platform-admin/, '/dashboard');
+    newUrl.pathname = pathname.replace(/^\/workspace\/platform-admin/, '/admin');
     newUrl.search = search;
     return NextResponse.redirect(newUrl, { status: 308 });
   }

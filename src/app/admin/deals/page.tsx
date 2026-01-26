@@ -1,66 +1,42 @@
 "use client";
 
+import { Handshake } from "lucide-react";
+import { UnderConstruction } from "@/components/admin/UnderConstruction";
+
 export default function DealsPage() {
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">
-          Deal Pipeline
-        </h1>
-        <p className="text-[var(--color-text-secondary)]">
-          Track and manage deals through your sales pipeline stages
-        </p>
-      </div>
-
+    <UnderConstruction
+      title="Deal Pipeline"
+      description="Track and manage deals through your sales pipeline stages"
+      status="in-development"
+      icon={<Handshake className="w-6 h-6" />}
+      plannedFeatures={[
+        "Interactive drag-and-drop pipeline",
+        "Deal value tracking",
+        "Stage progression analytics",
+        "Win/loss analysis",
+      ]}
+      redirectTo={{
+        href: "/admin/command-center",
+        label: "Go to Command Center",
+      }}
+    >
+      {/* Pipeline Stage Preview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-[var(--color-background-secondary)] border border-[var(--color-border)] rounded-lg p-4">
-          <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-3">
-            Prospecting
-          </h3>
-          <div className="space-y-2">
-            <div className="h-20 bg-[var(--color-background-primary)] border border-[var(--color-border)] rounded opacity-50"></div>
+        {["Prospecting", "Qualification", "Proposal", "Closing"].map((stage) => (
+          <div
+            key={stage}
+            className="bg-[var(--color-background-secondary)] border border-[var(--color-border)] rounded-lg p-4"
+          >
+            <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-3">
+              {stage}
+            </h3>
+            <div className="space-y-2">
+              <div className="h-20 bg-[var(--color-background-primary)] border border-[var(--color-border)] rounded opacity-50" />
+            </div>
           </div>
-        </div>
-
-        <div className="bg-[var(--color-background-secondary)] border border-[var(--color-border)] rounded-lg p-4">
-          <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-3">
-            Qualification
-          </h3>
-          <div className="space-y-2">
-            <div className="h-20 bg-[var(--color-background-primary)] border border-[var(--color-border)] rounded opacity-50"></div>
-          </div>
-        </div>
-
-        <div className="bg-[var(--color-background-secondary)] border border-[var(--color-border)] rounded-lg p-4">
-          <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-3">
-            Proposal
-          </h3>
-          <div className="space-y-2">
-            <div className="h-20 bg-[var(--color-background-primary)] border border-[var(--color-border)] rounded opacity-50"></div>
-          </div>
-        </div>
-
-        <div className="bg-[var(--color-background-secondary)] border border-[var(--color-border)] rounded-lg p-4">
-          <h3 className="text-sm font-medium text-[var(--color-text-secondary)] mb-3">
-            Closing
-          </h3>
-          <div className="space-y-2">
-            <div className="h-20 bg-[var(--color-background-primary)] border border-[var(--color-border)] rounded opacity-50"></div>
-          </div>
-        </div>
+        ))}
       </div>
-
-      <div className="bg-[var(--color-background-secondary)] border border-[var(--color-border)] rounded-lg p-16 text-center">
-        <span className="inline-block px-3 py-1 text-xs font-medium bg-[var(--color-accent-primary)] text-white rounded-full mb-4">
-          In Development
-        </span>
-        <p className="text-[var(--color-text-secondary)] mb-2">
-          Interactive deal pipeline with drag-and-drop functionality
-        </p>
-        <p className="text-sm text-[var(--color-text-secondary)]">
-          Including deal value tracking, stage progression, and win/loss analysis
-        </p>
-      </div>
-    </div>
+    </UnderConstruction>
   );
 }

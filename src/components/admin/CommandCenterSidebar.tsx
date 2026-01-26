@@ -89,7 +89,7 @@ const useNavigationStructure = (organizationId: string): NavCategory[] => {
           {
             id: "god-mode",
             label: "God Mode",
-            href: "/dashboard",
+            href: "/admin",
             icon: Zap,
             tooltip: "Platform Admin God Mode",
           },
