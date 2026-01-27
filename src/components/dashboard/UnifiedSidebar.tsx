@@ -1,5 +1,8 @@
 "use client";
 
+// Verification marker - confirms 11-section granular client UI is active
+console.info("RESTORED_CLIENT_UI_v1");
+
 import React, { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
