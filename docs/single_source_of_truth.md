@@ -841,20 +841,75 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 
 ### Sidebar Architecture
 
-Single unified sidebar implementation:
-- **UnifiedSidebar**: `src/components/dashboard/UnifiedSidebar.tsx`
-- ~~CommandCenterSidebar~~ (DELETED - Jan 26, 2026)
+**Forensic Investigation Completed:** January 26, 2026
 
-Navigation structure defined in: `src/components/dashboard/navigation-config.ts`
+#### Current Implementation (UNIFIED)
 
-**Section Order:**
-1. Dashboard (All Roles)
-2. Sales (All Roles)
-3. Marketing (Admin+ and Manager)
-4. AI Swarm (Owner and Admin only)
-5. Analytics (All Roles)
-6. Settings (Owner and Admin only)
-7. **SYSTEM (Platform Admin Only)** - Always at absolute bottom
+| Component | Location | Status |
+|-----------|----------|--------|
+| **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | ACTIVE - Single component for ALL layouts |
+| **Navigation Config** | `src/components/dashboard/navigation-config.ts` | ACTIVE - Contains `UNIFIED_NAVIGATION` |
+| **Role Filtering** | `src/types/unified-rbac.ts` → `filterNavigationByRole()` | ACTIVE - Lines 699-714 |
+| ~~CommandCenterSidebar~~ | `src/components/admin/CommandCenterSidebar.tsx` | DELETED - Commit `f2d2497b` (Jan 26, 2026) |
+
+#### Key Finding: No Separate Client Navigation
+
+**Investigation Result:** There are **NO separate CLIENT_NAV or WORKSPACE_NAV arrays**. The codebase uses a fully unified navigation system where:
+
+1. Both `/admin` layout and `/workspace/[orgId]` layout use the **same `UnifiedSidebar` component**
+2. Navigation items are filtered at runtime by `filterNavigationByRole(UNIFIED_NAVIGATION, user.role)`
+3. Each navigation item can specify a `requiredPermission` that gates visibility
+4. Client features (Leads, Deals, Social) ARE present in the unified config with permission gates
+
+#### Navigation Item Locations
+
+| Feature | Section | Permission Required | Route |
+|---------|---------|---------------------|-------|
+| Leads | Sales | `canViewLeads` | `/dashboard/sales/leads` |
+| Deals | Sales | `canViewDeals` | `/dashboard/sales/deals` |
+| Social Media | Marketing | `canManageSocialMedia` | `/dashboard/marketing/social` |
+| Voice Agents | Sales | `canAccessVoiceAgents` | `/admin/voice` |
+| AI Sales Agent | Sales | `canManageLeads` | `/admin/sales-agent` |
+
+#### Deleted Components (Forensic Record)
+
+| File | Commit | Date | Reason |
+|------|--------|------|--------|
+| `CommandCenterSidebar.tsx` | `f2d2497b` | Jan 26, 2026 | UI consolidation - migrated to UnifiedSidebar |
+
+**CommandCenterSidebar Contents (437 lines):** 10 navigation categories (Dashboard, Clients, Leads & Sales, Social Media, Email Marketing, AI Voice, Analytics, System, Jasper Lab), collapsible sections, badge support, role display. All functionality migrated to unified system.
+
+#### Section Visibility by Role
+
+| Section | platform_admin | owner | admin | manager | employee |
+|---------|----------------|-------|-------|---------|----------|
+| System | ✅ | - | - | - | - |
+| Dashboard | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Sales | ✅ | ✅ | ✅ | ✅ | ✅* |
+| Marketing | ✅ | ✅ | ✅ | ✅ | - |
+| Swarm | ✅ | ✅ | ✅ | - | - |
+| Analytics | ✅ | ✅ | ✅ | ✅ | ✅* |
+| Settings | ✅ | ✅ | ✅ | - | - |
+
+*Employee sees limited items based on specific permissions
+
+#### Files for Navigation Debugging
+
+```
+src/components/dashboard/
+├── UnifiedSidebar.tsx          # Sidebar component (use for ALL layouts)
+├── navigation-config.ts        # UNIFIED_NAVIGATION constant
+├── README.md                   # Migration documentation
+├── MIGRATION.md                # Migration guide
+└── IMPLEMENTATION_SUMMARY.md   # Implementation details
+
+src/types/
+└── unified-rbac.ts             # filterNavigationByRole() at lines 699-714
+```
+
+#### Orphaned Code Status: ✅ CLEAN
+
+No disconnected navigation references, unused arrays, or orphaned code found during forensic audit.
 
 ### Agent Communication
 
