@@ -16,7 +16,7 @@ import {
   type NavigationItem,
   type AccountRole,
 } from "@/types/unified-rbac";
-import { UNIFIED_NAVIGATION } from "./navigation-config";
+import { getNavigationForRole } from "./navigation-config";
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -210,9 +210,12 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
     const [mobileOpen, setMobileOpen] = useState(false);
     const isCollapsed = externalIsCollapsed ?? internalIsCollapsed;
 
-    // Filter navigation based on user role
+    // Get navigation sections based on user role
+    // Uses getNavigationForRole() which HARD-GATES System section to platform_admin only
     const filteredSections = useMemo(() => {
-      return filterNavigationByRole(UNIFIED_NAVIGATION.sections, user.role);
+      const roleSections = getNavigationForRole(user.role);
+      // Apply permission-based filtering on top of role-based sections
+      return filterNavigationByRole(roleSections, user.role);
     }, [user.role]);
 
     // Track expanded sections

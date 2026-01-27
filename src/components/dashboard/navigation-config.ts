@@ -1,16 +1,17 @@
 /**
- * Unified Navigation Configuration
- * Defines the complete navigation structure for the unified sidebar
- * Role-based visibility is controlled via allowedRoles and requiredPermission fields
+ * Legacy Client Navigation Configuration
+ * Restored: January 27, 2026 - 1/25/2026 Baseline
  *
  * ARCHITECTURE NOTES:
- * - 11 OPERATIONAL SECTIONS: Command Center, CRM, Lead Gen, Outbound, Automation,
- *   Content Factory, AI Workforce, E-Commerce, Analytics, Website, Settings
- * - 1 SYSTEM SECTION: Platform admin only tools (positioned at absolute bottom)
- * - All operational sections include platform_admin + appropriate client roles
+ * - CLIENT_SECTIONS: 11 operational sections for all client roles
+ *   (Command Center, CRM, Lead Gen, Outbound, Automation, Content Factory,
+ *    AI Workforce, E-Commerce, Analytics, Website, Settings)
+ * - SYSTEM_SECTION: Isolated platform_admin tools - NEVER included in client array
  * - Routes use :orgId placeholder - replace with actual orgId at render time
  *
- * GOD-MODE: platform_admin sees all 12 sections simultaneously
+ * HARD-GATING: System tools (System Overview, Organizations, All Users, Feature Flags,
+ * Audit Logs, System Settings) are ONLY accessible via explicit platform_admin check.
+ * They are NOT part of the standard client navigation structure.
  */
 
 import {
@@ -168,535 +169,552 @@ const MANAGER_PLUS: AccountRole[] = ['platform_admin', 'owner', 'admin', 'manage
 const PLATFORM_ADMIN_ONLY: AccountRole[] = ['platform_admin'];
 
 // =============================================================================
-// UNIFIED NAVIGATION STRUCTURE
+// CLIENT NAVIGATION SECTIONS (11 Operational Sections)
+// These sections are available to all client roles based on permissions
+// System/Admin tools are NOT included here - they are isolated separately
 // =============================================================================
 
 /**
- * Complete navigation structure for the unified sidebar
- * Sections are filtered by role using filterNavigationByRole()
- *
- * Section order:
- * 1-11: Operational sections (accessible by client roles + platform_admin)
- * 12: System section (platform_admin only - always at bottom)
+ * Client-facing navigation sections
+ * Contains ONLY the 11 operational sections for daily business operations
+ * DOES NOT include System, Audit Logs, Feature Flags, or All Users
  */
-export const UNIFIED_NAVIGATION: NavigationStructure = {
-  sections: [
-    // =========================================================================
-    // 1. COMMAND CENTER SECTION
-    // =========================================================================
-    {
-      id: 'command_center',
-      label: 'Command Center',
-      icon: LayoutDashboard as LucideIcon,
-      allowedRoles: ALL_ROLES,
-      collapsible: false,
-      items: [
-        {
-          id: 'workforce-hq',
-          label: 'Workforce HQ',
-          href: ws.workforce,
-          icon: GitBranch as LucideIcon,
-        },
-        {
-          id: 'dashboard',
-          label: 'Dashboard',
-          href: ws.dashboard,
-          icon: LayoutDashboard as LucideIcon,
-        },
-        {
-          id: 'conversations',
-          label: 'Conversations',
-          href: ws.conversations,
-          icon: MessageSquare as LucideIcon,
-        },
-      ],
-    },
+export const CLIENT_SECTIONS: NavigationSection[] = [
+  // =========================================================================
+  // 1. COMMAND CENTER SECTION
+  // =========================================================================
+  {
+    id: 'command_center',
+    label: 'Command Center',
+    icon: LayoutDashboard as LucideIcon,
+    allowedRoles: ALL_ROLES,
+    collapsible: false,
+    items: [
+      {
+        id: 'workforce-hq',
+        label: 'Workforce HQ',
+        href: ws.workforce,
+        icon: GitBranch as LucideIcon,
+      },
+      {
+        id: 'dashboard',
+        label: 'Dashboard',
+        href: ws.dashboard,
+        icon: LayoutDashboard as LucideIcon,
+      },
+      {
+        id: 'conversations',
+        label: 'Conversations',
+        href: ws.conversations,
+        icon: MessageSquare as LucideIcon,
+      },
+    ],
+  },
 
-    // =========================================================================
-    // 2. CRM SECTION
-    // =========================================================================
+  // =========================================================================
+  // 2. CRM SECTION
+  // =========================================================================
+  {
+    id: 'crm',
+    label: 'CRM',
+    icon: Users as LucideIcon,
+    allowedRoles: ALL_ROLES,
+    collapsible: true,
+    defaultCollapsed: false,
+    items: [
+      {
+        id: 'leads',
+        label: 'Leads',
+        href: ws.leads,
+        icon: Target as LucideIcon,
+        requiredPermission: 'canViewLeads',
+      },
+      {
+        id: 'deals',
+        label: 'Deals',
+        href: ws.deals,
+        icon: Handshake as LucideIcon,
+        requiredPermission: 'canViewDeals',
+      },
+      {
+        id: 'contacts',
+        label: 'Contacts',
+        href: ws.contacts,
+        icon: Users as LucideIcon,
+        requiredPermission: 'canViewLeads',
+      },
+      {
+        id: 'living-ledger',
+        label: 'Living Ledger',
+        href: ws.livingLedger,
+        icon: Book as LucideIcon,
+        requiredPermission: 'canViewAllRecords',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // 3. LEAD GEN SECTION
+  // =========================================================================
+  {
+    id: 'lead_gen',
+    label: 'Lead Gen',
+    icon: Search as LucideIcon,
+    allowedRoles: MANAGER_PLUS,
+    collapsible: true,
+    defaultCollapsed: false,
+    items: [
+      {
+        id: 'forms',
+        label: 'Forms',
+        href: ws.forms,
+        icon: ClipboardList as LucideIcon,
+        requiredPermission: 'canManageLeads',
+      },
+      {
+        id: 'lead-research',
+        label: 'Lead Research',
+        href: ws.leadResearch,
+        icon: Search as LucideIcon,
+        requiredPermission: 'canManageLeads',
+      },
+      {
+        id: 'lead-scoring',
+        label: 'Lead Scoring',
+        href: ws.leadScoring,
+        icon: Star as LucideIcon,
+        requiredPermission: 'canManageLeads',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // 4. OUTBOUND SECTION
+  // =========================================================================
+  {
+    id: 'outbound',
+    label: 'Outbound',
+    icon: Send as LucideIcon,
+    allowedRoles: ALL_ROLES,
+    collapsible: true,
+    defaultCollapsed: false,
+    items: [
+      {
+        id: 'sequences',
+        label: 'Sequences',
+        href: ws.sequences,
+        icon: Mail as LucideIcon,
+        requiredPermission: 'canManageEmailCampaigns',
+      },
+      {
+        id: 'campaigns',
+        label: 'Campaigns',
+        href: ws.emailCampaigns,
+        icon: Send as LucideIcon,
+        requiredPermission: 'canManageEmailCampaigns',
+      },
+      {
+        id: 'email-writer',
+        label: 'Email Writer',
+        href: ws.emailWriter,
+        icon: FileText as LucideIcon,
+        requiredPermission: 'canManageEmailCampaigns',
+      },
+      {
+        id: 'nurture',
+        label: 'Nurture',
+        href: ws.nurture,
+        icon: TrendingUp as LucideIcon,
+        requiredPermission: 'canManageLeads',
+      },
+      {
+        id: 'calls',
+        label: 'Calls',
+        href: ws.calls,
+        icon: Phone as LucideIcon,
+        requiredPermission: 'canAccessVoiceAgents',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // 5. AUTOMATION SECTION
+  // =========================================================================
+  {
+    id: 'automation',
+    label: 'Automation',
+    icon: Workflow as LucideIcon,
+    allowedRoles: ADMIN_PLUS,
+    collapsible: true,
+    defaultCollapsed: false,
+    items: [
+      {
+        id: 'workflows',
+        label: 'Workflows',
+        href: ws.workflows,
+        icon: Workflow as LucideIcon,
+        requiredPermission: 'canCreateWorkflows',
+      },
+      {
+        id: 'ab-tests',
+        label: 'A/B Tests',
+        href: ws.abTests,
+        icon: TestTube as LucideIcon,
+        requiredPermission: 'canCreateWorkflows',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // 6. CONTENT FACTORY SECTION
+  // =========================================================================
+  {
+    id: 'content_factory',
+    label: 'Content Factory',
+    icon: Video as LucideIcon,
+    allowedRoles: MANAGER_PLUS,
+    collapsible: true,
+    defaultCollapsed: false,
+    items: [
+      {
+        id: 'video-studio',
+        label: 'Video Studio',
+        href: ws.videoStudio,
+        icon: Video as LucideIcon,
+        requiredPermission: 'canManageSocialMedia',
+      },
+      {
+        id: 'social-media',
+        label: 'Social Media',
+        href: ws.socialMedia,
+        icon: Share2 as LucideIcon,
+        requiredPermission: 'canManageSocialMedia',
+      },
+      {
+        id: 'proposals',
+        label: 'Proposals',
+        href: ws.proposals,
+        icon: FileSignature as LucideIcon,
+        requiredPermission: 'canManageDeals',
+      },
+      {
+        id: 'battlecards',
+        label: 'Battlecards',
+        href: ws.battlecards,
+        icon: Swords as LucideIcon,
+        requiredPermission: 'canViewDeals',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // 7. AI WORKFORCE SECTION
+  // =========================================================================
+  {
+    id: 'ai_workforce',
+    label: 'AI Workforce',
+    icon: Bot as LucideIcon,
+    allowedRoles: ADMIN_PLUS,
+    collapsible: true,
+    defaultCollapsed: false,
+    items: [
+      {
+        id: 'agent-training',
+        label: 'Agent Training',
+        href: ws.agentTraining,
+        icon: GraduationCap as LucideIcon,
+        requiredPermission: 'canTrainAIAgents',
+      },
+      {
+        id: 'voice-ai-lab',
+        label: 'Voice AI Lab',
+        href: ws.voiceAiLab,
+        icon: Mic as LucideIcon,
+        requiredPermission: 'canManageAIAgents',
+      },
+      {
+        id: 'social-ai-lab',
+        label: 'Social AI Lab',
+        href: ws.socialAiLab,
+        icon: Share2 as LucideIcon,
+        requiredPermission: 'canManageAIAgents',
+      },
+      {
+        id: 'seo-ai-lab',
+        label: 'SEO AI Lab',
+        href: ws.seoAiLab,
+        icon: SearchCheck as LucideIcon,
+        requiredPermission: 'canManageAIAgents',
+      },
+      {
+        id: 'datasets',
+        label: 'Datasets',
+        href: ws.datasets,
+        icon: Database as LucideIcon,
+        requiredPermission: 'canManageAIAgents',
+      },
+      {
+        id: 'fine-tuning',
+        label: 'Fine-Tuning',
+        href: ws.fineTuning,
+        icon: SlidersHorizontal as LucideIcon,
+        requiredPermission: 'canTrainAIAgents',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // 8. E-COMMERCE SECTION
+  // =========================================================================
+  {
+    id: 'ecommerce',
+    label: 'E-Commerce',
+    icon: ShoppingCart as LucideIcon,
+    allowedRoles: ADMIN_PLUS,
+    collapsible: true,
+    defaultCollapsed: true,
+    items: [
+      {
+        id: 'products',
+        label: 'Products',
+        href: ws.products,
+        icon: Package as LucideIcon,
+        requiredPermission: 'canManageProducts',
+      },
+      {
+        id: 'orders',
+        label: 'Orders',
+        href: ws.orders,
+        icon: ShoppingCart as LucideIcon,
+        requiredPermission: 'canProcessOrders',
+      },
+      {
+        id: 'storefront',
+        label: 'Storefront',
+        href: ws.storefront,
+        icon: Store as LucideIcon,
+        requiredPermission: 'canManageEcommerce',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // 9. ANALYTICS SECTION
+  // =========================================================================
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: BarChart3 as LucideIcon,
+    allowedRoles: ALL_ROLES,
+    collapsible: true,
+    defaultCollapsed: false,
+    items: [
+      {
+        id: 'analytics-overview',
+        label: 'Overview',
+        href: ws.analyticsOverview,
+        icon: BarChart3 as LucideIcon,
+        requiredPermission: 'canViewReports',
+      },
+      {
+        id: 'analytics-revenue',
+        label: 'Revenue',
+        href: ws.analyticsRevenue,
+        icon: DollarSign as LucideIcon,
+        requiredPermission: 'canViewReports',
+      },
+      {
+        id: 'analytics-pipeline',
+        label: 'Pipeline',
+        href: ws.analyticsPipeline,
+        icon: TrendingUp as LucideIcon,
+        requiredPermission: 'canViewReports',
+      },
+      {
+        id: 'sequence-analytics',
+        label: 'Sequences',
+        href: ws.sequenceAnalytics,
+        icon: Activity as LucideIcon,
+        requiredPermission: 'canViewReports',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // 10. WEBSITE SECTION
+  // =========================================================================
+  {
+    id: 'website',
+    label: 'Website',
+    icon: Globe as LucideIcon,
+    allowedRoles: ADMIN_PLUS,
+    collapsible: true,
+    defaultCollapsed: true,
+    items: [
+      {
+        id: 'website-pages',
+        label: 'Pages',
+        href: ws.websitePages,
+        icon: Globe as LucideIcon,
+        requiredPermission: 'canManageWebsite',
+      },
+      {
+        id: 'website-blog',
+        label: 'Blog',
+        href: ws.websiteBlog,
+        icon: PenTool as LucideIcon,
+        requiredPermission: 'canManageWebsite',
+      },
+      {
+        id: 'website-domains',
+        label: 'Domains',
+        href: ws.websiteDomains,
+        icon: Link as LucideIcon,
+        requiredPermission: 'canManageWebsite',
+      },
+      {
+        id: 'website-seo',
+        label: 'SEO',
+        href: ws.websiteSeo,
+        icon: SearchCheck as LucideIcon,
+        requiredPermission: 'canManageWebsite',
+      },
+      {
+        id: 'website-settings',
+        label: 'Site Settings',
+        href: ws.websiteSettings,
+        icon: Palette as LucideIcon,
+        requiredPermission: 'canManageWebsite',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // 11. SETTINGS SECTION
+  // =========================================================================
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: Settings as LucideIcon,
+    allowedRoles: ADMIN_PLUS,
+    collapsible: true,
+    defaultCollapsed: true,
+    items: [
+      {
+        id: 'org-settings',
+        label: 'Organization',
+        href: ws.settings,
+        icon: Building2 as LucideIcon,
+        requiredPermission: 'canManageOrganization',
+      },
+      {
+        id: 'team-settings',
+        label: 'Team',
+        href: ws.team,
+        icon: Users as LucideIcon,
+        requiredPermission: 'canInviteUsers',
+      },
+      {
+        id: 'integrations',
+        label: 'Integrations',
+        href: ws.integrations,
+        icon: Plug as LucideIcon,
+        requiredPermission: 'canManageIntegrations',
+      },
+      {
+        id: 'api-keys',
+        label: 'API Keys',
+        href: ws.apiKeys,
+        icon: Key as LucideIcon,
+        requiredPermission: 'canManageAPIKeys',
+      },
+      {
+        id: 'billing',
+        label: 'Billing',
+        href: ws.billing,
+        icon: CreditCard as LucideIcon,
+        requiredPermission: 'canManageBilling',
+      },
+    ],
+  },
+];
+
+// =============================================================================
+// SYSTEM SECTION (Platform Admin Only - Isolated)
+// This section is NEVER part of the standard client navigation array
+// It MUST be conditionally appended ONLY when user.role === 'platform_admin'
+// =============================================================================
+
+/**
+ * Platform Admin System Tools
+ * ISOLATED from client navigation - must be explicitly appended via isPlatformAdmin check
+ * Contains: System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
+ */
+export const SYSTEM_SECTION: NavigationSection = {
+  id: 'system',
+  label: 'System',
+  icon: Wrench as LucideIcon,
+  allowedRoles: PLATFORM_ADMIN_ONLY,
+  collapsible: true,
+  defaultCollapsed: false,
+  items: [
     {
-      id: 'crm',
-      label: 'CRM',
+      id: 'system-overview',
+      label: 'System Overview',
+      href: admin.systemOverview,
+      icon: Activity as LucideIcon,
+      requiredPermission: 'canViewSystemHealth',
+    },
+    {
+      id: 'system-organizations',
+      label: 'Organizations',
+      href: admin.organizations,
+      icon: Building2 as LucideIcon,
+      requiredPermission: 'canManageAllOrganizations',
+    },
+    {
+      id: 'system-users',
+      label: 'All Users',
+      href: admin.users,
       icon: Users as LucideIcon,
-      allowedRoles: ALL_ROLES,
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        {
-          id: 'leads',
-          label: 'Leads',
-          href: ws.leads,
-          icon: Target as LucideIcon,
-          requiredPermission: 'canViewLeads',
-        },
-        {
-          id: 'deals',
-          label: 'Deals',
-          href: ws.deals,
-          icon: Handshake as LucideIcon,
-          requiredPermission: 'canViewDeals',
-        },
-        {
-          id: 'contacts',
-          label: 'Contacts',
-          href: ws.contacts,
-          icon: Users as LucideIcon,
-          requiredPermission: 'canViewLeads',
-        },
-        {
-          id: 'living-ledger',
-          label: 'Living Ledger',
-          href: ws.livingLedger,
-          icon: Book as LucideIcon,
-          requiredPermission: 'canViewAllRecords',
-        },
-      ],
+      requiredPermission: 'canManageAllOrganizations',
     },
-
-    // =========================================================================
-    // 3. LEAD GEN SECTION
-    // =========================================================================
     {
-      id: 'lead_gen',
-      label: 'Lead Gen',
-      icon: Search as LucideIcon,
-      allowedRoles: MANAGER_PLUS,
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        {
-          id: 'forms',
-          label: 'Forms',
-          href: ws.forms,
-          icon: ClipboardList as LucideIcon,
-          requiredPermission: 'canManageLeads',
-        },
-        {
-          id: 'lead-research',
-          label: 'Lead Research',
-          href: ws.leadResearch,
-          icon: Search as LucideIcon,
-          requiredPermission: 'canManageLeads',
-        },
-        {
-          id: 'lead-scoring',
-          label: 'Lead Scoring',
-          href: ws.leadScoring,
-          icon: Star as LucideIcon,
-          requiredPermission: 'canManageLeads',
-        },
-      ],
+      id: 'system-flags',
+      label: 'Feature Flags',
+      href: admin.featureFlags,
+      icon: Flag as LucideIcon,
+      requiredPermission: 'canManageFeatureFlags',
     },
-
-    // =========================================================================
-    // 4. OUTBOUND SECTION
-    // =========================================================================
     {
-      id: 'outbound',
-      label: 'Outbound',
-      icon: Send as LucideIcon,
-      allowedRoles: ALL_ROLES,
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        {
-          id: 'sequences',
-          label: 'Sequences',
-          href: ws.sequences,
-          icon: Mail as LucideIcon,
-          requiredPermission: 'canManageEmailCampaigns',
-        },
-        {
-          id: 'campaigns',
-          label: 'Campaigns',
-          href: ws.emailCampaigns,
-          icon: Send as LucideIcon,
-          requiredPermission: 'canManageEmailCampaigns',
-        },
-        {
-          id: 'email-writer',
-          label: 'Email Writer',
-          href: ws.emailWriter,
-          icon: FileText as LucideIcon,
-          requiredPermission: 'canManageEmailCampaigns',
-        },
-        {
-          id: 'nurture',
-          label: 'Nurture',
-          href: ws.nurture,
-          icon: TrendingUp as LucideIcon,
-          requiredPermission: 'canManageLeads',
-        },
-        {
-          id: 'calls',
-          label: 'Calls',
-          href: ws.calls,
-          icon: Phone as LucideIcon,
-          requiredPermission: 'canAccessVoiceAgents',
-        },
-      ],
+      id: 'system-logs',
+      label: 'Audit Logs',
+      href: admin.auditLogs,
+      icon: FileCode as LucideIcon,
+      requiredPermission: 'canViewAuditLogs',
     },
-
-    // =========================================================================
-    // 5. AUTOMATION SECTION
-    // =========================================================================
     {
-      id: 'automation',
-      label: 'Automation',
-      icon: Workflow as LucideIcon,
-      allowedRoles: ADMIN_PLUS,
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        {
-          id: 'workflows',
-          label: 'Workflows',
-          href: ws.workflows,
-          icon: Workflow as LucideIcon,
-          requiredPermission: 'canCreateWorkflows',
-        },
-        {
-          id: 'ab-tests',
-          label: 'A/B Tests',
-          href: ws.abTests,
-          icon: TestTube as LucideIcon,
-          requiredPermission: 'canCreateWorkflows',
-        },
-      ],
-    },
-
-    // =========================================================================
-    // 6. CONTENT FACTORY SECTION
-    // =========================================================================
-    {
-      id: 'content_factory',
-      label: 'Content Factory',
-      icon: Video as LucideIcon,
-      allowedRoles: MANAGER_PLUS,
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        {
-          id: 'video-studio',
-          label: 'Video Studio',
-          href: ws.videoStudio,
-          icon: Video as LucideIcon,
-          requiredPermission: 'canManageSocialMedia',
-        },
-        {
-          id: 'social-media',
-          label: 'Social Media',
-          href: ws.socialMedia,
-          icon: Share2 as LucideIcon,
-          requiredPermission: 'canManageSocialMedia',
-        },
-        {
-          id: 'proposals',
-          label: 'Proposals',
-          href: ws.proposals,
-          icon: FileSignature as LucideIcon,
-          requiredPermission: 'canManageDeals',
-        },
-        {
-          id: 'battlecards',
-          label: 'Battlecards',
-          href: ws.battlecards,
-          icon: Swords as LucideIcon,
-          requiredPermission: 'canViewDeals',
-        },
-      ],
-    },
-
-    // =========================================================================
-    // 7. AI WORKFORCE SECTION
-    // =========================================================================
-    {
-      id: 'ai_workforce',
-      label: 'AI Workforce',
-      icon: Bot as LucideIcon,
-      allowedRoles: ADMIN_PLUS,
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        {
-          id: 'agent-training',
-          label: 'Agent Training',
-          href: ws.agentTraining,
-          icon: GraduationCap as LucideIcon,
-          requiredPermission: 'canTrainAIAgents',
-        },
-        {
-          id: 'voice-ai-lab',
-          label: 'Voice AI Lab',
-          href: ws.voiceAiLab,
-          icon: Mic as LucideIcon,
-          requiredPermission: 'canManageAIAgents',
-        },
-        {
-          id: 'social-ai-lab',
-          label: 'Social AI Lab',
-          href: ws.socialAiLab,
-          icon: Share2 as LucideIcon,
-          requiredPermission: 'canManageAIAgents',
-        },
-        {
-          id: 'seo-ai-lab',
-          label: 'SEO AI Lab',
-          href: ws.seoAiLab,
-          icon: SearchCheck as LucideIcon,
-          requiredPermission: 'canManageAIAgents',
-        },
-        {
-          id: 'datasets',
-          label: 'Datasets',
-          href: ws.datasets,
-          icon: Database as LucideIcon,
-          requiredPermission: 'canManageAIAgents',
-        },
-        {
-          id: 'fine-tuning',
-          label: 'Fine-Tuning',
-          href: ws.fineTuning,
-          icon: SlidersHorizontal as LucideIcon,
-          requiredPermission: 'canTrainAIAgents',
-        },
-      ],
-    },
-
-    // =========================================================================
-    // 8. E-COMMERCE SECTION
-    // =========================================================================
-    {
-      id: 'ecommerce',
-      label: 'E-Commerce',
-      icon: ShoppingCart as LucideIcon,
-      allowedRoles: ADMIN_PLUS,
-      collapsible: true,
-      defaultCollapsed: true,
-      items: [
-        {
-          id: 'products',
-          label: 'Products',
-          href: ws.products,
-          icon: Package as LucideIcon,
-          requiredPermission: 'canManageProducts',
-        },
-        {
-          id: 'orders',
-          label: 'Orders',
-          href: ws.orders,
-          icon: ShoppingCart as LucideIcon,
-          requiredPermission: 'canProcessOrders',
-        },
-        {
-          id: 'storefront',
-          label: 'Storefront',
-          href: ws.storefront,
-          icon: Store as LucideIcon,
-          requiredPermission: 'canManageEcommerce',
-        },
-      ],
-    },
-
-    // =========================================================================
-    // 9. ANALYTICS SECTION
-    // =========================================================================
-    {
-      id: 'analytics',
-      label: 'Analytics',
-      icon: BarChart3 as LucideIcon,
-      allowedRoles: ALL_ROLES,
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        {
-          id: 'analytics-overview',
-          label: 'Overview',
-          href: ws.analyticsOverview,
-          icon: BarChart3 as LucideIcon,
-          requiredPermission: 'canViewReports',
-        },
-        {
-          id: 'analytics-revenue',
-          label: 'Revenue',
-          href: ws.analyticsRevenue,
-          icon: DollarSign as LucideIcon,
-          requiredPermission: 'canViewReports',
-        },
-        {
-          id: 'analytics-pipeline',
-          label: 'Pipeline',
-          href: ws.analyticsPipeline,
-          icon: TrendingUp as LucideIcon,
-          requiredPermission: 'canViewReports',
-        },
-        {
-          id: 'sequence-analytics',
-          label: 'Sequences',
-          href: ws.sequenceAnalytics,
-          icon: Activity as LucideIcon,
-          requiredPermission: 'canViewReports',
-        },
-      ],
-    },
-
-    // =========================================================================
-    // 10. WEBSITE SECTION
-    // =========================================================================
-    {
-      id: 'website',
-      label: 'Website',
-      icon: Globe as LucideIcon,
-      allowedRoles: ADMIN_PLUS,
-      collapsible: true,
-      defaultCollapsed: true,
-      items: [
-        {
-          id: 'website-pages',
-          label: 'Pages',
-          href: ws.websitePages,
-          icon: Globe as LucideIcon,
-          requiredPermission: 'canManageWebsite',
-        },
-        {
-          id: 'website-blog',
-          label: 'Blog',
-          href: ws.websiteBlog,
-          icon: PenTool as LucideIcon,
-          requiredPermission: 'canManageWebsite',
-        },
-        {
-          id: 'website-domains',
-          label: 'Domains',
-          href: ws.websiteDomains,
-          icon: Link as LucideIcon,
-          requiredPermission: 'canManageWebsite',
-        },
-        {
-          id: 'website-seo',
-          label: 'SEO',
-          href: ws.websiteSeo,
-          icon: SearchCheck as LucideIcon,
-          requiredPermission: 'canManageWebsite',
-        },
-        {
-          id: 'website-settings',
-          label: 'Site Settings',
-          href: ws.websiteSettings,
-          icon: Palette as LucideIcon,
-          requiredPermission: 'canManageWebsite',
-        },
-      ],
-    },
-
-    // =========================================================================
-    // 11. SETTINGS SECTION
-    // =========================================================================
-    {
-      id: 'settings',
-      label: 'Settings',
+      id: 'system-settings',
+      label: 'System Settings',
+      href: admin.systemSettings,
       icon: Settings as LucideIcon,
-      allowedRoles: ADMIN_PLUS,
-      collapsible: true,
-      defaultCollapsed: true,
-      items: [
-        {
-          id: 'org-settings',
-          label: 'Organization',
-          href: ws.settings,
-          icon: Building2 as LucideIcon,
-          requiredPermission: 'canManageOrganization',
-        },
-        {
-          id: 'team-settings',
-          label: 'Team',
-          href: ws.team,
-          icon: Users as LucideIcon,
-          requiredPermission: 'canInviteUsers',
-        },
-        {
-          id: 'integrations',
-          label: 'Integrations',
-          href: ws.integrations,
-          icon: Plug as LucideIcon,
-          requiredPermission: 'canManageIntegrations',
-        },
-        {
-          id: 'api-keys',
-          label: 'API Keys',
-          href: ws.apiKeys,
-          icon: Key as LucideIcon,
-          requiredPermission: 'canManageAPIKeys',
-        },
-        {
-          id: 'billing',
-          label: 'Billing',
-          href: ws.billing,
-          icon: CreditCard as LucideIcon,
-          requiredPermission: 'canManageBilling',
-        },
-      ],
-    },
-
-    // =========================================================================
-    // 12. SYSTEM SECTION (Platform Admin Only)
-    // CRITICAL: This section MUST remain at the ABSOLUTE BOTTOM
-    // Positioned last to visually separate platform admin tools from daily operations
-    // =========================================================================
-    {
-      id: 'system',
-      label: 'System',
-      icon: Wrench as LucideIcon,
-      allowedRoles: PLATFORM_ADMIN_ONLY,
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        {
-          id: 'system-overview',
-          label: 'System Overview',
-          href: admin.systemOverview,
-          icon: Activity as LucideIcon,
-          requiredPermission: 'canViewSystemHealth',
-        },
-        {
-          id: 'system-organizations',
-          label: 'Organizations',
-          href: admin.organizations,
-          icon: Building2 as LucideIcon,
-          requiredPermission: 'canManageAllOrganizations',
-        },
-        {
-          id: 'system-users',
-          label: 'All Users',
-          href: admin.users,
-          icon: Users as LucideIcon,
-          requiredPermission: 'canManageAllOrganizations',
-        },
-        {
-          id: 'system-flags',
-          label: 'Feature Flags',
-          href: admin.featureFlags,
-          icon: Flag as LucideIcon,
-          requiredPermission: 'canManageFeatureFlags',
-        },
-        {
-          id: 'system-logs',
-          label: 'Audit Logs',
-          href: admin.auditLogs,
-          icon: FileCode as LucideIcon,
-          requiredPermission: 'canViewAuditLogs',
-        },
-        {
-          id: 'system-settings',
-          label: 'System Settings',
-          href: admin.systemSettings,
-          icon: Settings as LucideIcon,
-          requiredPermission: 'canManageSystemSettings',
-        },
-      ],
+      requiredPermission: 'canManageSystemSettings',
     },
   ],
+};
+
+// =============================================================================
+// UNIFIED NAVIGATION (Backward Compatibility)
+// Combines CLIENT_SECTIONS + SYSTEM_SECTION for legacy code paths
+// NEW CODE SHOULD USE getNavigationForRole() INSTEAD
+// =============================================================================
+
+/**
+ * @deprecated Use getNavigationForRole() instead for explicit platform_admin gating
+ * Combined navigation structure for backward compatibility
+ */
+export const UNIFIED_NAVIGATION: NavigationStructure = {
+  sections: [...CLIENT_SECTIONS, SYSTEM_SECTION],
 };
 
 // =============================================================================
@@ -704,17 +722,47 @@ export const UNIFIED_NAVIGATION: NavigationStructure = {
 // =============================================================================
 
 /**
+ * Get navigation sections for a specific role
+ * HARD-GATES platform admin tools - System section ONLY appended for platform_admin
+ *
+ * @param role - The user's account role
+ * @returns Navigation sections appropriate for the role
+ */
+export function getNavigationForRole(role: AccountRole): NavigationSection[] {
+  // Start with client sections (never includes System)
+  const sections = [...CLIENT_SECTIONS];
+
+  // HARD-GATE: Only append System section for platform_admin
+  if (role === 'platform_admin') {
+    sections.push(SYSTEM_SECTION);
+  }
+
+  return sections;
+}
+
+/**
  * Helper to get a specific section by ID
  */
 export function getNavigationSection(sectionId: string): NavigationSection | undefined {
-  return UNIFIED_NAVIGATION.sections.find((section) => section.id === sectionId);
+  // Check client sections first
+  const clientSection = CLIENT_SECTIONS.find((section) => section.id === sectionId);
+  if (clientSection) {
+    return clientSection;
+  }
+
+  // Check system section
+  if (SYSTEM_SECTION.id === sectionId) {
+    return SYSTEM_SECTION;
+  }
+
+  return undefined;
 }
 
 /**
  * Helper to get all sections for a specific category
  */
 export function getNavigationByCategory(category: string): NavigationSection[] {
-  return UNIFIED_NAVIGATION.sections.filter((section) => section.id === category);
+  return [...CLIENT_SECTIONS, SYSTEM_SECTION].filter((section) => section.id === category);
 }
 
 /**
@@ -726,11 +774,14 @@ export function resolveWorkspaceRoute(href: string, orgId: string): string {
 }
 
 /**
- * Get navigation with resolved workspace routes
+ * Get navigation with resolved workspace routes for a specific role
+ * Uses getNavigationForRole() for proper platform_admin gating
  */
-export function getResolvedNavigation(orgId: string): NavigationStructure {
+export function getResolvedNavigation(orgId: string, role: AccountRole): NavigationStructure {
+  const sections = getNavigationForRole(role);
+
   return {
-    sections: UNIFIED_NAVIGATION.sections.map((section) => ({
+    sections: sections.map((section) => ({
       ...section,
       items: section.items.map((item) => ({
         ...item,
@@ -745,20 +796,30 @@ export function getResolvedNavigation(orgId: string): NavigationStructure {
 }
 
 /**
- * Get section count for God-Mode verification
- * Platform admin should see 12 sections total
+ * Get client section count (excludes System)
  */
-export function getTotalSectionCount(): number {
-  return UNIFIED_NAVIGATION.sections.length;
+export function getClientSectionCount(): number {
+  return CLIENT_SECTIONS.length;
 }
 
 /**
- * Verify God-Mode configuration
- * Returns true if platform_admin can see all 12 sections
+ * Get total section count for platform_admin (includes System)
  */
-export function verifyGodModeAccess(): boolean {
-  const platformAdminSections = UNIFIED_NAVIGATION.sections.filter((section) =>
-    section.allowedRoles.includes('platform_admin')
-  );
-  return platformAdminSections.length === 12;
+export function getTotalSectionCount(): number {
+  return CLIENT_SECTIONS.length + 1; // 11 client + 1 system = 12
+}
+
+/**
+ * Verify navigation configuration integrity
+ * Client sees 11 sections, platform_admin sees 12
+ */
+export function verifyNavigationConfig(): { clientSections: number; platformAdminSections: number; isValid: boolean } {
+  const clientCount = CLIENT_SECTIONS.length;
+  const platformAdminCount = getNavigationForRole('platform_admin').length;
+
+  return {
+    clientSections: clientCount,
+    platformAdminSections: platformAdminCount,
+    isValid: clientCount === 11 && platformAdminCount === 12,
+  };
 }

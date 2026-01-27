@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 27, 2026 (Legacy UI Verification & Route Fix)
+**Last Updated:** January 27, 2026 (Legacy Client UI Restoration - 1/25 Baseline)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification
@@ -852,20 +852,33 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 ### Sidebar Architecture
 
 **Forensic Investigation Completed:** January 26, 2026
-**God-Mode Navigation Restored:** January 27, 2026
+**Legacy Client UI Restored:** January 27, 2026 (1/25/2026 Baseline)
 
-#### Current Implementation (UNIFIED - 12 SECTIONS)
+> **IMPORTANT:** The "Unified Dashboard" logic has been SCRAPPED for the client view.
+> The legacy client navigation with 11 operational sections has been restored.
+> System tools are now HARD-GATED and isolated from the standard client navigation array.
+
+#### Current Implementation (ISOLATED ARCHITECTURE)
 
 | Component | Location | Status |
 |-----------|----------|--------|
-| **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | ACTIVE - Single component for ALL layouts |
-| **Navigation Config** | `src/components/dashboard/navigation-config.ts` | ACTIVE - Contains `UNIFIED_NAVIGATION` (12 sections) |
-| **Role Filtering** | `src/types/unified-rbac.ts` → `filterNavigationByRole()` | ACTIVE - Lines 699-714 |
-| ~~CommandCenterSidebar~~ | `src/components/admin/CommandCenterSidebar.tsx` | DELETED - Commit `f2d2497b` (Jan 26, 2026) |
+| **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | ACTIVE - Uses `getNavigationForRole()` |
+| **Navigation Config** | `src/components/dashboard/navigation-config.ts` | ACTIVE - Exports `CLIENT_SECTIONS` and `SYSTEM_SECTION` separately |
+| **Role Filtering** | `src/types/unified-rbac.ts` → `filterNavigationByRole()` | ACTIVE - Permission-based filtering |
+| **Hard-Gate Function** | `navigation-config.ts` → `getNavigationForRole()` | ACTIVE - Explicit platform_admin check |
 
-#### God-Mode Navigation Structure (12 Sections)
+#### Navigation Exports
 
-**11 Operational Sections:**
+```typescript
+// CLIENT_SECTIONS - 11 operational sections (available to all client roles)
+// SYSTEM_SECTION - Isolated platform_admin tools (NEVER in client array)
+// getNavigationForRole(role) - Returns CLIENT_SECTIONS, appends SYSTEM_SECTION ONLY for platform_admin
+```
+
+#### Client Navigation Structure (11 Sections)
+
+Clients see ONLY these 11 sections (NO System tools):
+
 1. **Command Center** - Workforce HQ, Dashboard, Conversations
 2. **CRM** - Leads, Deals, Contacts, Living Ledger
 3. **Lead Gen** - Forms, Lead Research, Lead Scoring
@@ -878,8 +891,14 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 10. **Website** - Pages, Blog, Domains, SEO, Site Settings
 11. **Settings** - Organization, Team, Integrations, API Keys, Billing
 
-**1 System Section (platform_admin only):**
-12. **System** - System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
+#### Platform Admin Tools (HARD-GATED)
+
+Platform admins see all 11 client sections PLUS the System section (12 total):
+
+12. **System** (platform_admin ONLY) - System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
+
+**CRITICAL:** The System section is NOT part of `CLIENT_SECTIONS`. It is a separate `SYSTEM_SECTION` export
+that is conditionally appended ONLY when `user.role === 'platform_admin'` via `getNavigationForRole()`.
 
 #### Route Pattern
 
