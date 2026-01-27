@@ -557,15 +557,27 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
 /**
  * Navigation section categories
  * These map to the sidebar sections visible based on role
+ *
+ * 11 Operational Sections (available to client roles):
+ * - command_center, crm, lead_gen, outbound, automation,
+ *   content_factory, ai_workforce, ecommerce, analytics, website, settings
+ *
+ * 1 System Section (platform_admin only):
+ * - system
  */
 export type NavigationCategory =
-  | 'system'      // Platform admin only: System health, feature flags, etc.
-  | 'dashboard'   // All roles: Overview dashboard
-  | 'sales'       // Sales features: Leads, Deals, CRM
-  | 'marketing'   // Marketing features: Social, Email, Website
-  | 'swarm'       // AI Agent Swarm panel
-  | 'analytics'   // Reports and analytics
-  | 'settings';   // Settings and configuration
+  | 'command_center'   // Command Center: Workforce HQ, Dashboard, Conversations
+  | 'crm'              // CRM: Leads, Deals, Contacts, Living Ledger
+  | 'lead_gen'         // Lead Gen: Forms, Research, Scoring
+  | 'outbound'         // Outbound: Sequences, Campaigns, Email Writer, Nurture, Calls
+  | 'automation'       // Automation: Workflows, A/B Tests
+  | 'content_factory'  // Content Factory: Video, Social, Proposals, Battlecards
+  | 'ai_workforce'     // AI Workforce: Training, Voice AI, Social AI, SEO AI, Datasets, Fine-Tuning
+  | 'ecommerce'        // E-Commerce: Products, Orders, Storefront
+  | 'analytics'        // Analytics: Overview, Revenue, Pipeline, Sequences
+  | 'website'          // Website: Pages, Blog, Domains, SEO, Settings
+  | 'settings'         // Settings: Organization, Integrations, API Keys, Billing
+  | 'system';          // System (platform_admin only): Health, Orgs, Users, Flags, Logs
 
 /**
  * Navigation item definition

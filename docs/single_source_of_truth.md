@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 26, 2026 (Role Standardization & Security Resolution)
+**Last Updated:** January 27, 2026 (God-Mode Navigation Restoration - 12 Sections)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification
@@ -501,20 +501,30 @@ src/lib/agents/
 | canProcessOrders | YES | YES | YES | YES | YES |
 | canManageProducts | YES | YES | YES | YES | - |
 
-### Navigation Section Visibility
+### Navigation Section Visibility (12 Sections - God-Mode Structure)
 
-| Section | platform_admin | owner | admin | manager | employee |
-|---------|----------------|-------|-------|---------|----------|
-| System | YES | - | - | - | - |
-| Dashboard | YES | YES | YES | YES | YES |
-| Sales | YES | YES | YES | YES | YES* |
-| Marketing | YES | YES | YES | YES | - |
-| Swarm | YES | YES | YES | - | - |
-| Analytics | YES | YES | YES | YES | YES* |
-| Settings | YES | YES | YES** | - | - |
+**11 Operational Sections** (available to client roles with permission gating)
+**1 System Section** (platform_admin only)
 
-*Limited items visible
-**Cannot see Billing
+| Section | platform_admin | owner | admin | manager | employee | Key Permission |
+|---------|----------------|-------|-------|---------|----------|----------------|
+| 1. Command Center | YES | YES | YES | YES | YES | - |
+| 2. CRM | YES | YES | YES | YES | YES* | canViewLeads, canViewDeals |
+| 3. Lead Gen | YES | YES | YES | YES | - | canManageLeads |
+| 4. Outbound | YES | YES | YES | YES | YES* | canManageEmailCampaigns |
+| 5. Automation | YES | YES | YES | - | - | canCreateWorkflows |
+| 6. Content Factory | YES | YES | YES | YES | - | canManageSocialMedia |
+| 7. AI Workforce | YES | YES | YES | - | - | canTrainAIAgents, canManageAIAgents |
+| 8. E-Commerce | YES | YES | YES | - | - | canManageProducts, canManageEcommerce |
+| 9. Analytics | YES | YES | YES | YES | YES* | canViewReports |
+| 10. Website | YES | YES | YES | - | - | canManageWebsite |
+| 11. Settings | YES | YES | YES** | - | - | canManageOrganization |
+| 12. System | YES | - | - | - | - | canViewSystemHealth (platform_admin only) |
+
+*Limited items visible based on specific permissions
+**Admin cannot see Billing (requires canManageBilling)
+
+**God-Mode Verification:** Platform admin sees all 12 sections simultaneously
 
 ### RBAC Source Files
 
@@ -842,34 +852,67 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 ### Sidebar Architecture
 
 **Forensic Investigation Completed:** January 26, 2026
+**God-Mode Navigation Restored:** January 27, 2026
 
-#### Current Implementation (UNIFIED)
+#### Current Implementation (UNIFIED - 12 SECTIONS)
 
 | Component | Location | Status |
 |-----------|----------|--------|
 | **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | ACTIVE - Single component for ALL layouts |
-| **Navigation Config** | `src/components/dashboard/navigation-config.ts` | ACTIVE - Contains `UNIFIED_NAVIGATION` |
+| **Navigation Config** | `src/components/dashboard/navigation-config.ts` | ACTIVE - Contains `UNIFIED_NAVIGATION` (12 sections) |
 | **Role Filtering** | `src/types/unified-rbac.ts` → `filterNavigationByRole()` | ACTIVE - Lines 699-714 |
 | ~~CommandCenterSidebar~~ | `src/components/admin/CommandCenterSidebar.tsx` | DELETED - Commit `f2d2497b` (Jan 26, 2026) |
 
-#### Key Finding: No Separate Client Navigation
+#### God-Mode Navigation Structure (12 Sections)
+
+**11 Operational Sections:**
+1. **Command Center** - Workforce HQ, Dashboard, Conversations
+2. **CRM** - Leads, Deals, Contacts, Living Ledger
+3. **Lead Gen** - Forms, Lead Research, Lead Scoring
+4. **Outbound** - Sequences, Campaigns, Email Writer, Nurture, Calls
+5. **Automation** - Workflows, A/B Tests
+6. **Content Factory** - Video Studio, Social Media, Proposals, Battlecards
+7. **AI Workforce** - Agent Training, Voice AI Lab, Social AI Lab, SEO AI Lab, Datasets, Fine-Tuning
+8. **E-Commerce** - Products, Orders, Storefront
+9. **Analytics** - Overview, Revenue, Pipeline, Sequences
+10. **Website** - Pages, Blog, Domains, SEO, Site Settings
+11. **Settings** - Organization, Team, Integrations, API Keys, Billing
+
+**1 System Section (platform_admin only):**
+12. **System** - System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
+
+#### Route Pattern
+
+- **Workspace Routes:** `/workspace/:orgId/*` (11 operational sections)
+- **Admin Routes:** `/admin/*` (System section only)
+- Route resolution: `resolveWorkspaceRoute(href, orgId)` replaces `:orgId` placeholder
+
+#### Key Finding: Unified Navigation System
 
 **Investigation Result:** There are **NO separate CLIENT_NAV or WORKSPACE_NAV arrays**. The codebase uses a fully unified navigation system where:
 
 1. Both `/admin` layout and `/workspace/[orgId]` layout use the **same `UnifiedSidebar` component**
 2. Navigation items are filtered at runtime by `filterNavigationByRole(UNIFIED_NAVIGATION, user.role)`
 3. Each navigation item can specify a `requiredPermission` that gates visibility
-4. Client features (Leads, Deals, Social) ARE present in the unified config with permission gates
+4. All 11 operational sections ARE present in the unified config with permission gates
+5. Platform admin (God-Mode) sees all 12 sections simultaneously
 
-#### Navigation Item Locations
+#### Navigation Item Locations (Key Routes)
 
-| Feature | Section | Permission Required | Route |
-|---------|---------|---------------------|-------|
-| Leads | Sales | `canViewLeads` | `/dashboard/sales/leads` |
-| Deals | Sales | `canViewDeals` | `/dashboard/sales/deals` |
-| Social Media | Marketing | `canManageSocialMedia` | `/dashboard/marketing/social` |
-| Voice Agents | Sales | `canAccessVoiceAgents` | `/admin/voice` |
-| AI Sales Agent | Sales | `canManageLeads` | `/admin/sales-agent` |
+| Feature | Section | Permission Required | Route Pattern |
+|---------|---------|---------------------|---------------|
+| Leads | CRM | `canViewLeads` | `/workspace/:orgId/leads` |
+| Deals | CRM | `canViewDeals` | `/workspace/:orgId/deals` |
+| Forms | Lead Gen | `canManageLeads` | `/workspace/:orgId/forms` |
+| Sequences | Outbound | `canManageEmailCampaigns` | `/workspace/:orgId/outbound/sequences` |
+| Workflows | Automation | `canCreateWorkflows` | `/workspace/:orgId/workflows` |
+| Video Studio | Content Factory | `canManageSocialMedia` | `/workspace/:orgId/content/video` |
+| Agent Training | AI Workforce | `canTrainAIAgents` | `/workspace/:orgId/settings/ai-agents/training` |
+| Products | E-Commerce | `canManageProducts` | `/workspace/:orgId/products` |
+| Analytics | Analytics | `canViewReports` | `/workspace/:orgId/analytics` |
+| Pages | Website | `canManageWebsite` | `/workspace/:orgId/website/pages` |
+| Organization | Settings | `canManageOrganization` | `/workspace/:orgId/settings` |
+| System Overview | System | `canViewSystemHealth` | `/admin/system/health` |
 
 #### Deleted Components (Forensic Record)
 
@@ -879,19 +922,25 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 
 **CommandCenterSidebar Contents (437 lines):** 10 navigation categories (Dashboard, Clients, Leads & Sales, Social Media, Email Marketing, AI Voice, Analytics, System, Jasper Lab), collapsible sections, badge support, role display. All functionality migrated to unified system.
 
-#### Section Visibility by Role
+#### Section Visibility by Role (12 Sections)
 
-| Section | platform_admin | owner | admin | manager | employee |
-|---------|----------------|-------|-------|---------|----------|
-| System | ✅ | - | - | - | - |
-| Dashboard | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Sales | ✅ | ✅ | ✅ | ✅ | ✅* |
-| Marketing | ✅ | ✅ | ✅ | ✅ | - |
-| Swarm | ✅ | ✅ | ✅ | - | - |
-| Analytics | ✅ | ✅ | ✅ | ✅ | ✅* |
-| Settings | ✅ | ✅ | ✅ | - | - |
+| # | Section | platform_admin | owner | admin | manager | employee |
+|---|---------|----------------|-------|-------|---------|----------|
+| 1 | Command Center | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 2 | CRM | ✅ | ✅ | ✅ | ✅ | ✅* |
+| 3 | Lead Gen | ✅ | ✅ | ✅ | ✅ | - |
+| 4 | Outbound | ✅ | ✅ | ✅ | ✅ | ✅* |
+| 5 | Automation | ✅ | ✅ | ✅ | - | - |
+| 6 | Content Factory | ✅ | ✅ | ✅ | ✅ | - |
+| 7 | AI Workforce | ✅ | ✅ | ✅ | - | - |
+| 8 | E-Commerce | ✅ | ✅ | ✅ | - | - |
+| 9 | Analytics | ✅ | ✅ | ✅ | ✅ | ✅* |
+| 10 | Website | ✅ | ✅ | ✅ | - | - |
+| 11 | Settings | ✅ | ✅ | ✅** | - | - |
+| 12 | System | ✅ | - | - | - | - |
 
 *Employee sees limited items based on specific permissions
+**Admin cannot see Billing (requires canManageBilling)
 
 #### Files for Navigation Debugging
 
@@ -983,4 +1032,4 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: January 26, 2026*
+*Last updated: January 27, 2026 - God-Mode Navigation Restoration (12 Sections)*
