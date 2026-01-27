@@ -68,12 +68,12 @@ const NavItemComponent = React.memo<NavItemComponentProps>(
   ({ item, isCollapsed, isActive, organizationId }) => {
     const Icon = item.icon;
 
-    // Build href with organization context if needed
+    // Build href with organization context - replace :orgId placeholder
     const href = useMemo(() => {
-      if (organizationId && !item.href.includes('[orgId]') && !item.href.startsWith('/admin')) {
-        return `/workspace/${organizationId}${item.href}`;
+      if (item.href.startsWith('/admin')) {
+        return item.href;
       }
-      return item.href.replace('[orgId]', organizationId ?? '');
+      return item.href.replace(':orgId', organizationId ?? '');
     }, [item.href, organizationId]);
 
     return (
@@ -118,9 +118,9 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
     // Check if any item in this section is active
     const hasActiveItem = useMemo(() => {
       return section.items.some((item) => {
-        const href = organizationId && !item.href.includes('[orgId]') && !item.href.startsWith('/admin')
-          ? `/workspace/${organizationId}${item.href}`
-          : item.href.replace('[orgId]', organizationId ?? '');
+        const href = item.href.startsWith('/admin')
+          ? item.href
+          : item.href.replace(':orgId', organizationId ?? '');
         return pathname?.startsWith(href);
       });
     }, [section.items, pathname, organizationId]);
@@ -164,9 +164,9 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
         {shouldShowItems && (
           <div className="flex flex-col gap-0.5 px-2 mt-1">
             {section.items.map((item) => {
-              const href = organizationId && !item.href.includes('[orgId]') && !item.href.startsWith('/admin')
-                ? `/workspace/${organizationId}${item.href}`
-                : item.href.replace('[orgId]', organizationId ?? '');
+              const href = item.href.startsWith('/admin')
+                ? item.href
+                : item.href.replace(':orgId', organizationId ?? '');
               const isActive = pathname?.startsWith(href) ?? false;
 
               return (
