@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 27, 2026 (Deep-Dive Forensic Audit - Added Infrastructure Systems, Fixed Agent Statuses)
+**Last Updated:** January 27, 2026 (Lead Routing Implementation - Converted from mock to production)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
@@ -32,7 +32,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 199 | Verified |
-| API Endpoints (route.ts) | 227 | 220 Functional, 7 Partial* |
+| API Endpoints (route.ts) | 227 | 221 Functional, 6 Partial* |
 | AI Agents | 44 | 35 FUNCTIONAL, 3 ENHANCED SHELL, 6 SHELL |
 | RBAC Roles | 5 | Implemented |
 | Permissions per Role | 47 | Defined |
@@ -743,7 +743,6 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 
 | Endpoint | Issue | Priority |
 |----------|-------|----------|
-| `/api/routing/route-lead` | Lead/rep resolution uses mock data | HIGH |
 | `/api/coaching/team` | Team member query returns hardcoded IDs | HIGH |
 | `/api/crm/deals/[dealId]/recommendations` | Auth implementation incomplete | MEDIUM |
 | `/api/crm/deals/monitor/start` | Monitor lifecycle not fully implemented | LOW |
@@ -766,7 +765,7 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 | Health endpoints | 10 req | 60s | `src/lib/rate-limit/rate-limiter.ts` |
 | Billing webhooks | 100 req | 60s | `/api/billing/webhook/route.ts` |
 | Coaching/team | 20 req | 60s | `/api/coaching/team/route.ts` |
-| Lead routing | 30 req | 60s | `/api/routing/route-lead/route.ts` |
+| Lead routing | 10 req | 60s | `/api/routing/route-lead/route.ts` |
 | Notifications | 50 req | 60s | `/api/notifications/send/route.ts` |
 
 **Response:** HTTP 429 with `Retry-After` header when limit exceeded.
@@ -802,9 +801,58 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 | Endpoint | TTL | Cache Key Pattern |
 |----------|-----|-------------------|
 | `/api/coaching/team` | 1 hour | `team-insights-{teamId}-{period}` |
-| `/api/routing/route-lead` | 5 min | `route-lead-{leadId}` |
 
 **Implementation:** In-memory cache with automatic TTL expiration.
+
+### Lead Routing System (FUNCTIONAL)
+
+**Location:** `src/app/api/routing/route-lead/route.ts`, `src/lib/crm/lead-routing.ts`
+
+**Status:** PRODUCTION - Fully implemented with Firestore-backed routing rules
+
+**Algorithm:** Priority-based rule evaluation with configurable strategies:
+
+| Strategy | Description | Use Case |
+|----------|-------------|----------|
+| **Round Robin** | Cycles through assigned users sequentially | Fair distribution |
+| **Territory** | Routes by state/country/industry match | Geographic assignment |
+| **Skill-based** | Matches lead language to rep skills | Specialized handling |
+| **Load Balance** | Assigns to rep with lowest workload | Capacity optimization |
+| **Default** | Round-robin across active org members | Fallback when no rules match |
+
+**Process Flow:**
+1. Authenticate via `requireOrganization` (Bearer token)
+2. Verify `canAssignRecords` permission (RBAC)
+3. Fetch lead from Firestore (`organizations/{orgId}/workspaces/{workspaceId}/entities/leads/records`)
+4. Evaluate routing rules by priority (`organizations/{orgId}/leadRoutingRules`)
+5. Apply matching strategy (round-robin → territory → skill → load-balance)
+6. Update `lead.ownerId` with assigned rep
+7. Create audit log entry via `logStatusChange()`
+8. Emit `lead.routed` signal to Signal Bus
+
+**Rate Limiting:** 10 requests/minute per organization+lead combination
+
+**Required Permission:** `canAssignRecords` (available to: platform_admin, owner, admin, manager)
+
+**Routing Rules Collection Schema:**
+```typescript
+{
+  id: string;
+  organizationId: string;
+  name: string;
+  enabled: boolean;
+  priority: number;  // Higher = evaluated first
+  routingType: 'round-robin' | 'territory' | 'skill-based' | 'load-balance' | 'custom';
+  assignedUsers: string[];  // User IDs eligible for assignment
+  conditions?: RoutingCondition[];
+  metadata?: {
+    territories?: { userId, states?, countries?, industries? }[];
+    skills?: { userId, skills[] }[];
+    maxLeadsPerUser?: number;
+    balancingPeriod?: 'day' | 'week' | 'month';
+  };
+}
+```
 
 ### Error Tracking & Logging
 

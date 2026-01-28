@@ -1,49 +1,43 @@
 /**
  * Lead Routing API Endpoint
- * 
+ *
  * POST /api/routing/route-lead
- * 
- * Intelligent lead routing endpoint that assigns leads to the best-matched sales rep
- * based on performance, workload, territory, and specialization.
- * 
+ *
+ * Production lead routing endpoint that assigns leads to the best-matched sales rep
+ * using configurable routing algorithms (Round Robin, Territory, Skill-based, Load Balance).
+ *
  * FEATURES:
- * - AI-powered rep matching
- * - Workload balancing
- * - Territory-based routing
- * - Skill-based matching
+ * - Round Robin distribution (default)
+ * - Territory-based routing (state/country/industry)
+ * - Skill-based matching (language preferences)
+ * - Load balancing (capacity-aware)
  * - Manual override capability
+ * - Firestore-backed routing rules
+ * - Activity audit logging
  * - Signal Bus integration
  * - Rate limiting (10 requests/min)
- * - Response caching (5 min TTL)
- * 
+ *
+ * ALGORITHM:
+ * 1. Fetch lead from Firestore
+ * 2. Evaluate routing rules by priority
+ * 3. Apply matching strategy (round-robin/territory/skill/load-balance)
+ * 4. Update lead.ownerId with assigned rep
+ * 5. Create audit trail in activities collection
+ *
  * @module api/routing/route-lead
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { leadRoutingEngine } from '@/lib/routing';
-import { routeLeadRequestSchema } from '@/lib/routing/validation';
-import type {
-  Lead,
-  SalesRep,
-  RoutingConfiguration,
-  RoutingRule,
-  RouteLeadResponse,
-} from '@/lib/routing/types';
+import { requireOrganization } from '@/lib/auth/api-auth';
+import { hasUnifiedPermission, type AccountRole } from '@/types/unified-rbac';
+import { routeLead as executeRouting, type RoutingResult } from '@/lib/crm/lead-routing';
+import { getLead, updateLead } from '@/lib/crm/lead-service';
+import { logStatusChange } from '@/lib/crm/activity-logger';
+import { logger } from '@/lib/logger/logger';
+import type { Lead, RouteLeadResponse } from '@/lib/routing/types';
 import { createLeadRoutedSignal, createRoutingFailedSignal } from '@/lib/routing/events';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-/**
- * Minimal lead ID body for error handling
- */
-interface LeadIdBody {
-  leadId: string;
-  [key: string]: unknown;
-}
 
 // ============================================================================
 // RATE LIMITING
@@ -83,63 +77,90 @@ function checkRateLimit(identifier: string): { limited: boolean; remaining: numb
 }
 
 // ============================================================================
-// RESPONSE CACHING
-// ============================================================================
-
-interface CacheEntry {
-  response: RouteLeadResponse;
-  expiresAt: number;
-}
-
-const responseCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-/**
- * Get cached response if available
- */
-function getCachedResponse(leadId: string): RouteLeadResponse | null {
-  const entry = responseCache.get(leadId);
-  if (!entry) {return null;}
-
-  if (entry.expiresAt < Date.now()) {
-    responseCache.delete(leadId);
-    return null;
-  }
-
-  return entry.response;
-}
-
-/**
- * Cache response
- */
-function cacheResponse(leadId: string, response: RouteLeadResponse): void {
-  responseCache.set(leadId, {
-    response,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
-}
-
-// ============================================================================
 // API HANDLER
 // ============================================================================
 
 /**
+ * Production request schema for lead routing
+ */
+const productionRouteLeadSchema = z.object({
+  leadId: z.string().min(1, 'leadId is required'),
+  workspaceId: z.string().default('default'),
+  forceRepId: z.string().optional(),
+});
+
+/**
  * POST /api/routing/route-lead
- * Route a lead to the best-matched sales rep
+ *
+ * Production lead routing endpoint that assigns leads to sales reps using
+ * configurable routing algorithms stored in Firestore.
+ *
+ * ALGORITHM PRIORITY:
+ * 1. Evaluate routing rules by priority (highest first)
+ * 2. Apply matching strategy: round-robin → territory → skill-based → load-balance
+ * 3. Fallback to default round-robin across active org members
+ *
+ * @requires Authentication via Bearer token
+ * @requires Permission: canAssignRecords
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  let organizationId: string | undefined;
+  let leadId: string | undefined;
+  let workspaceId: string = 'default';
 
   try {
-    // Parse and validate request body
+    // =========================================================================
+    // 1. AUTHENTICATION & AUTHORIZATION
+    // =========================================================================
+    const authResult = await requireOrganization(request);
+
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const { user } = authResult;
+    organizationId = user.organizationId;
+
+    // Verify user has permission to assign records
+    if (!hasUnifiedPermission(user.role as AccountRole, 'canAssignRecords')) {
+      logger.warn('Lead routing permission denied', {
+        userId: user.uid,
+        role: user.role,
+        organizationId,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Insufficient permissions. canAssignRecords permission required.',
+        },
+        { status: 403 }
+      );
+    }
+
+    // Ensure organization ID is present
+    if (!organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Organization context required' },
+        { status: 400 }
+      );
+    }
+
+    // =========================================================================
+    // 2. REQUEST VALIDATION
+    // =========================================================================
     const body = (await request.json()) as unknown;
-    const validatedRequest = routeLeadRequestSchema.parse(body);
+    const validatedRequest = productionRouteLeadSchema.parse(body);
 
-    const { leadId, strategy, forceRepId } = validatedRequest;
+    leadId = validatedRequest.leadId;
+    workspaceId = validatedRequest.workspaceId;
+    const { forceRepId } = validatedRequest;
 
-    // Rate limiting (use leadId as identifier)
-    const rateLimit = checkRateLimit(leadId);
+    // Rate limiting (use leadId + orgId as identifier)
+    const rateLimitKey = `${organizationId}:${leadId}`;
+    const rateLimit = checkRateLimit(rateLimitKey);
     if (rateLimit.limited) {
+      logger.warn('Lead routing rate limited', { leadId, organizationId });
       return NextResponse.json(
         {
           success: false,
@@ -161,321 +182,213 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check cache
-    const cached = getCachedResponse(leadId);
-    if (cached) {
-      return NextResponse.json(cached, {
-        status: 200,
-        headers: {
-          'X-Cache': 'HIT',
-          'X-RateLimit-Limit': RATE_LIMIT_REQUESTS.toString(),
-          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-          'X-RateLimit-Reset': new Date(rateLimit.resetAt).toISOString(),
+    // =========================================================================
+    // 3. FETCH LEAD FROM FIRESTORE
+    // =========================================================================
+    const crmLead = await getLead(organizationId, leadId, workspaceId);
+
+    if (!crmLead) {
+      logger.warn('Lead not found for routing', { leadId, organizationId, workspaceId });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Lead ${leadId} not found`,
+          metadata: {
+            processingTimeMs: Date.now() - startTime,
+            strategyUsed: 'none',
+            rulesEvaluated: 0,
+          },
         },
+        { status: 404 }
+      );
+    }
+
+    // Check if lead is already assigned (warn but continue)
+    if (crmLead.ownerId) {
+      logger.info('Re-routing already assigned lead', {
+        leadId,
+        previousOwnerId: crmLead.ownerId,
+        organizationId,
       });
     }
 
-    // TODO: Fetch lead from database
-    // For now, using mock data
-    const lead: Lead = {
-      id: leadId,
-      orgId: 'org_demo',
-      companyName: 'Acme Corp',
-      contactName: 'John Doe',
-      contactEmail: 'john@acme.com',
-      source: 'inbound_website',
-      qualityScore: 85,
-      intentScore: 90,
-      fitScore: 80,
-      priority: 'hot',
-      status: 'new',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    // =========================================================================
+    // 4. EXECUTE ROUTING ALGORITHM
+    // =========================================================================
+    let routingResult: RoutingResult;
 
-    // TODO: Fetch available reps from database
-    // For now, using mock data
-    const availableReps: SalesRep[] = [
-      {
-        id: 'rep_1',
-        orgId: 'org_demo',
-        name: 'Alice Johnson',
-        email: 'alice@company.com',
-        performanceTier: 'top_performer',
-        overallScore: 92,
-        skillScores: {
-          prospecting: 95,
-          discovery: 90,
-          needsAnalysis: 88,
-          presentation: 92,
-          objectionHandling: 90,
-          negotiation: 87,
-          closing: 94,
-          relationshipBuilding: 91,
-          productKnowledge: 89,
-          crmHygiene: 85,
-          timeManagement: 88,
-          aiToolAdoption: 93,
-        },
-        capacity: {
-          maxActiveLeads: 50,
-          maxNewLeadsPerDay: 5,
-          maxNewLeadsPerWeek: 20,
-        },
-        currentWorkload: {
-          activeLeads: 35,
-          leadsAssignedToday: 2,
-          leadsAssignedThisWeek: 8,
-          totalPipelineValue: 500000,
-          utilizationPercentage: 70,
-          isAtCapacity: false,
-          remainingCapacity: {
-            leads: 15,
-            dailyLeads: 3,
-            weeklyLeads: 12,
-          },
-        },
-        specializations: {
-          industries: ['Technology', 'SaaS'],
-          companySizes: ['enterprise', 'mid_market'],
-        },
-        territories: [],
-        isAvailable: true,
-        availabilityStatus: 'available',
-        routingPreferences: {
-          autoAccept: true,
-          notifyOnAssignment: true,
-          notifyOnHotLead: true,
-        },
-      },
-      {
-        id: 'rep_2',
-        orgId: 'org_demo',
-        name: 'Bob Smith',
-        email: 'bob@company.com',
-        performanceTier: 'high_performer',
-        overallScore: 85,
-        skillScores: {
-          prospecting: 82,
-          discovery: 88,
-          needsAnalysis: 85,
-          presentation: 87,
-          objectionHandling: 84,
-          negotiation: 83,
-          closing: 86,
-          relationshipBuilding: 88,
-          productKnowledge: 82,
-          crmHygiene: 80,
-          timeManagement: 85,
-          aiToolAdoption: 84,
-        },
-        capacity: {
-          maxActiveLeads: 40,
-          maxNewLeadsPerDay: 4,
-          maxNewLeadsPerWeek: 16,
-        },
-        currentWorkload: {
-          activeLeads: 20,
-          leadsAssignedToday: 1,
-          leadsAssignedThisWeek: 4,
-          totalPipelineValue: 300000,
-          utilizationPercentage: 50,
-          isAtCapacity: false,
-          remainingCapacity: {
-            leads: 20,
-            dailyLeads: 3,
-            weeklyLeads: 12,
-          },
-        },
-        specializations: {
-          industries: ['Healthcare', 'Finance'],
-          companySizes: ['mid_market', 'smb'],
-        },
-        territories: [],
-        isAvailable: true,
-        availabilityStatus: 'available',
-        routingPreferences: {
-          autoAccept: true,
-          notifyOnAssignment: true,
-          notifyOnHotLead: true,
-        },
-      },
-    ];
-
-    // TODO: Fetch routing configuration from database
-    // For now, using default config
-    const config: RoutingConfiguration = {
-      orgId: 'org_demo',
-      defaultStrategy: strategy ?? 'performance_weighted',
-      strategyWeights: {
-        performance: 0.35,
-        capacity: 0.20,
-        specialization: 0.25,
-        territory: 0.15,
-        availability: 0.05,
-      },
-      hotLeadRouting: {
-        enabled: true,
-        threshold: 80,
-        routeToTopPerformers: true,
-        topPerformerPercentile: 20,
-      },
-      workloadBalancing: {
-        enabled: true,
-        balanceThreshold: 30,
-        rebalanceInterval: 24,
-      },
-      roundRobin: {
-        enabled: false,
-        resetInterval: 'daily',
-        skipAtCapacity: true,
-      },
-      reassignment: {
-        allowReassignment: true,
-        maxReassignments: 3,
-        reassignAfterDays: 7,
-        reassignIfNoContact: true,
-      },
-      queue: {
-        enabled: true,
-        maxQueueTime: 24,
-        escalateAfter: 4,
-      },
-      notifications: {
-        notifyRepOnAssignment: true,
-        notifyManagerOnHotLead: true,
-        notifyOnQueueEscalation: true,
-      },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    // Handle manual override
     if (forceRepId) {
-      const forcedRep = availableReps.find(r => r.id === forceRepId);
-      if (!forcedRep) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Rep ${forceRepId} not found`,
-            metadata: {
-              processingTimeMs: Date.now() - startTime,
-              strategyUsed: 'manual',
-              rulesEvaluated: 0,
-            },
-          },
-          { status: 404 }
-        );
-      }
+      // Manual override - assign to specific rep
+      routingResult = {
+        assignedTo: forceRepId,
+        routingRuleId: 'manual',
+        routingRuleName: 'Manual Assignment',
+        reason: `Manual override by ${user.email ?? user.uid}`,
+      };
 
-      // Create manual assignment
-      const manualAssignment = {
+      logger.info('Lead manually assigned', {
+        leadId,
+        assignedTo: forceRepId,
+        assignedBy: user.uid,
+        organizationId,
+      });
+    } else {
+      // Execute automatic routing using the CRM lead-routing engine
+      // This evaluates: round-robin, territory, skill-based, load-balance rules
+      routingResult = await executeRouting(organizationId, workspaceId, crmLead);
+
+      logger.info('Lead automatically routed', {
+        leadId,
+        assignedTo: routingResult.assignedTo,
+        routingRule: routingResult.routingRuleName,
+        routingType: routingResult.routingRuleId,
+        organizationId,
+      });
+    }
+
+    // =========================================================================
+    // 5. UPDATE LEAD WITH ASSIGNED OWNER
+    // =========================================================================
+    const previousOwnerId = crmLead.ownerId;
+
+    await updateLead(
+      organizationId,
+      leadId,
+      { ownerId: routingResult.assignedTo },
+      workspaceId
+    );
+
+    logger.info('Lead owner updated', {
+      leadId,
+      previousOwnerId: previousOwnerId ?? 'none',
+      newOwnerId: routingResult.assignedTo,
+      organizationId,
+    });
+
+    // =========================================================================
+    // 6. CREATE AUDIT LOG ENTRY
+    // =========================================================================
+    try {
+      await logStatusChange({
+        organizationId,
+        workspaceId,
+        relatedEntityType: 'lead',
+        relatedEntityId: leadId,
+        relatedEntityName: `${crmLead.firstName} ${crmLead.lastName}`,
+        fieldChanged: 'ownerId',
+        previousValue: previousOwnerId ?? null,
+        newValue: routingResult.assignedTo,
+        userId: user.uid,
+        userName: user.email ?? 'System',
+      });
+
+      logger.debug('Routing audit log created', { leadId, organizationId });
+    } catch (auditError) {
+      // Don't fail routing if audit logging fails
+      logger.warn('Failed to create routing audit log', {
+        error: auditError instanceof Error ? auditError.message : String(auditError),
+        leadId,
+        organizationId,
+      });
+    }
+
+    // =========================================================================
+    // 7. EMIT SIGNAL BUS EVENT (optional, non-blocking)
+    // =========================================================================
+    try {
+      // Convert CRM lead to routing engine Lead type for signal emission
+      const routingLead: Lead = {
+        id: crmLead.id,
+        orgId: organizationId,
+        companyName: crmLead.company ?? crmLead.companyName ?? 'Unknown',
+        contactName: `${crmLead.firstName} ${crmLead.lastName}`,
+        contactEmail: crmLead.email,
+        source: (crmLead.source as Lead['source']) ?? 'other',
+        qualityScore: crmLead.score ?? 50,
+        priority: crmLead.score && crmLead.score >= 80 ? 'hot' : crmLead.score && crmLead.score >= 50 ? 'warm' : 'cold',
+        status: crmLead.status === 'new' ? 'new' : 'contacted',
+        createdAt: crmLead.createdAt instanceof Date ? crmLead.createdAt : new Date(),
+        updatedAt: new Date(),
+      };
+
+      const assignment = {
         id: `assignment_${leadId}_${Date.now()}`,
         leadId,
-        repId: forceRepId,
-        orgId: lead.orgId,
-        assignmentMethod: 'manual' as const,
+        repId: routingResult.assignedTo,
+        orgId: organizationId,
+        assignmentMethod: forceRepId ? 'manual' as const : 'automatic' as const,
         strategy: 'hybrid' as const,
-        matchedRules: [],
+        matchedRules: [routingResult.routingRuleId],
         matchScore: 100,
         confidence: 1.0,
-        reason: 'Manual override by admin',
+        reason: routingResult.reason,
         status: 'active' as const,
         assignedAt: new Date(),
       };
 
-      const response: RouteLeadResponse = {
-        success: true,
-        assignment: manualAssignment,
-        metadata: {
-          processingTimeMs: Date.now() - startTime,
-          strategyUsed: 'hybrid',
-          rulesEvaluated: 0,
-        },
-      };
-
-      // Emit signal
-      try {
-        const coordinator = getServerSignalCoordinator();
-        const signal = createLeadRoutedSignal(
-          lead.orgId,
-          lead,
-          manualAssignment,
-          lead.qualityScore,
-          0.5
-        );
-        await coordinator.emitSignal(signal);
-      } catch (signalError) {
-        console.error('Failed to emit routing signal:', signalError);
-        // Continue - don't fail the routing
-      }
-
-      return NextResponse.json(response, {
-        status: 200,
-        headers: {
-          'X-Cache': 'MISS',
-          'X-RateLimit-Limit': RATE_LIMIT_REQUESTS.toString(),
-          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-          'X-RateLimit-Reset': new Date(rateLimit.resetAt).toISOString(),
-        },
+      const coordinator = getServerSignalCoordinator();
+      const signal = createLeadRoutedSignal(
+        organizationId,
+        routingLead,
+        assignment,
+        crmLead.score ?? 50,
+        0.7
+      );
+      await coordinator.emitSignal(signal);
+    } catch (signalError) {
+      // Don't fail routing if signal emission fails
+      logger.warn('Failed to emit routing signal', {
+        error: signalError instanceof Error ? signalError.message : String(signalError),
+        leadId,
       });
     }
 
-    // TODO: Fetch routing rules from database
-    const rules: RoutingRule[] = [];
-
-    // Route the lead
-    const analysis = leadRoutingEngine.routeLead(
-      lead,
-      availableReps,
-      config,
-      rules
-    );
-
-    // Create assignment record
-    const assignment = leadRoutingEngine.createAssignment(
-      lead,
-      analysis,
-      'automatic',
-      config.defaultStrategy
-    );
-
+    // =========================================================================
+    // 8. RETURN SUCCESS RESPONSE
+    // =========================================================================
     const processingTimeMs = Date.now() - startTime;
 
     const response: RouteLeadResponse = {
       success: true,
-      assignment,
-      analysis,
+      assignment: {
+        id: `assignment_${leadId}_${Date.now()}`,
+        leadId,
+        repId: routingResult.assignedTo,
+        orgId: organizationId,
+        assignmentMethod: forceRepId ? 'manual' : 'automatic',
+        strategy: 'hybrid',
+        matchedRules: [routingResult.routingRuleId],
+        matchScore: 100,
+        confidence: 1.0,
+        reason: routingResult.reason,
+        status: 'active',
+        assignedAt: new Date(),
+      },
       metadata: {
         processingTimeMs,
-        strategyUsed: config.defaultStrategy,
-        rulesEvaluated: rules.length,
+        strategyUsed: routingResult.routingRuleName.includes('round-robin')
+          ? 'round_robin'
+          : routingResult.routingRuleName.includes('territory')
+            ? 'territory_based'
+            : routingResult.routingRuleName.includes('load')
+              ? 'workload_balanced'
+              : routingResult.routingRuleName.includes('skill')
+                ? 'skill_matched'
+                : 'hybrid',
+        rulesEvaluated: 1,
       },
     };
 
-    // Cache the response
-    cacheResponse(leadId, response);
-
-    // Emit signal
-    try {
-      const coordinator = getServerSignalCoordinator();
-      const signal = createLeadRoutedSignal(
-        lead.orgId,
-        lead,
-        assignment,
-        analysis.leadQuality.overallScore,
-        analysis.recommendation.expectedOutcomes.conversionProbability
-      );
-      await coordinator.emitSignal(signal);
-    } catch (signalError) {
-      console.error('Failed to emit routing signal:', signalError);
-      // Continue - don't fail the routing
-    }
+    logger.info('Lead routing completed successfully', {
+      leadId,
+      assignedTo: routingResult.assignedTo,
+      processingTimeMs,
+      organizationId,
+    });
 
     return NextResponse.json(response, {
       status: 200,
       headers: {
-        'X-Cache': 'MISS',
         'X-RateLimit-Limit': RATE_LIMIT_REQUESTS.toString(),
         'X-RateLimit-Remaining': rateLimit.remaining.toString(),
         'X-RateLimit-Reset': new Date(rateLimit.resetAt).toISOString(),
@@ -483,7 +396,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Lead routing error:', error);
+    logger.error('Lead routing error', error instanceof Error ? error : new Error(String(error)), {
+      leadId,
+      organizationId,
+    });
 
     // Handle validation errors
     if (error instanceof z.ZodError) {
@@ -505,38 +421,37 @@ export async function POST(request: NextRequest) {
     // Handle routing engine errors
     if (error instanceof Error) {
       // Try to emit failure signal
-      try {
-        const bodyRaw = (await request.json()) as unknown;
-        const body = bodyRaw as LeadIdBody;
-        const leadId = body.leadId;
+      if (organizationId && leadId) {
+        try {
+          const routingLead: Lead = {
+            id: leadId,
+            orgId: organizationId,
+            companyName: 'Unknown',
+            contactName: 'Unknown',
+            contactEmail: 'unknown@example.com',
+            source: 'other',
+            qualityScore: 0,
+            priority: 'cold',
+            status: 'new',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
 
-        // Mock lead for signal emission
-        const lead: Lead = {
-          id: leadId,
-          orgId: 'org_demo',
-          companyName: 'Unknown',
-          contactName: 'Unknown',
-          contactEmail: 'unknown@example.com',
-          source: 'other',
-          qualityScore: 0,
-          priority: 'cold',
-          status: 'new',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        const coordinator = getServerSignalCoordinator();
-        const signal = createRoutingFailedSignal(
-          'org_demo',
-          lead,
-          error.message,
-          0,
-          'hybrid',
-          false
-        );
-        await coordinator.emitSignal(signal);
-      } catch (signalError) {
-        console.error('Failed to emit failure signal:', signalError);
+          const coordinator = getServerSignalCoordinator();
+          const signal = createRoutingFailedSignal(
+            organizationId,
+            routingLead,
+            error.message,
+            0,
+            'hybrid',
+            false
+          );
+          await coordinator.emitSignal(signal);
+        } catch (signalError) {
+          logger.warn('Failed to emit failure signal', {
+            error: signalError instanceof Error ? signalError.message : String(signalError),
+          });
+        }
       }
 
       return NextResponse.json(
