@@ -77,6 +77,57 @@
   --sidebar-border: var(--color-border-main);
   --sidebar-item-hover: var(--color-bg-elevated);
   --sidebar-item-active: var(--color-primary);
+
+  /* ========================================================================
+   * ADMIN THEME VARIABLES (Platform-level defaults)
+   * These provide fallbacks for Admin UI when Firestore config is unavailable.
+   * The Admin layout applies these via useAdminTheme() to a scoped container,
+   * ensuring ISOLATION from Client/Org themes that modify document.documentElement.
+   * ======================================================================== */
+  --admin-color-primary: #6366f1;
+  --admin-color-primary-light: #818cf8;
+  --admin-color-primary-dark: #4f46e5;
+  --admin-color-secondary: #8b5cf6;
+  --admin-color-accent: #ec4899;
+  --admin-color-success: #10b981;
+  --admin-color-warning: #f59e0b;
+  --admin-color-error: #ef4444;
+  --admin-color-info: #3b82f6;
+  --admin-color-bg-main: #000000;
+  --admin-color-bg-paper: #0a0a0a;
+  --admin-color-bg-elevated: #1a1a1a;
+  --admin-color-text-primary: #ffffff;
+  --admin-color-text-secondary: #9ca3af;
+  --admin-color-text-disabled: #6b7280;
+  --admin-color-border-main: #1f2937;
+  --admin-color-border-light: #333333;
+  --admin-color-border-strong: #4b5563;
+  --admin-primary-color: #6366f1;
+}
+
+/**
+ * Admin Theme Scope
+ * When the .admin-theme-scope class is applied, these CSS variables override
+ * any values set by Client/Org themes on document.documentElement.
+ * This creates complete theme isolation for the Admin Dashboard.
+ */
+.admin-theme-scope {
+  /* Admin-scoped overrides - these take precedence over :root when within Admin */
+  --color-primary: var(--admin-color-primary);
+  --color-primary-light: var(--admin-color-primary-light);
+  --color-primary-dark: var(--admin-color-primary-dark);
+  --color-secondary: var(--admin-color-secondary);
+  --color-accent: var(--admin-color-accent);
+  --color-bg-main: var(--admin-color-bg-main);
+  --color-bg-paper: var(--admin-color-bg-paper);
+  --color-bg-elevated: var(--admin-color-bg-elevated);
+  --color-text-primary: var(--admin-color-text-primary);
+  --color-text-secondary: var(--admin-color-text-secondary);
+  --color-text-disabled: var(--admin-color-text-disabled);
+  --color-border-main: var(--admin-color-border-main);
+  --color-border-light: var(--admin-color-border-light);
+  --color-border-strong: var(--admin-color-border-strong);
+  --color-background: var(--admin-color-bg-main);
 }
 
 * {

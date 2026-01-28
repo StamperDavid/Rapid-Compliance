@@ -43,6 +43,12 @@ interface UnifiedSidebarProps {
 
   /** Custom primary color */
   primaryColor?: string;
+
+  /**
+   * Admin context flag - when true, sidebar uses Admin-scoped theme variables
+   * This enables theme isolation between Admin and Client workspaces
+   */
+  isAdminContext?: boolean;
 }
 
 interface NavItemComponentProps {
@@ -199,6 +205,11 @@ NavSectionComponent.displayName = "NavSectionComponent";
  * Unified Sidebar Component
  * Single sidebar that adapts based on user.role
  * Replaces both CommandCenterSidebar and workspace layout sidebar
+ *
+ * THEME ISOLATION:
+ * - When isAdminContext=true, the sidebar inherits theme from Admin-scoped CSS variables
+ * - When isAdminContext=false (default), uses standard CSS variables (may be overridden by org theme)
+ * - The parent container (Admin layout) applies scoped CSS vars that override document.documentElement
  */
 const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
   ({
@@ -208,6 +219,8 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
     onToggleCollapse,
     brandName = "AI Sales Platform",
     primaryColor = "#6366f1",
+    // Reserved for future Admin-specific sidebar behavior
+    isAdminContext: _isAdminContext = false,
   }) => {
     const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
