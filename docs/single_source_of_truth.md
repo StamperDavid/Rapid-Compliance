@@ -1,10 +1,10 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 27, 2026 (Admin Sidebar Dynamic Styling - Themed Lucide SVGs + Active State Borders)
+**Last Updated:** January 27, 2026 (Deep-Dive Forensic Audit - Added Infrastructure Systems, Fixed Agent Statuses)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
-**Audit Method:** Multi-agent parallel scan with verification
+**Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
 
 ---
 
@@ -16,10 +16,12 @@
 4. [Unified RBAC Matrix](#unified-rbac-matrix)
 5. [Security Audit Findings](#security-audit-findings)
 6. [Tooling Inventory](#tooling-inventory)
-7. [Integration Status](#integration-status)
-8. [Firestore Collections](#firestore-collections)
-9. [Architecture Notes](#architecture-notes)
-10. [Document Maintenance](#document-maintenance)
+7. [Infrastructure Systems](#infrastructure-systems)
+8. [Integration Status](#integration-status)
+9. [Firestore Collections](#firestore-collections)
+10. [Architecture Notes](#architecture-notes)
+11. [Data Contracts Reference](#data-contracts-reference)
+12. [Document Maintenance](#document-maintenance)
 
 ---
 
@@ -30,11 +32,13 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 199 | Verified |
-| API Endpoints (route.ts) | 227 | Functional |
-| AI Agents | 44 | 36 FUNCTIONAL, 8 SHELL |
+| API Endpoints (route.ts) | 227 | 220 Functional, 7 Partial* |
+| AI Agents | 44 | 35 FUNCTIONAL, 3 ENHANCED SHELL, 6 SHELL |
 | RBAC Roles | 5 | Implemented |
 | Permissions per Role | 47 | Defined |
 | Firestore Collections | 60+ | Active |
+
+*Partial endpoints have working infrastructure but use mock data for core logic (see [Implementation Notes](#api-implementation-notes))
 
 ### Technology Stack
 
@@ -207,23 +211,26 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL | 36 | Complete implementation with logic |
-| SHELL | 8 | Managers - orchestration layer only |
+| FUNCTIONAL | 35 | Complete implementation with logic |
+| ENHANCED SHELL | 3 | Managers with substantial orchestration logic |
+| SHELL | 6 | Managers - basic orchestration layer only |
 | GHOST | 0 | All specialists have been implemented |
 
 ### Managers (9) - L2 Orchestrators
 
-| Agent ID | Class Name | Domain | Status |
-|----------|------------|--------|--------|
-| INTELLIGENCE_MANAGER | IntelligenceManager | Research & Analysis | SHELL |
-| MARKETING_MANAGER | MarketingManager | Social & Ads | SHELL |
-| BUILDER_MANAGER | BuilderManager | Site Building | SHELL |
-| COMMERCE_MANAGER | CommerceManager | E-commerce | SHELL |
-| OUTREACH_MANAGER | OutreachManager | Email & SMS | SHELL |
-| CONTENT_MANAGER | ContentManager | Content Creation | SHELL |
-| ARCHITECT_MANAGER | ArchitectManager | Site Architecture | SHELL |
-| REVENUE_DIRECTOR | RevenueDirector | Sales Ops | SHELL |
-| REPUTATION_MANAGER | ReputationManager | Trust & Reviews | SHELL |
+| Agent ID | Class Name | Domain | Status | Notes |
+|----------|------------|--------|--------|-------|
+| INTELLIGENCE_MANAGER | IntelligenceManager | Research & Analysis | SHELL | Returns BLOCKED status; delegation not implemented |
+| MARKETING_MANAGER | MarketingManager | Social & Ads | ENHANCED SHELL | 450+ LOC with campaign orchestration logic |
+| BUILDER_MANAGER | BuilderManager | Site Building | SHELL | Basic orchestration only |
+| COMMERCE_MANAGER | CommerceManager | E-commerce | SHELL | Basic orchestration only |
+| OUTREACH_MANAGER | OutreachManager | Email & SMS | SHELL | Basic orchestration only |
+| CONTENT_MANAGER | ContentManager | Content Creation | SHELL | Basic orchestration only |
+| ARCHITECT_MANAGER | ArchitectManager | Site Architecture | ENHANCED SHELL | 100+ LOC with analysis logic |
+| REVENUE_DIRECTOR | RevenueDirector | Sales Ops | ENHANCED SHELL | Functional sales ops orchestration |
+| REPUTATION_MANAGER | ReputationManager | Trust & Reviews | SHELL | Basic orchestration only |
+
+> **Note:** "ENHANCED SHELL" managers have substantial internal logic but may not fully delegate to all specialists yet.
 
 ### Specialists (35) - L3 Workers
 
@@ -730,6 +737,84 @@ This script:
 | `/api/agent/config` | GET/PUT | Agent configuration | FUNCTIONAL |
 | `/api/agent/knowledge/upload` | POST | Knowledge base upload | FUNCTIONAL |
 
+### API Implementation Notes
+
+The following endpoints have working infrastructure (rate limiting, caching, auth) but use **mock data** for core business logic:
+
+| Endpoint | Issue | Priority |
+|----------|-------|----------|
+| `/api/routing/route-lead` | Lead/rep resolution uses mock data | HIGH |
+| `/api/coaching/team` | Team member query returns hardcoded IDs | HIGH |
+| `/api/crm/deals/[dealId]/recommendations` | Auth implementation incomplete | MEDIUM |
+| `/api/crm/deals/monitor/start` | Monitor lifecycle not fully implemented | LOW |
+| `/api/webhooks/gmail` | Auto-meeting booking has TODO | LOW |
+| `/api/admin/social/post` | Dev mode returns fake success | LOW |
+| `/api/voice/twiml` | Audio fallback uses placeholder URL | LOW |
+
+---
+
+## Infrastructure Systems
+
+> **Audit Note (January 27, 2026):** These systems are fully implemented but were previously undocumented.
+
+### Rate Limiting
+
+**Implementation:** In-memory rate limiting with configurable windows per endpoint.
+
+| Endpoint Category | Limit | Window | File |
+|-------------------|-------|--------|------|
+| Health endpoints | 10 req | 60s | `src/lib/rate-limit/rate-limiter.ts` |
+| Billing webhooks | 100 req | 60s | `/api/billing/webhook/route.ts` |
+| Coaching/team | 20 req | 60s | `/api/coaching/team/route.ts` |
+| Lead routing | 30 req | 60s | `/api/routing/route-lead/route.ts` |
+| Notifications | 50 req | 60s | `/api/notifications/send/route.ts` |
+
+**Response:** HTTP 429 with `Retry-After` header when limit exceeded.
+
+### Notification System
+
+**Location:** `src/lib/notifications/notification-service.ts`
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-Channel** | Slack, Email, Webhook, In-App |
+| **Templates** | Template-based notification content |
+| **Preferences** | User preference respect (quiet hours, channels, categories) |
+| **Retry Logic** | Exponential backoff with configurable retries |
+| **Smart Batching** | Batches notifications for efficiency |
+| **Delivery Tracking** | Analytics for sent/delivered/failed |
+
+**API Endpoints:**
+- `POST /api/notifications/send` - Send notification
+- `GET /api/notifications/list` - List notifications
+- `GET/PUT /api/notifications/preferences` - Manage preferences
+
+### Background Processing
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `/api/cron/scheduled-publisher` | CRON_SECRET env var | Scheduled content publishing |
+
+**Note:** Vercel cron jobs can trigger this endpoint on a schedule.
+
+### Response Caching
+
+| Endpoint | TTL | Cache Key Pattern |
+|----------|-----|-------------------|
+| `/api/coaching/team` | 1 hour | `team-insights-{teamId}-{period}` |
+| `/api/routing/route-lead` | 5 min | `route-lead-{leadId}` |
+
+**Implementation:** In-memory cache with automatic TTL expiration.
+
+### Error Tracking & Logging
+
+**Location:** `src/lib/logger/logger.ts`, `src/lib/logging/api-logger.ts`
+
+- Structured logging with context (file, function, metadata)
+- Error tracking with stack traces
+- Logger instance passed to every API endpoint
+- Activity logging for CRM operations (`src/lib/crm/activity-logger.ts`)
+
 ---
 
 ## Integration Status
@@ -1016,7 +1101,7 @@ The Admin UI and Client UI now have **completely independent theme-variable pipe
 | Aspect | Admin Dashboard | Client Workspace |
 |--------|-----------------|------------------|
 | **Hook** | `useAdminTheme()` | `useOrgTheme()` |
-| **Source** | Platform-level Firestore (`platform_config/settings/adminTheme`) | Org-level Firestore (`organizations/{orgId}/settings/theme`) |
+| **Source** | Platform-level Firestore (`platform_settings/adminTheme`) | Org-level Firestore (`organizations/{orgId}/themes/default`) |
 | **Scope** | `.admin-theme-scope` container class | `document.documentElement` |
 | **Variable Prefix** | `--admin-color-*` (with standard override) | `--color-*` |
 | **Isolation** | CSS cascading via scoped container | Global application |
@@ -1063,6 +1148,9 @@ document.documentElement.style.setProperty('--color-primary', orgTheme.primary);
 | `src/hooks/useOrgTheme.ts` | Client theme hook - root application |
 | `src/app/globals.css` | Base variables + Admin scope class |
 | `src/app/admin/layout.tsx` | Applies `.admin-theme-scope` container |
+| `src/app/workspace/[orgId]/settings/theme/page.tsx` | **Org Theme Editor** (UI exists) |
+
+> **Note:** The **Admin Theme Editor UI does NOT exist** yet. Admin themes can only be modified via direct Firestore writes to `platform_settings/adminTheme`. The Org Theme Editor at `/workspace/[orgId]/settings/theme` is fully functional.
 
 #### Admin Sidebar Dynamic Styling (January 27, 2026)
 
@@ -1101,6 +1189,34 @@ To verify isolation:
 
 The Admin UI will NOT be affected by organization theme changes.
 
+### State Management Architecture
+
+The platform uses a **layered state management** approach:
+
+| Layer | Technology | Scope | Persistence |
+|-------|------------|-------|-------------|
+| Component UI | `useState`, `useMemo` | Component | None |
+| App-wide Auth | `useUnifiedAuth()` hook | App | Firebase |
+| App-wide Theme | `useAdminTheme()`, `useOrgTheme()` | App | Firestore |
+| Global UI | Zustand stores | Global | localStorage |
+| Route Context | Layout files | Route tree | None |
+
+#### Zustand Stores
+
+| Store | Location | Purpose |
+|-------|----------|---------|
+| `useOnboardingStore` | `src/lib/stores/onboarding-store.ts` | Multi-step onboarding flow |
+| `useOrchestratorStore` | `src/lib/stores/orchestrator-store.ts` | AI assistant UI state |
+| `usePendingMerchantStore` | `src/lib/stores/pending-merchants-store.ts` | Lead capture & abandonment tracking |
+
+#### Sidebar Reactivity Pattern
+
+UnifiedSidebar achieves reactivity through:
+1. **Memoized navigation filtering:** `useMemo(() => getNavigationForRole(user.role), [user.role])`
+2. **Path-based active state:** `usePathname()` from Next.js
+3. **CSS variable injection:** Theme changes via `container.style.setProperty()` update instantly
+4. **React.memo sub-components:** Prevents unnecessary re-renders
+
 ### Agent Communication
 
 Agents communicate via **TenantMemoryVault**:
@@ -1108,6 +1224,64 @@ Agents communicate via **TenantMemoryVault**:
 - Signal broadcasting
 - Insight sharing
 - Location: `src/lib/agents/shared/tenant-memory-vault.ts`
+
+---
+
+## Data Contracts Reference
+
+### Core Type Definitions
+
+| Type | Location | Purpose |
+|------|----------|---------|
+| `UnifiedUser` | `src/types/unified-rbac.ts` | Authenticated user with role, tenantId, permissions |
+| `UnifiedPermissions` | `src/types/unified-rbac.ts` | 47 permission flags per role |
+| `AccountRole` | `src/types/unified-rbac.ts` | `'platform_admin' \| 'owner' \| 'admin' \| 'manager' \| 'employee'` |
+| `Organization` | `src/types/organization.ts` | Tenant definition with plan, branding, settings |
+| `Lead` | `src/types/crm-entities.ts` | CRM lead with scoring, enrichment |
+| `Deal` | `src/types/crm-entities.ts` | CRM deal with stage history, value |
+| `Contact` | `src/types/crm-entities.ts` | CRM contact with address, social |
+| `Schema` | `src/types/schema.ts` | Custom entity schema definition |
+| `AdminThemeConfig` | `src/hooks/useAdminTheme.ts` | Admin theme colors, branding |
+| `ThemeConfig` | `src/types/theme.ts` | Full theme with typography, layout |
+
+### Zod Validation Schemas
+
+| Schema | Location | Purpose |
+|--------|----------|---------|
+| `emailSendSchema` | `src/lib/validation/schemas.ts` | Email delivery request validation |
+| `leadScoringSchema` | `src/lib/validation/schemas.ts` | Lead scoring API input |
+| `CreateWorkflowSchema` | `src/lib/workflow/validation.ts` | Workflow creation validation |
+| `AnalyticsRequestSchema` | `src/lib/analytics/dashboard/validation.ts` | Analytics query parameters |
+| `sequenceStepSchema` | `src/lib/sequence/validation.ts` | Email sequence step definition |
+| `TriggerConditionSchema` | `src/lib/workflow/validation.ts` | Workflow trigger conditions |
+
+### Key Interfaces
+
+```typescript
+// Core user type
+interface UnifiedUser {
+  id: string;
+  email: string;
+  displayName: string;
+  role: AccountRole;
+  tenantId: string | null;  // null for platform_admin
+  workspaceId?: string;
+  status: 'active' | 'suspended' | 'pending';
+  mfaEnabled: boolean;
+}
+
+// Theme configuration
+interface AdminThemeConfig {
+  colors: {
+    primary: { main: string; light: string; dark: string; contrast: string };
+    secondary: { main: string; light: string; dark: string; contrast: string };
+    background: { main: string; paper: string; elevated: string };
+    text: { primary: string; secondary: string; disabled: string };
+    border: { main: string; light: string; strong: string };
+  };
+  branding: { platformName: string; logoUrl: string; primaryColor: string };
+}
+```
 
 ---
 
@@ -1173,4 +1347,15 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: January 27, 2026 - Admin Sidebar Dynamic Styling (UnifiedSidebar.tsx now uses themed Lucide SVGs with var(--color-primary) active state and 3px left border highlights, fully reactive to Admin Theme Editor)*
+*Last updated: January 27, 2026 - Deep-Dive Forensic Audit*
+
+### Changelog (January 27, 2026 - Forensic Audit)
+
+- **Added:** Infrastructure Systems section (Rate Limiting, Notifications, Caching, Logging)
+- **Added:** Data Contracts Reference section (TypeScript interfaces, Zod schemas)
+- **Added:** State Management Architecture subsection
+- **Added:** API Implementation Notes (endpoints with mock data identified)
+- **Updated:** Agent Registry with accurate manager statuses (3 ENHANCED SHELL, 6 SHELL)
+- **Updated:** Platform Statistics to reflect partial endpoint implementations
+- **Fixed:** Theme Architecture to note Admin Theme Editor UI does not exist
+- **Fixed:** Firestore path for Admin theme (`platform_settings/adminTheme` not `platform_config/settings/adminTheme`)
