@@ -109,18 +109,23 @@ const NavItemComponent = React.memo<NavItemComponentProps>(
       return item.href.replace(':orgId', organizationId ?? '');
     }, [item.href, organizationId]);
 
+    // Dynamic icon color: primary when active, muted when inactive
+    const iconColorClass = isActive
+      ? "text-[var(--color-primary)]"
+      : "text-[var(--color-text-secondary)]";
+
     return (
       <Link
         href={href}
         className={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-colors ${
           isActive
-            ? "bg-[var(--color-bg-elevated)] text-[var(--color-primary)] font-medium"
-            : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-primary)]"
+            ? "bg-[var(--color-bg-elevated)] text-[var(--color-primary)] font-medium border-l-[3px] border-l-[var(--color-primary)]"
+            : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-primary)] border-l-[3px] border-l-transparent"
         } ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         title={isCollapsed ? item.label : undefined}
         aria-disabled={item.disabled}
       >
-        <Icon className="w-5 h-5 flex-shrink-0" />
+        <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${iconColorClass}`} />
         {!isCollapsed && (
           <>
             <span className="flex-1 text-[15px] whitespace-nowrap overflow-hidden text-ellipsis">
@@ -161,6 +166,11 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
     // If section is not collapsible, always show items
     const shouldShowItems = !section.collapsible || isExpanded || isCollapsed;
 
+    // Dynamic section icon color: primary when has active item, muted otherwise
+    const sectionIconColorClass = hasActiveItem
+      ? "text-[var(--color-primary)]"
+      : "text-[var(--color-text-secondary)]";
+
     return (
       <div className="mb-2">
         {section.collapsible ? (
@@ -174,12 +184,12 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
             onClick={onToggle}
             title={isCollapsed ? section.label : undefined}
           >
-            <SectionIcon className="w-[18px] h-[18px] flex-shrink-0" />
+            <SectionIcon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${sectionIconColorClass}`} />
             {!isCollapsed && (
               <>
                 <span className="flex-1 text-left">{section.label}</span>
                 <ChevronRight
-                  className={`w-4 h-4 transition-transform duration-200 ${
+                  className={`w-4 h-4 transition-transform transition-colors duration-200 text-[var(--color-text-secondary)] ${
                     isExpanded ? "rotate-90" : ""
                   }`}
                 />
@@ -189,7 +199,7 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
         ) : (
           !isCollapsed && (
             <div className="flex items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-              <SectionIcon className="w-[18px] h-[18px] flex-shrink-0 text-[var(--color-text-disabled)]" />
+              <SectionIcon className="w-[18px] h-[18px] flex-shrink-0 transition-colors text-[var(--color-text-disabled)]" />
               <span className="flex-1 text-left">{section.label}</span>
             </div>
           )
@@ -398,26 +408,26 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
                 isCollapsed
                   ? "static w-10 h-10 mx-auto mt-0"
                   : "absolute top-4 right-4 w-8 h-8"
-              } rounded-md border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] flex items-center justify-center cursor-pointer transition-all hover:bg-[var(--color-bg-elevated)] hover:border-[var(--color-primary)]`}
+              } group rounded-md border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] flex items-center justify-center cursor-pointer transition-all hover:bg-[var(--color-bg-elevated)] hover:border-[var(--color-primary)]`}
               onClick={handleToggleCollapse}
               title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {isCollapsed ? (
-                <ChevronRight className="w-4 h-4 text-[var(--color-text-secondary)]" />
+                <ChevronRight className="w-4 h-4 text-[var(--color-text-secondary)] transition-colors group-hover:text-[var(--color-primary)]" />
               ) : (
-                <ChevronLeft className="w-4 h-4 text-[var(--color-text-secondary)]" />
+                <ChevronLeft className="w-4 h-4 text-[var(--color-text-secondary)] transition-colors group-hover:text-[var(--color-primary)]" />
               )}
             </button>
 
             {/* Mobile Close Button */}
             <button
               type="button"
-              className="md:hidden absolute top-4 left-4 w-8 h-8 rounded-md border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] flex items-center justify-center cursor-pointer transition-all hover:bg-[var(--color-bg-elevated)]"
+              className="md:hidden absolute top-4 left-4 w-8 h-8 group rounded-md border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] flex items-center justify-center cursor-pointer transition-all hover:bg-[var(--color-bg-elevated)] hover:border-[var(--color-primary)]"
               onClick={handleMobileClose}
               aria-label="Close sidebar"
             >
-              <X className="w-4 h-4 text-[var(--color-text-secondary)]" />
+              <X className="w-4 h-4 text-[var(--color-text-secondary)] transition-colors group-hover:text-[var(--color-primary)]" />
             </button>
           </div>
 
