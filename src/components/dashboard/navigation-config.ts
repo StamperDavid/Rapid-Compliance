@@ -187,6 +187,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'command_center',
     label: 'Command Center',
     icon: LayoutDashboard as LucideIcon,
+    iconColor: '#6366f1', // Indigo
     allowedRoles: ALL_ROLES,
     collapsible: false,
     items: [
@@ -195,18 +196,21 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Workforce HQ',
         href: ws.workforce,
         icon: GitBranch as LucideIcon,
+        iconColor: '#8b5cf6', // Violet
       },
       {
         id: 'dashboard',
         label: 'Dashboard',
         href: ws.dashboard,
         icon: LayoutDashboard as LucideIcon,
+        iconColor: '#6366f1', // Indigo
       },
       {
         id: 'conversations',
         label: 'Conversations',
         href: ws.conversations,
         icon: MessageSquare as LucideIcon,
+        iconColor: '#3b82f6', // Blue
       },
     ],
   },
@@ -218,6 +222,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'crm',
     label: 'CRM',
     icon: Users as LucideIcon,
+    iconColor: '#10b981', // Emerald
     allowedRoles: ALL_ROLES,
     collapsible: true,
     defaultCollapsed: false,
@@ -227,6 +232,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Leads',
         href: ws.leads,
         icon: Target as LucideIcon,
+        iconColor: '#ef4444', // Red
         requiredPermission: 'canViewLeads',
       },
       {
@@ -234,6 +240,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Deals',
         href: ws.deals,
         icon: Handshake as LucideIcon,
+        iconColor: '#10b981', // Emerald
         requiredPermission: 'canViewDeals',
       },
       {
@@ -241,6 +248,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Contacts',
         href: ws.contacts,
         icon: Users as LucideIcon,
+        iconColor: '#3b82f6', // Blue
         requiredPermission: 'canViewLeads',
       },
       {
@@ -248,6 +256,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Living Ledger',
         href: ws.livingLedger,
         icon: Book as LucideIcon,
+        iconColor: '#f59e0b', // Amber
         requiredPermission: 'canViewAllRecords',
       },
     ],
@@ -260,6 +269,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'lead_gen',
     label: 'Lead Gen',
     icon: Search as LucideIcon,
+    iconColor: '#f59e0b', // Amber
     allowedRoles: MANAGER_PLUS,
     collapsible: true,
     defaultCollapsed: false,
@@ -269,6 +279,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Forms',
         href: ws.forms,
         icon: ClipboardList as LucideIcon,
+        iconColor: '#8b5cf6', // Violet
         requiredPermission: 'canManageLeads',
       },
       {
@@ -276,6 +287,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Lead Research',
         href: ws.leadResearch,
         icon: Search as LucideIcon,
+        iconColor: '#f59e0b', // Amber
         requiredPermission: 'canManageLeads',
       },
       {
@@ -283,6 +295,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Lead Scoring',
         href: ws.leadScoring,
         icon: Star as LucideIcon,
+        iconColor: '#eab308', // Yellow
         requiredPermission: 'canManageLeads',
       },
     ],
@@ -295,6 +308,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'outbound',
     label: 'Outbound',
     icon: Send as LucideIcon,
+    iconColor: '#3b82f6', // Blue
     allowedRoles: ALL_ROLES,
     collapsible: true,
     defaultCollapsed: false,
@@ -304,6 +318,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Sequences',
         href: ws.sequences,
         icon: Mail as LucideIcon,
+        iconColor: '#3b82f6', // Blue
         requiredPermission: 'canManageEmailCampaigns',
       },
       {
@@ -311,6 +326,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Campaigns',
         href: ws.emailCampaigns,
         icon: Send as LucideIcon,
+        iconColor: '#06b6d4', // Cyan
         requiredPermission: 'canManageEmailCampaigns',
       },
       {
@@ -318,6 +334,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Email Writer',
         href: ws.emailWriter,
         icon: FileText as LucideIcon,
+        iconColor: '#8b5cf6', // Violet
         requiredPermission: 'canManageEmailCampaigns',
       },
       {
@@ -325,6 +342,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Nurture',
         href: ws.nurture,
         icon: TrendingUp as LucideIcon,
+        iconColor: '#10b981', // Emerald
         requiredPermission: 'canManageLeads',
       },
       {
@@ -332,6 +350,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Calls',
         href: ws.calls,
         icon: Phone as LucideIcon,
+        iconColor: '#22c55e', // Green
         requiredPermission: 'canAccessVoiceAgents',
       },
     ],
@@ -344,6 +363,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'automation',
     label: 'Automation',
     icon: Workflow as LucideIcon,
+    iconColor: '#8b5cf6', // Violet
     allowedRoles: ADMIN_PLUS,
     collapsible: true,
     defaultCollapsed: false,
@@ -353,6 +373,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Workflows',
         href: ws.workflows,
         icon: Workflow as LucideIcon,
+        iconColor: '#8b5cf6', // Violet
         requiredPermission: 'canCreateWorkflows',
       },
       {
@@ -360,6 +381,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'A/B Tests',
         href: ws.abTests,
         icon: TestTube as LucideIcon,
+        iconColor: '#ec4899', // Pink
         requiredPermission: 'canCreateWorkflows',
       },
     ],
@@ -372,6 +394,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'content_factory',
     label: 'Content Factory',
     icon: Video as LucideIcon,
+    iconColor: '#ec4899', // Pink
     allowedRoles: MANAGER_PLUS,
     collapsible: true,
     defaultCollapsed: false,
@@ -381,6 +404,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Video Studio',
         href: ws.videoStudio,
         icon: Video as LucideIcon,
+        iconColor: '#ef4444', // Red
         requiredPermission: 'canManageSocialMedia',
       },
       {
@@ -388,6 +412,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Social Media',
         href: ws.socialMedia,
         icon: Share2 as LucideIcon,
+        iconColor: '#3b82f6', // Blue
         requiredPermission: 'canManageSocialMedia',
       },
       {
@@ -395,6 +420,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Proposals',
         href: ws.proposals,
         icon: FileSignature as LucideIcon,
+        iconColor: '#8b5cf6', // Violet
         requiredPermission: 'canManageDeals',
       },
       {
@@ -402,6 +428,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Battlecards',
         href: ws.battlecards,
         icon: Swords as LucideIcon,
+        iconColor: '#f59e0b', // Amber
         requiredPermission: 'canViewDeals',
       },
     ],
@@ -414,6 +441,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'ai_workforce',
     label: 'AI Workforce',
     icon: Bot as LucideIcon,
+    iconColor: '#06b6d4', // Cyan
     allowedRoles: ADMIN_PLUS,
     collapsible: true,
     defaultCollapsed: false,
@@ -423,6 +451,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Agent Training',
         href: ws.agentTraining,
         icon: GraduationCap as LucideIcon,
+        iconColor: '#6366f1', // Indigo
         requiredPermission: 'canTrainAIAgents',
       },
       {
@@ -430,6 +459,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Voice AI Lab',
         href: ws.voiceAiLab,
         icon: Mic as LucideIcon,
+        iconColor: '#ef4444', // Red
         requiredPermission: 'canManageAIAgents',
       },
       {
@@ -437,6 +467,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Social AI Lab',
         href: ws.socialAiLab,
         icon: Share2 as LucideIcon,
+        iconColor: '#3b82f6', // Blue
         requiredPermission: 'canManageAIAgents',
       },
       {
@@ -444,6 +475,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'SEO AI Lab',
         href: ws.seoAiLab,
         icon: SearchCheck as LucideIcon,
+        iconColor: '#10b981', // Emerald
         requiredPermission: 'canManageAIAgents',
       },
       {
@@ -451,6 +483,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Datasets',
         href: ws.datasets,
         icon: Database as LucideIcon,
+        iconColor: '#8b5cf6', // Violet
         requiredPermission: 'canManageAIAgents',
       },
       {
@@ -458,6 +491,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Fine-Tuning',
         href: ws.fineTuning,
         icon: SlidersHorizontal as LucideIcon,
+        iconColor: '#f59e0b', // Amber
         requiredPermission: 'canTrainAIAgents',
       },
     ],
@@ -470,6 +504,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'ecommerce',
     label: 'E-Commerce',
     icon: ShoppingCart as LucideIcon,
+    iconColor: '#22c55e', // Green
     allowedRoles: ADMIN_PLUS,
     collapsible: true,
     defaultCollapsed: true,
@@ -479,6 +514,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Products',
         href: ws.products,
         icon: Package as LucideIcon,
+        iconColor: '#f59e0b', // Amber
         requiredPermission: 'canManageProducts',
       },
       {
@@ -486,6 +522,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Orders',
         href: ws.orders,
         icon: ShoppingCart as LucideIcon,
+        iconColor: '#22c55e', // Green
         requiredPermission: 'canProcessOrders',
       },
       {
@@ -493,6 +530,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Storefront',
         href: ws.storefront,
         icon: Store as LucideIcon,
+        iconColor: '#8b5cf6', // Violet
         requiredPermission: 'canManageEcommerce',
       },
     ],
@@ -505,6 +543,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'analytics',
     label: 'Analytics',
     icon: BarChart3 as LucideIcon,
+    iconColor: '#06b6d4', // Cyan
     allowedRoles: ALL_ROLES,
     collapsible: true,
     defaultCollapsed: false,
@@ -514,6 +553,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Overview',
         href: ws.analyticsOverview,
         icon: BarChart3 as LucideIcon,
+        iconColor: '#06b6d4', // Cyan
         requiredPermission: 'canViewReports',
       },
       {
@@ -521,6 +561,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Revenue',
         href: ws.analyticsRevenue,
         icon: DollarSign as LucideIcon,
+        iconColor: '#22c55e', // Green
         requiredPermission: 'canViewReports',
       },
       {
@@ -528,6 +569,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Pipeline',
         href: ws.analyticsPipeline,
         icon: TrendingUp as LucideIcon,
+        iconColor: '#10b981', // Emerald
         requiredPermission: 'canViewReports',
       },
       {
@@ -535,6 +577,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Sequences',
         href: ws.sequenceAnalytics,
         icon: Activity as LucideIcon,
+        iconColor: '#ef4444', // Red
         requiredPermission: 'canViewReports',
       },
     ],
@@ -547,6 +590,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'website',
     label: 'Website',
     icon: Globe as LucideIcon,
+    iconColor: '#3b82f6', // Blue
     allowedRoles: ADMIN_PLUS,
     collapsible: true,
     defaultCollapsed: true,
@@ -556,6 +600,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Pages',
         href: ws.websitePages,
         icon: Globe as LucideIcon,
+        iconColor: '#3b82f6', // Blue
         requiredPermission: 'canManageWebsite',
       },
       {
@@ -563,6 +608,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Blog',
         href: ws.websiteBlog,
         icon: PenTool as LucideIcon,
+        iconColor: '#ec4899', // Pink
         requiredPermission: 'canManageWebsite',
       },
       {
@@ -570,6 +616,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Domains',
         href: ws.websiteDomains,
         icon: Link as LucideIcon,
+        iconColor: '#8b5cf6', // Violet
         requiredPermission: 'canManageWebsite',
       },
       {
@@ -577,6 +624,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'SEO',
         href: ws.websiteSeo,
         icon: SearchCheck as LucideIcon,
+        iconColor: '#10b981', // Emerald
         requiredPermission: 'canManageWebsite',
       },
       {
@@ -584,6 +632,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Site Settings',
         href: ws.websiteSettings,
         icon: Palette as LucideIcon,
+        iconColor: '#f59e0b', // Amber
         requiredPermission: 'canManageWebsite',
       },
     ],
@@ -596,6 +645,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
     id: 'settings',
     label: 'Settings',
     icon: Settings as LucideIcon,
+    iconColor: '#64748b', // Slate
     allowedRoles: ADMIN_PLUS,
     collapsible: true,
     defaultCollapsed: true,
@@ -605,6 +655,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Organization',
         href: ws.settings,
         icon: Building2 as LucideIcon,
+        iconColor: '#6366f1', // Indigo
         requiredPermission: 'canManageOrganization',
       },
       {
@@ -612,6 +663,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Team',
         href: ws.team,
         icon: Users as LucideIcon,
+        iconColor: '#3b82f6', // Blue
         requiredPermission: 'canInviteUsers',
       },
       {
@@ -619,6 +671,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Integrations',
         href: ws.integrations,
         icon: Plug as LucideIcon,
+        iconColor: '#22c55e', // Green
         requiredPermission: 'canManageIntegrations',
       },
       {
@@ -626,6 +679,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'API Keys',
         href: ws.apiKeys,
         icon: Key as LucideIcon,
+        iconColor: '#f59e0b', // Amber
         requiredPermission: 'canManageAPIKeys',
       },
       {
@@ -633,6 +687,7 @@ export const CLIENT_SECTIONS: NavigationSection[] = [
         label: 'Billing',
         href: ws.billing,
         icon: CreditCard as LucideIcon,
+        iconColor: '#8b5cf6', // Violet
         requiredPermission: 'canManageBilling',
       },
     ],
@@ -654,6 +709,7 @@ export const SYSTEM_SECTION: NavigationSection = {
   id: 'system',
   label: 'System',
   icon: Wrench as LucideIcon,
+  iconColor: '#ef4444', // Red (admin/system)
   allowedRoles: PLATFORM_ADMIN_ONLY,
   collapsible: true,
   defaultCollapsed: false,
@@ -663,6 +719,7 @@ export const SYSTEM_SECTION: NavigationSection = {
       label: 'System Overview',
       href: admin.systemOverview,
       icon: Activity as LucideIcon,
+      iconColor: '#ef4444', // Red
       requiredPermission: 'canViewSystemHealth',
     },
     {
@@ -670,6 +727,7 @@ export const SYSTEM_SECTION: NavigationSection = {
       label: 'Organizations',
       href: admin.organizations,
       icon: Building2 as LucideIcon,
+      iconColor: '#6366f1', // Indigo
       requiredPermission: 'canManageAllOrganizations',
     },
     {
@@ -677,6 +735,7 @@ export const SYSTEM_SECTION: NavigationSection = {
       label: 'All Users',
       href: admin.users,
       icon: Users as LucideIcon,
+      iconColor: '#3b82f6', // Blue
       requiredPermission: 'canManageAllOrganizations',
     },
     {
@@ -684,6 +743,7 @@ export const SYSTEM_SECTION: NavigationSection = {
       label: 'Feature Flags',
       href: admin.featureFlags,
       icon: Flag as LucideIcon,
+      iconColor: '#f59e0b', // Amber
       requiredPermission: 'canManageFeatureFlags',
     },
     {
@@ -691,6 +751,7 @@ export const SYSTEM_SECTION: NavigationSection = {
       label: 'Audit Logs',
       href: admin.auditLogs,
       icon: FileCode as LucideIcon,
+      iconColor: '#8b5cf6', // Violet
       requiredPermission: 'canViewAuditLogs',
     },
     {
@@ -698,6 +759,7 @@ export const SYSTEM_SECTION: NavigationSection = {
       label: 'System Settings',
       href: admin.systemSettings,
       icon: Settings as LucideIcon,
+      iconColor: '#64748b', // Slate
       requiredPermission: 'canManageSystemSettings',
     },
   ],

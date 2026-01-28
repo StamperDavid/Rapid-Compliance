@@ -109,10 +109,8 @@ const NavItemComponent = React.memo<NavItemComponentProps>(
       return item.href.replace(':orgId', organizationId ?? '');
     }, [item.href, organizationId]);
 
-    // Dynamic icon color: primary when active, muted when inactive (matches Client sidebar)
-    const iconColorClass = isActive
-      ? "text-[var(--color-primary)]"
-      : "text-[#999]";
+    // Use item's specific iconColor, fallback to default
+    const iconColor = item.iconColor ?? '#999';
 
     return (
       <Link
@@ -126,7 +124,10 @@ const NavItemComponent = React.memo<NavItemComponentProps>(
         title={isCollapsed ? item.label : undefined}
         aria-disabled={item.disabled}
       >
-        <Icon className={`w-5 h-5 flex-shrink-0 transition-colors ${iconColorClass}`} />
+        <Icon
+          className="w-5 h-5 flex-shrink-0 transition-colors"
+          style={{ color: iconColor }}
+        />
         {!isCollapsed && (
           <>
             <span className="flex-1 text-[15px] whitespace-nowrap overflow-hidden text-ellipsis">
@@ -167,10 +168,8 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
     // If section is not collapsible, always show items
     const shouldShowItems = !section.collapsible || isExpanded || isCollapsed;
 
-    // Dynamic section icon color: primary when has active item, muted otherwise (matches Client #666)
-    const sectionIconColorClass = hasActiveItem
-      ? "text-[var(--color-primary)]"
-      : "text-[#666]";
+    // Use section's specific iconColor, fallback to #666
+    const sectionIconColor = section.iconColor ?? '#666';
 
     return (
       <div className="mb-0">
@@ -186,7 +185,10 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
             onClick={onToggle}
             title={isCollapsed ? section.label : undefined}
           >
-            <SectionIcon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${sectionIconColorClass}`} />
+            <SectionIcon
+              className="w-[18px] h-[18px] flex-shrink-0 transition-colors"
+              style={{ color: sectionIconColor }}
+            />
             {!isCollapsed && (
               <>
                 <span className="flex-1 text-left">{section.label}</span>
@@ -204,7 +206,10 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
               className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-[#666]"
               style={{ padding: '0 1.25rem', marginBottom: '0.5rem' }}
             >
-              <SectionIcon className="w-[18px] h-[18px] flex-shrink-0 transition-colors text-[#666]" />
+              <SectionIcon
+                className="w-[18px] h-[18px] flex-shrink-0 transition-colors"
+                style={{ color: sectionIconColor }}
+              />
               <span className="flex-1 text-left">{section.label}</span>
             </div>
           )

@@ -599,6 +599,9 @@ export interface NavigationItem {
 
   /** Whether this item is disabled */
   disabled?: boolean;
+
+  /** Icon color (hex) - used for colorful icon display in sidebar */
+  iconColor?: string;
 }
 
 /**
@@ -620,6 +623,9 @@ export interface NavigationSection {
 
   /** Default collapsed state */
   defaultCollapsed?: boolean;
+
+  /** Section icon color (hex) - used for colorful section header icons */
+  iconColor?: string;
 }
 
 /**
