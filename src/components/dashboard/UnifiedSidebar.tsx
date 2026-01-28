@@ -109,19 +109,20 @@ const NavItemComponent = React.memo<NavItemComponentProps>(
       return item.href.replace(':orgId', organizationId ?? '');
     }, [item.href, organizationId]);
 
-    // Dynamic icon color: primary when active, muted when inactive
+    // Dynamic icon color: primary when active, muted when inactive (matches Client sidebar)
     const iconColorClass = isActive
       ? "text-[var(--color-primary)]"
-      : "text-[var(--color-text-secondary)]";
+      : "text-[#999]";
 
     return (
       <Link
         href={href}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-colors ${
+        className={`flex items-center gap-3 transition-colors ${
           isActive
-            ? "bg-[var(--color-bg-elevated)] text-[var(--color-primary)] font-medium border-l-[3px] border-l-[var(--color-primary)]"
-            : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-primary)] border-l-[3px] border-l-transparent"
+            ? "bg-[var(--color-bg-elevated)] text-[var(--color-primary)] font-semibold border-l-[3px] border-l-[var(--color-primary)]"
+            : "text-[#999] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-primary)] border-l-[3px] border-l-transparent"
         } ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        style={{ padding: '0.875rem 1.25rem' }}
         title={isCollapsed ? item.label : undefined}
         aria-disabled={item.disabled}
       >
@@ -166,21 +167,22 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
     // If section is not collapsible, always show items
     const shouldShowItems = !section.collapsible || isExpanded || isCollapsed;
 
-    // Dynamic section icon color: primary when has active item, muted otherwise
+    // Dynamic section icon color: primary when has active item, muted otherwise (matches Client #666)
     const sectionIconColorClass = hasActiveItem
       ? "text-[var(--color-primary)]"
-      : "text-[var(--color-text-secondary)]";
+      : "text-[#666]";
 
     return (
-      <div className="mb-2">
+      <div className="mb-0">
         {section.collapsible ? (
           <button
             type="button"
-            className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${
+            className={`w-full flex items-center gap-3 text-xs font-semibold uppercase tracking-wider transition-colors ${
               hasActiveItem
                 ? "text-[var(--color-primary)]"
-                : "text-[var(--color-text-secondary)]"
+                : "text-[#666]"
             } hover:bg-[var(--color-bg-elevated)]`}
+            style={{ padding: '0 1.25rem', marginBottom: '0.5rem' }}
             onClick={onToggle}
             title={isCollapsed ? section.label : undefined}
           >
@@ -189,7 +191,7 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
               <>
                 <span className="flex-1 text-left">{section.label}</span>
                 <ChevronRight
-                  className={`w-4 h-4 transition-transform transition-colors duration-200 text-[var(--color-text-secondary)] ${
+                  className={`w-4 h-4 transition-transform transition-colors duration-200 text-[#666] ${
                     isExpanded ? "rotate-90" : ""
                   }`}
                 />
@@ -198,14 +200,17 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
           </button>
         ) : (
           !isCollapsed && (
-            <div className="flex items-center gap-3 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
-              <SectionIcon className="w-[18px] h-[18px] flex-shrink-0 transition-colors text-[var(--color-text-disabled)]" />
+            <div
+              className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-[#666]"
+              style={{ padding: '0 1.25rem', marginBottom: '0.5rem' }}
+            >
+              <SectionIcon className="w-[18px] h-[18px] flex-shrink-0 transition-colors text-[#666]" />
               <span className="flex-1 text-left">{section.label}</span>
             </div>
           )
         )}
         {shouldShowItems && (
-          <div className="flex flex-col gap-0.5 px-2 mt-1">
+          <div className="flex flex-col">
             {section.items.map((item) => {
               const href = item.href.startsWith('/admin')
                 ? item.href
