@@ -25,6 +25,24 @@ import { getNavigationForRole } from "./navigation-config";
 // TYPE DEFINITIONS
 // ============================================================================
 
+/**
+ * Admin theme colors for isolated theming
+ * When provided, these override CSS variables on the fixed-positioned sidebar
+ */
+interface AdminThemeColors {
+  primary: string;
+  primaryLight: string;
+  primaryDark: string;
+  bgMain: string;
+  bgPaper: string;
+  bgElevated: string;
+  textPrimary: string;
+  textSecondary: string;
+  textDisabled: string;
+  borderLight: string;
+  accent: string;
+}
+
 interface UnifiedSidebarProps {
   /** Current user with unified role */
   user: UnifiedUser;
@@ -49,6 +67,12 @@ interface UnifiedSidebarProps {
    * This enables theme isolation between Admin and Client workspaces
    */
   isAdminContext?: boolean;
+
+  /**
+   * Full Admin theme colors for fixed-position sidebar isolation
+   * Required when isAdminContext=true for proper theme inheritance
+   */
+  adminThemeColors?: AdminThemeColors;
 }
 
 interface NavItemComponentProps {
@@ -219,8 +243,9 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
     onToggleCollapse,
     brandName = "AI Sales Platform",
     primaryColor = "#6366f1",
-    // Reserved for future Admin-specific sidebar behavior
-    isAdminContext: _isAdminContext = false,
+    // When true, sidebar applies Admin theme CSS variables directly (for fixed positioning isolation)
+    isAdminContext = false,
+    adminThemeColors,
   }) => {
     const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -300,7 +325,24 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           } md:translate-x-0`}
           style={{
+            // Apply theme CSS variables directly for fixed positioning isolation
+            // Fixed elements may not inherit from scoped parent containers
             ['--primary-color' as string]: primaryColor,
+            ['--color-primary' as string]: adminThemeColors?.primary ?? primaryColor,
+            ['--color-primary-light' as string]: adminThemeColors?.primaryLight ?? `${primaryColor}cc`,
+            ['--color-primary-dark' as string]: adminThemeColors?.primaryDark ?? primaryColor,
+            // When in Admin context, apply full theme colors for proper isolation
+            ...(isAdminContext && adminThemeColors ? {
+              ['--color-bg-main' as string]: adminThemeColors.bgMain,
+              ['--color-bg-paper' as string]: adminThemeColors.bgPaper,
+              ['--color-bg-elevated' as string]: adminThemeColors.bgElevated,
+              ['--color-text-primary' as string]: adminThemeColors.textPrimary,
+              ['--color-text-secondary' as string]: adminThemeColors.textSecondary,
+              ['--color-text-disabled' as string]: adminThemeColors.textDisabled,
+              ['--color-border-light' as string]: adminThemeColors.borderLight,
+              ['--color-accent' as string]: adminThemeColors.accent,
+              ['--color-background' as string]: adminThemeColors.bgMain,
+            } : {}),
           }}
         >
           {/* Header */}

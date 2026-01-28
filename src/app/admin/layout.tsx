@@ -29,8 +29,23 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { user, loading: authLoading, isPlatformAdmin } = useUnifiedAuth();
-  const { setContainerRef, primaryColor, brandName, loading: themeLoading } = useAdminTheme();
+  const { theme, setContainerRef, primaryColor, brandName, loading: themeLoading } = useAdminTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Build admin theme colors for the fixed-positioned sidebar
+  const adminThemeColors = {
+    primary: theme.colors.primary.main,
+    primaryLight: theme.colors.primary.light,
+    primaryDark: theme.colors.primary.dark,
+    bgMain: theme.colors.background.main,
+    bgPaper: theme.colors.background.paper,
+    bgElevated: theme.colors.background.elevated,
+    textPrimary: theme.colors.text.primary,
+    textSecondary: theme.colors.text.secondary,
+    textDisabled: theme.colors.text.disabled,
+    borderLight: theme.colors.border.light,
+    accent: theme.colors.accent.main,
+  };
 
   const loading = authLoading || themeLoading;
 
@@ -87,6 +102,7 @@ export default function AdminLayout({
         brandName={brandName}
         primaryColor={primaryColor}
         isAdminContext={true}
+        adminThemeColors={adminThemeColors}
       />
 
       {/* Main Content */}
