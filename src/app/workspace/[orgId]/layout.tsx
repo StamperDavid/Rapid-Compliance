@@ -137,18 +137,30 @@ export default function WorkspaceLayout({
                   <Link
                     key={item.href}
                     href={item.href}
+                    className={`
+                      w-full flex items-center gap-3 text-sm no-underline transition-colors
+                      ${isActive(item.href)
+                        ? 'font-semibold'
+                        : 'font-normal hover:bg-[var(--color-bg-elevated)]'
+                      }
+                    `}
                     style={{
-                      width: '100%',
                       padding: '0.875rem 1.25rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      backgroundColor: isActive(item.href) ? 'var(--color-bg-elevated)' : 'transparent',
+                      backgroundColor: isActive(item.href) ? 'var(--color-bg-elevated)' : undefined,
                       color: isActive(item.href) ? primaryColor : '#999',
                       borderLeft: isActive(item.href) ? `3px solid ${primaryColor}` : '3px solid transparent',
-                      fontSize: '0.875rem',
-                      fontWeight: isActive(item.href) ? '600' : '400',
-                      textDecoration: 'none'
+                      // Hover color handled via CSS custom property
+                      ['--hover-color' as string]: primaryColor,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive(item.href)) {
+                        e.currentTarget.style.color = primaryColor;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive(item.href)) {
+                        e.currentTarget.style.color = '#999';
+                      }
                     }}
                     onClick={() => setSidebarOpen(false)}
                   >
