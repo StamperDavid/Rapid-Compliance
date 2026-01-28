@@ -43,20 +43,20 @@ export default function WorkspaceLayout({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <AdminBar />
 
       {/* Mobile Header with Hamburger */}
       <div style={{
         padding: '1rem',
-        borderBottom: '1px solid #1a1a1a',
-        backgroundColor: '#0a0a0a',
+        borderBottom: '1px solid var(--color-border-main)',
+        backgroundColor: 'var(--color-bg-paper)',
       }} className="md:hidden flex items-center justify-between">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           style={{
             padding: '0.5rem',
-            backgroundColor: '#1a1a1a',
+            backgroundColor: 'var(--color-bg-elevated)',
             color: '#999',
             border: 'none',
             borderRadius: '0.375rem',
@@ -91,20 +91,22 @@ export default function WorkspaceLayout({
             fixed md:relative
             w-[260px]
             h-full
-            bg-[#0a0a0a]
-            border-r border-[#1a1a1a]
             flex flex-col
             z-50 md:z-auto
             transition-transform duration-300
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             md:translate-x-0
           `}
+          style={{
+            backgroundColor: 'var(--color-bg-paper)',
+            borderRight: '1px solid var(--color-border-main)',
+          }}
         >
           {/* God Mode Indicator for Platform Admin */}
           {isGodMode && (
             <div style={{
               padding: '0.5rem 1.25rem',
-              backgroundColor: '#1a1a1a',
+              backgroundColor: 'var(--color-bg-elevated)',
               borderBottom: '1px solid #2a2a2a',
               display: 'flex',
               alignItems: 'center',
@@ -121,7 +123,7 @@ export default function WorkspaceLayout({
             {/* Render all sections */}
             {navSections.map((section, sectionIdx) => (
               <div key={sectionIdx}>
-                {sectionIdx > 0 && <div style={{ height: '1px', backgroundColor: '#1a1a1a', margin: '1rem 0' }} />}
+                {sectionIdx > 0 && <div style={{ height: '1px', backgroundColor: 'var(--color-border-main)', margin: '1rem 0' }} />}
 
                 {/* Section Label */}
                 <div style={{ padding: '0 1.25rem', marginBottom: '0.5rem', marginTop: sectionIdx > 0 ? '1rem' : '0' }}>
@@ -141,7 +143,7 @@ export default function WorkspaceLayout({
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.75rem',
-                      backgroundColor: isActive(item.href) ? '#1a1a1a' : 'transparent',
+                      backgroundColor: isActive(item.href) ? 'var(--color-bg-elevated)' : 'transparent',
                       color: isActive(item.href) ? primaryColor : '#999',
                       borderLeft: isActive(item.href) ? `3px solid ${primaryColor}` : '3px solid transparent',
                       fontSize: '0.875rem',
@@ -162,8 +164,8 @@ export default function WorkspaceLayout({
           {hiddenCount > 0 && !navLoading && (
             <div style={{
               padding: '0.75rem 1.25rem',
-              borderTop: '1px solid #1a1a1a',
-              backgroundColor: '#0a0a0a',
+              borderTop: '1px solid var(--color-border-main)',
+              backgroundColor: 'var(--color-bg-paper)',
             }}>
               <Link
                 href={`/workspace/${orgId}/settings`}
@@ -188,7 +190,7 @@ export default function WorkspaceLayout({
         <main style={{
           flex: 1,
           overflowY: 'auto',
-          backgroundColor: '#000',
+          backgroundColor: 'var(--color-bg-main)',
           width: '100%',
         }}
         className="md:ml-0"
