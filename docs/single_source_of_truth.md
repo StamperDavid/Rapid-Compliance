@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 29, 2026 (INTELLIGENCE_MANAGER - Dynamic orchestration engine implemented)
+**Last Updated:** January 29, 2026 (W2 Build Gate - Mandatory type-checking enforced)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
@@ -964,6 +964,28 @@ organizations/{orgId}/
 ---
 
 ## Architecture Notes
+
+### Build System (W2 Security Gate)
+
+**Status:** RESOLVED (January 29, 2026)
+
+The build pipeline now enforces **mandatory TypeScript type-checking** as a non-bypassable prerequisite:
+
+```json
+"build": "tsc --noEmit && next build"
+```
+
+| Gate | Command | Behavior |
+|------|---------|----------|
+| Type Check | `tsc --noEmit` | Fails build on ANY type error |
+| Next.js Build | `next build` | Only runs if type-check passes |
+
+**Security Implications:**
+- Prevents deployment of code with type inconsistencies
+- Eliminates W2 risk (type errors bypassing CI)
+- Ensures compile-time safety before production artifacts are generated
+
+**No Bypass Policy:** The `--noEmit` flag ensures type-checking runs without generating output files. There are no suppression flags. All type errors must be resolved before `next build` executes.
 
 ### Multi-Tenancy Model
 
