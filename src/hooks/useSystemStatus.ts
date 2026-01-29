@@ -5,10 +5,12 @@
  * from the MASTER_ORCHESTRATOR to Dashboard components.
  *
  * Features:
+ * - Full 47-agent swarm hierarchy (1 orchestrator + 9 managers + 37 specialists)
  * - Configurable polling interval (default 30s)
  * - Automatic error recovery
  * - Loading and error states
  * - Manual refresh capability
+ * - Hierarchical data access (by tier)
  *
  * @module hooks/useSystemStatus
  */
@@ -19,6 +21,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type {
   SystemStatusResponse,
   SystemAgentStatus,
+  AgentTier,
 } from '@/app/api/system/status/route';
 
 // ============================================================================
@@ -35,11 +38,17 @@ export interface UseSystemStatusOptions {
 }
 
 export interface UseSystemStatusReturn {
-  /** Array of agent statuses */
+  /** Array of all 47 agent statuses */
   agents: SystemAgentStatus[];
+  /** Hierarchical breakdown of agents by tier */
+  hierarchy: {
+    orchestrator: SystemAgentStatus | null;
+    managers: SystemAgentStatus[];
+    specialists: SystemAgentStatus[];
+  };
   /** Overall system health */
   overallHealth: 'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE' | null;
-  /** System metrics */
+  /** System metrics including by-tier breakdown */
   metrics: SystemStatusResponse['metrics'] | null;
   /** Recent insights from agents */
   insights: SystemStatusResponse['insights'];
@@ -53,6 +62,10 @@ export interface UseSystemStatusReturn {
   refresh: () => Promise<void>;
   /** Whether currently refreshing */
   isRefreshing: boolean;
+  /** Get agents filtered by tier */
+  getAgentsByTier: (tier: AgentTier) => SystemAgentStatus[];
+  /** Get agents filtered by parent manager */
+  getAgentsByManager: (managerId: string) => SystemAgentStatus[];
 }
 
 // ============================================================================
@@ -71,6 +84,11 @@ const EMPTY_METRICS: SystemStatusResponse['metrics'] = {
   totalCommands: 0,
   successRate: 0,
   averageResponseTimeMs: 0,
+  byTier: {
+    L1: { total: 0, functional: 0 },
+    L2: { total: 0, functional: 0 },
+    L3: { total: 0, functional: 0 },
+  },
 };
 
 // ============================================================================
@@ -80,6 +98,13 @@ const EMPTY_METRICS: SystemStatusResponse['metrics'] = {
 /**
  * Hook to fetch and poll system status from the Master Orchestrator
  */
+/** Empty hierarchy for initial state */
+const EMPTY_HIERARCHY = {
+  orchestrator: null,
+  managers: [],
+  specialists: [],
+};
+
 export function useSystemStatus(
   options: UseSystemStatusOptions = {}
 ): UseSystemStatusReturn {
@@ -91,6 +116,7 @@ export function useSystemStatus(
 
   // State
   const [agents, setAgents] = useState<SystemAgentStatus[]>([]);
+  const [hierarchy, setHierarchy] = useState<UseSystemStatusReturn['hierarchy']>(EMPTY_HIERARCHY);
   const [overallHealth, setOverallHealth] = useState<
     'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE' | null
   >(null);
@@ -149,6 +175,7 @@ export function useSystemStatus(
 
       if (data.success) {
         setAgents(data.agents);
+        setHierarchy(data.hierarchy ?? EMPTY_HIERARCHY);
         setOverallHealth(data.overallHealth);
         setMetrics(data.metrics);
         setInsights(data.insights);
@@ -211,8 +238,25 @@ export function useSystemStatus(
     };
   }, [enabled, pollingInterval, fetchStatus]);
 
+  // Helper function to filter agents by tier
+  const getAgentsByTier = useCallback(
+    (tier: AgentTier): SystemAgentStatus[] => {
+      return agents.filter(agent => agent.tier === tier);
+    },
+    [agents]
+  );
+
+  // Helper function to filter agents by parent manager
+  const getAgentsByManager = useCallback(
+    (managerId: string): SystemAgentStatus[] => {
+      return agents.filter(agent => agent.parentId === managerId);
+    },
+    [agents]
+  );
+
   return {
     agents,
+    hierarchy,
     overallHealth,
     metrics: metrics ?? EMPTY_METRICS,
     insights,
@@ -221,6 +265,8 @@ export function useSystemStatus(
     lastUpdated,
     refresh,
     isRefreshing,
+    getAgentsByTier,
+    getAgentsByManager,
   };
 }
 
@@ -253,4 +299,4 @@ export function useSystemInsights(options?: UseSystemStatusOptions) {
 }
 
 // Re-export types for consumer convenience
-export type { SystemAgentStatus, SystemStatusResponse };
+export type { SystemAgentStatus, SystemStatusResponse, AgentTier };

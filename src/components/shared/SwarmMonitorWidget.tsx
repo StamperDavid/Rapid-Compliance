@@ -198,10 +198,10 @@ export function SwarmMonitorWidget({
       {/* Expanded View */}
       {!compact && (
         <>
-          {/* Agent List - Live Data */}
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          {/* Agent List - Live Data (Full Swarm) */}
+          <div className="space-y-2 max-h-64 overflow-y-auto">
             {agents.length > 0 ? (
-              agents.slice(0, 9).map((agent) => (
+              agents.map((agent) => (
                 <div
                   key={agent.id}
                   className="flex items-center justify-between p-2 bg-[var(--color-bg-primary)] rounded-lg"
