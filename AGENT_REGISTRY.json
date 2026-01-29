@@ -33,7 +33,7 @@
     "INTELLIGENCE_MANAGER": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/intelligence/manager.ts",
-      "specialists": ["SCRAPER_SPECIALIST", "COMPETITOR_ANALYST", "TECHNOGRAPHIC_SCOUT", "SENTIMENT_ANALYST"],
+      "specialists": ["SCRAPER_SPECIALIST", "COMPETITOR_RESEARCHER", "TECHNOGRAPHIC_SCOUT", "SENTIMENT_ANALYST"],
       "note": "3 of 4 specialists now functional"
     },
     "COMMERCE_MANAGER": {
@@ -79,7 +79,7 @@
       "jasperTool": "scrape_website",
       "systemPrompt": "Full system prompt for URL scraping and key findings extraction"
     },
-    "COMPETITOR_ANALYST": {
+    "COMPETITOR_RESEARCHER": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/intelligence/competitor/specialist.ts",
       "reportsTo": "INTELLIGENCE_MANAGER",
@@ -334,7 +334,7 @@
   "criticalPath": [
     "INTELLIGENCE_MANAGER",
     "SCRAPER_SPECIALIST",
-    "COMPETITOR_ANALYST",
+    "COMPETITOR_RESEARCHER",
     "TECHNOGRAPHIC_SCOUT",
     "MARKETING_MANAGER",
     "TIKTOK_EXPERT",
@@ -363,7 +363,7 @@
         "output": "{ keyFindings, contactInfo, businessSignals, techSignals, contentSummary }"
       },
       "research_competitors": {
-        "specialist": "COMPETITOR_ANALYST",
+        "specialist": "COMPETITOR_RESEARCHER",
         "status": "CONNECTED",
         "input": "{ niche, location, limit, includeAnalysis }",
         "output": "{ competitors[], marketInsights, confidence }"

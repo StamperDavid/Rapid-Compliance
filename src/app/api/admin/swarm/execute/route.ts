@@ -17,7 +17,7 @@ import type { AgentMessage, AgentReport } from '@/lib/agents/types';
 
 // Request validation schema
 const executeSchema = z.object({
-  agentId: z.enum(['MARKETING_MANAGER', 'COMPETITOR_ANALYST', 'TIKTOK_EXPERT']),
+  agentId: z.enum(['MARKETING_MANAGER', 'COMPETITOR_RESEARCHER', 'TIKTOK_EXPERT']),
   taskId: z.string().min(1),
   payload: z.record(z.unknown()),
 });
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      case 'COMPETITOR_ANALYST': {
+      case 'COMPETITOR_RESEARCHER': {
         const researcher = getCompetitorResearcher();
         await researcher.initialize();
         const researchPayload = payload as unknown as CompetitorSearchRequest;
@@ -310,7 +310,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const functionalAgents = ['MARKETING_MANAGER', 'COMPETITOR_ANALYST', 'TIKTOK_EXPERT'];
+    const functionalAgents = ['MARKETING_MANAGER', 'COMPETITOR_RESEARCHER', 'TIKTOK_EXPERT'];
 
     const circuitBreakerStatus = functionalAgents.map(agentId => {
       const breaker = circuitBreakers.get(agentId);

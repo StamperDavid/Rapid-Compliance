@@ -29,7 +29,7 @@ export interface SpecialistRegistryProps {
 const SPECIALIST_REGISTRY: AISpecialist[] = [
   // Intelligence Category (4 specialists)
   {
-    id: 'COMPETITOR_ANALYST',
+    id: 'COMPETITOR_RESEARCHER',
     name: 'Competitor Researcher',
     category: 'intelligence',
     status: 'FUNCTIONAL',

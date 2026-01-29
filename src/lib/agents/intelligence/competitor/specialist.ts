@@ -121,7 +121,7 @@ Your output feeds into:
 
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'COMPETITOR_ANALYST',
+    id: 'COMPETITOR_RESEARCHER',
     name: 'Competitor Researcher',
     role: 'specialist',
     status: 'FUNCTIONAL',

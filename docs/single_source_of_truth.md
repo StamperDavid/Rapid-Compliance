@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 29, 2026 (MASTER_ORCHESTRATOR Swarm CEO Activation - 100% Swarm Completion)
+**Last Updated:** January 29, 2026 (Master Orchestrator Telemetry Wired to Dashboard UI - LIVE)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
@@ -1180,6 +1180,48 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 - Xero Accounting
 - PayPal Payments
 
+### Dashboard-Swarm Connectivity (LIVE: January 29, 2026)
+
+**Audit Reference:** `docs/audit_dashboard_connectivity.md`
+
+**Overall Connectivity Score: 85/100 (LIVE)**
+
+| Category | Status | Implementation |
+|----------|--------|----------------|
+| State Alignment | **LIVE** | `getSwarmStatus()` exposed via `/api/system/status`, consumed by `useSystemStatus` hook |
+| Telemetry Trace | **LIVE** | SwarmMonitorWidget polls live metrics from MASTER_ORCHESTRATOR |
+| Agent ID Verification | **ALIGNED** | `COMPETITOR_RESEARCHER` unified across frontend and backend (47 agents) |
+| Brief Injection | PARTIAL | Manager briefs live; Commerce/Reputation briefs need dedicated routes |
+
+**Implemented API Routes:**
+
+| Route | Purpose | Status |
+|-------|---------|--------|
+| `GET /api/system/status` | Expose `SwarmStatus` with `ManagerBrief[]` | **LIVE** |
+| `GET /api/admin/swarm/execute` | Execute agents with circuit breaker | **LIVE** |
+| `GET /api/commerce/brief` | Expose `CommerceBrief` metrics | PLANNED |
+| `GET /api/reputation/brief` | Expose `ReputationBrief` trust scores | PLANNED |
+
+**Frontend Integration:**
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| `useSystemStatus` | **LIVE** | New hook polling `/api/system/status` with 30s interval |
+| `SwarmMonitorWidget` | **LIVE** | Consumes live data, displays 9 managers with real metrics |
+| `useOrchestratorStore` | UNCHANGED | Manages chat/UI state (separate concern) |
+
+**Agent ID Alignment (COMPLETED):**
+- Backend Registry: 47 agents (`src/lib/agents/index.ts:169-234`)
+- Frontend Widget: Displays all 9 managers from live API
+- Execute Route Whitelist: 3 agents (`MARKETING_MANAGER`, `COMPETITOR_RESEARCHER`, `TIKTOK_EXPERT`)
+- ID Mismatch **FIXED**: `COMPETITOR_RESEARCHER` → `COMPETITOR_RESEARCHER` unified
+
+**Key Files:**
+- API Route: `src/app/api/system/status/route.ts` (NEW - calls `getSwarmStatus`)
+- Frontend Hook: `src/hooks/useSystemStatus.ts` (NEW - polling hook)
+- Swarm Widget: `src/components/shared/SwarmMonitorWidget.tsx` (UPDATED - live data)
+- Backend Orchestrator: `src/lib/agents/orchestrator/manager.ts:1230` (unchanged)
+
 ---
 
 ## Firestore Collections
@@ -1585,11 +1627,11 @@ The Intelligence Manager is the orchestration engine for market intelligence gat
 | Intent | Specialists Activated | Use Case |
 |--------|----------------------|----------|
 | `FULL_MARKET_RESEARCH` | All 5 specialists | Complete market analysis |
-| `COMPETITOR_ANALYSIS` | COMPETITOR_ANALYST, TECHNOGRAPHIC_SCOUT | Competitive landscape |
+| `COMPETITOR_ANALYSIS` | COMPETITOR_RESEARCHER, TECHNOGRAPHIC_SCOUT | Competitive landscape |
 | `BRAND_MONITORING` | SENTIMENT_ANALYST, TREND_SCOUT | Brand health tracking |
 | `TECH_DISCOVERY` | TECHNOGRAPHIC_SCOUT, SCRAPER_SPECIALIST | Technology stack analysis |
 | `TREND_ANALYSIS` | TREND_SCOUT, SENTIMENT_ANALYST | Market signal detection |
-| `COMPANY_PROFILE` | SCRAPER_SPECIALIST, COMPETITOR_ANALYST | Company profiling |
+| `COMPANY_PROFILE` | SCRAPER_SPECIALIST, COMPETITOR_RESEARCHER | Company profiling |
 | `SINGLE_SPECIALIST` | (Delegation rules) | Targeted single-specialist query |
 
 #### Execution Flow

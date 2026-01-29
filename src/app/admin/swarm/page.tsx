@@ -83,7 +83,7 @@ const AGENT_REGISTRY: AgentInfo[] = [
   },
   // SPECIALISTS - INTELLIGENCE
   {
-    id: 'COMPETITOR_ANALYST',
+    id: 'COMPETITOR_RESEARCHER',
     name: 'Competitor Researcher',
     category: 'specialist',
     status: 'FUNCTIONAL',
@@ -350,7 +350,7 @@ export default function SwarmControlPage() {
           message: executionInput.campaignMessage,
           objective: executionInput.campaignObjective,
         };
-      } else if (agent.id === 'COMPETITOR_ANALYST') {
+      } else if (agent.id === 'COMPETITOR_RESEARCHER') {
         payload = {
           niche: executionInput.competitorNiche,
           location: executionInput.competitorLocation,
@@ -619,7 +619,7 @@ export default function SwarmControlPage() {
               </div>
             )}
 
-            {selectedAgent?.id === 'COMPETITOR_ANALYST' && (
+            {selectedAgent?.id === 'COMPETITOR_RESEARCHER' && (
               <div className="flex flex-col gap-4">
                 <div>
                   <label className="block text-sm text-[var(--color-text-muted)] mb-2">

@@ -2040,7 +2040,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           id: `competitor_${Date.now()}`,
           timestamp: new Date(),
           from: 'JASPER',
-          to: 'COMPETITOR_ANALYST',
+          to: 'COMPETITOR_RESEARCHER',
           type: 'COMMAND',
           priority: 'NORMAL',
           payload: {
@@ -2057,7 +2057,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           status: result.status,
           data: result.data,
           errors: result.errors,
-          specialist: 'COMPETITOR_ANALYST',
+          specialist: 'COMPETITOR_RESEARCHER',
         });
         break;
       }

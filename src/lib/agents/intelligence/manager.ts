@@ -166,14 +166,14 @@ const INTENT_KEYWORDS: Record<ResearchIntent, string[]> = {
  */
 const INTENT_SPECIALISTS: Record<ResearchIntent, string[]> = {
   FULL_MARKET_RESEARCH: [
-    'COMPETITOR_ANALYST', 'SENTIMENT_ANALYST', 'TECHNOGRAPHIC_SCOUT',
+    'COMPETITOR_RESEARCHER', 'SENTIMENT_ANALYST', 'TECHNOGRAPHIC_SCOUT',
     'TREND_SCOUT', 'SCRAPER_SPECIALIST'
   ],
-  COMPETITOR_ANALYSIS: ['COMPETITOR_ANALYST', 'TECHNOGRAPHIC_SCOUT'],
+  COMPETITOR_ANALYSIS: ['COMPETITOR_RESEARCHER', 'TECHNOGRAPHIC_SCOUT'],
   BRAND_MONITORING: ['SENTIMENT_ANALYST', 'TREND_SCOUT'],
   TECH_DISCOVERY: ['TECHNOGRAPHIC_SCOUT', 'SCRAPER_SPECIALIST'],
   TREND_ANALYSIS: ['TREND_SCOUT', 'SENTIMENT_ANALYST'],
-  COMPANY_PROFILE: ['SCRAPER_SPECIALIST', 'COMPETITOR_ANALYST'],
+  COMPANY_PROFILE: ['SCRAPER_SPECIALIST', 'COMPETITOR_RESEARCHER'],
   SINGLE_SPECIALIST: [], // Determined dynamically
 };
 
@@ -205,7 +205,7 @@ const INTELLIGENCE_MANAGER_CONFIG: ManagerConfig = {
 
 ## YOUR ROLE
 You coordinate 5 specialist agents to gather comprehensive market intelligence:
-- COMPETITOR_ANALYST: Discovers and analyzes competitors by niche/location
+- COMPETITOR_RESEARCHER: Discovers and analyzes competitors by niche/location
 - SENTIMENT_ANALYST: Monitors brand sentiment and detects crises
 - TECHNOGRAPHIC_SCOUT: Detects technology stacks and tools
 - TREND_SCOUT: Identifies market signals and generates forecasts
@@ -254,7 +254,7 @@ You coordinate 5 specialist agents to gather comprehensive market intelligence:
   maxTokens: 8192,
   temperature: 0.3,
   specialists: [
-    'COMPETITOR_ANALYST',
+    'COMPETITOR_RESEARCHER',
     'SENTIMENT_ANALYST',
     'TECHNOGRAPHIC_SCOUT',
     'TREND_SCOUT',
@@ -263,7 +263,7 @@ You coordinate 5 specialist agents to gather comprehensive market intelligence:
   delegationRules: [
     {
       triggerKeywords: ['competitor', 'competition', 'rival', 'market share', 'pricing comparison', 'alternatives'],
-      delegateTo: 'COMPETITOR_ANALYST',
+      delegateTo: 'COMPETITOR_RESEARCHER',
       priority: 10,
       requiresApproval: false,
     },
@@ -327,7 +327,7 @@ export class IntelligenceManager extends BaseManager {
     }
 
     const specialistFactories = [
-      { name: 'COMPETITOR_ANALYST', factory: getCompetitorResearcher },
+      { name: 'COMPETITOR_RESEARCHER', factory: getCompetitorResearcher },
       { name: 'SENTIMENT_ANALYST', factory: getSentimentAnalyst },
       { name: 'TECHNOGRAPHIC_SCOUT', factory: getTechnographicScout },
       { name: 'TREND_SCOUT', factory: getTrendScout },
@@ -624,7 +624,7 @@ export class IntelligenceManager extends BaseManager {
     let payload: Record<string, unknown>;
 
     switch (specialistId) {
-      case 'COMPETITOR_ANALYST':
+      case 'COMPETITOR_RESEARCHER':
         payload = {
           action: 'search_competitors',
           niche: request.niche ?? 'technology services',
@@ -695,7 +695,7 @@ export class IntelligenceManager extends BaseManager {
     const now = new Date();
 
     // Extract individual specialist data
-    const competitorResult = results.find(r => r.specialistId === 'COMPETITOR_ANALYST');
+    const competitorResult = results.find(r => r.specialistId === 'COMPETITOR_RESEARCHER');
     const sentimentResult = results.find(r => r.specialistId === 'SENTIMENT_ANALYST');
     const techResult = results.find(r => r.specialistId === 'TECHNOGRAPHIC_SCOUT');
     const trendResult = results.find(r => r.specialistId === 'TREND_SCOUT');
