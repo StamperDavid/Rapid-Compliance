@@ -211,8 +211,8 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL | 37 | Complete implementation with logic |
-| ENHANCED SHELL | 2 | Managers with substantial orchestration logic |
+| FUNCTIONAL | 38 | Complete implementation with logic |
+| ENHANCED SHELL | 1 | Managers with substantial orchestration logic |
 | SHELL | 5 | Managers - basic orchestration layer only |
 | GHOST | 0 | All specialists have been implemented |
 
@@ -226,11 +226,11 @@
 | COMMERCE_MANAGER | CommerceManager | E-commerce | SHELL | Basic orchestration only |
 | OUTREACH_MANAGER | OutreachManager | Email & SMS | SHELL | Basic orchestration only |
 | CONTENT_MANAGER | ContentManager | Content Creation | SHELL | Basic orchestration only |
-| ARCHITECT_MANAGER | ArchitectManager | Site Architecture | ENHANCED SHELL | 100+ LOC with analysis logic |
+| ARCHITECT_MANAGER | ArchitectManager | Site Architecture | FUNCTIONAL | **Strategic Infrastructure Commander** - 2100+ LOC with dynamic specialist resolution (3 specialists), Brand DNA integration, TenantMemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis, SignalBus `site.blueprint_ready` broadcast, parallel execution, graceful degradation |
 | REVENUE_DIRECTOR | RevenueDirector | Sales Ops | FUNCTIONAL | **Sales Ops Commander** - 1800+ LOC with dynamic specialist resolution (5 specialists), Golden Master persona tuning, RevenueBrief synthesis, objection library battlecards, cross-agent signal sharing |
 | REPUTATION_MANAGER | ReputationManager | Trust & Reviews | SHELL | Basic orchestration only |
 
-> **Note:** "ENHANCED SHELL" managers have substantial internal logic but may not fully delegate to all specialists yet.
+> **Note:** "ENHANCED SHELL" managers have substantial internal logic but may not fully delegate to all specialists yet. Only REPUTATION_MANAGER remains in this state.
 
 ### Specialists (35) - L3 Workers
 
@@ -270,6 +270,41 @@
 | UX_UI_SPECIALIST | UXUISpecialist | Site UX/UI | FUNCTIONAL |
 | FUNNEL_PATHOLOGIST | FunnelPathologist | Funnel analysis | FUNCTIONAL |
 | COPY_SPECIALIST | CopySpecialist | Website copy | FUNCTIONAL |
+
+##### ARCHITECT_MANAGER Site Blueprint Orchestration Logic
+
+The ARCHITECT_MANAGER implements dynamic site architecture generation from Brand DNA:
+
+**Architecture Derivation Pipeline:**
+1. Load Brand DNA from tenant context (industry, tone, audience, unique value)
+2. Query TenantMemoryVault for existing Intelligence Briefs (market context)
+3. Derive site requirements: industry type, funnel type, target audience, integrations
+4. Generate site map from 7 industry templates (SaaS, Agency, E-commerce, Coach, Local Business, Media, Nonprofit)
+5. Design funnel flow from 4 funnel templates (Lead Gen, E-commerce, Course, Service)
+6. Execute specialists in parallel with graceful degradation
+7. Synthesize SiteArchitecture + TechnicalBrief output
+
+**Output Types:**
+- `SiteArchitecture`: Complete site blueprint with siteMap, funnelFlow, navigation, designDirection, contentStructure
+- `TechnicalBrief`: API integrations, schema requirements, SEO mandates, performance targets, accessibility checklist
+
+**Industry Templates:**
+- SaaS: Features, Pricing, Integrations, Docs, Case Studies (9 pages)
+- Agency: Portfolio, Services, Case Studies, Process (8 pages)
+- E-commerce: Shop, Product, Cart, Checkout, Account (9 pages)
+- Coach: Services, Programs, Resources, Book a Call (9 pages)
+- Local Business: Services, Gallery, Reviews (6 pages)
+- Media: Articles, Categories, Subscribe (6 pages)
+- Nonprofit: Programs, Impact, Donate, Get Involved (8 pages)
+
+**Signal Broadcasting:**
+- Broadcasts `site.blueprint_ready` signal to BUILDER_MANAGER, CONTENT_MANAGER, MARKETING_MANAGER
+- Stores blueprint as insight in TenantMemoryVault for cross-agent consumption
+
+**Specialist Orchestration:**
+- UX_UI_SPECIALIST: Wireframes, component library, color psychology, accessibility
+- FUNNEL_PATHOLOGIST: Conversion optimization, urgency tactics, pricing strategy
+- COPY_SPECIALIST: Messaging framework, headlines, CTAs, voice alignment
 
 #### Commerce Domain (2)
 
