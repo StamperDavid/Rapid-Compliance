@@ -1187,5 +1187,26 @@ ${sender.company}`,
   }
 }
 
-// Export singleton instance
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+/**
+ * Factory function to create an Email Specialist instance
+ */
+export function createEmailSpecialist(): EmailSpecialist {
+  return new EmailSpecialist();
+}
+
+/**
+ * Singleton instance getter (SwarmRegistry pattern)
+ */
+let instance: EmailSpecialist | null = null;
+
+export function getEmailSpecialist(): EmailSpecialist {
+  instance ??= createEmailSpecialist();
+  return instance;
+}
+
+// Legacy singleton export (deprecated - use getEmailSpecialist())
 export const emailSpecialist = new EmailSpecialist();

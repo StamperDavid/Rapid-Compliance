@@ -491,5 +491,26 @@ export class SmsSpecialist extends BaseSpecialist {
   }
 }
 
-// Export singleton instance
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+/**
+ * Factory function to create an SMS Specialist instance
+ */
+export function createSmsSpecialist(): SmsSpecialist {
+  return new SmsSpecialist();
+}
+
+/**
+ * Singleton instance getter (SwarmRegistry pattern)
+ */
+let instance: SmsSpecialist | null = null;
+
+export function getSmsSpecialist(): SmsSpecialist {
+  instance ??= createSmsSpecialist();
+  return instance;
+}
+
+// Legacy singleton export (deprecated - use getSmsSpecialist())
 export const smsSpecialist = new SmsSpecialist();
