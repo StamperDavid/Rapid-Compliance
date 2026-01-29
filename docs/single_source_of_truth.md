@@ -211,8 +211,8 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL | 36 | Complete implementation with logic |
-| ENHANCED SHELL | 3 | Managers with substantial orchestration logic |
+| FUNCTIONAL | 37 | Complete implementation with logic |
+| ENHANCED SHELL | 2 | Managers with substantial orchestration logic |
 | SHELL | 5 | Managers - basic orchestration layer only |
 | GHOST | 0 | All specialists have been implemented |
 
@@ -221,7 +221,7 @@
 | Agent ID | Class Name | Domain | Status | Notes |
 |----------|------------|--------|--------|-------|
 | INTELLIGENCE_MANAGER | IntelligenceManager | Research & Analysis | FUNCTIONAL | Dynamic orchestration engine with parallel execution, graceful degradation |
-| MARKETING_MANAGER | MarketingManager | Social & Ads | ENHANCED SHELL | 450+ LOC with campaign orchestration logic |
+| MARKETING_MANAGER | MarketingManager | Social & Ads | FUNCTIONAL | **Industry-agnostic Cross-Channel Commander** - 850+ LOC with dynamic specialist resolution, Brand DNA integration, SEO-social feedback loop, parallel execution |
 | BUILDER_MANAGER | BuilderManager | Site Building | SHELL | Basic orchestration only |
 | COMMERCE_MANAGER | CommerceManager | E-commerce | SHELL | Basic orchestration only |
 | OUTREACH_MANAGER | OutreachManager | Email & SMS | SHELL | Basic orchestration only |
@@ -1370,6 +1370,114 @@ The Intelligence Manager is the orchestration engine for market intelligence gat
 | **Intent Detection** | Keyword-based intent mapping + explicit intent parameter |
 | **Contextual Synthesis** | Weighted confidence scoring, contradiction detection |
 | **Vault Integration** | Stores insights and broadcasts signals to TenantMemoryVault |
+
+### Marketing Manager - Industry-Agnostic Cross-Channel Commander
+
+**Status:** FUNCTIONAL (January 29, 2026)
+**Location:** `src/lib/agents/marketing/manager.ts`
+
+The Marketing Manager is an **industry-agnostic** orchestration engine for cross-channel marketing campaigns. It dynamically adapts to ANY business context via the TenantMemoryVault Brand DNA, eliminating all hardcoded industry assumptions.
+
+#### Key Design Principles
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Zero Industry Bias** | All industry context derived from Brand DNA at runtime |
+| **Dynamic Specialist Resolution** | 5 specialists resolved from SwarmRegistry via factory functions |
+| **SEO-Social Feedback Loop** | SEO keywords flow into social content briefs |
+| **Brand Voice Consistency** | All content adapts to tenant's tone, key phrases, and avoid-phrases |
+| **Parallel Execution** | Social specialists execute concurrently for performance |
+
+#### Campaign Intent Detection
+
+| Intent | Specialists Activated | Use Case |
+|--------|----------------------|----------|
+| `FULL_FUNNEL` | All 5 specialists | Comprehensive omnichannel campaign |
+| `AWARENESS` | TIKTOK, TWITTER, LINKEDIN | Brand visibility and reach |
+| `LEAD_GENERATION` | SEO, FACEBOOK, LINKEDIN | B2B/B2C lead capture |
+| `THOUGHT_LEADERSHIP` | SEO, TWITTER, LINKEDIN | Authority building |
+| `VIRAL_CONTENT` | TIKTOK, TWITTER | Maximum organic reach |
+| `PAID_ADVERTISING` | FACEBOOK, LINKEDIN | Targeted paid campaigns |
+| `ORGANIC_GROWTH` | SEO + All social | Long-term organic strategy |
+| `SINGLE_PLATFORM` | (Detected dynamically) | Platform-specific request |
+
+#### Orchestration Flow
+
+```
+1. Load Brand DNA → Industry, tone, key phrases from TenantMemoryVault
+   ↓
+2. Detect Campaign Intent → Keyword-based + objective mapping
+   ↓
+3. SEO Keyword Research → SEO_EXPERT provides target keywords FIRST
+   ↓
+4. Inject Keywords → SEO terms flow into all social briefs
+   ↓
+5. Parallel Execution → Social specialists run via Promise.allSettled()
+   ↓
+6. Aggregate Results → Unified CampaignBrief with cross-platform recommendations
+   ↓
+7. Store Insights → Share campaign strategy via TenantMemoryVault
+```
+
+#### CampaignBrief Output Structure
+
+```typescript
+{
+  briefId: string;
+  campaignGoal: CampaignGoal;
+  brandContext: BrandContext;      // Industry context from Brand DNA
+  detectedIntent: CampaignIntent;
+  seoGuidance: SEOKeywordGuidance | null;  // Keywords for social content
+  campaignAnalysis: CampaignAnalysis;
+  platformStrategy: PlatformStrategy;
+  delegations: DelegationResult[];
+  specialistOutputs: {
+    tiktok: unknown | null;
+    twitter: unknown | null;
+    facebook: unknown | null;
+    linkedin: unknown | null;
+    seo: unknown | null;
+  };
+  aggregatedPlan: AggregatedPlan;
+  crossPlatformRecommendations: string[];
+  confidence: number;
+  execution: {
+    totalSpecialists: number;
+    successfulSpecialists: number;
+    totalExecutionTimeMs: number;
+  };
+}
+```
+
+#### Specialists Orchestrated
+
+| Specialist | Factory Function | Domain |
+|------------|-----------------|--------|
+| `TIKTOK_EXPERT` | `getTikTokExpert()` | Short-form viral video |
+| `TWITTER_X_EXPERT` | `getTwitterExpert()` | Threads, thought leadership |
+| `FACEBOOK_ADS_EXPERT` | `getFacebookAdsExpert()` | Paid ads, lead generation |
+| `LINKEDIN_EXPERT` | `getLinkedInExpert()` | B2B content, professional networking |
+| `SEO_EXPERT` | `getSEOExpert()` | Keyword research, content optimization |
+
+#### Brand DNA Integration
+
+The manager loads tenant-specific context at runtime:
+
+```typescript
+BrandContext {
+  tenantId: string;
+  companyDescription: string;  // What the business does
+  uniqueValue: string;         // USP - derived dynamically
+  targetAudience: string;      // Who to target
+  industry: string;            // Industry context (never hardcoded!)
+  toneOfVoice: string;         // warm | professional | direct | etc.
+  keyPhrases: string[];        // Phrases to use in content
+  avoidPhrases: string[];      // Phrases to never use
+  competitors: string[];       // For differentiation
+}
+```
+
+This architecture ensures the Marketing Manager works for **any industry**: SaaS, real estate, e-commerce, healthcare, finance, or any custom vertical defined in the tenant's Brand DNA.
 
 ---
 
