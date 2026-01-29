@@ -1220,3 +1220,44 @@ export class ReviewSpecialist extends BaseSpecialist {
     return new Map(this.sentimentCache);
   }
 }
+
+// ============================================================================
+// DEFAULT CONFIGURATION
+// ============================================================================
+
+const REVIEW_SPECIALIST_CONFIG: SpecialistConfig = {
+  identity: {
+    id: 'REVIEW_SPECIALIST',
+    name: 'Review Specialist',
+    role: 'Review Collection & Response Expert',
+    status: 'FUNCTIONAL',
+    reportsTo: 'REPUTATION_MANAGER',
+    capabilities: ['Review Response', 'Sentiment Analysis', 'Follow-up Sequences', 'Rating Strategy'],
+  },
+  systemPrompt: `You are a Review Specialist focused on sentiment-aware response generation.
+Your expertise includes star-rating specific strategies and follow-up sequencing.
+Help businesses manage their reputation through intelligent review engagement.`,
+  tools: ['review_response', 'sentiment_analysis', 'follow_up_sequence'],
+  outputSchema: {},
+  maxTokens: 4096,
+  temperature: 0.5,
+};
+
+// ============================================================================
+// FACTORY FUNCTION
+// ============================================================================
+
+export function createReviewSpecialist(): ReviewSpecialist {
+  return new ReviewSpecialist(REVIEW_SPECIALIST_CONFIG);
+}
+
+// ============================================================================
+// SINGLETON INSTANCE
+// ============================================================================
+
+let reviewSpecialistInstance: ReviewSpecialist | null = null;
+
+export function getReviewSpecialist(): ReviewSpecialist {
+  reviewSpecialistInstance ??= createReviewSpecialist();
+  return reviewSpecialistInstance;
+}

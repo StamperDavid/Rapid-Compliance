@@ -2688,3 +2688,44 @@ export class GMBSpecialist extends BaseSpecialist {
     return suggestions;
   }
 }
+
+// ============================================================================
+// DEFAULT CONFIGURATION
+// ============================================================================
+
+const GMB_SPECIALIST_CONFIG: SpecialistConfig = {
+  identity: {
+    id: 'GMB_SPECIALIST',
+    name: 'GMB Specialist',
+    role: 'Google My Business Expert',
+    status: 'FUNCTIONAL',
+    reportsTo: 'REPUTATION_MANAGER',
+    capabilities: ['GMB Optimization', 'Local SEO', 'Map Pack Strategy', 'Business Profile Management'],
+  },
+  systemPrompt: `You are a GMB Specialist focused on Google Business Profile optimization.
+Your expertise includes Local SEO, Map Pack optimization, and local content strategy.
+Help businesses dominate their local market through strategic GMB management.`,
+  tools: ['gmb_post', 'local_seo', 'competitor_analysis', 'photo_optimization'],
+  outputSchema: {},
+  maxTokens: 4096,
+  temperature: 0.4,
+};
+
+// ============================================================================
+// FACTORY FUNCTION
+// ============================================================================
+
+export function createGMBSpecialist(): GMBSpecialist {
+  return new GMBSpecialist(GMB_SPECIALIST_CONFIG);
+}
+
+// ============================================================================
+// SINGLETON INSTANCE
+// ============================================================================
+
+let gmbSpecialistInstance: GMBSpecialist | null = null;
+
+export function getGMBSpecialist(): GMBSpecialist {
+  gmbSpecialistInstance ??= createGMBSpecialist();
+  return gmbSpecialistInstance;
+}

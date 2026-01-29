@@ -1701,3 +1701,22 @@ export class VideoSpecialist extends BaseSpecialist {
       .slice(0, 5);
   }
 }
+
+// ============================================================================
+// FACTORY FUNCTION
+// ============================================================================
+
+export function createVideoSpecialist(): VideoSpecialist {
+  return new VideoSpecialist();
+}
+
+// ============================================================================
+// SINGLETON INSTANCE
+// ============================================================================
+
+let videoSpecialistInstance: VideoSpecialist | null = null;
+
+export function getVideoSpecialist(): VideoSpecialist {
+  videoSpecialistInstance ??= createVideoSpecialist();
+  return videoSpecialistInstance;
+}

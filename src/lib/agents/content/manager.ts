@@ -1623,3 +1623,22 @@ export class ContentManager extends BaseManager {
     }
   }
 }
+
+// ============================================================================
+// FACTORY FUNCTION
+// ============================================================================
+
+export function createContentManager(): ContentManager {
+  return new ContentManager();
+}
+
+// ============================================================================
+// SINGLETON INSTANCE
+// ============================================================================
+
+let contentManagerInstance: ContentManager | null = null;
+
+export function getContentManager(): ContentManager {
+  contentManagerInstance ??= createContentManager();
+  return contentManagerInstance;
+}

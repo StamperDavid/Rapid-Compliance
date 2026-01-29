@@ -17,6 +17,31 @@ type SignalListener = (signal: Signal) => void;
 // ============================================================================
 
 /**
+ * Signal history entry for telemetry and audit
+ */
+export interface SignalHistoryEntry {
+  signal: Signal;
+  processedAt: Date;
+  targetAgentId: string;
+  status: 'SUCCESS' | 'FAILED' | 'PENDING';
+  durationMs?: number;
+  errorMessage?: string;
+}
+
+/**
+ * Options for getHistory queries
+ */
+export interface SignalHistoryOptions {
+  agentId?: string;           // Filter by agent ID
+  limit?: number;             // Max entries to return (default: 100)
+  offset?: number;            // Skip entries for pagination
+  since?: Date;               // Only entries after this time
+  until?: Date;               // Only entries before this time
+  status?: SignalHistoryEntry['status']; // Filter by status
+  signalType?: Signal['type']; // Filter by signal type
+}
+
+/**
  * TenantRegistry - Isolated container for a single tenant's signal infrastructure
  * Each tenant gets their own registry, preventing any cross-tenant data leakage
  */
@@ -27,6 +52,7 @@ interface TenantRegistry {
   children: Map<string, Set<string>>;             // parent -> children
   processedSignals: Set<string>;                  // deduplication cache
   pendingSignals: Signal[];                       // queue for async processing
+  signalHistory: SignalHistoryEntry[];            // telemetry/audit log
   createdAt: Date;
   lastActivityAt: Date;
 }
@@ -100,6 +126,7 @@ export class SignalBus {
         children: new Map(),
         processedSignals: new Set(),
         pendingSignals: [],
+        signalHistory: [],
         createdAt: new Date(),
         lastActivityAt: new Date(),
       };
@@ -360,11 +387,23 @@ export class SignalBus {
     for (const [agentId, handler] of registry.handlers) {
       if (handler.canHandle(signal)) {
         signal.hops.push(agentId);
+        const startTime = Date.now();
         try {
           const report = await handler.handle(signal);
+          const durationMs = Date.now() - startTime;
           reports.push(report);
           this.notifyListeners(registry, agentId, signal);
+          // Record successful signal in history
+          this.recordSignalHistory(
+            signal.tenantId,
+            signal,
+            agentId,
+            report.status === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
+            durationMs,
+            report.errors?.join('; ')
+          );
         } catch (error) {
+          const durationMs = Date.now() - startTime;
           const errorMsg = error instanceof Error ? error.message : String(error);
           logger.error(`[SignalBus] Handler error for ${agentId}`, error instanceof Error ? error : undefined, {
             organizationId: signal.tenantId,
@@ -378,6 +417,8 @@ export class SignalBus {
             data: null,
             errors: [errorMsg],
           });
+          // Record failed signal in history
+          this.recordSignalHistory(signal.tenantId, signal, agentId, 'FAILED', durationMs, errorMsg);
         }
       }
     }
@@ -395,6 +436,8 @@ export class SignalBus {
     const handler = registry.handlers.get(signal.target);
 
     if (!handler) {
+      // Record failed delivery attempt
+      this.recordSignalHistory(signal.tenantId, signal, signal.target, 'FAILED', 0, 'Agent not found in tenant');
       return [{
         agentId: 'SIGNAL_BUS',
         timestamp: new Date(),
@@ -408,10 +451,25 @@ export class SignalBus {
     signal.hops.push(signal.target);
     this.notifyListeners(registry, signal.target, signal);
 
+    const startTime = Date.now();
     try {
-      return [await handler.handle(signal)];
+      const report = await handler.handle(signal);
+      const durationMs = Date.now() - startTime;
+      // Record in history
+      this.recordSignalHistory(
+        signal.tenantId,
+        signal,
+        signal.target,
+        report.status === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
+        durationMs,
+        report.errors?.join('; ')
+      );
+      return [report];
     } catch (error) {
+      const durationMs = Date.now() - startTime;
       const errorMsg = error instanceof Error ? error.message : String(error);
+      // Record failed signal in history
+      this.recordSignalHistory(signal.tenantId, signal, signal.target, 'FAILED', durationMs, errorMsg);
       return [{
         agentId: signal.target,
         timestamp: new Date(),
@@ -642,13 +700,14 @@ export class SignalBus {
       cleanedHandlers: registry.handlers.size,
       cleanedListeners: Array.from(registry.listeners.values())
         .reduce((sum, set) => sum + set.size, 0),
-      cleanedSignals: registry.processedSignals.size + registry.pendingSignals.length,
+      cleanedSignals: registry.processedSignals.size + registry.pendingSignals.length + registry.signalHistory.length,
     };
 
     // Clear all registry data
     registry.handlers.clear();
     registry.listeners.clear();
     registry.hierarchy.clear();
+    registry.signalHistory.length = 0;
     registry.children.clear();
     registry.processedSignals.clear();
     registry.pendingSignals.length = 0;
@@ -795,6 +854,180 @@ export class SignalBus {
    */
   getActiveTenantIds(): string[] {
     return Array.from(this.tenantRegistries.keys());
+  }
+
+  // ==========================================================================
+  // SIGNAL HISTORY & TELEMETRY
+  // ==========================================================================
+
+  /**
+   * Record a signal in the history for telemetry/audit purposes
+   * @internal Used by signal handlers
+   */
+  recordSignalHistory(
+    tenantId: string,
+    signal: Signal,
+    targetAgentId: string,
+    status: SignalHistoryEntry['status'],
+    durationMs?: number,
+    errorMessage?: string
+  ): void {
+    const validation = this.validateTenantContext(tenantId, 'recordSignalHistory');
+    if (!validation.valid) {
+      return;
+    }
+
+    const registry = this.tenantRegistries.get(tenantId);
+    if (!registry) {
+      return;
+    }
+
+    const entry: SignalHistoryEntry = {
+      signal: { ...signal }, // Clone to prevent mutation
+      processedAt: new Date(),
+      targetAgentId,
+      status,
+      durationMs,
+      errorMessage,
+    };
+
+    // Add to history (prepend for most recent first)
+    registry.signalHistory.unshift(entry);
+
+    // Cap history at 1000 entries per tenant to prevent memory bloat
+    const MAX_HISTORY = 1000;
+    if (registry.signalHistory.length > MAX_HISTORY) {
+      registry.signalHistory = registry.signalHistory.slice(0, MAX_HISTORY);
+    }
+  }
+
+  /**
+   * Get signal history for a tenant with efficient filtering
+   * SECURITY: Strictly scoped to the provided tenantId
+   *
+   * @param tenantId - REQUIRED: The tenant context
+   * @param options - Query options for filtering
+   * @returns Filtered signal history entries
+   */
+  getHistory(
+    tenantId: string,
+    options: SignalHistoryOptions = {}
+  ): {
+    entries: SignalHistoryEntry[];
+    total: number;
+    hasMore: boolean;
+  } {
+    const validation = this.validateTenantContext(tenantId, 'getHistory');
+    if (!validation.valid) {
+      logger.warn('[SignalBus] getHistory called with invalid tenantId', { tenantId });
+      return { entries: [], total: 0, hasMore: false };
+    }
+
+    const registry = this.tenantRegistries.get(tenantId);
+    if (!registry) {
+      return { entries: [], total: 0, hasMore: false };
+    }
+
+    // Apply filters efficiently
+    let filtered = registry.signalHistory;
+
+    // Filter by agentId (most common filter - apply first)
+    if (options.agentId) {
+      filtered = filtered.filter(entry => entry.targetAgentId === options.agentId);
+    }
+
+    // Filter by status
+    if (options.status) {
+      filtered = filtered.filter(entry => entry.status === options.status);
+    }
+
+    // Filter by signal type
+    if (options.signalType) {
+      filtered = filtered.filter(entry => entry.signal.type === options.signalType);
+    }
+
+    // Filter by time range (since)
+    if (options.since) {
+      const sinceTime = options.since.getTime();
+      filtered = filtered.filter(entry => entry.processedAt.getTime() >= sinceTime);
+    }
+
+    // Filter by time range (until)
+    if (options.until) {
+      const untilTime = options.until.getTime();
+      filtered = filtered.filter(entry => entry.processedAt.getTime() <= untilTime);
+    }
+
+    const total = filtered.length;
+
+    // Apply pagination
+    const offset = options.offset ?? 0;
+    const limit = Math.min(options.limit ?? 100, 500); // Cap at 500 to prevent over-fetching
+
+    const paginated = filtered.slice(offset, offset + limit);
+    const hasMore = offset + limit < total;
+
+    return {
+      entries: paginated,
+      total,
+      hasMore,
+    };
+  }
+
+  /**
+   * Get aggregated statistics for an agent's signal history
+   */
+  getAgentStats(tenantId: string, agentId: string): {
+    totalSignals: number;
+    successCount: number;
+    failureCount: number;
+    pendingCount: number;
+    averageDurationMs: number;
+    lastActivity: Date | null;
+  } | null {
+    const validation = this.validateTenantContext(tenantId, 'getAgentStats');
+    if (!validation.valid) {
+      return null;
+    }
+
+    const registry = this.tenantRegistries.get(tenantId);
+    if (!registry) {
+      return null;
+    }
+
+    const agentHistory = registry.signalHistory.filter(e => e.targetAgentId === agentId);
+
+    if (agentHistory.length === 0) {
+      return {
+        totalSignals: 0,
+        successCount: 0,
+        failureCount: 0,
+        pendingCount: 0,
+        averageDurationMs: 0,
+        lastActivity: null,
+      };
+    }
+
+    const successCount = agentHistory.filter(e => e.status === 'SUCCESS').length;
+    const failureCount = agentHistory.filter(e => e.status === 'FAILED').length;
+    const pendingCount = agentHistory.filter(e => e.status === 'PENDING').length;
+
+    const durationsWithValue = agentHistory
+      .filter(e => e.durationMs !== undefined)
+      .map(e => e.durationMs as number);
+
+    const averageDurationMs = durationsWithValue.length > 0
+      ? durationsWithValue.reduce((sum, d) => sum + d, 0) / durationsWithValue.length
+      : 0;
+
+    return {
+      totalSignals: agentHistory.length,
+      successCount,
+      failureCount,
+      pendingCount,
+      averageDurationMs: Math.round(averageDurationMs),
+      lastActivity: agentHistory[0]?.processedAt ?? null,
+    };
   }
 }
 

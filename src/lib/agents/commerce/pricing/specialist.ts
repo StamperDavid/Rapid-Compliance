@@ -579,3 +579,11 @@ export class PricingStrategist extends BaseSpecialist {
 
 // Export singleton instance
 export const pricingStrategist = new PricingStrategist();
+
+// ============================================================================
+// SINGLETON GETTER
+// ============================================================================
+
+export function getPricingStrategist(): PricingStrategist {
+  return pricingStrategist;
+}

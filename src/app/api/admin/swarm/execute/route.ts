@@ -1,7 +1,15 @@
 /**
  * Admin Swarm Agent Execution API
- * POST to execute functional agents from the Swarm Control Center
- * Implements circuit breaker pattern and error reporting
+ * STATUS: PRODUCTION-READY (Full 47-Agent Support)
+ *
+ * POST to execute any functional agent from the Swarm Control Center
+ * Implements circuit breaker pattern, multi-tenant isolation, and error reporting
+ *
+ * KEY FEATURES:
+ * - Dynamic agent instantiation via AgentFactory registry
+ * - Supports all 47 agents (1 orchestrator + 9 managers + 37 specialists)
+ * - Per-agent circuit breakers with automatic cooldown
+ * - Tenant-scoped execution for multi-tenant safety
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,20 +17,79 @@ import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 
-// Import functional agents
-import { getMarketingManager, type CampaignGoal } from '@/lib/agents/marketing/manager';
-import { getCompetitorResearcher, type CompetitorSearchRequest } from '@/lib/agents/intelligence/competitor/specialist';
-import { getTikTokExpert, type TikTokRequest } from '@/lib/agents/marketing/tiktok/specialist';
+// Agent Factory and Registry
+import {
+  getAgentInstance,
+  isValidAgentId,
+  getAllAgentIds,
+} from '@/lib/agents/agent-factory';
+import { AGENT_IDS, type AgentId } from '@/lib/agents/index';
 import type { AgentMessage, AgentReport } from '@/lib/agents/types';
 
-// Request validation schema
+// ============================================================================
+// STANDARDIZED AGENT COMMAND INTERFACE
+// ============================================================================
+
+/**
+ * Standardized interface for agent execution commands
+ */
+export interface AgentCommand {
+  agentId: AgentId;
+  taskId: string;
+  tenantId: string;
+  payload: Record<string, unknown>;
+  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL';
+  traceId?: string;
+}
+
+/**
+ * Response interface for agent execution
+ */
+export interface AgentExecutionResponse {
+  success: boolean;
+  agentId: string;
+  taskId: string;
+  status: AgentReport['status'];
+  data?: unknown;
+  errors?: string[];
+  duration: number;
+  timestamp: string;
+  circuitBreaker?: {
+    isOpen: boolean;
+    failures: number;
+    cooldownRemaining?: number;
+    threshold?: number;
+  };
+}
+
+// ============================================================================
+// REQUEST VALIDATION SCHEMA
+// ============================================================================
+
+/**
+ * Dynamic Zod schema that validates against all 47 agent IDs
+ * No hardcoded enum - uses runtime registry for validation
+ */
 const executeSchema = z.object({
-  agentId: z.enum(['MARKETING_MANAGER', 'COMPETITOR_RESEARCHER', 'TIKTOK_EXPERT']),
-  taskId: z.string().min(1),
+  agentId: z.string().min(1).refine(
+    (val): val is AgentId => isValidAgentId(val),
+    { message: 'Invalid agent ID. Must be one of the 47 registered agents.' }
+  ),
+  taskId: z.string().min(1, 'taskId is required'),
+  tenantId: z.string().min(1, 'tenantId is required for multi-tenant isolation'),
   payload: z.record(z.unknown()),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'CRITICAL']).optional().default('NORMAL'),
+  traceId: z.string().optional(),
 });
 
-// Circuit breaker state (in-memory for now - could be Redis in production)
+// ============================================================================
+// CIRCUIT BREAKER IMPLEMENTATION
+// ============================================================================
+
+/**
+ * Circuit breaker state tracking per agent
+ * In-memory implementation - consider Redis for distributed deployments
+ */
 const circuitBreakers = new Map<string, {
   failures: number;
   lastFailure: number;
@@ -30,10 +97,10 @@ const circuitBreakers = new Map<string, {
 }>();
 
 const CIRCUIT_BREAKER_THRESHOLD = 3;
-const CIRCUIT_BREAKER_RESET_MS = 60000; // 1 minute
+const CIRCUIT_BREAKER_RESET_MS = 60000; // 1 minute cooldown
 
 /**
- * Check if circuit breaker is open
+ * Check if circuit breaker is open for an agent
  */
 function isCircuitOpen(agentId: string): boolean {
   const breaker = circuitBreakers.get(agentId);
@@ -41,10 +108,13 @@ function isCircuitOpen(agentId: string): boolean {
     return false;
   }
 
-  // Check if cooldown period has passed
+  // Auto-reset after cooldown period
   if (breaker.isOpen && Date.now() - breaker.lastFailure > CIRCUIT_BREAKER_RESET_MS) {
     breaker.isOpen = false;
     breaker.failures = 0;
+    logger.info(`[SwarmExecute] Circuit breaker RESET for agent ${agentId}`, {
+      file: 'admin/swarm/execute/route.ts',
+    });
     return false;
   }
 
@@ -52,7 +122,7 @@ function isCircuitOpen(agentId: string): boolean {
 }
 
 /**
- * Record a failure for circuit breaker
+ * Record a failure and potentially open the circuit breaker
  */
 function recordFailure(agentId: string): void {
   const breaker = circuitBreakers.get(agentId) ?? {
@@ -76,7 +146,7 @@ function recordFailure(agentId: string): void {
 }
 
 /**
- * Record success and reset circuit breaker
+ * Record success and reset the circuit breaker
  */
 function recordSuccess(agentId: string): void {
   circuitBreakers.set(agentId, {
@@ -87,20 +157,62 @@ function recordSuccess(agentId: string): void {
 }
 
 /**
- * POST /api/admin/swarm/execute
- * Execute a functional agent with given payload
+ * Get circuit breaker status for an agent
  */
-export async function POST(request: NextRequest) {
+function getCircuitBreakerStatus(agentId: string): {
+  isOpen: boolean;
+  failures: number;
+  lastFailure: string | null;
+  cooldownRemaining: number;
+} {
+  const breaker = circuitBreakers.get(agentId);
+  return {
+    isOpen: breaker?.isOpen ?? false,
+    failures: breaker?.failures ?? 0,
+    lastFailure: breaker?.lastFailure ? new Date(breaker.lastFailure).toISOString() : null,
+    cooldownRemaining: breaker?.isOpen
+      ? Math.max(0, Math.ceil((CIRCUIT_BREAKER_RESET_MS - (Date.now() - (breaker.lastFailure || 0))) / 1000))
+      : 0,
+  };
+}
+
+// ============================================================================
+// POST HANDLER - Execute Agent
+// ============================================================================
+
+/**
+ * POST /api/admin/swarm/execute
+ * Execute any valid agent from the 47-agent swarm
+ *
+ * @requires Admin authentication
+ * @requires tenantId for multi-tenant isolation
+ */
+export async function POST(request: NextRequest): Promise<NextResponse<AgentExecutionResponse>> {
   const startTime = Date.now();
 
   try {
-    // Verify admin authentication
+    // ========================================================================
+    // AUTHENTICATION
+    // ========================================================================
     const authResult = await verifyAdminRequest(request);
     if (isAuthError(authResult)) {
-      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+      return NextResponse.json(
+        {
+          success: false,
+          agentId: '',
+          taskId: '',
+          status: 'FAILED' as const,
+          errors: [authResult.error],
+          duration: Date.now() - startTime,
+          timestamp: new Date().toISOString(),
+        },
+        { status: authResult.status }
+      );
     }
 
-    // Parse and validate request body
+    // ========================================================================
+    // REQUEST VALIDATION
+    // ========================================================================
     const body: unknown = await request.json();
     const validation = executeSchema.safeParse(body);
 
@@ -108,112 +220,118 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Validation failed',
-          errors: validation.error.errors.map(e => e.message),
+          agentId: '',
+          taskId: '',
+          status: 'FAILED' as const,
+          errors: validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`),
+          duration: Date.now() - startTime,
+          timestamp: new Date().toISOString(),
         },
         { status: 400 }
       );
     }
 
-    const { agentId, taskId, payload } = validation.data;
+    const { agentId, taskId, tenantId, payload, priority, traceId } = validation.data;
 
-    // Check circuit breaker
+    // ========================================================================
+    // CIRCUIT BREAKER CHECK
+    // ========================================================================
     if (isCircuitOpen(agentId)) {
-      const breaker = circuitBreakers.get(agentId);
-      const cooldownRemaining = breaker
-        ? Math.ceil((CIRCUIT_BREAKER_RESET_MS - (Date.now() - breaker.lastFailure)) / 1000)
-        : 0;
+      const cbStatus = getCircuitBreakerStatus(agentId);
 
       logger.warn(`[SwarmExecute] Circuit breaker OPEN for ${agentId}`, {
-        cooldownRemaining,
+        cooldownRemaining: cbStatus.cooldownRemaining,
         file: 'admin/swarm/execute/route.ts',
       });
 
       return NextResponse.json(
         {
           success: false,
-          error: `Circuit breaker OPEN for agent ${agentId}`,
-          errors: [`Agent has failed ${CIRCUIT_BREAKER_THRESHOLD} times. Cooldown: ${cooldownRemaining}s remaining.`],
+          agentId,
+          taskId,
+          status: 'BLOCKED' as const,
+          errors: [`Circuit breaker OPEN. Agent has failed ${CIRCUIT_BREAKER_THRESHOLD} times. Cooldown: ${cbStatus.cooldownRemaining}s remaining.`],
+          duration: Date.now() - startTime,
+          timestamp: new Date().toISOString(),
           circuitBreaker: {
             isOpen: true,
-            failures: breaker?.failures ?? 0,
-            cooldownRemaining,
+            failures: cbStatus.failures,
+            cooldownRemaining: cbStatus.cooldownRemaining,
+            threshold: CIRCUIT_BREAKER_THRESHOLD,
           },
         },
         { status: 503 }
       );
     }
 
+    // ========================================================================
+    // AGENT INSTANTIATION VIA FACTORY
+    // ========================================================================
+    const agent = getAgentInstance(agentId);
+
+    if (!agent) {
+      logger.error(`[SwarmExecute] Agent not found in factory: ${agentId}`, undefined, {
+        file: 'admin/swarm/execute/route.ts',
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          agentId,
+          taskId,
+          status: 'FAILED' as const,
+          errors: [`Agent ${agentId} not found in factory registry`],
+          duration: Date.now() - startTime,
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 }
+      );
+    }
+
     logger.info(`[SwarmExecute] Executing agent ${agentId}`, {
       taskId,
+      tenantId,
       adminId: authResult.user.uid,
+      priority,
       file: 'admin/swarm/execute/route.ts',
     });
 
-    // Create the agent message
+    // ========================================================================
+    // AGENT EXECUTION
+    // ========================================================================
+
+    // Initialize the agent
+    await agent.initialize();
+
+    // Create the standardized agent message
     const message: AgentMessage = {
       id: taskId,
       timestamp: new Date(),
       from: 'ADMIN_DASHBOARD',
       to: agentId,
       type: 'COMMAND',
-      priority: 'NORMAL',
-      payload,
+      priority: priority ?? 'NORMAL',
+      payload: {
+        ...payload,
+        tenantId, // Inject tenantId for multi-tenant scoping
+      },
       requiresResponse: true,
-      traceId: taskId,
+      traceId: traceId ?? taskId,
     };
 
-    let report: AgentReport;
-
-    // Execute the appropriate agent
-    // Note: payload is validated by Zod schema, but we need to cast through unknown for TypeScript
-    switch (agentId) {
-      case 'MARKETING_MANAGER': {
-        const manager = getMarketingManager();
-        await manager.initialize();
-        const campaignPayload = payload as unknown as CampaignGoal;
-        message.payload = campaignPayload;
-        report = await manager.execute(message);
-        break;
-      }
-
-      case 'COMPETITOR_RESEARCHER': {
-        const researcher = getCompetitorResearcher();
-        await researcher.initialize();
-        const researchPayload = payload as unknown as CompetitorSearchRequest;
-        message.payload = researchPayload;
-        report = await researcher.execute(message);
-        break;
-      }
-
-      case 'TIKTOK_EXPERT': {
-        const expert = getTikTokExpert();
-        await expert.initialize();
-        const tiktokPayload = payload as unknown as TikTokRequest;
-        message.payload = tiktokPayload;
-        report = await expert.execute(message);
-        break;
-      }
-
-      default:
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Unknown agent ID',
-            errors: [`Agent ${agentId} is not executable or does not exist`],
-          },
-          { status: 400 }
-        );
-    }
-
+    // Execute the agent
+    const report: AgentReport = await agent.execute(message);
     const duration = Date.now() - startTime;
 
-    // Process agent report
+    // ========================================================================
+    // PROCESS RESULT
+    // ========================================================================
     if (report.status === 'COMPLETED') {
       recordSuccess(agentId);
 
       logger.info(`[SwarmExecute] Agent ${agentId} completed successfully`, {
         taskId,
+        tenantId,
         duration,
         file: 'admin/swarm/execute/route.ts',
       });
@@ -226,25 +344,25 @@ export async function POST(request: NextRequest) {
         data: report.data,
         duration,
         timestamp: report.timestamp.toISOString(),
+        circuitBreaker: getCircuitBreakerStatus(agentId),
       });
     }
 
-    // Handle failure or blocked status
+    // Handle failure, blocked, or other statuses
     recordFailure(agentId);
 
     logger.error(
-      `[SwarmExecute] Agent ${agentId} failed`,
+      `[SwarmExecute] Agent ${agentId} execution failed`,
       new Error(report.errors?.join('; ') ?? 'Unknown error'),
       {
         taskId,
+        tenantId,
         status: report.status,
         errors: report.errors,
         duration,
         file: 'admin/swarm/execute/route.ts',
       }
     );
-
-    const breaker = circuitBreakers.get(agentId);
 
     return NextResponse.json(
       {
@@ -255,11 +373,7 @@ export async function POST(request: NextRequest) {
         errors: report.errors ?? ['Agent execution failed'],
         duration,
         timestamp: report.timestamp.toISOString(),
-        circuitBreaker: {
-          isOpen: breaker?.isOpen ?? false,
-          failures: breaker?.failures ?? 0,
-          threshold: CIRCUIT_BREAKER_THRESHOLD,
-        },
+        circuitBreaker: getCircuitBreakerStatus(agentId),
       },
       { status: 500 }
     );
@@ -267,10 +381,10 @@ export async function POST(request: NextRequest) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    // Try to extract agentId from the body for circuit breaker tracking
+    // Try to track failure for circuit breaker
     try {
       const body = await request.clone().json() as { agentId?: string };
-      if (body.agentId && typeof body.agentId === 'string') {
+      if (body.agentId && typeof body.agentId === 'string' && isValidAgentId(body.agentId)) {
         recordFailure(body.agentId);
       }
     } catch {
@@ -289,18 +403,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal server error',
+        agentId: '',
+        taskId: '',
+        status: 'FAILED' as const,
         errors: [errorMessage],
         duration,
+        timestamp: new Date().toISOString(),
       },
       { status: 500 }
     );
   }
 }
 
+// ============================================================================
+// GET HANDLER - Circuit Breaker Status
+// ============================================================================
+
 /**
  * GET /api/admin/swarm/execute
- * Get circuit breaker status for all agents
+ * Get circuit breaker status for all 47 agents
+ *
+ * @requires Admin authentication
  */
 export async function GET(request: NextRequest) {
   try {
@@ -310,27 +433,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const functionalAgents = ['MARKETING_MANAGER', 'COMPETITOR_RESEARCHER', 'TIKTOK_EXPERT'];
+    // Get all 47 agent IDs from the registry
+    const allAgentIds = getAllAgentIds();
 
-    const circuitBreakerStatus = functionalAgents.map(agentId => {
-      const breaker = circuitBreakers.get(agentId);
-      return {
-        agentId,
-        isOpen: breaker?.isOpen ?? false,
-        failures: breaker?.failures ?? 0,
-        lastFailure: breaker?.lastFailure ? new Date(breaker.lastFailure).toISOString() : null,
-        cooldownRemaining: breaker?.isOpen
-          ? Math.max(0, Math.ceil((CIRCUIT_BREAKER_RESET_MS - (Date.now() - (breaker.lastFailure || 0))) / 1000))
-          : 0,
-      };
-    });
+    // Build circuit breaker status for all agents
+    const circuitBreakerStatuses = allAgentIds.map(agentId => ({
+      agentId,
+      ...getCircuitBreakerStatus(agentId),
+    }));
+
+    // Summarize by status
+    const openBreakers = circuitBreakerStatuses.filter(cb => cb.isOpen);
+    const degradedAgents = circuitBreakerStatuses.filter(cb => cb.failures > 0 && !cb.isOpen);
 
     return NextResponse.json({
       success: true,
-      functionalAgents,
-      circuitBreakers: circuitBreakerStatus,
-      threshold: CIRCUIT_BREAKER_THRESHOLD,
-      cooldownMs: CIRCUIT_BREAKER_RESET_MS,
+      summary: {
+        totalAgents: allAgentIds.length,
+        healthy: allAgentIds.length - openBreakers.length - degradedAgents.length,
+        degraded: degradedAgents.length,
+        circuitOpen: openBreakers.length,
+      },
+      circuitBreakers: circuitBreakerStatuses,
+      configuration: {
+        threshold: CIRCUIT_BREAKER_THRESHOLD,
+        cooldownMs: CIRCUIT_BREAKER_RESET_MS,
+      },
+      availableAgents: Object.keys(AGENT_IDS),
     });
   } catch (error: unknown) {
     logger.error(
