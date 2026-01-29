@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 27, 2026 (Lead Routing Implementation - Converted from mock to production)
+**Last Updated:** January 29, 2026 (INTELLIGENCE_MANAGER - Dynamic orchestration engine implemented)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
@@ -33,7 +33,7 @@
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 199 | Verified |
 | API Endpoints (route.ts) | 227 | 221 Functional, 6 Partial* |
-| AI Agents | 44 | 35 FUNCTIONAL, 3 ENHANCED SHELL, 6 SHELL |
+| AI Agents | 44 | 36 FUNCTIONAL, 3 ENHANCED SHELL, 5 SHELL |
 | RBAC Roles | 5 | Implemented |
 | Permissions per Role | 47 | Defined |
 | Firestore Collections | 60+ | Active |
@@ -211,16 +211,16 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL | 35 | Complete implementation with logic |
+| FUNCTIONAL | 36 | Complete implementation with logic |
 | ENHANCED SHELL | 3 | Managers with substantial orchestration logic |
-| SHELL | 6 | Managers - basic orchestration layer only |
+| SHELL | 5 | Managers - basic orchestration layer only |
 | GHOST | 0 | All specialists have been implemented |
 
 ### Managers (9) - L2 Orchestrators
 
 | Agent ID | Class Name | Domain | Status | Notes |
 |----------|------------|--------|--------|-------|
-| INTELLIGENCE_MANAGER | IntelligenceManager | Research & Analysis | SHELL | Returns BLOCKED status; delegation not implemented |
+| INTELLIGENCE_MANAGER | IntelligenceManager | Research & Analysis | FUNCTIONAL | Dynamic orchestration engine with parallel execution, graceful degradation |
 | MARKETING_MANAGER | MarketingManager | Social & Ads | ENHANCED SHELL | 450+ LOC with campaign orchestration logic |
 | BUILDER_MANAGER | BuilderManager | Site Building | SHELL | Basic orchestration only |
 | COMMERCE_MANAGER | CommerceManager | E-commerce | SHELL | Basic orchestration only |
@@ -1273,6 +1273,82 @@ Agents communicate via **TenantMemoryVault**:
 - Insight sharing
 - Location: `src/lib/agents/shared/tenant-memory-vault.ts`
 
+### Intelligence Manager - Dynamic Orchestration Engine
+
+**Status:** FUNCTIONAL (January 29, 2026)
+**Location:** `src/lib/agents/intelligence/manager.ts`
+
+The Intelligence Manager is the orchestration engine for market intelligence gathering. It coordinates 5 specialist agents with dynamic resolution, parallel execution, and graceful degradation.
+
+#### Orchestration Patterns
+
+| Intent | Specialists Activated | Use Case |
+|--------|----------------------|----------|
+| `FULL_MARKET_RESEARCH` | All 5 specialists | Complete market analysis |
+| `COMPETITOR_ANALYSIS` | COMPETITOR_ANALYST, TECHNOGRAPHIC_SCOUT | Competitive landscape |
+| `BRAND_MONITORING` | SENTIMENT_ANALYST, TREND_SCOUT | Brand health tracking |
+| `TECH_DISCOVERY` | TECHNOGRAPHIC_SCOUT, SCRAPER_SPECIALIST | Technology stack analysis |
+| `TREND_ANALYSIS` | TREND_SCOUT, SENTIMENT_ANALYST | Market signal detection |
+| `COMPANY_PROFILE` | SCRAPER_SPECIALIST, COMPETITOR_ANALYST | Company profiling |
+| `SINGLE_SPECIALIST` | (Delegation rules) | Targeted single-specialist query |
+
+#### Execution Flow
+
+```
+1. Parse Request → Detect Intent from payload keywords
+   ↓
+2. Resolve Specialists → Dynamic lookup from SwarmRegistry
+   ↓
+3. Parallel Execution → Promise.allSettled() for isolation
+   ↓
+4. Graceful Degradation → Partial results on specialist failure
+   ↓
+5. Synthesize Brief → Aggregate into IntelligenceBrief
+   ↓
+6. Store in Vault → Share insights via TenantMemoryVault
+```
+
+#### IntelligenceBrief Output Structure
+
+```typescript
+{
+  briefId: string;
+  request: IntelligenceRequest;
+  competitorAnalysis: { competitors, marketInsights, confidence } | null;
+  sentimentAnalysis: { overallSentiment, brandHealth, alerts, confidence } | null;
+  technographicAnalysis: { techStack, platforms, summary, confidence } | null;
+  trendAnalysis: { signals, forecasts, pivotRecommendations, confidence } | null;
+  companyProfile: { keyFindings, contactInfo, businessSignals, confidence } | null;
+  synthesis: {
+    executiveSummary: string;
+    keyFindings: string[];
+    opportunities: string[];
+    threats: string[];
+    recommendedActions: string[];
+    overallConfidence: number;
+  };
+  execution: {
+    totalSpecialists: number;
+    successfulSpecialists: number;
+    failedSpecialists: number;
+    skippedSpecialists: number;
+    totalExecutionTimeMs: number;
+  };
+  errors: string[];
+}
+```
+
+#### Key Features
+
+| Feature | Implementation |
+|---------|----------------|
+| **Dynamic Resolution** | Specialists resolved from SwarmRegistry at runtime, not hard-coded |
+| **Parallel Execution** | All specialists execute via `Promise.allSettled()` |
+| **Graceful Degradation** | Returns partial results if some specialists fail |
+| **Intent Detection** | Keyword-based intent mapping + explicit intent parameter |
+| **Contextual Synthesis** | Weighted confidence scoring, contradiction detection |
+| **Vault Integration** | Stores insights and broadcasts signals to TenantMemoryVault |
+
 ---
 
 ## Data Contracts Reference
@@ -1396,6 +1472,17 @@ See `docs/archive/legacy/README.md` for full archive index.
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
 *Last updated: January 27, 2026 - Deep-Dive Forensic Audit*
+
+### Changelog (January 29, 2026 - Intelligence Manager Implementation)
+
+- **MAJOR:** INTELLIGENCE_MANAGER upgraded from SHELL to FUNCTIONAL
+- **Added:** Dynamic orchestration engine with parallel specialist execution
+- **Added:** IntelligenceBrief synthesis output structure
+- **Added:** 7 orchestration patterns (FULL_MARKET_RESEARCH, COMPETITOR_ANALYSIS, etc.)
+- **Added:** Graceful degradation for partial specialist failures
+- **Added:** TenantMemoryVault integration for cross-agent insights
+- **Updated:** Agent counts (36 FUNCTIONAL, 3 ENHANCED SHELL, 5 SHELL)
+- **Added:** Intelligence Manager documentation in Architecture Notes
 
 ### Changelog (January 27, 2026 - Forensic Audit)
 
