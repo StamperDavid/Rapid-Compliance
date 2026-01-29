@@ -207,13 +207,13 @@
 
 ### Agent Swarm Overview
 
-**Total Agents:** 44 (9 managers + 35 specialists)
+**Total Agents:** 47 (9 managers + 38 specialists)
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL | 40 | Complete implementation with logic |
+| FUNCTIONAL | 45 | Complete implementation with logic |
 | ENHANCED SHELL | 1 | Managers with substantial orchestration logic |
-| SHELL | 3 | Managers - basic orchestration layer only |
+| SHELL | 1 | Managers - basic orchestration layer only |
 | GHOST | 0 | All specialists have been implemented |
 
 ### Managers (9) - L2 Orchestrators
@@ -223,7 +223,7 @@
 | INTELLIGENCE_MANAGER | IntelligenceManager | Research & Analysis | FUNCTIONAL | Dynamic orchestration engine with parallel execution, graceful degradation |
 | MARKETING_MANAGER | MarketingManager | Social & Ads | FUNCTIONAL | **Industry-agnostic Cross-Channel Commander** - 850+ LOC with dynamic specialist resolution, Brand DNA integration, SEO-social feedback loop, parallel execution |
 | BUILDER_MANAGER | BuilderManager | Site Building | FUNCTIONAL | **Autonomous Construction Commander** - 1650+ LOC with dynamic specialist resolution (3 specialists: UX_UI_ARCHITECT, FUNNEL_ENGINEER, ASSET_GENERATOR), Blueprint-to-Deployment workflow, pixel injection (GA4, GTM, Meta Pixel, Hotjar), build state machine (PENDING_BLUEPRINT → ASSEMBLING → INJECTING_SCRIPTS → DEPLOYING → LIVE), Vercel deployment manifest generation, SignalBus `website.build_complete` broadcast, parallel execution, graceful degradation |
-| COMMERCE_MANAGER | CommerceManager | E-commerce | SHELL | Basic orchestration only |
+| COMMERCE_MANAGER | CommerceManager | E-commerce | FUNCTIONAL | **Transactional Commerce Commander** - 1400+ LOC with dynamic specialist resolution (5 specialists: PAYMENT_SPECIALIST, SUBSCRIPTION_SPECIALIST, CATALOG_MANAGER, PRICING_STRATEGIST, INVENTORY_MANAGER), Product-to-Payment checkout orchestration, Subscription state machine (TRIAL → ACTIVE → PAST_DUE → CANCELLED), CommerceBrief revenue synthesis (MRR, Churn, Transaction Volume), TenantMemoryVault tax/currency settings, SignalBus dunning triggers for OUTREACH_MANAGER, parallel execution, graceful degradation |
 | OUTREACH_MANAGER | OutreachManager | Email & SMS | FUNCTIONAL | **Omni-Channel Communication Commander** - 1900+ LOC with dynamic specialist resolution (EMAIL_SPECIALIST, SMS_SPECIALIST), Multi-Step Sequence execution, channel escalation (EMAIL → SMS → VOICE), sentiment-aware routing via INTELLIGENCE_MANAGER, DNC compliance via TenantMemoryVault, frequency throttling, quiet hours enforcement, SignalBus integration |
 | CONTENT_MANAGER | ContentManager | Content Creation | FUNCTIONAL | **Multi-Modal Production Commander** - 1600+ LOC with dynamic specialist resolution (4 specialists: COPYWRITER, CALENDAR_COORDINATOR, VIDEO_SPECIALIST, ASSET_GENERATOR), TechnicalBrief consumption from ARCHITECT_MANAGER, Brand DNA integration (avoidPhrases, toneOfVoice, keyPhrases), SEO-to-Copy keyword injection, ContentPackage synthesis, validateContent() quality gate, SignalBus `content.package_ready` broadcast, parallel execution, graceful degradation |
 | ARCHITECT_MANAGER | ArchitectManager | Site Architecture | FUNCTIONAL | **Strategic Infrastructure Commander** - 2100+ LOC with dynamic specialist resolution (3 specialists), Brand DNA integration, TenantMemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis, SignalBus `site.blueprint_ready` broadcast, parallel execution, graceful degradation |
@@ -387,12 +387,59 @@ The CONTENT_MANAGER implements multi-modal content production from architectural
 - VIDEO_SPECIALIST: Script-to-storyboard, audio cues, video SEO, thumbnail strategy
 - ASSET_GENERATOR: Brand visuals, social graphics, hero images with hex-code palette
 
-#### Commerce Domain (2)
+#### Commerce Domain (5)
 
 | Agent ID | Class Name | Capabilities | Status |
 |----------|------------|--------------|--------|
-| PRICING_STRATEGIST | PricingStrategist | Dynamic pricing | FUNCTIONAL |
-| INVENTORY_MANAGER | InventoryManagerAgent | Stock management | FUNCTIONAL |
+| PAYMENT_SPECIALIST | PaymentSpecialist | Checkout sessions, payment intents, refunds | FUNCTIONAL |
+| SUBSCRIPTION_SPECIALIST | SubscriptionSpecialist | State machine, billing cycles, dunning | FUNCTIONAL |
+| CATALOG_MANAGER | CatalogManagerSpecialist | Product CRUD, variants, search | FUNCTIONAL |
+| PRICING_STRATEGIST | PricingStrategist | Dynamic pricing, discounts, totals | FUNCTIONAL |
+| INVENTORY_MANAGER | InventoryManagerAgent | Stock management, demand forecasting | FUNCTIONAL |
+
+##### COMMERCE_MANAGER Transactional Orchestration Logic
+
+The COMMERCE_MANAGER implements Product-to-Payment commerce orchestration:
+
+**Checkout Orchestration Pipeline:**
+1. Fetch tenant commerce settings from TenantMemoryVault (currency, tax config)
+2. Validate products via CATALOG_MANAGER
+3. Calculate totals via PRICING_STRATEGIST (subtotal, tax, shipping, discounts)
+4. Initialize checkout session via PAYMENT_SPECIALIST
+5. Handle webhook completion and update inventory
+6. Broadcast `commerce.checkout_complete` signal to BUILDER_MANAGER
+
+**Subscription State Machine:**
+- `TRIAL` → Initial state, 14-day default, $0 MRR
+- `ACTIVE` → Converted, billing active, MRR counted
+- `PAST_DUE` → Payment failed, dunning sequence triggered
+- `CANCELLED` → Terminal state, MRR removed
+
+**Dunning Sequence (PAST_DUE handling):**
+- Day 0: Immediate email (payment_failed_immediate)
+- Day 3: Reminder email (payment_failed_reminder)
+- Day 7: Urgent SMS (payment_urgent)
+- Day 10: Final warning email (payment_final_warning)
+- Day 14: Auto-cancel subscription
+
+**Revenue Reporting (CommerceBrief):**
+- MRR (Monthly Recurring Revenue) from active subscriptions
+- Churn Rate calculated from cancelled subscriptions
+- Trial Conversion Rate (TRIAL → ACTIVE)
+- Transaction Volume and Count
+- Inventory health metrics
+
+**Signal Broadcasting:**
+- `commerce.checkout_complete` → BUILDER_MANAGER, OUTREACH_MANAGER
+- `commerce.payment_failed` → OUTREACH_MANAGER (triggers dunning)
+- `commerce.subscription_cancelled` → OUTREACH_MANAGER, INTELLIGENCE_MANAGER
+
+**Specialist Orchestration:**
+- PAYMENT_SPECIALIST: Stripe checkout sessions, payment intents, webhooks, refunds
+- SUBSCRIPTION_SPECIALIST: Trial management, billing cycles, state transitions, dunning
+- CATALOG_MANAGER: Product fetching, catalog CRUD, variant management, search
+- PRICING_STRATEGIST: Price validation, discount application, totals calculation
+- INVENTORY_MANAGER: Stock analysis, demand forecasting, reorder alerts
 
 #### Outreach Domain (2)
 
