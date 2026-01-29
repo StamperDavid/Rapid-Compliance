@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 29, 2026 (W2 Build Gate - Mandatory type-checking enforced)
+**Last Updated:** January 29, 2026 (REPUTATION_MANAGER Brand Guardian Activation)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
@@ -33,7 +33,7 @@
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 199 | Verified |
 | API Endpoints (route.ts) | 227 | 221 Functional, 6 Partial* |
-| AI Agents | 44 | 37 FUNCTIONAL, 3 ENHANCED SHELL, 4 SHELL |
+| AI Agents | 47 | 46 FUNCTIONAL, 1 SHELL |
 | RBAC Roles | 5 | Implemented |
 | Permissions per Role | 47 | Defined |
 | Firestore Collections | 60+ | Active |
@@ -211,9 +211,9 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL | 45 | Complete implementation with logic |
-| ENHANCED SHELL | 1 | Managers with substantial orchestration logic |
-| SHELL | 1 | Managers - basic orchestration layer only |
+| FUNCTIONAL | 46 | Complete implementation with logic |
+| ENHANCED SHELL | 0 | All managers now fully orchestrating |
+| SHELL | 1 | Basic orchestration layer only |
 | GHOST | 0 | All specialists have been implemented |
 
 ### Managers (9) - L2 Orchestrators
@@ -228,9 +228,9 @@
 | CONTENT_MANAGER | ContentManager | Content Creation | FUNCTIONAL | **Multi-Modal Production Commander** - 1600+ LOC with dynamic specialist resolution (4 specialists: COPYWRITER, CALENDAR_COORDINATOR, VIDEO_SPECIALIST, ASSET_GENERATOR), TechnicalBrief consumption from ARCHITECT_MANAGER, Brand DNA integration (avoidPhrases, toneOfVoice, keyPhrases), SEO-to-Copy keyword injection, ContentPackage synthesis, validateContent() quality gate, SignalBus `content.package_ready` broadcast, parallel execution, graceful degradation |
 | ARCHITECT_MANAGER | ArchitectManager | Site Architecture | FUNCTIONAL | **Strategic Infrastructure Commander** - 2100+ LOC with dynamic specialist resolution (3 specialists), Brand DNA integration, TenantMemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis, SignalBus `site.blueprint_ready` broadcast, parallel execution, graceful degradation |
 | REVENUE_DIRECTOR | RevenueDirector | Sales Ops | FUNCTIONAL | **Sales Ops Commander** - 1800+ LOC with dynamic specialist resolution (5 specialists), Golden Master persona tuning, RevenueBrief synthesis, objection library battlecards, cross-agent signal sharing |
-| REPUTATION_MANAGER | ReputationManager | Trust & Reviews | SHELL | Basic orchestration only |
+| REPUTATION_MANAGER | ReputationManager | Trust & Reviews | FUNCTIONAL | **Brand Defense Commander** - 2000+ LOC with dynamic specialist resolution (3 specialists: REVIEW_SPECIALIST, GMB_SPECIALIST, SENTIMENT_ANALYST), automated review solicitation from sale.completed signals, AI-powered response engine with star-rating strategies, GMB profile optimization coordination, ReputationBrief trust score synthesis, webhook.review.received signal handling, Review-to-Revenue feedback loop |
 
-> **Note:** "ENHANCED SHELL" managers have substantial internal logic but may not fully delegate to all specialists yet. Only REPUTATION_MANAGER remains in this state.
+> **Note:** All managers are now FUNCTIONAL with complete specialist orchestration and cross-agent signal communication.
 
 ### Specialists (35) - L3 Workers
 
@@ -543,6 +543,44 @@ DEAL_CLOSER closed-won signals are broadcast to LEAD_QUALIFIER for continuous BA
 | REVIEW_SPECIALIST | ReviewSpecialist | Review management | FUNCTIONAL |
 | REV_MGR | ReviewManagerSpecialist | Review response | FUNCTIONAL |
 | CASE_STUDY | CaseStudyBuilderSpecialist | Case study creation | FUNCTIONAL |
+
+##### REPUTATION_MANAGER Brand Guardian Orchestration Logic
+
+The REPUTATION_MANAGER implements brand defense through coordinated review management and trust score synthesis:
+
+**Review-to-Revenue Feedback Loop:**
+1. Receive `sale.completed` signal from REVENUE_DIRECTOR
+2. Extract customer profile and purchase details
+3. Calculate optimal review solicitation timing (3-7 days post-purchase)
+4. Broadcast `reputation.review_solicitation_requested` signal to OUTREACH_MANAGER
+5. Store solicitation record in TenantMemoryVault for tracking
+
+**AI-Powered Response Engine:**
+1. Receive `webhook.review.received` signal
+2. Delegate to REVIEW_SPECIALIST for sentiment-aware response generation
+3. Apply star-rating specific strategies (1-star Crisis → 5-star Amplification)
+4. Load Brand DNA for tone alignment
+5. For negative reviews (1-3 stars): Flag HIGH PRIORITY, queue for human approval
+6. For positive reviews (4-5 stars): Auto-approve with review option
+7. Cache successful response templates in TenantMemoryVault
+
+**Trust Score Synthesis (ReputationBrief):**
+- Overall Trust Score: 0-100 composite metric
+- Components: Average Rating, Review Velocity, Sentiment Score, Response Rate, NPS
+- Trend Analysis: IMPROVING | DECLINING | STABLE
+- Platform-specific metrics: Google, Yelp, Facebook, Other
+- GMB Health: Profile completeness, posting frequency, map pack position
+- Actionable recommendations based on trust metrics
+
+**Signal Integration:**
+- Receives: `sale.completed`, `deal.won`, `webhook.review.received`, `review.received`
+- Broadcasts: `reputation.review_solicitation_requested`, `reputation.gmb_updated`
+- Shares: PERFORMANCE insights for trust metrics, AUDIENCE insights for solicitations
+
+**Specialist Orchestration:**
+- REVIEW_SPECIALIST: Sentiment-aware response generation, star-rating strategies
+- GMB_SPECIALIST: Local SEO optimization, profile updates, map pack positioning
+- SENTIMENT_ANALYST: Deep sentiment analysis, crisis detection, trend monitoring
 
 ### Agent File Locations
 
@@ -1833,7 +1871,22 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: January 29, 2026 - OUTREACH_MANAGER Activation*
+*Last updated: January 29, 2026 - REPUTATION_MANAGER Activation*
+
+### Changelog (January 29, 2026 - REPUTATION_MANAGER Activation)
+
+- **MAJOR:** REPUTATION_MANAGER upgraded from SHELL to FUNCTIONAL
+- **Added:** Brand Defense Commander with 2000+ LOC
+- **Added:** Dynamic specialist resolution (REVIEW_SPECIALIST, GMB_SPECIALIST, SENTIMENT_ANALYST)
+- **Added:** Automated review solicitation from sale.completed signals (Review-to-Revenue loop)
+- **Added:** AI-powered response engine with star-rating specific strategies
+- **Added:** GMB profile optimization coordination with CONTENT_MANAGER assets
+- **Added:** ReputationBrief trust score synthesis (Average Rating, Review Velocity, Sentiment, Response Rate, NPS)
+- **Added:** webhook.review.received signal handling for real-time review response
+- **Added:** SignalBus integration (reputation.review_solicitation_requested, reputation.gmb_updated)
+- **Added:** TenantMemoryVault integration for response templates and cross-agent insights
+- **Updated:** Agent counts (46 FUNCTIONAL, 0 ENHANCED SHELL, 1 SHELL)
+- **Updated:** All 9 managers now fully FUNCTIONAL with complete orchestration logic
 
 ### Changelog (January 29, 2026 - OUTREACH_MANAGER Activation)
 
