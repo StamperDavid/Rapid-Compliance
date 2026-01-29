@@ -225,7 +225,7 @@
 | BUILDER_MANAGER | BuilderManager | Site Building | FUNCTIONAL | **Autonomous Construction Commander** - 1650+ LOC with dynamic specialist resolution (3 specialists: UX_UI_ARCHITECT, FUNNEL_ENGINEER, ASSET_GENERATOR), Blueprint-to-Deployment workflow, pixel injection (GA4, GTM, Meta Pixel, Hotjar), build state machine (PENDING_BLUEPRINT → ASSEMBLING → INJECTING_SCRIPTS → DEPLOYING → LIVE), Vercel deployment manifest generation, SignalBus `website.build_complete` broadcast, parallel execution, graceful degradation |
 | COMMERCE_MANAGER | CommerceManager | E-commerce | SHELL | Basic orchestration only |
 | OUTREACH_MANAGER | OutreachManager | Email & SMS | SHELL | Basic orchestration only |
-| CONTENT_MANAGER | ContentManager | Content Creation | SHELL | Basic orchestration only |
+| CONTENT_MANAGER | ContentManager | Content Creation | FUNCTIONAL | **Multi-Modal Production Commander** - 1600+ LOC with dynamic specialist resolution (4 specialists: COPYWRITER, CALENDAR_COORDINATOR, VIDEO_SPECIALIST, ASSET_GENERATOR), TechnicalBrief consumption from ARCHITECT_MANAGER, Brand DNA integration (avoidPhrases, toneOfVoice, keyPhrases), SEO-to-Copy keyword injection, ContentPackage synthesis, validateContent() quality gate, SignalBus `content.package_ready` broadcast, parallel execution, graceful degradation |
 | ARCHITECT_MANAGER | ArchitectManager | Site Architecture | FUNCTIONAL | **Strategic Infrastructure Commander** - 2100+ LOC with dynamic specialist resolution (3 specialists), Brand DNA integration, TenantMemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis, SignalBus `site.blueprint_ready` broadcast, parallel execution, graceful degradation |
 | REVENUE_DIRECTOR | RevenueDirector | Sales Ops | FUNCTIONAL | **Sales Ops Commander** - 1800+ LOC with dynamic specialist resolution (5 specialists), Golden Master persona tuning, RevenueBrief synthesis, objection library battlecards, cross-agent signal sharing |
 | REPUTATION_MANAGER | ReputationManager | Trust & Reviews | SHELL | Basic orchestration only |
@@ -348,6 +348,44 @@ The BUILDER_MANAGER implements autonomous site construction from architectural b
 - UX_UI_ARCHITECT: Design system tokens, color palettes, typography, accessibility
 - FUNNEL_ENGINEER: Conversion funnel design, landing page optimization, A/B test setup
 - ASSET_GENERATOR: Logo generation, favicon sets, social graphics, banners
+
+##### CONTENT_MANAGER Multi-Modal Content Orchestration Logic
+
+The CONTENT_MANAGER implements multi-modal content production from architectural briefs:
+
+**SEO-to-Copy Injection Workflow:**
+1. Receive `site.blueprint_ready` signal from ARCHITECT_MANAGER
+2. Load Brand DNA from TenantMemoryVault (toneOfVoice, avoidPhrases, keyPhrases, colorPalette)
+3. Extract SEO mandates from TechnicalBrief (perPage keywords, meta templates)
+4. Inject SEO keywords into COPYWRITER briefs for each page
+5. Execute specialists in parallel with brand + SEO context
+6. Synthesize outputs into ContentPackage JSON
+7. Validate all copy against avoidPhrases (quality gate)
+8. Broadcast `content.package_ready` signal to BUILDER_MANAGER, MARKETING_MANAGER
+
+**Output Types:**
+- `ContentPackage`: Complete content package with pageContent, socialSnippets, videoContent, calendar
+- `PageContent[]`: H1-H6 headlines, body copy, CTAs, metadata, visuals per page
+- `SocialSnippets`: Platform-specific promotional copy (Twitter, LinkedIn, Instagram, TikTok, Facebook)
+- `VideoContent`: Storyboards, scripts, thumbnails, video SEO tags
+- `ContentCalendar`: Recommended publishing schedule with optimal timing
+
+**Content Validation (Quality Gate):**
+- Check ALL copy against Brand DNA avoidPhrases list
+- Verify toneOfVoice consistency across all content
+- Validate meta description character limits (120-160)
+- Ensure alt-text is descriptive for accessibility
+- Calculate toneConsistency, seoScore, accessibilityScore
+
+**Signal Broadcasting:**
+- Broadcasts `content.package_ready` signal to BUILDER_MANAGER, MARKETING_MANAGER
+- Stores content insights in TenantMemoryVault for cross-agent consumption
+
+**Specialist Orchestration:**
+- COPYWRITER: Headlines (H1-H6), product descriptions, email copy, ad copy, landing pages
+- CALENDAR_COORDINATOR: Content scheduling, optimal posting times, cross-platform coordination
+- VIDEO_SPECIALIST: Script-to-storyboard, audio cues, video SEO, thumbnail strategy
+- ASSET_GENERATOR: Brand visuals, social graphics, hero images with hex-code palette
 
 #### Commerce Domain (2)
 
