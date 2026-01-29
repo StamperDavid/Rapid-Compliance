@@ -887,6 +887,7 @@ src/lib/agents/
 | ~~LOW~~ | ~~Inconsistent role naming (super_admin vs platform_admin)~~ | Multiple files | ✅ RESOLVED - Fully standardized to `platform_admin` across codebase. All source files updated, claims-validator provides runtime normalization for any legacy data. |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
 | LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
+| **CRITICAL** | Auth Handshake Failure: `useSystemStatus` hook missing Authorization header | `src/hooks/useSystemStatus.ts` | IDENTIFIED 2026-01-29 - Hook does not send Firebase ID Token to `/api/system/status`. See `docs/debug-reports/2026-01-29-auth-handshake-failure.md` |
 
 ### Admin Account Bootstrap
 
