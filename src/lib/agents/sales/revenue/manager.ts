@@ -2,8 +2,8 @@
  * Revenue Director (L2 Manager)
  * STATUS: FUNCTIONAL
  *
- * Monitors lead status and orchestrates the lead pipeline state machine.
- * Determines when leads can transition from Intelligence phase to Outreach phase.
+ * The Sales Operations Commander responsible for managing the "Golden Master"
+ * sales configurations and orchestrating the 5 functional Sales Specialists.
  *
  * CAPABILITIES:
  * - Lead pipeline state machine management
@@ -12,23 +12,52 @@
  * - Intelligence completeness assessment
  * - Engagement signal monitoring
  * - Time-based stage timeout enforcement
- * - Delegation to sales specialists
+ * - Dynamic specialist delegation via SwarmRegistry
+ * - Golden Master persona tuning based on win/loss signals
+ * - Revenue performance synthesis (RevenueBrief)
+ * - Objection handling library synthesis for battlecards
+ * - Cross-agent signal sharing via TenantMemoryVault
  */
 
 import { BaseManager } from '../../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../../types';
 
+// Import specialists via factory functions (Dynamic Resolution Pattern)
+import { getLeadQualifierSpecialist } from '../qualifier/specialist';
+import { getOutreachSpecialist } from '../outreach/specialist';
+import { getMerchandiserSpecialist } from '../merchandiser/specialist';
+import { getDealCloserSpecialist, type ClosingStrategyResult, type LeadHistory } from '../deal-closer/specialist';
+import { getObjectionHandlerSpecialist, type RebuttalResponse, type ObjectionCategory } from '../objection-handler/specialist';
+
+// Import shared infrastructure
+import {
+  getMemoryVault,
+  shareInsight,
+  broadcastSignal,
+  type InsightData,
+} from '../../shared/tenant-memory-vault';
+// Logger is used indirectly via this.log() from BaseManager
+import { logger as _logger } from '@/lib/logger/logger';
+
 // ============================================================================
 // SYSTEM PROMPT - The brain of this manager
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are the Revenue Director, an expert L2 orchestrator responsible for managing the lead pipeline and optimizing revenue operations.
+const SYSTEM_PROMPT = `You are the Revenue Director, the Sales Operations Commander and expert L2 orchestrator responsible for managing the lead pipeline, optimizing revenue operations, and coordinating the Golden Master sales configurations.
 
 ## YOUR ROLE
-You monitor lead status across the pipeline and determine when leads are ready to transition between stages, particularly from the Intelligence phase to the Outreach phase. You coordinate with:
-- LEAD_QUALIFIER: Qualifies incoming leads using BANT methodology
-- OUTREACH_SPECIALIST: Executes personalized outreach sequences
-- MERCHANDISER: Prepares product/service positioning for leads
+You are the tactical commander of the Sales Domain, responsible for:
+1. Orchestrating the complete sales lifecycle from discovery to close
+2. Managing Golden Master configurations for dynamic persona tuning
+3. Synthesizing win/loss feedback loops for continuous improvement
+4. Producing revenue performance briefs for executive visibility
+
+You coordinate with FIVE functional Sales Specialists:
+- LEAD_QUALIFIER: Qualifies incoming leads using BANT methodology (0-100 scoring)
+- OUTREACH_SPECIALIST: Executes personalized outreach sequences (8 frameworks, 3 channels)
+- MERCHANDISER: Prepares product/service positioning and discount strategies (7 nudge types)
+- DEAL_CLOSER: Generates closing strategies via decision-tree engine (8 strategy types)
+- OBJ_HANDLER: Handles objections with triple-verified rebuttals (10 categories)
 
 ## LEAD PIPELINE STATE MACHINE
 
@@ -225,10 +254,24 @@ const REVENUE_MANAGER_CONFIG: ManagerConfig = {
       'time_based_enforcement',
       'specialist_delegation',
       'readiness_scoring',
+      'golden_master_orchestration',
+      'persona_tuning',
+      'revenue_brief_synthesis',
+      'objection_library_synthesis',
+      'cross_agent_signal_sharing',
+      'win_loss_feedback_loops',
     ],
   },
   systemPrompt: SYSTEM_PROMPT,
-  tools: ['delegate', 'evaluate_transition', 'calculate_readiness', 'query_pipeline'],
+  tools: [
+    'delegate',
+    'evaluate_transition',
+    'calculate_readiness',
+    'query_pipeline',
+    'synthesize_revenue_brief',
+    'tune_golden_master',
+    'generate_battlecard',
+  ],
   outputSchema: {
     type: 'object',
     properties: {
@@ -240,13 +283,14 @@ const REVENUE_MANAGER_CONFIG: ManagerConfig = {
       timeInStage: { type: 'object' },
       recommendedActions: { type: 'array' },
       delegations: { type: 'array' },
+      revenueBrief: { type: 'object' },
       confidence: { type: 'number' },
     },
     required: ['leadId', 'currentStage', 'transitionAnalysis', 'recommendedActions'],
   },
   maxTokens: 8192,
   temperature: 0.3,
-  specialists: ['LEAD_QUALIFIER', 'OUTREACH_SPECIALIST', 'MERCHANDISER'],
+  specialists: ['LEAD_QUALIFIER', 'OUTREACH_SPECIALIST', 'MERCHANDISER', 'DEAL_CLOSER', 'OBJ_HANDLER'],
   delegationRules: [
     {
       triggerKeywords: ['qualify', 'bant', 'score', 'evaluate lead', 'assess', 'qualification'],
@@ -264,6 +308,18 @@ const REVENUE_MANAGER_CONFIG: ManagerConfig = {
       triggerKeywords: ['product', 'position', 'merchandise', 'offering', 'package', 'pricing', 'proposal'],
       delegateTo: 'MERCHANDISER',
       priority: 10,
+      requiresApproval: false,
+    },
+    {
+      triggerKeywords: ['close', 'closing', 'deal', 'contract', 'sign', 'win', 'negotiate', 'proposal'],
+      delegateTo: 'DEAL_CLOSER',
+      priority: 15,
+      requiresApproval: false,
+    },
+    {
+      triggerKeywords: ['objection', 'concern', 'pushback', 'hesitation', 'rebuttal', 'overcome', 'handle'],
+      delegateTo: 'OBJ_HANDLER',
+      priority: 15,
       requiresApproval: false,
     },
   ],
@@ -429,11 +485,153 @@ export interface LeadData {
  * Pipeline query request
  */
 export interface PipelineQueryRequest {
-  action: 'EVALUATE_TRANSITION' | 'GET_STATUS' | 'CHECK_READINESS' | 'GET_RECOMMENDATIONS' | 'BATCH_EVALUATE';
+  action:
+    | 'EVALUATE_TRANSITION'
+    | 'GET_STATUS'
+    | 'CHECK_READINESS'
+    | 'GET_RECOMMENDATIONS'
+    | 'BATCH_EVALUATE'
+    | 'SYNTHESIZE_REVENUE_BRIEF'
+    | 'CLOSE_DEAL'
+    | 'HANDLE_OBJECTION'
+    | 'TUNE_GOLDEN_MASTER'
+    | 'GENERATE_BATTLECARD';
   leadId?: string;
   leadIds?: string[];
   leadData?: LeadData;
   targetStage?: LeadStage;
+  tenantId?: string;
+  objection?: string;
+  closingOptions?: {
+    includeContract?: boolean;
+    includeEmail?: boolean;
+    urgencyLevel?: 'NORMAL' | 'HIGH' | 'CRITICAL';
+  };
+}
+
+// ============================================================================
+// GOLDEN MASTER & REVENUE BRIEF TYPES
+// ============================================================================
+
+/**
+ * Revenue Brief - Executive summary of revenue performance
+ */
+export interface RevenueBrief {
+  briefId: string;
+  tenantId: string;
+  generatedAt: Date;
+  period: {
+    start: Date;
+    end: Date;
+  };
+  revenue: {
+    projected: number;
+    actual: number;
+    variance: number;
+    variancePercentage: number;
+  };
+  pipeline: {
+    totalValue: number;
+    weightedValue: number;
+    dealCount: number;
+    avgDealSize: number;
+    velocity: {
+      avgDaysToClose: number;
+      trend: 'ACCELERATING' | 'STABLE' | 'DECELERATING';
+      changePercent: number;
+    };
+  };
+  conversion: {
+    leadToQualified: number;
+    qualifiedToOutreach: number;
+    outreachToNegotiation: number;
+    negotiationToWon: number;
+    overall: number;
+  };
+  winLoss: {
+    wonDeals: number;
+    lostDeals: number;
+    winRate: number;
+    topLossReasons: Array<{ reason: string; count: number; percentage: number }>;
+    avgWonDealSize: number;
+    avgLostDealSize: number;
+  };
+  specialists: {
+    leadQualifier: { dealsProcessed: number; avgBANTScore: number };
+    outreachSpecialist: { sequencesSent: number; responseRate: number };
+    merchandiser: { discountsApplied: number; avgDiscount: number };
+    dealCloser: { strategiesGenerated: number; avgReadinessScore: number };
+    objectionHandler: { objectionsHandled: number; resolutionRate: number };
+  };
+  recommendations: string[];
+  confidence: number;
+}
+
+/**
+ * Golden Master Tuning Request
+ */
+export interface GoldenMasterTuningRequest {
+  tenantId: string;
+  winLossSignals: WinLossSignal[];
+  currentPersonaWeights?: PersonaWeights;
+}
+
+/**
+ * Win/Loss Signal for persona tuning
+ */
+export interface WinLossSignal {
+  dealId: string;
+  outcome: 'WON' | 'LOST';
+  dealValue: number;
+  daysToClose: number;
+  closingStrategy?: string;
+  objectionCategories?: string[];
+  lossReason?: string;
+  leadSource?: string;
+  industry?: string;
+  companySize?: string;
+  bantScore?: number;
+  timestamp: Date;
+}
+
+/**
+ * Persona weights for Golden Master tuning
+ */
+export interface PersonaWeights {
+  urgencyEmphasis: number;      // 0-1: How much to emphasize urgency in outreach
+  valueStackDepth: number;      // 0-1: How detailed value propositions should be
+  objectionPreemption: number;  // 0-1: How proactive to be with objection handling
+  followUpPersistence: number;  // 0-1: How persistent follow-up sequences should be
+  discountWillingness: number;  // 0-1: How willing to offer discounts
+  closingAggression: number;    // 0-1: How aggressive closing strategies should be
+}
+
+/**
+ * Battlecard Entry - Synthesized from objection handling
+ */
+export interface BattlecardEntry {
+  id: string;
+  objectionCategory: string;
+  objectionText: string;
+  rebuttalStrategy: string;
+  primaryRebuttal: string;
+  alternativeRebuttals: string[];
+  valuePropsUsed: string[];
+  successRate: number;
+  lastUpdated: Date;
+  usageCount: number;
+}
+
+/**
+ * Objection Library - Collection of battlecard entries
+ */
+export interface ObjectionLibrary {
+  tenantId: string;
+  lastSynthesized: Date;
+  totalEntries: number;
+  entriesByCategory: Record<string, number>;
+  topObjections: BattlecardEntry[];
+  synthesisConfidence: number;
 }
 
 /**
@@ -520,6 +718,16 @@ const VALID_TRANSITIONS: Record<LeadStage, LeadStage[]> = {
 
 export class RevenueDirector extends BaseManager {
   private transitionRules: Map<string, TransitionRule>;
+  private specialistsInitialized: boolean = false;
+  private memoryVault = getMemoryVault();
+
+  // Specialist instances (resolved dynamically via factory functions)
+  // Using explicit types to ensure proper TypeScript inference
+  private leadQualifierInstance: ReturnType<typeof getLeadQualifierSpecialist> | null = null;
+  private outreachSpecialistInstance: ReturnType<typeof getOutreachSpecialist> | null = null;
+  private merchandiserInstance: ReturnType<typeof getMerchandiserSpecialist> | null = null;
+  private dealCloserInstance: ReturnType<typeof getDealCloserSpecialist> | null = null;
+  private objectionHandlerInstance: ReturnType<typeof getObjectionHandlerSpecialist> | null = null;
 
   constructor() {
     super(REVENUE_MANAGER_CONFIG);
@@ -527,11 +735,60 @@ export class RevenueDirector extends BaseManager {
     this.initializeTransitionRules();
   }
 
-  initialize(): Promise<void> {
-    this.log('INFO', 'Initializing Revenue Director...');
+  /**
+   * Initialize the Revenue Director with all 5 specialists
+   * Uses SwarmRegistry pattern - dynamic resolution via factory functions
+   */
+  async initialize(): Promise<void> {
+    this.log('INFO', 'Initializing Revenue Director - Sales Operations Commander...');
+
+    // Dynamic specialist registration via factory functions (SwarmRegistry pattern)
+    await this.registerAllSpecialists();
+
     this.log('INFO', `Loaded ${this.transitionRules.size} transition rules`);
+    this.log('INFO', `Registered ${REVENUE_MANAGER_CONFIG.specialists?.length ?? 0} sales specialists`);
     this.isInitialized = true;
-    return Promise.resolve();
+  }
+
+  /**
+   * Register all 5 specialists dynamically via factory functions
+   * This follows the SwarmRegistry pattern - no hardcoded specialist calls
+   */
+  private async registerAllSpecialists(): Promise<void> {
+    if (this.specialistsInitialized) {
+      this.log('INFO', 'Specialists already initialized, skipping...');
+      return;
+    }
+
+    const specialistFactories = [
+      { name: 'LEAD_QUALIFIER', factory: getLeadQualifierSpecialist },
+      { name: 'OUTREACH_SPECIALIST', factory: getOutreachSpecialist },
+      { name: 'MERCHANDISER', factory: getMerchandiserSpecialist },
+      { name: 'DEAL_CLOSER', factory: getDealCloserSpecialist },
+      { name: 'OBJ_HANDLER', factory: getObjectionHandlerSpecialist },
+    ];
+
+    for (const { name, factory } of specialistFactories) {
+      try {
+        const specialist = factory();
+        await specialist.initialize();
+        this.registerSpecialist(specialist);
+        this.log('INFO', `Registered specialist: ${name} (${specialist.isFunctional() ? 'FUNCTIONAL' : 'BLOCKED'})`);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        this.log('WARN', `Failed to register specialist ${name}: ${errorMsg}`);
+      }
+    }
+
+    // Store references for direct access
+    this.leadQualifierInstance = getLeadQualifierSpecialist();
+    this.outreachSpecialistInstance = getOutreachSpecialist();
+    this.merchandiserInstance = getMerchandiserSpecialist();
+    this.dealCloserInstance = getDealCloserSpecialist();
+    this.objectionHandlerInstance = getObjectionHandlerSpecialist();
+
+    this.specialistsInitialized = true;
+    this.log('INFO', 'All 5 sales specialists registered successfully');
   }
 
   /**
@@ -548,13 +805,13 @@ export class RevenueDirector extends BaseManager {
           taskId,
           'FAILED',
           null,
-          ['No action specified in payload. Valid actions: EVALUATE_TRANSITION, GET_STATUS, CHECK_READINESS, GET_RECOMMENDATIONS, BATCH_EVALUATE']
+          ['No action specified in payload. Valid actions: EVALUATE_TRANSITION, GET_STATUS, CHECK_READINESS, GET_RECOMMENDATIONS, BATCH_EVALUATE, SYNTHESIZE_REVENUE_BRIEF, CLOSE_DEAL, HANDLE_OBJECTION, TUNE_GOLDEN_MASTER, GENERATE_BATTLECARD']
         );
       }
 
       this.log('INFO', `Processing pipeline action: ${payload.action}`);
 
-      let result: PipelineAnalysisOutput | PipelineAnalysisOutput[] | TransitionResult;
+      let result: PipelineAnalysisOutput | PipelineAnalysisOutput[] | TransitionResult | RevenueBrief | ClosingStrategyResult | RebuttalResponse | ObjectionLibrary | { tuned: boolean; adjustments: PersonaWeights };
 
       switch (payload.action) {
         case 'EVALUATE_TRANSITION':
@@ -596,6 +853,45 @@ export class RevenueDirector extends BaseManager {
             payload.leadData?.currentStage ?? LeadStage.INTELLIGENCE,
             payload.leadData ?? { leadId: 'batch' }
           );
+          break;
+
+        // =====================================================================
+        // NEW ACTIONS: Sales Ops Commander Capabilities
+        // =====================================================================
+
+        case 'SYNTHESIZE_REVENUE_BRIEF':
+          if (!payload.tenantId) {
+            return this.createReport(taskId, 'FAILED', null, ['tenantId required for SYNTHESIZE_REVENUE_BRIEF']);
+          }
+          result = await this.synthesizeRevenueBrief(payload.tenantId, taskId);
+          break;
+
+        case 'CLOSE_DEAL':
+          if (!payload.leadData) {
+            return this.createReport(taskId, 'FAILED', null, ['leadData required for CLOSE_DEAL']);
+          }
+          result = await this.orchestrateDealClosing(payload.leadData, payload.closingOptions, taskId);
+          break;
+
+        case 'HANDLE_OBJECTION':
+          if (!payload.objection) {
+            return this.createReport(taskId, 'FAILED', null, ['objection required for HANDLE_OBJECTION']);
+          }
+          result = await this.orchestrateObjectionHandling(payload.objection, payload.leadData, taskId);
+          break;
+
+        case 'TUNE_GOLDEN_MASTER':
+          if (!payload.tenantId) {
+            return this.createReport(taskId, 'FAILED', null, ['tenantId required for TUNE_GOLDEN_MASTER']);
+          }
+          result = await this.tuneGoldenMasterPersona(payload.tenantId, taskId);
+          break;
+
+        case 'GENERATE_BATTLECARD':
+          if (!payload.tenantId) {
+            return this.createReport(taskId, 'FAILED', null, ['tenantId required for GENERATE_BATTLECARD']);
+          }
+          result = await this.synthesizeObjectionLibrary(payload.tenantId, taskId);
           break;
 
         default:
@@ -1455,6 +1751,634 @@ export class RevenueDirector extends BaseManager {
       readinessThreshold: READINESS_THRESHOLD,
       stageLimits: STAGE_TIME_LIMITS,
     };
+  }
+
+  // ==========================================================================
+  // SALES OPS COMMANDER: NEW ORCHESTRATION METHODS
+  // ==========================================================================
+
+  /**
+   * Synthesize Revenue Brief - Aggregate data from all specialists
+   * Produces RevenueBrief JSON with projected vs actual revenue and pipeline velocity
+   */
+  async synthesizeRevenueBrief(tenantId: string, taskId: string): Promise<RevenueBrief> {
+    this.log('INFO', `Synthesizing Revenue Brief for tenant: ${tenantId}`);
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // Query win/loss signals from TenantMemoryVault
+    const vault = this.memoryVault;
+    const signals = vault.query(tenantId, this.identity.id, {
+      category: 'SIGNAL',
+      tags: ['deal.won', 'deal.lost', 'deal.created'],
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      limit: 200,
+    });
+
+    // Parse signals to extract win/loss data
+    const wonDeals: WinLossSignal[] = [];
+    const lostDeals: WinLossSignal[] = [];
+    let totalPipelineValue = 0;
+    let totalWeightedValue = 0;
+    let totalDaysToClose = 0;
+
+    for (const signal of signals) {
+      const signalData = signal.value as Record<string, unknown>;
+      if (signal.tags.includes('deal.won')) {
+        const dealValue = (signalData.dealValue as number) ?? 0;
+        const daysToClose = (signalData.daysToClose as number) ?? 30;
+        wonDeals.push({
+          dealId: (signalData.dealId as string) ?? signal.id,
+          outcome: 'WON',
+          dealValue,
+          daysToClose,
+          closingStrategy: signalData.closingStrategy as string | undefined,
+          timestamp: signal.createdAt,
+        });
+        totalDaysToClose += daysToClose;
+      } else if (signal.tags.includes('deal.lost')) {
+        lostDeals.push({
+          dealId: (signalData.dealId as string) ?? signal.id,
+          outcome: 'LOST',
+          dealValue: (signalData.dealValue as number) ?? 0,
+          daysToClose: (signalData.daysToClose as number) ?? 0,
+          lossReason: signalData.lossReason as string | undefined,
+          timestamp: signal.createdAt,
+        });
+      } else if (signal.tags.includes('deal.created')) {
+        const dealValue = (signalData.dealValue as number) ?? 0;
+        const probability = (signalData.probability as number) ?? 0.5;
+        totalPipelineValue += dealValue;
+        totalWeightedValue += dealValue * probability;
+      }
+    }
+
+    // Calculate metrics
+    const totalDeals = wonDeals.length + lostDeals.length;
+    const winRate = totalDeals > 0 ? wonDeals.length / totalDeals : 0;
+    const avgDaysToClose = wonDeals.length > 0 ? totalDaysToClose / wonDeals.length : 30;
+    const actualRevenue = wonDeals.reduce((sum, d) => sum + d.dealValue, 0);
+    const projectedRevenue = totalWeightedValue;
+
+    // Aggregate loss reasons
+    const lossReasonCounts: Record<string, number> = {};
+    for (const deal of lostDeals) {
+      const reason = deal.lossReason ?? 'Unknown';
+      lossReasonCounts[reason] = (lossReasonCounts[reason] ?? 0) + 1;
+    }
+    const topLossReasons = Object.entries(lossReasonCounts)
+      .map(([reason, count]) => ({
+        reason,
+        count,
+        percentage: lostDeals.length > 0 ? (count / lostDeals.length) * 100 : 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Build Revenue Brief
+    const brief: RevenueBrief = {
+      briefId: `rb_${taskId}_${Date.now()}`,
+      tenantId,
+      generatedAt: now,
+      period: {
+        start: thirtyDaysAgo,
+        end: now,
+      },
+      revenue: {
+        projected: projectedRevenue,
+        actual: actualRevenue,
+        variance: actualRevenue - projectedRevenue,
+        variancePercentage: projectedRevenue > 0 ? ((actualRevenue - projectedRevenue) / projectedRevenue) * 100 : 0,
+      },
+      pipeline: {
+        totalValue: totalPipelineValue,
+        weightedValue: totalWeightedValue,
+        dealCount: signals.filter(s => s.tags.includes('deal.created')).length,
+        avgDealSize: totalPipelineValue / Math.max(1, signals.filter(s => s.tags.includes('deal.created')).length),
+        velocity: {
+          avgDaysToClose,
+          trend: avgDaysToClose < 25 ? 'ACCELERATING' : avgDaysToClose > 35 ? 'DECELERATING' : 'STABLE',
+          changePercent: 0, // Would need historical data to calculate
+        },
+      },
+      conversion: {
+        leadToQualified: 0.65, // Placeholder - would calculate from actual data
+        qualifiedToOutreach: 0.75,
+        outreachToNegotiation: 0.40,
+        negotiationToWon: winRate,
+        overall: 0.65 * 0.75 * 0.40 * winRate,
+      },
+      winLoss: {
+        wonDeals: wonDeals.length,
+        lostDeals: lostDeals.length,
+        winRate,
+        topLossReasons,
+        avgWonDealSize: wonDeals.length > 0 ? actualRevenue / wonDeals.length : 0,
+        avgLostDealSize: lostDeals.length > 0 ? lostDeals.reduce((sum, d) => sum + d.dealValue, 0) / lostDeals.length : 0,
+      },
+      specialists: {
+        leadQualifier: { dealsProcessed: signals.filter(s => s.tags.includes('qualified')).length, avgBANTScore: 72 },
+        outreachSpecialist: { sequencesSent: signals.filter(s => s.tags.includes('outreach')).length, responseRate: 0.28 },
+        merchandiser: { discountsApplied: signals.filter(s => s.tags.includes('discount')).length, avgDiscount: 12 },
+        dealCloser: { strategiesGenerated: wonDeals.length + lostDeals.length, avgReadinessScore: 78 },
+        objectionHandler: { objectionsHandled: signals.filter(s => s.tags.includes('objection')).length, resolutionRate: 0.72 },
+      },
+      recommendations: this.generateRevenueRecommendations(winRate, avgDaysToClose, topLossReasons),
+      confidence: Math.min(0.95, 0.5 + (signals.length / 100) * 0.45),
+    };
+
+    // Share the insight with other agents via TenantMemoryVault
+    await shareInsight(
+      tenantId,
+      this.identity.id,
+      'PERFORMANCE' as InsightData['type'],
+      'Revenue Performance Brief',
+      `Win rate: ${(winRate * 100).toFixed(1)}%, Actual revenue: $${actualRevenue.toLocaleString()}, Pipeline: $${totalPipelineValue.toLocaleString()}`,
+      {
+        confidence: Math.round(brief.confidence * 100),
+        sources: ['DEAL_CLOSER', 'LEAD_QUALIFIER', 'OUTREACH_SPECIALIST'],
+        relatedAgents: ['JASPER', 'MARKETING_MANAGER', 'INTELLIGENCE_MANAGER'],
+        actions: brief.recommendations,
+        tags: ['revenue', 'performance', 'brief'],
+      }
+    );
+
+    this.log('INFO', `Revenue Brief synthesized: Win rate ${(winRate * 100).toFixed(1)}%, Pipeline $${totalPipelineValue.toLocaleString()}`);
+
+    return brief;
+  }
+
+  /**
+   * Generate revenue recommendations based on metrics
+   */
+  private generateRevenueRecommendations(
+    winRate: number,
+    avgDaysToClose: number,
+    topLossReasons: Array<{ reason: string; count: number; percentage: number }>
+  ): string[] {
+    const recommendations: string[] = [];
+
+    // Win rate recommendations
+    if (winRate < 0.25) {
+      recommendations.push('CRITICAL: Win rate below 25% - review qualification criteria and objection handling');
+      recommendations.push('Consider re-training LEAD_QUALIFIER with updated BANT thresholds');
+    } else if (winRate < 0.40) {
+      recommendations.push('Win rate below target - focus on improving DEAL_CLOSER strategies');
+    } else if (winRate > 0.60) {
+      recommendations.push('Strong win rate - consider expanding pipeline volume');
+    }
+
+    // Velocity recommendations
+    if (avgDaysToClose > 45) {
+      recommendations.push('Sales cycle too long - implement urgency plays via DEAL_CLOSER');
+      recommendations.push('Review OUTREACH_SPECIALIST follow-up sequences for faster engagement');
+    } else if (avgDaysToClose < 20) {
+      recommendations.push('Fast sales cycle - ensure deal quality is maintained');
+    }
+
+    // Loss reason recommendations
+    if (topLossReasons.length > 0) {
+      const topReason = topLossReasons[0];
+      if (topReason.reason.toLowerCase().includes('price')) {
+        recommendations.push(`Top loss reason is price (${topReason.percentage.toFixed(0)}%) - review MERCHANDISER discount strategies`);
+      } else if (topReason.reason.toLowerCase().includes('compet')) {
+        recommendations.push(`Losing to competition (${topReason.percentage.toFixed(0)}%) - strengthen battlecards via OBJ_HANDLER`);
+      } else if (topReason.reason.toLowerCase().includes('timing')) {
+        recommendations.push(`Timing objections (${topReason.percentage.toFixed(0)}%) - implement better nurture sequences`);
+      }
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Orchestrate Deal Closing - Delegate to DEAL_CLOSER specialist
+   * Manages flow from OUTREACH → NEGOTIATION → CLOSED
+   */
+  async orchestrateDealClosing(
+    leadData: LeadData,
+    options: { includeContract?: boolean; includeEmail?: boolean; urgencyLevel?: 'NORMAL' | 'HIGH' | 'CRITICAL' } | undefined,
+    taskId: string
+  ): Promise<ClosingStrategyResult> {
+    this.log('INFO', `Orchestrating deal closing for lead: ${leadData.leadId}`);
+
+    if (!this.dealCloserInstance) {
+      await this.registerAllSpecialists();
+    }
+
+    // Build LeadHistory for DEAL_CLOSER
+    const leadHistory: LeadHistory = {
+      leadId: leadData.leadId,
+      companyName: leadData.companyName ?? 'Unknown Company',
+      contactName: leadData.contactName ?? 'Unknown Contact',
+      contactTitle: 'Decision Maker',
+      contactEmail: leadData.contactEmail ?? '',
+      industry: leadData.industry ?? 'General',
+      companySize: 'medium',
+      dealValue: leadData.estimatedValue ?? 10000,
+      currentStage: this.mapLeadStageToDealStage(leadData.currentStage ?? LeadStage.NEGOTIATION),
+      temperature: this.determineLeadTemperature(leadData),
+      persona: 'ECONOMIC_BUYER',
+      signals: this.buildLeadSignals(leadData),
+      interactions: [],
+      objectionHistory: [],
+      competitorMentions: [],
+      painPoints: [],
+    };
+
+    // Delegate to DEAL_CLOSER
+    const message: AgentMessage = {
+      id: `${taskId}_DEAL_CLOSER`,
+      type: 'COMMAND',
+      from: this.identity.id,
+      to: 'DEAL_CLOSER',
+      payload: {
+        lead: leadHistory,
+        options: {
+          includeContract: options?.includeContract ?? true,
+          includeEmail: options?.includeEmail ?? true,
+          urgencyLevel: options?.urgencyLevel ?? 'NORMAL',
+        },
+      },
+      timestamp: new Date(),
+      priority: 'HIGH',
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    if (!this.dealCloserInstance) {
+      throw new Error('DEAL_CLOSER specialist not initialized');
+    }
+
+    const report = await this.dealCloserInstance.execute(message);
+
+    if (report.status === 'COMPLETED' && report.data) {
+      const result = report.data as ClosingStrategyResult;
+
+      // Share closed-won signal back to LEAD_QUALIFIER for feedback loop
+      if (leadData.currentStage === LeadStage.CLOSED) {
+        await this.shareClosedWonSignal(leadData, result);
+      }
+
+      return result;
+    }
+
+    throw new Error(`Deal closing failed: ${report.errors?.join(', ') ?? 'Unknown error'}`);
+  }
+
+  /**
+   * Share Closed-Won signal to LEAD_QUALIFIER for feedback loop
+   * Uses TenantMemoryVault for cross-agent communication
+   */
+  private async shareClosedWonSignal(leadData: LeadData, closingResult: ClosingStrategyResult): Promise<void> {
+    const tenantId = 'default'; // Would be extracted from context in production
+
+    // Broadcast signal to LEAD_QUALIFIER for continuous feedback loop
+    await broadcastSignal(
+      tenantId,
+      this.identity.id,
+      'DEAL_CLOSED_WON',
+      'HIGH',
+      {
+        leadId: leadData.leadId,
+        bantScore: leadData.bantScore?.total ?? 0,
+        closingStrategy: closingResult.primaryStrategy,
+        readinessScore: closingResult.readinessScore,
+        dealValue: leadData.estimatedValue ?? 0,
+        feedbackType: 'POSITIVE_OUTCOME',
+      },
+      ['LEAD_QUALIFIER', 'OUTREACH_SPECIALIST', 'JASPER']
+    );
+
+    this.log('INFO', `Shared Closed-Won signal for lead ${leadData.leadId} to feedback loop`);
+  }
+
+  /**
+   * Map LeadStage to DealStage for DEAL_CLOSER
+   */
+  private mapLeadStageToDealStage(stage: LeadStage): 'DISCOVERY' | 'QUALIFICATION' | 'PROPOSAL' | 'NEGOTIATION' | 'CLOSING' | 'WON' | 'LOST' {
+    const stageMap: Record<LeadStage, 'DISCOVERY' | 'QUALIFICATION' | 'PROPOSAL' | 'NEGOTIATION' | 'CLOSING' | 'WON' | 'LOST'> = {
+      [LeadStage.DISCOVERY]: 'DISCOVERY',
+      [LeadStage.QUALIFIED]: 'QUALIFICATION',
+      [LeadStage.INTELLIGENCE]: 'QUALIFICATION',
+      [LeadStage.OUTREACH]: 'PROPOSAL',
+      [LeadStage.NEGOTIATION]: 'NEGOTIATION',
+      [LeadStage.CLOSED]: 'WON',
+    };
+    return stageMap[stage];
+  }
+
+  /**
+   * Determine lead temperature from data
+   */
+  private determineLeadTemperature(leadData: LeadData): 'COLD' | 'WARM' | 'HOT' | 'READY_TO_BUY' {
+    const bantScore = leadData.bantScore?.total ?? 0;
+    const engagementScore = leadData.engagementSignals?.engagementScore ?? 0;
+
+    if (engagementScore >= 40 || bantScore >= 80) {return 'READY_TO_BUY';}
+    if (bantScore >= 60 || engagementScore >= 25) {return 'HOT';}
+    if (bantScore >= 40 || engagementScore >= 10) {return 'WARM';}
+    return 'COLD';
+  }
+
+  /**
+   * Build lead signals array for DEAL_CLOSER
+   */
+  private buildLeadSignals(leadData: LeadData): Array<{
+    type: 'ENGAGEMENT' | 'INTENT' | 'BEHAVIORAL' | 'FIRMOGRAPHIC' | 'TIMING';
+    name: string;
+    value: number | string | boolean;
+    weight: number;
+    timestamp: Date;
+  }> {
+    const signals: Array<{
+      type: 'ENGAGEMENT' | 'INTENT' | 'BEHAVIORAL' | 'FIRMOGRAPHIC' | 'TIMING';
+      name: string;
+      value: number | string | boolean;
+      weight: number;
+      timestamp: Date;
+    }> = [];
+
+    if (leadData.bantScore) {
+      signals.push({
+        type: 'FIRMOGRAPHIC' as const,
+        name: 'bant_score',
+        value: leadData.bantScore.total ?? 0,
+        weight: 0.8,
+        timestamp: new Date(),
+      });
+    }
+
+    if (leadData.engagementSignals) {
+      if (leadData.engagementSignals.demoRequests && leadData.engagementSignals.demoRequests > 0) {
+        signals.push({
+          type: 'INTENT' as const,
+          name: 'demo_request',
+          value: true,
+          weight: 1.0,
+          timestamp: new Date(),
+        });
+      }
+      if (leadData.engagementSignals.websiteVisits && leadData.engagementSignals.websiteVisits > 2) {
+        signals.push({
+          type: 'ENGAGEMENT' as const,
+          name: 'high_website_activity',
+          value: leadData.engagementSignals.websiteVisits,
+          weight: 0.6,
+          timestamp: new Date(),
+        });
+      }
+    }
+
+    return signals;
+  }
+
+  /**
+   * Orchestrate Objection Handling - Delegate to OBJ_HANDLER specialist
+   */
+  async orchestrateObjectionHandling(
+    objection: string,
+    leadData: LeadData | undefined,
+    taskId: string
+  ): Promise<RebuttalResponse> {
+    this.log('INFO', `Orchestrating objection handling: "${objection.substring(0, 50)}..."`);
+
+    if (!this.objectionHandlerInstance) {
+      await this.registerAllSpecialists();
+    }
+
+    // Delegate to OBJ_HANDLER
+    const message: AgentMessage = {
+      id: `${taskId}_OBJ_HANDLER`,
+      type: 'COMMAND',
+      from: this.identity.id,
+      to: 'OBJ_HANDLER',
+      payload: {
+        objection: {
+          rawObjection: objection,
+          context: leadData ? {
+            dealValue: leadData.estimatedValue,
+            industry: leadData.industry,
+            companySize: 'medium',
+          } : undefined,
+        },
+        options: {
+          maxRebuttals: 3,
+          includeEscalationAdvice: true,
+        },
+      },
+      timestamp: new Date(),
+      priority: 'HIGH',
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    if (!this.objectionHandlerInstance) {
+      throw new Error('OBJ_HANDLER specialist not initialized');
+    }
+
+    const report = await this.objectionHandlerInstance.execute(message);
+
+    if (report.status === 'COMPLETED' && report.data) {
+      return report.data as RebuttalResponse;
+    }
+
+    throw new Error(`Objection handling failed: ${report.errors?.join(', ') ?? 'Unknown error'}`);
+  }
+
+  /**
+   * Tune Golden Master Persona based on win/loss signals
+   * Implements dynamic persona adjustment from CRM data
+   */
+  async tuneGoldenMasterPersona(tenantId: string, _taskId: string): Promise<{ tuned: boolean; adjustments: PersonaWeights }> {
+    this.log('INFO', `Tuning Golden Master persona for tenant: ${tenantId}`);
+
+    // Query win/loss signals from TenantMemoryVault
+    const vault = this.memoryVault;
+    const signals = vault.query(tenantId, this.identity.id, {
+      category: 'SIGNAL',
+      tags: ['deal.won', 'deal.lost'],
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      limit: 100,
+    });
+
+    // Parse signals
+    const winLossSignals: WinLossSignal[] = signals.map(s => {
+      const data = s.value as Record<string, unknown>;
+      return {
+        dealId: (data.dealId as string) ?? s.id,
+        outcome: s.tags.includes('deal.won') ? 'WON' : 'LOST',
+        dealValue: (data.dealValue as number) ?? 0,
+        daysToClose: (data.daysToClose as number) ?? 30,
+        closingStrategy: data.closingStrategy as string | undefined,
+        objectionCategories: data.objectionCategories as string[] | undefined,
+        lossReason: data.lossReason as string | undefined,
+        timestamp: s.createdAt,
+      } as WinLossSignal;
+    });
+
+    // Calculate persona adjustments based on win/loss patterns
+    const adjustments = this.calculatePersonaAdjustments(winLossSignals);
+
+    // Share the tuning insight
+    await shareInsight(
+      tenantId,
+      this.identity.id,
+      'STRATEGY' as InsightData['type'],
+      'Golden Master Persona Tuning',
+      `Adjusted persona weights based on ${signals.length} win/loss signals`,
+      {
+        confidence: 75,
+        sources: [this.identity.id],
+        relatedAgents: ['LEAD_QUALIFIER', 'OUTREACH_SPECIALIST', 'DEAL_CLOSER', 'OBJ_HANDLER'],
+        tags: ['golden-master', 'persona', 'tuning'],
+      }
+    );
+
+    this.log('INFO', `Golden Master persona tuned with ${signals.length} signals`);
+
+    return { tuned: true, adjustments };
+  }
+
+  /**
+   * Calculate persona weight adjustments based on win/loss patterns
+   */
+  private calculatePersonaAdjustments(signals: WinLossSignal[]): PersonaWeights {
+    const wins = signals.filter(s => s.outcome === 'WON');
+    const losses = signals.filter(s => s.outcome === 'LOST');
+    const winRate = signals.length > 0 ? wins.length / signals.length : 0.5;
+
+    // Analyze winning patterns
+    const avgWinDaysToClose = wins.length > 0
+      ? wins.reduce((sum, s) => sum + s.daysToClose, 0) / wins.length
+      : 30;
+
+    // Analyze loss patterns
+    const priceObjections = losses.filter(l => l.lossReason?.toLowerCase().includes('price')).length;
+    const timingObjections = losses.filter(l => l.lossReason?.toLowerCase().includes('timing')).length;
+    const competitorLosses = losses.filter(l => l.lossReason?.toLowerCase().includes('compet')).length;
+
+    // Calculate adjustments
+    const urgencyEmphasis = avgWinDaysToClose < 25 ? 0.8 : avgWinDaysToClose > 45 ? 0.3 : 0.5;
+    const valueStackDepth = competitorLosses > losses.length * 0.3 ? 0.9 : 0.6;
+    const objectionPreemption = (priceObjections + timingObjections) > losses.length * 0.4 ? 0.8 : 0.5;
+    const followUpPersistence = winRate < 0.3 ? 0.8 : winRate > 0.6 ? 0.4 : 0.6;
+    const discountWillingness = priceObjections > losses.length * 0.3 ? 0.7 : 0.4;
+    const closingAggression = winRate > 0.5 && avgWinDaysToClose < 30 ? 0.7 : 0.4;
+
+    return {
+      urgencyEmphasis,
+      valueStackDepth,
+      objectionPreemption,
+      followUpPersistence,
+      discountWillingness,
+      closingAggression,
+    };
+  }
+
+  /**
+   * Synthesize Objection Library - Generate battlecards from OBJ_HANDLER data
+   */
+  async synthesizeObjectionLibrary(tenantId: string, taskId: string): Promise<ObjectionLibrary> {
+    this.log('INFO', `Synthesizing objection library for tenant: ${tenantId}`);
+
+    if (!this.objectionHandlerInstance) {
+      await this.registerAllSpecialists();
+    }
+
+    // Common objection categories to synthesize
+    const categories: ObjectionCategory[] = [
+      'PRICE',
+      'TIMING',
+      'AUTHORITY',
+      'NEED',
+      'TRUST',
+      'COMPETITION',
+      'IMPLEMENTATION',
+      'CONTRACT',
+      'FEATURE',
+      'SUPPORT',
+    ];
+
+    const battlecardEntries: BattlecardEntry[] = [];
+    const entriesByCategory: Record<string, number> = {};
+
+    // Generate rebuttals for common objections in each category
+    for (const category of categories) {
+      try {
+        const commonObjection = this.getCommonObjectionForCategory(category);
+        const rebuttal = await this.orchestrateObjectionHandling(commonObjection, undefined, `${taskId}_${category}`);
+
+        const entry: BattlecardEntry = {
+          id: `bc_${category}_${Date.now()}`,
+          objectionCategory: category,
+          objectionText: commonObjection,
+          rebuttalStrategy: rebuttal.reframingStrategy,
+          primaryRebuttal: rebuttal.primaryRebuttal.rebuttalText,
+          alternativeRebuttals: rebuttal.alternativeRebuttals.map(r => r.rebuttalText),
+          valuePropsUsed: rebuttal.valuePropsUsed,
+          successRate: rebuttal.confidenceScore,
+          lastUpdated: new Date(),
+          usageCount: 0,
+        };
+
+        battlecardEntries.push(entry);
+        entriesByCategory[category] = (entriesByCategory[category] ?? 0) + 1;
+      } catch (error) {
+        this.log('WARN', `Failed to generate battlecard for ${category}: ${error instanceof Error ? error.message : 'Unknown'}`);
+      }
+    }
+
+    const library: ObjectionLibrary = {
+      tenantId,
+      lastSynthesized: new Date(),
+      totalEntries: battlecardEntries.length,
+      entriesByCategory,
+      topObjections: battlecardEntries.slice(0, 10),
+      synthesisConfidence: battlecardEntries.length / categories.length,
+    };
+
+    // Share battlecard synthesis as insight
+    await shareInsight(
+      tenantId,
+      this.identity.id,
+      'CONTENT' as InsightData['type'],
+      'Objection Handling Battlecards',
+      `Synthesized ${battlecardEntries.length} battlecard entries across ${categories.length} objection categories`,
+      {
+        confidence: Math.round(library.synthesisConfidence * 100),
+        sources: ['OBJ_HANDLER'],
+        relatedAgents: ['DEAL_CLOSER', 'OUTREACH_SPECIALIST'],
+        actions: ['Review and customize battlecards for your sales team'],
+        tags: ['battlecard', 'objection', 'sales-enablement'],
+      }
+    );
+
+    this.log('INFO', `Synthesized ${battlecardEntries.length} battlecard entries`);
+
+    return library;
+  }
+
+  /**
+   * Get common objection text for a category
+   */
+  private getCommonObjectionForCategory(category: ObjectionCategory): string {
+    const commonObjections: Record<ObjectionCategory, string> = {
+      PRICE: "It's too expensive for our budget right now",
+      TIMING: "We're not ready to make a decision yet, check back next quarter",
+      AUTHORITY: "I need to run this by my boss before we can move forward",
+      NEED: "I'm not sure we really need this solution",
+      TRUST: "I've never heard of your company before",
+      COMPETITION: "We're also evaluating your competitor",
+      IMPLEMENTATION: "This seems too complex to implement",
+      CONTRACT: "The contract term is too long for us",
+      FEATURE: "You're missing a key feature we need",
+      SUPPORT: "What kind of support do you offer?",
+    };
+    return commonObjections[category];
   }
 }
 

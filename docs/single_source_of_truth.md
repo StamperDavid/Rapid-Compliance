@@ -227,7 +227,7 @@
 | OUTREACH_MANAGER | OutreachManager | Email & SMS | SHELL | Basic orchestration only |
 | CONTENT_MANAGER | ContentManager | Content Creation | SHELL | Basic orchestration only |
 | ARCHITECT_MANAGER | ArchitectManager | Site Architecture | ENHANCED SHELL | 100+ LOC with analysis logic |
-| REVENUE_DIRECTOR | RevenueDirector | Sales Ops | ENHANCED SHELL | Functional sales ops orchestration |
+| REVENUE_DIRECTOR | RevenueDirector | Sales Ops | FUNCTIONAL | **Sales Ops Commander** - 1800+ LOC with dynamic specialist resolution (5 specialists), Golden Master persona tuning, RevenueBrief synthesis, objection library battlecards, cross-agent signal sharing |
 | REPUTATION_MANAGER | ReputationManager | Trust & Reviews | SHELL | Basic orchestration only |
 
 > **Note:** "ENHANCED SHELL" managers have substantial internal logic but may not fully delegate to all specialists yet.
@@ -302,6 +302,26 @@
 | LEAD_QUALIFIER | LeadQualifierSpecialist | Lead scoring | FUNCTIONAL |
 | DEAL_CLOSER | DealCloserSpecialist | Closing strategies | FUNCTIONAL |
 | OBJ_HANDLER | ObjectionHandlerSpecialist | Objection handling | FUNCTIONAL |
+
+##### REVENUE_DIRECTOR Golden Master Tuning Logic
+
+The REVENUE_DIRECTOR implements dynamic persona adjustment based on win/loss signals from the CRM:
+
+**Persona Weight Adjustments:**
+- `urgencyEmphasis` (0-1): Increases when avg days-to-close < 25, decreases when > 45
+- `valueStackDepth` (0-1): Increases when competitor losses exceed 30% of total losses
+- `objectionPreemption` (0-1): Increases when price/timing objections exceed 40%
+- `followUpPersistence` (0-1): Increases when win rate < 30%, decreases when > 60%
+- `discountWillingness` (0-1): Increases when price objections exceed 30% of losses
+- `closingAggression` (0-1): Increases when win rate > 50% AND avg close < 30 days
+
+**Signal Sources:**
+- `deal.won` - Positive outcome signals from DEAL_CLOSER
+- `deal.lost` - Loss signals with reason analysis
+- TenantMemoryVault cross-agent communication
+
+**Feedback Loop:**
+DEAL_CLOSER closed-won signals are broadcast to LEAD_QUALIFIER for continuous BANT threshold optimization.
 
 #### Trust Domain (4)
 
