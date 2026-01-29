@@ -486,6 +486,17 @@ export class MarketingManager extends BaseManager {
     try {
       const payload = message.payload as CampaignGoal;
 
+      // SECURITY: Validate tenantId - multi-tenant scoping is mandatory
+      const tenantId = payload?.tenantId;
+      if (!tenantId) {
+        return this.createReport(
+          taskId,
+          'FAILED',
+          null,
+          ['tenantId is REQUIRED - multi-tenant scoping is mandatory']
+        );
+      }
+
       if (!payload?.message && !payload?.objective) {
         return this.createReport(
           taskId,
@@ -501,9 +512,8 @@ export class MarketingManager extends BaseManager {
       const campaignBrief = await this.orchestrateCampaign(payload, taskId, startTime);
 
       // Store insights in TenantMemoryVault for cross-agent learning
-      if (payload.tenantId) {
-        await this.storeCampaignInsights(payload.tenantId, campaignBrief);
-      }
+      // tenantId is validated above, so we can safely use it here
+      await this.storeCampaignInsights(tenantId, campaignBrief);
 
       return this.createReport(taskId, 'COMPLETED', campaignBrief);
     } catch (error) {

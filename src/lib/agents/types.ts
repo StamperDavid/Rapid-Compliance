@@ -58,6 +58,7 @@ export interface DelegationRule {
 // Signal Bus Types
 export interface Signal {
   id: string;
+  tenantId: string; // MANDATORY: Tenant scoping for multi-tenant isolation
   type: 'BROADCAST' | 'DIRECT' | 'BUBBLE_UP' | 'BUBBLE_DOWN';
   origin: string;
   target: string; // Agent ID, or broadcast targets: 'ALL' | 'MANAGERS' | 'SPECIALISTS'
@@ -70,6 +71,7 @@ export interface Signal {
 
 export interface SignalHandler {
   agentId: string;
+  tenantId: string; // Handler is scoped to a specific tenant
   canHandle: (signal: Signal) => boolean;
   handle: (signal: Signal) => Promise<AgentReport>;
 }
