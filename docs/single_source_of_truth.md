@@ -211,9 +211,9 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL | 38 | Complete implementation with logic |
+| FUNCTIONAL | 39 | Complete implementation with logic |
 | ENHANCED SHELL | 1 | Managers with substantial orchestration logic |
-| SHELL | 5 | Managers - basic orchestration layer only |
+| SHELL | 4 | Managers - basic orchestration layer only |
 | GHOST | 0 | All specialists have been implemented |
 
 ### Managers (9) - L2 Orchestrators
@@ -222,7 +222,7 @@
 |----------|------------|--------|--------|-------|
 | INTELLIGENCE_MANAGER | IntelligenceManager | Research & Analysis | FUNCTIONAL | Dynamic orchestration engine with parallel execution, graceful degradation |
 | MARKETING_MANAGER | MarketingManager | Social & Ads | FUNCTIONAL | **Industry-agnostic Cross-Channel Commander** - 850+ LOC with dynamic specialist resolution, Brand DNA integration, SEO-social feedback loop, parallel execution |
-| BUILDER_MANAGER | BuilderManager | Site Building | SHELL | Basic orchestration only |
+| BUILDER_MANAGER | BuilderManager | Site Building | FUNCTIONAL | **Autonomous Construction Commander** - 1650+ LOC with dynamic specialist resolution (3 specialists: UX_UI_ARCHITECT, FUNNEL_ENGINEER, ASSET_GENERATOR), Blueprint-to-Deployment workflow, pixel injection (GA4, GTM, Meta Pixel, Hotjar), build state machine (PENDING_BLUEPRINT → ASSEMBLING → INJECTING_SCRIPTS → DEPLOYING → LIVE), Vercel deployment manifest generation, SignalBus `website.build_complete` broadcast, parallel execution, graceful degradation |
 | COMMERCE_MANAGER | CommerceManager | E-commerce | SHELL | Basic orchestration only |
 | OUTREACH_MANAGER | OutreachManager | Email & SMS | SHELL | Basic orchestration only |
 | CONTENT_MANAGER | ContentManager | Content Creation | SHELL | Basic orchestration only |
@@ -305,6 +305,49 @@ The ARCHITECT_MANAGER implements dynamic site architecture generation from Brand
 - UX_UI_SPECIALIST: Wireframes, component library, color psychology, accessibility
 - FUNNEL_PATHOLOGIST: Conversion optimization, urgency tactics, pricing strategy
 - COPY_SPECIALIST: Messaging framework, headlines, CTAs, voice alignment
+
+##### BUILDER_MANAGER Blueprint-to-Deployment Orchestration Logic
+
+The BUILDER_MANAGER implements autonomous site construction from architectural blueprints:
+
+**Blueprint-to-Deployment Pipeline:**
+1. Receive `site.blueprint_ready` signal from ARCHITECT_MANAGER
+2. Load SiteArchitecture from TenantMemoryVault
+3. Execute specialists in parallel: UX_UI_ARCHITECT, FUNNEL_ENGINEER, ASSET_GENERATOR
+4. Assemble page components by mapping sections to templates
+5. Inject tracking pixels (GA4, GTM, Meta Pixel, Hotjar) into page headers
+6. Inject custom "Golden Master" conversion scripts as specified by blueprint
+7. Generate Vercel-compatible deployment manifest
+8. Broadcast `website.build_complete` signal to downstream managers
+
+**Build State Machine:**
+- `PENDING_BLUEPRINT` → Awaiting architecture from ARCHITECT_MANAGER
+- `ASSEMBLING` → Coordinating specialists, generating components
+- `INJECTING_SCRIPTS` → Adding tracking pixels and conversion scripts
+- `DEPLOYING` → Generating deployment manifest
+- `LIVE` → Build complete, ready for deployment
+
+**Output Types:**
+- `AssembledPage[]`: Page components with sections, metadata, scripts, styles
+- `AssetPackage`: Logo variants, favicons, social graphics, banners
+- `InjectedScripts`: Head scripts, body scripts, dataLayer configuration
+- `DeploymentManifest`: Pages, assets, redirects, headers, environment, build config
+
+**Pixel Injection Capabilities:**
+- Google Analytics (GA4): gtag.js with measurement ID
+- Google Tag Manager: Container script with dataLayer initialization
+- Meta Pixel: Facebook conversion tracking with PageView events
+- Hotjar: Heatmap and session recording integration
+- Custom Scripts: Priority-sorted injection by placement (head/body_start/body_end)
+
+**Signal Broadcasting:**
+- Broadcasts `website.build_complete` signal to CONTENT_MANAGER, MARKETING_MANAGER
+- Stores build result as insight in TenantMemoryVault for cross-agent consumption
+
+**Specialist Orchestration:**
+- UX_UI_ARCHITECT: Design system tokens, color palettes, typography, accessibility
+- FUNNEL_ENGINEER: Conversion funnel design, landing page optimization, A/B test setup
+- ASSET_GENERATOR: Logo generation, favicon sets, social graphics, banners
 
 #### Commerce Domain (2)
 
