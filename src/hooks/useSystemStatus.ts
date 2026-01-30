@@ -18,6 +18,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { auth } from '@/lib/firebase/config';
 import type {
   SystemStatusResponse,
   SystemAgentStatus,
@@ -56,6 +58,10 @@ export interface UseSystemStatusReturn {
   loading: boolean;
   /** Error message if fetch failed */
   error: string | null;
+  /** Connection error for 401/403 responses */
+  connectionError: 'unauthorized' | 'forbidden' | null;
+  /** Whether the user is authenticated */
+  isAuthenticated: boolean;
   /** Timestamp of last successful fetch */
   lastUpdated: Date | null;
   /** Manual refresh function */
@@ -124,18 +130,35 @@ export function useSystemStatus(
   const [insights, setInsights] = useState<SystemStatusResponse['insights']>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<'unauthorized' | 'forbidden' | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   // Refs for cleanup
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
+  const authUnsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Derived auth state
+  const isAuthenticated = authInitialized && currentUser !== null;
 
   /**
-   * Fetch system status from API
+   * Fetch system status from API with fresh Firebase ID token
    */
   const fetchStatus = useCallback(async (isManualRefresh = false) => {
     if (!mountedRef.current) {
+      return;
+    }
+
+    // Check if user is authenticated before making request
+    if (!auth?.currentUser) {
+      if (mountedRef.current) {
+        setError('Awaiting Authentication');
+        setLoading(false);
+        setConnectionError(null);
+      }
       return;
     }
 
@@ -144,6 +167,13 @@ export function useSystemStatus(
     }
 
     try {
+      // Get fresh Firebase ID token for each request (prevents token staleness)
+      const token = await auth.currentUser.getIdToken();
+
+      if (!token) {
+        throw new Error('Failed to retrieve authentication token');
+      }
+
       const url = tenantId
         ? `/api/system/status?tenantId=${encodeURIComponent(tenantId)}`
         : '/api/system/status';
@@ -152,11 +182,24 @@ export function useSystemStatus(
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
-        credentials: 'include',
       });
 
       if (!mountedRef.current) {
+        return;
+      }
+
+      // Handle auth-specific errors gracefully
+      if (response.status === 401) {
+        setConnectionError('unauthorized');
+        setError('Authentication required - please sign in');
+        return;
+      }
+
+      if (response.status === 403) {
+        setConnectionError('forbidden');
+        setError('Access denied - insufficient permissions');
         return;
       }
 
@@ -181,6 +224,7 @@ export function useSystemStatus(
         setInsights(data.insights);
         setLastUpdated(new Date());
         setError(null);
+        setConnectionError(null);
       } else {
         throw new Error('API returned unsuccessful response');
       }
@@ -209,26 +253,75 @@ export function useSystemStatus(
     await fetchStatus(true);
   }, [fetchStatus]);
 
-  // Initial fetch and polling setup
+  // Auth state listener - reactive to login/logout
   useEffect(() => {
-    mountedRef.current = true;
-
-    if (!enabled) {
-      setLoading(false);
+    if (!auth) {
+      setAuthInitialized(true);
       return;
     }
 
-    // Initial fetch
+    authUnsubscribeRef.current = onAuthStateChanged(auth, (user) => {
+      if (mountedRef.current) {
+        setCurrentUser(user);
+        setAuthInitialized(true);
+        // Clear connection errors when auth state changes
+        if (user) {
+          setConnectionError(null);
+        }
+      }
+    });
+
+    return () => {
+      mountedRef.current = false;
+      if (authUnsubscribeRef.current) {
+        authUnsubscribeRef.current();
+        authUnsubscribeRef.current = null;
+      }
+    };
+  }, []);
+
+  // Polling setup - only runs when authenticated and enabled
+  useEffect(() => {
+    mountedRef.current = true;
+
+    // Stop polling if disabled
+    if (!enabled) {
+      setLoading(false);
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    // Wait for auth to initialize
+    if (!authInitialized) {
+      return;
+    }
+
+    // If not authenticated, set awaiting state and don't poll
+    if (!currentUser) {
+      setError('Awaiting Authentication');
+      setLoading(false);
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    // Clear error when authenticated and fetch immediately
+    setError(null);
     void fetchStatus();
 
-    // Set up polling
+    // Set up polling interval
     if (pollingInterval > 0) {
       pollingRef.current = setInterval(() => {
         void fetchStatus();
       }, pollingInterval);
     }
 
-    // Cleanup
+    // Cleanup: clear interval on unmount or dependency change
     return () => {
       mountedRef.current = false;
       if (pollingRef.current) {
@@ -236,7 +329,7 @@ export function useSystemStatus(
         pollingRef.current = null;
       }
     };
-  }, [enabled, pollingInterval, fetchStatus]);
+  }, [enabled, pollingInterval, fetchStatus, authInitialized, currentUser]);
 
   // Helper function to filter agents by tier
   const getAgentsByTier = useCallback(
@@ -262,6 +355,8 @@ export function useSystemStatus(
     insights,
     loading,
     error,
+    connectionError,
+    isAuthenticated,
     lastUpdated,
     refresh,
     isRefreshing,

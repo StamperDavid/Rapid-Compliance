@@ -887,7 +887,7 @@ src/lib/agents/
 | ~~LOW~~ | ~~Inconsistent role naming (super_admin vs platform_admin)~~ | Multiple files | ✅ RESOLVED - Fully standardized to `platform_admin` across codebase. All source files updated, claims-validator provides runtime normalization for any legacy data. |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
 | LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
-| **CRITICAL** | Auth Handshake Failure: `useSystemStatus` hook missing Authorization header | `src/hooks/useSystemStatus.ts:151-157` | IDENTIFIED 2026-01-29 - Hook does not send Firebase ID Token. **RECOMMENDED FIX:** (1) Import `auth` from `@/lib/firebase/config`, (2) Get token via `await auth?.currentUser?.getIdToken()`, (3) Add header `Authorization: Bearer ${token}`. See `docs/debug-reports/2026-01-29-auth-handshake-failure.md` |
+| ~~CRITICAL~~ | ~~Auth Handshake Failure: `useSystemStatus` hook missing Authorization header~~ | `src/hooks/useSystemStatus.ts` | ✅ **RESOLVED 2026-01-29** - Implemented reactive auth handshake with fresh Firebase ID Token per request. Features: (1) `onAuthStateChanged` listener for reactive auth state, (2) `getIdToken()` called inside fetch for token freshness, (3) Auth-ready polling kill-switch, (4) Graceful 401/403 error handling via `connectionError` state, (5) Proper cleanup on unmount. `/api/system/status` is now **AUTHENTICATED-LIVE**. |
 
 ### Admin Account Bootstrap
 

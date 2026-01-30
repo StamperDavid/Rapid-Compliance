@@ -1,10 +1,32 @@
 # Forensic Debug Report: /api/system/status 401 Unauthorized
 
 **Date:** January 29, 2026
-**Severity:** CRITICAL
-**Status:** ROOT CAUSE IDENTIFIED
+**Severity:** ~~CRITICAL~~ → RESOLVED
+**Status:** ✅ FIX IMPLEMENTED
 **Branch:** dev
 **Auditor:** Multi-Agent Forensic Team (Frontend, Backend, Wiring Sub-Agents)
+
+---
+
+## Resolution Summary (2026-01-29)
+
+**Fix Applied:** Reactive Auth Handshake implemented in `useSystemStatus.ts`
+
+**Changes Made:**
+1. Imported `auth` from `@/lib/firebase/config` and `onAuthStateChanged` from Firebase
+2. Added `onAuthStateChanged` listener for reactive auth state tracking
+3. Implemented fresh token retrieval via `auth.currentUser.getIdToken()` per request
+4. Added auth-ready polling kill-switch (pauses when unauthenticated, resumes on login)
+5. Added `connectionError` state for graceful 401/403 handling
+6. Added `isAuthenticated` state for UI feedback
+7. Proper cleanup on unmount for both auth listener and polling interval
+
+**Verification:**
+- TypeScript build gate (`tsc --noEmit`): PASS
+- Cleanup Audit: PASS (memory leak prevention verified)
+- Wiring Verification: PASS (header format matches backend contract)
+
+---
 
 ---
 
