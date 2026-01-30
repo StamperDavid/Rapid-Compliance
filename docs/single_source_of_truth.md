@@ -21,7 +21,8 @@
 9. [Firestore Collections](#firestore-collections)
 10. [Architecture Notes](#architecture-notes)
 11. [Data Contracts Reference](#data-contracts-reference)
-12. [Document Maintenance](#document-maintenance)
+12. [Autonomous Verification](#autonomous-verification)
+13. [Document Maintenance](#document-maintenance)
 
 ---
 
@@ -2040,6 +2041,76 @@ interface AdminThemeConfig {
   branding: { platformName: string; logoUrl: string; primaryColor: string };
 }
 ```
+
+---
+
+## Autonomous Verification
+
+### Admin Gateway E2E Audit
+
+**Audit Date:** January 30, 2026
+**Test File:** `tests/e2e/admin-gateway.spec.ts`
+**Audit Method:** Playwright-driven E2E test + MCP browser manual verification
+
+#### Test Results Summary
+
+| Assertion | Description | Status | Evidence |
+|-----------|-------------|--------|----------|
+| 1 | Smart Redirect: platform_admin → /admin | **PASS** | URL verified as `/admin`, not `/workspace/...` |
+| 2 | UnifiedSidebar System Section | **PASS** | System section visible with 6 hard-gated items |
+| 3 | Admin Theme CSS Isolation | **PASS** | All CSS variables correctly scoped |
+
+#### Detailed Results
+
+##### Assertion 1: Smart Role-Based Redirect
+- **Commit Reference:** `950e5f08` (Smart role-based login redirection)
+- **Behavior:** Platform admin users are redirected to `/admin` after login
+- **Verification:** URL matches `/admin` pattern, does NOT contain `/workspace/`
+- **FOUC Prevention:** Redirecting state shows clean loading indicator
+
+##### Assertion 2: UnifiedSidebar System Section (Hard-Gated)
+- **Commit Reference:** `1a3c89f5` (Sidebar default collapsed state)
+- **System Section Items Verified:**
+  - System Overview (`/admin/system/health`)
+  - Organizations (`/admin/organizations`)
+  - All Users (`/admin/users`)
+  - Feature Flags (`/admin/system/flags`)
+  - Audit Logs (`/admin/system/logs`)
+  - System Settings (`/admin/system/settings`)
+- **Hard-Gate:** System section ONLY appears for `platform_admin` role
+
+##### Assertion 3: Admin Theme CSS Variable Isolation
+- **Scope Class:** `.admin-theme-scope` present on admin container
+- **CSS Variables Verified:**
+
+| Variable | Expected | Actual | Status |
+|----------|----------|--------|--------|
+| `--admin-color-primary` | `#6366f1` | `#6366f1` | PASS |
+| `--admin-color-bg-main` | `#000000` | `#000000` | PASS |
+| `--admin-color-bg-paper` | `#0a0a0a` | `#0a0a0a` | PASS |
+| `--admin-color-text-primary` | `#ffffff` | `#ffffff` | PASS |
+| `--color-primary` (scoped) | `#6366f1` | `#6366f1` | PASS |
+| `--color-bg-main` (scoped) | `#000000` | `#000000` | PASS |
+| `--color-bg-paper` (scoped) | `#0a0a0a` | `#0a0a0a` | PASS |
+
+- **Sidebar Background:** `rgb(10, 10, 10)` = `#0a0a0a` (matches expected)
+- **Theme Bleeding:** NONE detected - Admin theme is properly isolated from tenant themes
+
+#### Playwright Test Suite Status
+
+| Browser | Tests Passed | Tests Skipped | Tests Failed |
+|---------|--------------|---------------|--------------|
+| Chromium | 5 | 4 | 0 |
+| Mobile Chrome | 5 | 4 | 0 |
+
+*Note: Auth-dependent tests skipped due to E2E_ADMIN_EMAIL not configured in CI environment*
+
+#### Infrastructure Notes
+
+- **Test Isolation:** Playwright config uses `testMatch: '**/*.spec.ts'` to isolate from Jest E2E tests
+- **Admin Layout:** Uses `useAdminTheme` hook with scoped CSS variable application
+- **Fixed Positioning:** Sidebar applies theme variables directly via inline styles for proper inheritance
+- **Navigation Config:** `getNavigationForRole()` hard-gates System section to `platform_admin` only
 
 ---
 
