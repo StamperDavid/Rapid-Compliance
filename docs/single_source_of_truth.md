@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 30, 2026 (Admin Navigation Context + 43-Route Gap Analysis)
+**Last Updated:** January 30, 2026 (Admin Support Views: Integrations + Settings for org-level God Mode)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -32,7 +32,7 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 199 | Verified |
+| Physical Routes (page.tsx) | 201 | Verified |
 | API Endpoints (route.ts) | 228 | 222 Functional, 6 Partial* |
 | AI Agents | 47 | **47 FUNCTIONAL (100% Complete)** |
 | RBAC Roles | 5 | Implemented |
@@ -92,14 +92,14 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Admin (`/admin/*`) | 46 | 2 (`[id]`) | All pages exist |
+| Admin (`/admin/*`) | 48 | 2 (`[id]`) | All pages exist |
 | Workspace (`/workspace/[orgId]/*`) | 95 | 15 | All pages exist |
 | Dashboard (`/dashboard/*`) | 17 | 0 | All pages exist |
 | Public (`/(public)/*`) | 15 | 0 | All pages exist |
 | Sites (`/sites/[orgId]/*`) | 12 | 2 | Multi-tenant websites |
 | Onboarding (`/onboarding/*`) | 4 | 0 | All pages exist |
 | Other | 10 | 2 | All pages exist |
-| **TOTAL** | **199** | **21** | **Verified** |
+| **TOTAL** | **201** | **21** | **Verified** |
 
 ### Admin Routes (46)
 
@@ -123,6 +123,8 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 /admin/organizations/new            # Create organization
 /admin/organizations/[id]           # Organization detail
 /admin/organizations/[id]/edit      # Edit organization
+/admin/organizations/[id]/integrations  # Admin Support: Org integrations
+/admin/organizations/[id]/settings      # Admin Support: Org settings
 /admin/pricing-tiers                # Pricing tier config
 /admin/recovery                     # Churn prevention
 /admin/revenue                      # Revenue analytics
@@ -1682,9 +1684,14 @@ Platform Admin → /admin/support/impersonate → Select user → /workspace/[ta
 - `src/components/dashboard/navigation-config.ts` - Exports `getNavigationForRole(role, adminContext)` with context-aware sections
 - `src/types/unified-rbac.ts` - Defines `admin_org_view` and `admin_support` navigation categories
 
-**Gap Report (43 Missing Routes):**
-The `/admin/organizations/[id]/*` route tree only has 2 functional pages (detail, edit). Full CLIENT_SECTION equivalents do not exist:
-- Missing: dashboard, leads, deals, contacts, analytics, settings, integrations, etc.
+**Gap Report (41 Missing Routes - 2 Recovered):**
+The `/admin/organizations/[id]/*` route tree now has 4 functional pages:
+- ✅ OPERATIONAL: `/admin/organizations/[id]` (detail view)
+- ✅ OPERATIONAL: `/admin/organizations/[id]/edit` (edit organization)
+- ✅ OPERATIONAL: `/admin/organizations/[id]/integrations` (Admin Support view - added Jan 30, 2026)
+- ✅ OPERATIONAL: `/admin/organizations/[id]/settings` (Admin Support view - added Jan 30, 2026)
+
+Remaining gaps (41 routes): dashboard, leads, deals, contacts, analytics, etc.
 - These would require "Admin View" components for org-specific data inspection
 - Current solution: Hide CLIENT_SECTIONS entirely in admin context to prevent invalid routing
 

@@ -814,6 +814,20 @@ export const ADMIN_ORG_VIEW_SECTION: NavigationSection = {
       iconColor: '#f59e0b', // Amber
     },
     {
+      id: 'org-integrations',
+      label: 'Integrations',
+      href: '/admin/organizations/:adminOrgId/integrations',
+      icon: Share2 as LucideIcon,
+      iconColor: '#22c55e', // Green
+    },
+    {
+      id: 'org-settings',
+      label: 'Settings',
+      href: '/admin/organizations/:adminOrgId/settings',
+      icon: Wrench as LucideIcon,
+      iconColor: '#ef4444', // Red
+    },
+    {
       id: 'org-back',
       label: 'All Organizations',
       href: '/admin/organizations',
