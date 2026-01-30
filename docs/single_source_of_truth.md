@@ -1122,6 +1122,92 @@ testMatch: '**/*.spec.ts',
 
 ---
 
+### INFRASTRUCTURE: AUTOMATED CLEANUP PROTOCOL
+
+**Status:** ✅ ACTIVE
+
+**Implemented:** January 30, 2026
+
+**Location:** `tests/helpers/e2e-cleanup-utility.ts`
+
+**Purpose:** Zero-residual E2E testing with guaranteed Firestore cleanup
+
+#### Core Components
+
+| Component | Description |
+|-----------|-------------|
+| `E2ECleanupTracker` | Class for tracking and cleaning E2E test artifacts |
+| `E2E_PREFIX` | `E2E_TEMP_` - mandatory prefix for all test data |
+| `deleteSubcollectionsRecursively()` | Recursive sub-collection deletion using Firebase Admin SDK |
+| `verifyDeleted()` | 404 verification to confirm complete deletion |
+| `cleanupAllWithVerification()` | Orchestrated cleanup with verification |
+
+#### Protected Organizations
+
+The following organization IDs are protected from deletion:
+- `platform`
+- `platform-internal-org`
+- `demo-org`
+- `test-org`
+- `development-org`
+
+#### Cleanup Protocol
+
+```typescript
+// 1. Generate prefixed org ID
+const orgId = tracker.generateOrgId('content_audit');
+// Result: E2E_TEMP_org_content_audit_1738276800000
+
+// 2. Track for cleanup
+tracker.trackOrganization(orgId);
+
+// 3. Run tests...
+
+// 4. Cleanup with verification
+const report = await tracker.cleanupAllWithVerification();
+// Returns: { success: boolean, organizationsDeleted: number, ... }
+```
+
+#### Recursive Deletion Strategy
+
+```
+Organization Document
+├── settings/
+│   └── preferences (deleted)
+├── members/
+│   └── user_123 (deleted)
+├── content/
+│   ├── video_456 (deleted)
+│   │   └── renders/ (sub-collection deleted)
+│   └── post_789 (deleted)
+└── analytics/ (deleted)
+```
+
+**Batch Size:** 400 operations per batch (Firestore limit: 500)
+
+#### Integration with E2E Tests
+
+```typescript
+// admin-content-factory.spec.ts
+import { E2ECleanupTracker, E2E_PREFIX } from '../helpers/e2e-cleanup-utility';
+
+test.afterAll(async () => {
+  const report = await tracker.cleanupAllWithVerification();
+  expect(report.success).toBe(true);
+  console.info('[E2E Cleanup] Report:', report);
+});
+```
+
+#### Stale Data Detection
+
+Utility function to find orphaned E2E data:
+```typescript
+await findStaleE2EData();
+// Finds all documents with E2E_TEMP_ prefix older than current session
+```
+
+---
+
 ## Infrastructure Systems
 
 > **Audit Note (January 27, 2026):** These systems are fully implemented but were previously undocumented.
