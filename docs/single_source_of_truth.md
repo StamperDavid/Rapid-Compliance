@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 30, 2026 (46-Route Admin Audit + Merchandiser Promotion API)
+**Last Updated:** January 30, 2026 (Admin Navigation Context + 43-Route Gap Analysis)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -1640,7 +1640,53 @@ that is conditionally appended ONLY when `user.role === 'platform_admin'` via `g
 
 - **Workspace Routes:** `/workspace/:orgId/*` (11 operational sections)
 - **Admin Routes:** `/admin/*` (System section only)
+- **Admin Org View Routes:** `/admin/organizations/:orgId/*` (admin org-specific navigation)
 - Route resolution: `resolveWorkspaceRoute(href, orgId)` replaces `:orgId` placeholder
+
+#### Admin Navigation Context (January 30, 2026)
+
+**Purpose:** Prevent Platform Admins from being routed OUT of the admin context when viewing organization details.
+
+**Problem Solved:** The UnifiedSidebar was showing CLIENT_SECTIONS (11 sections with 45 workspace routes) to Platform Admins in the admin context. Clicking any of these links would route to `/workspace/platform-internal-org/*` - an invalid route that:
+1. Exits the `/admin` route tree
+2. Unmounts Jasper (AdminOrchestrator)
+3. Loses the Admin theme
+4. Routes to a non-existent organization
+
+**Solution:** Admin Navigation Context system that dynamically switches navigation based on current route:
+
+| Context | Route Pattern | Navigation Shown |
+|---------|---------------|------------------|
+| `admin-global` | `/admin/*` (except org detail) | Support Tools + System |
+| `admin-org-view` | `/admin/organizations/[id]/*` | Organization + Support Tools + System |
+
+**Admin Support Flow** (Stay in Admin Context):
+```
+Platform Admin → /admin/organizations → /admin/organizations/[id] → /admin/organizations/[id]/edit
+                                                                  ↓
+                                       Sidebar shows: Organization, Support Tools, System sections
+                                       Jasper remains mounted, Admin theme active
+```
+
+**Tenant Impersonation Flow** (Exit Admin Context Intentionally):
+```
+Platform Admin → /admin/support/impersonate → Select user → /workspace/[targetOrgId]/dashboard
+                                                            ↓
+                                        Admin deliberately exits to workspace context
+                                        Jasper unmounts, Workspace orchestrator activates
+```
+
+**Implementation Files:**
+- `src/app/admin/layout.tsx` - Detects admin navigation context from pathname
+- `src/components/dashboard/UnifiedSidebar.tsx` - Accepts `adminNavigationContext` and `adminViewingOrgId` props
+- `src/components/dashboard/navigation-config.ts` - Exports `getNavigationForRole(role, adminContext)` with context-aware sections
+- `src/types/unified-rbac.ts` - Defines `admin_org_view` and `admin_support` navigation categories
+
+**Gap Report (43 Missing Routes):**
+The `/admin/organizations/[id]/*` route tree only has 2 functional pages (detail, edit). Full CLIENT_SECTION equivalents do not exist:
+- Missing: dashboard, leads, deals, contacts, analytics, settings, integrations, etc.
+- These would require "Admin View" components for org-specific data inspection
+- Current solution: Hide CLIENT_SECTIONS entirely in admin context to prevent invalid routing
 
 #### Bug Fix (January 27, 2026)
 

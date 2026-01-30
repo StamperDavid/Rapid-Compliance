@@ -564,6 +564,10 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
  *
  * 1 System Section (platform_admin only):
  * - system
+ *
+ * Admin-Only Sections (platform_admin in admin context):
+ * - admin_org_view: Navigation for viewing organization details in admin panel
+ * - admin_support: Support tools (impersonate, exports, bulk ops, API health)
  */
 export type NavigationCategory =
   | 'command_center'   // Command Center: Workforce HQ, Dashboard, Conversations
@@ -577,7 +581,9 @@ export type NavigationCategory =
   | 'analytics'        // Analytics: Overview, Revenue, Pipeline, Sequences
   | 'website'          // Website: Pages, Blog, Domains, SEO, Settings
   | 'settings'         // Settings: Organization, Integrations, API Keys, Billing
-  | 'system';          // System (platform_admin only): Health, Orgs, Users, Flags, Logs
+  | 'system'           // System (platform_admin only): Health, Orgs, Users, Flags, Logs
+  | 'admin_org_view'   // Admin Org View: Overview, Edit, Back to List (admin context)
+  | 'admin_support';   // Admin Support: Impersonate, Bulk Ops, Exports, API Health (admin context)
 
 /**
  * Navigation item definition

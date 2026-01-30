@@ -19,7 +19,7 @@ import {
   type NavigationItem,
   type AccountRole,
 } from "@/types/unified-rbac";
-import { getNavigationForRole } from "./navigation-config";
+import { getNavigationForRole, type AdminNavigationContext } from "./navigation-config";
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -73,6 +73,20 @@ interface UnifiedSidebarProps {
    * Required when isAdminContext=true for proper theme inheritance
    */
   adminThemeColors?: AdminThemeColors;
+
+  /**
+   * Admin navigation context - controls which navigation sections to show
+   * - 'admin-global': System tools only (default admin behavior)
+   * - 'admin-org-view': Viewing a specific organization
+   * When set, CLIENT_SECTIONS are hidden to prevent routing to /workspace/*
+   */
+  adminNavigationContext?: AdminNavigationContext;
+
+  /**
+   * Organization ID being viewed in admin context
+   * Used to resolve :adminOrgId placeholders in admin navigation hrefs
+   */
+  adminViewingOrgId?: string;
 }
 
 interface NavItemComponentProps {
@@ -80,6 +94,8 @@ interface NavItemComponentProps {
   isCollapsed: boolean;
   isActive: boolean;
   organizationId?: string;
+  /** Organization ID being viewed in admin context (for :adminOrgId placeholder) */
+  adminViewingOrgId?: string;
 }
 
 interface NavSectionComponentProps {
@@ -88,6 +104,8 @@ interface NavSectionComponentProps {
   isExpanded: boolean;
   onToggle: () => void;
   organizationId?: string;
+  /** Organization ID being viewed in admin context (for :adminOrgId placeholder) */
+  adminViewingOrgId?: string;
 }
 
 // ============================================================================
@@ -98,16 +116,26 @@ interface NavSectionComponentProps {
  * Individual navigation item component
  */
 const NavItemComponent = React.memo<NavItemComponentProps>(
-  ({ item, isCollapsed, isActive, organizationId }) => {
+  ({ item, isCollapsed, isActive, organizationId, adminViewingOrgId }) => {
     const Icon = item.icon;
 
-    // Build href with organization context - replace :orgId placeholder
+    // Build href with organization context
+    // Handles both :orgId (workspace routes) and :adminOrgId (admin org view routes)
     const href = useMemo(() => {
-      if (item.href.startsWith('/admin')) {
-        return item.href;
+      let resolvedHref = item.href;
+
+      // Replace :adminOrgId for admin organization view routes
+      if (resolvedHref.includes(':adminOrgId')) {
+        resolvedHref = resolvedHref.replace(':adminOrgId', adminViewingOrgId ?? '');
       }
-      return item.href.replace(':orgId', organizationId ?? '');
-    }, [item.href, organizationId]);
+
+      // Replace :orgId for workspace routes (only if not an admin route)
+      if (!resolvedHref.startsWith('/admin') && resolvedHref.includes(':orgId')) {
+        resolvedHref = resolvedHref.replace(':orgId', organizationId ?? '');
+      }
+
+      return resolvedHref;
+    }, [item.href, organizationId, adminViewingOrgId]);
 
     // Use item's specific iconColor, fallback to default
     const iconColor = item.iconColor ?? '#999';
@@ -151,19 +179,29 @@ NavItemComponent.displayName = "NavItemComponent";
  * Navigation section component (collapsible)
  */
 const NavSectionComponent = React.memo<NavSectionComponentProps>(
-  ({ section, isCollapsed, isExpanded, onToggle, organizationId }) => {
+  ({ section, isCollapsed, isExpanded, onToggle, organizationId, adminViewingOrgId }) => {
     const SectionIcon = section.icon;
     const pathname = usePathname();
 
     // Check if any item in this section is active
+    // Handles both :orgId (workspace) and :adminOrgId (admin org view) placeholders
     const hasActiveItem = useMemo(() => {
       return section.items.some((item) => {
-        const href = item.href.startsWith('/admin')
-          ? item.href
-          : item.href.replace(':orgId', organizationId ?? '');
+        let href = item.href;
+
+        // Replace :adminOrgId for admin organization view routes
+        if (href.includes(':adminOrgId')) {
+          href = href.replace(':adminOrgId', adminViewingOrgId ?? '');
+        }
+
+        // Replace :orgId for workspace routes (only if not an admin route)
+        if (!href.startsWith('/admin') && href.includes(':orgId')) {
+          href = href.replace(':orgId', organizationId ?? '');
+        }
+
         return pathname?.startsWith(href);
       });
-    }, [section.items, pathname, organizationId]);
+    }, [section.items, pathname, organizationId, adminViewingOrgId]);
 
     // If section is not collapsible, always show items
     const shouldShowItems = !section.collapsible || isExpanded || isCollapsed;
@@ -217,9 +255,14 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
         {shouldShowItems && (
           <div className="flex flex-col">
             {section.items.map((item) => {
-              const href = item.href.startsWith('/admin')
-                ? item.href
-                : item.href.replace(':orgId', organizationId ?? '');
+              // Resolve href with both :adminOrgId and :orgId placeholders
+              let href = item.href;
+              if (href.includes(':adminOrgId')) {
+                href = href.replace(':adminOrgId', adminViewingOrgId ?? '');
+              }
+              if (!href.startsWith('/admin') && href.includes(':orgId')) {
+                href = href.replace(':orgId', organizationId ?? '');
+              }
               const isActive = pathname?.startsWith(href) ?? false;
 
               return (
@@ -229,6 +272,7 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
                   isCollapsed={isCollapsed}
                   isActive={isActive}
                   organizationId={organizationId}
+                  adminViewingOrgId={adminViewingOrgId}
                 />
               );
             })}
@@ -266,18 +310,24 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
     // When true, sidebar applies Admin theme CSS variables directly (for fixed positioning isolation)
     isAdminContext = false,
     adminThemeColors,
+    // Admin navigation context - controls specialized navigation for admin views
+    adminNavigationContext,
+    // Organization ID being viewed in admin context (for :adminOrgId placeholder)
+    adminViewingOrgId,
   }) => {
     const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const isCollapsed = externalIsCollapsed ?? internalIsCollapsed;
 
-    // Get navigation sections based on user role
+    // Get navigation sections based on user role and admin context
     // Uses getNavigationForRole() which HARD-GATES System section to platform_admin only
+    // When adminNavigationContext is set, CLIENT_SECTIONS are hidden to prevent
+    // admins from being routed out of the /admin tree to /workspace/*
     const filteredSections = useMemo(() => {
-      const roleSections = getNavigationForRole(user.role);
+      const roleSections = getNavigationForRole(user.role, adminNavigationContext);
       // Apply permission-based filtering on top of role-based sections
       return filterNavigationByRole(roleSections, user.role);
-    }, [user.role]);
+    }, [user.role, adminNavigationContext]);
 
     // Track expanded sections - default to collapsed (closed)
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
@@ -451,6 +501,7 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
                 isExpanded={expandedSections[section.id] ?? false}
                 onToggle={() => handleToggleSection(section.id)}
                 organizationId={organizationId}
+                adminViewingOrgId={adminViewingOrgId}
               />
             ))}
           </nav>

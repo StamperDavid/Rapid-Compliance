@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useMemo } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useAdminTheme, ADMIN_THEME_SCOPE_CLASS } from '@/hooks/useAdminTheme';
 import { AdminOrchestrator } from '@/components/orchestrator';
 import UnifiedSidebar from '@/components/dashboard/UnifiedSidebar';
 import { PLATFORM_INTERNAL_ORG_ID, workspaceRoutes } from '@/lib/routes/workspace-routes';
+import type { AdminNavigationContext } from '@/components/dashboard/navigation-config';
 
 /**
  * Admin Layout - UNIFIED VERSION with ISOLATED THEMING
@@ -28,9 +29,33 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading: authLoading, isPlatformAdmin } = useUnifiedAuth();
   const { theme, setContainerRef, primaryColor, brandName, loading: themeLoading } = useAdminTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Detect admin navigation context based on current path
+  // This determines which navigation sections to show in the sidebar
+  // - 'admin-org-view': When viewing a specific organization (/admin/organizations/[id]/*)
+  // - 'admin-global': Default for all other admin pages
+  const { adminNavigationContext, adminViewingOrgId } = useMemo<{
+    adminNavigationContext: AdminNavigationContext;
+    adminViewingOrgId?: string;
+  }>(() => {
+    // Match /admin/organizations/[id] or /admin/organizations/[id]/*
+    // But NOT /admin/organizations (list page) or /admin/organizations/new
+    const orgDetailMatch = pathname?.match(/^\/admin\/organizations\/([^/]+)(?:\/|$)/);
+
+    if (orgDetailMatch && orgDetailMatch[1] !== 'new') {
+      return {
+        adminNavigationContext: 'admin-org-view',
+        adminViewingOrgId: orgDetailMatch[1],
+      };
+    }
+
+    // Default: global admin context
+    return { adminNavigationContext: 'admin-global' };
+  }, [pathname]);
 
   // Build admin theme colors for the fixed-positioned sidebar
   const adminThemeColors = {
@@ -94,6 +119,7 @@ export default function AdminLayout({
       style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--color-background)' }}
     >
       {/* Unified Sidebar - Uses Admin theme via scoped CSS variables */}
+      {/* Admin context prevents CLIENT_SECTIONS from showing to avoid routing to /workspace/* */}
       <UnifiedSidebar
         user={user}
         organizationId={PLATFORM_INTERNAL_ORG_ID}
@@ -103,6 +129,8 @@ export default function AdminLayout({
         primaryColor={primaryColor}
         isAdminContext={true}
         adminThemeColors={adminThemeColors}
+        adminNavigationContext={adminNavigationContext}
+        adminViewingOrgId={adminViewingOrgId}
       />
 
       {/* Main Content */}

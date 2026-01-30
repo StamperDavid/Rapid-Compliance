@@ -780,18 +780,128 @@ export const UNIFIED_NAVIGATION: NavigationStructure = {
 };
 
 // =============================================================================
+// ADMIN ORGANIZATION VIEW NAVIGATION
+// When a platform admin is viewing an organization detail, they should see
+// only admin-specific navigation that keeps them within the /admin route tree
+// =============================================================================
+
+/**
+ * Admin Organization View Section
+ * Shows navigation items for viewing organization details in admin context
+ * This replaces CLIENT_SECTIONS when admin is viewing an org to prevent routing
+ * to invalid /workspace/* paths
+ */
+export const ADMIN_ORG_VIEW_SECTION: NavigationSection = {
+  id: 'admin_org_view',
+  label: 'Organization',
+  icon: Building2 as LucideIcon,
+  iconColor: '#6366f1', // Indigo
+  allowedRoles: ['platform_admin'],
+  collapsible: false,
+  items: [
+    {
+      id: 'org-overview',
+      label: 'Overview',
+      href: '/admin/organizations/:adminOrgId',
+      icon: LayoutDashboard as LucideIcon,
+      iconColor: '#6366f1', // Indigo
+    },
+    {
+      id: 'org-edit',
+      label: 'Edit Organization',
+      href: '/admin/organizations/:adminOrgId/edit',
+      icon: Settings as LucideIcon,
+      iconColor: '#f59e0b', // Amber
+    },
+    {
+      id: 'org-back',
+      label: 'All Organizations',
+      href: '/admin/organizations',
+      icon: Building2 as LucideIcon,
+      iconColor: '#3b82f6', // Blue
+    },
+  ],
+};
+
+/**
+ * Admin Support Section - Quick Actions
+ * Support tools for managing organizations
+ */
+export const ADMIN_SUPPORT_SECTION: NavigationSection = {
+  id: 'admin_support',
+  label: 'Support Tools',
+  icon: Wrench as LucideIcon,
+  iconColor: '#ef4444', // Red
+  allowedRoles: ['platform_admin'],
+  collapsible: true,
+  defaultCollapsed: false,
+  items: [
+    {
+      id: 'support-impersonate',
+      label: 'Impersonate User',
+      href: '/admin/support/impersonate',
+      icon: Users as LucideIcon,
+      iconColor: '#8b5cf6', // Violet
+    },
+    {
+      id: 'support-bulk-ops',
+      label: 'Bulk Operations',
+      href: '/admin/support/bulk-ops',
+      icon: Package as LucideIcon,
+      iconColor: '#10b981', // Emerald
+    },
+    {
+      id: 'support-exports',
+      label: 'Data Exports',
+      href: '/admin/support/exports',
+      icon: FileText as LucideIcon,
+      iconColor: '#3b82f6', // Blue
+    },
+    {
+      id: 'support-api-health',
+      label: 'API Health',
+      href: '/admin/support/api-health',
+      icon: Activity as LucideIcon,
+      iconColor: '#22c55e', // Green
+    },
+  ],
+};
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
+
+/**
+ * Navigation context type for admin views
+ */
+export type AdminNavigationContext =
+  | 'admin-global'     // Admin landing, system pages
+  | 'admin-org-view';  // Viewing a specific organization
 
 /**
  * Get navigation sections for a specific role
  * HARD-GATES platform admin tools - System section ONLY appended for platform_admin
  *
  * @param role - The user's account role
+ * @param adminContext - Optional admin context for specialized navigation
  * @returns Navigation sections appropriate for the role
  */
-export function getNavigationForRole(role: AccountRole): NavigationSection[] {
-  // Start with client sections (never includes System)
+export function getNavigationForRole(
+  role: AccountRole,
+  adminContext?: AdminNavigationContext
+): NavigationSection[] {
+  // When in admin context, DON'T show CLIENT_SECTIONS (they route to /workspace/*)
+  // This prevents admins from being kicked out of the admin route tree
+  if (role === 'platform_admin' && adminContext) {
+    if (adminContext === 'admin-org-view') {
+      // Viewing an organization - show org-specific + support + system navigation
+      return [ADMIN_ORG_VIEW_SECTION, ADMIN_SUPPORT_SECTION, SYSTEM_SECTION];
+    }
+    // Admin global view - show support + system navigation only
+    return [ADMIN_SUPPORT_SECTION, SYSTEM_SECTION];
+  }
+
+  // Standard workspace flow - show client sections
   const sections = [...CLIENT_SECTIONS];
 
   // HARD-GATE: Only append System section for platform_admin
