@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 30, 2026 (Playwright Infrastructure Audit - NO-GO)
+**Last Updated:** January 30, 2026 (Playwright Infrastructure - OPERATIONAL)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
@@ -1036,8 +1036,8 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 | Framework | Version | Purpose | Status |
 |-----------|---------|---------|--------|
 | Jest | ^30.2.0 | Unit tests, Jest E2E | FUNCTIONAL |
-| Playwright | ^1.57.0 | Browser E2E testing | **BLOCKED** |
-| @playwright/test | ^1.57.0 | Playwright test runner | INSTALLED |
+| Playwright | ^1.57.0 | Browser E2E testing | ✅ OPERATIONAL |
+| @playwright/test | ^1.57.0 | Playwright test runner | ✅ OPERATIONAL |
 
 #### Playwright Configuration
 
@@ -1045,18 +1045,13 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 
 | Setting | Value | Status |
 |---------|-------|--------|
-| testDir | `./tests/e2e` | Configured |
-| testMatch | **NOT DEFINED** | CRITICAL ISSUE |
-| baseURL | `http://localhost:3000` | Configured |
-| reporter | `html` | Configured |
-| projects | 5 (chromium, firefox, webkit, mobile) | Configured |
+| testDir | `./tests/e2e` | ✅ Configured |
+| testMatch | `**/*.spec.ts` | ✅ CONFIGURED |
+| baseURL | `http://localhost:3000` | ✅ Configured |
+| reporter | `html` | ✅ Configured |
+| projects | 5 (chromium, firefox, webkit, mobile) | ✅ Configured |
 
-**CRITICAL ISSUE:** Missing `testMatch` pattern causes Playwright to attempt loading Jest test files (`*.e2e.test.ts`) which import `@jest/globals`, crashing test discovery.
-
-**Required Fix:**
-```typescript
-testMatch: '**/*.spec.ts',
-```
+**RESOLVED (January 30, 2026):** Added `testMatch: '**/*.spec.ts'` to isolate Playwright specs from Jest E2E tests. Test discovery now functional.
 
 #### Test File Naming Conventions
 
@@ -1081,19 +1076,48 @@ testMatch: '**/*.spec.ts',
 |--------|---------|---------|
 | `test` | `jest` | Unit tests |
 | `test:e2e` | `jest --testPathPattern=e2e --runInBand` | Jest E2E |
-| `test:playwright` | `playwright test` | Playwright E2E (**BROKEN**) |
-| `test:playwright:ui` | `playwright test --ui` | Playwright UI mode |
+| `test:playwright` | `playwright test` | ✅ Playwright E2E |
+| `test:playwright:ui` | `playwright test --ui` | ✅ Playwright UI mode |
 
 #### Readiness Status
 
 | Criterion | Status |
 |-----------|--------|
-| Playwright installed | PASS |
-| Config file exists | PASS |
-| Test discovery | **FAIL** |
-| Autonomous testing | **NO-GO** |
+| Playwright installed | ✅ PASS |
+| Config file exists | ✅ PASS |
+| Test discovery | ✅ PASS (200 tests across 5 projects) |
+| Autonomous testing | ✅ OPERATIONAL |
 
 **Full Audit Report:** `docs/playwright-audit-2026-01-30.md`
+
+---
+
+### TESTING INFRASTRUCTURE: PLAYWRIGHT ACTIVATION
+
+**Status:** ✅ OPERATIONAL
+
+**Fix Applied:** January 30, 2026
+
+**Configuration Change:**
+```typescript
+// playwright.config.ts
+testMatch: '**/*.spec.ts',
+```
+
+**Test Discovery Results:**
+- **Total Tests:** 200
+- **Spec Files:** 2 (`voice-engine.spec.ts`, `website-builder.spec.ts`)
+- **Browser Projects:** 5 (chromium, firefox, webkit, Mobile Chrome, Mobile Safari)
+- **Jest Conflict:** RESOLVED (`.e2e.test.ts` files are now correctly ignored)
+
+**Naming Convention Standard:**
+| Pattern | Framework | Purpose |
+|---------|-----------|---------|
+| `*.spec.ts` | Playwright | Browser-based E2E tests |
+| `*.e2e.test.ts` | Jest | API/integration E2E tests |
+| `*.test.ts` | Jest | Unit tests |
+
+**Autonomous Test-Fix-Verify Cycles:** Enabled
 
 ---
 
