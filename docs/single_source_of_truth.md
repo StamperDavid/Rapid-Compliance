@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 30, 2026 (Playwright Infrastructure - OPERATIONAL)
+**Last Updated:** January 30, 2026 (Claude Code Governance + Cleanup Protocol Integration)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
@@ -50,6 +50,39 @@
 - **AI Gateway:** OpenRouter (100+ models)
 - **Voice:** VoiceEngineFactory (Native, ElevenLabs, Unreal)
 - **Payments:** Stripe
+
+### AI Governance Layer
+
+**File:** `CLAUDE.md` (Project Root)
+**Status:** ✅ AUTHORITATIVE
+**Scope:** All Claude Code sessions in this project
+
+The Claude Code Governance Layer defines binding operational constraints for AI-assisted development:
+
+| Constraint | Description |
+|------------|-------------|
+| **Linting Lock** | NO modification of ESLint, TypeScript config, pre-commit hooks, or lint-staged |
+| **Zero-Any Policy** | No `any` types in TypeScript; no new `eslint-disable` or `@ts-ignore` comments |
+| **Best Practices** | Adherence to ENGINEERING_STANDARDS.md, Zod validation, service layer architecture |
+| **Sub-Agent Protocol** | Mandatory use of specialized agents (Explore, Plan, Architect, CodeScout, fixer, Reviewer, steward) |
+| **Session Sync** | End-of-session commits to `dev` branch with SSOT update when applicable |
+
+**Key Governance Files:**
+
+| File | Purpose | Modification Status |
+|------|---------|---------------------|
+| `CLAUDE.md` | AI instruction set | **BINDING** |
+| `ENGINEERING_STANDARDS.md` | Code quality requirements | Reference |
+| `eslint.config.mjs` | Linting rules | 🔒 **LOCKED** |
+| `tsconfig.json` | TypeScript config | 🔒 **LOCKED** |
+| `.husky/*` | Pre-commit hooks | 🔒 **LOCKED** |
+
+**Pre-Commit Gate Requirements:**
+- `npm run lint` must pass
+- `npx tsc --noEmit` must pass (W2 Build Gate)
+- `npm run build` must succeed
+- No new `any` types introduced
+- No new eslint-disable comments added
 
 ---
 
@@ -1144,12 +1177,16 @@ testMatch: '**/*.spec.ts',
 
 #### Protected Organizations
 
-The following organization IDs are protected from deletion:
+The following organization IDs are **hardcoded as protected** and will NEVER be deleted:
 - `platform`
 - `platform-internal-org`
-- `demo-org`
-- `test-org`
-- `development-org`
+- `org_demo_auraflow`
+- `org_demo_greenthumb`
+- `org_demo_adventuregear`
+- `org_demo_summitwm`
+- `org_demo_pixelperfect`
+
+> **Safety:** Any attempt to track a protected org is blocked with console error.
 
 #### Cleanup Protocol
 
@@ -1170,20 +1207,38 @@ const report = await tracker.cleanupAllWithVerification();
 
 #### Recursive Deletion Strategy
 
+The cleanup utility uses **dynamic sub-collection discovery** via Firebase Admin SDK's `listCollections()` method, ensuring ALL nested data is deleted regardless of schema evolution.
+
+**Known Organization Sub-Collections (24):**
 ```
-Organization Document
-├── settings/
-│   └── preferences (deleted)
+workspaces          workflows           workflowExecutions
+deals               leads               contacts
+users               members             records
+signals             sequences           sequenceEnrollments
+campaigns           trainingSessions    goldenMasters
+goldenMasterUpdates baseModels          scheduledPosts
+socialPosts         videoJobs           storyboards
+analytics_events    merchant_coupons    schemas
+apiKeys             integrations        auditLogs
+```
+
+**Deletion Tree Example:**
+```
+Organization Document (E2E_TEMP_org_content_audit_1738276800000)
+├── [Dynamic Discovery via listCollections()]
 ├── members/
-│   └── user_123 (deleted)
-├── content/
-│   ├── video_456 (deleted)
-│   │   └── renders/ (sub-collection deleted)
-│   └── post_789 (deleted)
-└── analytics/ (deleted)
+│   └── E2E_TEMP_user_abc123 (deleted)
+├── leads/
+│   └── E2E_TEMP_lead_xyz789 (deleted)
+│       └── activities/ (nested sub-collection deleted)
+├── campaigns/
+│   └── E2E_TEMP_campaign_001 (deleted)
+└── [All discovered sub-collections recursively deleted]
 ```
 
 **Batch Size:** 400 operations per batch (Firestore limit: 500)
+
+**Depth-First Traversal:** Nested sub-collections are deleted BEFORE their parent documents to ensure complete cleanup.
 
 #### Integration with E2E Tests
 
@@ -1200,11 +1255,21 @@ test.afterAll(async () => {
 
 #### Stale Data Detection
 
-Utility function to find orphaned E2E data:
+Utility function to find and clean orphaned E2E data:
 ```typescript
-await findStaleE2EData();
-// Finds all documents with E2E_TEMP_ prefix older than current session
+import { cleanupAllE2ETempData } from '../helpers/e2e-cleanup-utility';
+
+// Scans organizations collection for E2E_TEMP_ prefixed IDs
+// Uses Firestore range query: __name__ >= 'E2E_TEMP_' AND < 'E2E_TEMP_\uf8ff'
+const totalCleaned = await cleanupAllE2ETempData();
+console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 ```
+
+**Safety Features:**
+- Prefix enforcement: Only deletes IDs starting with `E2E_TEMP_`
+- Protected org check: Skips all 7 protected organization IDs
+- Verification query: 404 check confirms complete deletion
+- Detailed logging: Console output for audit trail
 
 ---
 
@@ -2262,7 +2327,21 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: January 29, 2026 - MASTER_ORCHESTRATOR Swarm CEO Activation (100% Swarm Completion)*
+*Last updated: January 30, 2026 - Claude Code Governance + Cleanup Protocol Integration*
+
+### Changelog (January 30, 2026 - Authority Synchronization Update)
+
+- **ADDED:** AI Governance Layer section documenting CLAUDE.md as authoritative AI instruction set
+- **ADDED:** Governance constraint table (Linting Lock, Zero-Any Policy, Sub-Agent Protocol, Session Sync)
+- **ADDED:** Key Governance Files table with modification status (BINDING/LOCKED)
+- **ADDED:** Pre-Commit Gate Requirements documentation
+- **UPDATED:** Automated Cleanup Protocol - Protected Organizations list corrected to match actual code:
+  - Removed: `demo-org`, `test-org`, `development-org`
+  - Added: `org_demo_auraflow`, `org_demo_greenthumb`, `org_demo_adventuregear`, `org_demo_summitwm`, `org_demo_pixelperfect`
+- **UPDATED:** Recursive Deletion Strategy - Added full list of 24+ known organization sub-collections
+- **UPDATED:** Stale Data Detection - Corrected function name to `cleanupAllE2ETempData()` with accurate implementation details
+- **ADDED:** Safety Features documentation for cleanup utility
+- **VERIFIED:** Playwright ✅ OPERATIONAL with `*.spec.ts` naming convention (no changes needed)
 
 ### Changelog (January 29, 2026 - MASTER_ORCHESTRATOR Swarm CEO Activation)
 
