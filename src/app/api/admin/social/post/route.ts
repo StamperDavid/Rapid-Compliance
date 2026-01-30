@@ -2,12 +2,18 @@
  * Admin Platform Social Media Post API
  * POST to platform social accounts (SalesVelocity.ai official accounts)
  * Uses platform-level API keys from environment variables
+ *
+ * Features:
+ * - Immediate posting to Twitter/LinkedIn
+ * - Scheduled post persistence to Firestore
+ * - Future-date validation for scheduled posts
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
+import { SocialPostService } from '@/lib/social/social-post-service';
 
 interface TwitterResponse {
   data?: {
@@ -122,22 +128,64 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // If scheduling, store for later posting
+      // If scheduling, validate future date and persist to Firestore
       if (scheduledAt) {
-        // In production, this would save to a scheduled posts collection
-        logger.info('[AdminSocialPost] Tweet scheduled', {
-          scheduledAt,
-          file: 'admin/social/post/route.ts',
-        });
+        const scheduledDate = new Date(scheduledAt);
+        const now = new Date();
 
-        return NextResponse.json({
-          success: true,
-          postId: `scheduled_tweet_${Date.now()}`,
-          platform: 'twitter',
-          content,
-          scheduledAt,
-          message: 'Tweet scheduled successfully',
-        });
+        // Validate scheduled time is in the future
+        if (scheduledDate <= now) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Scheduled time must be in the future',
+            },
+            { status: 400 }
+          );
+        }
+
+        // Persist to Firestore for worker execution
+        try {
+          const scheduledPost = await SocialPostService.createScheduledPost({
+            platform: 'twitter',
+            content,
+            scheduledAt: scheduledDate,
+            mediaUrls,
+            createdBy: authResult.user.uid,
+            createdByEmail: authResult.user.email,
+          });
+
+          logger.info('[AdminSocialPost] Tweet scheduled and persisted', {
+            postId: scheduledPost.id,
+            scheduledAt,
+            file: 'admin/social/post/route.ts',
+          });
+
+          return NextResponse.json({
+            success: true,
+            postId: scheduledPost.id,
+            platform: 'twitter',
+            content,
+            scheduledAt,
+            status: 'scheduled',
+            message: 'Tweet scheduled successfully and persisted to database',
+          });
+        } catch (scheduleError) {
+          logger.error(
+            '[AdminSocialPost] Failed to persist scheduled tweet',
+            scheduleError instanceof Error ? scheduleError : new Error(String(scheduleError)),
+            { file: 'admin/social/post/route.ts' }
+          );
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Failed to schedule tweet',
+              message: scheduleError instanceof Error ? scheduleError.message : 'Unknown error',
+            },
+            { status: 500 }
+          );
+        }
       }
 
       // Post immediately using Twitter API v2
@@ -231,21 +279,64 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // If scheduling, store for later posting
+      // If scheduling, validate future date and persist to Firestore
       if (scheduledAt) {
-        logger.info('[AdminSocialPost] LinkedIn post scheduled', {
-          scheduledAt,
-          file: 'admin/social/post/route.ts',
-        });
+        const scheduledDate = new Date(scheduledAt);
+        const now = new Date();
 
-        return NextResponse.json({
-          success: true,
-          postId: `scheduled_linkedin_${Date.now()}`,
-          platform: 'linkedin',
-          content,
-          scheduledAt,
-          message: 'LinkedIn post scheduled successfully',
-        });
+        // Validate scheduled time is in the future
+        if (scheduledDate <= now) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Scheduled time must be in the future',
+            },
+            { status: 400 }
+          );
+        }
+
+        // Persist to Firestore for worker execution
+        try {
+          const scheduledPost = await SocialPostService.createScheduledPost({
+            platform: 'linkedin',
+            content,
+            scheduledAt: scheduledDate,
+            mediaUrls,
+            createdBy: authResult.user.uid,
+            createdByEmail: authResult.user.email,
+          });
+
+          logger.info('[AdminSocialPost] LinkedIn post scheduled and persisted', {
+            postId: scheduledPost.id,
+            scheduledAt,
+            file: 'admin/social/post/route.ts',
+          });
+
+          return NextResponse.json({
+            success: true,
+            postId: scheduledPost.id,
+            platform: 'linkedin',
+            content,
+            scheduledAt,
+            status: 'scheduled',
+            message: 'LinkedIn post scheduled successfully and persisted to database',
+          });
+        } catch (scheduleError) {
+          logger.error(
+            '[AdminSocialPost] Failed to persist scheduled LinkedIn post',
+            scheduleError instanceof Error ? scheduleError : new Error(String(scheduleError)),
+            { file: 'admin/social/post/route.ts' }
+          );
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Failed to schedule LinkedIn post',
+              message: scheduleError instanceof Error ? scheduleError.message : 'Unknown error',
+            },
+            { status: 500 }
+          );
+        }
       }
 
       // Post immediately using LinkedIn API
@@ -365,8 +456,31 @@ export async function GET(request: NextRequest) {
       process.env.PLATFORM_LINKEDIN_ORG_ID
     );
 
-    // In production, fetch recent posts from database
-    // For now, return configuration status
+    // Fetch scheduled posts and recent posts from Firestore
+    const [scheduledPosts, recentPosts] = await Promise.all([
+      SocialPostService.getScheduledPosts(),
+      SocialPostService.getRecentPosts(10),
+    ]);
+
+    // Transform posts for response
+    const transformPost = (post: {
+      id: string;
+      platform: string;
+      content: string;
+      status: string;
+      scheduledAt: Date;
+      publishedAt?: Date;
+      createdAt: Date;
+    }) => ({
+      id: post.id,
+      platform: post.platform,
+      content: post.content,
+      status: post.status,
+      scheduledAt: post.scheduledAt instanceof Date ? post.scheduledAt.toISOString() : post.scheduledAt,
+      publishedAt: post.publishedAt instanceof Date ? post.publishedAt.toISOString() : post.publishedAt,
+      createdAt: post.createdAt instanceof Date ? post.createdAt.toISOString() : post.createdAt,
+    });
+
     return NextResponse.json({
       success: true,
       platforms: {
@@ -379,8 +493,8 @@ export async function GET(request: NextRequest) {
           companyName: 'SalesVelocity.ai',
         },
       },
-      recentPosts: [],
-      scheduledPosts: [],
+      recentPosts: recentPosts.map(transformPost),
+      scheduledPosts: scheduledPosts.map(transformPost),
     });
   } catch (error: unknown) {
     logger.error('[AdminSocialPost] GET failed', error instanceof Error ? error : new Error(String(error)), {
