@@ -279,11 +279,11 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
       return filterNavigationByRole(roleSections, user.role);
     }, [user.role]);
 
-    // Track expanded sections
+    // Track expanded sections - default to collapsed (closed)
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
       const initial: Record<string, boolean> = {};
       filteredSections.forEach((section) => {
-        initial[section.id] = !(section.defaultCollapsed ?? false);
+        initial[section.id] = !(section.defaultCollapsed ?? true);
       });
       return initial;
     });
