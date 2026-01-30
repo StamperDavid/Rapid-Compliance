@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 29, 2026 (Master Orchestrator Telemetry Wired to Dashboard UI - LIVE)
+**Last Updated:** January 30, 2026 (Smart Role Redirection - OPERATIONAL)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
@@ -2324,6 +2324,105 @@ Org A broadcasts signal → SignalBus looks up Org A's registry ONLY
 3. Customer communication re: Salesforce/HubSpot "Coming Soon"
 
 **Projected Launch-Ready Date:** January 30, 2026 (Agent Control Layer COMPLETE, 2 hrs remaining for base model path)
+
+---
+
+## UNIFIED LOGIN ARCHITECTURE: SMART ROLE REDIRECTION
+
+**Status:** ✅ OPERATIONAL
+**Implemented:** January 30, 2026
+**Location:** `src/app/(public)/login/page.tsx`
+
+### Overview
+
+The public `/login` page now implements **Smart Role Redirection** to route users to their appropriate dashboard based on their role. This eliminates the "Layout Collision" issue previously experienced in the `/workspace/platform` path.
+
+### Redirect Logic
+
+| User Role | Destination | Layout |
+|-----------|-------------|--------|
+| `platform_admin` | `/admin` | PlatformAdminLayout (isolated theme) |
+| `owner`, `admin`, `manager`, `employee` | `/workspace/{orgId}/dashboard` | WorkspaceLayout (org theme) |
+
+### Implementation Details
+
+#### Role Detection Flow
+
+```
+1. User submits email/password → Firebase Auth
+   ↓
+2. Fetch user document from Firestore (users/{uid})
+   ↓
+3. Extract role from user document (AccountRole type)
+   ↓
+4. SMART ROLE REDIRECTION:
+   - if (role === 'platform_admin') → router.push('/admin')
+   - else → router.push('/workspace/{orgId}/dashboard')
+   ↓
+5. Show "Redirecting..." loading state (prevents FOUC)
+```
+
+#### Key Features
+
+| Feature | Implementation |
+|---------|----------------|
+| **Type-Safe Routing** | `AccountRole` type from `unified-rbac.ts` |
+| **FOUC Prevention** | `redirecting` state shows clean loading UI during navigation |
+| **Tenant ID Resolution** | Prefers `tenantId`, falls back to `organizationId` (legacy support) |
+| **State Hygiene** | Platform admin context has null `tenantId` (no CSS variable bleeding) |
+| **Structured Logging** | Role detection logged with uid, role, orgId for debugging |
+
+#### Code Changes
+
+**File:** `src/app/(public)/login/page.tsx`
+
+```typescript
+// Lines 87-97: Platform Admin Detection
+if (userRole === 'platform_admin') {
+  logger.info('Platform admin detected, redirecting to /admin', {
+    uid: user.uid,
+    file: 'login/page.tsx'
+  });
+  setRedirecting(true);  // Clean loading state
+  router.push('/admin');
+  return;
+}
+```
+
+### Theme Isolation Compliance
+
+The Smart Role Redirection works in conjunction with the existing theme isolation architecture:
+
+- **Platform Admins** → Routed to `/admin` which uses `useAdminTheme()` hook
+- **Tenant Users** → Routed to `/workspace/{orgId}/*` which uses `useOrgTheme()` hook
+
+This ensures that organization-specific theme customizations do NOT affect the Admin Dashboard, and vice versa.
+
+### Related Components
+
+| Component | Purpose |
+|-----------|---------|
+| `src/app/admin/layout.tsx` | PlatformAdminLayout - verifies role on admin routes |
+| `src/hooks/useUnifiedAuth.ts` | `isPlatformAdmin()` helper function |
+| `src/hooks/useAdminTheme.ts` | Admin-scoped CSS variable application |
+| `src/types/unified-rbac.ts` | `AccountRole` type definition |
+
+### Legacy Cleanup
+
+**CONFIRMED:** No legacy sidebar components exist in `/workspace/platform` path. The codebase is clean with no orphaned navigation references.
+
+---
+
+### Changelog (January 30, 2026 - Smart Role Redirection)
+
+- **IMPLEMENTED:** Smart Role Redirection in `/login` page
+- **ADDED:** `redirecting` state for FOUC-free navigation transitions
+- **ADDED:** `AccountRole` type import for type-safe role checking
+- **ADDED:** Structured logging for role detection and redirect decisions
+- **REFACTORED:** `handleSubmit()` to check user role before redirect
+- **VERIFIED:** PlatformAdminLayout sidebar reactive state (Frontend Sub-Agent audit)
+- **VERIFIED:** No legacy components in `/workspace/platform` path
+- **UPDATED:** SSOT with UNIFIED LOGIN ARCHITECTURE section
 
 ---
 

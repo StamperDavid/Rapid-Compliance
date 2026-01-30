@@ -7,10 +7,21 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config'
 import { logger } from '@/lib/logger/logger';
+import type { AccountRole } from '@/types/unified-rbac';
 
 interface FirebaseError {
   code: string;
   message: string;
+}
+
+/**
+ * User document structure from Firestore
+ * Used for role-based login redirection
+ */
+interface UserDocument {
+  organizationId?: string;
+  tenantId?: string;
+  role?: AccountRole;
 }
 
 export default function LoginPage() {
@@ -20,8 +31,19 @@ export default function LoginPage() {
     password: '',
   });
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState('');
 
+  /**
+   * UNIFIED LOGIN ARCHITECTURE: SMART ROLE REDIRECTION
+   *
+   * This handler implements role-based routing after authentication:
+   * - platform_admin users → /admin (Platform Admin Dashboard)
+   * - All other users → /workspace/{orgId}/dashboard (Tenant Workspace)
+   *
+   * The redirecting state prevents FOUC (Flash of Unstyled Content) by
+   * showing a clean loading indicator during the navigation transition.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -40,27 +62,54 @@ export default function LoginPage() {
       );
 
       const user = userCredential.user;
-      logger.info('User signed in', { uid: user.uid, file: 'page.tsx' });
+      logger.info('User signed in', { uid: user.uid, file: 'login/page.tsx' });
 
-      // Get user document to find their organization
+      // Get user document to find their organization and role
       const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
+
       if (!userDoc.exists()) {
         throw new Error('User profile not found. Please contact support.');
       }
 
-      const userData = userDoc.data() as { organizationId?: string };
-      const orgId = userData.organizationId;
+      const userData = userDoc.data() as UserDocument;
+      const userRole = userData.role;
+      const orgId = userData.tenantId ?? userData.organizationId;
 
+      logger.info('User role detected', {
+        uid: user.uid,
+        role: userRole,
+        orgId: orgId,
+        file: 'login/page.tsx'
+      });
+
+      // SMART ROLE REDIRECTION
+      // Platform admins are routed to /admin, all others to their workspace
+      if (userRole === 'platform_admin') {
+        logger.info('Platform admin detected, redirecting to /admin', {
+          uid: user.uid,
+          file: 'login/page.tsx'
+        });
+        // Set redirecting state to show clean loading UI (prevents FOUC)
+        setRedirecting(true);
+        // Clear any tenant context for platform admin scope
+        // (activeTenant will be null in admin context)
+        router.push('/admin');
+        return;
+      }
+
+      // Tenant user validation
       if (!orgId) {
         throw new Error('No organization associated with this account.');
       }
 
-      // Redirect to workspace dashboard
+      // Set redirecting state for clean transition
+      setRedirecting(true);
+
+      // Redirect tenant users to their workspace dashboard
       router.push(`/workspace/${orgId}/dashboard`);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      logger.error('Login error:', error, { file: 'page.tsx' });
+      logger.error('Login error:', error, { file: 'login/page.tsx' });
 
       // User-friendly error messages
       const firebaseError = err as FirebaseError;
@@ -74,10 +123,38 @@ export default function LoginPage() {
       };
 
       setError(errorMessages[firebaseError.code] ?? firebaseError.message ?? 'Login failed');
-    } finally {
+      // Only reset loading on error (successful auth transitions to redirecting state)
       setLoading(false);
     }
   };
+
+  // Show full-screen loading state during redirect to prevent FOUC
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4">
+          <svg className="animate-spin h-10 w-10 text-indigo-500" viewBox="0 0 24 24">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          <p className="text-white text-lg font-medium">Redirecting to your dashboard...</p>
+          <p className="text-gray-500 text-sm">Please wait while we set things up</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
