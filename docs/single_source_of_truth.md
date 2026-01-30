@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 30, 2026 (Smart Role Redirection - OPERATIONAL)
+**Last Updated:** January 30, 2026 (Playwright Infrastructure Audit - NO-GO)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
@@ -1028,6 +1028,72 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 | `/api/webhooks/gmail` | Auto-meeting booking has TODO | LOW |
 | `/api/admin/social/post` | Dev mode returns fake success | LOW |
 | `/api/voice/twiml` | Audio fallback uses placeholder URL | LOW |
+
+### Testing Infrastructure (Audit: January 30, 2026)
+
+#### Test Frameworks Installed
+
+| Framework | Version | Purpose | Status |
+|-----------|---------|---------|--------|
+| Jest | ^30.2.0 | Unit tests, Jest E2E | FUNCTIONAL |
+| Playwright | ^1.57.0 | Browser E2E testing | **BLOCKED** |
+| @playwright/test | ^1.57.0 | Playwright test runner | INSTALLED |
+
+#### Playwright Configuration
+
+**File:** `playwright.config.ts`
+
+| Setting | Value | Status |
+|---------|-------|--------|
+| testDir | `./tests/e2e` | Configured |
+| testMatch | **NOT DEFINED** | CRITICAL ISSUE |
+| baseURL | `http://localhost:3000` | Configured |
+| reporter | `html` | Configured |
+| projects | 5 (chromium, firefox, webkit, mobile) | Configured |
+
+**CRITICAL ISSUE:** Missing `testMatch` pattern causes Playwright to attempt loading Jest test files (`*.e2e.test.ts`) which import `@jest/globals`, crashing test discovery.
+
+**Required Fix:**
+```typescript
+testMatch: '**/*.spec.ts',
+```
+
+#### Test File Naming Conventions
+
+| Pattern | Framework | Directory | Count |
+|---------|-----------|-----------|-------|
+| `*.spec.ts` | Playwright | `tests/e2e/` | 2 |
+| `*.e2e.test.ts` | Jest | `tests/e2e/` | 3 |
+| `*.test.ts` | Jest | `tests/` | Various |
+
+**Playwright E2E Tests (Valid):**
+- `website-builder.spec.ts` (16 tests)
+- `voice-engine.spec.ts` (22 tests)
+
+**Jest E2E Tests (Separate Runner):**
+- `email-sequences.e2e.test.ts`
+- `ecommerce-checkout.e2e.test.ts`
+- `ui-pages.e2e.test.ts`
+
+#### Test Scripts
+
+| Script | Command | Purpose |
+|--------|---------|---------|
+| `test` | `jest` | Unit tests |
+| `test:e2e` | `jest --testPathPattern=e2e --runInBand` | Jest E2E |
+| `test:playwright` | `playwright test` | Playwright E2E (**BROKEN**) |
+| `test:playwright:ui` | `playwright test --ui` | Playwright UI mode |
+
+#### Readiness Status
+
+| Criterion | Status |
+|-----------|--------|
+| Playwright installed | PASS |
+| Config file exists | PASS |
+| Test discovery | **FAIL** |
+| Autonomous testing | **NO-GO** |
+
+**Full Audit Report:** `docs/playwright-audit-2026-01-30.md`
 
 ---
 
