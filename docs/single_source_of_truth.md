@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 30, 2026 (Admin Support Views: Integrations + Settings for org-level God Mode)
+**Last Updated:** January 30, 2026 (Full Admin Support View Implementation: 45 org-level routes + LOC audit)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -32,7 +32,7 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 201 | Verified |
+| Physical Routes (page.tsx) | 244 | Verified (includes 45 Admin Org Support views) |
 | API Endpoints (route.ts) | 228 | 222 Functional, 6 Partial* |
 | AI Agents | 47 | **47 FUNCTIONAL (100% Complete)** |
 | RBAC Roles | 5 | Implemented |
@@ -50,6 +50,38 @@
 - **AI Gateway:** OpenRouter (100+ models)
 - **Voice:** VoiceEngineFactory (Native, ElevenLabs, Unreal)
 - **Payments:** Stripe
+
+### Codebase Scale (January 30, 2026)
+
+**Total Lines of Code Analysis (via cloc):**
+
+| Metric | Count |
+|--------|-------|
+| **Total Files** | 1,232 |
+| **Total Lines** | 472,741 |
+| **Code Lines** | 365,958 |
+| **Comment Lines** | 52,751 |
+| **Blank Lines** | 54,032 |
+
+**Breakdown by Language:**
+
+| Language | Files | Code | Comments | Blank |
+|----------|-------|------|----------|-------|
+| TypeScript | 1,223 | 364,132 | 52,727 | 53,645 |
+| Markdown | 6 | 1,530 | 0 | 372 |
+| JSON | 2 | 191 | 0 | 0 |
+| CSS | 1 | 105 | 24 | 15 |
+
+**Breakdown by Directory (TypeScript LOC):**
+
+| Directory | Files | Code Lines | Purpose |
+|-----------|-------|------------|---------|
+| `src/lib/` | 512 | ~199,000 | Core business logic, services, agents |
+| `src/components/` | 179 | ~40,000 | UI components |
+| `src/app/api/` | 231 | ~30,600 | API routes |
+| `src/app/admin/` | 92 | ~24,500 | Admin pages |
+| `src/types/` | 41 | ~10,700 | TypeScript definitions |
+| `src/hooks/` | 14 | ~2,200 | React hooks |
 
 ### AI Governance Layer
 
@@ -92,16 +124,16 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Admin (`/admin/*`) | 48 | 2 (`[id]`) | All pages exist |
+| Admin (`/admin/*`) | 92 | 2 (`[id]`) | All pages exist (including 45 org-level support views) |
 | Workspace (`/workspace/[orgId]/*`) | 95 | 15 | All pages exist |
 | Dashboard (`/dashboard/*`) | 17 | 0 | All pages exist |
 | Public (`/(public)/*`) | 15 | 0 | All pages exist |
 | Sites (`/sites/[orgId]/*`) | 12 | 2 | Multi-tenant websites |
 | Onboarding (`/onboarding/*`) | 4 | 0 | All pages exist |
 | Other | 10 | 2 | All pages exist |
-| **TOTAL** | **201** | **21** | **Verified** |
+| **TOTAL** | **244** | **21** | **Verified** |
 
-### Admin Routes (46)
+### Admin Routes (92)
 
 ```
 /admin                              # CEO Command Center [FULL - 395 lines]
@@ -123,8 +155,51 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 /admin/organizations/new            # Create organization
 /admin/organizations/[id]           # Organization detail
 /admin/organizations/[id]/edit      # Edit organization
-/admin/organizations/[id]/integrations  # Admin Support: Org integrations
-/admin/organizations/[id]/settings      # Admin Support: Org settings
+
+# Admin Support Views (45 org-level routes for God Mode access)
+/admin/organizations/[id]/dashboard         # Org dashboard
+/admin/organizations/[id]/leads             # Lead management
+/admin/organizations/[id]/deals             # Deal pipeline
+/admin/organizations/[id]/contacts          # Contact management
+/admin/organizations/[id]/analytics         # Analytics dashboard
+/admin/organizations/[id]/analytics-pipeline # Pipeline analytics
+/admin/organizations/[id]/analytics-revenue  # Revenue analytics
+/admin/organizations/[id]/calls             # Call management
+/admin/organizations/[id]/conversations     # Conversation tracking
+/admin/organizations/[id]/email-campaigns   # Email campaigns
+/admin/organizations/[id]/social-campaigns  # Social campaigns
+/admin/organizations/[id]/sequences         # Sequences
+/admin/organizations/[id]/nurture           # Nurture sequences
+/admin/organizations/[id]/forms             # Form management
+/admin/organizations/[id]/templates         # Templates
+/admin/organizations/[id]/products          # Product catalog
+/admin/organizations/[id]/orders            # Order management
+/admin/organizations/[id]/storefront        # Storefront
+/admin/organizations/[id]/proposals         # Proposals
+/admin/organizations/[id]/battlecards       # Sales battlecards
+/admin/organizations/[id]/lead-scoring      # Lead scoring
+/admin/organizations/[id]/workflows         # Workflow automation
+/admin/organizations/[id]/workforce         # AI workforce
+/admin/organizations/[id]/datasets          # Datasets
+/admin/organizations/[id]/fine-tuning       # Model fine-tuning
+/admin/organizations/[id]/agent-training    # Agent training
+/admin/organizations/[id]/custom-tools      # Custom tools
+/admin/organizations/[id]/ab-tests          # A/B tests
+/admin/organizations/[id]/living-ledger     # Living ledger
+/admin/organizations/[id]/website-pages     # Website pages
+/admin/organizations/[id]/website-blog      # Blog management
+/admin/organizations/[id]/website-seo       # SEO management
+/admin/organizations/[id]/website-domains   # Domain management
+/admin/organizations/[id]/video-studio      # Video studio
+/admin/organizations/[id]/voice-ai-lab      # Voice AI lab
+/admin/organizations/[id]/seo-ai-lab        # SEO AI lab
+/admin/organizations/[id]/social-ai-lab     # Social AI lab
+/admin/organizations/[id]/integrations      # Integration management
+/admin/organizations/[id]/settings          # Organization settings
+/admin/organizations/[id]/api-keys          # API key management
+/admin/organizations/[id]/webhooks          # Webhook management
+/admin/organizations/[id]/billing           # Billing management
+/admin/organizations/[id]/security          # Security settings
 /admin/pricing-tiers                # Pricing tier config
 /admin/recovery                     # Churn prevention
 /admin/revenue                      # Revenue analytics
@@ -1684,16 +1759,63 @@ Platform Admin → /admin/support/impersonate → Select user → /workspace/[ta
 - `src/components/dashboard/navigation-config.ts` - Exports `getNavigationForRole(role, adminContext)` with context-aware sections
 - `src/types/unified-rbac.ts` - Defines `admin_org_view` and `admin_support` navigation categories
 
-**Gap Report (41 Missing Routes - 2 Recovered):**
-The `/admin/organizations/[id]/*` route tree now has 4 functional pages:
-- ✅ OPERATIONAL: `/admin/organizations/[id]` (detail view)
-- ✅ OPERATIONAL: `/admin/organizations/[id]/edit` (edit organization)
-- ✅ OPERATIONAL: `/admin/organizations/[id]/integrations` (Admin Support view - added Jan 30, 2026)
-- ✅ OPERATIONAL: `/admin/organizations/[id]/settings` (Admin Support view - added Jan 30, 2026)
+**Gap Report (0 Missing Routes - COMPLETE):**
+The `/admin/organizations/[id]/*` route tree now has **45 functional pages** (January 30, 2026 - Full Implementation):
 
-Remaining gaps (41 routes): dashboard, leads, deals, contacts, analytics, etc.
-- These would require "Admin View" components for org-specific data inspection
-- Current solution: Hide CLIENT_SECTIONS entirely in admin context to prevent invalid routing
+| Route | Status | Description |
+|-------|--------|-------------|
+| `/admin/organizations/[id]` | ✅ | Organization detail view |
+| `/admin/organizations/[id]/edit` | ✅ | Edit organization |
+| `/admin/organizations/[id]/dashboard` | ✅ | Admin org dashboard |
+| `/admin/organizations/[id]/leads` | ✅ | Lead management view |
+| `/admin/organizations/[id]/deals` | ✅ | Deal pipeline view |
+| `/admin/organizations/[id]/contacts` | ✅ | Contact management view |
+| `/admin/organizations/[id]/analytics` | ✅ | Analytics dashboard |
+| `/admin/organizations/[id]/analytics-pipeline` | ✅ | Pipeline analytics |
+| `/admin/organizations/[id]/analytics-revenue` | ✅ | Revenue analytics |
+| `/admin/organizations/[id]/calls` | ✅ | Call management view |
+| `/admin/organizations/[id]/conversations` | ✅ | Conversation tracking |
+| `/admin/organizations/[id]/email-campaigns` | ✅ | Email campaign management |
+| `/admin/organizations/[id]/social-campaigns` | ✅ | Social campaign management |
+| `/admin/organizations/[id]/sequences` | ✅ | Sequence management |
+| `/admin/organizations/[id]/nurture` | ✅ | Nurture sequence view |
+| `/admin/organizations/[id]/forms` | ✅ | Form management |
+| `/admin/organizations/[id]/templates` | ✅ | Template management |
+| `/admin/organizations/[id]/products` | ✅ | Product catalog view |
+| `/admin/organizations/[id]/orders` | ✅ | Order management view |
+| `/admin/organizations/[id]/storefront` | ✅ | Storefront management |
+| `/admin/organizations/[id]/proposals` | ✅ | Proposal management |
+| `/admin/organizations/[id]/battlecards` | ✅ | Sales battlecards |
+| `/admin/organizations/[id]/lead-scoring` | ✅ | Lead scoring config |
+| `/admin/organizations/[id]/workflows` | ✅ | Workflow automation |
+| `/admin/organizations/[id]/workforce` | ✅ | AI workforce view |
+| `/admin/organizations/[id]/datasets` | ✅ | Dataset management |
+| `/admin/organizations/[id]/fine-tuning` | ✅ | Model fine-tuning |
+| `/admin/organizations/[id]/agent-training` | ✅ | Agent training |
+| `/admin/organizations/[id]/custom-tools` | ✅ | Custom tools config |
+| `/admin/organizations/[id]/ab-tests` | ✅ | A/B test management |
+| `/admin/organizations/[id]/living-ledger` | ✅ | Living ledger view |
+| `/admin/organizations/[id]/website-pages` | ✅ | Website pages |
+| `/admin/organizations/[id]/website-blog` | ✅ | Blog management |
+| `/admin/organizations/[id]/website-seo` | ✅ | SEO management |
+| `/admin/organizations/[id]/website-domains` | ✅ | Domain management |
+| `/admin/organizations/[id]/video-studio` | ✅ | Video studio |
+| `/admin/organizations/[id]/voice-ai-lab` | ✅ | Voice AI lab |
+| `/admin/organizations/[id]/seo-ai-lab` | ✅ | SEO AI lab |
+| `/admin/organizations/[id]/social-ai-lab` | ✅ | Social AI lab |
+| `/admin/organizations/[id]/integrations` | ✅ | Integration management |
+| `/admin/organizations/[id]/settings` | ✅ | Organization settings |
+| `/admin/organizations/[id]/api-keys` | ✅ | API key management |
+| `/admin/organizations/[id]/webhooks` | ✅ | Webhook management |
+| `/admin/organizations/[id]/billing` | ✅ | Billing management |
+| `/admin/organizations/[id]/security` | ✅ | Security settings |
+
+**All Admin Support Views implemented with:**
+- `useAdminAuth()` permission checks (`platform_admin` required)
+- Organization data loading via FirestoreService
+- Consistent Admin Banner with Shield icon
+- Dark theme styling matching platform design
+- Backend integration via existing workspace APIs
 
 #### Bug Fix (January 27, 2026)
 
