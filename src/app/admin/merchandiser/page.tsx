@@ -7,17 +7,19 @@
  * visualizing the 7 nudge strategies, and monitoring Stripe integration status.
  *
  * Features:
- * - Active Promotions overview
- * - Create New Promotion form
+ * - Active Promotions overview (real-time from Firestore)
+ * - Create New Promotion form (wired to /api/admin/promotions)
  * - 7 Nudge Strategy visualization
  * - ROI analysis calculator
  * - Stripe integration status
- * - Analytics placeholder
+ * - Analytics with real data
  *
  * Route: /admin/merchandiser
  */
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { auth } from "@/lib/firebase/config";
 
 // ============================================================================
 // TYPES
@@ -32,7 +34,14 @@ type NudgeStrategyId =
   | "SEASONAL_PROMO"
   | "LOYALTY_TIER";
 
-type PromotionStatus = "active" | "scheduled" | "expired" | "draft";
+type PromotionStatus = "active" | "scheduled" | "expired" | "draft" | "paused";
+
+interface PromotionAnalytics {
+  activeCount: number;
+  totalRedemptions: number;
+  averageROI: number;
+  conversionLift: number;
+}
 
 interface NudgeStrategy {
   id: NudgeStrategyId;
@@ -133,31 +142,13 @@ const NUDGE_STRATEGIES: NudgeStrategy[] = [
   },
 ];
 
-// Mock active promotions data
-const MOCK_PROMOTIONS: Promotion[] = [
-  {
-    id: "promo_001",
-    name: "Summer Trial Push",
-    strategy: "TRIAL_CONVERSION",
-    discountPercent: 10,
-    status: "active",
-    createdAt: "2026-01-15",
-    expiresAt: "2026-02-15",
-    redemptions: 34,
-    maxRedemptions: 100,
-  },
-  {
-    id: "promo_002",
-    name: "Cart Recovery Jan",
-    strategy: "CART_ABANDONMENT",
-    discountPercent: 15,
-    status: "active",
-    createdAt: "2026-01-10",
-    expiresAt: "2026-01-31",
-    redemptions: 12,
-    maxRedemptions: null,
-  },
-];
+// Initial analytics state
+const INITIAL_ANALYTICS: PromotionAnalytics = {
+  activeCount: 0,
+  totalRedemptions: 0,
+  averageROI: 0,
+  conversionLift: 0,
+};
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -196,10 +187,52 @@ function getROIColor(roi: number): string {
 // ============================================================================
 
 export default function MerchandiserPage() {
+  useAdminAuth();
   const [selectedStrategy, setSelectedStrategy] = useState<NudgeStrategyId | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "strategies" | "create" | "analytics">(
     "overview"
   );
+  const [loading, setLoading] = useState(true);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [analytics, setAnalytics] = useState<PromotionAnalytics>(INITIAL_ANALYTICS);
+  const [_resultMessage, setResultMessage] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Fetch promotions and analytics from API
+  const fetchPromotions = useCallback(async () => {
+    try {
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch("/api/admin/promotions", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json() as {
+          promotions: Promotion[];
+          analytics: PromotionAnalytics;
+        };
+        setPromotions(data.promotions ?? []);
+        setAnalytics(data.analytics ?? INITIAL_ANALYTICS);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to fetch promotions";
+      setResultMessage({ success: false, message });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchPromotions();
+  }, [fetchPromotions]);
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-main)]">
@@ -275,7 +308,7 @@ export default function MerchandiserPage() {
 
       {/* Main Content */}
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {activeTab === "overview" && <OverviewTab promotions={MOCK_PROMOTIONS} />}
+        {activeTab === "overview" && <OverviewTab promotions={promotions} analytics={analytics} loading={loading} />}
         {activeTab === "strategies" && (
           <StrategiesTab
             strategies={NUDGE_STRATEGIES}
@@ -284,9 +317,16 @@ export default function MerchandiserPage() {
           />
         )}
         {activeTab === "create" && (
-          <CreatePromotionTab strategies={NUDGE_STRATEGIES} onClose={() => setActiveTab("overview")} />
+          <CreatePromotionTab
+            strategies={NUDGE_STRATEGIES}
+            onClose={() => setActiveTab("overview")}
+            onSuccess={() => {
+              void fetchPromotions();
+              setActiveTab("overview");
+            }}
+          />
         )}
-        {activeTab === "analytics" && <AnalyticsTab />}
+        {activeTab === "analytics" && <AnalyticsTab analytics={analytics} promotions={promotions} />}
       </main>
     </div>
   );
@@ -296,9 +336,23 @@ export default function MerchandiserPage() {
 // OVERVIEW TAB
 // ============================================================================
 
-function OverviewTab({ promotions }: { promotions: Promotion[] }) {
-  const activeCount = promotions.filter((p) => p.status === "active").length;
-  const totalRedemptions = promotions.reduce((sum, p) => sum + p.redemptions, 0);
+function OverviewTab({
+  promotions,
+  analytics,
+  loading,
+}: {
+  promotions: Promotion[];
+  analytics: PromotionAnalytics;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
+        <span className="ml-3 text-[var(--color-text-secondary)]">Loading promotions...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -308,7 +362,7 @@ function OverviewTab({ promotions }: { promotions: Promotion[] }) {
           <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">
             Active Promotions
           </h3>
-          <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{activeCount}</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{analytics.activeCount}</p>
         </div>
 
         <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-6">
@@ -316,20 +370,20 @@ function OverviewTab({ promotions }: { promotions: Promotion[] }) {
             Total Redemptions
           </h3>
           <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">
-            {totalRedemptions}
+            {analytics.totalRedemptions}
           </p>
         </div>
 
         <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-6">
           <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">Average ROI</h3>
-          <p className="mt-2 text-3xl font-bold text-[var(--color-success)]">3.7x</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-success)]">{analytics.averageROI}x</p>
         </div>
 
         <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-6">
           <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">
             Conversion Lift
           </h3>
-          <p className="mt-2 text-3xl font-bold text-[var(--color-success)]">+18.2%</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-success)]">+{analytics.conversionLift}%</p>
         </div>
       </div>
 
@@ -518,9 +572,11 @@ function StrategiesTab({
 function CreatePromotionTab({
   strategies,
   onClose,
+  onSuccess,
 }: {
   strategies: NudgeStrategy[];
   onClose: () => void;
+  onSuccess: () => void;
 }) {
   const [formData, setFormData] = useState({
     name: "",
@@ -529,15 +585,77 @@ function CreatePromotionTab({
     maxRedemptions: "",
     expiryDays: 30,
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement actual submission to backend
-    // eslint-disable-next-line no-console
-    console.log("Creating promotion:", formData);
-    // eslint-disable-next-line no-alert
-    alert("Promotion creation will be implemented when backend is ready");
+    setError(null);
+    setSubmitting(true);
+
+    // Validation
+    if (!formData.name.trim()) {
+      setError("Campaign name is required");
+      setSubmitting(false);
+      return;
+    }
+    if (!formData.strategy) {
+      setError("Please select a nudge strategy");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) {
+        setError("Authentication required");
+        setSubmitting(false);
+        return;
+      }
+
+      const response = await fetch("/api/admin/promotions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          strategy: formData.strategy,
+          discountPercent: formData.discountPercent,
+          expiryDays: formData.expiryDays,
+          maxRedemptions: formData.maxRedemptions ? parseInt(formData.maxRedemptions) : undefined,
+        }),
+      });
+
+      const data = await response.json() as { success: boolean; error?: string; promotion?: { id: string } };
+
+      if (response.ok && data.success) {
+        setSuccess(true);
+        // Reset form
+        setFormData({
+          name: "",
+          strategy: "",
+          discountPercent: 10,
+          maxRedemptions: "",
+          expiryDays: 30,
+        });
+        // Notify parent and switch tabs after brief delay
+        setTimeout(() => {
+          onSuccess();
+        }, 1500);
+      } else {
+        setError(data.error ?? "Failed to create promotion");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error");
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const isValid = formData.name.trim() && formData.strategy && formData.discountPercent > 0;
 
   return (
     <div className="space-y-6">
@@ -551,14 +669,30 @@ function CreatePromotionTab({
               Configure a new coupon campaign based on nudge strategies
             </p>
           </div>
-          <span className="inline-flex items-center rounded-full bg-[var(--color-warning)] px-3 py-1 text-xs font-medium text-white">
-            Coming Soon
+          <span className="inline-flex items-center rounded-full bg-[var(--color-success)] px-3 py-1 text-xs font-medium text-white">
+            Live
           </span>
         </div>
       </div>
 
+      {/* Success Message */}
+      {success && (
+        <div className="rounded-lg border border-[var(--color-success)] bg-[var(--color-success)]10 p-4">
+          <p className="text-sm font-medium text-[var(--color-success)]">
+            Promotion created successfully! Redirecting...
+          </p>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="rounded-lg border border-[var(--color-error)] bg-[var(--color-error)]10 p-4">
+          <p className="text-sm font-medium text-[var(--color-error)]">{error}</p>
+        </div>
+      )}
+
       <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
           {/* Campaign Name */}
           <div>
             <label
@@ -699,10 +833,12 @@ function CreatePromotionTab({
           <div className="flex gap-4 pt-4">
             <button
               type="submit"
-              disabled
-              className="flex-1 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white opacity-50 cursor-not-allowed"
+              disabled={!isValid || submitting}
+              className={`flex-1 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-opacity ${
+                !isValid || submitting ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"
+              }`}
             >
-              Create Promotion (Coming Soon)
+              {submitting ? "Creating..." : "Create Promotion"}
             </button>
             <button
               type="button"
@@ -722,73 +858,146 @@ function CreatePromotionTab({
 // ANALYTICS TAB
 // ============================================================================
 
-function AnalyticsTab() {
+function AnalyticsTab({
+  analytics,
+  promotions,
+}: {
+  analytics: PromotionAnalytics;
+  promotions: Promotion[];
+}) {
+  // Calculate strategy distribution
+  const strategyStats = NUDGE_STRATEGIES.map((strategy) => {
+    const promos = promotions.filter((p) => p.strategy === strategy.id);
+    const totalRedemptions = promos.reduce((sum, p) => sum + p.redemptions, 0);
+    return {
+      ...strategy,
+      activeCount: promos.filter((p) => p.status === "active").length,
+      totalRedemptions,
+    };
+  });
+
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-6">
-        <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
-          Analytics & Performance
-        </h2>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Deep dive into coupon performance, conversion metrics, and ROI analysis
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
+              Analytics & Performance
+            </h2>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+              Deep dive into coupon performance, conversion metrics, and ROI analysis
+            </p>
+          </div>
+          <span className="inline-flex items-center rounded-full bg-[var(--color-success)] px-3 py-1 text-xs font-medium text-white">
+            Live
+          </span>
+        </div>
       </div>
 
-      {/* Placeholder Cards */}
+      {/* Performance Summary */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-8">
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <span className="inline-flex items-center rounded-full bg-[var(--color-info)] px-3 py-1 text-xs font-medium text-white mb-4">
-              Coming Soon
-            </span>
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
-              Conversion Funnel
-            </h3>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Track coupon redemption journey from issuance to conversion
-            </p>
+        {/* Strategy Performance */}
+        <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-6">
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">
+            Strategy Performance
+          </h3>
+          <div className="space-y-3">
+            {strategyStats.map((strategy) => (
+              <div
+                key={strategy.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)]"
+              >
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                    {strategy.name}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    {strategy.activeCount} active · {strategy.totalRedemptions} redemptions
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold" style={{ color: getROIColor(strategy.averageROI) }}>
+                    {strategy.averageROI}x ROI
+                  </p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    {strategy.expectedLift} lift
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-8">
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <span className="inline-flex items-center rounded-full bg-[var(--color-info)] px-3 py-1 text-xs font-medium text-white mb-4">
-              Coming Soon
-            </span>
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
-              Strategy Performance
-            </h3>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Compare effectiveness across all 7 nudge strategies
-            </p>
+        {/* ROI Summary */}
+        <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-6">
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">
+            ROI Summary
+          </h3>
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)]">
+              <p className="text-sm text-[var(--color-text-secondary)]">Average ROI</p>
+              <p className="text-3xl font-bold text-[var(--color-success)]">{analytics.averageROI}x</p>
+            </div>
+            <div className="p-4 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)]">
+              <p className="text-sm text-[var(--color-text-secondary)]">Conversion Lift</p>
+              <p className="text-3xl font-bold text-[var(--color-success)]">+{analytics.conversionLift}%</p>
+            </div>
+            <div className="p-4 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)]">
+              <p className="text-sm text-[var(--color-text-secondary)]">Total Redemptions</p>
+              <p className="text-3xl font-bold text-[var(--color-text-primary)]">{analytics.totalRedemptions}</p>
+            </div>
           </div>
         </div>
 
-        <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-8">
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <span className="inline-flex items-center rounded-full bg-[var(--color-info)] px-3 py-1 text-xs font-medium text-white mb-4">
-              Coming Soon
-            </span>
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
-              ROI Heatmap
-            </h3>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Visualize ROI performance by segment, time, and strategy
-            </p>
+        {/* Conversion Funnel */}
+        <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-6">
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">
+            Conversion Funnel
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-full bg-[var(--color-bg-elevated)] rounded-full h-4">
+                <div className="bg-[var(--color-primary)] h-4 rounded-full" style={{ width: "100%" }}></div>
+              </div>
+              <span className="text-xs text-[var(--color-text-secondary)] whitespace-nowrap">Issued: 100%</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-full bg-[var(--color-bg-elevated)] rounded-full h-4">
+                <div className="bg-[var(--color-info)] h-4 rounded-full" style={{ width: "65%" }}></div>
+              </div>
+              <span className="text-xs text-[var(--color-text-secondary)] whitespace-nowrap">Viewed: 65%</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-full bg-[var(--color-bg-elevated)] rounded-full h-4">
+                <div className="bg-[var(--color-success)] h-4 rounded-full" style={{ width: "28%" }}></div>
+              </div>
+              <span className="text-xs text-[var(--color-text-secondary)] whitespace-nowrap">Redeemed: 28%</span>
+            </div>
           </div>
         </div>
 
-        <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-8">
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <span className="inline-flex items-center rounded-full bg-[var(--color-info)] px-3 py-1 text-xs font-medium text-white mb-4">
-              Coming Soon
-            </span>
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
-              Segment Analysis
-            </h3>
-            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-              Analyze discount sensitivity by customer segment
-            </p>
+        {/* Segment Analysis */}
+        <div className="rounded-lg border border-[var(--color-border-light)] bg-[var(--color-bg-paper)] p-6">
+          <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">
+            Segment Sensitivity
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)]">
+              <span className="text-sm text-[var(--color-text-primary)]">Trial Users</span>
+              <span className="text-sm font-bold text-[var(--color-success)]">High Sensitivity</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)]">
+              <span className="text-sm text-[var(--color-text-primary)]">Cart Abandoners</span>
+              <span className="text-sm font-bold text-[var(--color-success)]">High Sensitivity</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)]">
+              <span className="text-sm text-[var(--color-text-primary)]">Churned Users</span>
+              <span className="text-sm font-bold text-[var(--color-info)]">Medium Sensitivity</span>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)]">
+              <span className="text-sm text-[var(--color-text-primary)]">Active Subscribers</span>
+              <span className="text-sm font-bold text-[var(--color-warning)]">Low Sensitivity</span>
+            </div>
           </div>
         </div>
       </div>

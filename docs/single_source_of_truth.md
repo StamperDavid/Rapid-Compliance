@@ -1,10 +1,10 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 30, 2026 (Backend Integration: Video Rendering + Social Scheduling)
+**Last Updated:** January 30, 2026 (46-Route Admin Audit + Merchandiser Promotion API)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
-**Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis
+**Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
 
 ---
 
@@ -33,7 +33,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 199 | Verified |
-| API Endpoints (route.ts) | 227 | 221 Functional, 6 Partial* |
+| API Endpoints (route.ts) | 228 | 222 Functional, 6 Partial* |
 | AI Agents | 47 | **47 FUNCTIONAL (100% Complete)** |
 | RBAC Roles | 5 | Implemented |
 | Permissions per Role | 47 | Defined |
@@ -1065,6 +1065,11 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 **RESOLVED (January 30, 2026):**
 - `/api/admin/social/post` - Now persists scheduled posts to Firestore via `SocialPostService`
 - `/api/admin/video/render` - New endpoint with real `jobId` persistence via `VideoJobService`
+- `/api/admin/promotions` - ✅ **NEW** Full CRUD for promotional campaigns via `PromotionService`
+  - POST: Create promotion with Zod validation, Firestore persistence
+  - GET: Fetch all promotions with analytics aggregation
+  - DELETE: Remove promotion by ID
+  - Service: `src/lib/promotions/promotion-service.ts`
 
 ### Testing Infrastructure (Audit: January 30, 2026)
 
@@ -1094,13 +1099,16 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 
 | Pattern | Framework | Directory | Count |
 |---------|-----------|-----------|-------|
-| `*.spec.ts` | Playwright | `tests/e2e/` | 2 |
+| `*.spec.ts` | Playwright | `tests/e2e/` | 4 |
 | `*.e2e.test.ts` | Jest | `tests/e2e/` | 3 |
 | `*.test.ts` | Jest | `tests/` | Various |
 
 **Playwright E2E Tests (Valid):**
 - `website-builder.spec.ts` (16 tests)
 - `voice-engine.spec.ts` (22 tests)
+- `admin-gateway.spec.ts` (Admin login/theme audit)
+- `admin-content-factory.spec.ts` (Content & AI management audit)
+- `admin-routes-audit.spec.ts` ✅ **NEW** (46-route visual audit with trace)
 
 **Jest E2E Tests (Separate Runner):**
 - `email-sequences.e2e.test.ts`
