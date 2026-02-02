@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 2, 2026 (Penthouse Single-Tenant Model - All Phases Complete)
+**Last Updated:** February 2, 2026 (Backend Migration Complete - rapid-compliance-65f87)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -46,7 +46,7 @@
 
 - **Framework:** Next.js 15 (App Router)
 - **Hosting:** Vercel (serverless)
-- **Database:** Firebase Firestore (multi-tenant)
+- **Database:** Firebase Firestore (single-tenant: `rapid-compliance-65f87`)
 - **Authentication:** Firebase Auth with custom claims
 - **AI Gateway:** OpenRouter (100+ models)
 - **Voice:** VoiceEngineFactory (Native, ElevenLabs, Unreal)
@@ -157,6 +157,23 @@ function validateProjectId(): void {
 - Any other project ID throws `CriticalConfigurationError` at runtime
 - Build phase bypassed to allow CI/CD (validation occurs at runtime)
 - Prevents accidental deployment to wrong project
+
+#### Backend Migration Status
+
+**Status:** ✅ COMPLETE (February 2, 2026)
+
+| Component | Old Value | New Value | Status |
+|-----------|-----------|-----------|--------|
+| Project ID | `ai-sales-platform-dev` | `rapid-compliance-65f87` | ✅ Migrated |
+| Auth Domain | `ai-sales-platform-dev.firebaseapp.com` | `rapid-compliance-65f87.firebaseapp.com` | ✅ Migrated |
+| Storage Bucket | `ai-sales-platform-dev.firebasestorage.app` | `rapid-compliance-65f87.firebasestorage.app` | ✅ Migrated |
+| Firestore Rules | Legacy project | `rapid-compliance-65f87` | ⚠️ Pending CLI auth |
+| Admin SDK | Old service account | New service account needed | ⚠️ Pending credentials |
+
+**Verification Script:** `scripts/verify-firebase-connection.mjs`
+- Confirms CriticalConfigurationError kill-switch is NOT triggered
+- Validates Firestore handshake with production project
+- Run: `node scripts/verify-firebase-connection.mjs`
 
 #### Flattened Route Architecture
 
@@ -1772,7 +1789,7 @@ console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 | Integration | Type | Features |
 |-------------|------|----------|
 | **Stripe** | Payments | Subscriptions, invoices, webhooks |
-| **Firebase** | Auth + DB | Authentication, Firestore |
+| **Firebase** | Auth + DB | Authentication, Firestore (`rapid-compliance-65f87`) |
 | **OpenRouter** | AI Gateway | 100+ model access |
 | **Calendly** | Scheduling | Meeting booking |
 | **Shopify** | E-commerce | Product sync |
