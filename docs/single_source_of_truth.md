@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** January 30, 2026 (SSOT cleanup: changelogs archived, 43 admin routes verified via Playwright)
+**Last Updated:** February 2, 2026 (Single-Tenant Conversion Plan added)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -11,18 +11,19 @@
 ## Table of Contents
 
 1. [Executive Summary](#executive-summary)
-2. [Verified Live Route Map](#verified-live-route-map)
-3. [Agent Registry](#agent-registry)
-4. [Unified RBAC Matrix](#unified-rbac-matrix)
-5. [Security Audit Findings](#security-audit-findings)
-6. [Tooling Inventory](#tooling-inventory)
-7. [Infrastructure Systems](#infrastructure-systems)
-8. [Integration Status](#integration-status)
-9. [Firestore Collections](#firestore-collections)
-10. [Architecture Notes](#architecture-notes)
-11. [Data Contracts Reference](#data-contracts-reference)
-12. [Autonomous Verification](#autonomous-verification)
-13. [Document Maintenance](#document-maintenance)
+2. [Single-Tenant Conversion Plan](#single-tenant-conversion-plan) **[NEW - February 2026]**
+3. [Verified Live Route Map](#verified-live-route-map)
+4. [Agent Registry](#agent-registry)
+5. [Unified RBAC Matrix](#unified-rbac-matrix)
+6. [Security Audit Findings](#security-audit-findings)
+7. [Tooling Inventory](#tooling-inventory)
+8. [Infrastructure Systems](#infrastructure-systems)
+9. [Integration Status](#integration-status)
+10. [Firestore Collections](#firestore-collections)
+11. [Architecture Notes](#architecture-notes)
+12. [Data Contracts Reference](#data-contracts-reference)
+13. [Autonomous Verification](#autonomous-verification)
+14. [Document Maintenance](#document-maintenance)
 
 ---
 
@@ -115,6 +116,228 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 - `npm run build` must succeed
 - No new `any` types introduced
 - No new eslint-disable comments added
+
+---
+
+## Single-Tenant Conversion Plan
+
+**Status:** 🚧 PLANNED - February 2026
+**Repository:** https://github.com/StamperDavid/Rapid-Compliance
+**Branch:** dev
+
+### Overview
+
+This platform is being converted from a **multi-tenant SaaS** architecture (multiple organizations/companies) to a **single-company deployment** for Rapid Compliance.
+
+### Conversion Parameters
+
+| Parameter | Decision | Rationale |
+|-----------|----------|-----------|
+| **Workspaces** | Flatten entirely | Remove workspace layer - all data lives directly under single org |
+| **Data Migration** | Fresh start | No existing production data to migrate |
+| **Admin Panel** | Simplify heavily | Keep basic admin (user management, settings) but remove org-browsing features |
+| **Public Features** | Keep both | Retain website builder (`/sites/`) and storefront (`/store/`) |
+| **RBAC** | 4-level hierarchy | `superadmin` → `admin` → `manager` → `employee` (remove platform_admin and owner) |
+
+### Current Multi-Tenant Architecture
+
+#### Database Layer
+- 60+ Firestore collections, most with `organizationId` field
+- Sub-collection pattern: `organizations/{orgId}/workspaces/{wsId}/*`
+- Security rules enforce `belongsToOrg(orgId)` checks
+- Key file: `firestore.rules` (855 lines)
+
+#### Route Structure (Before Conversion)
+
+| Route Pattern | Count | Conversion Action |
+|---------------|-------|-------------------|
+| `/workspace/[orgId]/*` | 95 pages | Remove `[orgId]` segment → `/workspace/*` |
+| `/admin/organizations/[id]/*` | 43 pages | Remove org-browsing, keep settings/integrations |
+| `/admin/organizations/*` | 4 pages | Remove org CRUD |
+| `/sites/[orgId]/*` | 12 pages | Hard-code to DEFAULT_ORG_ID |
+| `/store/[orgId]/*` | 3 pages | Hard-code to DEFAULT_ORG_ID |
+
+#### Key Multi-Tenant Files
+
+| File | Current Purpose | Conversion Change |
+|------|-----------------|-------------------|
+| `src/lib/constants/platform.ts` | Platform org config | Add `DEFAULT_ORG_ID` constant |
+| `src/types/organization.ts` | Org/Workspace types | Remove Workspace, simplify |
+| `src/types/unified-rbac.ts` | 5-level RBAC | Convert to 4-level |
+| `src/lib/auth/claims-validator.ts` | Extract tenant_id from claims | Use DEFAULT_ORG_ID |
+| `src/lib/auth/api-auth.ts` | requireOrganization() middleware | Simplify to use constant |
+| `src/lib/firebase/dal.ts` | Client Firestore access | Remove org-scoped queries |
+| `src/lib/firebase/admin-dal.ts` | Server Firestore access | Remove workspace methods |
+| `src/lib/firebase/collections.ts` | Collection path helpers | Remove getWorkspaceSubCollection() |
+| `firestore.rules` | Security rules | Simplify org checks |
+| `src/middleware.ts` | Subdomain/domain routing | Remove multi-tenant routing |
+| `src/lib/ai/tenant-context-wrapper.ts` | AI tenant isolation | Simplify |
+| `src/lib/agents/shared/tenant-memory-vault.ts` | Cross-agent memory | Remove tenantId requirement |
+
+### Conversion Phases
+
+#### Phase 1: Constants & Types
+1. Add `DEFAULT_ORG_ID = 'default-org'` to `src/lib/constants/platform.ts`
+2. Update `src/types/unified-rbac.ts` to 4-level hierarchy:
+   - Remove `platform_admin` and `owner`
+   - Add `superadmin` (combines platform_admin + owner permissions)
+   - Keep `admin`, `manager`, `employee`
+3. Update `src/types/organization.ts`:
+   - Remove `Workspace` interface
+   - Remove `WorkspaceAccess` interface
+   - Simplify `OrganizationMember` (remove workspaceAccess array)
+
+#### Phase 2: Auth Simplification
+4. Update `src/lib/auth/claims-validator.ts`:
+   - `getEffectiveOrgId()` returns `DEFAULT_ORG_ID`
+   - `checkTenantAccess()` simplified (single org)
+5. Update `src/lib/auth/api-auth.ts`:
+   - `requireOrganization()` uses `DEFAULT_ORG_ID`
+6. Update `src/hooks/useUnifiedAuth.ts`:
+   - Remove org selection/switching logic
+
+#### Phase 3: Route Restructuring
+7. Rename `src/app/workspace/[orgId]/` → `src/app/workspace/`
+   - Update all 95 page files
+   - Remove `params.orgId` extraction
+   - Update all navigation links
+8. Update `src/lib/routes/workspace-routes.ts`:
+   - Remove `orgId` parameter from route builders
+   - Routes become static paths
+
+#### Phase 4: Database Layer
+9. Update `src/lib/firebase/admin-dal.ts`:
+   - Remove `getWorkspaceCollection()` methods
+   - Flatten collection paths
+   - Remove `workspaceId` parameters (~22 references)
+10. Update `src/lib/firebase/collections.ts`:
+    - Remove `getWorkspaceSubCollection()` function
+11. Update `firestore.rules`:
+    - Simplify `belongsToOrg()` function
+    - Remove workspace-nested path rules
+
+#### Phase 5: AI Agents
+12. Update `src/lib/ai/tenant-context-wrapper.ts`:
+    - Use `DEFAULT_ORG_ID` constant
+13. Update `src/lib/agents/shared/tenant-memory-vault.ts`:
+    - Remove mandatory tenantId parameters
+
+#### Phase 6: UI Cleanup
+14. Remove admin organization browser:
+    - Delete `src/app/admin/organizations/page.tsx`
+    - Delete `src/app/admin/organizations/new/page.tsx`
+    - Delete `src/app/admin/organizations/[id]/page.tsx`
+    - Delete `src/app/admin/organizations/[id]/edit/page.tsx`
+    - Delete 40+ feature routes under `[id]/`
+    - Keep only `settings/page.tsx` and `integrations/page.tsx` (hard-code org)
+15. Update `src/app/admin/organizations/[id]/settings` and `integrations` to use `DEFAULT_ORG_ID`
+16. Update `/sites/[orgId]/*` and `/store/[orgId]/*` routes
+
+#### Phase 7: Middleware
+17. Update `src/middleware.ts`:
+    - Remove subdomain-based org lookup
+    - Remove custom domain org routing
+
+#### Phase 8: Verification & Deployment
+18. Run full test suite:
+    - `npm run lint`
+    - `npm run type-check`
+    - `npm run build`
+19. Update this SSOT document with new route map
+20. Commit and push to dev branch
+
+### RBAC Hierarchy (After Conversion)
+
+| Role | Level | Key Permissions |
+|------|-------|-----------------|
+| `superadmin` | 4 | Full system access, user management, billing, all features |
+| `admin` | 3 | Organization management, API keys, theme, user management |
+| `manager` | 2 | Team management, workflows, marketing, sales |
+| `employee` | 1 | Individual contributor - create/edit own records only |
+
+### Files to Remove
+
+```
+src/app/admin/organizations/page.tsx           # Org browser
+src/app/admin/organizations/new/page.tsx       # Org creator
+src/app/admin/organizations/[id]/page.tsx      # Org details
+src/app/admin/organizations/[id]/edit/page.tsx # Org editor
+src/app/admin/organizations/[id]/ab-tests/
+src/app/admin/organizations/[id]/analytics/
+src/app/admin/organizations/[id]/api-keys/
+src/app/admin/organizations/[id]/battlecards/
+src/app/admin/organizations/[id]/billing/
+src/app/admin/organizations/[id]/calls/
+src/app/admin/organizations/[id]/contacts/
+src/app/admin/organizations/[id]/conversations/
+src/app/admin/organizations/[id]/custom-tools/
+src/app/admin/organizations/[id]/dashboard/
+src/app/admin/organizations/[id]/datasets/
+src/app/admin/organizations/[id]/deals/
+src/app/admin/organizations/[id]/email-campaigns/
+src/app/admin/organizations/[id]/fine-tuning/
+src/app/admin/organizations/[id]/forms/
+src/app/admin/organizations/[id]/lead-scoring/
+src/app/admin/organizations/[id]/leads/
+src/app/admin/organizations/[id]/living-ledger/
+src/app/admin/organizations/[id]/nurture/
+src/app/admin/organizations/[id]/orders/
+src/app/admin/organizations/[id]/products/
+src/app/admin/organizations/[id]/proposals/
+src/app/admin/organizations/[id]/sequences/
+src/app/admin/organizations/[id]/seo-ai-lab/
+src/app/admin/organizations/[id]/social-ai-lab/
+src/app/admin/organizations/[id]/social-campaigns/
+src/app/admin/organizations/[id]/storefront/
+src/app/admin/organizations/[id]/templates/
+src/app/admin/organizations/[id]/video-studio/
+src/app/admin/organizations/[id]/voice-ai-lab/
+src/app/admin/organizations/[id]/website-blog/
+src/app/admin/organizations/[id]/website-domains/
+src/app/admin/organizations/[id]/website-pages/
+src/app/admin/organizations/[id]/website-seo/
+src/app/admin/organizations/[id]/webhooks/
+src/app/admin/organizations/[id]/workflows/
+src/app/admin/organizations/[id]/workforce/
+src/app/admin/organizations/[id]/agent-training/
+src/app/admin/organizations/[id]/analytics-pipeline/
+src/app/admin/organizations/[id]/analytics-revenue/
+```
+
+### Files to Keep (with modifications)
+
+```
+src/app/admin/organizations/[id]/settings/page.tsx      # Hard-code to DEFAULT_ORG_ID
+src/app/admin/organizations/[id]/integrations/page.tsx  # Hard-code to DEFAULT_ORG_ID
+```
+
+### Post-Conversion Route Map
+
+| Area | Routes | Status |
+|------|--------|--------|
+| Admin (`/admin/*`) | ~50 | Simplified (org-browsing removed) |
+| Workspace (`/workspace/*`) | 95 | Static (no [orgId] param) |
+| Sites (`/sites/*`) | 12 | Hard-coded to DEFAULT_ORG_ID |
+| Store (`/store/*`) | 3 | Hard-coded to DEFAULT_ORG_ID |
+| Public | 15 | Unchanged |
+| Dashboard | 17 | Unchanged |
+| **TOTAL** | ~190 | Estimated |
+
+### Task Tracking
+
+Tasks are tracked in Claude Code session. Current status:
+
+| Phase | Tasks | Status |
+|-------|-------|--------|
+| Phase 1: Constants & Types | 3 | Pending |
+| Phase 2: Auth Simplification | 3 | Pending |
+| Phase 3: Route Restructuring | 2 | Pending |
+| Phase 4: Database Layer | 3 | Pending |
+| Phase 5: AI Agents | 2 | Pending |
+| Phase 6: UI Cleanup | 3 | Pending |
+| Phase 7: Middleware | 1 | Pending |
+| Phase 8: Verification | 3 | Pending |
+| **TOTAL** | **20** | **Planned** |
 
 ---
 
