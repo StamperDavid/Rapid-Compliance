@@ -51,6 +51,23 @@ export function middleware(request: NextRequest) {
   }
 
   // ============================================================================
+  // PENTHOUSE MODEL: LEGACY WORKSPACE URL REDIRECTS
+  // ============================================================================
+  // Redirect legacy /workspace/[orgId]/* URLs to flat /(dashboard)/* routes
+  // This ensures backwards compatibility with bookmarks and external links
+  if (pathname.startsWith('/workspace/')) {
+    const newUrl = request.nextUrl.clone();
+    // Remove /workspace/[orgId] prefix, keep the rest of the path
+    // Example: /workspace/salesvelocity/leads -> /leads
+    newUrl.pathname = pathname.replace(/^\/workspace\/[^/]+/, '');
+    if (newUrl.pathname === '' || newUrl.pathname === '/') {
+      newUrl.pathname = '/dashboard';
+    }
+    newUrl.search = search;
+    return NextResponse.redirect(newUrl, { status: 308 });
+  }
+
+  // ============================================================================
   // SINGLE-TENANT PUBLIC SITE ROUTING
   // ============================================================================
   // For single-tenant deployment, all public site traffic uses DEFAULT_ORG_ID

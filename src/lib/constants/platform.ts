@@ -5,9 +5,10 @@
 
 /**
  * Single-tenant default organization ID
- * Used throughout the application to identify the single organization in single-tenant mode
+ * PENTHOUSE MODEL: Hardcoded to 'salesvelocity' for single-tenant deployment
+ * Used throughout the application to identify the single organization
  */
-export const DEFAULT_ORG_ID = 'default-org' as const;
+export const DEFAULT_ORG_ID = 'salesvelocity' as const;
 
 /**
  * Configuration shape for platform organization objects

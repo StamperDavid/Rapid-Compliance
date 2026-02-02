@@ -1,7 +1,7 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 2, 2026 (Single-Tenant Conversion Phases 1,2,4,5,6,7,8 completed)
+**Last Updated:** February 2, 2026 (Penthouse Single-Tenant Model - All Phases Complete)
 **Branch:** dev
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -124,10 +124,62 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 **Status:** ✅ COMPLETED - February 2, 2026
 **Repository:** https://github.com/StamperDavid/Rapid-Compliance
 **Branch:** dev
+**Model:** Penthouse Single-Tenant (hardened)
 
 ### Overview
 
 This platform is being converted from a **multi-tenant SaaS** architecture (multiple organizations/companies) to a **single-company deployment** for Rapid Compliance.
+
+### Penthouse Security Model
+
+The Penthouse model implements a **hardened single-tenant deployment** with the following security measures:
+
+#### Firebase Kill-Switch
+
+**File:** `src/lib/firebase/config.ts`
+
+```typescript
+const ALLOWED_PROJECT_ID = 'rapid-compliance-65f87';
+
+function validateProjectId(): void {
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+  if (!isBuildPhase && firebaseConfig.projectId !== ALLOWED_PROJECT_ID) {
+    throw new CriticalConfigurationError(
+      `CRITICAL: Invalid Firebase project "${firebaseConfig.projectId}". ` +
+      `This deployment ONLY allows "${ALLOWED_PROJECT_ID}". Halting all operations.`
+    );
+  }
+}
+```
+
+**Behavior:**
+- Only `rapid-compliance-65f87` Firebase project is allowed
+- Any other project ID throws `CriticalConfigurationError` at runtime
+- Build phase bypassed to allow CI/CD (validation occurs at runtime)
+- Prevents accidental deployment to wrong project
+
+#### Flattened Route Architecture
+
+**Change:** Routes moved from `/workspace/[orgId]/*` to `/(dashboard)/*`
+
+| Before | After |
+|--------|-------|
+| `/workspace/abc123/dashboard` | `/dashboard` |
+| `/workspace/abc123/entities/leads` | `/entities/leads` |
+| `/workspace/abc123/settings/users` | `/settings/users` |
+
+**Implementation:**
+- Created `src/app/(dashboard)/` route group with 108 files (layout + 107 pages)
+- All pages use `DEFAULT_ORG_ID = 'salesvelocity'` instead of `useParams()`
+- Legacy URLs redirect via middleware (`/workspace/*` → `/(dashboard)/*`)
+
+#### Middleware Redirects
+
+**File:** `src/middleware.ts`
+
+Legacy workspace URLs are automatically redirected:
+- `/workspace/any-org-id/path` → `/path`
+- Preserves query strings and hash fragments
 
 ### Conversion Parameters
 
@@ -330,14 +382,30 @@ Tasks are tracked in Claude Code session. Current status:
 | Phase | Tasks | Status |
 |-------|-------|--------|
 | Phase 1: Constants & Types | 3 | ✅ Complete |
+| Phase 1.1: Firebase Kill-Switch | 1 | ✅ Complete (Penthouse security) |
 | Phase 2: Auth Simplification | 3 | ✅ Complete |
-| Phase 3: Route Restructuring | 2 | ⏸️ Deferred (URL cleanup optional) |
+| Phase 2.1: Route Flattening | 1 | ✅ Complete (/(dashboard)/ route group) |
+| Phase 3: AI Agent Endpoints | 5 | ✅ Complete (DEFAULT_ORG_ID usage) |
 | Phase 4: Database Layer | 3 | ✅ Complete |
 | Phase 5: AI Agents | 2 | ✅ Complete |
 | Phase 6: UI Cleanup | 3 | ✅ Complete |
-| Phase 7: Middleware | 1 | ✅ Complete |
+| Phase 7: Middleware | 1 | ✅ Complete (legacy redirects) |
 | Phase 8: Verification | 3 | ✅ Complete |
-| **TOTAL** | **20** | **18 Complete, 2 Deferred** |
+| **TOTAL** | **25** | **25 Complete (100%)** |
+
+### Key Files Changed (Penthouse Model)
+
+| File | Change |
+|------|--------|
+| `src/lib/firebase/config.ts` | Added `CriticalConfigurationError` kill-switch |
+| `src/lib/constants/platform.ts` | `DEFAULT_ORG_ID = 'salesvelocity'` |
+| `src/app/(dashboard)/` | 108 new files (flattened routes) |
+| `src/middleware.ts` | Legacy `/workspace/*` redirects |
+| `src/app/api/voice/ai-agent/route.ts` | Uses `DEFAULT_ORG_ID` |
+| `src/app/api/voice/ai-agent/fallback/route.ts` | Uses `DEFAULT_ORG_ID` |
+| `src/app/api/voice/ai-agent/speech/route.ts` | Uses `DEFAULT_ORG_ID` |
+| `src/app/api/voice/twiml/route.ts` | Uses `DEFAULT_ORG_ID` |
+| `src/app/api/orchestrator/chat/route.ts` | Uses `DEFAULT_ORG_ID` |
 
 ---
 

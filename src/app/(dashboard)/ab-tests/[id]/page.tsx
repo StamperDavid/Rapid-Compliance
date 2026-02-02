@@ -1,0 +1,84 @@
+'use client';
+
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+
+interface ABTestVariant {
+  name: string;
+  config: Record<string, unknown>;
+  impressions?: number;
+  conversions?: number;
+}
+
+interface ABTest {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  variants?: ABTestVariant[];
+  winner?: string;
+  createdAt: unknown;
+}
+
+export default function ABTestResultsPage() {
+  const params = useParams();
+  const router = useRouter();
+  const orgId = DEFAULT_ORG_ID;
+  const testId = params.id as string;
+  const [test, setTest] = useState<ABTest | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadTest = useCallback(async () => {
+    try {
+      const data = await FirestoreService.get(`organizations/${orgId}/abTests`, testId);
+      setTest(data as ABTest);
+    } catch (error: unknown) {
+      logger.error('Error loading test:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+    } finally {
+      setLoading(false);
+    }
+  }, [orgId, testId]);
+
+  useEffect(() => {
+    void loadTest();
+  }, [loadTest]);
+
+  if (loading || !test) {return <div className="p-8">Loading...</div>;}
+
+  return (
+    <div className="p-8">
+      <div className="mb-6">
+        <button onClick={() => router.back()} className="text-blue-400 hover:text-blue-300 mb-4">← Back</button>
+        <h1 className="text-3xl font-bold mb-2">{test.name}</h1>
+        <p className="text-gray-400">{test.description}</p>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        {test.variants?.map((variant, idx: number) => {
+          const impressions = variant.impressions ?? 0;
+          const conversions = variant.conversions ?? 0;
+          const conversionRate = impressions > 0 ? ((conversions / impressions) * 100).toFixed(2) : '0';
+
+          return (
+            <div key={idx} className="bg-gray-900 rounded-lg p-6">
+              <h3 className="text-xl font-semibold mb-4">Variant {variant.name}</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-gray-400">Impressions</span><span className="font-semibold">{impressions}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Conversions</span><span className="font-semibold text-green-400">{conversions}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">Conversion Rate</span><span className="font-semibold">{conversionRate}%</span></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {test.winner && <div className="mt-6 bg-green-900/20 border border-green-900 rounded-lg p-4 text-center"><div className="text-green-400 font-semibold">🏆 Winner: Variant {test.winner}</div></div>}
+    </div>
+  );
+}
+
+
+
+

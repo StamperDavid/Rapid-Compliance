@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /** Telnyx speech recognition data structure */
 interface TelnyxSpeechPayload {
@@ -231,7 +232,7 @@ async function logSpeechTurn(
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     // Extract organizationId from call context if available
-    const organizationId = 'default'; // In production, get from call context
+    const organizationId = DEFAULT_ORG_ID; // Single-tenant Penthouse model
 
     const logId = `${callId}-turn-${Date.now()}`;
     await FirestoreService.set(

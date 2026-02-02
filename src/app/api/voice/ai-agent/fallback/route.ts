@@ -12,6 +12,7 @@ import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { callTransferService } from '@/lib/voice/call-transfer-service';
 import { aiConversationService } from '@/lib/voice/ai-conversation-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /** Conversation context from the voice agent handler */
 interface ConversationContext {
@@ -62,7 +63,7 @@ async function handleFallback(request: NextRequest): Promise<NextResponse> {
       try {
         await callTransferService.aiToHumanHandoff({
           callId,
-          organizationId: 'default', // In production, get from context
+          organizationId: DEFAULT_ORG_ID, // Single-tenant Penthouse model
           aiAgentId: 'ai-prospector',
           conversationSummary: summary,
           customerSentiment: context.sentiment,

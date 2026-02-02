@@ -27,6 +27,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
 import { JASPER_TOOLS, executeToolCalls } from '@/lib/orchestrator/jasper-tools';
 import { SystemStateService } from '@/lib/orchestrator/system-state-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // Type Definitions
@@ -321,7 +322,7 @@ export async function POST(request: NextRequest) {
     ];
 
     // Initialize OpenRouter provider
-    const orgId = organizationId ?? (isAdminContext ? 'admin' : 'default');
+    const orgId = organizationId ?? (isAdminContext ? 'admin' : DEFAULT_ORG_ID);
     const provider = new OpenRouterProvider(orgId);
 
     const startTime = Date.now();

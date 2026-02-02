@@ -16,6 +16,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Twilio webhook payload interface
 interface TwilioWebhookPayload {
@@ -39,7 +40,7 @@ interface TwilioWebhookPayload {
 export function GET(request: NextRequest): NextResponse {
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') ?? 'ai'; // 'ai' or 'basic'
-  const organizationId = searchParams.get('organizationId') ?? 'default';
+  const organizationId = searchParams.get('organizationId') ?? DEFAULT_ORG_ID;
 
   if (mode === 'basic') {
     // Return simple static TwiML for testing
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     // Get configuration from query params
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId') ?? 'default';
+    const organizationId = searchParams.get('organizationId') ?? DEFAULT_ORG_ID;
     const agentId = searchParams.get('agentId') ?? 'ai-prospector';
     const mode = (searchParams.get('mode') ?? 'prospector') as 'prospector' | 'closer';
     const useAI = searchParams.get('ai') !== 'false';
