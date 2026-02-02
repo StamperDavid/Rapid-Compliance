@@ -11,9 +11,8 @@ import { logger } from '@/lib/logger/logger';
 
 // Default plan limits for organizations missing this data
 const DEFAULT_PLAN_LIMITS: PlanLimits = {
-  maxWorkspaces: 1,
-  maxUsersPerWorkspace: 5,
-  maxRecordsPerWorkspace: 1000,
+  maxUsers: 5,
+  maxRecords: 1000,
   maxAICallsPerMonth: 100,
   maxStorageGB: 1,
   maxSchemas: 5,
@@ -231,8 +230,8 @@ export default function OrganizationDetailPage() {
         <div>
           {/* Stats Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
-            <StatCard label="Workspaces" value="2" limit={organization.planLimits.maxWorkspaces} />
-            <StatCard label="Total Users" value="15" limit={organization.planLimits.maxUsersPerWorkspace} />
+            <StatCard label="Total Users" value="15" limit={organization.planLimits.maxUsers} />
+            <StatCard label="Total Records" value="850" limit={organization.planLimits.maxRecords} />
             <StatCard label="AI Calls (Month)" value="2,340" limit={organization.planLimits.maxAICallsPerMonth} />
             <StatCard label="Storage Used" value="23.4 GB" limit={`${organization.planLimits.maxStorageGB} GB`} />
           </div>
@@ -261,9 +260,8 @@ export default function OrganizationDetailPage() {
             </InfoCard>
 
             <InfoCard title="Plan Limits">
-              <InfoRow label="Max Workspaces" value={organization.planLimits.maxWorkspaces.toString()} />
-              <InfoRow label="Max Users/Workspace" value={organization.planLimits.maxUsersPerWorkspace.toString()} />
-              <InfoRow label="Max Records/Workspace" value={organization.planLimits.maxRecordsPerWorkspace.toLocaleString()} />
+              <InfoRow label="Max Users" value={organization.planLimits.maxUsers.toString()} />
+              <InfoRow label="Max Records" value={organization.planLimits.maxRecords.toLocaleString()} />
               <InfoRow label="Max AI Calls/Month" value={organization.planLimits.maxAICallsPerMonth.toLocaleString()} />
               <InfoRow label="Max Storage" value={`${organization.planLimits.maxStorageGB} GB`} />
             </InfoCard>

@@ -1,19 +1,14 @@
 /**
  * Tenant Context Wrapper for AI Agents
  *
- * Provides strict multi-tenant isolation for all AI agent interactions.
- * Every prompt sent to an LLM must be prepended with a Hidden System Header
- * that enforces data boundaries.
- *
- * Security Requirements:
- * - All AI prompts include tenant isolation context
- * - Agents cannot access or hallucinate data outside their organization
- * - Summary counts must be verified against secure server actions
+ * Single-tenant mode: Simplified isolation context for AI agents.
+ * Every prompt sent to an LLM includes a system header with organization context.
  *
  * @module tenant-context-wrapper
  */
 
 import type { TenantClaims } from '@/lib/auth/claims-validator';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -147,6 +142,7 @@ export function wrapPromptWithTenantContext(
 
 /**
  * Build tenant context from claims and organization data.
+ * Single-tenant mode: Always uses DEFAULT_ORG_ID.
  *
  * @param claims - The user's tenant claims
  * @param orgData - Optional organization data
@@ -157,11 +153,11 @@ export function buildTenantContext(
   orgData?: { name?: string; industry?: string }
 ): TenantContext {
   return {
-    orgId: claims.tenant_id ?? 'unknown',
-    orgName: orgData?.name ?? claims.tenant_id ?? 'Unknown Organization',
+    orgId: DEFAULT_ORG_ID,
+    orgName: orgData?.name ?? 'Rapid Compliance',
     industry: orgData?.industry,
     role: claims.role ?? undefined,
-    isGlobalAdmin: claims.admin,
+    isGlobalAdmin: claims.role === 'superadmin',
   };
 }
 
@@ -228,50 +224,48 @@ export async function verifyCount(
 
 /**
  * Build context for Jasper (Admin AI Assistant).
- * Jasper has global read access but must still operate within security bounds.
+ * Single-tenant mode: Jasper operates within the single organization.
  *
  * @param adminEmail - The admin's email
- * @param platformStats - Platform-wide statistics to include
+ * @param platformStats - Platform statistics to include
  * @returns The admin tenant context
  */
 export function buildJasperContext(
   _adminEmail: string,
   _platformStats?: {
-    totalOrgs?: number;
     totalUsers?: number;
     totalAgents?: number;
   }
 ): TenantContext {
   return {
-    orgId: 'platform',
-    orgName: 'SalesVelocity Platform',
+    orgId: DEFAULT_ORG_ID,
+    orgName: 'Rapid Compliance',
     industry: 'platform_administration',
-    role: 'platform_admin',
+    role: 'superadmin',
     isGlobalAdmin: true,
   };
 }
 
 /**
  * Build the Jasper system prompt with verified statistics.
+ * Single-tenant mode: Focus on organization-level stats.
  *
- * @param stats - Verified platform statistics
+ * @param stats - Verified statistics
  * @returns The system prompt addition for Jasper
  */
 export function buildJasperStatisticsContext(stats: {
-  totalOrgs: number;
+  totalUsers: number;
   activeAgents: number;
   pendingTickets: number;
-  trialOrgs: number;
 }): string {
   return `
-[VERIFIED PLATFORM STATISTICS]
+[VERIFIED STATISTICS]
 These statistics have been verified against the secure database.
 Do NOT modify or inflate these numbers. Report them exactly as provided.
 
-- Total Organizations: ${stats.totalOrgs}
+- Total Users: ${stats.totalUsers}
 - Active AI Agents: ${stats.activeAgents}
 - Pending Support Tickets: ${stats.pendingTickets}
-- Trial Organizations: ${stats.trialOrgs}
 
 When reporting these statistics, use these exact values.
 [END STATISTICS]

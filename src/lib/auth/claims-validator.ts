@@ -1,30 +1,30 @@
 /**
  * Firebase Custom Claims Validator
  *
- * Provides claims-based authorization for strict multi-tenant isolation.
- * Uses Firebase ID Token claims as the source of truth for:
- * - tenant_id: Organization ID the user belongs to
- * - admin: Super admin flag for global read access
- * - role: User's role within the organization
+ * Single-tenant authorization using Firebase ID Token claims.
+ * Claims structure:
+ * - tenant_id: Always DEFAULT_ORG_ID in single-tenant mode
+ * - role: User's role (superadmin | admin | manager | employee)
  *
  * @module claims-validator
  */
 
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_MASTER_ORG } from '@/lib/constants/platform';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { type AccountRole, type LegacyAccountRole, migrateLegacyRole } from '@/types/unified-rbac';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export interface TenantClaims {
-  /** Organization ID (tenant) the user belongs to */
-  tenant_id: string | null;
+  /** Organization ID - always DEFAULT_ORG_ID in single-tenant mode */
+  tenant_id: string;
   /** Legacy admin flag - deprecated, use role-based checks instead */
   admin: boolean;
-  /** User's role within the organization. Note: 'super_admin' is normalized to 'platform_admin' during validation */
-  role: 'platform_admin' | 'admin' | 'owner' | 'member' | 'viewer' | null;
+  /** User's role using 4-level RBAC: superadmin | admin | manager | employee */
+  role: AccountRole | null;
   /** User's email */
   email: string | null;
   /** User ID */
@@ -47,11 +47,14 @@ export interface TenantAccessResult {
 // CONSTANTS
 // ============================================================================
 
-/** Roles that grant admin-level access within an organization */
-const ADMIN_ROLES = ['platform_admin', 'admin'] as const;
+/** Roles that grant admin-level access */
+const ADMIN_ROLES = ['superadmin', 'admin'] as const;
 
-/** Platform-level admin roles - these have full RBAC permissions but NO org bypass */
-export const PLATFORM_ADMIN_ROLES = ['platform_admin'] as const;
+/** Superadmin role - full system access */
+export const SUPERADMIN_ROLES = ['superadmin'] as const;
+
+/** @deprecated Use SUPERADMIN_ROLES instead */
+export const PLATFORM_ADMIN_ROLES = SUPERADMIN_ROLES;
 
 // ============================================================================
 // CLAIMS EXTRACTION
@@ -74,15 +77,14 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
     const email = decodedToken.email ?? null;
 
     // Extract custom claims from the token
-    // Firebase custom claims are stored directly on the decoded token
-    const tenantId = decodedToken.tenant_id as string | undefined;
     const isAdmin = decodedToken.admin === true;
     const role = (decodedToken.role as string | undefined) ?? null;
 
     const validatedRole = validateRole(role);
 
+    // Single-tenant mode: always use DEFAULT_ORG_ID
     const claims: TenantClaims = {
-      tenant_id: tenantId ?? null,
+      tenant_id: DEFAULT_ORG_ID,
       admin: isAdmin, // Legacy field - kept for backwards compatibility
       role: validatedRole,
       email,
@@ -92,7 +94,7 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
     logger.debug('Extracted tenant claims', {
       uid,
       email,
-      hasTenantId: !!claims.tenant_id,
+      tenant_id: claims.tenant_id,
       role: claims.role,
       file: 'claims-validator.ts',
     });
@@ -107,7 +109,7 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
     return {
       valid: false,
       claims: {
-        tenant_id: null,
+        tenant_id: DEFAULT_ORG_ID,
         admin: false,
         role: null,
         email: null,
@@ -119,32 +121,42 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
 }
 
 /**
- * Validate and normalize role string to expected values.
- * Legacy 'super_admin' is normalized to 'platform_admin' for backwards compatibility.
+ * Validate and normalize role string to 4-level RBAC.
+ * Migrates legacy roles (platform_admin, owner) to superadmin.
  */
-function validateRole(role: string | null): TenantClaims['role'] {
+function validateRole(role: string | null): AccountRole | null {
   if (!role) {return null;}
 
   const normalizedRole = role.toLowerCase();
+
+  // Direct 4-level RBAC roles
   switch (normalizedRole) {
-    case 'platform_admin':
-    case 'platformadmin':
-      return 'platform_admin';
-    case 'super_admin':
     case 'superadmin':
-      // Legacy alias: normalize to platform_admin
-      return 'platform_admin';
+    case 'super_admin':
+      return 'superadmin';
     case 'admin':
       return 'admin';
-    case 'owner':
-      return 'owner';
-    case 'member':
-      return 'member';
-    case 'viewer':
-      return 'viewer';
-    default:
-      return null;
+    case 'manager':
+      return 'manager';
+    case 'employee':
+      return 'employee';
   }
+
+  // Migrate legacy roles
+  const legacyRoleMap: Record<string, LegacyAccountRole> = {
+    platform_admin: 'platform_admin',
+    platformadmin: 'platform_admin',
+    owner: 'owner',
+    member: 'employee', // member → employee
+    viewer: 'employee', // viewer → employee
+  };
+
+  const legacyRole = legacyRoleMap[normalizedRole];
+  if (legacyRole) {
+    return migrateLegacyRole(legacyRole);
+  }
+
+  return null;
 }
 
 // ============================================================================
@@ -152,96 +164,45 @@ function validateRole(role: string | null): TenantClaims['role'] {
 // ============================================================================
 
 /**
- * Check if user has access to a specific tenant/organization.
+ * Check if user has access to the organization.
  *
- * Unified access control - ALL users must belong to an organization.
- * Access is granted if:
- * 1. User's tenant_id matches the requested organization
- * 2. No specific org requested - uses user's own org
- * 3. Platform admins can access 'platform-admin' org
+ * Single-tenant mode: All authenticated users have access to DEFAULT_ORG_ID.
+ * Access control is now purely role-based within the single organization.
  *
  * @param claims - User's tenant claims
- * @param requestedOrgId - The organization ID being accessed
+ * @param _requestedOrgId - Ignored in single-tenant mode (always DEFAULT_ORG_ID)
  * @returns TenantAccessResult with access determination
  */
 export function checkTenantAccess(
   claims: TenantClaims,
-  requestedOrgId: string | null
+  _requestedOrgId: string | null
 ): TenantAccessResult {
-  // Platform admins can access platform-admin org without tenant_id
-  const isPlatformAdmin = claims.role === 'platform_admin';
-  const isPlatformOrgRequest = requestedOrgId === PLATFORM_MASTER_ORG.id || requestedOrgId === null;
+  const isSuperadmin = claims.role === 'superadmin';
 
-  if (isPlatformAdmin && isPlatformOrgRequest) {
+  // All authenticated users have access in single-tenant mode
+  if (claims.uid) {
     return {
       allowed: true,
-      reason: 'Platform admin accessing platform-level resources',
-      isGlobalAdmin: true,
+      reason: 'Single-tenant mode: authenticated user has organization access',
+      isGlobalAdmin: isSuperadmin,
     };
   }
 
-  // No tenant_id in claims means user has no organization access
-  if (!claims.tenant_id) {
-    // Platform admins without tenant_id get assigned 'platform-admin' as their effective tenant
-    if (isPlatformAdmin) {
-      return {
-        allowed: true,
-        reason: 'Platform admin assigned platform-admin as effective tenant',
-        isGlobalAdmin: true,
-      };
-    }
-
-    logger.debug('User has no tenant_id', {
-      uid: claims.uid,
-      email: claims.email,
-      role: claims.role,
-      file: 'claims-validator.ts',
-    });
-
-    return {
-      allowed: false,
-      reason: 'User has no tenant_id claim - must belong to an organization',
-      isGlobalAdmin: false,
-    };
-  }
-
-  // No specific org requested - allow access to user's own org
-  if (!requestedOrgId) {
-    return {
-      allowed: true,
-      reason: 'No specific organization requested, using user tenant',
-      isGlobalAdmin: false,
-    };
-  }
-
-  // Check if user's tenant matches the requested org
-  if (claims.tenant_id === requestedOrgId) {
-    return {
-      allowed: true,
-      reason: 'User tenant matches requested organization',
-      isGlobalAdmin: false,
-    };
-  }
-
-  // Tenant mismatch - deny access (applies to ALL roles including platform_admin)
-  logger.warn('Tenant access denied - ID mismatch', {
+  logger.warn('Unauthenticated access attempt', {
     uid: claims.uid,
-    userTenant: claims.tenant_id,
-    requestedOrg: requestedOrgId,
-    role: claims.role,
+    email: claims.email,
     file: 'claims-validator.ts',
   });
 
   return {
     allowed: false,
-    reason: `Tenant mismatch: user belongs to ${claims.tenant_id}, requested ${requestedOrgId}`,
+    reason: 'User is not authenticated',
     isGlobalAdmin: false,
   };
 }
 
 /**
- * Check if user has admin-level role within their organization.
- * Admin roles have elevated permissions but still respect org boundaries.
+ * Check if user has admin-level role (superadmin or admin).
  *
  * @param claims - User's tenant claims
  * @returns true if user has admin role
@@ -252,39 +213,38 @@ export function hasAdminRole(claims: TenantClaims): boolean {
 }
 
 /**
- * Check if user has platform-level admin role.
- * These roles have full RBAC permissions within their organization.
- * Note: This does NOT grant cross-org access.
+ * Check if user has superadmin role (full system access).
  *
- * @deprecated Use isPlatformAdminClaims() instead - 'super_admin' has been renamed to 'platform_admin'
  * @param claims - User's tenant claims
- * @returns true if user has platform admin role
+ * @returns true if user is superadmin
+ */
+export function isSuperadminClaims(claims: TenantClaims): boolean {
+  return claims.role === 'superadmin';
+}
+
+/**
+ * @deprecated Use isSuperadminClaims() instead
  */
 export function isSuperAdmin(claims: TenantClaims): boolean {
-  return claims.role === 'platform_admin';
+  return isSuperadminClaims(claims);
 }
 
 /**
- * Check if user has platform admin role.
- * Platform admin has full RBAC permissions within their organization.
- * IMPORTANT: This does NOT bypass organization isolation.
- *
- * @param claims - User's tenant claims
- * @returns true if user is platform admin
+ * @deprecated Use isSuperadminClaims() instead
  */
 export function isPlatformAdminClaims(claims: TenantClaims): boolean {
-  return claims.role === 'platform_admin';
+  return isSuperadminClaims(claims);
 }
 
 /**
- * Get the effective organization ID for a request.
- * All users must operate within their assigned organization.
+ * Get the effective organization ID.
+ * Single-tenant mode: Always returns DEFAULT_ORG_ID.
  *
- * @param claims - User's tenant claims
- * @returns Organization ID (null if user has no organization)
+ * @param _claims - User's tenant claims (unused in single-tenant mode)
+ * @returns DEFAULT_ORG_ID
  */
-export function getEffectiveOrgId(claims: TenantClaims): string | null {
-  return claims.tenant_id;
+export function getEffectiveOrgId(_claims: TenantClaims): string {
+  return DEFAULT_ORG_ID;
 }
 
 // ============================================================================
@@ -304,22 +264,21 @@ export interface FirebaseCustomClaims {
 
 /**
  * Build custom claims object for a user.
+ * Single-tenant mode: Always uses DEFAULT_ORG_ID.
  *
- * @param orgId - Organization ID
- * @param role - User's role
- * @param isAdmin - Whether user is a super admin
+ * @param role - User's role (superadmin | admin | manager | employee)
+ * @param isAdmin - Whether user is a superadmin (sets legacy admin flag)
  * @returns Claims object to set on the user
  */
 export function buildCustomClaims(
-  orgId: string,
-  role: string,
+  role: AccountRole,
   isAdmin: boolean = false
 ): FirebaseCustomClaims {
   return {
-    tenant_id: orgId,
-    organizationId: orgId, // Backwards compatibility
+    tenant_id: DEFAULT_ORG_ID,
+    organizationId: DEFAULT_ORG_ID, // Backwards compatibility
     role,
-    admin: isAdmin,
+    admin: isAdmin || role === 'superadmin',
   };
 }
 
@@ -328,9 +287,11 @@ const claimsValidator = {
   checkTenantAccess,
   hasAdminRole,
   isSuperAdmin,
+  isSuperadminClaims,
   isPlatformAdminClaims,
   getEffectiveOrgId,
   buildCustomClaims,
+  SUPERADMIN_ROLES,
   PLATFORM_ADMIN_ROLES,
 };
 

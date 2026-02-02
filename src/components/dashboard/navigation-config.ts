@@ -157,16 +157,16 @@ const admin = {
 // =============================================================================
 
 /** All roles can access */
-const ALL_ROLES: AccountRole[] = ['platform_admin', 'owner', 'admin', 'manager', 'employee'];
+const ALL_ROLES: AccountRole[] = ['superadmin', 'admin', 'manager', 'employee'];
 
-/** Admin+ roles (owner, admin, and platform_admin) */
-const ADMIN_PLUS: AccountRole[] = ['platform_admin', 'owner', 'admin'];
+/** Admin+ roles (admin and superadmin) */
+const ADMIN_PLUS: AccountRole[] = ['superadmin', 'admin'];
 
 /** Manager+ roles */
-const MANAGER_PLUS: AccountRole[] = ['platform_admin', 'owner', 'admin', 'manager'];
+const MANAGER_PLUS: AccountRole[] = ['superadmin', 'admin', 'manager'];
 
-/** Platform admin only */
-const PLATFORM_ADMIN_ONLY: AccountRole[] = ['platform_admin'];
+/** Superadmin only */
+const PLATFORM_ADMIN_ONLY: AccountRole[] = ['superadmin'];
 
 // =============================================================================
 // CLIENT NAVIGATION SECTIONS (11 Operational Sections)
@@ -796,7 +796,7 @@ export const ADMIN_ORG_VIEW_SECTION: NavigationSection = {
   label: 'Organization',
   icon: Building2 as LucideIcon,
   iconColor: '#6366f1', // Indigo
-  allowedRoles: ['platform_admin'],
+  allowedRoles: ['superadmin'],
   collapsible: false,
   items: [
     {
@@ -846,7 +846,7 @@ export const ADMIN_SUPPORT_SECTION: NavigationSection = {
   label: 'Support Tools',
   icon: Wrench as LucideIcon,
   iconColor: '#ef4444', // Red
-  allowedRoles: ['platform_admin'],
+  allowedRoles: ['superadmin'],
   collapsible: true,
   defaultCollapsed: false,
   items: [
@@ -894,7 +894,7 @@ export type AdminNavigationContext =
 
 /**
  * Get navigation sections for a specific role
- * HARD-GATES platform admin tools - System section ONLY appended for platform_admin
+ * HARD-GATES platform admin tools - System section ONLY appended for superadmin
  *
  * @param role - The user's account role
  * @param adminContext - Optional admin context for specialized navigation
@@ -906,7 +906,7 @@ export function getNavigationForRole(
 ): NavigationSection[] {
   // When in admin context, DON'T show CLIENT_SECTIONS (they route to /workspace/*)
   // This prevents admins from being kicked out of the admin route tree
-  if (role === 'platform_admin' && adminContext) {
+  if (role === 'superadmin' && adminContext) {
     if (adminContext === 'admin-org-view') {
       // Viewing an organization - show org-specific + support + system navigation
       return [ADMIN_ORG_VIEW_SECTION, ADMIN_SUPPORT_SECTION, SYSTEM_SECTION];
@@ -918,8 +918,8 @@ export function getNavigationForRole(
   // Standard workspace flow - show client sections
   const sections = [...CLIENT_SECTIONS];
 
-  // HARD-GATE: Only append System section for platform_admin
-  if (role === 'platform_admin') {
+  // HARD-GATE: Only append System section for superadmin
+  if (role === 'superadmin') {
     sections.push(SYSTEM_SECTION);
   }
 
@@ -961,7 +961,7 @@ export function resolveWorkspaceRoute(href: string, orgId: string): string {
 
 /**
  * Get navigation with resolved workspace routes for a specific role
- * Uses getNavigationForRole() for proper platform_admin gating
+ * Uses getNavigationForRole() for proper superadmin gating
  */
 export function getResolvedNavigation(orgId: string, role: AccountRole): NavigationStructure {
   const sections = getNavigationForRole(role);
@@ -989,7 +989,7 @@ export function getClientSectionCount(): number {
 }
 
 /**
- * Get total section count for platform_admin (includes System)
+ * Get total section count for superadmin (includes System)
  */
 export function getTotalSectionCount(): number {
   return CLIENT_SECTIONS.length + 1; // 11 client + 1 system = 12
@@ -997,11 +997,11 @@ export function getTotalSectionCount(): number {
 
 /**
  * Verify navigation configuration integrity
- * Client sees 11 sections, platform_admin sees 12
+ * Client sees 11 sections, superadmin sees 12
  */
 export function verifyNavigationConfig(): { clientSections: number; platformAdminSections: number; isValid: boolean } {
   const clientCount = CLIENT_SECTIONS.length;
-  const platformAdminCount = getNavigationForRole('platform_admin').length;
+  const platformAdminCount = getNavigationForRole('superadmin').length;
 
   return {
     clientSections: clientCount,

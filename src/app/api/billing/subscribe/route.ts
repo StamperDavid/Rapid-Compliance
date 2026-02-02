@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
     }
     const { user } = authResult;
 
-    // Check if user is owner or admin
-    if (user.role !== 'owner' && user.role !== 'admin') {
-      return errors.forbidden('Only owners and admins can create subscriptions');
+    // Check if user is admin or manager
+    if (user.role !== 'admin' && user.role !== 'manager' && user.role !== 'superadmin') {
+      return errors.forbidden('Only admins and managers can create subscriptions');
     }
 
     // Parse and validate input

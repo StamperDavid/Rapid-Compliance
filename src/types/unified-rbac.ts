@@ -1,12 +1,12 @@
 /**
  * Unified Role-Based Access Control (RBAC) System
- * Single source of truth for the Command Center unification
+ * Single source of truth for single-tenant deployment
  *
- * This file consolidates:
- * - AdminRole (platform_admin, admin, support, viewer) from admin.ts
- * - UserRole (platform_admin, owner, admin, manager, employee) from permissions.ts
- *
- * Into a single AccountRole system that the unified dashboard uses.
+ * 4-Level Hierarchy (Single-Tenant Mode):
+ * - superadmin: Full system access, user management, billing, all features
+ * - admin: Organization management, API keys, theme, user management
+ * - manager: Team management, workflows, marketing, sales
+ * - employee: Individual contributor - create/edit own records only
  */
 
 import type { LucideIcon } from 'lucide-react';
@@ -18,24 +18,45 @@ import type { Timestamp } from 'firebase/firestore';
 
 /**
  * Unified account role hierarchy (highest to lowest):
- * - platform_admin: Full platform access + system administration
- * - owner: Full access within their organization
- * - admin: Most permissions except billing and org deletion
- * - manager: Team-level management
- * - employee: Individual contributor access
+ * - superadmin: Full system access, user management, billing, all features
+ * - admin: Organization management, API keys, theme, user management
+ * - manager: Team management, workflows, marketing, sales
+ * - employee: Individual contributor - create/edit own records only
  */
-export type AccountRole = 'platform_admin' | 'owner' | 'admin' | 'manager' | 'employee';
+export type AccountRole = 'superadmin' | 'admin' | 'manager' | 'employee';
+
+/**
+ * @deprecated Use AccountRole instead. Kept for backward compatibility during migration.
+ */
+export type LegacyAccountRole = 'platform_admin' | 'owner' | 'admin' | 'manager' | 'employee';
 
 /**
  * Role hierarchy for permission comparisons
  */
 export const ACCOUNT_ROLE_HIERARCHY: Record<AccountRole, number> = {
-  platform_admin: 5,
-  owner: 4,
+  superadmin: 4,
   admin: 3,
   manager: 2,
   employee: 1,
 };
+
+/**
+ * Maps legacy roles to new 4-level hierarchy
+ * Use this during migration to convert existing role assignments
+ */
+export function migrateLegacyRole(legacyRole: LegacyAccountRole): AccountRole {
+  switch (legacyRole) {
+    case 'platform_admin':
+    case 'owner':
+      return 'superadmin';
+    case 'admin':
+      return 'admin';
+    case 'manager':
+      return 'manager';
+    case 'employee':
+      return 'employee';
+  }
+}
 
 // =============================================================================
 // UNIFIED USER - Single user interface for the Command Center
@@ -47,11 +68,8 @@ export interface UnifiedUser {
   displayName: string;
   role: AccountRole;
 
-  /** Organization/Tenant ID - null for platform_admin default view */
-  tenantId: string | null;
-
-  /** Current workspace ID within the tenant */
-  workspaceId?: string;
+  /** Organization/Tenant ID - uses DEFAULT_ORG_ID in single-tenant mode */
+  tenantId: string;
 
   /** Avatar URL */
   avatarUrl?: string;
@@ -154,10 +172,10 @@ export interface UnifiedPermissions {
  * Complete permission set for each role
  */
 export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> = {
-  platform_admin: {
-    // Platform Administration - FULL ACCESS
+  superadmin: {
+    // Platform Administration - FULL ACCESS (single-tenant: system settings)
     canAccessPlatformAdmin: true,
-    canManageAllOrganizations: true,
+    canManageAllOrganizations: true, // In single-tenant, manages the single org
     canViewSystemHealth: true,
     canManageFeatureFlags: true,
     canViewAuditLogs: true,
@@ -222,85 +240,6 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
     canCreateReports: true,
     canExportReports: true,
     canViewPlatformAnalytics: true,
-
-    // Settings - FULL ACCESS
-    canAccessSettings: true,
-    canManageIntegrations: true,
-
-    // E-Commerce - FULL ACCESS
-    canManageEcommerce: true,
-    canProcessOrders: true,
-    canManageProducts: true,
-  },
-
-  owner: {
-    // Platform Administration - NO ACCESS
-    canAccessPlatformAdmin: false,
-    canManageAllOrganizations: false,
-    canViewSystemHealth: false,
-    canManageFeatureFlags: false,
-    canViewAuditLogs: false,
-    canManageSystemSettings: false,
-    canImpersonateUsers: false,
-    canAccessSupportTools: false,
-
-    // Organization Management - FULL ACCESS
-    canManageOrganization: true,
-    canManageBilling: true,
-    canManageAPIKeys: true,
-    canManageTheme: true,
-    canDeleteOrganization: true,
-
-    // User Management - FULL ACCESS
-    canInviteUsers: true,
-    canRemoveUsers: true,
-    canChangeUserRoles: true,
-    canViewAllUsers: true,
-
-    // Data Management - FULL ACCESS
-    canCreateSchemas: true,
-    canEditSchemas: true,
-    canDeleteSchemas: true,
-    canExportData: true,
-    canImportData: true,
-    canDeleteData: true,
-    canViewAllRecords: true,
-
-    // CRM Operations - FULL ACCESS
-    canCreateRecords: true,
-    canEditRecords: true,
-    canDeleteRecords: true,
-    canViewOwnRecordsOnly: false,
-    canAssignRecords: true,
-
-    // Workflows & Automation - FULL ACCESS
-    canCreateWorkflows: true,
-    canEditWorkflows: true,
-    canDeleteWorkflows: true,
-
-    // AI Agents & Swarm - FULL ACCESS
-    canTrainAIAgents: true,
-    canDeployAIAgents: true,
-    canManageAIAgents: true,
-    canAccessSwarmPanel: true,
-
-    // Marketing - FULL ACCESS
-    canManageSocialMedia: true,
-    canManageEmailCampaigns: true,
-    canManageWebsite: true,
-
-    // Sales - FULL ACCESS
-    canViewLeads: true,
-    canManageLeads: true,
-    canViewDeals: true,
-    canManageDeals: true,
-    canAccessVoiceAgents: true,
-
-    // Reports & Analytics - FULL ACCESS (except platform)
-    canViewReports: true,
-    canCreateReports: true,
-    canExportReports: true,
-    canViewPlatformAnalytics: false,
 
     // Settings - FULL ACCESS
     canAccessSettings: true,
@@ -558,14 +497,14 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
  * Navigation section categories
  * These map to the sidebar sections visible based on role
  *
- * 11 Operational Sections (available to client roles):
+ * 11 Operational Sections (available to all roles):
  * - command_center, crm, lead_gen, outbound, automation,
  *   content_factory, ai_workforce, ecommerce, analytics, website, settings
  *
- * 1 System Section (platform_admin only):
+ * 1 System Section (superadmin only):
  * - system
  *
- * Admin-Only Sections (platform_admin in admin context):
+ * Admin-Only Sections (superadmin in admin context):
  * - admin_org_view: Navigation for viewing organization details in admin panel
  * - admin_support: Support tools (impersonate, exports, bulk ops, API health)
  */
@@ -670,10 +609,17 @@ export function getUnifiedPermissions(role: AccountRole): UnifiedPermissions {
 }
 
 /**
- * Check if user is platform admin
+ * Check if user is superadmin (has full system access)
  */
-export function isPlatformAdminRole(role: AccountRole | null | undefined): boolean {
-  return role === 'platform_admin';
+export function isSuperadminRole(role: AccountRole | null | undefined): boolean {
+  return role === 'superadmin';
+}
+
+/**
+ * @deprecated Use isSuperadminRole instead. Kept for backward compatibility.
+ */
+export function isPlatformAdminRole(role: AccountRole | LegacyAccountRole | null | undefined): boolean {
+  return role === 'superadmin' || role === 'platform_admin';
 }
 
 /**
@@ -701,19 +647,13 @@ export function isRoleHigherThanUnified(
 
 /**
  * Get the default tenant ID for a role
- * Platform admins default to null (platform-level data)
- * All other roles must have a tenant ID
+ * In single-tenant mode, all roles use DEFAULT_ORG_ID
  */
 export function getDefaultTenantId(
-  role: AccountRole,
-  userTenantId: string | null
-): string | null {
-  if (role === 'platform_admin') {
-    // Platform admin can view platform-level data by default
-    // But can also switch to specific tenants
-    return userTenantId;
-  }
-  // All other roles must have a tenant ID
+  _role: AccountRole,
+  userTenantId: string
+): string {
+  // In single-tenant mode, all users belong to the same org
   return userTenantId;
 }
 

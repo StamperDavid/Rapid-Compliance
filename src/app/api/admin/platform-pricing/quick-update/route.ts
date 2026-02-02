@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { user } = authResult;
-    if (user.role !== 'owner' && user.role !== 'admin') {
+    if (user.role !== 'superadmin' && user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - Admin access required' },
         { status: 403 }

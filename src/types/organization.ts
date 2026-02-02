@@ -1,8 +1,9 @@
 import type { Timestamp } from 'firebase/firestore';
+import type { AccountRole } from './unified-rbac';
 
 /**
- * Organization (Top-level tenant)
- * Each customer/company gets one organization
+ * Organization (Single-tenant deployment)
+ * In single-tenant mode, there is only one organization (DEFAULT_ORG_ID)
  */
 export interface Organization {
   id: string;
@@ -50,9 +51,8 @@ export interface Organization {
 }
 
 export interface PlanLimits {
-  maxWorkspaces: number;
-  maxUsersPerWorkspace: number;
-  maxRecordsPerWorkspace: number;
+  maxUsers: number;
+  maxRecords: number;
   maxAICallsPerMonth: number;
   maxStorageGB: number;
   maxSchemas: number;
@@ -63,36 +63,26 @@ export interface PlanLimits {
 }
 
 /**
- * Workspace (Sub-tenant within an organization)
- * Different business units, departments, or use cases
+ * @deprecated Workspaces are removed in single-tenant mode.
+ * Kept for backward compatibility during migration.
  */
 export interface Workspace {
   id: string;
   organizationId: string;
   name: string;
   slug: string;
-  
-  // Industry/Use Case
   industry: IndustryType;
-  useCase: string; // e.g., "Sales CRM", "Service Management", "E-commerce"
-  
-  // Theme
-  themeId: string; // references Theme
-  
-  // Settings
+  useCase: string;
+  themeId: string;
   settings: {
     allowGuestAccess: boolean;
     enableAI: boolean;
     enableWorkflows: boolean;
     dataRetentionDays: number;
   };
-  
-  // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: string;
-  
-  // Status
   status: 'active' | 'archived';
 }
 
@@ -112,37 +102,47 @@ export type IndustryType =
 
 /**
  * Organization Member
- * Users who have access to an organization
+ * Users who have access to the organization
  */
 export interface OrganizationMember {
   id: string;
   organizationId: string;
   userId: string;
   email: string;
-  
-  // Role at org level
-  role: OrganizationRole;
-  
-  // Workspace access
-  workspaceAccess: WorkspaceAccess[];
-  
+
+  /** Role using unified 4-level RBAC: superadmin | admin | manager | employee */
+  role: AccountRole;
+
+  /** Display name for the user */
+  displayName?: string;
+
   // Metadata
   joinedAt: Timestamp;
   invitedBy: string;
   lastActiveAt: Timestamp;
-  
+
   // Status
   status: 'active' | 'invited' | 'suspended';
 }
 
+/**
+ * @deprecated Use AccountRole from unified-rbac.ts instead.
+ * Maps: owner → superadmin, admin → admin, member → employee
+ */
 export type OrganizationRole = 'owner' | 'admin' | 'member';
 
+/**
+ * @deprecated Workspaces are removed in single-tenant mode.
+ */
 export interface WorkspaceAccess {
   workspaceId: string;
   role: WorkspaceRole;
   permissions: Permission[];
 }
 
+/**
+ * @deprecated Workspaces are removed in single-tenant mode.
+ */
 export type WorkspaceRole = 'admin' | 'editor' | 'viewer' | 'custom';
 
 export type Permission =
@@ -182,6 +182,7 @@ export type Permission =
 export interface AuditLog {
   id: string;
   organizationId: string;
+  /** @deprecated Workspaces are removed in single-tenant mode */
   workspaceId?: string;
   
   // Action details
@@ -215,24 +216,15 @@ export interface AuditLog {
 export interface UsageMetrics {
   organizationId: string;
   period: string; // e.g., "2024-03"
-  
+
   metrics: {
-    workspaces: number;
     users: number;
     totalRecords: number;
     aiCallsCount: number;
     storageUsedGB: number;
     apiCallsCount: number;
   };
-  
-  // Breakdown by workspace
-  workspaceBreakdown: {
-    workspaceId: string;
-    records: number;
-    aiCalls: number;
-    apiCalls: number;
-  }[];
-  
+
   updatedAt: Timestamp;
 }
 

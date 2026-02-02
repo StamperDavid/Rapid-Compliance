@@ -27,9 +27,9 @@ export async function DELETE(
     return createErrorResponse(authResult.error, authResult.status);
   }
 
-  // Only platform_admins can delete organizations
-  if (authResult.user.role !== 'platform_admin') {
-    return createErrorResponse('Only platform_admins can delete organizations', 403);
+  // Only superadmins can delete organizations
+  if (authResult.user.role !== 'superadmin') {
+    return createErrorResponse('Only superadmins can delete organizations', 403);
   }
 
   try {

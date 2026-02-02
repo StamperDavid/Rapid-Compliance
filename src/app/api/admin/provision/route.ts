@@ -15,8 +15,8 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Require platform_admin role
-    const authResult = await requireRole(request, ['platform_admin']);
+    // Require superadmin role
+    const authResult = await requireRole(request, ['superadmin']);
 
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Require admin role
-    const authResult = await requireRole(request, ['platform_admin', 'admin']);
+    const authResult = await requireRole(request, ['superadmin', 'admin']);
 
     if (authResult instanceof NextResponse) {
       return authResult;

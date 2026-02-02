@@ -25,7 +25,7 @@ import { logger } from '@/lib/logger/logger';
 export async function GET(request: NextRequest) {
   try {
     // Require admin role
-    await requireUserRole(request, ['admin', 'platform_admin', 'owner']);
+    await requireUserRole(request, ['admin', 'superadmin']);
 
     const options = await getIndustryOptionsWithOverrides();
 
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Require admin role
-    const user = await requireUserRole(request, ['admin', 'platform_admin', 'owner']);
+    const user = await requireUserRole(request, ['admin', 'superadmin']);
 
     const body: unknown = await request.json();
 
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     // Require admin role
-    const user = await requireUserRole(request, ['admin', 'platform_admin', 'owner']);
+    const user = await requireUserRole(request, ['admin', 'superadmin']);
 
     const { searchParams } = new URL(request.url);
     const templateId = searchParams.get('id');

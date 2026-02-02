@@ -6,6 +6,7 @@
 import type { NextRequest } from 'next/server';
 import { requireAuth, requireRole, requireOrganization, type AuthenticatedUser } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
+import type { AccountRole } from '@/types/unified-rbac';
 
 /**
  * Get authenticated user token from request
@@ -46,7 +47,7 @@ export async function requireAuthToken(request: NextRequest): Promise<Authentica
  */
 export async function requireUserRole(
   request: NextRequest,
-  allowedRoles: string[]
+  allowedRoles: AccountRole[]
 ): Promise<AuthenticatedUser> {
   const result = await requireRole(request, allowedRoles);
   
@@ -102,7 +103,7 @@ export async function hasRole(request: NextRequest, role: string): Promise<boole
  */
 export async function isAdmin(request: NextRequest): Promise<boolean> {
   const user = await getAuthToken(request);
-  return user?.role === 'admin' || user?.role === 'platform_admin' || user?.role === 'owner';
+  return user?.role === 'admin' || user?.role === 'superadmin';
 }
 
 

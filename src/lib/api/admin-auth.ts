@@ -24,7 +24,7 @@ import { PLATFORM_MASTER_ORG } from '@/lib/constants/platform';
 export interface AdminUser {
   uid: string;
   email: string;
-  role: 'platform_admin' | 'admin';
+  role: 'superadmin' | 'admin';
   organizationId: string;
   isGlobalAdmin?: boolean;
   isPlatformAdmin?: boolean;
@@ -126,9 +126,9 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
-    // Check if user has platform admin role in token claims
-    // Platform admins can proceed without a user document
-    const hasPlatformAdminClaim = claims.role === 'platform_admin';
+    // Check if user has superadmin role in token claims
+    // Superadmins can proceed without a user document
+    const hasPlatformAdminClaim = claims.role === 'superadmin';
 
     // Get user document to enrich with database role
     const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(userId).get();
@@ -199,7 +199,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       user: {
         uid: userId,
         email: userData.email ?? decodedToken.email ?? '',
-        role: (effectiveClaims.role as 'platform_admin' | 'admin') ?? (userData.role as 'platform_admin' | 'admin'),
+        role: (effectiveClaims.role as 'superadmin' | 'admin') ?? (userData.role as 'superadmin' | 'admin'),
         organizationId:
           effectiveClaims.tenant_id ?? userData.organizationId ?? 'platform',
         isGlobalAdmin,

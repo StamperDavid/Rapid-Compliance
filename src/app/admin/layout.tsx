@@ -79,10 +79,10 @@ export default function AdminLayout({
       // Redirect to admin login if not authenticated
       router.push('/admin-login');
     }
-    // Only platform_admin can access /admin routes
+    // Only superadmin can access /admin routes
     // Non-admins are redirected to their workspace dashboard (with proper orgId context)
     if (!authLoading && user && !isPlatformAdmin()) {
-      const userOrgId = user.tenantId ?? user.workspaceId;
+      const userOrgId = user.tenantId;
       if (userOrgId) {
         // Redirect to user's workspace dashboard with proper context
         router.push(workspaceRoutes.dashboard(userOrgId));

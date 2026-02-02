@@ -91,7 +91,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps): Rea
               Dashboard
             </h1>
             <p className="text-sm text-[var(--color-text-secondary)]">
-              {user.role === "platform_admin" && !user.tenantId
+              {user.role === "superadmin" && !user.tenantId
                 ? "Platform Administration"
                 : `${user.displayName} - ${user.role}`}
             </p>

@@ -1,24 +1,20 @@
 /**
  * Tenant Memory Vault - Shared Stateful Memory Across Agents
  *
- * THE MOAT: This is the shared memory infrastructure that enables 36 agents
- * to "talk" to each other through a common, tenant-scoped state store.
+ * Shared memory infrastructure that enables agents to communicate
+ * through a common state store.
  *
  * ARCHITECTURE:
  * - All agents read from and write to this vault
- * - Data is scoped by tenantId (multi-tenant safe)
+ * - Data is scoped by tenantId (DEFAULT_ORG_ID in single-tenant mode)
  * - Supports cross-agent signals, insights, and context sharing
  * - Enables "Chain of Action" patterns where agents build on each other's work
- *
- * STRICT ZONE COMPLIANCE:
- * - Zero `any` types
- * - All data validated via type guards
- * - Tenant scoping is MANDATORY
  *
  * @module agents/shared/tenant-memory-vault
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -878,6 +874,13 @@ export class TenantMemoryVault {
  */
 export function getMemoryVault(): TenantMemoryVault {
   return TenantMemoryVault.getInstance();
+}
+
+/**
+ * Get the default tenant ID for single-tenant mode
+ */
+export function getDefaultTenantId(): string {
+  return DEFAULT_ORG_ID;
 }
 
 // ============================================================================

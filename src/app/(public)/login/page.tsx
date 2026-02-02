@@ -83,8 +83,8 @@ export default function LoginPage() {
       });
 
       // SMART ROLE REDIRECTION
-      // Platform admins are routed to /admin, all others to their workspace
-      if (userRole === 'platform_admin') {
+      // Superadmins are routed to /admin, all others to their workspace
+      if (userRole === 'superadmin') {
         logger.info('Platform admin detected, redirecting to /admin', {
           uid: user.uid,
           file: 'login/page.tsx'

@@ -20,7 +20,7 @@ export async function GET(
 ) {
   try {
     // Require admin role
-    await requireUserRole(request, ['admin', 'platform_admin', 'owner']);
+    await requireUserRole(request, ['admin', 'superadmin']);
 
     const templateId = params.id;
 

@@ -364,8 +364,7 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
     // Role badge display
     const getRoleBadge = (role: AccountRole): string => {
       const badges: Record<AccountRole, string> = {
-        platform_admin: "Platform Admin",
-        owner: "Owner",
+        superadmin: "Superadmin",
         admin: "Admin",
         manager: "Manager",
         employee: "Employee",
@@ -374,7 +373,7 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
     };
 
     const roleBadge = getRoleBadge(user.role);
-    const isPlatformAdmin = user.role === 'platform_admin';
+    const isPlatformAdmin = user.role === 'superadmin';
 
     return (
       <>

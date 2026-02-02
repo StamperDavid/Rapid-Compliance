@@ -388,8 +388,8 @@ export function useTenantRecords<T>(
     }
 
     // For records, we need a workspace ID
-    // If not provided, use the user's current workspace or first available
-    const workspaceId = user.workspaceId ?? 'default';
+    // If not provided, use a default workspace
+    const workspaceId = 'default';
 
     try {
       setLoading(true);
@@ -429,7 +429,7 @@ export function useTenantRecords<T>(
       return;
     }
 
-    const workspaceId = user.workspaceId ?? 'default';
+    const workspaceId = 'default';
 
     const unsubscribe = RecordService.subscribe(
       user.tenantId,

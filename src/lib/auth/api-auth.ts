@@ -1,12 +1,16 @@
 /**
  * API Authentication Middleware
  * Validates authentication tokens and user permissions for API routes
+ *
+ * Single-tenant mode: All users belong to DEFAULT_ORG_ID
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
 import type { Auth } from 'firebase-admin/auth';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import type { AccountRole } from '@/types/unified-rbac';
 
 // Firebase Admin SDK (optional - only if configured)
 let adminAuth: Auth | null = null;
@@ -88,8 +92,10 @@ export interface AuthenticatedUser {
   uid: string;
   email: string | null;
   emailVerified: boolean;
-  organizationId?: string;
-  role?: string;
+  /** Always DEFAULT_ORG_ID in single-tenant mode */
+  organizationId: string;
+  /** User's role using 4-level RBAC */
+  role?: AccountRole;
 }
 
 /**
@@ -180,14 +186,15 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
       }
     }
 
-    logger.debug('[API Auth] Final auth result', { file: 'api-auth.ts', uid: decodedToken.uid, email: decodedToken.email, role, organizationId });
+    logger.debug('[API Auth] Final auth result', { file: 'api-auth.ts', uid: decodedToken.uid, email: decodedToken.email, role });
 
+    // Single-tenant mode: always use DEFAULT_ORG_ID
     return {
       uid: decodedToken.uid,
       email: decodedToken.email ?? null,
       emailVerified: decodedToken.email_verified ?? false,
-      organizationId,
-      role,
+      organizationId: DEFAULT_ORG_ID,
+      role: role as AccountRole | undefined,
     };
   } catch (error: unknown) {
     logger.error('Token verification failed:', error instanceof Error ? error : new Error(String(error)), { file: 'api-auth.ts' });
@@ -230,11 +237,11 @@ export async function optionalAuth(
 
 /**
  * Require specific role
- * Uses unified RBAC - no special bypasses
+ * Uses 4-level RBAC: superadmin | admin | manager | employee
  */
 export async function requireRole(
   request: NextRequest,
-  allowedRoles: string[]
+  allowedRoles: AccountRole[]
 ): Promise<{ user: AuthenticatedUser } | NextResponse> {
   const authResult = await requireAuth(request);
 
@@ -244,8 +251,7 @@ export async function requireRole(
 
   const { user } = authResult;
 
-  // Unified RBAC: Check if user's role is in the allowed list
-  // platform_admin and platform_admin must be explicitly included in allowedRoles
+  // Check if user's role is in the allowed list
   if (!user.role || !allowedRoles.includes(user.role)) {
     return NextResponse.json(
       { success: false, error: 'Insufficient permissions' },
@@ -258,11 +264,11 @@ export async function requireRole(
 
 /**
  * Require organization membership
- * All users (including platform_admin) must belong to a real organization
+ * Single-tenant mode: All authenticated users belong to DEFAULT_ORG_ID
  */
 export async function requireOrganization(
   request: NextRequest,
-  organizationId?: string
+  _organizationId?: string
 ): Promise<{ user: AuthenticatedUser } | NextResponse> {
   const authResult = await requireAuth(request);
 
@@ -270,28 +276,6 @@ export async function requireOrganization(
     return authResult;
   }
 
-  const { user } = authResult;
-
-  // All users must have an organization - no exceptions
-  if (!user.organizationId) {
-    // Allow onboarding for admin/owner roles who are setting up their first org
-    if (['admin', 'owner', 'platform_admin', 'platform_admin'].includes(user.role ?? '')) {
-      // Return user without org - they're in onboarding flow
-      return { user };
-    }
-    return NextResponse.json(
-      { success: false, error: 'User must belong to an organization' },
-      { status: 403 }
-    );
-  }
-
-  // If specific organizationId is requested, verify membership
-  if (organizationId && user.organizationId !== organizationId) {
-    return NextResponse.json(
-      { success: false, error: 'Access denied to this organization' },
-      { status: 403 }
-    );
-  }
-
-  return { user };
+  // Single-tenant mode: user always has organizationId = DEFAULT_ORG_ID
+  return authResult;
 }
