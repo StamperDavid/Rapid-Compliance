@@ -1,8 +1,8 @@
 # AI Sales Platform - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 2, 2026 (Backend Migration Complete - rapid-compliance-65f87)
-**Branch:** dev
+**Last Updated:** February 2, 2026 (Vercel Deployment Ready - Branches Synced)
+**Branches:** `main` and `dev` synchronized at commit `2113d2f0`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
 
@@ -45,30 +45,30 @@
 ### Technology Stack
 
 - **Framework:** Next.js 15 (App Router)
-- **Hosting:** Vercel (serverless)
+- **Hosting:** Vercel (Status: **Pending Import** from GitHub)
 - **Database:** Firebase Firestore (single-tenant: `rapid-compliance-65f87`)
 - **Authentication:** Firebase Auth with custom claims
 - **AI Gateway:** OpenRouter (100+ models)
 - **Voice:** VoiceEngineFactory (Native, ElevenLabs, Unreal)
 - **Payments:** Stripe
 
-### Codebase Scale (January 30, 2026)
+### Codebase Scale (February 2, 2026)
 
-**Total Lines of Code Analysis (via cloc):**
+**Total Lines of Code Analysis (via `cloc src/`):**
 
 | Metric | Count |
 |--------|-------|
-| **Total Files** | 1,232 |
-| **Total Lines** | 472,741 |
-| **Code Lines** | 365,958 |
-| **Comment Lines** | 52,751 |
-| **Blank Lines** | 54,032 |
+| **Total Files** | 1,291 |
+| **Total Lines** | 514,071 |
+| **Code Lines** | **403,094** |
+| **Comment Lines** | 53,579 |
+| **Blank Lines** | 57,298 |
 
 **Breakdown by Language:**
 
 | Language | Files | Code | Comments | Blank |
 |----------|-------|------|----------|-------|
-| TypeScript | 1,223 | 364,132 | 52,727 | 53,645 |
+| TypeScript | 1,282 | 401,268 | 53,555 | 56,911 |
 | Markdown | 6 | 1,530 | 0 | 372 |
 | JSON | 2 | 191 | 0 | 0 |
 | CSS | 1 | 105 | 24 | 15 |
@@ -123,8 +123,9 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 **Status:** ✅ COMPLETED - February 2, 2026
 **Repository:** https://github.com/StamperDavid/Rapid-Compliance
-**Branch:** dev
+**Branches:** `main` and `dev` synchronized at `2113d2f0`
 **Model:** Penthouse Single-Tenant (hardened)
+**Hosting:** Vercel (Pending Import) | **Backend:** Firebase `rapid-compliance-65f87`
 
 ### Overview
 
@@ -167,10 +168,11 @@ function validateProjectId(): void {
 | Project ID | `ai-sales-platform-dev` | `rapid-compliance-65f87` | ✅ Migrated |
 | Auth Domain | `ai-sales-platform-dev.firebaseapp.com` | `rapid-compliance-65f87.firebaseapp.com` | ✅ Migrated |
 | Storage Bucket | `ai-sales-platform-dev.firebasestorage.app` | `rapid-compliance-65f87.firebasestorage.app` | ✅ Migrated |
-| Firestore Rules | Legacy project | `rapid-compliance-65f87` | ⚠️ Pending CLI auth |
-| Admin SDK | Old service account | New service account needed | ⚠️ Pending credentials |
+| Firestore Rules | Legacy project | `rapid-compliance-65f87` | ⚠️ Deploy after `firebase login --reauth` |
+| Admin SDK | Old credentials | Configured in `.env.local` | ✅ Ready |
+| Measurement ID | N/A | `G-YELVC6MTYF` | ✅ Added |
 
-**Verification Script:** `scripts/verify-firebase-connection.mjs`
+**Verification Script:** `scripts/verify-firebase-connection.ts`
 - Confirms CriticalConfigurationError kill-switch is NOT triggered
 - Validates Firestore handshake with production project
 - Run: `node scripts/verify-firebase-connection.mjs`
