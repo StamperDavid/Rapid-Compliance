@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useFeatureVisibility } from '@/hooks/useFeatureVisibility';
 import { MerchantOrchestrator } from '@/components/orchestrator';
-import { isPlatformAdmin } from '@/types/permissions';
+import { isSuperAdmin } from '@/types/permissions';
 
 export default function WorkspaceLayout({
   children,
@@ -28,8 +28,8 @@ export default function WorkspaceLayout({
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
   const brandName = (theme?.branding?.companyName !== '' && theme?.branding?.companyName != null) ? theme.branding.companyName : 'AI CRM';
 
-  // Determine if user is Platform Admin (God Mode)
-  const isGodMode = isPlatformAdmin(user?.role);
+  // Determine if user is Super Admin (full access)
+  const isGodMode = isSuperAdmin(user?.role);
 
   // Use adaptive navigation from hook
   const navSections = filteredNav;

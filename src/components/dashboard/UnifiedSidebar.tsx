@@ -1,7 +1,11 @@
 "use client";
 
-// Verification marker - confirms 11-section granular client UI is active
-console.info("RESTORED_CLIENT_UI_v1");
+/**
+ * Single-Tenant Unified Sidebar Component
+ * Rapid Compliance - Clean, Simple Navigation
+ *
+ * Navigation: Dashboard, Lead Pipeline, Agent Swarm, Social Media, Company Settings
+ */
 
 import React, { useState, useCallback, useMemo } from "react";
 import Link from "next/link";
@@ -19,36 +23,16 @@ import {
   type NavigationItem,
   type AccountRole,
 } from "@/types/unified-rbac";
-import { getNavigationForRole, type AdminNavigationContext } from "./navigation-config";
+import { getNavigationForRole } from "./navigation-config";
+import { DEFAULT_ORG_ID } from "@/lib/constants/platform";
 
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
 
-/**
- * Admin theme colors for isolated theming
- * When provided, these override CSS variables on the fixed-positioned sidebar
- */
-interface AdminThemeColors {
-  primary: string;
-  primaryLight: string;
-  primaryDark: string;
-  bgMain: string;
-  bgPaper: string;
-  bgElevated: string;
-  textPrimary: string;
-  textSecondary: string;
-  textDisabled: string;
-  borderLight: string;
-  accent: string;
-}
-
 interface UnifiedSidebarProps {
   /** Current user with unified role */
   user: UnifiedUser;
-
-  /** Organization ID for URL context */
-  organizationId?: string;
 
   /** External collapsed state control */
   isCollapsed?: boolean;
@@ -61,41 +45,12 @@ interface UnifiedSidebarProps {
 
   /** Custom primary color */
   primaryColor?: string;
-
-  /**
-   * Admin context flag - when true, sidebar uses Admin-scoped theme variables
-   * This enables theme isolation between Admin and Client workspaces
-   */
-  isAdminContext?: boolean;
-
-  /**
-   * Full Admin theme colors for fixed-position sidebar isolation
-   * Required when isAdminContext=true for proper theme inheritance
-   */
-  adminThemeColors?: AdminThemeColors;
-
-  /**
-   * Admin navigation context - controls which navigation sections to show
-   * - 'admin-global': System tools only (default admin behavior)
-   * - 'admin-org-view': Viewing a specific organization
-   * When set, CLIENT_SECTIONS are hidden to prevent routing to /workspace/*
-   */
-  adminNavigationContext?: AdminNavigationContext;
-
-  /**
-   * Organization ID being viewed in admin context
-   * Used to resolve :adminOrgId placeholders in admin navigation hrefs
-   */
-  adminViewingOrgId?: string;
 }
 
 interface NavItemComponentProps {
   item: NavigationItem;
   isCollapsed: boolean;
   isActive: boolean;
-  organizationId?: string;
-  /** Organization ID being viewed in admin context (for :adminOrgId placeholder) */
-  adminViewingOrgId?: string;
 }
 
 interface NavSectionComponentProps {
@@ -103,9 +58,6 @@ interface NavSectionComponentProps {
   isCollapsed: boolean;
   isExpanded: boolean;
   onToggle: () => void;
-  organizationId?: string;
-  /** Organization ID being viewed in admin context (for :adminOrgId placeholder) */
-  adminViewingOrgId?: string;
 }
 
 // ============================================================================
@@ -116,28 +68,14 @@ interface NavSectionComponentProps {
  * Individual navigation item component
  */
 const NavItemComponent = React.memo<NavItemComponentProps>(
-  ({ item, isCollapsed, isActive, organizationId, adminViewingOrgId }) => {
+  ({ item, isCollapsed, isActive }) => {
     const Icon = item.icon;
 
-    // Build href with organization context
-    // Handles both :orgId (workspace routes) and :adminOrgId (admin org view routes)
+    // Build href with hardcoded org ID (single-tenant)
     const href = useMemo(() => {
-      let resolvedHref = item.href;
+      return item.href.replace(':orgId', DEFAULT_ORG_ID);
+    }, [item.href]);
 
-      // Replace :adminOrgId for admin organization view routes
-      if (resolvedHref.includes(':adminOrgId')) {
-        resolvedHref = resolvedHref.replace(':adminOrgId', adminViewingOrgId ?? '');
-      }
-
-      // Replace :orgId for workspace routes (only if not an admin route)
-      if (!resolvedHref.startsWith('/admin') && resolvedHref.includes(':orgId')) {
-        resolvedHref = resolvedHref.replace(':orgId', organizationId ?? '');
-      }
-
-      return resolvedHref;
-    }, [item.href, organizationId, adminViewingOrgId]);
-
-    // Use item's specific iconColor, fallback to default
     const iconColor = item.iconColor ?? '#999';
 
     return (
@@ -176,37 +114,22 @@ const NavItemComponent = React.memo<NavItemComponentProps>(
 NavItemComponent.displayName = "NavItemComponent";
 
 /**
- * Navigation section component (collapsible)
+ * Navigation section component
  */
 const NavSectionComponent = React.memo<NavSectionComponentProps>(
-  ({ section, isCollapsed, isExpanded, onToggle, organizationId, adminViewingOrgId }) => {
+  ({ section, isCollapsed, isExpanded, onToggle }) => {
     const SectionIcon = section.icon;
     const pathname = usePathname();
 
     // Check if any item in this section is active
-    // Handles both :orgId (workspace) and :adminOrgId (admin org view) placeholders
     const hasActiveItem = useMemo(() => {
       return section.items.some((item) => {
-        let href = item.href;
-
-        // Replace :adminOrgId for admin organization view routes
-        if (href.includes(':adminOrgId')) {
-          href = href.replace(':adminOrgId', adminViewingOrgId ?? '');
-        }
-
-        // Replace :orgId for workspace routes (only if not an admin route)
-        if (!href.startsWith('/admin') && href.includes(':orgId')) {
-          href = href.replace(':orgId', organizationId ?? '');
-        }
-
+        const href = item.href.replace(':orgId', DEFAULT_ORG_ID);
         return pathname?.startsWith(href);
       });
-    }, [section.items, pathname, organizationId, adminViewingOrgId]);
+    }, [section.items, pathname]);
 
-    // If section is not collapsible, always show items
     const shouldShowItems = !section.collapsible || isExpanded || isCollapsed;
-
-    // Use section's specific iconColor, fallback to #666
     const sectionIconColor = section.iconColor ?? '#666';
 
     return (
@@ -255,14 +178,7 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
         {shouldShowItems && (
           <div className="flex flex-col">
             {section.items.map((item) => {
-              // Resolve href with both :adminOrgId and :orgId placeholders
-              let href = item.href;
-              if (href.includes(':adminOrgId')) {
-                href = href.replace(':adminOrgId', adminViewingOrgId ?? '');
-              }
-              if (!href.startsWith('/admin') && href.includes(':orgId')) {
-                href = href.replace(':orgId', organizationId ?? '');
-              }
+              const href = item.href.replace(':orgId', DEFAULT_ORG_ID);
               const isActive = pathname?.startsWith(href) ?? false;
 
               return (
@@ -271,8 +187,6 @@ const NavSectionComponent = React.memo<NavSectionComponentProps>(
                   item={item}
                   isCollapsed={isCollapsed}
                   isActive={isActive}
-                  organizationId={organizationId}
-                  adminViewingOrgId={adminViewingOrgId}
                 />
               );
             })}
@@ -291,45 +205,27 @@ NavSectionComponent.displayName = "NavSectionComponent";
 
 /**
  * Unified Sidebar Component
- * Single sidebar that adapts based on user.role
- * Replaces both CommandCenterSidebar and workspace layout sidebar
- *
- * THEME ISOLATION:
- * - When isAdminContext=true, the sidebar inherits theme from Admin-scoped CSS variables
- * - When isAdminContext=false (default), uses standard CSS variables (may be overridden by org theme)
- * - The parent container (Admin layout) applies scoped CSS vars that override document.documentElement
+ * Single-tenant navigation for Rapid Compliance
  */
 const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
   ({
     user,
-    organizationId,
     isCollapsed: externalIsCollapsed,
     onToggleCollapse,
-    brandName = "AI Sales Platform",
+    brandName = "Rapid Compliance",
     primaryColor = "#6366f1",
-    // When true, sidebar applies Admin theme CSS variables directly (for fixed positioning isolation)
-    isAdminContext = false,
-    adminThemeColors,
-    // Admin navigation context - controls specialized navigation for admin views
-    adminNavigationContext,
-    // Organization ID being viewed in admin context (for :adminOrgId placeholder)
-    adminViewingOrgId,
   }) => {
     const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const isCollapsed = externalIsCollapsed ?? internalIsCollapsed;
 
-    // Get navigation sections based on user role and admin context
-    // Uses getNavigationForRole() which HARD-GATES System section to platform_admin only
-    // When adminNavigationContext is set, CLIENT_SECTIONS are hidden to prevent
-    // admins from being routed out of the /admin tree to /workspace/*
+    // Get navigation sections based on user role
     const filteredSections = useMemo(() => {
-      const roleSections = getNavigationForRole(user.role, adminNavigationContext);
-      // Apply permission-based filtering on top of role-based sections
+      const roleSections = getNavigationForRole(user.role);
       return filterNavigationByRole(roleSections, user.role);
-    }, [user.role, adminNavigationContext]);
+    }, [user.role]);
 
-    // Track expanded sections - default to collapsed (closed)
+    // Track expanded sections
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
       const initial: Record<string, boolean> = {};
       filteredSections.forEach((section) => {
@@ -364,7 +260,7 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
     // Role badge display
     const getRoleBadge = (role: AccountRole): string => {
       const badges: Record<AccountRole, string> = {
-        superadmin: "Superadmin",
+        superadmin: "Super Admin",
         admin: "Admin",
         manager: "Manager",
         employee: "Employee",
@@ -373,7 +269,7 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
     };
 
     const roleBadge = getRoleBadge(user.role);
-    const isPlatformAdmin = user.role === 'superadmin';
+    const isSuperAdmin = user.role === 'superadmin';
 
     return (
       <>
@@ -394,24 +290,8 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           } md:translate-x-0`}
           style={{
-            // Apply theme CSS variables directly for fixed positioning isolation
-            // Fixed elements may not inherit from scoped parent containers
             ['--primary-color' as string]: primaryColor,
-            ['--color-primary' as string]: adminThemeColors?.primary ?? primaryColor,
-            ['--color-primary-light' as string]: adminThemeColors?.primaryLight ?? `${primaryColor}cc`,
-            ['--color-primary-dark' as string]: adminThemeColors?.primaryDark ?? primaryColor,
-            // When in Admin context, apply full theme colors for proper isolation
-            ...(isAdminContext && adminThemeColors ? {
-              ['--color-bg-main' as string]: adminThemeColors.bgMain,
-              ['--color-bg-paper' as string]: adminThemeColors.bgPaper,
-              ['--color-bg-elevated' as string]: adminThemeColors.bgElevated,
-              ['--color-text-primary' as string]: adminThemeColors.textPrimary,
-              ['--color-text-secondary' as string]: adminThemeColors.textSecondary,
-              ['--color-text-disabled' as string]: adminThemeColors.textDisabled,
-              ['--color-border-light' as string]: adminThemeColors.borderLight,
-              ['--color-accent' as string]: adminThemeColors.accent,
-              ['--color-background' as string]: adminThemeColors.bgMain,
-            } : {}),
+            ['--color-primary' as string]: primaryColor,
           }}
         >
           {/* Header */}
@@ -448,7 +328,7 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
                     </div>
                     <div
                       className={`text-xs uppercase tracking-wider ${
-                        isPlatformAdmin
+                        isSuperAdmin
                           ? "text-[var(--color-primary)] font-semibold"
                           : "text-[var(--color-text-secondary)]"
                       }`}
@@ -499,17 +379,15 @@ const UnifiedSidebar: React.FC<UnifiedSidebarProps> = React.memo(
                 isCollapsed={isCollapsed}
                 isExpanded={expandedSections[section.id] ?? false}
                 onToggle={() => handleToggleSection(section.id)}
-                organizationId={organizationId}
-                adminViewingOrgId={adminViewingOrgId}
               />
             ))}
           </nav>
 
-          {/* Footer Info */}
+          {/* Footer */}
           {!isCollapsed && (
             <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-bg-elevated)]">
               <div className="text-xs text-[var(--color-text-disabled)] text-center">
-                {user.tenantId ? `Org: ${user.tenantId.slice(0, 8)}...` : "Platform View"}
+                Rapid Compliance
               </div>
             </div>
           )}

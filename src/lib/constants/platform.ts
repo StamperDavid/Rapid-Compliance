@@ -5,52 +5,19 @@
 
 /**
  * Single-tenant default organization ID
- * PENTHOUSE MODEL: Hardcoded to 'salesvelocity' for single-tenant deployment
- * Used throughout the application to identify the single organization
+ * PENTHOUSE MODEL: Hardcoded to 'rapid-compliance' for single-tenant deployment
+ * This is the ONLY organization in the system - we are NOT a multi-tenant platform
  */
-export const DEFAULT_ORG_ID = 'salesvelocity' as const;
+export const DEFAULT_ORG_ID = 'rapid-compliance' as const;
 
 /**
- * Configuration shape for platform organization objects
+ * Single-tenant organization configuration
+ * Rapid Compliance is a single company, NOT a multi-tenant platform
  */
-export type PlatformOrgConfig = {
-  /** Unique identifier for the organization */
-  id: string;
-  /** Display name of the organization */
-  name: string;
-  /** Flag indicating if this is a platform-level organization */
-  isPlatformOrg: boolean;
-  /** Flag indicating if this organization has internal admin privileges */
-  isInternalAdmin: boolean;
-};
-
-/**
- * Master platform admin organization configuration
- * This organization has elevated privileges for platform-wide operations
- */
-export const PLATFORM_MASTER_ORG: PlatformOrgConfig = {
-  id: 'platform-admin',
-  name: 'Platform Admin',
-  isPlatformOrg: true,
-  isInternalAdmin: true,
+export const COMPANY_CONFIG = {
+  id: DEFAULT_ORG_ID,
+  name: 'Rapid Compliance',
 } as const;
-
-/**
- * Checks if a given organization ID matches the platform admin organization
- *
- * @param orgId - The organization ID to check
- * @returns True if the orgId matches the platform admin ID, false otherwise
- *
- * @example
- * ```typescript
- * if (isPlatformOrg(currentOrgId)) {
- *   // Grant platform-level access
- * }
- * ```
- */
-export function isPlatformOrg(orgId: string): boolean {
-  return orgId === PLATFORM_MASTER_ORG.id;
-}
 
 /**
  * Checks if a given organization ID matches the default single-tenant organization

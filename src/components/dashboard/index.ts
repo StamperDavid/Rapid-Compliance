@@ -4,7 +4,7 @@
  */
 
 export { default as UnifiedSidebar } from './UnifiedSidebar';
-export { UNIFIED_NAVIGATION, getNavigationSection, getNavigationByCategory } from './navigation-config';
+export { NAVIGATION_SECTIONS, getNavigationSection, getNavigationForRole } from './navigation-config';
 
 // Re-export types from unified-rbac for convenience
 export type {

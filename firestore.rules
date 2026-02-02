@@ -205,7 +205,7 @@ service cloud.firestore {
     }
 
     // System collections (admin-only)
-    match /system_{collection}/{document=**} {
+    match /system/{collection}/{document=**} {
       // Public read for some system data
       allow read: if true;
 
@@ -214,7 +214,7 @@ service cloud.firestore {
     }
 
     // Platform collections (admin-only)
-    match /platform_{collection}/{document=**} {
+    match /platform/{collection}/{document=**} {
       // Public read for platform config
       allow read: if true;
 

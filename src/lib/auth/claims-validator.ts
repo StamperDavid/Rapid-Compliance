@@ -144,8 +144,6 @@ function validateRole(role: string | null): AccountRole | null {
 
   // Migrate legacy roles
   const legacyRoleMap: Record<string, LegacyAccountRole> = {
-    platform_admin: 'platform_admin',
-    platformadmin: 'platform_admin',
     owner: 'owner',
     member: 'employee', // member → employee
     viewer: 'employee', // viewer → employee

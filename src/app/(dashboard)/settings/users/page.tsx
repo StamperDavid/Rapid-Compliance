@@ -126,7 +126,7 @@ export default function TeamMembersPage() {
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
   const roles: { value: UserRole; label: string; description: string }[] = [
-    { value: 'owner', label: 'Owner', description: 'Full system access and billing control' },
+    { value: 'superadmin', label: 'Super Admin', description: 'Full system access and billing control' },
     { value: 'admin', label: 'Admin', description: 'Full access except billing and org deletion' },
     { value: 'manager', label: 'Manager', description: 'Can manage team and view all records' },
     { value: 'employee', label: 'Employee', description: 'Can only view and edit assigned records' }

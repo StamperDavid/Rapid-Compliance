@@ -1,183 +1,95 @@
 import type { Timestamp } from 'firebase/firestore';
 
 /**
- * Admin Platform Types
- * For managing the entire SaaS platform
+ * Admin Types for Rapid Compliance
+ * Single-Tenant Model - Company Settings & System Configuration
  */
 
 /**
- * Admin role type - standardized to use platform_admin
- * @deprecated 'super_admin' has been renamed to 'platform_admin' for clarity
+ * Admin role type - simplified for single-tenant
+ * superadmin = highest authority in the company
  */
-export type AdminRole = 'platform_admin' | 'admin' | 'support' | 'viewer';
+export type AdminRole = 'superadmin' | 'admin';
 
 export interface AdminUser {
   id: string;
   email: string;
   displayName: string;
   role: AdminRole;
-  
+
   // Permissions
   permissions: AdminPermissions;
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
   lastLoginAt?: Timestamp;
   createdBy?: string;
-  
+
   // Status
   status: 'active' | 'suspended';
   mfaEnabled: boolean;
 }
 
 export interface AdminPermissions {
-  // Organization Management
-  canViewOrganizations: boolean;
-  canCreateOrganizations: boolean;
-  canEditOrganizations: boolean;
-  canSuspendOrganizations: boolean;
-  canDeleteOrganizations: boolean;
-  
   // User Management
   canViewUsers: boolean;
   canCreateUsers: boolean;
   canEditUsers: boolean;
   canSuspendUsers: boolean;
   canDeleteUsers: boolean;
-  canImpersonateUsers: boolean;
-  
-  // Billing Management
-  canViewBilling: boolean;
-  canManageSubscriptions: boolean;
-  canProcessRefunds: boolean;
-  canViewPaymentHistory: boolean;
-  
+
+  // Company Settings
+  canViewSettings: boolean;
+  canManageSettings: boolean;
+  canManageIntegrations: boolean;
+  canManageAPIKeys: boolean;
+
   // System Management
   canViewSystemHealth: boolean;
   canManageFeatureFlags: boolean;
   canViewAuditLogs: boolean;
-  canManageSystemSettings: boolean;
-  
-  // Support Tools
-  canAccessSupportTools: boolean;
+
+  // Data Management
   canExportData: boolean;
-  canViewUsageAnalytics: boolean;
-  
-  // Advanced
-  canManageIntegrations: boolean;
-  canManageTemplates: boolean;
-  canManageCompliance: boolean;
+  canImportData: boolean;
+  canViewAnalytics: boolean;
 }
 
 export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
-  platform_admin: {
-    canViewOrganizations: true,
-    canCreateOrganizations: true,
-    canEditOrganizations: true,
-    canSuspendOrganizations: true,
-    canDeleteOrganizations: true,
+  superadmin: {
     canViewUsers: true,
     canCreateUsers: true,
     canEditUsers: true,
     canSuspendUsers: true,
     canDeleteUsers: true,
-    canImpersonateUsers: true,
-    canViewBilling: true,
-    canManageSubscriptions: true,
-    canProcessRefunds: true,
-    canViewPaymentHistory: true,
+    canViewSettings: true,
+    canManageSettings: true,
+    canManageIntegrations: true,
+    canManageAPIKeys: true,
     canViewSystemHealth: true,
     canManageFeatureFlags: true,
     canViewAuditLogs: true,
-    canManageSystemSettings: true,
-    canAccessSupportTools: true,
     canExportData: true,
-    canViewUsageAnalytics: true,
-    canManageIntegrations: true,
-    canManageTemplates: true,
-    canManageCompliance: true,
+    canImportData: true,
+    canViewAnalytics: true,
   },
   admin: {
-    canViewOrganizations: true,
-    canCreateOrganizations: true,
-    canEditOrganizations: true,
-    canSuspendOrganizations: true,
-    canDeleteOrganizations: false,
     canViewUsers: true,
     canCreateUsers: true,
     canEditUsers: true,
     canSuspendUsers: true,
     canDeleteUsers: false,
-    canImpersonateUsers: true,
-    canViewBilling: true,
-    canManageSubscriptions: true,
-    canProcessRefunds: false,
-    canViewPaymentHistory: true,
-    canViewSystemHealth: true,
-    canManageFeatureFlags: true,
-    canViewAuditLogs: true,
-    canManageSystemSettings: false,
-    canAccessSupportTools: true,
-    canExportData: true,
-    canViewUsageAnalytics: true,
+    canViewSettings: true,
+    canManageSettings: true,
     canManageIntegrations: true,
-    canManageTemplates: true,
-    canManageCompliance: false,
-  },
-  support: {
-    canViewOrganizations: true,
-    canCreateOrganizations: false,
-    canEditOrganizations: true,
-    canSuspendOrganizations: false,
-    canDeleteOrganizations: false,
-    canViewUsers: true,
-    canCreateUsers: false,
-    canEditUsers: true,
-    canSuspendUsers: false,
-    canDeleteUsers: false,
-    canImpersonateUsers: true,
-    canViewBilling: true,
-    canManageSubscriptions: false,
-    canProcessRefunds: false,
-    canViewPaymentHistory: true,
+    canManageAPIKeys: true,
     canViewSystemHealth: true,
     canManageFeatureFlags: false,
     canViewAuditLogs: true,
-    canManageSystemSettings: false,
-    canAccessSupportTools: true,
-    canExportData: false,
-    canViewUsageAnalytics: true,
-    canManageIntegrations: false,
-    canManageTemplates: false,
-    canManageCompliance: false,
-  },
-  viewer: {
-    canViewOrganizations: true,
-    canCreateOrganizations: false,
-    canEditOrganizations: false,
-    canSuspendOrganizations: false,
-    canDeleteOrganizations: false,
-    canViewUsers: true,
-    canCreateUsers: false,
-    canEditUsers: false,
-    canSuspendUsers: false,
-    canDeleteUsers: false,
-    canImpersonateUsers: false,
-    canViewBilling: true,
-    canManageSubscriptions: false,
-    canProcessRefunds: false,
-    canViewPaymentHistory: true,
-    canViewSystemHealth: true,
-    canManageFeatureFlags: false,
-    canViewAuditLogs: true,
-    canManageSystemSettings: false,
-    canAccessSupportTools: false,
-    canExportData: false,
-    canViewUsageAnalytics: true,
-    canManageIntegrations: false,
-    canManageTemplates: false,
-    canManageCompliance: false,
+    canExportData: true,
+    canImportData: true,
+    canViewAnalytics: true,
   },
 };
 
@@ -187,8 +99,7 @@ export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
 export interface SystemHealth {
   status: 'healthy' | 'degraded' | 'down';
   timestamp: Timestamp;
-  
-  // Services
+
   services: {
     database: ServiceStatus;
     storage: ServiceStatus;
@@ -197,16 +108,14 @@ export interface SystemHealth {
     sms: ServiceStatus;
     api: ServiceStatus;
   };
-  
-  // Performance
+
   performance: {
-    averageResponseTime: number; // ms
-    errorRate: number; // percentage
-    uptime: number; // percentage
+    averageResponseTime: number;
+    errorRate: number;
+    uptime: number;
     activeConnections: number;
   };
-  
-  // Alerts
+
   alerts: Alert[];
 }
 
@@ -227,43 +136,6 @@ export interface Alert {
 }
 
 /**
- * Platform Metrics
- */
-export interface PlatformMetrics {
-  period: string; // e.g., "2024-03"
-  
-  // Organizations
-  totalOrganizations: number;
-  activeOrganizations: number;
-  trialOrganizations: number;
-  suspendedOrganizations: number;
-  
-  // Users
-  totalUsers: number;
-  activeUsers: number;
-  newUsersThisPeriod: number;
-  
-  // Usage
-  totalApiCalls: number;
-  totalAICalls: number;
-  totalStorageGB: number;
-  totalRecords: number;
-  
-  // Revenue
-  mrr: number; // Monthly Recurring Revenue
-  arr: number; // Annual Recurring Revenue
-  totalRevenue: number;
-  newRevenue: number;
-  churnRate: number;
-  
-  // Growth
-  growthRate: number;
-  conversionRate: number;
-  
-  updatedAt: Timestamp;
-}
-
-/**
  * Feature Flag
  */
 export interface FeatureFlag {
@@ -271,123 +143,26 @@ export interface FeatureFlag {
   name: string;
   description: string;
   enabled: boolean;
-  
-  // Rollout
-  rolloutPercentage: number; // 0-100
-  targetOrganizations?: string[]; // Specific org IDs
-  excludeOrganizations?: string[]; // Excluded org IDs
-  
-  // Conditions
-  conditions?: {
-    plan?: ('free' | 'pro' | 'enterprise')[];
-    industry?: string[];
-    createdAt?: {
-      before?: Timestamp;
-      after?: Timestamp;
-    };
-  };
-  
-  // Metadata
+  rolloutPercentage: number;
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
 /**
- * Admin Audit Log
+ * Audit Log
  */
-export interface AdminAuditLog {
+export interface AuditLog {
   id: string;
-  adminId: string;
-  adminEmail: string;
-  action: string; // e.g., "organization.suspended", "user.impersonated"
+  userId: string;
+  userEmail: string;
+  action: string;
   resourceType: string;
   resourceId: string;
-  
-  // Details
   details?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
-  
   timestamp: Timestamp;
-}
-
-/**
- * Impersonation Session
- */
-export interface ImpersonationSession {
-  id: string;
-  adminId: string;
-  adminEmail: string;
-  targetUserId: string;
-  targetUserEmail: string;
-  targetOrganizationId: string;
-  
-  startedAt: Timestamp;
-  endedAt?: Timestamp;
-  reason?: string;
-}
-
-/**
- * Bulk Operation
- */
-export interface BulkOperation {
-  id: string;
-  type: 'export' | 'import' | 'update' | 'delete' | 'suspend';
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  
-  // Scope
-  organizationIds?: string[];
-  resourceType: string;
-  
-  // Parameters
-  parameters: Record<string, unknown>;
-  
-  // Export format (for export operations)
-  format?: 'json' | 'csv' | 'xlsx';
-  
-  // Results
-  totalItems: number;
-  processedItems: number;
-  successCount: number;
-  errorCount: number;
-  errors?: Array<{ item: string; error: string }>;
-  
-  // Metadata
-  createdBy: string;
-  createdAt: Timestamp;
-  completedAt?: Timestamp;
-  downloadUrl?: string;
-}
-
-/**
- * Compliance Record
- */
-export interface ComplianceRecord {
-  id: string;
-  organizationId: string;
-  type: 'gdpr' | 'ccpa' | 'sox' | 'custom';
-  
-  // Status
-  status: 'compliant' | 'non_compliant' | 'pending_review';
-  
-  // Requirements
-  requirements: ComplianceRequirement[];
-  
-  // Audit
-  lastAuditAt?: Timestamp;
-  nextAuditAt?: Timestamp;
-  auditNotes?: string;
-  
-  updatedAt: Timestamp;
-}
-
-export interface ComplianceRequirement {
-  id: string;
-  name: string;
-  description: string;
-  status: 'met' | 'not_met' | 'n/a';
-  evidence?: string;
 }
 
 /**
@@ -401,10 +176,7 @@ export interface SystemConfig {
   value: SystemConfigValue;
   type: 'string' | 'number' | 'boolean' | 'json';
   description?: string;
-  category: 'general' | 'billing' | 'ai' | 'integrations' | 'security' | 'compliance';
-
+  category: 'general' | 'ai' | 'integrations' | 'security';
   updatedBy: string;
   updatedAt: Date | Timestamp;
 }
-
-

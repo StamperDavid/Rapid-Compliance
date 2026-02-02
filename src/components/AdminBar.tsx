@@ -58,8 +58,8 @@ export default function AdminBar() {
   const logoUrl = theme?.branding?.logoUrl;
   const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
 
-  // Settings button should show for admin, owner, or manager roles
-  const shouldShowSettings = user.role === 'admin' || user.role === 'owner' || user.role === 'manager' || canAccessSettings;
+  // Settings button should show for admin, superadmin, or manager roles
+  const shouldShowSettings = user.role === 'admin' || user.role === 'superadmin' || user.role === 'manager' || canAccessSettings;
 
   return (
     <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', position: 'sticky', top: 0, zIndex: 100 }}>

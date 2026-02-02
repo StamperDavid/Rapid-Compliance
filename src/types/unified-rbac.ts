@@ -26,9 +26,9 @@ import type { Timestamp } from 'firebase/firestore';
 export type AccountRole = 'superadmin' | 'admin' | 'manager' | 'employee';
 
 /**
- * @deprecated Use AccountRole instead. Kept for backward compatibility during migration.
+ * @deprecated Legacy role type - now unified to AccountRole. Will be removed.
  */
-export type LegacyAccountRole = 'platform_admin' | 'owner' | 'admin' | 'manager' | 'employee';
+export type LegacyAccountRole = 'owner' | 'admin' | 'manager' | 'employee';
 
 /**
  * Role hierarchy for permission comparisons
@@ -46,7 +46,6 @@ export const ACCOUNT_ROLE_HIERARCHY: Record<AccountRole, number> = {
  */
 export function migrateLegacyRole(legacyRole: LegacyAccountRole): AccountRole {
   switch (legacyRole) {
-    case 'platform_admin':
     case 'owner':
       return 'superadmin';
     case 'admin':
@@ -616,10 +615,10 @@ export function isSuperadminRole(role: AccountRole | null | undefined): boolean 
 }
 
 /**
- * @deprecated Use isSuperadminRole instead. Kept for backward compatibility.
+ * @deprecated Use isSuperadminRole instead. Will be removed.
  */
 export function isPlatformAdminRole(role: AccountRole | LegacyAccountRole | null | undefined): boolean {
-  return role === 'superadmin' || role === 'platform_admin';
+  return role === 'superadmin';
 }
 
 /**

@@ -99,15 +99,17 @@ export function useAdminAuth() {
   };
 
   /**
-   * Check if user has platform admin role
-   * @deprecated Use isPlatformAdmin() instead - super_admin has been renamed to platform_admin
+   * Check if user has superadmin role (highest authority)
    */
   const isSuperAdmin = (): boolean => {
-    return adminUser?.role === 'platform_admin';
+    return adminUser?.role === 'superadmin';
   };
 
+  /**
+   * @deprecated Use isSuperAdmin() instead
+   */
   const isPlatformAdmin = (): boolean => {
-    return adminUser?.role === 'platform_admin';
+    return adminUser?.role === 'superadmin';
   };
 
   return {

@@ -60,11 +60,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps): Rea
     );
   }
 
-  // Get organization ID for context
-  // Platform admin may have null tenantId (platform-level view)
-  // All other roles must have a tenantId
-  const organizationId = user.tenantId ?? undefined;
-
   logger.info("Dashboard layout rendered", {
     userId: user.id,
     role: user.role,
@@ -77,8 +72,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps): Rea
       {/* Unified Sidebar - role determines visibility */}
       <UnifiedSidebar
         user={user}
-        organizationId={organizationId}
-        brandName="AI Sales Platform"
+        brandName="Rapid Compliance"
         primaryColor="#6366f1"
       />
 
