@@ -69,16 +69,6 @@ export class FirestoreAdminDAL {
   }
 
   /**
-   * Get a workspace sub-collection reference
-   * Usage: adminDal.getWorkspaceCollection('org123', 'workspace456', 'schemas')
-   */
-  getWorkspaceCollection(orgId: string, workspaceId: string, subCollection: string): CollectionReference {
-    const orgCollection = COLLECTIONS.ORGANIZATIONS;
-    const prefix = getPrefix();
-    return this.db.collection(`${orgCollection}/${orgId}/${prefix}workspaces/${workspaceId}/${prefix}${subCollection}`);
-  }
-
-  /**
    * Get a nested collection reference with a custom path
    * Usage: adminDal.getNestedCollection('organizations/{orgId}/ai-agents/default/config/persona', { orgId: 'org123' })
    * This is useful for deep nested collections that don't fit standard patterns
@@ -505,10 +495,10 @@ export class FirestoreAdminDAL {
   // ========================================
 
   /**
-   * Get all workflows for an organization workspace
+   * Get all workflows for an organization
    */
-  async getAllWorkflows(organizationId: string, workspaceId: string): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'workflows');
+  async getAllWorkflows(organizationId: string): Promise<Array<Record<string, unknown>>> {
+    const colRef = this.getOrgCollection(organizationId, 'workflows');
     const snapshot = await colRef.get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
@@ -518,11 +508,10 @@ export class FirestoreAdminDAL {
    */
   async getWorkflowExecutions(
     organizationId: string,
-    workspaceId: string,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'workflowExecutions');
+    const colRef = this.getOrgCollection(organizationId, 'workflowExecutions');
     const snapshot = await colRef
       .where('startedAt', '>=', startDate)
       .where('startedAt', '<=', endDate)
@@ -535,7 +524,6 @@ export class FirestoreAdminDAL {
    */
   getEmailGenerations(
     _organizationId: string,
-    _workspaceId: string,
     _startDate: Date,
     _endDate: Date
   ): Array<Record<string, unknown>> {
@@ -547,8 +535,8 @@ export class FirestoreAdminDAL {
   /**
    * Get all active deals
    */
-  async getActiveDeals(organizationId: string, workspaceId: string): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
+  async getActiveDeals(organizationId: string): Promise<Array<Record<string, unknown>>> {
+    const colRef = this.getOrgCollection(organizationId, 'deals');
     const snapshot = await colRef
       .where('status', 'in', ['active', 'open', 'in_progress'])
       .get();
@@ -560,12 +548,11 @@ export class FirestoreAdminDAL {
    */
   async getDealsSnapshot(
     organizationId: string,
-    workspaceId: string,
     _snapshotDate: Date
   ): Promise<Array<Record<string, unknown>>> {
     // This would require historical snapshots
     // For now, return current active deals
-    return this.getActiveDeals(organizationId, workspaceId);
+    return this.getActiveDeals(organizationId);
   }
 
   /**
@@ -573,11 +560,10 @@ export class FirestoreAdminDAL {
    */
   async getClosedDeals(
     organizationId: string,
-    workspaceId: string,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
+    const colRef = this.getOrgCollection(organizationId, 'deals');
     const snapshot = await colRef
       .where('status', 'in', ['won', 'lost', 'closed'])
       .where('closedAt', '>=', startDate)
@@ -591,11 +577,10 @@ export class FirestoreAdminDAL {
    */
   async getWonDeals(
     organizationId: string,
-    workspaceId: string,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
+    const colRef = this.getOrgCollection(organizationId, 'deals');
     const snapshot = await colRef
       .where('status', '==', 'won')
       .where('closedAt', '>=', startDate)
@@ -607,8 +592,8 @@ export class FirestoreAdminDAL {
   /**
    * Get revenue forecast
    */
-  async getRevenueForecast(organizationId: string, workspaceId: string): Promise<Record<string, unknown> | null> {
-    const docRef = this.getWorkspaceCollection(organizationId, workspaceId, 'forecasts').doc('current');
+  async getRevenueForecast(organizationId: string): Promise<Record<string, unknown> | null> {
+    const docRef = this.getOrgCollection(organizationId, 'forecasts').doc('current');
     const snapshot = await docRef.get();
     return snapshot.exists ? (snapshot.data() as Record<string, unknown>) : null;
   }
@@ -616,8 +601,8 @@ export class FirestoreAdminDAL {
   /**
    * Get sales reps for an organization
    */
-  async getSalesReps(organizationId: string, workspaceId: string): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'users');
+  async getSalesReps(organizationId: string): Promise<Array<Record<string, unknown>>> {
+    const colRef = this.getOrgCollection(organizationId, 'users');
     const snapshot = await colRef
       .where('role', '==', 'sales')
       .get();
@@ -629,12 +614,11 @@ export class FirestoreAdminDAL {
    */
   async getRepDeals(
     organizationId: string,
-    workspaceId: string,
     repId: string,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
+    const colRef = this.getOrgCollection(organizationId, 'deals');
     const snapshot = await colRef
       .where('ownerId', '==', repId)
       .where('createdAt', '>=', startDate)

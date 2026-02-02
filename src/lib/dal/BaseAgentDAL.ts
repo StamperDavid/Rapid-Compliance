@@ -161,26 +161,6 @@ export class BaseAgentDAL {
   }
   
   /**
-   * Get a workspace sub-collection reference
-   * 
-   * @param orgId - Organization ID
-   * @param workspaceId - Workspace ID
-   * @param subCollection - Sub-collection name
-   * @returns CollectionReference for the workspace sub-collection
-   */
-  getWorkspaceSubCollection(
-    orgId: string,
-    workspaceId: string,
-    subCollection: string
-  ): CollectionReference {
-    const orgPath = this.getColPath('organizations');
-    const workspacesPath = this.getColPath('workspaces');
-    const subPath = this.getColPath(subCollection);
-    const fullPath = `${orgPath}/${orgId}/${workspacesPath}/${workspaceId}/${subPath}`;
-    return collection(this.db, fullPath);
-  }
-  
-  /**
    * Get a document reference with environment-aware path
    * 
    * @param baseName - Base collection name

@@ -13,13 +13,17 @@ import { getOrCreateCart, removeFromCart, updateCartItemQuantity } from '@/lib/e
 import { useTheme } from '@/contexts/ThemeContext'
 import { logger } from '@/lib/logger/logger';
 import type { Cart } from '@/types/ecommerce';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export default function ShoppingCartPage() {
   const params = useParams();
   const router = useRouter();
   const { theme } = useTheme();
   const toast = useToast();
-  const orgId = params.orgId as string;
+  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
+  const orgId = DEFAULT_ORG_ID;
+  // Keep URL param for routing purposes
+  const urlOrgId = params.orgId as string;
 
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,7 +89,7 @@ export default function ShoppingCartPage() {
   };
 
   const handleCheckout = () => {
-    router.push(`/store/${orgId}/checkout`);
+    router.push(`/store/${urlOrgId}/checkout`);
   };
 
   if (loading) {
@@ -121,7 +125,7 @@ export default function ShoppingCartPage() {
               Shopping Cart
             </h1>
             <button
-              onClick={() => router.push(`/store/${orgId}/products`)}
+              onClick={() => router.push(`/store/${urlOrgId}/products`)}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: 'transparent',
@@ -148,7 +152,7 @@ export default function ShoppingCartPage() {
             <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Your cart is empty</h2>
             <p style={{ marginBottom: '2rem' }}>Add some products to get started!</p>
             <button
-              onClick={() => router.push(`/store/${orgId}/products`)}
+              onClick={() => router.push(`/store/${urlOrgId}/products`)}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: theme.colors.primary.main,

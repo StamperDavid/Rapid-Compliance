@@ -47,7 +47,6 @@ interface IncomingSchema {
 
 interface RequestBody {
   organizationId?: string;
-  workspaceId?: string;
   schema?: IncomingSchema;
   userId?: string;
 }
@@ -65,7 +64,6 @@ interface ProcessedSchemaField {
 interface NewSchema {
   id: string;
   organizationId: string;
-  workspaceId: string;
   name: string;
   pluralName: string;
   singularName: string;
@@ -132,25 +130,17 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId');
 
-    if (!organizationId || !workspaceId) {
+    if (!organizationId) {
       return NextResponse.json(
-        { error: 'organizationId and workspaceId are required' },
+        { error: 'organizationId is required' },
         { status: 400 }
-      );
-    }
-
-    if (!adminDal) {
-      return NextResponse.json(
-        { error: 'Admin DAL not initialized' },
-        { status: 500 }
       );
     }
 
     const dal = adminDal; // Type narrowing for callback
     const snapshot = await dal.safeQuery('ORGANIZATIONS', (_ref) => {
-      return dal.getWorkspaceCollection(organizationId, workspaceId, 'schemas')
+      return dal.getOrgCollection(organizationId, 'schemas')
         .where('status', '==', 'active');
     });
 
@@ -177,11 +167,11 @@ export async function POST(request: NextRequest) {
 
     const rawBody: unknown = await request.json();
     const body = rawBody as RequestBody;
-    const { organizationId, workspaceId, schema, userId } = body ?? {};
+    const { organizationId, schema, userId } = body ?? {};
 
-    if (!organizationId || !workspaceId || !schema?.name) {
+    if (!organizationId || !schema?.name) {
       return NextResponse.json(
-        { error: 'organizationId, workspaceId, and schema.name are required' },
+        { error: 'organizationId and schema.name are required' },
         { status: 400 }
       );
     }
@@ -205,7 +195,6 @@ export async function POST(request: NextRequest) {
     const newSchema: NewSchema = {
       id: schemaId,
       organizationId,
-      workspaceId,
       name: schema.name,
       pluralName: (schema.pluralName !== '' && schema.pluralName != null) ? schema.pluralName : `${schema.name}s`,
       singularName: schema.singularName ?? schema.name,
@@ -246,11 +235,11 @@ export async function POST(request: NextRequest) {
       version: 1,
     };
 
-    const schemasCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas');
+    const schemasCollection = adminDal.getOrgCollection(organizationId, 'schemas');
     await schemasCollection.doc(schemaId).set(newSchema);
 
     // Initialize entity collection metadata
-    const entitiesCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'entities');
+    const entitiesCollection = adminDal.getOrgCollection(organizationId, 'entities');
     const metadataRef = entitiesCollection.doc(schemaId).collection('_metadata').doc('info');
 
     await metadataRef.set({

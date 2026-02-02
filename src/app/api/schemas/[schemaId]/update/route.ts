@@ -13,7 +13,6 @@ import type { Schema } from '@/types/schema';
 
 interface SchemaUpdateRequestBody {
   organizationId: string;
-  workspaceId: string;
   updates: Partial<Schema>;
   userId: string;
 }
@@ -33,20 +32,20 @@ export async function POST(
         { status: 500 }
       );
     }
-    
+
     const params = await context.params;
     const body = (await request.json()) as SchemaUpdateRequestBody;
-    const { organizationId, workspaceId, updates, userId } = body;
-    
-    if (!organizationId || !workspaceId || !updates || !userId) {
+    const { organizationId, updates, userId } = body;
+
+    if (!organizationId || !updates || !userId) {
       return NextResponse.json(
-        { error: 'organizationId, workspaceId, updates, and userId are required' },
+        { error: 'organizationId, updates, and userId are required' },
         { status: 400 }
       );
     }
-    
+
     // Get current schema using Admin DAL
-    const schemasCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas');
+    const schemasCollection = adminDal.getOrgCollection(organizationId, 'schemas');
     const schemaDoc = await schemasCollection.doc(params.schemaId).get();
     
     if (!schemaDoc.exists) {

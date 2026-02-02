@@ -36,7 +36,6 @@ export const MetricsSchema = z.array(
  */
 export const AnalyticsRequestSchema = z.object({
   organizationId: z.string().min(1, 'Organization ID is required'),
-  workspaceId: z.string().min(1, 'Workspace ID is required'),
   period: TimePeriodSchema,
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),

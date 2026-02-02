@@ -119,19 +119,6 @@ export const getOrgSubCollection = (
 };
 
 /**
- * Helper for workspace sub-collections
- * Usage: getWorkspaceSubCollection('org123', 'workspace456', 'schemas')
- * Returns: 'organizations/org123/workspaces/workspace456/schemas'
- */
-export const getWorkspaceSubCollection = (
-  orgId: string,
-  workspaceId: string,
-  subCollection: string
-): string => {
-  return `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${PREFIX}workspaces/${workspaceId}/${PREFIX}${subCollection}`;
-};
-
-/**
  * Helper for schema sub-collections
  * Usage: getSchemaSubCollection('org123', 'schema456', 'fields')
  * Returns: 'organizations/org123/schemas/schema456/fields'

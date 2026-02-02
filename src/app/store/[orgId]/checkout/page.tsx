@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 import { getOrCreateCart } from '@/lib/ecommerce/cart-service';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { useTheme } from '@/contexts/ThemeContext'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface CartItem {
   id: string;
@@ -30,7 +31,10 @@ export default function CheckoutPage() {
   const params = useParams();
   const router = useRouter();
   const { theme } = useTheme();
-  const orgId = params.orgId as string;
+  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
+  const orgId = DEFAULT_ORG_ID;
+  // Keep URL param for routing purposes
+  const urlOrgId = params.orgId as string;
 
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,13 +57,13 @@ export default function CheckoutPage() {
     try {
       const sessionId = localStorage.getItem('cartSessionId');
       if (!sessionId) {
-        router.push(`/store/${orgId}/cart`);
+        router.push(`/store/${urlOrgId}/cart`);
         return;
       }
 
       const cartData = await getOrCreateCart(sessionId, 'default', orgId);
       if (!cartData.items || cartData.items.length === 0) {
-        router.push(`/store/${orgId}/cart`);
+        router.push(`/store/${urlOrgId}/cart`);
         return;
       }
 
@@ -69,7 +73,7 @@ export default function CheckoutPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, router]);
+  }, [orgId, router, urlOrgId]);
 
   useEffect(() => {
     void loadCart();
@@ -126,7 +130,7 @@ export default function CheckoutPage() {
 
       // Clear cart and redirect to success
       localStorage.removeItem('cartSessionId');
-      router.push(`/store/${orgId}/checkout/success?orderId=${order.id}`);
+      router.push(`/store/${urlOrgId}/checkout/success?orderId=${order.id}`);
     } catch (error) {
       logger.error('Checkout error:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       const message = error instanceof Error && error.message ? error.message : 'Checkout failed. Please try again.';

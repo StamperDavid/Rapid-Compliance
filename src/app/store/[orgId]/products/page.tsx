@@ -9,8 +9,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { useTheme } from '@/contexts/ThemeContext'
-import { logger } from '@/lib/logger/logger';;
+import { useTheme } from '@/contexts/ThemeContext';
+import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface Product {
   id: string;
@@ -27,7 +28,10 @@ export default function ProductCatalogPage() {
   const params = useParams();
   const router = useRouter();
   const { theme } = useTheme();
-  const orgId = params.orgId as string;
+  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
+  const orgId = DEFAULT_ORG_ID;
+  // Keep URL param for routing purposes
+  const urlOrgId = params.orgId as string;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,9 +43,9 @@ export default function ProductCatalogPage() {
     try {
       setLoading(true);
 
-      // Load products from Firestore
+      // Load products from Firestore (org-level collection)
       const productsData = await FirestoreService.getAll(
-        `organizations/${orgId}/workspaces/default/entities/products/records`,
+        `organizations/${orgId}/products`,
         []
       );
 
@@ -76,7 +80,7 @@ export default function ProductCatalogPage() {
   });
 
   const handleProductClick = (productId: string) => {
-    router.push(`/store/${orgId}/products/${productId}`);
+    router.push(`/store/${urlOrgId}/products/${productId}`);
   };
 
   if (loading) {
@@ -124,7 +128,7 @@ export default function ProductCatalogPage() {
               </h1>
             </div>
             <button
-              onClick={() => router.push(`/store/${orgId}/cart`)}
+              onClick={() => router.push(`/store/${urlOrgId}/cart`)}
               style={{
                 padding: '0.625rem 1.25rem',
                 backgroundColor: theme.colors.primary.main,

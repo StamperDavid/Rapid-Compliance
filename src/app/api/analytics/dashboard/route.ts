@@ -1,20 +1,19 @@
 /**
  * Analytics Dashboard API Endpoint
- * 
+ *
  * GET /api/analytics/dashboard
- * 
+ *
  * Returns comprehensive analytics across all platform features
- * 
+ *
  * FEATURES:
  * - Rate limiting (20 requests/minute per user)
  * - Request validation (Zod schemas)
  * - Response caching (5-minute TTL)
  * - Error handling
  * - Performance tracking
- * 
+ *
  * QUERY PARAMETERS:
  * - organizationId (required): Organization ID
- * - workspaceId (required): Workspace ID
  * - period (required): Time period ('24h', '7d', '30d', '90d', 'month', 'quarter', 'year', 'custom')
  * - startDate (optional): Custom start date (ISO string)
  * - endDate (optional): Custom end date (ISO string)
@@ -72,21 +71,19 @@ export async function GET(request: NextRequest) {
     // Extract query parameters
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId');
     const period = searchParams.get('period') as TimePeriod;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const metricsParam = searchParams.get('metrics');
-    
+
     // Parse metrics
     const metrics = metricsParam
       ? metricsParam.split(',').map(m => m.trim())
       : undefined;
-    
+
     // Build request object
     const requestData = {
       organizationId,
-      workspaceId,
       period,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
@@ -116,7 +113,6 @@ export async function GET(request: NextRequest) {
           'Validation error',
           'VALIDATION_ERROR',
           organizationId ?? undefined,
-          workspaceId ?? undefined,
           { errors: error.errors }
         );
         
@@ -152,14 +148,12 @@ export async function GET(request: NextRequest) {
     // Emit dashboard viewed event
     await emitDashboardViewed(
       validatedRequest.organizationId,
-      validatedRequest.workspaceId,
       validatedRequest.period
     );
-    
+
     // Get analytics data
     const data = await getDashboardAnalytics(
       validatedRequest.organizationId,
-      validatedRequest.workspaceId,
       validatedRequest.period,
       validatedRequest.startDate,
       validatedRequest.endDate
@@ -201,7 +195,6 @@ export async function GET(request: NextRequest) {
     await emitAnalyticsError(
       errorMessage,
       'INTERNAL_ERROR',
-      undefined,
       undefined,
       process.env.NODE_ENV === 'development' ? { stack: errorStack } : undefined
     );

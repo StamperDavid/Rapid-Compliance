@@ -10,6 +10,7 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { ResponsiveRenderer } from '@/components/website-builder/ResponsiveRenderer';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Type definitions for SEO metadata
 interface SeoMetadata {
@@ -55,7 +56,8 @@ function isPagesApiResponse(data: unknown): data is PagesApiResponse {
 
 export default function PublicSitePage() {
   const params = useParams();
-  const orgId = params.orgId as string;
+  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
+  const orgId = DEFAULT_ORG_ID;
   const slug = (params.slug as string[]) || [''];
   const pagePath = slug.join('/') || 'home';
 

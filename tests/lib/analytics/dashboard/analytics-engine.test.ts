@@ -77,9 +77,9 @@ function createMockWorkflowExecution(overrides: Partial<WorkflowExecution> = {})
 }
 
 describe('Analytics Engine', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
-    clearAnalyticsCache();
+    await clearAnalyticsCache();
   });
 
   describe('getDashboardAnalytics', () => {
@@ -126,19 +126,19 @@ describe('Analytics Engine', () => {
         }),
       ];
 
-      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue(mockWorkflows);
-      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue(mockExecutions);
-      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getRepDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getAllWorkflows).mockResolvedValue(mockWorkflows);
+      (mockAdminDal.getWorkflowExecutions).mockResolvedValue(mockExecutions);
+      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps).mockResolvedValue([]);
+      (mockAdminDal.getRepDeals).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', 'ws1', '30d');
+      const result = await getDashboardAnalytics('org1', '30d');
 
       // Verify
       expect(result).toHaveProperty('workflows');
@@ -190,20 +190,20 @@ describe('Analytics Engine', () => {
         }),
       ];
 
-      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue(mockWorkflows);
-      (mockAdminDal.getWorkflowExecutions as jest.Mock)
+      (mockAdminDal.getAllWorkflows).mockResolvedValue(mockWorkflows);
+      (mockAdminDal.getWorkflowExecutions)
         .mockResolvedValueOnce(mockExecutions) // Current period
         .mockResolvedValueOnce([]); // Previous period
-      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', 'ws1', '30d');
+      const result = await getDashboardAnalytics('org1', '30d');
 
       // Verify workflow metrics
       expect(result.workflows.totalActiveWorkflows).toBe(1);
@@ -239,20 +239,20 @@ describe('Analytics Engine', () => {
         }),
       ];
 
-      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue(mockWorkflows);
-      (mockAdminDal.getWorkflowExecutions as jest.Mock)
+      (mockAdminDal.getAllWorkflows).mockResolvedValue(mockWorkflows);
+      (mockAdminDal.getWorkflowExecutions)
         .mockResolvedValueOnce(mockExecutions)
         .mockResolvedValueOnce([]);
-      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', 'ws1', '30d');
+      const result = await getDashboardAnalytics('org1', '30d');
 
       // Verify action breakdown
       expect(result.workflows.actionBreakdown).toHaveLength(2);
@@ -286,18 +286,18 @@ describe('Analytics Engine', () => {
         throw new Error('adminDal is not initialized');
       }
       
-      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue(mockDeals);
-      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue(mockClosedDeals);
-      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals).mockResolvedValue(mockDeals);
+      (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals).mockResolvedValue(mockClosedDeals);
+      (mockAdminDal.getWonDeals).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', 'ws1', '30d');
+      const result = await getDashboardAnalytics('org1', '30d');
 
       // Verify deal metrics
       expect(result.deals.totalActiveDeals).toBe(4);
@@ -326,22 +326,22 @@ describe('Analytics Engine', () => {
         throw new Error('adminDal is not initialized');
       }
       
-      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue(mockAllClosedDeals);
-      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue(mockWonDeals);
-      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({
+      (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals).mockResolvedValue(mockAllClosedDeals);
+      (mockAdminDal.getWonDeals).mockResolvedValue(mockWonDeals);
+      (mockAdminDal.getRevenueForecast).mockResolvedValue({
         optimistic: 120000,
         realistic: 100000,
         pessimistic: 80000,
       });
-      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', 'ws1', '30d');
+      const result = await getDashboardAnalytics('org1', '30d');
 
       // Verify revenue metrics
       expect(result.revenue.totalRevenue).toBe(33000);
@@ -360,29 +360,29 @@ describe('Analytics Engine', () => {
       }
       
       // Setup minimal mocks
-      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // First call
-      await getDashboardAnalytics('org1', 'ws1', '30d');
+      await getDashboardAnalytics('org1', '30d');
       expect(mockAdminDal.getAllWorkflows).toHaveBeenCalledTimes(1);
 
       // Second call (should use cache)
-      await getDashboardAnalytics('org1', 'ws1', '30d');
+      await getDashboardAnalytics('org1', '30d');
       expect(mockAdminDal.getAllWorkflows).toHaveBeenCalledTimes(1); // Still 1 (cached)
 
       // Clear cache
-      clearAnalyticsCache();
+      await clearAnalyticsCache();
 
       // Third call (should fetch again)
-      await getDashboardAnalytics('org1', 'ws1', '30d');
+      await getDashboardAnalytics('org1', '30d');
       expect(mockAdminDal.getAllWorkflows).toHaveBeenCalledTimes(2);
     });
 
@@ -403,20 +403,20 @@ describe('Analytics Engine', () => {
         createMockWorkflowExecution({ id: 'ex0', workflowId: 'wf1', status: 'completed', startedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, completedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, actionsExecuted: [] }),
       ];
 
-      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWorkflowExecutions as jest.Mock)
+      (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions)
         .mockResolvedValueOnce(currentExecutions) // Current period
         .mockResolvedValueOnce(previousExecutions); // Previous period
-      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', 'ws1', '30d');
+      const result = await getDashboardAnalytics('org1', '30d');
 
       // Verify trend (200% increase: from 1 to 3)
       expect(result.workflows.executionsTrend).toBe(200);
@@ -428,21 +428,21 @@ describe('Analytics Engine', () => {
       }
       
       // Setup minimal mocks
-      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Test different periods
       const periods = ['24h', '7d', '30d', '90d', 'month', 'quarter', 'year'] as const;
 
       for (const period of periods) {
-        const result = await getDashboardAnalytics('org1', 'ws1', period);
+        const result = await getDashboardAnalytics('org1', period);
         expect(result.period).toBe(period);
         expect(result.startDate).toBeInstanceOf(Date);
         expect(result.endDate).toBeInstanceOf(Date);
@@ -463,20 +463,20 @@ describe('Analytics Engine', () => {
         createMockWorkflowExecution({ id: 'ex3', workflowId: 'wf1', status: 'completed', startedAt: new Date('2024-01-16') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, completedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, actionsExecuted: [] }),
       ];
 
-      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWorkflowExecutions as jest.Mock)
+      (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions)
         .mockResolvedValueOnce(mockExecutions)
         .mockResolvedValueOnce([]);
-      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', 'ws1', '7d');
+      const result = await getDashboardAnalytics('org1', '7d');
 
       // Verify time series
       expect(result.workflows.executionsByDay).toBeInstanceOf(Array);

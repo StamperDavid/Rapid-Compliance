@@ -81,9 +81,8 @@ function toDate(value: Date | FirestoreTimestamp | string | number): Date {
 
 /**
  * Get comprehensive dashboard analytics
- * 
+ *
  * @param organizationId - Organization ID
- * @param workspaceId - Workspace ID
  * @param period - Time period for analytics
  * @param startDate - Custom start date (for custom period)
  * @param endDate - Custom end date (for custom period)
@@ -91,17 +90,16 @@ function toDate(value: Date | FirestoreTimestamp | string | number): Date {
  */
 export async function getDashboardAnalytics(
   organizationId: string,
-  workspaceId: string,
   period: TimePeriod,
   startDate?: Date,
   endDate?: Date
 ): Promise<DashboardOverview> {
   const startTime = Date.now();
-  
+
   // Check cache
-  const cacheKey = `${organizationId}:${workspaceId}:${period}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
+  const cacheKey = `${organizationId}:${period}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
   const cached = analyticsCache.get(cacheKey);
-  
+
   if (cached) {
     const age = Date.now() - cached.timestamp.getTime();
     if (age < CACHE_TTL * 1000) {
@@ -109,7 +107,6 @@ export async function getDashboardAnalytics(
       const generationTime = Date.now() - startTime;
       await emitDashboardGenerated(
         organizationId,
-        workspaceId,
         period,
         generationTime,
         true,
@@ -118,22 +115,22 @@ export async function getDashboardAnalytics(
       return cached.data;
     }
   }
-  
+
   // Calculate date range
   const dateRange = calculateDateRange(period, startDate, endDate);
   const previousDateRange = calculatePreviousDateRange(dateRange.start, dateRange.end);
-  
+
   // Aggregate data from all sources in parallel
   const [workflows, deals, revenue, team] = await Promise.all([
-    getWorkflowMetrics(organizationId, workspaceId, dateRange.start, dateRange.end, previousDateRange),
-    getDealMetrics(organizationId, workspaceId, dateRange.start, dateRange.end, previousDateRange),
-    getRevenueMetrics(organizationId, workspaceId, dateRange.start, dateRange.end, previousDateRange),
-    getTeamMetrics(organizationId, workspaceId, dateRange.start, dateRange.end),
+    getWorkflowMetrics(organizationId, dateRange.start, dateRange.end, previousDateRange),
+    getDealMetrics(organizationId, dateRange.start, dateRange.end, previousDateRange),
+    getRevenueMetrics(organizationId, dateRange.start, dateRange.end, previousDateRange),
+    getTeamMetrics(organizationId, dateRange.start, dateRange.end),
   ]);
 
   // Get email metrics synchronously (no async DB calls)
-  const emails = getEmailMetrics(organizationId, workspaceId, dateRange.start, dateRange.end, previousDateRange);
-  
+  const emails = getEmailMetrics(organizationId, dateRange.start, dateRange.end, previousDateRange);
+
   const dashboard: DashboardOverview = {
     period,
     startDate: dateRange.start,
@@ -144,24 +141,23 @@ export async function getDashboardAnalytics(
     revenue,
     team,
   };
-  
+
   // Cache result
   analyticsCache.set(cacheKey, {
     data: dashboard,
     timestamp: new Date(),
   });
-  
+
   // Emit event for new generation
   const generationTime = Date.now() - startTime;
   await emitDashboardGenerated(
     organizationId,
-    workspaceId,
     period,
     generationTime,
     false,
     dashboard
   );
-  
+
   return dashboard;
 }
 
@@ -174,7 +170,6 @@ export async function getDashboardAnalytics(
  */
 async function getWorkflowMetrics(
   organizationId: string,
-  workspaceId: string,
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
@@ -196,13 +191,12 @@ async function getWorkflowMetrics(
   }
 
   // Get all workflows - cast from DAL's Record<string, unknown>[] to typed array
-  const workflows = await adminDal.getAllWorkflows(organizationId, workspaceId) as unknown as Workflow[];
+  const workflows = await adminDal.getAllWorkflows(organizationId) as unknown as Workflow[];
   const activeWorkflows = workflows.filter((w) => w.status === 'active');
 
   // Get executions in current period - cast from DAL's Record<string, unknown>[] to typed array
   const executions = await adminDal.getWorkflowExecutions(
     organizationId,
-    workspaceId,
     startDate,
     endDate
   ) as unknown as WorkflowExecution[];
@@ -210,7 +204,6 @@ async function getWorkflowMetrics(
   // Get executions in previous period (for trend) - cast from DAL's Record<string, unknown>[] to typed array
   const previousExecutions = await adminDal.getWorkflowExecutions(
     organizationId,
-    workspaceId,
     previousDateRange.start,
     previousDateRange.end
   ) as unknown as WorkflowExecution[];
@@ -404,7 +397,6 @@ function calculateActionBreakdown(
  */
 function getEmailMetrics(
   organizationId: string,
-  workspaceId: string,
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
@@ -425,14 +417,12 @@ function getEmailMetrics(
   // Get email generation events from Signal Bus or email writer logs
   const emails = adminDal.getEmailGenerations(
     organizationId,
-    workspaceId,
     startDate,
     endDate
   );
 
   const previousEmails = adminDal.getEmailGenerations(
     organizationId,
-    workspaceId,
     previousDateRange.start,
     previousDateRange.end
   );
@@ -555,7 +545,6 @@ function calculateEmailsByTier(emails: EmailRecord[], total: number): TierDistri
  */
 async function getDealMetrics(
   organizationId: string,
-  workspaceId: string,
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
@@ -576,10 +565,9 @@ async function getDealMetrics(
   }
 
   // Get all active deals
-  const deals = await adminDal.getActiveDeals(organizationId, workspaceId);
+  const deals = await adminDal.getActiveDeals(organizationId);
   const previousDeals = await adminDal.getDealsSnapshot(
     organizationId,
-    workspaceId,
     previousDateRange.end
   );
   
@@ -616,16 +604,14 @@ async function getDealMetrics(
   // Calculate average velocity
   const closedDeals = await adminDal.getClosedDeals(
     organizationId,
-    workspaceId,
     startDate,
     endDate
   );
   const averageVelocity = calculateAverageVelocity(closedDeals);
-  
+
   // Get pipeline by day
   const pipelineByDay = generateDealPipelineTimeSeries(
     organizationId,
-    workspaceId,
     startDate,
     endDate
   );
@@ -757,7 +743,6 @@ function calculateAverageVelocity(closedDeals: DealAnalyticsRecord[]): number {
  */
 function generateDealPipelineTimeSeries(
   _organizationId: string,
-  _workspaceId: string,
   _startDate: Date,
   _endDate: Date
 ): TimeSeriesDataPoint[] {
@@ -775,7 +760,6 @@ function generateDealPipelineTimeSeries(
  */
 async function getRevenueMetrics(
   organizationId: string,
-  workspaceId: string,
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
@@ -798,14 +782,12 @@ async function getRevenueMetrics(
   // Get closed/won deals in period
   const wonDeals = await adminDal.getWonDeals(
     organizationId,
-    workspaceId,
     startDate,
     endDate
   );
-  
+
   const previousWonDeals = await adminDal.getWonDeals(
     organizationId,
-    workspaceId,
     previousDateRange.start,
     previousDateRange.end
   );
@@ -818,7 +800,7 @@ async function getRevenueMetrics(
   const quotaAttainment = quota > 0 ? (totalRevenue / quota) * 100 : 0;
   
   // Get revenue forecast from forecasting engine
-  const forecast = await adminDal.getRevenueForecast(organizationId, workspaceId);
+  const forecast = await adminDal.getRevenueForecast(organizationId);
   
   // Calculate trend
   const revenueTrend = previousRevenue > 0
@@ -834,7 +816,7 @@ async function getRevenueMetrics(
   );
   
   // Calculate win rate
-  const allDeals = await adminDal.getClosedDeals(organizationId, workspaceId, startDate, endDate);
+  const allDeals = await adminDal.getClosedDeals(organizationId, startDate, endDate);
   const winRate = allDeals.length > 0
     ? (wonDeals.length / allDeals.length) * 100
     : 0;
@@ -870,7 +852,6 @@ async function getRevenueMetrics(
  */
 async function getTeamMetrics(
   organizationId: string,
-  workspaceId: string,
   startDate: Date,
   endDate: Date
 ): Promise<TeamOverviewMetrics> {
@@ -895,12 +876,12 @@ async function getTeamMetrics(
   }
 
   // Get all reps (users with role 'sales') - cast from DAL's Record<string, unknown>[] to typed array
-  const reps = await dal.getSalesReps(organizationId, workspaceId) as unknown as RepRecord[];
+  const reps = await dal.getSalesReps(organizationId) as unknown as RepRecord[];
 
   // Get deals for each rep
   const repDeals = await Promise.all(
     reps.map((rep) =>
-      dal.getRepDeals(organizationId, workspaceId, rep.id, startDate, endDate)
+      dal.getRepDeals(organizationId, rep.id, startDate, endDate)
     )
   ) as unknown as DealAnalyticsRecord[][];
 

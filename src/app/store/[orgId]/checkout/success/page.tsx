@@ -2,13 +2,17 @@
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export default function OrderSuccessPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { theme } = useTheme();
-  const orgId = params.orgId as string;
+  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
+  const _orgId = DEFAULT_ORG_ID;
+  // Keep URL param for routing purposes
+  const urlOrgId = params.orgId as string;
   const orderId = searchParams.get('orderId');
 
   return (
@@ -28,7 +32,7 @@ export default function OrderSuccessPage() {
         <p style={{ marginBottom: '2rem', color: theme.colors.text.secondary }}>
           You&apos;ll receive an email confirmation shortly with your order details.
         </p>
-        <button onClick={() => router.push(`/store/${orgId}/products`)} style={{ padding: '0.75rem 1.5rem', backgroundColor: theme.colors.primary.main, color: theme.colors.primary.contrast, border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: '500' }}>
+        <button onClick={() => router.push(`/store/${urlOrgId}/products`)} style={{ padding: '0.75rem 1.5rem', backgroundColor: theme.colors.primary.main, color: theme.colors.primary.contrast, border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: '500' }}>
           Continue Shopping
         </button>
       </div>

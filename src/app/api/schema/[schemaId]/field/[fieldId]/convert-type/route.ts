@@ -10,7 +10,6 @@ import type { FieldType, SchemaField } from '@/types/schema';
 
 interface ConversionRequestBody {
   organizationId: string;
-  workspaceId: string;
   fieldKey: string;
   oldType: FieldType;
   newType: FieldType;
@@ -34,25 +33,23 @@ export async function GET(
     const params = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId');
     const oldType = searchParams.get('oldType') as FieldType;
     const newType = searchParams.get('newType') as FieldType;
     const fieldKey = searchParams.get('fieldKey');
-    
-    if (!organizationId || !workspaceId || !oldType || !newType || !fieldKey) {
+
+    if (!organizationId || !oldType || !newType || !fieldKey) {
       return NextResponse.json(
-        { error: 'organizationId, workspaceId, oldType, newType, and fieldKey are required' },
+        { error: 'organizationId, oldType, newType, and fieldKey are required' },
         { status: 400 }
       );
     }
-    
+
     // Check if safe conversion
     const isSafe = FieldTypeConverterServer.isSafeConversion(oldType, newType);
-    
+
     // Generate preview using SERVER version (admin SDK)
     const preview = await FieldTypeConverterServer.generateConversionPreview(
       organizationId,
-      workspaceId,
       params.schemaId,
       fieldKey,
       oldType,
@@ -95,12 +92,12 @@ export async function POST(
   try {
     const params = await context.params;
     const body = (await request.json()) as ConversionRequestBody;
-    const { organizationId, workspaceId, fieldKey, oldType, newType } = body;
-    
+    const { organizationId, fieldKey, oldType, newType } = body;
+
     // Validate required fields
-    if (!organizationId || !workspaceId || !fieldKey || !oldType || !newType) {
+    if (!organizationId || !fieldKey || !oldType || !newType) {
       return NextResponse.json(
-        { error: 'Missing required fields: organizationId, workspaceId, fieldKey, oldType, newType' },
+        { error: 'Missing required fields: organizationId, fieldKey, oldType, newType' },
         { status: 400 }
       );
     }
@@ -111,7 +108,7 @@ export async function POST(
         { status: 500 }
       );
     }
-    
+
     logger.info('[Type Conversion] Starting conversion', {
       schemaId: params.schemaId,
       fieldId: params.fieldId,
@@ -120,37 +117,37 @@ export async function POST(
       newType,
       file: 'route.ts'
     });
-    
+
     // Import admin SDK and helpers
     const { getFirestore } = await import('firebase-admin/firestore');
-    const { getWorkspaceSubCollection } = await import('@/lib/firebase/collections');
+    const { getOrgSubCollection } = await import('@/lib/firebase/collections');
     const db = getFirestore();
-    
+
     // Get schema to get schema name (using environment-aware paths)
-    const schemasPath = getWorkspaceSubCollection(organizationId, workspaceId, 'schemas');
+    const schemasPath = getOrgSubCollection(organizationId, 'schemas');
     const schemaRef = db.collection(schemasPath).doc(params.schemaId);
-    
+
     const schemaDoc = await schemaRef.get();
-    
+
     if (!schemaDoc.exists) {
       return NextResponse.json(
         { error: 'Schema not found' },
         { status: 404 }
       );
     }
-    
+
     const schemaData = schemaDoc.data() as SchemaData | undefined;
     const schemaName = schemaData?.name;
-    
+
     if (!schemaName) {
       return NextResponse.json(
         { error: 'Schema name not found' },
         { status: 400 }
       );
     }
-    
+
     // Get all records (using environment-aware paths for entities)
-    const entitiesPath = getWorkspaceSubCollection(organizationId, workspaceId, 'entities');
+    const entitiesPath = getOrgSubCollection(organizationId, 'entities');
     const recordsPath = adminDal.getSubColPath('records');
     const recordsRef = db.collection(`${entitiesPath}/${schemaName}/${recordsPath}`);
     

@@ -43,16 +43,13 @@ export const ANALYTICS_EVENTS = {
 export interface DashboardViewedPayload {
   /** Organization ID */
   organizationId: string;
-  
-  /** Workspace ID */
-  workspaceId: string;
-  
+
   /** Time period selected */
   period: TimePeriod;
-  
+
   /** User ID who viewed */
   userId?: string;
-  
+
   /** Timestamp */
   timestamp: Date;
 }
@@ -63,19 +60,16 @@ export interface DashboardViewedPayload {
 export interface DashboardGeneratedPayload {
   /** Organization ID */
   organizationId: string;
-  
-  /** Workspace ID */
-  workspaceId: string;
-  
+
   /** Time period */
   period: TimePeriod;
-  
+
   /** Generation time (ms) */
   generationTime: number;
-  
+
   /** Whether served from cache */
   cached: boolean;
-  
+
   /** Dashboard data summary */
   summary: {
     totalWorkflows: number;
@@ -83,7 +77,7 @@ export interface DashboardGeneratedPayload {
     totalDeals: number;
     totalRevenue: number;
   };
-  
+
   /** Timestamp */
   timestamp: Date;
 }
@@ -108,16 +102,13 @@ export interface CacheClearedPayload {
 export interface ExportRequestedPayload {
   /** Organization ID */
   organizationId: string;
-  
-  /** Workspace ID */
-  workspaceId: string;
-  
+
   /** Export format */
   format: 'csv' | 'pdf' | 'excel';
-  
+
   /** User ID who requested */
   userId?: string;
-  
+
   /** Timestamp */
   timestamp: Date;
 }
@@ -128,19 +119,16 @@ export interface ExportRequestedPayload {
 export interface ErrorOccurredPayload {
   /** Error message */
   error: string;
-  
+
   /** Error code */
   code: string;
-  
+
   /** Organization ID (if available) */
   organizationId?: string;
-  
-  /** Workspace ID (if available) */
-  workspaceId?: string;
-  
+
   /** Additional context */
   context?: Record<string, unknown>;
-  
+
   /** Timestamp */
   timestamp: Date;
 }
@@ -154,7 +142,6 @@ export interface ErrorOccurredPayload {
  */
 export async function emitDashboardViewed(
   organizationId: string,
-  workspaceId: string,
   period: TimePeriod,
   userId?: string
 ): Promise<void> {
@@ -163,7 +150,6 @@ export async function emitDashboardViewed(
 
     const payload: DashboardViewedPayload = {
       organizationId,
-      workspaceId,
       period,
       userId,
       timestamp: new Date(),
@@ -186,7 +172,6 @@ export async function emitDashboardViewed(
  */
 export async function emitDashboardGenerated(
   organizationId: string,
-  workspaceId: string,
   period: TimePeriod,
   generationTime: number,
   cached: boolean,
@@ -194,10 +179,9 @@ export async function emitDashboardGenerated(
 ): Promise<void> {
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     const payload: DashboardGeneratedPayload = {
       organizationId,
-      workspaceId,
       period,
       generationTime,
       cached,
@@ -209,7 +193,7 @@ export async function emitDashboardGenerated(
       },
       timestamp: new Date(),
     };
-    
+
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.DASHBOARD_GENERATED as SignalType,
       orgId: organizationId,
@@ -255,21 +239,19 @@ export async function emitCacheCleared(
  */
 export async function emitExportRequested(
   organizationId: string,
-  workspaceId: string,
   format: 'csv' | 'pdf' | 'excel',
   userId?: string
 ): Promise<void> {
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     const payload: ExportRequestedPayload = {
       organizationId,
-      workspaceId,
       format,
       userId,
       timestamp: new Date(),
     };
-    
+
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.EXPORT_REQUESTED as SignalType,
       orgId: organizationId,
@@ -289,21 +271,19 @@ export async function emitAnalyticsError(
   error: string,
   code: string,
   organizationId?: string,
-  workspaceId?: string,
   context?: Record<string, unknown>
 ): Promise<void> {
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     const payload: ErrorOccurredPayload = {
       error,
       code,
       organizationId,
-      workspaceId,
       context,
       timestamp: new Date(),
     };
-    
+
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.ERROR_OCCURRED as SignalType,
       orgId: (organizationId !== '' && organizationId != null) ? organizationId : 'system',
@@ -328,7 +308,6 @@ export function handleDashboardViewed(payload: DashboardViewedPayload): void {
   // Log to analytics service
   logger.info('Dashboard viewed', {
     org: payload.organizationId,
-    workspace: payload.workspaceId,
     period: payload.period,
     user: payload.userId,
     file: 'events.ts',
@@ -380,7 +359,6 @@ export function handleAnalyticsError(payload: ErrorOccurredPayload): void {
   logger.error('Analytics error', new Error(payload.error), {
     code: payload.code,
     org: payload.organizationId,
-    workspace: payload.workspaceId,
     file: 'events.ts',
   });
 

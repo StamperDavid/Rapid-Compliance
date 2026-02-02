@@ -18,20 +18,19 @@ export async function GET(
         { status: 500 }
       );
     }
-    
+
     const params = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId');
 
-    if (!organizationId || !workspaceId) {
+    if (!organizationId) {
       return NextResponse.json(
-        { error: 'organizationId and workspaceId are required' },
+        { error: 'organizationId is required' },
         { status: 400 }
       );
     }
 
-    const schemasCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas');
+    const schemasCollection = adminDal.getOrgCollection(organizationId, 'schemas');
     const docSnap = await schemasCollection.doc(params.schemaId).get();
 
     if (!docSnap.exists) {
@@ -62,22 +61,21 @@ export async function DELETE(
         { status: 500 }
       );
     }
-    
+
     const params = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId');
 
-    if (!organizationId || !workspaceId) {
+    if (!organizationId) {
       return NextResponse.json(
-        { error: 'organizationId and workspaceId are required' },
+        { error: 'organizationId is required' },
         { status: 400 }
       );
     }
 
-    const schemasCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas');
+    const schemasCollection = adminDal.getOrgCollection(organizationId, 'schemas');
     const docRef = schemasCollection.doc(params.schemaId);
-    
+
     const docSnap = await docRef.get();
     if (!docSnap.exists) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });

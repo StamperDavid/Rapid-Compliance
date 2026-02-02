@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/lib/firebase-admin';
-import { getWorkspaceSubCollection } from '@/lib/firebase/collections';
+import { getOrgSubCollection } from '@/lib/firebase/collections';
 import type { FieldType } from '@/types/schema';
 
 /**
@@ -48,7 +48,6 @@ export class FieldTypeConverterServer {
    */
   static async generateConversionPreview(
     organizationId: string,
-    workspaceId: string,
     schemaId: string,
     fieldKey: string,
     oldType: FieldType,
@@ -61,26 +60,26 @@ export class FieldTypeConverterServer {
     estimatedFailures: number;
   }> {
     // Get schema (using environment-aware paths)
-    const schemasPath = getWorkspaceSubCollection(organizationId, workspaceId, 'schemas');
+    const schemasPath = getOrgSubCollection(organizationId, 'schemas');
     const schemaDoc = await db
       .collection(schemasPath)
       .doc(schemaId)
       .get();
-    
+
     if (!schemaDoc.exists) {
       throw new Error('Schema not found');
     }
-    
+
     const schema = schemaDoc.data() as { name?: string } | undefined;
     const schemaName = schema?.name;
-    
+
     if (!schemaName) {
       throw new Error('Schema name not found');
     }
-    
+
     // Get records (using environment-aware paths for nested entities)
     const { getPrefix } = await import('@/lib/firebase/collections');
-    const entitiesPath = getWorkspaceSubCollection(organizationId, workspaceId, 'entities');
+    const entitiesPath = getOrgSubCollection(organizationId, 'entities');
     const recordsPath = `${getPrefix()}records`;
     const recordsSnapshot = await db
       .collection(`${entitiesPath}/${schemaName}/${recordsPath}`)
