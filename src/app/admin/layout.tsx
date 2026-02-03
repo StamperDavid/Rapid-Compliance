@@ -3,7 +3,13 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import AdminSidebar from '@/components/admin/AdminSidebar';
 
+/**
+ * Admin Layout
+ * Wraps all /admin/* pages with auth guard and sidebar navigation.
+ * Single-tenant: RapidCompliance.US Penthouse model.
+ */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { adminUser, loading } = useAdminAuth();
   const router = useRouter();
@@ -51,7 +57,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="admin-theme-scope" style={{ minHeight: '100vh', backgroundColor: '#000' }}>
-      {children}
+      <AdminSidebar />
+
+      {/* Main content area offset by sidebar width */}
+      <main
+        className="md:ml-[280px]"
+        style={{
+          minHeight: '100vh',
+          transition: 'margin-left 0.3s ease',
+        }}
+      >
+        {children}
+      </main>
     </div>
   );
 }
