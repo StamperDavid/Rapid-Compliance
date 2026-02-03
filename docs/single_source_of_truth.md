@@ -1,9 +1,10 @@
-# AI Sales Platform - Single Source of Truth
+# RapidCompliance.US - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 2, 2026 (Vercel Deployment Ready - Branches Synced)
-**Branches:** `main` and `dev` synchronized at commit `2113d2f0`
+**Last Updated:** February 2, 2026 (Multi-Tenant Purge Complete)
+**Branches:** `dev` at commit `e8a707c0`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
+**Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
 
 ---
@@ -33,14 +34,13 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 244 | Verified (includes 45 Admin Org Support views) |
-| API Endpoints (route.ts) | 228 | 222 Functional, 6 Partial* |
+| Physical Routes (page.tsx) | 148 | Verified (single-tenant flat routes) |
+| API Endpoints (route.ts) | 215 | Functional |
 | AI Agents | 47 | **47 FUNCTIONAL (100% Complete)** |
-| RBAC Roles | 5 | Implemented |
-| Permissions per Role | 47 | Defined |
+| RBAC Roles | 4 | `superadmin`, `admin`, `manager`, `employee` |
 | Firestore Collections | 60+ | Active |
 
-*Partial endpoints have working infrastructure but use mock data for core logic (see [Implementation Notes](#api-implementation-notes))
+**Architecture:** Single-company deployment for RapidCompliance.US. Clients purchase services/products - they do NOT get SaaS tenants.
 
 ### Technology Stack
 
@@ -52,24 +52,24 @@
 - **Voice:** VoiceEngineFactory (Native, ElevenLabs, Unreal)
 - **Payments:** Stripe
 
-### Codebase Scale (February 2, 2026)
+### Codebase Scale (February 2, 2026 - Post Multi-Tenant Purge)
 
 **Total Lines of Code Analysis (via `cloc src/`):**
 
-| Metric | Count |
-|--------|-------|
-| **Total Files** | 1,291 |
-| **Total Lines** | 514,071 |
-| **Code Lines** | **403,094** |
-| **Comment Lines** | 53,579 |
-| **Blank Lines** | 57,298 |
+| Metric | Count | Change |
+|--------|-------|--------|
+| **Total Files** | 1,106 | -185 files |
+| **Total Lines** | 433,362 | -80,709 lines |
+| **Code Lines** | **331,725** | -71,369 lines |
+| **Comment Lines** | 51,126 | -2,453 lines |
+| **Blank Lines** | 50,487 | -6,811 lines |
 
 **Breakdown by Language:**
 
 | Language | Files | Code | Comments | Blank |
 |----------|-------|------|----------|-------|
-| TypeScript | 1,282 | 401,268 | 53,555 | 56,911 |
-| Markdown | 6 | 1,530 | 0 | 372 |
+| TypeScript | 1,100 | 330,721 | 51,126 | 50,299 |
+| Markdown | 3 | 708 | 0 | 173 |
 | JSON | 2 | 191 | 0 | 0 |
 | CSS | 1 | 105 | 24 | 15 |
 
@@ -77,11 +77,12 @@
 
 | Directory | Files | Code Lines | Purpose |
 |-----------|-------|------------|---------|
-| `src/lib/` | 512 | ~199,000 | Core business logic, services, agents |
-| `src/components/` | 179 | ~40,000 | UI components |
-| `src/app/api/` | 231 | ~30,600 | API routes |
+| `src/lib/` | ~480 | ~190,000 | Core business logic, services, agents |
+| `src/components/` | ~175 | ~38,000 | UI components |
+| `src/app/api/` | 215 | ~28,000 | API routes (flat structure) |
 | `src/app/admin/` | 92 | ~24,500 | Admin pages |
-| `src/types/` | 41 | ~10,700 | TypeScript definitions |
+| `src/app/(dashboard)/` | 108 | ~15,000 | Dashboard pages (flattened) |
+| `src/types/` | 39 | ~9,500 | TypeScript definitions |
 | `src/hooks/` | 14 | ~2,200 | React hooks |
 
 ### AI Governance Layer
@@ -119,17 +120,31 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 ---
 
-## Single-Tenant Conversion Plan
+## Single-Tenant Architecture (COMPLETE)
 
-**Status:** ✅ COMPLETED - February 2, 2026
+**Status:** ✅ FULLY COMPLETE - February 2, 2026
 **Repository:** https://github.com/StamperDavid/Rapid-Compliance
-**Branches:** `main` and `dev` synchronized at `2113d2f0`
+**Branch:** `dev` at commit `e8a707c0`
 **Model:** Penthouse Single-Tenant (hardened)
 **Hosting:** Vercel (Pending Import) | **Backend:** Firebase `rapid-compliance-65f87`
 
 ### Overview
 
-This platform is being converted from a **multi-tenant SaaS** architecture (multiple organizations/companies) to a **single-company deployment** for Rapid Compliance.
+RapidCompliance.US is a **single-company sales and marketing super tool**. This is NOT a SaaS platform. Clients purchase professional services and products - they do NOT get their own tenant/workspace.
+
+### Multi-Tenant Purge Summary (February 2, 2026)
+
+| Category | Items Removed |
+|----------|--------------|
+| Workspace Pages | `src/app/workspace/[orgId]/` (~100 pages) - **DELETED** |
+| Workspace API Routes | `src/app/api/workspace/[orgId]/` (12 routes) - **MIGRATED to /api/** |
+| Subscription API | `src/app/api/subscription/` (5 routes) - **DELETED** |
+| Billing API | `src/app/api/billing/` (3 routes) - **DELETED** |
+| Billing Services | `src/lib/billing/`, `src/lib/subscription/` - **DELETED** |
+| Types | `src/types/subscription.ts`, `src/types/organization.ts` - **DELETED** |
+| Route Builders | `src/lib/routes/workspace-routes.ts` - **DELETED** |
+
+**Net Result:** -185 files, -71,369 lines of code
 
 ### Penthouse Security Model
 
@@ -208,7 +223,7 @@ Legacy workspace URLs are automatically redirected:
 | **Data Migration** | Fresh start | No existing production data to migrate |
 | **Admin Panel** | Simplify heavily | Keep basic admin (user management, settings) but remove org-browsing features |
 | **Public Features** | Keep both | Retain website builder (`/sites/`) and storefront (`/store/`) |
-| **RBAC** | 4-level hierarchy | `superadmin` → `admin` → `manager` → `employee` (remove platform_admin and owner) |
+| **RBAC** | 4-level hierarchy | `superadmin` → `admin` → `manager` → `employee` (remove superadmin and owner) |
 
 ### Current Multi-Tenant Architecture
 
@@ -250,8 +265,8 @@ Legacy workspace URLs are automatically redirected:
 #### Phase 1: Constants & Types
 1. Add `DEFAULT_ORG_ID = 'default-org'` to `src/lib/constants/platform.ts`
 2. Update `src/types/unified-rbac.ts` to 4-level hierarchy:
-   - Remove `platform_admin` and `owner`
-   - Add `superadmin` (combines platform_admin + owner permissions)
+   - Remove `superadmin` and `owner`
+   - Add `superadmin` (combines superadmin + owner permissions)
    - Keep `admin`, `manager`, `employee`
 3. Update `src/types/organization.ts`:
    - Remove `Workspace` interface
@@ -430,18 +445,20 @@ Tasks are tracked in Claude Code session. Current status:
 
 ## Verified Live Route Map
 
-### Route Distribution
+### Route Distribution (Post Multi-Tenant Purge)
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Admin (`/admin/*`) | 92 | 2 (`[id]`) | All pages exist (including 45 org-level support views) |
-| Workspace (`/workspace/[orgId]/*`) | 95 | 15 | All pages exist |
-| Dashboard (`/dashboard/*`) | 17 | 0 | All pages exist |
+| Admin (`/admin/*`) | 92 | 2 (`[id]`) | Admin support views |
+| Dashboard (`/(dashboard)/*`) | 108 | 5 | **Flattened** (no orgId) |
 | Public (`/(public)/*`) | 15 | 0 | All pages exist |
-| Sites (`/sites/[orgId]/*`) | 12 | 2 | Multi-tenant websites |
+| Sites (`/sites/[orgId]/*`) | 12 | 2 | Uses DEFAULT_ORG_ID internally |
+| Store (`/store/[orgId]/*`) | 5 | 2 | Uses DEFAULT_ORG_ID internally |
 | Onboarding (`/onboarding/*`) | 4 | 0 | All pages exist |
 | Other | 10 | 2 | All pages exist |
-| **TOTAL** | **244** | **21** | **Verified** |
+| **TOTAL** | **148** | **13** | **Verified** |
+
+**DELETED:** `src/app/workspace/[orgId]/*` (95 pages) - multi-tenant workspace routes removed
 
 ### Admin Routes (92)
 
@@ -540,12 +557,14 @@ Tasks are tracked in Claude Code session. Current status:
 /admin/advanced/compliance          # Compliance management
 ```
 
-### Workspace Routes (95 in /workspace/[orgId]/*)
+### Dashboard Routes (108 in /(dashboard)/* - Flattened Single-Tenant)
+
+> **Note:** These routes were migrated from `/workspace/[orgId]/*` to `/(dashboard)/*` as part of the single-tenant conversion. All routes now use `DEFAULT_ORG_ID = 'rapid-compliance'` internally.
 
 **Core Navigation:**
 - `/dashboard`, `/settings`, `/analytics`, `/integrations`, `/templates`
-- `/onboarding`, `/schemas`, `/battlecards`, `/email-writer`
-- `/lead-scoring`, `/living-ledger`, `/conversations`, `/workforce`
+- `/battlecards`, `/email-writer`, `/lead-scoring`, `/living-ledger`
+- `/conversations`, `/workforce`
 
 **CRM Entities:**
 - `/leads`, `/leads/new`, `/leads/[id]`, `/leads/[id]/edit`, `/leads/research`
@@ -557,16 +576,18 @@ Tasks are tracked in Claude Code session. Current status:
 **Marketing & Outbound:**
 - `/email/campaigns`, `/email/campaigns/new`, `/email/campaigns/[campaignId]`
 - `/nurture`, `/nurture/new`, `/nurture/[id]`, `/nurture/[id]/stats`
-- `/ab-tests`, `/ab-tests/new`, `/ab-tests/[id]`, `/marketing/ab-tests`
+- `/ab-tests`, `/ab-tests/new`, `/ab-tests/[id]`
 - `/outbound`, `/outbound/email-writer`, `/outbound/sequences`
 - `/social/campaigns`, `/social/training`
 
-**Settings (23 sub-routes):**
-- `api-keys`, `billing`, `accounting`, `storefront`, `promotions`
-- `email-templates`, `sms-messages`, `theme`, `organization`, `users`
+**Settings (19 sub-routes):**
+- `api-keys`, `accounting`, `storefront`, `promotions`
+- `email-templates`, `sms-messages`, `theme`, `users`
 - `security`, `integrations`, `webhooks`, `custom-tools`, `workflows`
-- `subscription`, `lead-routing`, `meeting-scheduler`
+- `lead-routing`, `meeting-scheduler`
 - `ai-agents/*` (5 routes: hub, business-setup, configuration, persona, training)
+
+> **Removed:** `/settings/billing`, `/settings/subscription`, `/settings/organization` (subscription system deleted)
 
 **Website Builder:**
 - `/website/editor`, `/website/pages`, `/website/domains`, `/website/seo`
@@ -1086,7 +1107,7 @@ src/lib/agents/
 
 | Role | Level | Description |
 |------|-------|-------------|
-| `platform_admin` | 5 | Full platform access + system administration |
+| `superadmin` | 5 | Full platform access + system administration |
 | `owner` | 4 | Full access within their organization |
 | `admin` | 3 | Most permissions except billing and org deletion |
 | `manager` | 2 | Team-level management |
@@ -1096,7 +1117,7 @@ src/lib/agents/
 
 #### Platform Administration (8 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canAccessPlatformAdmin | YES | - | - | - | - |
 | canManageAllOrganizations | YES | - | - | - | - |
@@ -1109,7 +1130,7 @@ src/lib/agents/
 
 #### Organization Management (5 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canManageOrganization | YES | YES | YES | - | - |
 | canManageBilling | YES | YES | - | - | - |
@@ -1119,7 +1140,7 @@ src/lib/agents/
 
 #### User Management (4 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canInviteUsers | YES | YES | YES | YES | - |
 | canRemoveUsers | YES | YES | YES | - | - |
@@ -1128,7 +1149,7 @@ src/lib/agents/
 
 #### Data Management (7 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canCreateSchemas | YES | YES | YES | - | - |
 | canEditSchemas | YES | YES | YES | - | - |
@@ -1140,7 +1161,7 @@ src/lib/agents/
 
 #### CRM Operations (5 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canCreateRecords | YES | YES | YES | YES | YES |
 | canEditRecords | YES | YES | YES | YES | YES |
@@ -1150,7 +1171,7 @@ src/lib/agents/
 
 #### Workflows & Automation (3 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canCreateWorkflows | YES | YES | YES | YES | - |
 | canEditWorkflows | YES | YES | YES | YES | - |
@@ -1158,7 +1179,7 @@ src/lib/agents/
 
 #### AI Agents & Swarm (4 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canTrainAIAgents | YES | YES | YES | - | - |
 | canDeployAIAgents | YES | YES | YES | - | - |
@@ -1167,7 +1188,7 @@ src/lib/agents/
 
 #### Marketing (3 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canManageSocialMedia | YES | YES | YES | YES | - |
 | canManageEmailCampaigns | YES | YES | YES | YES | - |
@@ -1175,7 +1196,7 @@ src/lib/agents/
 
 #### Sales (5 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canViewLeads | YES | YES | YES | YES | YES |
 | canManageLeads | YES | YES | YES | YES | - |
@@ -1185,7 +1206,7 @@ src/lib/agents/
 
 #### Reports & Analytics (4 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canViewReports | YES | YES | YES | YES | YES |
 | canCreateReports | YES | YES | YES | YES | - |
@@ -1194,14 +1215,14 @@ src/lib/agents/
 
 #### Settings (2 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canAccessSettings | YES | YES | YES | - | - |
 | canManageIntegrations | YES | YES | YES | - | - |
 
 #### E-Commerce (3 permissions)
 
-| Permission | platform_admin | owner | admin | manager | employee |
+| Permission | superadmin | owner | admin | manager | employee |
 |------------|----------------|-------|-------|---------|----------|
 | canManageEcommerce | YES | YES | YES | - | - |
 | canProcessOrders | YES | YES | YES | YES | YES |
@@ -1210,9 +1231,9 @@ src/lib/agents/
 ### Navigation Section Visibility (12 Sections - God-Mode Structure)
 
 **11 Operational Sections** (available to client roles with permission gating)
-**1 System Section** (platform_admin only)
+**1 System Section** (superadmin only)
 
-| Section | platform_admin | owner | admin | manager | employee | Key Permission |
+| Section | superadmin | owner | admin | manager | employee | Key Permission |
 |---------|----------------|-------|-------|---------|----------|----------------|
 | 1. Command Center | YES | YES | YES | YES | YES | - |
 | 2. CRM | YES | YES | YES | YES | YES* | canViewLeads, canViewDeals |
@@ -1225,7 +1246,7 @@ src/lib/agents/
 | 9. Analytics | YES | YES | YES | YES | YES* | canViewReports |
 | 10. Website | YES | YES | YES | - | - | canManageWebsite |
 | 11. Settings | YES | YES | YES** | - | - | canManageOrganization |
-| 12. System | YES | - | - | - | - | canViewSystemHealth (platform_admin only) |
+| 12. System | YES | - | - | - | - | canViewSystemHealth (superadmin only) |
 
 *Limited items visible based on specific permissions
 **Admin cannot see Billing (requires canManageBilling)
@@ -1251,8 +1272,8 @@ src/lib/agents/
    ↓
 2. Get Firebase ID token
    ↓
-3. Check if user is platform_admin via /api/admin/verify
-   ├─ If YES → UnifiedUser with role='platform_admin', tenantId=null
+3. Check if user is superadmin via /api/admin/verify
+   ├─ If YES → UnifiedUser with role='superadmin', tenantId=null
    └─ If NO → Check Firestore USERS collection
       ├─ If document exists → Load tenant user profile
       │  └─ Extract tenantId, role (owner|admin|manager|employee)
@@ -1295,7 +1316,7 @@ src/lib/agents/
 | Strength | Implementation | Files |
 |----------|----------------|-------|
 | Tenant Isolation | Claims-validator enforces tenant_id on ALL requests | `claims-validator.ts`, `api-auth.ts` |
-| No Admin Bypass | platform_admin respects organization boundaries | `claims-validator.ts` |
+| No Admin Bypass | superadmin respects organization boundaries | `claims-validator.ts` |
 | Token Verification | Firebase Admin SDK validates ID tokens server-side | `api-auth.ts` |
 | Layout-Level Auth | Admin routes protected at layout level before render | `admin/layout.tsx` |
 | Permission Matrix | Comprehensive 47-permission definitions per role | `unified-rbac.ts` |
@@ -1305,7 +1326,7 @@ src/lib/agents/
 | Severity | Issue | Location | Status |
 |----------|-------|----------|--------|
 | ~~MEDIUM~~ | ~~Demo mode fallback in useAuth.ts~~ | `src/hooks/useAuth.ts` | ✅ RESOLVED - Wrapped in `NODE_ENV === 'development'` check |
-| ~~LOW~~ | ~~Inconsistent role naming (super_admin vs platform_admin)~~ | Multiple files | ✅ RESOLVED - Fully standardized to `platform_admin` across codebase. All source files updated, claims-validator provides runtime normalization for any legacy data. |
+| ~~LOW~~ | ~~Inconsistent role naming (super_admin vs superadmin)~~ | Multiple files | ✅ RESOLVED - Fully standardized to `superadmin` across codebase. All source files updated, claims-validator provides runtime normalization for any legacy data. |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
 | LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
 | ~~CRITICAL~~ | ~~Auth Handshake Failure: `useSystemStatus` hook missing Authorization header~~ | `src/hooks/useSystemStatus.ts` | ✅ **RESOLVED 2026-01-29** - Implemented reactive auth handshake with fresh Firebase ID Token per request. Features: (1) `onAuthStateChanged` listener for reactive auth state, (2) `getIdToken()` called inside fetch for token freshness, (3) Auth-ready polling kill-switch, (4) Graceful 401/403 error handling via `connectionError` state, (5) Proper cleanup on unmount. `/api/system/status` is now **AUTHENTICATED-LIVE**. |
@@ -1320,7 +1341,7 @@ node scripts/bootstrap-platform-admin.js
 ```
 
 This script:
-- Sets Firebase custom claims: `{ role: "platform_admin", admin: true }`
+- Sets Firebase custom claims: `{ role: "superadmin", admin: true }`
 - Updates Firestore user document with standardized role
 - Verifies claims were successfully applied
 
@@ -1751,7 +1772,7 @@ console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 
 **Rate Limiting:** 10 requests/minute per organization+lead combination
 
-**Required Permission:** `canAssignRecords` (available to: platform_admin, owner, admin, manager)
+**Required Permission:** `canAssignRecords` (available to: superadmin, owner, admin, manager)
 
 **Routing Rules Collection Schema:**
 ```typescript
@@ -1975,20 +1996,22 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 > The legacy client navigation with 11 operational sections has been restored.
 > System tools are now HARD-GATED and isolated from the standard client navigation array.
 
-#### Current Implementation (DUAL-LAYOUT ARCHITECTURE)
+#### Current Implementation (SINGLE-TENANT ARCHITECTURE)
 
 | Component | Location | Used By | Status |
 |-----------|----------|---------|--------|
-| **Workspace Layout** | `src/app/workspace/[orgId]/layout.tsx` | Client Routes | ACTIVE - Built-in adaptive sidebar |
-| **useFeatureVisibility** | `src/hooks/useFeatureVisibility.ts` | Workspace Layout | ACTIVE - Client-specific navigation |
-| **buildNavigationStructure** | `src/lib/orchestrator/feature-toggle-service.ts` | useFeatureVisibility | ACTIVE - 11 client sections |
+| **Dashboard Layout** | `src/app/(dashboard)/layout.tsx` | Dashboard Routes | ACTIVE - Flattened single-tenant |
+| **useFeatureVisibility** | `src/hooks/useFeatureVisibility.ts` | Dashboard Layout | ACTIVE - Feature navigation |
+| **buildNavigationStructure** | `src/lib/orchestrator/feature-toggle-service.ts` | useFeatureVisibility | ACTIVE - 11 sections |
 | **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | Admin Layout | ACTIVE - Uses `getNavigationForRole()` |
 | **Navigation Config** | `src/components/dashboard/navigation-config.ts` | UnifiedSidebar | ACTIVE - Hard-gated System section |
 
+> **Note:** The workspace layout at `src/app/workspace/[orgId]/layout.tsx` has been **DELETED** as part of the multi-tenant purge. All dashboard routes now use the flattened `/(dashboard)/` layout with `DEFAULT_ORG_ID`.
+
 #### Navigation Architecture
 
-**Client Routes (`/workspace/[orgId]/*`):**
-- Uses built-in adaptive sidebar in workspace layout
+**Dashboard Routes (`/(dashboard)/*`):**
+- Uses flattened layout with DEFAULT_ORG_ID
 - Navigation from `buildNavigationStructure()` in feature-toggle-service.ts
 - 11 sections, NO System tools
 - Dark theme with emoji icons
@@ -1996,7 +2019,7 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 **Admin Routes (`/admin/*`):**
 - Uses UnifiedSidebar component
 - Navigation from `getNavigationForRole()` in navigation-config.ts
-- Hard-gated System section for platform_admin only
+- Hard-gated System section for superadmin only
 
 #### Client Navigation Structure (11 Sections)
 
@@ -2018,17 +2041,19 @@ Clients see ONLY these 11 sections (NO System tools):
 
 Platform admins see all 11 client sections PLUS the System section (12 total):
 
-12. **System** (platform_admin ONLY) - System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
+12. **System** (superadmin ONLY) - System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
 
 **CRITICAL:** The System section is NOT part of `CLIENT_SECTIONS`. It is a separate `SYSTEM_SECTION` export
-that is conditionally appended ONLY when `user.role === 'platform_admin'` via `getNavigationForRole()`.
+that is conditionally appended ONLY when `user.role === 'superadmin'` via `getNavigationForRole()`.
 
-#### Route Pattern
+#### Route Pattern (Single-Tenant)
 
-- **Workspace Routes:** `/workspace/:orgId/*` (11 operational sections)
-- **Admin Routes:** `/admin/*` (System section only)
-- **Admin Org View Routes:** `/admin/organizations/:orgId/*` (admin org-specific navigation)
-- Route resolution: `resolveWorkspaceRoute(href, orgId)` replaces `:orgId` placeholder
+- **Dashboard Routes:** `/(dashboard)/*` (11 operational sections, flattened)
+- **Admin Routes:** `/admin/*` (System section)
+- **Sites Routes:** `/sites/[orgId]/*` (uses DEFAULT_ORG_ID internally)
+- **Store Routes:** `/store/[orgId]/*` (uses DEFAULT_ORG_ID internally)
+
+> **DELETED:** `/workspace/[orgId]/*` routes - migrated to `/(dashboard)/*`
 
 #### Admin Navigation Context (January 30, 2026)
 
@@ -2121,7 +2146,7 @@ The `/admin/organizations/[id]/*` route tree now has **45 functional pages** (Ja
 | `/admin/organizations/[id]/security` | ✅ | Security settings |
 
 **All Admin Support Views implemented with:**
-- `useAdminAuth()` permission checks (`platform_admin` required)
+- `useAdminAuth()` permission checks (`superadmin` required)
 - Organization data loading via FirestoreService
 - Consistent Admin Banner with Shield icon
 - Dark theme styling matching platform design
@@ -2183,7 +2208,7 @@ The `/admin/organizations/[id]/*` route tree now has **45 functional pages** (Ja
 
 #### Section Visibility by Role (12 Sections)
 
-| # | Section | platform_admin | owner | admin | manager | employee |
+| # | Section | superadmin | owner | admin | manager | employee |
 |---|---------|----------------|-------|-------|---------|----------|
 | 1 | Command Center | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 2 | CRM | ✅ | ✅ | ✅ | ✅ | ✅* |
@@ -2641,7 +2666,7 @@ The orchestrator enforces execution order through dependency tracking:
 |------|----------|---------|
 | `UnifiedUser` | `src/types/unified-rbac.ts` | Authenticated user with role, tenantId, permissions |
 | `UnifiedPermissions` | `src/types/unified-rbac.ts` | 47 permission flags per role |
-| `AccountRole` | `src/types/unified-rbac.ts` | `'platform_admin' \| 'owner' \| 'admin' \| 'manager' \| 'employee'` |
+| `AccountRole` | `src/types/unified-rbac.ts` | `'superadmin' \| 'owner' \| 'admin' \| 'manager' \| 'employee'` |
 | `Organization` | `src/types/organization.ts` | Tenant definition with plan, branding, settings |
 | `Lead` | `src/types/crm-entities.ts` | CRM lead with scoring, enrichment |
 | `Deal` | `src/types/crm-entities.ts` | CRM deal with stage history, value |
@@ -2670,7 +2695,7 @@ interface UnifiedUser {
   email: string;
   displayName: string;
   role: AccountRole;
-  tenantId: string | null;  // null for platform_admin
+  tenantId: string | null;  // null for superadmin
   workspaceId?: string;
   status: 'active' | 'suspended' | 'pending';
   mfaEnabled: boolean;
@@ -2703,7 +2728,7 @@ interface AdminThemeConfig {
 
 | Assertion | Description | Status | Evidence |
 |-----------|-------------|--------|----------|
-| 1 | Smart Redirect: platform_admin → /admin | **PASS** | URL verified as `/admin`, not `/workspace/...` |
+| 1 | Smart Redirect: superadmin → /admin | **PASS** | URL verified as `/admin`, not `/workspace/...` |
 | 2 | UnifiedSidebar System Section | **PASS** | System section visible with 6 hard-gated items |
 | 3 | Admin Theme CSS Isolation | **PASS** | All CSS variables correctly scoped |
 
@@ -2724,7 +2749,7 @@ interface AdminThemeConfig {
   - Feature Flags (`/admin/system/flags`)
   - Audit Logs (`/admin/system/logs`)
   - System Settings (`/admin/system/settings`)
-- **Hard-Gate:** System section ONLY appears for `platform_admin` role
+- **Hard-Gate:** System section ONLY appears for `superadmin` role
 
 ##### Assertion 3: Admin Theme CSS Variable Isolation
 - **Scope Class:** `.admin-theme-scope` present on admin container
@@ -2757,7 +2782,7 @@ interface AdminThemeConfig {
 - **Test Isolation:** Playwright config uses `testMatch: '**/*.spec.ts'` to isolate from Jest E2E tests
 - **Admin Layout:** Uses `useAdminTheme` hook with scoped CSS variable application
 - **Fixed Positioning:** Sidebar applies theme variables directly via inline styles for proper inheritance
-- **Navigation Config:** `getNavigationForRole()` hard-gates System section to `platform_admin` only
+- **Navigation Config:** `getNavigationForRole()` hard-gates System section to `superadmin` only
 
 ---
 
@@ -3175,7 +3200,7 @@ The public `/login` page now implements **Smart Role Redirection** to route user
 
 | User Role | Destination | Layout |
 |-----------|-------------|--------|
-| `platform_admin` | `/admin` | PlatformAdminLayout (isolated theme) |
+| `superadmin` | `/admin` | PlatformAdminLayout (isolated theme) |
 | `owner`, `admin`, `manager`, `employee` | `/workspace/{orgId}/dashboard` | WorkspaceLayout (org theme) |
 
 ### Implementation Details
@@ -3190,7 +3215,7 @@ The public `/login` page now implements **Smart Role Redirection** to route user
 3. Extract role from user document (AccountRole type)
    ↓
 4. SMART ROLE REDIRECTION:
-   - if (role === 'platform_admin') → router.push('/admin')
+   - if (role === 'superadmin') → router.push('/admin')
    - else → router.push('/workspace/{orgId}/dashboard')
    ↓
 5. Show "Redirecting..." loading state (prevents FOUC)
@@ -3212,7 +3237,7 @@ The public `/login` page now implements **Smart Role Redirection** to route user
 
 ```typescript
 // Lines 87-97: Platform Admin Detection
-if (userRole === 'platform_admin') {
+if (userRole === 'superadmin') {
   logger.info('Platform admin detected, redirecting to /admin', {
     uid: user.uid,
     file: 'login/page.tsx'
