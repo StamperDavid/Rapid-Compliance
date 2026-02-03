@@ -66,8 +66,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       padding: '2rem',
     }}>
       <div style={{
-        backgroundColor: '#1a1a1a',
-        border: '1px solid #2a2a2a',
+        backgroundColor: 'var(--color-bg-elevated)',
+        border: '1px solid var(--color-border-main)',
         borderRadius: '1rem',
         maxWidth: '800px',
         width: '100%',
@@ -77,7 +77,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         {/* Header */}
         <div style={{
           padding: '2rem',
-          borderBottom: '1px solid #2a2a2a',
+          borderBottom: '1px solid var(--color-border-main)',
         }}>
           <div style={{
             display: 'flex',
@@ -88,7 +88,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             <h2 style={{
               fontSize: '1.5rem',
               fontWeight: 'bold',
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               margin: 0,
             }}>
               {step.title}
@@ -99,7 +99,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#999',
+                  color: 'var(--color-text-secondary)',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
                 }}
@@ -110,7 +110,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           </div>
           
           <p style={{
-            color: '#999',
+            color: 'var(--color-text-secondary)',
             margin: 0,
             marginBottom: '1rem',
           }}>
@@ -129,14 +129,14 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 style={{
                   flex: 1,
                   height: '4px',
-                  backgroundColor: '#2a2a2a',
+                  backgroundColor: 'var(--color-border-main)',
                   borderRadius: '2px',
                   overflow: 'hidden',
                 }}
               >
                 <div style={{
                   height: '100%',
-                  backgroundColor: i <= currentStep ? '#6366f1' : 'transparent',
+                  backgroundColor: i <= currentStep ? 'var(--color-primary)' : 'transparent',
                   transition: 'background-color 0.3s',
                 }} />
               </div>
@@ -145,7 +145,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
           
           <div style={{
             fontSize: '0.875rem',
-            color: '#666',
+            color: 'var(--color-text-disabled)',
           }}>
             Step {currentStep + 1} of {steps.length}
           </div>
@@ -162,7 +162,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         {/* Footer */}
         <div style={{
           padding: '2rem',
-          borderTop: '1px solid #2a2a2a',
+          borderTop: '1px solid var(--color-border-main)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -173,9 +173,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             style={{
               padding: '0.75rem 1.5rem',
               borderRadius: '0.5rem',
-              border: '1px solid #2a2a2a',
+              border: '1px solid var(--color-border-main)',
               backgroundColor: 'transparent',
-              color: currentStep === 0 ? '#666' : '#fff',
+              color: currentStep === 0 ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
               cursor: currentStep === 0 ? 'not-allowed' : 'pointer',
               fontSize: '0.875rem',
             }}
@@ -190,9 +190,9 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 style={{
                   padding: '0.75rem 1.5rem',
                   borderRadius: '0.5rem',
-                  border: '1px solid #2a2a2a',
+                  border: '1px solid var(--color-border-main)',
                   backgroundColor: 'transparent',
-                  color: '#999',
+                  color: 'var(--color-text-secondary)',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
                 }}
@@ -207,8 +207,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 padding: '0.75rem 2rem',
                 borderRadius: '0.5rem',
                 border: 'none',
-                backgroundColor: '#6366f1',
-                color: '#fff',
+                backgroundColor: 'var(--color-primary)',
+                color: 'var(--color-text-primary)',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
                 fontWeight: '600',
@@ -229,15 +229,15 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 export const defaultOnboardingSteps: OnboardingStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to RapidCompliance.US! 🎉',
+    title: 'Welcome to SalesVelocity.ai! 🎉',
     description: "Let's get you set up in just a few minutes.",
     component: (
       <div style={{ textAlign: 'center', padding: '2rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🚀</div>
-        <h3 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '1rem' }}>
+        <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', marginBottom: '1rem' }}>
           Ready to supercharge your sales?
         </h3>
-        <p style={{ color: '#999', maxWidth: '500px', margin: '0 auto' }}>
+        <p style={{ color: 'var(--color-text-secondary)', maxWidth: '500px', margin: '0 auto' }}>
           This quick setup will help you create your first AI agent, import customers,
           and start seeing results immediately.
         </p>
@@ -251,7 +251,7 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
     component: (
       <div>
         <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', color: '#fff', marginBottom: '0.5rem' }}>
+          <label style={{ display: 'block', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
             Agent Name
           </label>
           <input
@@ -261,24 +261,24 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
               width: '100%',
               padding: '0.75rem',
               borderRadius: '0.5rem',
-              border: '1px solid #2a2a2a',
-              backgroundColor: '#0a0a0a',
-              color: '#fff',
+              border: '1px solid var(--color-border-main)',
+              backgroundColor: 'var(--color-bg-paper)',
+              color: 'var(--color-text-primary)',
             }}
           />
         </div>
         
         <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', color: '#fff', marginBottom: '0.5rem' }}>
+          <label style={{ display: 'block', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
             Agent Role
           </label>
           <select style={{
             width: '100%',
             padding: '0.75rem',
             borderRadius: '0.5rem',
-            border: '1px solid #2a2a2a',
-            backgroundColor: '#0a0a0a',
-            color: '#fff',
+            border: '1px solid var(--color-border-main)',
+            backgroundColor: 'var(--color-bg-paper)',
+            color: 'var(--color-text-primary)',
           }}>
             <option>Sales Agent</option>
             <option>Support Agent</option>
@@ -309,7 +309,7 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
     component: (
       <div>
         <div style={{
-          border: '2px dashed #2a2a2a',
+          border: '2px dashed var(--color-border-main)',
           borderRadius: '0.75rem',
           padding: '3rem',
           textAlign: 'center',
@@ -317,16 +317,16 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
           cursor: 'pointer',
         }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📄</div>
-          <div style={{ color: '#fff', marginBottom: '0.5rem' }}>
+          <div style={{ color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
             Drop files here or click to browse
           </div>
-          <div style={{ color: '#666', fontSize: '0.875rem' }}>
+          <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
             Supports PDF, Excel, Word, and more
           </div>
         </div>
         
-        <div style={{ fontSize: '0.875rem', color: '#999' }}>
-          <div style={{ marginBottom: '0.5rem', fontWeight: '600', color: '#fff' }}>
+        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+          <div style={{ marginBottom: '0.5rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
             Good knowledge sources:
           </div>
           <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
@@ -347,10 +347,10 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
     component: (
       <div style={{ textAlign: 'center', padding: '2rem' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✨</div>
-        <h3 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '1rem' }}>
+        <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', marginBottom: '1rem' }}>
           Congratulations!
         </h3>
-        <p style={{ color: '#999', maxWidth: '500px', margin: '0 auto 2rem' }}>
+        <p style={{ color: 'var(--color-text-secondary)', maxWidth: '500px', margin: '0 auto 2rem' }}>
           Your AI agent is live and ready to chat with customers. Start seeing
           results immediately!
         </p>
@@ -363,30 +363,30 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
         }}>
           <div style={{
             backgroundColor: '#1a1a1a',
-            border: '1px solid #2a2a2a',
+            border: '1px solid var(--color-border-main)',
             borderRadius: '0.75rem',
             padding: '1.5rem',
           }}>
-            <div style={{ color: '#6366f1', fontSize: '2rem', marginBottom: '0.5rem' }}>📚</div>
-            <div style={{ color: '#fff', fontWeight: '600', marginBottom: '0.25rem' }}>
+            <div style={{ color: 'var(--color-primary)', fontSize: '2rem', marginBottom: '0.5rem' }}>📚</div>
+            <div style={{ color: 'var(--color-text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>
               View Docs
             </div>
-            <div style={{ color: '#666', fontSize: '0.875rem' }}>
+            <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
               Learn advanced features
             </div>
           </div>
           
           <div style={{
             backgroundColor: '#1a1a1a',
-            border: '1px solid #2a2a2a',
+            border: '1px solid var(--color-border-main)',
             borderRadius: '0.75rem',
             padding: '1.5rem',
           }}>
-            <div style={{ color: '#6366f1', fontSize: '2rem', marginBottom: '0.5rem' }}>🎥</div>
-            <div style={{ color: '#fff', fontWeight: '600', marginBottom: '0.25rem' }}>
+            <div style={{ color: 'var(--color-primary)', fontSize: '2rem', marginBottom: '0.5rem' }}>🎥</div>
+            <div style={{ color: 'var(--color-text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>
               Watch Tutorials
             </div>
-            <div style={{ color: '#666', fontSize: '0.875rem' }}>
+            <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
               Video guides
             </div>
           </div>

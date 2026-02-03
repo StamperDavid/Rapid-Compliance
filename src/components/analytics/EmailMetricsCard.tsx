@@ -90,7 +90,7 @@ export function EmailMetricsCard({ data, loading = false }: EmailMetricsCardProp
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#10b981"
+              stroke="var(--color-success)"
               strokeWidth={2}
               dot={{ r: 4 }}
               activeDot={{ r: 6 }}
@@ -116,7 +116,7 @@ export function EmailMetricsCard({ data, loading = false }: EmailMetricsCardProp
               formatter={(value: number) => [value, 'Count']}
               labelFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}
             />
-            <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="count" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

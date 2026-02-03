@@ -61,13 +61,13 @@ export function RecoveryAnalytics({ metrics }: RecoveryAnalyticsProps) {
 
   const getChannelColor = (channel: RecoveryChannel): string => {
     const colors: Record<RecoveryChannel, string> = {
-      email: '#6366f1',
-      sms: '#8b5cf6',
-      voice: '#ec4899',
-      push: '#14b8a6',
-      manual: '#f59e0b',
+      email: 'var(--color-primary)',
+      sms: 'var(--color-secondary)',
+      voice: 'var(--color-accent)',
+      push: 'var(--color-teal)',
+      manual: 'var(--color-warning)',
     };
-    return colors[channel] || '#6b7280';
+    return colors[channel] || 'var(--color-neutral-500)';
   };
 
   return (

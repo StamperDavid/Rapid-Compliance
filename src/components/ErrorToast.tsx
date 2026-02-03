@@ -50,9 +50,9 @@ export function showErrorToast(error: unknown, fallbackMessage = 'An error occur
     duration: 5000,
     position: 'top-right',
     style: {
-      background: '#7f1d1d',
-      color: '#fff',
-      border: '1px solid #991b1b',
+      background: 'var(--color-error-dark)',
+      color: 'var(--color-text-primary)',
+      border: '1px solid var(--color-error-dark)',
       borderRadius: '0.5rem',
       padding: '1rem',
       maxWidth: '500px',
@@ -74,9 +74,9 @@ export function showSuccessToast(message: string) {
     duration: 3000,
     position: 'top-right',
     style: {
-      background: '#065f46',
-      color: '#fff',
-      border: '1px solid #047857',
+      background: 'var(--color-success-dark)',
+      color: 'var(--color-text-primary)',
+      border: '1px solid var(--color-success-dark)',
       borderRadius: '0.5rem',
       padding: '1rem',
     },
@@ -91,9 +91,9 @@ export function showLoadingToast(message: string) {
   return toast.loading(displayMessage, {
     position: 'top-right',
     style: {
-      background: '#1e3a8a',
-      color: '#fff',
-      border: '1px solid #1e40af',
+      background: 'var(--color-info-dark)',
+      color: 'var(--color-text-primary)',
+      border: '1px solid var(--color-info-dark)',
       borderRadius: '0.5rem',
       padding: '1rem',
     },

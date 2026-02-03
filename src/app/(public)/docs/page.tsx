@@ -22,7 +22,7 @@ function FallbackContent() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-white mb-6">Documentation</h1>
-          <p className="text-xl text-gray-300 mb-8">Everything you need to know about using RapidCompliance.US</p>
+          <p className="text-xl text-gray-300 mb-8">Everything you need to know about using SalesVelocity.ai</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
@@ -42,7 +42,7 @@ function FallbackContent() {
         <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-xl p-8 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Need Help?</h2>
           <p className="text-gray-300 mb-6">Our support team responds within 24 hours.</p>
-          <Link href="/contact" className="inline-block px-8 py-4 rounded-lg font-semibold" style={{ backgroundColor: theme.primaryColor, color: '#fff' }}>
+          <Link href="/contact" className="inline-block px-8 py-4 rounded-lg font-semibold" style={{ backgroundColor: theme.primaryColor, color: 'var(--color-text-primary)' }}>
             Contact Support →
           </Link>
         </div>

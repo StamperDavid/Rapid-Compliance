@@ -66,7 +66,7 @@ export function LoadingSkeleton({ count = 1 }: { count?: number }) {
           key={i}
           style={{
             height: '4rem',
-            background: 'linear-gradient(90deg, #1a1a1a 25%, #262626 50%, #1a1a1a 75%)',
+            background: 'linear-gradient(90deg, var(--color-bg-elevated) 25%, var(--color-border-light) 50%, var(--color-bg-elevated) 75%)',
             backgroundSize: '200% 100%',
             animation: 'loading 1.5s ease-in-out infinite',
             borderRadius: '0.5rem',
@@ -103,7 +103,7 @@ export function LoadingTable({ rows = 5, cols = 4 }: { rows?: number; cols?: num
             key={i}
             style={{
               height: '2rem',
-              background: '#262626',
+              background: 'var(--color-border-light)',
               borderRadius: '0.25rem',
             }}
           />
@@ -124,7 +124,7 @@ export function LoadingTable({ rows = 5, cols = 4 }: { rows?: number; cols?: num
               key={j}
               style={{
                 height: '3rem',
-                background: 'linear-gradient(90deg, #1a1a1a 25%, #262626 50%, #1a1a1a 75%)',
+                background: 'linear-gradient(90deg, var(--color-bg-elevated) 25%, var(--color-border-light) 50%, var(--color-bg-elevated) 75%)',
                 backgroundSize: '200% 100%',
                 animation: `loading 1.5s ease-in-out infinite ${j * 0.1}s`,
                 borderRadius: '0.25rem',
@@ -166,7 +166,7 @@ export function LoadingOverlay({ message = 'Loading...' }: { message?: string })
       }}
     >
       <LoadingSpinner size="lg" />
-      <div style={{ color: '#fff', fontSize: '1.125rem' }}>{message}</div>
+      <div style={{ color: 'var(--color-text-primary)', fontSize: '1.125rem' }}>{message}</div>
     </div>
   );
 }

@@ -34,7 +34,7 @@ interface WorkflowMetricsCardProps {
   loading?: boolean;
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+const COLORS = ['var(--color-info)', 'var(--color-success)', 'var(--color-warning)', 'var(--color-error)', 'var(--color-secondary)'];
 
 /**
  * Workflow Metrics Card Component
@@ -102,7 +102,7 @@ export function WorkflowMetricsCard({ data, loading = false }: WorkflowMetricsCa
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#3b82f6"
+              stroke="var(--color-info)"
               strokeWidth={2}
               dot={{ r: 4 }}
               activeDot={{ r: 6 }}

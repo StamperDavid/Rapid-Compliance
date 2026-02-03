@@ -244,16 +244,16 @@ export class SignalCoordinator {
         processedAt: null,
         ttl: this.calculateTTL(),
       };
-      
+
       // Get signals collection with environment awareness
       const signalsCollection = this.dal.getOrgSubCollection(
         signalData.orgId,
         'signals'
       );
-      
+
       // Emit to Firestore
       const docRef = await addDoc(signalsCollection, enrichedSignal);
-      
+
       // Update throttler
       this.incrementThrottler(signalData.orgId);
       
@@ -372,13 +372,14 @@ export class SignalCoordinator {
     
     // Limit to prevent overwhelming observers
     constraints.push(firestoreLimit(100));
-    
+
+
     // Get signals collection with environment awareness
     const signalsCollection = this.dal.getOrgSubCollection(
       subscription.orgId,
       'signals'
     );
-    
+
     // Build query
     const q = query(signalsCollection, ...constraints);
     
@@ -678,7 +679,7 @@ export class SignalCoordinator {
   ): Promise<void> {
     try {
       const logsCollection = this.dal.getOrgSubCollection(orgId, 'signal_logs');
-      
+
       const logEntry = {
         signalId,
         type: signal.type,

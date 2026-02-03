@@ -70,14 +70,14 @@ export function Pagination({
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '1rem 1.5rem',
-      backgroundColor: '#0a0a0a',
-      borderTop: '1px solid #1a1a1a',
+      backgroundColor: 'var(--color-bg-paper)',
+      borderTop: '1px solid var(--color-bg-elevated)',
       borderRadius: '0 0 0.75rem 0.75rem',
     }}>
       {/* Results info */}
-      <div style={{ color: '#666', fontSize: '0.875rem' }}>
-        Showing <span style={{ color: '#fff', fontWeight: '500' }}>{startItem}-{endItem}</span> of{' '}
-        <span style={{ color: '#fff', fontWeight: '500' }}>{totalItems}</span> results
+      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+        Showing <span style={{ color: 'var(--color-text-primary)', fontWeight: '500' }}>{startItem}-{endItem}</span> of{' '}
+        <span style={{ color: 'var(--color-text-primary)', fontWeight: '500' }}>{totalItems}</span> results
       </div>
 
       {/* Page numbers */}
@@ -88,9 +88,9 @@ export function Pagination({
           disabled={currentPage === 1}
           style={{
             padding: '0.5rem 0.75rem',
-            backgroundColor: currentPage === 1 ? '#1a1a1a' : '#222',
-            color: currentPage === 1 ? '#555' : '#fff',
-            border: '1px solid #333',
+            backgroundColor: currentPage === 1 ? 'var(--color-bg-elevated)' : 'var(--color-bg-elevated)',
+            color: currentPage === 1 ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '0.375rem',
             cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
             fontSize: '0.875rem',
@@ -104,15 +104,15 @@ export function Pagination({
         {getPageNumbers().map((page, index) => (
           <React.Fragment key={index}>
             {page === '...' ? (
-              <span style={{ padding: '0.5rem', color: '#666', fontSize: '0.875rem' }}>...</span>
+              <span style={{ padding: '0.5rem', color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>...</span>
             ) : (
               <button
                 onClick={() => onPageChange(page as number)}
                 style={{
                   padding: '0.5rem 0.75rem',
-                  backgroundColor: currentPage === page ? '#6366f1' : '#222',
-                  color: currentPage === page ? '#fff' : '#999',
-                  border: `1px solid ${currentPage === page ? '#6366f1' : '#333'}`,
+                  backgroundColor: currentPage === page ? 'var(--color-primary)' : 'var(--color-bg-elevated)',
+                  color: currentPage === page ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                  border: `1px solid ${currentPage === page ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
                   borderRadius: '0.375rem',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -132,9 +132,9 @@ export function Pagination({
           disabled={currentPage === totalPages}
           style={{
             padding: '0.5rem 0.75rem',
-            backgroundColor: currentPage === totalPages ? '#1a1a1a' : '#222',
-            color: currentPage === totalPages ? '#555' : '#fff',
-            border: '1px solid #333',
+            backgroundColor: currentPage === totalPages ? 'var(--color-bg-elevated)' : 'var(--color-bg-elevated)',
+            color: currentPage === totalPages ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '0.375rem',
             cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
             fontSize: '0.875rem',
@@ -148,15 +148,15 @@ export function Pagination({
       {/* Page size selector */}
       {showPageSize && onPageSizeChange && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ color: '#666', fontSize: '0.875rem' }}>Per page:</span>
+          <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>Per page:</span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
             style={{
               padding: '0.5rem 0.75rem',
-              backgroundColor: '#222',
-              color: '#fff',
-              border: '1px solid #333',
+              backgroundColor: 'var(--color-bg-elevated)',
+              color: 'var(--color-text-primary)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '0.375rem',
               cursor: 'pointer',
               fontSize: '0.875rem',

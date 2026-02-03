@@ -90,9 +90,9 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
             onClick={() => handlePresetClick(preset)}
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: value.preset === preset.value ? '#6366f1' : '#1a1a1a',
-              color: value.preset === preset.value ? '#fff' : '#999',
-              border: `1px solid ${value.preset === preset.value ? '#6366f1' : '#333'}`,
+              backgroundColor: value.preset === preset.value ? 'var(--color-primary)' : 'var(--color-bg-elevated)',
+              color: value.preset === preset.value ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              border: `1px solid ${value.preset === preset.value ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
               borderRadius: '0.5rem',
               cursor: 'pointer',
               fontSize: '0.875rem',
@@ -101,14 +101,14 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
             }}
             onMouseEnter={(e) => {
               if (value.preset !== preset.value) {
-                e.currentTarget.style.backgroundColor = '#222';
-                e.currentTarget.style.borderColor = '#444';
+                e.currentTarget.style.backgroundColor = 'var(--color-neutral-800)';
+                e.currentTarget.style.borderColor = 'var(--color-border-strong)';
               }
             }}
             onMouseLeave={(e) => {
               if (value.preset !== preset.value) {
-                e.currentTarget.style.backgroundColor = '#1a1a1a';
-                e.currentTarget.style.borderColor = '#333';
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)';
+                e.currentTarget.style.borderColor = 'var(--color-border-light)';
               }
             }}
           >
@@ -118,20 +118,20 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
       </div>
 
       {/* Current Range Display */}
-      <div style={{ 
-        marginTop: '0.75rem', 
+      <div style={{
+        marginTop: '0.75rem',
         padding: '0.75rem 1rem',
-        backgroundColor: '#0a0a0a',
-        border: '1px solid #333',
+        backgroundColor: 'var(--color-bg-paper)',
+        border: '1px solid var(--color-border-light)',
         borderRadius: '0.5rem',
         fontSize: '0.875rem',
-        color: '#999',
+        color: 'var(--color-text-secondary)',
       }}>
-        <span style={{ color: '#6366f1', fontWeight: '600' }}>Selected Range:</span>
+        <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>Selected Range:</span>
         {' '}
         {formatDateDisplay(value.startDate)} - {formatDateDisplay(value.endDate)}
         {' '}
-        <span style={{ color: '#666' }}>
+        <span style={{ color: 'var(--color-text-disabled)' }}>
           ({getDaysDifference(value.startDate, value.endDate)} days)
         </span>
       </div>
@@ -148,20 +148,20 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
           zIndex: 50,
         }}>
           <div style={{
-            backgroundColor: '#0a0a0a',
+            backgroundColor: 'var(--color-bg-paper)',
             borderRadius: '1rem',
-            border: '1px solid #333',
+            border: '1px solid var(--color-border-light)',
             padding: '1.5rem',
             maxWidth: '28rem',
             width: '100%',
           }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
               Select Custom Date Range
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                   Start Date
                 </label>
                 <input
@@ -171,9 +171,9 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    backgroundColor: '#1a1a1a',
-                    color: '#fff',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.5rem',
                     fontSize: '0.875rem',
                   }}
@@ -181,7 +181,7 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                   End Date
                 </label>
                 <input
@@ -191,9 +191,9 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    backgroundColor: '#1a1a1a',
-                    color: '#fff',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.5rem',
                     fontSize: '0.875rem',
                   }}
@@ -206,9 +206,9 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
                   style={{
                     flex: 1,
                     padding: '0.75rem',
-                    backgroundColor: '#1a1a1a',
-                    color: '#999',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -222,8 +222,8 @@ export function DateRangeFilter({ value, onChange, className = '' }: DateRangeFi
                   style={{
                     flex: 1,
                     padding: '0.75rem',
-                    backgroundColor: '#6366f1',
-                    color: '#fff',
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',

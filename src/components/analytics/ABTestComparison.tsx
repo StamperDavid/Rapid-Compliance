@@ -104,9 +104,9 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
       overflowY: 'auto',
     }}>
       <div style={{
-        backgroundColor: '#0a0a0a',
+        backgroundColor: 'var(--color-bg-paper)',
         borderRadius: '1rem',
-        border: '1px solid #333',
+        border: '1px solid var(--color-border-light)',
         maxWidth: '1200px',
         width: '100%',
         maxHeight: '90vh',
@@ -115,23 +115,23 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
         {/* Header */}
         <div style={{
           padding: '1.5rem',
-          borderBottom: '1px solid #1a1a1a',
+          borderBottom: '1px solid var(--color-border-main)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               🆚 A/B Test Comparison
             </h2>
-            <p style={{ color: '#666', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
               Compare sequence performance side by side
             </p>
           </div>
           <button
             onClick={onClose}
             style={{
-              color: '#666',
+              color: 'var(--color-text-disabled)',
               background: 'none',
               border: 'none',
               cursor: 'pointer',
@@ -149,11 +149,11 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
           gridTemplateColumns: '1fr 1fr',
           gap: '1.5rem',
           padding: '1.5rem',
-          borderBottom: '1px solid #1a1a1a',
+          borderBottom: '1px solid var(--color-border-main)',
         }}>
           <div style={{
-            backgroundColor: winner === 'A' ? '#065f46' : '#111',
-            border: `2px solid ${winner === 'A' ? '#10b981' : '#333'}`,
+            backgroundColor: winner === 'A' ? 'var(--color-success-dark)' : 'var(--color-neutral-900)',
+            border: `2px solid ${winner === 'A' ? 'var(--color-success)' : 'var(--color-border-light)'}`,
             borderRadius: '0.75rem',
             padding: '1.5rem',
             position: 'relative',
@@ -163,8 +163,8 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
                 position: 'absolute',
                 top: '-0.75rem',
                 right: '1rem',
-                backgroundColor: '#10b981',
-                color: '#000',
+                backgroundColor: 'var(--color-success)',
+                color: 'var(--color-bg-main)',
                 padding: '0.25rem 0.75rem',
                 borderRadius: '0.25rem',
                 fontSize: '0.75rem',
@@ -173,10 +173,10 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
                 🏆 WINNER
               </div>
             )}
-            <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
               VARIANT A
             </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               {sequenceA.sequenceName}
             </h3>
             <div style={{ fontSize: '0.875rem', color: '#666' }}>
@@ -185,8 +185,8 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
           </div>
 
           <div style={{
-            backgroundColor: winner === 'B' ? '#065f46' : '#111',
-            border: `2px solid ${winner === 'B' ? '#10b981' : '#333'}`,
+            backgroundColor: winner === 'B' ? 'var(--color-success-dark)' : 'var(--color-neutral-900)',
+            border: `2px solid ${winner === 'B' ? 'var(--color-success)' : 'var(--color-border-light)'}`,
             borderRadius: '0.75rem',
             padding: '1.5rem',
             position: 'relative',
@@ -196,8 +196,8 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
                 position: 'absolute',
                 top: '-0.75rem',
                 right: '1rem',
-                backgroundColor: '#10b981',
-                color: '#000',
+                backgroundColor: 'var(--color-success)',
+                color: 'var(--color-bg-main)',
                 padding: '0.25rem 0.75rem',
                 borderRadius: '0.25rem',
                 fontSize: '0.75rem',
@@ -206,10 +206,10 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
                 🏆 WINNER
               </div>
             )}
-            <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
               VARIANT B
             </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               {sequenceB.sequenceName}
             </h3>
             <div style={{ fontSize: '0.875rem', color: '#666' }}>
@@ -222,17 +222,17 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
         {significance.isSignificant && (
           <div style={{
             padding: '1rem 1.5rem',
-            backgroundColor: '#1a3a1a',
-            borderBottom: '1px solid #1a1a1a',
+            backgroundColor: 'var(--color-success-dark)',
+            borderBottom: '1px solid var(--color-border-main)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span style={{ fontSize: '1.25rem' }}>📊</span>
               <div>
-                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#10b981' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-success)' }}>
                   Statistically Significant Result
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#6ee7b7' }}>
-                  {significance.confidence > 0.99 ? '99%+' : `${(significance.confidence * 100).toFixed(0)}%`} confidence • 
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-success-light)' }}>
+                  {significance.confidence > 0.99 ? '99%+' : `${(significance.confidence * 100).toFixed(0)}%`} confidence •
                   Sample size sufficient for reliable comparison
                 </div>
               </div>
@@ -242,7 +242,7 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
 
         {/* Metrics Comparison */}
         <div style={{ padding: '1.5rem' }}>
-          <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '1rem' }}>
+          <h4 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
             Performance Metrics
           </h4>
           
@@ -261,12 +261,12 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
                     alignItems: 'center',
                     gap: '1rem',
                     padding: '1rem',
-                    backgroundColor: metric.isKey ? '#1a1a2e' : '#111',
+                    backgroundColor: metric.isKey ? 'var(--color-bg-elevated)' : 'var(--color-neutral-900)',
                     borderRadius: '0.5rem',
-                    border: metric.isKey ? '1px solid #6366f1' : '1px solid #222',
+                    border: metric.isKey ? '1px solid var(--color-primary)' : '1px solid var(--color-border-light)',
                   }}
                 >
-                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: metric.isKey ? '#6366f1' : '#999' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: metric.isKey ? 'var(--color-primary)' : 'var(--color-text-secondary)' }}>
                     {metric.label}
                   </div>
 
@@ -274,7 +274,7 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
                     textAlign: 'right',
                     fontSize: '1.25rem',
                     fontWeight: '700',
-                    color: metric.isKey && metric.valueA > metric.valueB ? '#10b981' : '#fff',
+                    color: metric.isKey && metric.valueA > metric.valueB ? 'var(--color-success)' : 'var(--color-text-primary)',
                   }}>
                     {metric.format(metric.valueA)}
                   </div>
@@ -282,7 +282,7 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
                   <div style={{
                     textAlign: 'center',
                     fontSize: '0.875rem',
-                    color: showDiff && diff !== 0 ? (diff > 0 ? '#10b981' : '#ef4444') : '#666',
+                    color: showDiff && diff !== 0 ? (diff > 0 ? 'var(--color-success)' : 'var(--color-error)') : 'var(--color-text-disabled)',
                     fontWeight: '600',
                     minWidth: '80px',
                   }}>
@@ -297,7 +297,7 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
                     textAlign: 'left',
                     fontSize: '1.25rem',
                     fontWeight: '700',
-                    color: metric.isKey && metric.valueB > metric.valueA ? '#10b981' : '#fff',
+                    color: metric.isKey && metric.valueB > metric.valueA ? 'var(--color-success)' : 'var(--color-text-primary)',
                   }}>
                     {metric.format(metric.valueB)}
                   </div>
@@ -310,21 +310,21 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
         {/* Recommendation */}
         <div style={{
           padding: '1.5rem',
-          borderTop: '1px solid #1a1a1a',
-          backgroundColor: '#111',
+          borderTop: '1px solid var(--color-border-main)',
+          backgroundColor: 'var(--color-neutral-900)',
         }}>
-          <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '1rem' }}>
+          <h4 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
             💡 Recommendation
           </h4>
           
           {winner === 'tie' ? (
-            <p style={{ color: '#999', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
               Both sequences have identical reply rates. Consider other factors like sample size, 
               cost per acquisition, or secondary metrics to make a decision.
             </p>
           ) : (
-            <p style={{ color: '#999', fontSize: '0.875rem' }}>
-              <strong style={{ color: '#10b981' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+              <strong style={{ color: 'var(--color-success)' }}>
                 Variant {winner}
               </strong>
               {' '}shows better performance with a{' '}
@@ -341,7 +341,7 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
         {/* Actions */}
         <div style={{
           padding: '1.5rem',
-          borderTop: '1px solid #1a1a1a',
+          borderTop: '1px solid var(--color-border-main)',
           display: 'flex',
           justifyContent: 'flex-end',
           gap: '0.75rem',
@@ -350,8 +350,8 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
             onClick={onClose}
             style={{
               padding: '0.75rem 1.5rem',
-              backgroundColor: '#6366f1',
-              color: '#fff',
+              backgroundColor: 'var(--color-primary)',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',

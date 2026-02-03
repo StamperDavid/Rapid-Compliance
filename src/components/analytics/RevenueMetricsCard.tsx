@@ -140,7 +140,7 @@ export function RevenueMetricsCard({ data, loading = false }: RevenueMetricsCard
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#10b981"
+              stroke="var(--color-success)"
               strokeWidth={2}
               dot={{ r: 4 }}
               activeDot={{ r: 6 }}
@@ -168,12 +168,12 @@ export function RevenueMetricsCard({ data, loading = false }: RevenueMetricsCard
                   key={`cell-${index}`}
                   fill={
                     entry.scenario === 'Quota'
-                      ? '#6b7280'
+                      ? 'var(--color-neutral-500)'
                       : entry.scenario === 'Optimistic'
-                      ? '#10b981'
+                      ? 'var(--color-success)'
                       : entry.scenario === 'Realistic'
-                      ? '#3b82f6'
-                      : '#ef4444'
+                      ? 'var(--color-info)'
+                      : 'var(--color-error)'
                   }
                 />
               ))}

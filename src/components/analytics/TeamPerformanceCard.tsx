@@ -104,7 +104,7 @@ export function TeamPerformanceCard({ data, loading = false }: TeamPerformanceCa
               <Tooltip
                 formatter={(value: number) => [formatCurrency(value), 'Revenue']}
               />
-              <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="revenue" fill="var(--color-info)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

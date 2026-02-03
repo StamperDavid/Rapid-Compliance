@@ -43,9 +43,9 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '4rem 2rem',
-    border: '2px dashed #333',
+    border: '2px dashed var(--color-border-light)',
     borderRadius: '1rem',
-    backgroundColor: '#111',
+    backgroundColor: 'var(--color-bg-main)',
     textAlign: 'center' as const,
   },
   emptyIcon: {
@@ -70,7 +70,7 @@ const styles = {
     transition: 'all 0.2s',
   },
   dropZoneActive: {
-    border: '2px dashed #6366f1',
+    border: '2px dashed var(--color-primary)',
     backgroundColor: 'rgba(99, 102, 241, 0.1)',
   },
   fieldWrapper: {
@@ -80,15 +80,15 @@ const styles = {
     display: 'flex',
     alignItems: 'flex-start',
     padding: '1rem',
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #333',
+    backgroundColor: 'var(--color-bg-elevated)',
+    border: '1px solid var(--color-border-light)',
     borderRadius: '0.5rem',
     cursor: 'pointer',
     transition: 'all 0.2s',
   },
   fieldCardSelected: {
-    borderColor: '#6366f1',
-    backgroundColor: '#1e1e2f',
+    borderColor: 'var(--color-primary)',
+    backgroundColor: 'var(--color-bg-elevated)',
   },
   fieldCardHovered: {
     borderColor: '#444',
@@ -121,7 +121,7 @@ const styles = {
   fieldPreview: {
     marginTop: '0.5rem',
     padding: '0.5rem',
-    backgroundColor: '#0a0a0a',
+    backgroundColor: 'var(--color-bg-paper)',
     borderRadius: '0.25rem',
   },
   fieldActions: {
@@ -145,14 +145,14 @@ const styles = {
   },
   actionButtonHover: {
     color: '#fff',
-    backgroundColor: '#333',
+    backgroundColor: 'var(--color-border-light)',
   },
   actionButtonDelete: {
-    color: '#dc2626',
+    color: 'var(--color-error-dark)',
   },
   dropIndicator: {
     height: '3px',
-    backgroundColor: '#6366f1',
+    backgroundColor: 'var(--color-primary)',
     borderRadius: '2px',
     margin: '0.25rem 0',
   },
@@ -369,7 +369,7 @@ function FieldCard({
         <div style={styles.fieldLabel}>
           {field.label}
           {field.validation?.required && (
-            <span style={{ color: '#dc2626', marginLeft: '0.25rem' }}>*</span>
+            <span style={{ color: 'var(--color-error-dark)', marginLeft: '0.25rem' }}>*</span>
           )}
         </div>
         <div style={styles.fieldType}>{getFieldTypeLabel(field.type)}</div>
@@ -441,8 +441,8 @@ function FieldPreview({ field }: FieldPreviewProps) {
     width: '100%',
     padding: '0.5rem',
     fontSize: '0.875rem',
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #333',
+    backgroundColor: 'var(--color-bg-elevated)',
+    border: '1px solid var(--color-border-light)',
     borderRadius: '0.375rem',
     color: '#666',
   };
@@ -539,7 +539,7 @@ function FieldPreview({ field }: FieldPreviewProps) {
         <div
           style={{
             padding: '1rem',
-            border: '2px dashed #333',
+            border: '2px dashed var(--color-border-light)',
             borderRadius: '0.5rem',
             textAlign: 'center',
             color: '#666',
@@ -555,12 +555,12 @@ function FieldPreview({ field }: FieldPreviewProps) {
         <div
           style={{
             padding: '2rem 1rem',
-            border: '1px solid #333',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '0.5rem',
             textAlign: 'center',
             color: '#666',
             fontSize: '0.875rem',
-            backgroundColor: '#0a0a0a',
+            backgroundColor: 'var(--color-bg-paper)',
           }}
         >
           ✍️ Sign here
@@ -580,17 +580,17 @@ function FieldPreview({ field }: FieldPreviewProps) {
       );
 
     case 'divider':
-      return <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '0.5rem 0' }} />;
+      return <hr style={{ border: 'none', borderTop: '1px solid var(--color-border-light)', margin: '0.5rem 0' }} />;
 
     case 'pagebreak':
       return (
         <div
           style={{
             padding: '0.5rem 1rem',
-            backgroundColor: '#1a1a1a',
+            backgroundColor: 'var(--color-bg-elevated)',
             borderRadius: '0.25rem',
             textAlign: 'center',
-            color: '#6366f1',
+            color: 'var(--color-primary)',
             fontSize: '0.75rem',
             fontWeight: '600',
           }}

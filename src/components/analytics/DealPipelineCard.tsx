@@ -24,10 +24,10 @@ interface DealPipelineCardProps {
 }
 
 const TIER_COLORS: Record<string, string> = {
-  hot: '#ef4444',
-  warm: '#f59e0b',
-  cold: '#3b82f6',
-  'at-risk': '#8b5cf6',
+  hot: 'var(--color-error)',
+  warm: 'var(--color-warning)',
+  cold: 'var(--color-info)',
+  'at-risk': 'var(--color-secondary)',
 };
 
 /**
@@ -103,7 +103,7 @@ export function DealPipelineCard({ data, loading = false }: DealPipelineCardProp
               }}
               labelFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}
             />
-            <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="count" fill="var(--color-info)" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

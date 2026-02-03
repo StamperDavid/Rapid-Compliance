@@ -75,7 +75,7 @@ export default function ProfilePage() {
   }, [user]);
 
   const colorsPrimaryMain = theme?.colors?.primary?.main;
-  const primaryColor = (colorsPrimaryMain !== '' && colorsPrimaryMain != null) ? colorsPrimaryMain : '#6366f1';
+  const primaryColor = (colorsPrimaryMain !== '' && colorsPrimaryMain != null) ? colorsPrimaryMain : 'var(--color-primary)';
 
   const handleSaveClick = () => {
     void handleSave();
@@ -121,20 +121,20 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#000000', color: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)' }}>
         <div>Loading...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left Sidebar */}
         <div style={{ 
           width: sidebarOpen ? '260px' : '70px',
-          backgroundColor: '#0a0a0a',
-          borderRight: '1px solid #1a1a1a',
+          backgroundColor: 'var(--color-bg-paper)',
+          borderRight: '1px solid var(--color-bg-elevated)',
           transition: 'width 0.3s',
           display: 'flex',
           flexDirection: 'column'
@@ -149,7 +149,7 @@ export default function ProfilePage() {
                 alignItems: 'center',
                 gap: '0.75rem',
                 backgroundColor: 'transparent',
-                color: '#999',
+                color: 'var(--color-text-secondary)',
                 borderLeft: '3px solid transparent',
                 fontSize: '0.875rem',
                 fontWeight: '400',
@@ -171,7 +171,7 @@ export default function ProfilePage() {
                   alignItems: 'center',
                   gap: '0.75rem',
                   backgroundColor: 'transparent',
-                  color: '#999',
+                  color: 'var(--color-text-secondary)',
                   borderLeft: '3px solid transparent',
                   fontSize: '0.875rem',
                   fontWeight: '400',
@@ -184,14 +184,14 @@ export default function ProfilePage() {
             ))}
           </nav>
 
-          <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
+          <div style={{ padding: '1rem', borderTop: '1px solid var(--color-bg-elevated)' }}>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                backgroundColor: '#1a1a1a',
-                color: '#999',
+                backgroundColor: 'var(--color-bg-elevated)',
+                color: 'var(--color-text-secondary)',
                 border: 'none',
                 borderRadius: '0.375rem',
                 cursor: 'pointer',
@@ -223,14 +223,14 @@ export default function ProfilePage() {
               >
                 ← Back to CRM
               </Link>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>My Profile</h1>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>My Profile</h1>
+              <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                 Manage your personal information and preferences
               </p>
             </div>
 
             {/* Profile Info Card */}
-            <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '2rem' }}>
                 <div style={{
                   width: '80px',
@@ -242,13 +242,13 @@ export default function ProfilePage() {
                   justifyContent: 'center',
                   fontSize: '2rem',
                   fontWeight: 'bold',
-                  color: '#fff'
+                  color: 'var(--color-text-primary)'
                 }}>
                   {user.displayName?.charAt(0) ?? 'U'}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>{user.displayName ?? 'User'}</h2>
-                  <p style={{ color: '#666', fontSize: '0.875rem' }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{user.displayName ?? 'User'}</h2>
+                  <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                     {user.email} • <span style={{ textTransform: 'capitalize', color: primaryColor, fontWeight: 600 }}>{user.role}</span>
                   </p>
                 </div>
@@ -256,62 +256,62 @@ export default function ProfilePage() {
 
               {/* Basic Information */}
               <div style={{ marginBottom: '2rem' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '1rem' }}>Basic Information</h3>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Basic Information</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Display Name</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Display Name</label>
                     <input
                       type="text"
                       value={formData.displayName}
                       onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                      style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Email</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Email</label>
                     <input
                       type="email"
                       value={formData.email}
                       disabled
-                      style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#666', fontSize: '0.875rem', cursor: 'not-allowed' }}
+                      style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem', color: 'var(--color-text-disabled)', fontSize: '0.875rem', cursor: 'not-allowed' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Phone</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Phone</label>
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                       placeholder="(555) 123-4567"
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Job Title</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Job Title</label>
                     <input
                       type="text"
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                       placeholder="e.g. Sales Manager"
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Department</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Department</label>
                     <input
                       type="text"
                       value={formData.department}
                       onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                       placeholder="e.g. Sales"
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Timezone</label>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Timezone</label>
                     <select
                       value={formData.timezone}
                       onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-                      style={{ width: '100%', padding: '0.625rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                     >
                       <option value="America/New_York">Eastern Time (ET)</option>
                       <option value="America/Chicago">Central Time (CT)</option>
@@ -327,7 +327,7 @@ export default function ProfilePage() {
 
               {/* Preferences */}
               <div style={{ marginBottom: '2rem' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '1rem' }}>Preferences</h3>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Preferences</h3>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Language</label>
                   <select
@@ -346,7 +346,7 @@ export default function ProfilePage() {
 
               {/* Notifications */}
               <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '1rem' }}>Notifications</h3>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Notifications</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
                     <input
@@ -356,8 +356,8 @@ export default function ProfilePage() {
                       style={{ width: '1.125rem', height: '1.125rem' }}
                     />
                     <div>
-                      <div style={{ fontSize: '0.875rem', color: '#fff' }}>Email Notifications</div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>Receive email updates about your activity</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Email Notifications</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Receive email updates about your activity</div>
                     </div>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
@@ -368,8 +368,8 @@ export default function ProfilePage() {
                       style={{ width: '1.125rem', height: '1.125rem' }}
                     />
                     <div>
-                      <div style={{ fontSize: '0.875rem', color: '#fff' }}>SMS Notifications</div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>Receive text messages for important updates</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>SMS Notifications</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Receive text messages for important updates</div>
                     </div>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
@@ -380,8 +380,8 @@ export default function ProfilePage() {
                       style={{ width: '1.125rem', height: '1.125rem' }}
                     />
                     <div>
-                      <div style={{ fontSize: '0.875rem', color: '#fff' }}>Browser Notifications</div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>Get desktop notifications while using the app</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Browser Notifications</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Get desktop notifications while using the app</div>
                     </div>
                   </label>
                 </div>
@@ -392,21 +392,21 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
               <Link
                 href="/crm"
-                style={{ padding: '0.75rem 1.5rem', backgroundColor: '#1a1a1a', color: '#999', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid #333' }}
+                style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid var(--color-border-light)' }}
               >
                 Cancel
               </Link>
               <button
                 onClick={handleSaveClick}
                 disabled={isSaving}
-                style={{ 
-                  padding: '0.75rem 1.5rem', 
-                  backgroundColor: isSaving ? '#4f46e5' : '#6366f1', 
-                  color: 'white', 
-                  borderRadius: '0.5rem', 
-                  border: 'none', 
-                  cursor: isSaving ? 'not-allowed' : 'pointer', 
-                  fontSize: '0.875rem', 
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: isSaving ? 'var(--color-primary-dark)' : 'var(--color-primary)',
+                  color: 'white',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem',
                   fontWeight: '600',
                   opacity: isSaving ? 0.7 : 1
                 }}
@@ -425,10 +425,10 @@ export default function ProfilePage() {
           bottom: '2rem',
           right: '2rem',
           padding: '1rem 1.5rem',
-          backgroundColor: saveMessage.includes('success') ? '#065f46' : '#7f1d1d',
-          border: `1px solid ${saveMessage.includes('success') ? '#10b981' : '#dc2626'}`,
+          backgroundColor: saveMessage.includes('success') ? 'var(--color-success-dark)' : '#7f1d1d',
+          border: `1px solid ${saveMessage.includes('success') ? 'var(--color-success)' : 'var(--color-error-dark)'}`,
           borderRadius: '0.5rem',
-          color: '#fff',
+          color: 'var(--color-text-primary)',
           fontSize: '0.875rem',
           boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
           zIndex: 1000

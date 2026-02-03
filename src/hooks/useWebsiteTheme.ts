@@ -22,7 +22,7 @@ export interface WebsiteTheme {
 const DEFAULT_THEME: WebsiteTheme = {
   logoUrl: '/logo.png',
   logoHeight: 48,
-  companyName: 'RapidCompliance.US',
+  companyName: 'SalesVelocity.ai',
   tagline: 'Accelerate Your Growth',
   primaryColor: '#6366f1',
   secondaryColor: '#8b5cf6',

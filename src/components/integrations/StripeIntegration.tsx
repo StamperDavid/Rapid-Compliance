@@ -21,8 +21,8 @@ export default function StripeIntegration({
   const [apiKey, setApiKey] = useState('');
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || '#ffffff'
-    : '#ffffff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)fff'
+    : 'var(--color-text-primary)fff';
 
   const borderColor = typeof window !== 'undefined'
     ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
@@ -91,7 +91,7 @@ export default function StripeIntegration({
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
               Stripe
             </h3>
-            <p style={{ fontSize: '0.875rem', color: '#666' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
               Process payments, manage subscriptions, and handle invoices
             </p>
           </div>
@@ -115,7 +115,7 @@ export default function StripeIntegration({
               fontSize: '0.875rem'
             }}
           />
-          <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
             Find your API keys in the Stripe Dashboard → Developers → API keys
           </p>
         </div>
@@ -125,8 +125,8 @@ export default function StripeIntegration({
           style={{
             width: '100%',
             padding: '0.75rem',
-            backgroundColor: isConnecting || !apiKey ? '#444' : primaryColor,
-            color: '#fff',
+            backgroundColor: isConnecting || !apiKey ? 'var(--color-border-strong)' : primaryColor,
+            color: 'var(--color-text-primary)',
             border: 'none',
             borderRadius: '0.5rem',
             cursor: isConnecting || !apiKey ? 'not-allowed' : 'pointer',
@@ -156,18 +156,18 @@ export default function StripeIntegration({
                 Stripe
               </h3>
               {integration.accountId && (
-                <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
                   Account: {integration.accountId.substring(0, 20)}...
                 </p>
               )}
             </div>
             <div style={{
               padding: '0.375rem 0.75rem',
-              backgroundColor: '#0f4c0f',
-              border: '1px solid #4ade80',
+              backgroundColor: 'var(--color-success-dark)',
+              border: '1px solid var(--color-success-light)',
               borderRadius: '0.375rem',
               fontSize: '0.75rem',
-              color: '#4ade80',
+              color: 'var(--color-success-light)',
               fontWeight: '600'
             }}>
               ✓ Connected
@@ -221,8 +221,8 @@ export default function StripeIntegration({
               onClick={onDisconnect}
               style={{
                 padding: '0.625rem 1rem',
-                backgroundColor: '#4c0f0f',
-                color: '#f87171',
+                backgroundColor: 'var(--color-error-dark)',
+                color: 'var(--color-error-light)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
@@ -242,7 +242,7 @@ export default function StripeIntegration({
               flex: 1,
               padding: '0.75rem',
               backgroundColor: primaryColor,
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',
@@ -256,8 +256,8 @@ export default function StripeIntegration({
             onClick={onDisconnect}
             style={{
               padding: '0.75rem 1rem',
-              backgroundColor: '#4c0f0f',
-              color: '#f87171',
+              backgroundColor: 'var(--color-error-dark)',
+              color: 'var(--color-error-light)',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',

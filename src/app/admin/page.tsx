@@ -47,12 +47,12 @@ interface StatsApiResponse {
 // -------------------------------------------------------------------
 
 const QUICK_ACTIONS = [
-  { label: 'View Leads', href: '/leads', color: '#6366f1' },
-  { label: 'Deal Pipeline', href: '/deals', color: '#8b5cf6' },
-  { label: 'AI Agents', href: '/admin/ai-agents', color: '#06b6d4' },
-  { label: 'Workflows', href: '/workflows', color: '#10b981' },
-  { label: 'Analytics', href: '/analytics/revenue', color: '#f59e0b' },
-  { label: 'Compliance', href: '/admin/compliance-reports', color: '#ef4444' },
+  { label: 'View Leads', href: '/leads', color: 'var(--color-primary)' },
+  { label: 'Deal Pipeline', href: '/deals', color: 'var(--color-secondary)' },
+  { label: 'AI Agents', href: '/admin/ai-agents', color: 'var(--color-cyan)' },
+  { label: 'Workflows', href: '/workflows', color: 'var(--color-success)' },
+  { label: 'Analytics', href: '/analytics/revenue', color: 'var(--color-warning)' },
+  { label: 'Compliance', href: '/admin/compliance-reports', color: 'var(--color-error)' },
 ];
 
 // -------------------------------------------------------------------
@@ -109,13 +109,13 @@ export default function AdminDashboardPage() {
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
                 Command Center
               </h1>
-              <p style={{ color: '#666', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+              <p style={{ color: 'var(--color-text-disabled)', marginTop: '0.5rem', fontSize: '0.875rem' }}>
                 {adminUser
                   ? `${adminUser.email} (${adminUser.role})`
-                  : 'RapidCompliance.US Platform Administration'}
+                  : 'SalesVelocity.ai Platform Administration'}
               </p>
             </div>
             <button
@@ -126,9 +126,9 @@ export default function AdminDashboardPage() {
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.625rem 1.25rem',
-                backgroundColor: '#1a1a1a',
-                color: '#fff',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-elevated)',
+                color: 'var(--color-text-primary)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
@@ -151,7 +151,7 @@ export default function AdminDashboardPage() {
               backgroundColor: 'rgba(239, 68, 68, 0.1)',
               border: '1px solid rgba(239, 68, 68, 0.3)',
               borderRadius: '0.75rem',
-              color: '#f87171',
+              color: 'var(--color-error-light)',
               fontSize: '0.875rem',
             }}
           >
@@ -172,34 +172,34 @@ export default function AdminDashboardPage() {
             label="Total Users"
             value={loading ? '...' : (stats?.totalUsers ?? 0).toLocaleString()}
             icon={Users}
-            color="#6366f1"
+            color="var(--color-primary)"
             trend="+12%"
           />
           <KpiCard
             label="AI Agents"
             value="51"
             icon={Bot}
-            color="#06b6d4"
+            color="var(--color-cyan)"
             subtitle="47 swarm + 4 standalone"
           />
           <KpiCard
             label="Active Agents"
             value={loading ? '...' : (stats?.activeAgents ?? 0).toLocaleString()}
             icon={Activity}
-            color="#10b981"
+            color="var(--color-success)"
             trend="operational"
           />
           <KpiCard
             label="Pending Tickets"
             value={loading ? '...' : (stats?.pendingTickets ?? 0).toLocaleString()}
             icon={AlertTriangle}
-            color={stats && stats.pendingTickets > 5 ? '#ef4444' : '#f59e0b'}
+            color={stats && stats.pendingTickets > 5 ? 'var(--color-error)' : 'var(--color-warning)'}
           />
           <KpiCard
             label="Revenue"
             value={loading ? '...' : stats?.monthlyRevenue ? `$${stats.monthlyRevenue.toLocaleString()}` : '$--'}
             icon={TrendingUp}
-            color="#10b981"
+            color="var(--color-success)"
             subtitle="this month"
           />
         </div>
@@ -215,13 +215,13 @@ export default function AdminDashboardPage() {
           {/* Quick Actions */}
           <div
             style={{
-              backgroundColor: '#1a1a1a',
-              border: '1px solid #333',
+              backgroundColor: 'var(--color-bg-elevated)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '1rem',
               padding: '1.5rem',
             }}
           >
-            <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
               Quick Actions
             </h3>
             <div
@@ -240,11 +240,11 @@ export default function AdminDashboardPage() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '0.75rem 1rem',
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #222',
+                    backgroundColor: 'var(--color-bg-paper)',
+                    border: '1px solid var(--color-border-main)',
                     borderRadius: '0.5rem',
                     textDecoration: 'none',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.8125rem',
                     fontWeight: 500,
                     transition: 'border-color 0.15s ease',
@@ -253,11 +253,11 @@ export default function AdminDashboardPage() {
                     e.currentTarget.style.borderColor = action.color;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#222';
+                    e.currentTarget.style.borderColor = 'var(--color-border-main)';
                   }}
                 >
                   {action.label}
-                  <ArrowUpRight className="w-3.5 h-3.5" style={{ color: '#555' }} />
+                  <ArrowUpRight className="w-3.5 h-3.5" style={{ color: 'var(--color-neutral-600)' }} />
                 </Link>
               ))}
             </div>
@@ -266,13 +266,13 @@ export default function AdminDashboardPage() {
           {/* Session Info */}
           <div
             style={{
-              backgroundColor: '#1a1a1a',
-              border: '1px solid #333',
+              backgroundColor: 'var(--color-bg-elevated)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '1rem',
               padding: '1.5rem',
             }}
           >
-            <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
               Session Info
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -347,8 +347,8 @@ function KpiCard({
   return (
     <div
       style={{
-        backgroundColor: '#1a1a1a',
-        border: '1px solid #333',
+        backgroundColor: 'var(--color-bg-elevated)',
+        border: '1px solid var(--color-border-light)',
         borderRadius: '1rem',
         padding: '1.5rem',
         position: 'relative',
@@ -357,10 +357,10 @@ function KpiCard({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
         <div>
-          <p style={{ fontSize: '0.8125rem', color: '#999', marginBottom: '0.5rem' }}>{label}</p>
-          <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>{value}</p>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>{label}</p>
+          <p style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>{value}</p>
           {(trend ?? subtitle) && (
-            <p style={{ fontSize: '0.75rem', color: trend === 'operational' ? '#10b981' : '#666', marginTop: '0.375rem' }}>
+            <p style={{ fontSize: '0.75rem', color: trend === 'operational' ? 'var(--color-success)' : 'var(--color-text-disabled)', marginTop: '0.375rem' }}>
               {trend ?? subtitle}
             </p>
           )}
@@ -386,8 +386,8 @@ function KpiCard({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <span style={{ fontSize: '0.8125rem', color: '#999' }}>{label}</span>
-      <span style={{ fontSize: '0.8125rem', color: '#fff', fontWeight: '500' }}>{value}</span>
+      <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>{label}</span>
+      <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-primary)', fontWeight: '500' }}>{value}</span>
     </div>
   );
 }
@@ -397,13 +397,13 @@ function OverviewItem({ label, value }: { label: string; value: string }) {
     <div
       style={{
         padding: '1rem',
-        backgroundColor: '#0a0a0a',
+        backgroundColor: 'var(--color-bg-paper)',
         borderRadius: '0.5rem',
-        border: '1px solid #222',
+        border: '1px solid var(--color-border-main)',
       }}
     >
-      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>{value}</div>
-      <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>{label}</div>
+      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{value}</div>
+      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>{label}</div>
     </div>
   );
 }

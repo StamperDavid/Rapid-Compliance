@@ -39,14 +39,14 @@ export function PerformanceTrendsChart({
   if (data.length === 0) {
     return (
       <div style={{
-        backgroundColor: '#0a0a0a',
-        border: '1px solid #333',
+        backgroundColor: 'var(--color-bg-paper)',
+        border: '1px solid var(--color-border-light)',
         borderRadius: '1rem',
         padding: '2rem',
         textAlign: 'center',
       }}>
         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📈</div>
-        <p style={{ color: '#666' }}>No trend data available for this date range</p>
+        <p style={{ color: 'var(--color-text-disabled)' }}>No trend data available for this date range</p>
       </div>
     );
   }
@@ -82,21 +82,21 @@ export function PerformanceTrendsChart({
     {
       key: 'reply' as const,
       label: 'Reply Rate',
-      color: '#10b981',
+      color: 'var(--color-success)',
       path: generatePath('replyRate'),
       visible: selectedMetric === 'all' || selectedMetric === 'reply',
     },
     {
       key: 'open' as const,
       label: 'Open Rate',
-      color: '#6366f1',
+      color: 'var(--color-primary)',
       path: generatePath('openRate'),
       visible: selectedMetric === 'all' || selectedMetric === 'open',
     },
     {
       key: 'click' as const,
       label: 'Click Rate',
-      color: '#f59e0b',
+      color: 'var(--color-warning)',
       path: generatePath('clickRate'),
       visible: selectedMetric === 'all' || selectedMetric === 'click',
     },
@@ -104,8 +104,8 @@ export function PerformanceTrendsChart({
 
   return (
     <div style={{
-      backgroundColor: '#0a0a0a',
-      border: '1px solid #333',
+      backgroundColor: 'var(--color-bg-paper)',
+      border: '1px solid var(--color-border-light)',
       borderRadius: '1rem',
       padding: '1.5rem',
     }}>
@@ -116,7 +116,7 @@ export function PerformanceTrendsChart({
         justifyContent: 'space-between',
         marginBottom: '1.5rem',
       }}>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
           {title}
         </h3>
         
@@ -126,9 +126,9 @@ export function PerformanceTrendsChart({
             onClick={() => setSelectedMetric('all')}
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: selectedMetric === 'all' ? '#6366f1' : '#1a1a1a',
-              color: selectedMetric === 'all' ? '#fff' : '#999',
-              border: '1px solid #333',
+              backgroundColor: selectedMetric === 'all' ? 'var(--color-primary)' : 'var(--color-bg-elevated)',
+              color: selectedMetric === 'all' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '0.5rem',
               cursor: 'pointer',
               fontSize: '0.75rem',
@@ -143,9 +143,9 @@ export function PerformanceTrendsChart({
               onClick={() => setSelectedMetric(metric.key)}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: selectedMetric === metric.key ? metric.color : '#1a1a1a',
-                color: selectedMetric === metric.key ? '#fff' : '#999',
-                border: `1px solid ${selectedMetric === metric.key ? metric.color : '#333'}`,
+                backgroundColor: selectedMetric === metric.key ? metric.color : 'var(--color-bg-elevated)',
+                color: selectedMetric === metric.key ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                border: `1px solid ${selectedMetric === metric.key ? metric.color : 'var(--color-border-light)'}`,
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
                 fontSize: '0.75rem',
@@ -175,13 +175,13 @@ export function PerformanceTrendsChart({
                   y1={y}
                   x2={width - padding.right}
                   y2={y}
-                  stroke="#1a1a1a"
+                  stroke="var(--color-bg-elevated)"
                   strokeWidth="1"
                 />
                 <text
                   x={padding.left - 10}
                   y={y + 4}
-                  fill="#666"
+                  fill="var(--color-text-disabled)"
                   fontSize="12"
                   textAnchor="end"
                 >
@@ -238,7 +238,7 @@ export function PerformanceTrendsChart({
                   cy={y}
                   r={hoveredPoint === index ? 6 : 4}
                   fill={metric.color}
-                  stroke="#000"
+                  stroke="var(--color-bg-main)"
                   strokeWidth="2"
                   style={{ cursor: 'pointer', transition: 'r 0.2s' }}
                   onMouseEnter={() => setHoveredPoint(index)}
@@ -255,38 +255,38 @@ export function PerformanceTrendsChart({
             position: 'absolute',
             top: '1rem',
             right: '1rem',
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-elevated)',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '0.5rem',
             padding: '1rem',
             minWidth: '200px',
           }}>
-            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               {sortedData[hoveredPoint].date.toLocaleDateString('en-US', {
                 month: 'long',
                 day: 'numeric',
                 year: 'numeric',
               })}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.75rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.75rem' }}>
               {sortedData[hoveredPoint].sent} messages sent
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.875rem', color: '#10b981' }}>Reply Rate:</span>
-                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--color-success)' }}>Reply Rate:</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                   {sortedData[hoveredPoint].replyRate.toFixed(1)}%
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.875rem', color: '#6366f1' }}>Open Rate:</span>
-                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--color-primary)' }}>Open Rate:</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                   {sortedData[hoveredPoint].openRate.toFixed(1)}%
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.875rem', color: '#f59e0b' }}>Click Rate:</span>
-                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--color-warning)' }}>Click Rate:</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                   {sortedData[hoveredPoint].clickRate.toFixed(1)}%
                 </span>
               </div>
@@ -302,7 +302,7 @@ export function PerformanceTrendsChart({
         gap: '2rem',
         marginTop: '1rem',
         paddingTop: '1rem',
-        borderTop: '1px solid #1a1a1a',
+        borderTop: '1px solid var(--color-bg-elevated)',
       }}>
         {metrics.map(metric => (
           <div
@@ -320,7 +320,7 @@ export function PerformanceTrendsChart({
               borderRadius: '50%',
               backgroundColor: metric.color,
             }} />
-            <span style={{ fontSize: '0.875rem', color: '#999' }}>
+            <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
               {metric.label}
             </span>
           </div>

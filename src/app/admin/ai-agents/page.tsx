@@ -68,9 +68,9 @@ const AGENT_CARDS: AgentCard[] = [
 ];
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  active: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', label: 'Active' },
-  available: { bg: 'rgba(99, 102, 241, 0.1)', text: '#6366f1', label: 'Available' },
-  'coming-soon': { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', label: 'Coming Soon' },
+  active: { bg: 'rgba(16, 185, 129, 0.1)', text: 'var(--color-success)', label: 'Active' },
+  available: { bg: 'rgba(99, 102, 241, 0.1)', text: 'var(--color-primary)', label: 'Available' },
+  'coming-soon': { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--color-warning)', label: 'Coming Soon' },
 };
 
 export default function AdminAIAgentsPage() {
@@ -83,15 +83,15 @@ export default function AdminAIAgentsPage() {
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '0.6875rem', color: '#6366f1', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Admin / {adminUser?.email}
             </span>
           </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
             AI Agents / Tools
           </h1>
-          <p style={{ color: '#666', fontSize: '0.875rem' }}>
-            Manage your Sales &amp; Customer Service AI Agents for RapidCompliance.US
+          <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+            Manage your Sales &amp; Customer Service AI Agents for SalesVelocity.ai
           </p>
         </div>
 
@@ -105,10 +105,10 @@ export default function AdminAIAgentsPage() {
           }}
         >
           {[
-            { label: 'Active Agents', value: '4', color: '#10b981' },
-            { label: 'Total Training Sessions', value: '34', color: '#6366f1' },
-            { label: 'Conversations Today', value: '127', color: '#06b6d4' },
-            { label: 'Success Rate', value: '94%', color: '#f59e0b' },
+            { label: 'Active Agents', value: '4', color: 'var(--color-success)' },
+            { label: 'Total Training Sessions', value: '34', color: 'var(--color-primary)' },
+            { label: 'Conversations Today', value: '127', color: 'var(--color-cyan)' },
+            { label: 'Success Rate', value: '94%', color: 'var(--color-warning)' },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -119,7 +119,7 @@ export default function AdminAIAgentsPage() {
                 borderRadius: '0.75rem',
               }}
             >
-              <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>
                 {stat.label}
               </div>
               <div style={{ fontSize: '1.5rem', fontWeight: 700, color: stat.color }}>
@@ -175,7 +175,7 @@ export default function AdminAIAgentsPage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontWeight: 700,
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '1.125rem',
                         flexShrink: 0,
                       }}
@@ -183,7 +183,7 @@ export default function AdminAIAgentsPage() {
                       {card.icon}
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                      <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
                         {card.title}
                       </h3>
                     </div>
@@ -202,7 +202,7 @@ export default function AdminAIAgentsPage() {
                   </span>
                 </div>
 
-                <p style={{ fontSize: '0.8125rem', color: '#999', lineHeight: 1.6, marginBottom: '1rem' }}>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: '1rem' }}>
                   {card.description}
                 </p>
 
@@ -219,10 +219,10 @@ export default function AdminAIAgentsPage() {
                 >
                   {card.stats.map((stat) => (
                     <div key={stat.label}>
-                      <div style={{ fontSize: '0.6875rem', color: '#666', marginBottom: '0.125rem' }}>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', marginBottom: '0.125rem' }}>
                         {stat.label}
                       </div>
-                      <div style={{ fontSize: '1rem', fontWeight: 600, color: '#fff' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                         {stat.value}
                       </div>
                     </div>

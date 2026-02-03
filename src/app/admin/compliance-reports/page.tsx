@@ -23,10 +23,10 @@ interface ComplianceReport {
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  compliant: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981', label: 'Compliant' },
-  'review-needed': { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', label: 'Review Needed' },
-  'non-compliant': { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444', label: 'Non-Compliant' },
-  pending: { bg: 'rgba(99, 102, 241, 0.1)', text: '#6366f1', label: 'Pending' },
+  compliant: { bg: 'rgba(16, 185, 129, 0.1)', text: 'var(--color-success)', label: 'Compliant' },
+  'review-needed': { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--color-warning)', label: 'Review Needed' },
+  'non-compliant': { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--color-error)', label: 'Non-Compliant' },
+  pending: { bg: 'rgba(99, 102, 241, 0.1)', text: 'var(--color-primary)', label: 'Pending' },
 };
 
 export default function AdminComplianceReportsPage() {
@@ -75,10 +75,10 @@ export default function AdminComplianceReportsPage() {
       <div style={{ padding: '2rem' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <div style={{ marginBottom: '2rem' }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               Compliance Reports
             </h1>
-            <p style={{ color: '#666', fontSize: '0.875rem' }}>Loading...</p>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>Loading...</p>
           </div>
         </div>
       </div>
@@ -91,15 +91,15 @@ export default function AdminComplianceReportsPage() {
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '0.6875rem', color: '#6366f1', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.6875rem', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Admin / {adminUser?.email}
             </span>
           </div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
             Compliance Reports
           </h1>
-          <p style={{ color: '#666', fontSize: '0.875rem' }}>
-            Regulatory compliance dashboard for RapidCompliance.US
+          <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+            Regulatory compliance dashboard for SalesVelocity.ai
           </p>
         </div>
 
@@ -114,10 +114,10 @@ export default function AdminComplianceReportsPage() {
               textAlign: 'center',
             }}
           >
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               No Compliance Reports Found
             </h2>
-            <p style={{ color: '#666', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
               Compliance reports will appear here once audits are configured and completed.
             </p>
           </div>
@@ -142,11 +142,11 @@ export default function AdminComplianceReportsPage() {
                   borderRadius: '0.75rem',
                 }}
               >
-                <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Overall Score</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Overall Score</div>
                 <div style={{ fontSize: '2.5rem', fontWeight: 800, color: overallScore >= 90 ? '#10b981' : overallScore >= 70 ? '#f59e0b' : '#ef4444' }}>
                   {overallScore}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: '#555' }}>out of 100</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-600)' }}>out of 100</div>
               </div>
 
               <div
@@ -157,11 +157,11 @@ export default function AdminComplianceReportsPage() {
                   borderRadius: '0.75rem',
                 }}
               >
-                <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Compliant</div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#10b981' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Compliant</div>
+                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-success)' }}>
                   {compliantCount}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: '#555' }}>of {reports.length} areas</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-600)' }}>of {reports.length} areas</div>
               </div>
 
               <div
@@ -172,11 +172,11 @@ export default function AdminComplianceReportsPage() {
                   borderRadius: '0.75rem',
                 }}
               >
-                <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Review Needed</div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#f59e0b' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Review Needed</div>
+                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-warning)' }}>
                   {reviewCount}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: '#555' }}>areas flagged</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-600)' }}>areas flagged</div>
               </div>
 
               <div
@@ -187,11 +187,11 @@ export default function AdminComplianceReportsPage() {
                   borderRadius: '0.75rem',
                 }}
               >
-                <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Pending Audit</div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#6366f1' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Pending Audit</div>
+                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>
                   {pendingCount}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: '#555' }}>awaiting review</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-600)' }}>awaiting review</div>
               </div>
             </div>
 
@@ -245,7 +245,7 @@ export default function AdminComplianceReportsPage() {
                   borderBottom: '1px solid #1a1a1a',
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: '#666',
+                  color: 'var(--color-text-disabled)',
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                 }}
@@ -280,10 +280,10 @@ export default function AdminComplianceReportsPage() {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#fff' }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
                       {report.title}
                     </div>
-                    <div style={{ fontSize: '0.8125rem', color: '#999' }}>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
                       {report.category}
                     </div>
                     <div>
@@ -300,10 +300,10 @@ export default function AdminComplianceReportsPage() {
                         {statusStyle.label}
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.8125rem', color: '#999' }}>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
                       {report.lastAudit}
                     </div>
-                    <div style={{ fontSize: '0.8125rem', color: '#999' }}>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
                       {report.nextReview}
                     </div>
                     <div

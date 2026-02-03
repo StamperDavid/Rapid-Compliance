@@ -47,16 +47,16 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     height: '100%',
-    backgroundColor: '#0a0a0a',
-    color: '#fff',
+    backgroundColor: 'var(--color-bg-paper)',
+    color: 'var(--color-text-primary)',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '1rem 1.5rem',
-    borderBottom: '1px solid #333',
-    backgroundColor: '#111',
+    borderBottom: '1px solid var(--color-border-light)',
+    backgroundColor: 'var(--color-bg-main)',
   },
   headerLeft: {
     display: 'flex',
@@ -71,12 +71,12 @@ const styles = {
   title: {
     fontSize: '1.25rem',
     fontWeight: 'bold',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     margin: 0,
   },
   subtitle: {
     fontSize: '0.875rem',
-    color: '#666',
+    color: 'var(--color-text-disabled)',
     margin: 0,
   },
   body: {
@@ -86,8 +86,8 @@ const styles = {
   },
   sidebar: {
     width: '280px',
-    borderRight: '1px solid #333',
-    backgroundColor: '#111',
+    borderRight: '1px solid var(--color-border-light)',
+    backgroundColor: 'var(--color-bg-main)',
     overflowY: 'auto' as const,
   },
   main: {
@@ -100,12 +100,12 @@ const styles = {
     flex: 1,
     overflow: 'auto',
     padding: '2rem',
-    backgroundColor: '#0a0a0a',
+    backgroundColor: 'var(--color-bg-paper)',
   },
   editorPanel: {
     width: '320px',
-    borderLeft: '1px solid #333',
-    backgroundColor: '#111',
+    borderLeft: '1px solid var(--color-border-light)',
+    backgroundColor: 'var(--color-bg-main)',
     overflowY: 'auto' as const,
   },
   button: {
@@ -117,23 +117,23 @@ const styles = {
     transition: 'all 0.2s',
   },
   buttonPrimary: {
-    backgroundColor: '#6366f1',
-    color: '#fff',
+    backgroundColor: 'var(--color-primary)',
+    color: 'var(--color-text-primary)',
     border: 'none',
   },
   buttonSecondary: {
-    backgroundColor: '#1a1a1a',
-    color: '#fff',
-    border: '1px solid #333',
+    backgroundColor: 'var(--color-bg-elevated)',
+    color: 'var(--color-text-primary)',
+    border: '1px solid var(--color-border-light)',
   },
   buttonSuccess: {
-    backgroundColor: '#22c55e',
-    color: '#fff',
+    backgroundColor: 'var(--color-success)',
+    color: 'var(--color-text-primary)',
     border: 'none',
   },
   tabs: {
     display: 'flex',
-    borderBottom: '1px solid #333',
+    borderBottom: '1px solid var(--color-border-light)',
   },
   tab: {
     padding: '0.75rem 1.5rem',
@@ -141,13 +141,13 @@ const styles = {
     fontWeight: '500',
     cursor: 'pointer',
     borderBottom: '2px solid transparent',
-    color: '#999',
+    color: 'var(--color-text-secondary)',
     backgroundColor: 'transparent',
     border: 'none',
   },
   tabActive: {
-    color: '#fff',
-    borderBottom: '2px solid #6366f1',
+    color: 'var(--color-text-primary)',
+    borderBottom: '2px solid var(--color-primary)',
   },
   // Share Modal Styles
   modalOverlay: {
@@ -163,9 +163,9 @@ const styles = {
     zIndex: 1000,
   },
   modal: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'var(--color-bg-elevated)',
     borderRadius: '1rem',
-    border: '1px solid #333',
+    border: '1px solid var(--color-border-light)',
     width: '100%',
     maxWidth: '520px',
     maxHeight: '90vh',
@@ -176,18 +176,18 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '1rem 1.5rem',
-    borderBottom: '1px solid #333',
+    borderBottom: '1px solid var(--color-border-light)',
   },
   modalTitle: {
     fontSize: '1.125rem',
     fontWeight: '600',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     margin: 0,
   },
   modalClose: {
     backgroundColor: 'transparent',
     border: 'none',
-    color: '#666',
+    color: 'var(--color-text-disabled)',
     fontSize: '1.5rem',
     cursor: 'pointer',
     padding: '0.25rem',
@@ -204,19 +204,19 @@ const styles = {
   shareTab: {
     flex: 1,
     padding: '0.75rem',
-    backgroundColor: '#111',
-    border: '1px solid #333',
+    backgroundColor: 'var(--color-bg-main)',
+    border: '1px solid var(--color-border-light)',
     borderRadius: '0.5rem',
-    color: '#999',
+    color: 'var(--color-text-secondary)',
     fontSize: '0.875rem',
     fontWeight: '500',
     cursor: 'pointer',
     transition: 'all 0.2s',
   },
   shareTabActive: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
-    color: '#fff',
+    backgroundColor: 'var(--color-primary)',
+    borderColor: 'var(--color-primary)',
+    color: 'var(--color-text-primary)',
   },
   inputGroup: {
     marginBottom: '1rem',
@@ -224,7 +224,7 @@ const styles = {
   inputLabel: {
     display: 'block',
     fontSize: '0.75rem',
-    color: '#999',
+    color: 'var(--color-text-secondary)',
     marginBottom: '0.5rem',
   },
   inputWrapper: {
@@ -234,34 +234,34 @@ const styles = {
   shareInput: {
     flex: 1,
     padding: '0.75rem 1rem',
-    backgroundColor: '#111',
-    border: '1px solid #333',
+    backgroundColor: 'var(--color-bg-main)',
+    border: '1px solid var(--color-border-light)',
     borderRadius: '0.5rem',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     fontSize: '0.875rem',
     fontFamily: 'monospace',
   },
   copyButton: {
     padding: '0.75rem 1rem',
-    backgroundColor: '#333',
+    backgroundColor: 'var(--color-border-light)',
     border: 'none',
     borderRadius: '0.5rem',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     cursor: 'pointer',
     fontSize: '0.875rem',
     fontWeight: '500',
     whiteSpace: 'nowrap' as const,
   },
   copySuccess: {
-    backgroundColor: '#22c55e',
+    backgroundColor: 'var(--color-success)',
   },
   embedCode: {
     width: '100%',
     padding: '1rem',
-    backgroundColor: '#111',
-    border: '1px solid #333',
+    backgroundColor: 'var(--color-bg-main)',
+    border: '1px solid var(--color-border-light)',
     borderRadius: '0.5rem',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     fontSize: '0.75rem',
     fontFamily: 'monospace',
     resize: 'vertical' as const,
@@ -275,16 +275,16 @@ const styles = {
     padding: '1rem',
   },
   qrCode: {
-    backgroundColor: '#fff',
+    backgroundColor: 'var(--color-text-primary)',
     padding: '1rem',
     borderRadius: '0.5rem',
   },
   downloadButton: {
     padding: '0.75rem 1.5rem',
-    backgroundColor: '#6366f1',
+    backgroundColor: 'var(--color-primary)',
     border: 'none',
     borderRadius: '0.5rem',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     cursor: 'pointer',
     fontSize: '0.875rem',
     fontWeight: '500',
@@ -294,8 +294,8 @@ const styles = {
     alignItems: 'center',
     gap: '0.75rem',
     padding: '1rem',
-    backgroundColor: '#7f1d1d30',
-    border: '1px solid #b91c1c',
+    backgroundColor: 'var(--color-error-dark)',
+    border: '1px solid var(--color-error-dark)',
     borderRadius: '0.5rem',
     marginBottom: '1rem',
   },
@@ -304,7 +304,7 @@ const styles = {
   },
   warningText: {
     fontSize: '0.875rem',
-    color: '#fca5a5',
+    color: 'var(--color-error-light)',
   },
 };
 
@@ -756,9 +756,9 @@ function PageTabs({
         display: 'flex',
         alignItems: 'center',
         padding: '0.5rem 1rem',
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--color-border-light)',
         gap: '0.5rem',
-        backgroundColor: '#111',
+        backgroundColor: 'var(--color-bg-main)',
         overflowX: 'auto',
       }}
     >
@@ -777,9 +777,9 @@ function PageTabs({
               padding: '0.5rem 1rem',
               fontSize: '0.875rem',
               fontWeight: currentPageIndex === index ? '600' : '400',
-              color: currentPageIndex === index ? '#fff' : '#999',
-              backgroundColor: currentPageIndex === index ? '#1a1a1a' : 'transparent',
-              border: currentPageIndex === index ? '1px solid #333' : '1px solid transparent',
+              color: currentPageIndex === index ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              backgroundColor: currentPageIndex === index ? 'var(--color-bg-elevated)' : 'transparent',
+              border: currentPageIndex === index ? '1px solid var(--color-border-light)' : '1px solid transparent',
               borderRadius: '0.375rem',
               cursor: 'pointer',
             }}
@@ -792,7 +792,7 @@ function PageTabs({
               style={{
                 padding: '0.25rem 0.5rem',
                 fontSize: '0.75rem',
-                color: '#dc2626',
+                color: 'var(--color-error-dark)',
                 backgroundColor: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
@@ -808,9 +808,9 @@ function PageTabs({
         style={{
           padding: '0.5rem 1rem',
           fontSize: '0.875rem',
-          color: '#6366f1',
+          color: 'var(--color-primary)',
           backgroundColor: 'transparent',
-          border: '1px dashed #333',
+          border: '1px dashed var(--color-border-light)',
           borderRadius: '0.375rem',
           cursor: 'pointer',
         }}
@@ -833,13 +833,13 @@ interface FormSettingsProps {
 function FormSettings({ form, onFormChange }: FormSettingsProps) {
   return (
     <div style={{ padding: '1rem' }}>
-      <h3 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+      <h3 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
         Form Settings
       </h3>
 
       {/* Form Name */}
       <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>
+        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
           Form Name
         </label>
         <input
@@ -850,17 +850,17 @@ function FormSettings({ form, onFormChange }: FormSettingsProps) {
             width: '100%',
             padding: '0.5rem',
             fontSize: '0.875rem',
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-elevated)',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '0.375rem',
-            color: '#fff',
+            color: 'var(--color-text-primary)',
           }}
         />
       </div>
 
       {/* Description */}
       <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>
+        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
           Description
         </label>
         <textarea
@@ -871,10 +871,10 @@ function FormSettings({ form, onFormChange }: FormSettingsProps) {
             width: '100%',
             padding: '0.5rem',
             fontSize: '0.875rem',
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-elevated)',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '0.375rem',
-            color: '#fff',
+            color: 'var(--color-text-primary)',
             resize: 'vertical',
           }}
         />
@@ -882,7 +882,7 @@ function FormSettings({ form, onFormChange }: FormSettingsProps) {
 
       {/* Submit Button Text */}
       <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>
+        <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
           Submit Button Text
         </label>
         <input
@@ -898,10 +898,10 @@ function FormSettings({ form, onFormChange }: FormSettingsProps) {
             width: '100%',
             padding: '0.5rem',
             fontSize: '0.875rem',
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-elevated)',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '0.375rem',
-            color: '#fff',
+            color: 'var(--color-text-primary)',
           }}
         />
       </div>
@@ -980,7 +980,7 @@ function ToggleSetting({ label, checked, onChange }: ToggleSettingProps) {
         style={{
           width: '40px',
           height: '22px',
-          backgroundColor: checked ? '#6366f1' : '#333',
+          backgroundColor: checked ? 'var(--color-primary)' : 'var(--color-border-light)',
           borderRadius: '11px',
           position: 'relative',
           cursor: 'pointer',
@@ -991,7 +991,7 @@ function ToggleSetting({ label, checked, onChange }: ToggleSettingProps) {
           style={{
             width: '18px',
             height: '18px',
-            backgroundColor: '#fff',
+            backgroundColor: 'var(--color-text-primary)',
             borderRadius: '50%',
             position: 'absolute',
             top: '2px',
@@ -1049,20 +1049,20 @@ function ShareModal({ form, onClose }: ShareModalProps) {
     // This is a placeholder - in production, use a QR library like qrcode
     return (
       <svg width={qrSize} height={qrSize} viewBox={`0 0 ${qrSize} ${qrSize}`}>
-        <rect fill="#fff" width={qrSize} height={qrSize} />
+        <rect fill="var(--color-text-primary)" width={qrSize} height={qrSize} />
         <rect fill="#000" x="20" y="20" width="40" height="40" />
-        <rect fill="#fff" x="30" y="30" width="20" height="20" />
+        <rect fill="var(--color-text-primary)" x="30" y="30" width="20" height="20" />
         <rect fill="#000" x="140" y="20" width="40" height="40" />
-        <rect fill="#fff" x="150" y="30" width="20" height="20" />
+        <rect fill="var(--color-text-primary)" x="150" y="30" width="20" height="20" />
         <rect fill="#000" x="20" y="140" width="40" height="40" />
-        <rect fill="#fff" x="30" y="150" width="20" height="20" />
+        <rect fill="var(--color-text-primary)" x="30" y="150" width="20" height="20" />
         <rect fill="#000" x="80" y="80" width="40" height="40" />
         <text
           x={qrSize / 2}
           y={qrSize - 10}
           textAnchor="middle"
           fontSize="10"
-          fill="#666"
+          fill="var(--color-text-disabled)"
         >
           QR Code Preview
         </text>
@@ -1149,7 +1149,7 @@ function ShareModal({ form, onClose }: ShareModalProps) {
                   </button>
                 </div>
               </div>
-              <p style={{ fontSize: '0.75rem', color: '#666', margin: 0 }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', margin: 0 }}>
                 Share this link with anyone to let them fill out your form.
               </p>
             </div>
@@ -1166,7 +1166,7 @@ function ShareModal({ form, onClose }: ShareModalProps) {
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={{ fontSize: '0.75rem', color: '#666', margin: 0 }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', margin: 0 }}>
                   Paste this code into your website HTML.
                 </p>
                 <button
@@ -1189,7 +1189,7 @@ function ShareModal({ form, onClose }: ShareModalProps) {
               <div style={styles.qrCode}>
                 {generateQRPlaceholder()}
               </div>
-              <p style={{ fontSize: '0.75rem', color: '#666', margin: 0, textAlign: 'center' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', margin: 0, textAlign: 'center' }}>
                 Scan this QR code to open the form on a mobile device.
               </p>
               <button

@@ -28,21 +28,21 @@ export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({
   const getConfidenceColor = () => {
     if (confidence >= CONFIDENCE_THRESHOLDS.HIGH) {
       return {
-        bg: '#1a3a1a',
-        border: '#2a5a2a',
-        text: '#4ade80',
+        bg: 'var(--color-success-dark)',
+        border: 'var(--color-success-dark)',
+        text: 'var(--color-success-light)',
       };
     } else if (confidence >= CONFIDENCE_THRESHOLDS.MEDIUM) {
       return {
-        bg: '#3a3a1a',
-        border: '#5a5a2a',
-        text: '#fbbf24',
+        bg: 'var(--color-warning-dark)',
+        border: 'var(--color-warning-dark)',
+        text: 'var(--color-warning-light)',
       };
     } else {
       return {
-        bg: '#1a1a2a',
-        border: '#2a2a4a',
-        text: '#60a5fa',
+        bg: 'var(--color-bg-elevated)',
+        border: 'var(--color-border-main)',
+        text: 'var(--color-info-light)',
       };
     }
   };
@@ -117,7 +117,7 @@ export const PrefilledFieldWrapper: React.FC<PrefilledFieldWrapperProps> = ({
         {isConfirmed && (
           <div style={{
             fontSize: '0.75rem',
-            color: '#4ade80',
+            color: 'var(--color-success-light)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.25rem',
@@ -129,7 +129,7 @@ export const PrefilledFieldWrapper: React.FC<PrefilledFieldWrapperProps> = ({
         {isRejected && (
           <div style={{
             fontSize: '0.75rem',
-            color: '#666',
+            color: 'var(--color-text-disabled)',
             display: 'flex',
             alignItems: 'center',
             gap: '0.25rem',
@@ -144,15 +144,15 @@ export const PrefilledFieldWrapper: React.FC<PrefilledFieldWrapperProps> = ({
         style={{
           position: 'relative',
           border: isConfirmed
-            ? '2px solid #2a5a2a'
+            ? '2px solid var(--color-success-dark)'
             : isRejected
-            ? '2px solid #666'
+            ? '2px solid var(--color-text-disabled)'
             : fieldConfidence.suggestedAction === 'hint'
-            ? '2px dashed #2a2a4a'
-            : '2px solid #5a5a2a',
+            ? '2px dashed var(--color-border-main)'
+            : '2px solid var(--color-warning-dark)',
           borderRadius: '0.5rem',
           padding: '0.125rem',
-          backgroundColor: isConfirmed ? '#1a3a1a' : 'transparent',
+          backgroundColor: isConfirmed ? 'var(--color-success-dark)' : 'transparent',
         }}
       >
         {children}
@@ -171,20 +171,20 @@ export const PrefilledFieldWrapper: React.FC<PrefilledFieldWrapperProps> = ({
             onClick={onConfirm}
             style={{
               padding: '0.5rem 1rem',
-              backgroundColor: '#2a5a2a',
-              border: '1px solid #4ade80',
+              backgroundColor: 'var(--color-success-dark)',
+              border: '1px solid var(--color-success-light)',
               borderRadius: '0.375rem',
-              color: '#4ade80',
+              color: 'var(--color-success-light)',
               fontSize: '0.75rem',
               fontWeight: '600',
               cursor: 'pointer',
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#1a4a1a';
+              e.currentTarget.style.backgroundColor = 'var(--color-success-dark)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#2a5a2a';
+              e.currentTarget.style.backgroundColor = 'var(--color-success-dark)';
             }}
           >
             ✓ Looks good
@@ -195,21 +195,21 @@ export const PrefilledFieldWrapper: React.FC<PrefilledFieldWrapperProps> = ({
             style={{
               padding: '0.5rem 1rem',
               backgroundColor: 'transparent',
-              border: '1px solid #666',
+              border: '1px solid var(--color-text-disabled)',
               borderRadius: '0.375rem',
-              color: '#999',
+              color: 'var(--color-text-secondary)',
               fontSize: '0.75rem',
               fontWeight: '600',
               cursor: 'pointer',
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#1a1a1a';
-              e.currentTarget.style.color = '#fff';
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)';
+              e.currentTarget.style.color = 'var(--color-text-primary)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#999';
+              e.currentTarget.style.color = 'var(--color-text-secondary)';
             }}
           >
             ✎ Let me edit
@@ -223,15 +223,15 @@ export const PrefilledFieldWrapper: React.FC<PrefilledFieldWrapperProps> = ({
           style={{
             marginTop: '0.5rem',
             padding: '0.75rem',
-            backgroundColor: '#1a1a2a',
-            border: '1px solid #2a2a4a',
+            backgroundColor: 'var(--color-bg-elevated)',
+            border: '1px solid var(--color-border-main)',
             borderRadius: '0.375rem',
             fontSize: '0.75rem',
-            color: '#60a5fa',
+            color: 'var(--color-info-light)',
           }}
         >
           💡 <strong>Suggestion:</strong> {String(fieldConfidence.value)}
-          <div style={{ marginTop: '0.25rem', color: '#888', fontSize: '0.7rem' }}>
+          <div style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)', fontSize: '0.7rem' }}>
             We found this information but aren&apos;t very confident. Please verify.
           </div>
         </div>
@@ -265,27 +265,27 @@ export const PrefillStatusBanner: React.FC<PrefillStatusBannerProps> = ({
         emoji: '🎉',
         title: 'Great news!',
         message: `We auto-filled ${fieldsPrefilledCount} fields with high confidence from your website.`,
-        color: '#4ade80',
-        bg: '#1a3a1a',
-        border: '#2a5a2a',
+        color: 'var(--color-success-light)',
+        bg: 'var(--color-success-dark)',
+        border: 'var(--color-success-dark)',
       };
     } else if (overallConfidence >= CONFIDENCE_THRESHOLDS.MEDIUM) {
       return {
         emoji: '👍',
         title: 'Almost there!',
         message: `We found ${fieldsPrefilledCount} fields from your website. Please confirm the suggestions.`,
-        color: '#fbbf24',
-        bg: '#3a3a1a',
-        border: '#5a5a2a',
+        color: 'var(--color-warning-light)',
+        bg: 'var(--color-warning-dark)',
+        border: 'var(--color-warning-dark)',
       };
     } else {
       return {
         emoji: '💡',
         title: 'We found some hints',
         message: `We found ${fieldsPrefilledCount} suggestions from your website. You'll need to verify most fields.`,
-        color: '#60a5fa',
-        bg: '#1a1a2a',
-        border: '#2a2a4a',
+        color: 'var(--color-info-light)',
+        bg: 'var(--color-bg-elevated)',
+        border: 'var(--color-border-main)',
       };
     }
   };
@@ -310,11 +310,11 @@ export const PrefillStatusBanner: React.FC<PrefillStatusBannerProps> = ({
             {msg.title}
           </div>
           
-          <div style={{ color: '#ccc', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
+          <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
             {msg.message}
           </div>
           
-          <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.75rem', color: '#888' }}>
+          <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
             <div>
               <strong style={{ color: msg.color }}>{fieldsPrefilledCount}</strong> fields prefilled
             </div>
@@ -335,9 +335,9 @@ export const PrefillStatusBanner: React.FC<PrefillStatusBannerProps> = ({
             style={{
               padding: '0.5rem 1rem',
               backgroundColor: 'transparent',
-              border: '1px solid #666',
+              border: '1px solid var(--color-text-disabled)',
               borderRadius: '0.375rem',
-              color: '#999',
+              color: 'var(--color-text-secondary)',
               fontSize: '0.75rem',
               fontWeight: '600',
               cursor: 'pointer',
@@ -362,8 +362,8 @@ export const PrefillLoadingState: React.FC = () => {
       style={{
         padding: '3rem',
         textAlign: 'center',
-        backgroundColor: '#1a1a1a',
-        border: '2px solid #2a2a2a',
+        backgroundColor: 'var(--color-bg-elevated)',
+        border: '2px solid var(--color-border-main)',
         borderRadius: '0.75rem',
         marginBottom: '2rem',
       }}
@@ -372,11 +372,11 @@ export const PrefillLoadingState: React.FC = () => {
         🔍
       </div>
       
-      <div style={{ color: '#fff', fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.5rem' }}>
+      <div style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.5rem' }}>
         Analyzing your website...
       </div>
       
-      <div style={{ color: '#999', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+      <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
         We&apos;re discovering information about your business to pre-fill this form.
         This usually takes 10-30 seconds.
       </div>
@@ -387,7 +387,7 @@ export const PrefillLoadingState: React.FC = () => {
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            backgroundColor: '#6366f1',
+            backgroundColor: 'var(--color-primary)',
             animation: 'bounce 1.4s infinite ease-in-out',
             animationDelay: '0s',
           }}
@@ -397,7 +397,7 @@ export const PrefillLoadingState: React.FC = () => {
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            backgroundColor: '#6366f1',
+            backgroundColor: 'var(--color-primary)',
             animation: 'bounce 1.4s infinite ease-in-out',
             animationDelay: '0.2s',
           }}
@@ -407,7 +407,7 @@ export const PrefillLoadingState: React.FC = () => {
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            backgroundColor: '#6366f1',
+            backgroundColor: 'var(--color-primary)',
             animation: 'bounce 1.4s infinite ease-in-out',
             animationDelay: '0.4s',
           }}
