@@ -1,7 +1,7 @@
 # RapidCompliance.US - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 3, 2026 (DEFAULT_ORG_ID updated to rapid-compliance-root, identity lock applied)
+**Last Updated:** February 3, 2026 (Ironclad Architecture Rules codified — One Company, Workforce Registry, Theme Governance, Navigation Hierarchy, Firebase Flat Pathing)
 **Branches:** `dev` at commit `e8a707c0`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -12,19 +12,20 @@
 ## Table of Contents
 
 1. [Executive Summary](#executive-summary)
-2. [Single-Tenant Conversion Plan](#single-tenant-conversion-plan) **[NEW - February 2026]**
-3. [Verified Live Route Map](#verified-live-route-map)
-4. [Agent Registry](#agent-registry)
-5. [Unified RBAC Matrix](#unified-rbac-matrix)
-6. [Security Audit Findings](#security-audit-findings)
-7. [Tooling Inventory](#tooling-inventory)
-8. [Infrastructure Systems](#infrastructure-systems)
-9. [Integration Status](#integration-status)
-10. [Firestore Collections](#firestore-collections)
-11. [Architecture Notes](#architecture-notes)
-12. [Data Contracts Reference](#data-contracts-reference)
-13. [Autonomous Verification](#autonomous-verification)
-14. [Document Maintenance](#document-maintenance)
+2. [Ironclad Architecture Rules](#ironclad-architecture-rules) **[BINDING - February 3, 2026]**
+3. [Single-Tenant Conversion Plan](#single-tenant-conversion-plan)
+4. [Verified Live Route Map](#verified-live-route-map)
+5. [Agent Registry](#agent-registry)
+6. [Unified RBAC Matrix](#unified-rbac-matrix)
+7. [Security Audit Findings](#security-audit-findings)
+8. [Tooling Inventory](#tooling-inventory)
+9. [Infrastructure Systems](#infrastructure-systems)
+10. [Integration Status](#integration-status)
+11. [Firestore Collections](#firestore-collections)
+12. [Architecture Notes](#architecture-notes)
+13. [Data Contracts Reference](#data-contracts-reference)
+14. [Autonomous Verification](#autonomous-verification)
+15. [Document Maintenance](#document-maintenance)
 
 ---
 
@@ -117,6 +118,208 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 - `npm run build` must succeed
 - No new `any` types introduced
 - No new eslint-disable comments added
+
+---
+
+## Ironclad Architecture Rules
+
+> **Status:** BINDING — These rules are non-negotiable architectural constraints. Any code that violates them is a **bug** and must be corrected immediately. No exception, no discussion.
+
+---
+
+### Rule 1: The "One Company" Rule
+
+**`rapid-compliance-root` is the ONLY valid organization ID in this system. Period.**
+
+| Aspect | Detail |
+|--------|--------|
+| **Constant** | `DEFAULT_ORG_ID = 'rapid-compliance-root'` in `src/lib/constants/platform.ts` |
+| **Company Config** | `COMPANY_CONFIG = { id: 'rapid-compliance-root', name: 'RapidCompliance.US' }` |
+| **Firebase Project** | `rapid-compliance-65f87` (enforced by `CriticalConfigurationError` kill-switch) |
+| **Validation Helpers** | `isDefaultOrg(orgId)` confirms identity; `getDefaultOrgId()` returns the constant |
+
+**Enforcement:**
+- All Firestore paths, API routes, and service classes use `DEFAULT_ORG_ID` exclusively
+- `CriticalConfigurationError` in `src/lib/firebase/config.ts` halts the application if any other Firebase project is detected at runtime
+- Service classes accept deprecated `orgId` parameters for backward compatibility but **ignore them** — all methods route to `DEFAULT_ORG_ID` internally
+
+**Bug Definition:** Any code that introduces dynamic organization IDs, org-switching logic, tenant selection, multi-org routing, or parameterized org resolution is a **bug**. There is no org picker. There is no tenant dropdown. Clients purchase services — they do NOT get tenants.
+
+---
+
+### Rule 2: Unified AI Workforce Registry
+
+**The 51 AI Agents are managed through a single global registry in Firestore, not per-user and not per-tenant.**
+
+| Aspect | Detail |
+|--------|--------|
+| **Registry File** | `AGENT_REGISTRY.json` (project root — authoritative manifest) |
+| **Runtime Registry** | `src/lib/agents/index.ts` (factory functions, swarm wiring) |
+| **Firestore: Agent Config** | `organizations/rapid-compliance-root/agentConfig/{agentId}` |
+| **Firestore: Golden Masters** | `organizations/rapid-compliance-root/goldenMasters/{masterId}` |
+| **Firestore: Training Data** | `organizations/rapid-compliance-root/trainingData/{dataId}` |
+
+**Hierarchy:**
+
+```
+MASTER_ORCHESTRATOR (L1 - Swarm CEO)
+├── INTELLIGENCE_MANAGER (L2) → 5 Specialists
+├── MARKETING_MANAGER (L2) → 5 Specialists
+├── BUILDER_MANAGER (L2) → 4 Specialists
+├── ARCHITECT_MANAGER (L2) → 3 Specialists
+├── COMMERCE_MANAGER (L2) → 5 Specialists
+├── OUTREACH_MANAGER (L2) → 2 Specialists
+├── CONTENT_MANAGER (L2) → 3 Specialists
+├── REVENUE_DIRECTOR (L2) → 5 Specialists
+└── REPUTATION_MANAGER (L2) → 4 Specialists
+
+Standalone: JASPER_GOLDEN_MASTER, VOICE_AGENT_HANDLER,
+           AUTONOMOUS_POSTING_AGENT, CHAT_SESSION_SERVICE
+```
+
+**Total: 47 Swarm (1 + 9 + 37) + 4 Standalone = 51 Agents**
+
+**Governance:** Agents are deployed, trained, and configured at the **platform level**. The `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) creates ephemeral session instances from Golden Masters — these are temporary runtime objects, not persistent per-user registries.
+
+**Bug Definition:** Any code that creates user-scoped agent registries, per-tenant agent configurations, or duplicate agent manifests outside the global registry is a **bug**.
+
+---
+
+### Rule 3: Theme Governance — CSS Variables Only
+
+**All UI components MUST use CSS variables for colors. Hard-coded hex values are FORBIDDEN in component code.**
+
+| Aspect | Detail |
+|--------|--------|
+| **Variable Source** | `src/app/globals.css` (`:root` block) |
+| **Admin Scope** | `.admin-theme-scope` class — overrides `--color-*` with `--admin-color-*` |
+| **Client Scope** | `:root` (document-level) via `useOrgTheme()` hook |
+| **Admin Hook** | `useAdminTheme()` — loads from `platform_settings/adminTheme` |
+| **Client Hook** | `useOrgTheme()` — loads from `organizations/rapid-compliance-root/themes/default` |
+
+**Required Pattern (CORRECT):**
+```css
+color: var(--color-primary);
+background: var(--color-bg-main);
+background: rgba(var(--color-primary-rgb), 0.5);
+border-color: var(--color-border-main);
+```
+
+**Forbidden Pattern (BUG):**
+```css
+color: #6366f1;
+background: #000000;
+background: rgb(99, 102, 241);
+border-color: #1a1a1a;
+```
+
+**Core CSS Variable Families:**
+
+| Family | Variables | Purpose |
+|--------|-----------|---------|
+| Primary | `--color-primary`, `--color-primary-light`, `--color-primary-dark`, `--color-primary-rgb` | Brand primary color |
+| Secondary | `--color-secondary`, `--color-secondary-light`, `--color-secondary-dark` | Brand secondary color |
+| Accent | `--color-accent`, `--color-accent-light`, `--color-accent-dark` | Accent highlights |
+| Semantic | `--color-success`, `--color-warning`, `--color-error`, `--color-info` | Status indicators |
+| Background | `--color-bg-main`, `--color-bg-paper`, `--color-bg-elevated` | Surface backgrounds |
+| Text | `--color-text-primary`, `--color-text-secondary`, `--color-text-disabled` | Typography colors |
+| Border | `--color-border-main`, `--color-border-light`, `--color-border-strong` | Border colors |
+| Neutral | `--color-neutral-100` through `--color-neutral-900` | Gray scale |
+
+**Theme Isolation Guarantee:**
+- Changing a client theme at `/settings/theme` does NOT affect the Admin Dashboard
+- Admin UI is wrapped in `.admin-theme-scope` which overrides all `--color-*` with `--admin-color-*`
+- CSS cascading ensures admin variables always win within the admin container
+
+**Known Exception:** `AdminSidebar.tsx` uses `iconColor` hex strings in its navigation config for Lucide icon coloring. These are static navigation constants in the config array — not dynamic component styling. Future work should migrate these to CSS variable references.
+
+**Bug Definition:** Any component that uses literal hex codes, `rgb()` values, or hard-coded color strings for theming instead of CSS variables is a **bug**.
+
+---
+
+### Rule 4: Navigation Hierarchy — Consolidated Sidebar
+
+**All navigation lives in a single `AdminSidebar` component. The legacy "God Mode" sidebar is dead. Do not resurrect it.**
+
+| Aspect | Detail |
+|--------|--------|
+| **Source** | `src/components/admin/AdminSidebar.tsx` |
+| **Sections** | 12 navigation sections, 70+ menu items |
+| **Width** | 280px expanded / 64px collapsed |
+| **Theming** | 100% CSS variable-driven via `var(--color-*)` |
+| **Routing** | All static routes — no `[orgId]` parameters in sidebar links |
+
+**Consolidated Navigation Structure:**
+
+| # | Section | Items |
+|---|---------|-------|
+| 1 | **Command Center** | Dashboard, Workforce HQ |
+| 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Conversations, Living Ledger |
+| 3 | **Lead Gen** | Forms, Lead Research, Lead Scoring |
+| 4 | **Outbound** | Outbound, Sequences, Campaigns, Email Writer, Nurture, Calls |
+| 5 | **Content Factory** | Video Studio, Social Media, Proposals, Battlecards |
+| 6 | **AI Workforce** | Agent Registry, Training Center, Agent Persona, Voice AI Lab, Social AI Lab, SEO AI Lab, Datasets, Fine-Tuning |
+| 7 | **Automation** | Workflows, A/B Testing, Lead Routing |
+| 8 | **E-Commerce** | Products, Orders, Storefront |
+| 9 | **Compliance** | Compliance Reports, Audit Log |
+| 10 | **Analytics** | Overview, Revenue, Pipeline, Sales Performance, Sequences |
+| 11 | **Website** | Site Editor, Pages, Blog, SEO, Domains, Site Settings |
+| 12 | **Settings** | General, Users & Team, Integrations, API Keys, Theme & Branding, Security |
+
+**Deleted Components (Forensic Record):**
+- `CommandCenterSidebar.tsx` — Deleted January 26, 2026 (commit `f2d2497b`)
+- God Mode sidebar logic — Absorbed into unified `AdminSidebar.tsx`
+- `UnifiedSidebar.tsx` in admin context — Superseded by `AdminSidebar.tsx` for admin routes
+
+**Dashboard vs. Admin Navigation:**
+- **Dashboard routes** (`/(dashboard)/*`) use `buildNavigationStructure()` from `feature-toggle-service.ts` — 11 client sections, no System tools
+- **Admin routes** (`/admin/*`) use `AdminSidebar.tsx` — 12 sections including all operational tools
+
+**Bug Definition:** Any code that creates parallel navigation structures, reintroduces God Mode sidebars, builds shadow navigation components, or splits sidebar logic into disconnected files is a **bug**.
+
+---
+
+### Rule 5: Firebase Flat Pathing
+
+**Firestore uses a flat pathing model. `users` and `platform_settings` are root-level collections. Organization data nests under the single `rapid-compliance-root` document.**
+
+**Root-Level Collections (Flat — NOT nested under any org):**
+
+| Collection | Path Pattern | Purpose |
+|------------|-------------|---------|
+| `users` | `users/{userId}` | User profiles and auth data |
+| `platform_settings` | `platform_settings/{settingId}` | Global platform configuration (admin theme, feature flags) |
+| `platform_metrics` | `platform_metrics/{metricId}` | Platform-wide analytics metrics |
+| `health` | `health/{healthId}` | System health check records |
+| `discoveryQueue` | `discoveryQueue/{itemId}` | Lead discovery queue items |
+| `admin` | `admin/{configId}` | Admin-level configurations |
+| `slack_workspaces` | `slack_workspaces/{workspaceId}` | Slack OAuth workspace configs |
+
+**Organization-Scoped Collections (under single org root):**
+
+| Collection | Path Pattern | Purpose |
+|------------|-------------|---------|
+| Agent Config | `organizations/rapid-compliance-root/agentConfig/{agentId}` | AI agent settings |
+| Golden Masters | `organizations/rapid-compliance-root/goldenMasters/{masterId}` | Trained AI model snapshots |
+| Themes | `organizations/rapid-compliance-root/themes/default` | Client theme configuration |
+| Workspaces | `organizations/rapid-compliance-root/workspaces/{wsId}` | Workspace containers |
+| CRM Records | `organizations/rapid-compliance-root/workspaces/{wsId}/entities/{entity}/records/{id}` | Entity records |
+| Schemas | `organizations/rapid-compliance-root/workspaces/{wsId}/schemas/{schemaId}` | Data schemas |
+| Email Campaigns | `organizations/rapid-compliance-root/emailCampaigns/{campaignId}` | Email campaign data |
+| Nurture Sequences | `organizations/rapid-compliance-root/nurtureSequences/{sequenceId}` | Nurture sequence data |
+| Signals | `organizations/rapid-compliance-root/signals/{signalId}` | Agent signal bus events |
+
+**Path Builders (in `src/lib/db/firestore-service.ts`):**
+
+```typescript
+orgPath(subPath)           → organizations/rapid-compliance-root/{subPath}
+workspacePath(wsId, sub)   → organizations/rapid-compliance-root/workspaces/{wsId}/{sub}
+entityRecordsPath(wsId, e) → organizations/rapid-compliance-root/workspaces/{wsId}/entities/{e}/records
+```
+
+All three functions are hardcoded to `DEFAULT_ORG_ID`. There is no dynamic org parameter.
+
+**Bug Definition:** Any code that constructs Firestore paths with dynamic organization IDs, nests `users` or `platform_settings` under an organization document, or creates per-user root-level collections for data that belongs at org scope is a **bug**.
 
 ---
 
@@ -483,7 +686,7 @@ Tasks are tracked in Claude Code session. Current status:
 /admin/organizations/[id]           # Organization detail
 /admin/organizations/[id]/edit      # Edit organization
 
-# Admin Support Views (45 org-level routes for God Mode access)
+# Admin Support Views (45 org-level routes for platform admin access)
 /admin/organizations/[id]/dashboard         # Org dashboard
 /admin/organizations/[id]/leads             # Lead management
 /admin/organizations/[id]/deals             # Deal pipeline
@@ -1250,10 +1453,11 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 | canProcessOrders | YES | YES | YES | YES | YES |
 | canManageProducts | YES | YES | YES | YES | - |
 
-### Navigation Section Visibility (12 Sections - God-Mode Structure)
+### Navigation Section Visibility (12 Sections - Consolidated Sidebar)
 
+**12 Unified Sections** in `AdminSidebar.tsx` (permission-gated per role):
 **11 Operational Sections** (available to client roles with permission gating)
-**1 System Section** (superadmin only)
+**1 System Section** (superadmin only — see Rule 4 in Ironclad Architecture Rules)
 
 | Section | superadmin | owner | admin | manager | employee | Key Permission |
 |---------|----------------|-------|-------|---------|----------|----------------|
@@ -1273,7 +1477,7 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 *Limited items visible based on specific permissions
 **Admin cannot see Billing (requires canManageBilling)
 
-**God-Mode Verification:** Platform admin sees all 12 sections simultaneously
+**Admin Verification:** Platform admin sees all 12 sections simultaneously in `AdminSidebar.tsx`
 
 ### RBAC Source Files
 
@@ -1991,13 +2195,16 @@ The build pipeline now enforces **mandatory TypeScript type-checking** as a non-
 
 **No Bypass Policy:** The `--noEmit` flag ensures type-checking runs without generating output files. There are no suppression flags. All type errors must be resolved before `next build` executes.
 
-### Multi-Tenancy Model
+### Single-Tenant Model (Penthouse)
 
-- Each organization has isolated data in Firestore
-- Organizations identified by unique `organizationId`
-- Feature visibility configurable per-organization
-- Agents inherit organization context
-- Environment-aware collection prefixing (test_ prefix in non-production)
+> **See also:** [Ironclad Architecture Rules](#ironclad-architecture-rules) — Rules 1 and 5
+
+- **One organization:** `rapid-compliance-root` is the only org in the system (Rule 1)
+- All Firestore data scoped to `organizations/rapid-compliance-root/` or flat root collections (Rule 5)
+- Feature visibility configurable at the platform level, not per-tenant
+- All 51 AI agents operate under the single org identity (Rule 2)
+- `DEFAULT_ORG_ID` constant used by all service classes — no dynamic org resolution
+- Legacy `organizationId` parameters in service classes are deprecated and ignored
 
 ### Middleware Routing Strategy
 
