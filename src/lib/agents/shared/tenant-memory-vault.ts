@@ -242,17 +242,14 @@ export class TenantMemoryVault {
    * Write an entry to the vault
    */
   write<T>(
-    tenantId: string,
     category: MemoryCategory,
     key: string,
     value: T,
     agentId: string,
     options: WriteOptions = {}
   ): MemoryEntry<T> {
-    // Validate tenant scope
-    if (!tenantId || tenantId.trim() === '') {
-      throw new Error('[TenantMemoryVault] tenantId is REQUIRED - tenant scoping is mandatory');
-    }
+    // Use DEFAULT_ORG_ID internally (single-tenant mode)
+    const tenantId = DEFAULT_ORG_ID;
 
     // Get or create tenant store
     if (!this.store.has(tenantId)) {
@@ -332,7 +329,6 @@ export class TenantMemoryVault {
    * Write an insight to the vault
    */
   async writeInsight(
-    tenantId: string,
     key: string,
     insight: InsightData,
     agentId: string,
@@ -340,7 +336,6 @@ export class TenantMemoryVault {
   ): Promise<InsightEntry> {
     await Promise.resolve();
     return this.write<InsightData>(
-      tenantId,
       'INSIGHT',
       key,
       insight,
@@ -353,7 +348,6 @@ export class TenantMemoryVault {
    * Write a signal to the vault
    */
   async writeSignal(
-    tenantId: string,
     key: string,
     signal: SignalData,
     agentId: string,
@@ -361,7 +355,6 @@ export class TenantMemoryVault {
   ): Promise<SignalEntry> {
     await Promise.resolve();
     return this.write<SignalData>(
-      tenantId,
       'SIGNAL',
       key,
       signal,
@@ -378,7 +371,6 @@ export class TenantMemoryVault {
    * Write content to the vault
    */
   async writeContent(
-    tenantId: string,
     key: string,
     content: ContentData,
     agentId: string,
@@ -386,7 +378,6 @@ export class TenantMemoryVault {
   ): Promise<ContentEntry> {
     await Promise.resolve();
     return this.write<ContentData>(
-      tenantId,
       'CONTENT',
       key,
       content,
@@ -402,7 +393,6 @@ export class TenantMemoryVault {
    * Send a cross-agent message
    */
   async sendCrossAgentMessage(
-    tenantId: string,
     fromAgent: string,
     toAgent: string,
     messageType: CrossAgentData['messageType'],
@@ -425,7 +415,6 @@ export class TenantMemoryVault {
     const key = `${fromAgent}_to_${toAgent}_${Date.now()}`;
 
     return this.write<CrossAgentData>(
-      tenantId,
       'CROSS_AGENT',
       key,
       message,
@@ -442,15 +431,12 @@ export class TenantMemoryVault {
    * Read a specific entry by key
    */
   read<T>(
-    tenantId: string,
     category: MemoryCategory,
     key: string,
     agentId: string
   ): MemoryEntry<T> | null {
-    // Validate tenant scope
-    if (!tenantId || tenantId.trim() === '') {
-      throw new Error('[TenantMemoryVault] tenantId is REQUIRED - tenant scoping is mandatory');
-    }
+    // Use DEFAULT_ORG_ID internally (single-tenant mode)
+    const tenantId = DEFAULT_ORG_ID;
 
     const tenantStore = this.store.get(tenantId);
     if (!tenantStore) {
@@ -483,14 +469,11 @@ export class TenantMemoryVault {
    * Query entries by criteria
    */
   query(
-    tenantId: string,
     agentId: string,
     options: QueryOptions = {}
   ): MemoryEntry[] {
-    // Validate tenant scope
-    if (!tenantId || tenantId.trim() === '') {
-      throw new Error('[TenantMemoryVault] tenantId is REQUIRED - tenant scoping is mandatory');
-    }
+    // Use DEFAULT_ORG_ID internally (single-tenant mode)
+    const tenantId = DEFAULT_ORG_ID;
 
     const tenantStore = this.store.get(tenantId);
     if (!tenantStore) {
@@ -569,12 +552,11 @@ export class TenantMemoryVault {
    * Get all insights for a tenant
    */
   async getInsights(
-    tenantId: string,
     agentId: string,
     filter?: { type?: InsightData['type']; minConfidence?: number }
   ): Promise<InsightEntry[]> {
     await Promise.resolve();
-    const entries = this.query(tenantId, agentId, {
+    const entries = this.query(agentId, {
       category: 'INSIGHT',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -598,11 +580,10 @@ export class TenantMemoryVault {
    * Get pending signals for an agent
    */
   async getPendingSignals(
-    tenantId: string,
     agentId: string
   ): Promise<SignalEntry[]> {
     await Promise.resolve();
-    const entries = this.query(tenantId, agentId, {
+    const entries = this.query(agentId, {
       category: 'SIGNAL',
       sortBy: 'priority',
       sortOrder: 'desc',
@@ -618,12 +599,11 @@ export class TenantMemoryVault {
    * Get cross-agent messages for an agent
    */
   async getMessagesForAgent(
-    tenantId: string,
     agentId: string,
     options?: { unrespondedOnly?: boolean }
   ): Promise<CrossAgentEntry[]> {
     await Promise.resolve();
-    const entries = this.query(tenantId, agentId, {
+    const entries = this.query(agentId, {
       category: 'CROSS_AGENT',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -644,12 +624,11 @@ export class TenantMemoryVault {
    * Get content by type
    */
   async getContent(
-    tenantId: string,
     agentId: string,
     contentType?: ContentData['contentType']
   ): Promise<ContentEntry[]> {
     await Promise.resolve();
-    const entries = this.query(tenantId, agentId, {
+    const entries = this.query(agentId, {
       category: 'CONTENT',
       tags: contentType ? [contentType] : undefined,
       sortBy: 'createdAt',
@@ -667,11 +646,13 @@ export class TenantMemoryVault {
    * Subscribe to memory changes
    */
   subscribe(
-    tenantId: string,
     subscriberId: string,
     callback: MemorySubscriptionCallback,
     options: SubscriptionOptions = {}
   ): () => void {
+    // Use DEFAULT_ORG_ID internally (single-tenant mode)
+    const tenantId = DEFAULT_ORG_ID;
+
     if (!this.subscriptions.has(tenantId)) {
       this.subscriptions.set(tenantId, new Map());
     }
@@ -739,19 +720,18 @@ export class TenantMemoryVault {
    * Acknowledge a signal
    */
   async acknowledgeSignal(
-    tenantId: string,
     signalKey: string,
     agentId: string
   ): Promise<boolean> {
     await Promise.resolve();
-    const entry = this.read<SignalData>(tenantId, 'SIGNAL', signalKey, agentId);
+    const entry = this.read<SignalData>('SIGNAL', signalKey, agentId);
     if (!entry) {return false;}
 
     entry.value.acknowledged = true;
     entry.value.acknowledgedBy = agentId;
     entry.value.acknowledgedAt = new Date();
 
-    this.write(tenantId, 'SIGNAL', signalKey, entry.value, agentId, { overwrite: true });
+    this.write('SIGNAL', signalKey, entry.value, agentId, { overwrite: true });
     return true;
   }
 
@@ -759,30 +739,32 @@ export class TenantMemoryVault {
    * Mark a cross-agent message as responded
    */
   async markMessageResponded(
-    tenantId: string,
     messageKey: string,
     responseId: string,
     agentId: string
   ): Promise<boolean> {
     await Promise.resolve();
-    const entry = this.read<CrossAgentData>(tenantId, 'CROSS_AGENT', messageKey, agentId);
+    const entry = this.read<CrossAgentData>('CROSS_AGENT', messageKey, agentId);
     if (!entry) {return false;}
 
     entry.value.responded = true;
     entry.value.responseId = responseId;
 
-    this.write(tenantId, 'CROSS_AGENT', messageKey, entry.value, agentId, { overwrite: true });
+    this.write('CROSS_AGENT', messageKey, entry.value, agentId, { overwrite: true });
     return true;
   }
 
   /**
    * Get vault statistics for a tenant
    */
-  getStats(tenantId: string): {
+  getStats(): {
     totalEntries: number;
     byCategory: Record<MemoryCategory, number>;
     metrics: { reads: number; writes: number };
   } {
+    // Use DEFAULT_ORG_ID internally (single-tenant mode)
+    const tenantId = DEFAULT_ORG_ID;
+
     const tenantStore = this.store.get(tenantId);
     const metrics = this.accessMetrics.get(tenantId) ?? { reads: 0, writes: 0 };
 
@@ -816,7 +798,10 @@ export class TenantMemoryVault {
   /**
    * Clean expired entries
    */
-  cleanExpired(tenantId: string): number {
+  cleanExpired(): number {
+    // Use DEFAULT_ORG_ID internally (single-tenant mode)
+    const tenantId = DEFAULT_ORG_ID;
+
     const tenantStore = this.store.get(tenantId);
     if (!tenantStore) {return 0;}
 
@@ -891,7 +876,6 @@ export function getDefaultTenantId(): string {
  * Helper to share an insight with other agents
  */
 export async function shareInsight(
-  tenantId: string,
   agentId: string,
   insightType: InsightData['type'],
   title: string,
@@ -907,7 +891,6 @@ export async function shareInsight(
   const vault = getMemoryVault();
 
   return vault.writeInsight(
-    tenantId,
     `${agentId}_${insightType}_${Date.now()}`,
     {
       type: insightType,
@@ -928,7 +911,6 @@ export async function shareInsight(
  * Helper to broadcast a signal to other agents
  */
 export async function broadcastSignal(
-  tenantId: string,
   agentId: string,
   signalType: string,
   urgency: SignalData['urgency'],
@@ -938,7 +920,6 @@ export async function broadcastSignal(
   const vault = getMemoryVault();
 
   return vault.writeSignal(
-    tenantId,
     `${agentId}_signal_${Date.now()}`,
     {
       signalType,
@@ -956,12 +937,11 @@ export async function broadcastSignal(
  * Helper to read recent insights from other agents
  */
 export async function readAgentInsights(
-  tenantId: string,
   agentId: string,
   filter?: { type?: InsightData['type']; minConfidence?: number; limit?: number }
 ): Promise<InsightEntry[]> {
   const vault = getMemoryVault();
-  const insights = await vault.getInsights(tenantId, agentId, filter);
+  const insights = await vault.getInsights(agentId, filter);
   return insights.slice(0, filter?.limit ?? 10);
 }
 
@@ -969,11 +949,10 @@ export async function readAgentInsights(
  * Helper to check for pending signals
  */
 export async function checkPendingSignals(
-  tenantId: string,
   agentId: string
 ): Promise<SignalEntry[]> {
   const vault = getMemoryVault();
-  return vault.getPendingSignals(tenantId, agentId);
+  return vault.getPendingSignals(agentId);
 }
 
 logger.info('[TenantMemoryVault] Module loaded - Shared memory infrastructure ready');

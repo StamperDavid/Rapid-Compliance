@@ -1604,7 +1604,6 @@ export class VideoSpecialist extends BaseSpecialist {
     const scenes = storyboard.scenes as unknown[];
 
     await vault.writeContent(
-      tenantId,
       `storyboard_${videoId}`,
       {
         contentType: 'STORYBOARD',
@@ -1620,7 +1619,6 @@ export class VideoSpecialist extends BaseSpecialist {
 
     // Share insight about the video content strategy
     await shareInsight(
-      tenantId,
       this.identity.id,
       'CONTENT',
       `Video Storyboard: ${title}`,
@@ -1638,11 +1636,11 @@ export class VideoSpecialist extends BaseSpecialist {
   /**
    * Read trend insights from other agents before creating content
    */
-  private async readTrendInsightsFromVault(tenantId: string): Promise<{
+  private async readTrendInsightsFromVault(): Promise<{
     trendingTopics: string[];
     recommendations: string[];
   }> {
-    const insights = await readAgentInsights(tenantId, this.identity.id, {
+    const insights = await readAgentInsights(this.identity.id, {
       type: 'TREND',
       minConfidence: 70,
       limit: 5,
@@ -1672,7 +1670,6 @@ export class VideoSpecialist extends BaseSpecialist {
     issue: string
   ): Promise<void> {
     await broadcastSignal(
-      tenantId,
       this.identity.id,
       'VIDEO_OPTIMIZATION_NEEDED',
       'MEDIUM',
@@ -1693,7 +1690,7 @@ export class VideoSpecialist extends BaseSpecialist {
     platform: string
   ): Promise<ContentData[]> {
     const vault = getMemoryVault();
-    const content = await vault.getContent(tenantId, this.identity.id);
+    const content = await vault.getContent(this.identity.id);
 
     return content
       .filter(c => c.tags.includes(platform) || c.value.platform === platform)

@@ -1194,7 +1194,6 @@ export class MasterOrchestrator extends BaseManager {
 
       // Broadcast signal for cross-manager coordination
       await broadcastSignal(
-        tenantId,
         'MASTER_ORCHESTRATOR',
         `command.${command.targetManager.toLowerCase()}.completed`,
         'LOW',
@@ -1227,7 +1226,7 @@ export class MasterOrchestrator extends BaseManager {
   /**
    * Get aggregated status from all domain managers
    */
-  async getSwarmStatus(tenantId: string): Promise<SwarmStatus> {
+  async getSwarmStatus(_tenantId?: string): Promise<SwarmStatus> {
     const managerBriefs: ManagerBrief[] = [];
 
     // Collect briefs from all managers
@@ -1262,7 +1261,7 @@ export class MasterOrchestrator extends BaseManager {
     }
 
     // Get recent insights from TenantMemoryVault
-    const insights = await readAgentInsights(tenantId, 'MASTER_ORCHESTRATOR', { limit: 10 });
+    const insights = await readAgentInsights('MASTER_ORCHESTRATOR', { limit: 10 });
 
     // Calculate success rate
     const successRate = this.metricsCollector.totalCommands > 0
@@ -1500,7 +1499,6 @@ export class MasterOrchestrator extends BaseManager {
     confidence: number
   ): Promise<void> {
     await shareInsight(
-      tenantId,
       'MASTER_ORCHESTRATOR',
       'PERFORMANCE',
       `Goal Processed: ${intent}`,

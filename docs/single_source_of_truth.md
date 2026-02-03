@@ -1,8 +1,8 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 3, 2026 (Ironclad Architecture Rules codified — One Company, Workforce Registry, Theme Governance, Navigation Hierarchy, Firebase Flat Pathing)
-**Branches:** `dev` at commit `e8a707c0`
+**Last Updated:** February 3, 2026 (TenantMemoryVault single-tenant refactor complete, SalesVelocity.ai rebrand finalized, CSS variable theme system deployed across 100+ components)
+**Branches:** `dev` at commit `d44d1494`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -118,6 +118,36 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 - `npm run build` must succeed
 - No new `any` types introduced
 - No new eslint-disable comments added
+
+### Recent Major Milestones (February 2026)
+
+#### SalesVelocity.ai Rebrand Complete
+**Status:** ✅ **COMPLETE** (February 3, 2026)
+
+All user-facing brand references have been migrated from RapidCompliance.US to **SalesVelocity.ai**:
+- Platform name updated throughout UI components
+- `COMPANY_CONFIG.name = 'SalesVelocity.ai'` in `src/lib/constants/platform.ts`
+- Marketing materials, documentation, and public-facing content updated
+- Internal identifiers remain unchanged: `rapid-compliance-root` (org ID), `rapid-compliance-65f87` (Firebase project)
+
+#### CSS Variable Theme System Deployed
+**Status:** ✅ **COMPLETE** (February 3, 2026)
+
+Hard-coded hex colors converted to CSS variables across 100+ components (Rule 3 enforcement):
+- All components now use `var(--color-*)` pattern for theming
+- Admin dashboard isolated with `.admin-theme-scope` class
+- Client workspace uses document-level CSS variables via `useOrgTheme()`
+- Theme changes reflect instantly without page reloads
+- Known exception: `AdminSidebar.tsx` navigation config uses static hex for icon colors
+
+#### Agent Coordination Layer Refactor
+**Status:** ✅ **FULLY IMPLEMENTED** (February 3, 2026)
+
+TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
+- `tenantId` parameter removed from public API methods
+- All internal operations route to `DEFAULT_ORG_ID` exclusively
+- No dynamic organization ID resolution - hard-coded to `rapid-compliance-root`
+- Maintains backward compatibility for swarm agent coordination
 
 ---
 
@@ -509,7 +539,9 @@ Legacy workspace URLs are automatically redirected:
 12. Update `src/lib/ai/tenant-context-wrapper.ts`:
     - Use `DEFAULT_ORG_ID` constant
 13. Update `src/lib/agents/shared/tenant-memory-vault.ts`:
-    - Remove mandatory tenantId parameters
+    - Remove mandatory tenantId parameters from public API
+    - Internal methods use `DEFAULT_ORG_ID` exclusively
+    - **Status:** ✅ Fully Implemented (February 3, 2026)
 
 #### Phase 6: UI Cleanup
 14. Remove admin organization browser:
@@ -624,7 +656,7 @@ Tasks are tracked in Claude Code session. Current status:
 | Phase 2.1: Route Flattening | 1 | ✅ Complete (/(dashboard)/ route group) |
 | Phase 3: AI Agent Endpoints | 5 | ✅ Complete (DEFAULT_ORG_ID usage) |
 | Phase 4: Database Layer | 3 | ✅ Complete |
-| Phase 5: AI Agents | 2 | ✅ Complete |
+| Phase 5: AI Agents | 2 | ✅ Complete (TenantMemoryVault refactored Feb 3, 2026) |
 | Phase 6: UI Cleanup | 3 | ✅ Complete |
 | Phase 7: Middleware | 1 | ✅ Complete (legacy redirects) |
 | Phase 8: Verification | 3 | ✅ Complete |

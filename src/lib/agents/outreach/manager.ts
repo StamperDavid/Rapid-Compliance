@@ -648,7 +648,7 @@ export class OutreachManager extends BaseManager {
       const sequence = await this.buildSequence(tenantId, payload, lead);
 
       // Step 4: Fetch templates from CONTENT_MANAGER (if available)
-      const templates = await this.fetchContentTemplates(tenantId, sequence);
+      const templates = await this.fetchContentTemplates(sequence);
 
       // Step 5: Execute sequence steps
       const executionStatus = await this.executeSequenceSteps(
@@ -1020,7 +1020,7 @@ export class OutreachManager extends BaseManager {
     }
 
     // 3. Check contact frequency limits
-    const settings = this.getCommunicationSettings(tenantId);
+    const settings = this.getCommunicationSettings();
     const withinLimits = this.checkFrequencyLimits(tenantId, lead, settings);
     if (!withinLimits) {
       blockReasons.push('Contact frequency limit exceeded');
@@ -1053,18 +1053,18 @@ export class OutreachManager extends BaseManager {
 
       // Check by email
       if (lead.email) {
-        const emailDNC = vault.read(tenantId, 'PROFILE', `dnc_email_${lead.email}`, this.identity.id);
+        const emailDNC = vault.read('PROFILE', `dnc_email_${lead.email}`, this.identity.id);
         if (emailDNC) {return true;}
       }
 
       // Check by phone
       if (lead.phone) {
-        const phoneDNC = vault.read(tenantId, 'PROFILE', `dnc_phone_${lead.phone}`, this.identity.id);
+        const phoneDNC = vault.read('PROFILE', `dnc_phone_${lead.phone}`, this.identity.id);
         if (phoneDNC) {return true;}
       }
 
       // Check by leadId
-      const leadDNC = vault.read(tenantId, 'PROFILE', `dnc_lead_${lead.leadId}`, this.identity.id);
+      const leadDNC = vault.read('PROFILE', `dnc_lead_${lead.leadId}`, this.identity.id);
       if (leadDNC) {return true;}
 
       return lead.doNotContact ?? false;
@@ -1088,7 +1088,6 @@ export class OutreachManager extends BaseManager {
       // Get contact history from vault
       const historyKey = `contact_history_${lead.leadId}`;
       const history = vault.read<{ contacts: Array<{ timestamp: Date; channel: string }> }>(
-        tenantId,
         'WORKFLOW',
         historyKey,
         this.identity.id
@@ -1140,11 +1139,10 @@ export class OutreachManager extends BaseManager {
   /**
    * Get communication settings for tenant
    */
-  private getCommunicationSettings(tenantId: string): CommunicationSettings {
+  private getCommunicationSettings(): CommunicationSettings {
     try {
       const vault = getMemoryVault();
       const settings = vault.read<CommunicationSettings>(
-        tenantId,
         'CONTEXT',
         'communication_settings',
         this.identity.id
@@ -1198,7 +1196,7 @@ export class OutreachManager extends BaseManager {
         sentiment: LeadSentiment;
         confidence: number;
         analyzedAt: Date;
-      }>(tenantId, 'INSIGHT', `lead_sentiment_${lead.leadId}`, this.identity.id);
+      }>('INSIGHT', `lead_sentiment_${lead.leadId}`, this.identity.id);
 
       if (cachedSentiment) {
         const analyzedAt = new Date(cachedSentiment.value.analyzedAt);
@@ -1214,7 +1212,7 @@ export class OutreachManager extends BaseManager {
       }
 
       // Query insights from INTELLIGENCE_MANAGER
-      const insights = await vault.getInsights(tenantId, this.identity.id, {
+      const insights = await vault.getInsights(this.identity.id, {
         type: 'AUDIENCE',
         minConfidence: 50,
       });
@@ -1316,7 +1314,7 @@ export class OutreachManager extends BaseManager {
       switch (action) {
         case 'add':
           if (email) {
-            vault.write(tenantId, 'PROFILE', `dnc_email_${email}`, {
+            vault.write('PROFILE', `dnc_email_${email}`, {
               email,
               reason: reason ?? 'Manual addition',
               addedAt: new Date(),
@@ -1324,7 +1322,7 @@ export class OutreachManager extends BaseManager {
             }, this.identity.id, { priority: 'HIGH', tags: ['dnc', 'compliance'] });
           }
           if (phone) {
-            vault.write(tenantId, 'PROFILE', `dnc_phone_${phone}`, {
+            vault.write('PROFILE', `dnc_phone_${phone}`, {
               phone,
               reason: reason ?? 'Manual addition',
               addedAt: new Date(),
@@ -1332,7 +1330,7 @@ export class OutreachManager extends BaseManager {
             }, this.identity.id, { priority: 'HIGH', tags: ['dnc', 'compliance'] });
           }
           if (leadId) {
-            vault.write(tenantId, 'PROFILE', `dnc_lead_${leadId}`, {
+            vault.write('PROFILE', `dnc_lead_${leadId}`, {
               leadId,
               reason: reason ?? 'Manual addition',
               addedAt: new Date(),
@@ -1537,7 +1535,6 @@ Best regards`;
    * Fetch content templates from CONTENT_MANAGER via vault
    */
   private async fetchContentTemplates(
-    tenantId: string,
     _sequence: OutreachSequence
   ): Promise<Map<string, ContentTemplate>> {
     const templates = new Map<string, ContentTemplate>();
@@ -1546,7 +1543,7 @@ Best regards`;
       const vault = getMemoryVault();
 
       // Get content from CONTENT_MANAGER
-      const contentEntries = await vault.getContent(tenantId, this.identity.id, 'EMAIL');
+      const contentEntries = await vault.getContent(this.identity.id, 'EMAIL');
 
       for (const entry of contentEntries) {
         const content = entry.value;
@@ -1621,7 +1618,6 @@ Best regards`;
   ): Promise<void> {
     try {
       await broadcastSignal(
-        tenantId,
         this.identity.id,
         'outreach.human_review_required',
         'HIGH',
@@ -1635,7 +1631,7 @@ Best regards`;
       );
 
       const vault = getMemoryVault();
-      vault.write(tenantId, 'WORKFLOW', `human_review_${lead.leadId}`, {
+      vault.write('WORKFLOW', `human_review_${lead.leadId}`, {
         leadId: lead.leadId,
         email: lead.email,
         reason,
@@ -1659,7 +1655,6 @@ Best regards`;
   ): Promise<void> {
     try {
       await shareInsight(
-        tenantId,
         this.identity.id,
         'PERFORMANCE' as InsightData['type'],
         'Outreach Sequence Executed',
@@ -1677,7 +1672,6 @@ Best regards`;
       const vault = getMemoryVault();
       const historyKey = `contact_history_${lead.leadId}`;
       const existing = vault.read<{ contacts: Array<{ timestamp: Date; channel: string }> }>(
-        tenantId,
         'WORKFLOW',
         historyKey,
         this.identity.id
@@ -1693,7 +1687,7 @@ Best regards`;
         }
       }
 
-      vault.write(tenantId, 'WORKFLOW', historyKey, { contacts }, this.identity.id, {
+      vault.write('WORKFLOW', historyKey, { contacts }, this.identity.id, {
         tags: ['contact-history'],
       });
 
@@ -1712,7 +1706,6 @@ Best regards`;
   ): Promise<void> {
     try {
       await broadcastSignal(
-        tenantId,
         this.identity.id,
         signalType,
         'MEDIUM',
@@ -1828,9 +1821,8 @@ Best regards`;
       // Add to DNC list
       const email = payload?.email as string;
       if (email) {
-        const tenantId = payload?.tenantId as string ?? '';
         const vault = getMemoryVault();
-        vault.write(tenantId, 'PROFILE', `dnc_email_${email}`, {
+        vault.write('PROFILE', `dnc_email_${email}`, {
           email,
           reason: 'Unsubscribed',
           addedAt: new Date(),

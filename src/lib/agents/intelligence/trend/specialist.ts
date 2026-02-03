@@ -1456,7 +1456,6 @@ export class TrendScout extends BaseSpecialist {
         };
 
         await vault.writeSignal(
-          tenantId,
           `trend_${signal.id}`,
           signalData,
           this.identity.id,
@@ -1471,7 +1470,6 @@ export class TrendScout extends BaseSpecialist {
       const highCount = signals.filter(s => s.urgency === 'HIGH').length;
 
       await shareInsight(
-        tenantId,
         this.identity.id,
         'TREND',
         `Market Signal Scan: ${signals.length} Signals Detected`,
@@ -1500,7 +1498,6 @@ export class TrendScout extends BaseSpecialist {
                       pivot.priority === 'HIGH' ? ('HIGH' as const) : ('MEDIUM' as const);
 
       await broadcastSignal(
-        tenantId,
         this.identity.id,
         'PIVOT_RECOMMENDED',
         urgency,
@@ -1521,10 +1518,8 @@ export class TrendScout extends BaseSpecialist {
   /**
    * Read competitor insights from other agents
    */
-  private async readCompetitorInsightsFromVault(
-    tenantId: string
-  ): Promise<{ competitors: string[]; recentMoves: string[] }> {
-    const insights = await readAgentInsights(tenantId, this.identity.id, {
+  private async readCompetitorInsightsFromVault(): Promise<{ competitors: string[]; recentMoves: string[] }> {
+    const insights = await readAgentInsights(this.identity.id, {
       type: 'COMPETITOR',
       minConfidence: 60,
       limit: 10,
@@ -1549,11 +1544,9 @@ export class TrendScout extends BaseSpecialist {
    * Share trend forecast to memory vault for other agents
    */
   private async shareTrendForecastToVault(
-    tenantId: string,
     forecast: TrendForecast
   ): Promise<void> {
     await shareInsight(
-      tenantId,
       this.identity.id,
       'TREND',
       `Trend Forecast: ${forecast.trendName}`,
@@ -1572,11 +1565,9 @@ export class TrendScout extends BaseSpecialist {
   /**
    * Get market context from other intelligence agents
    */
-  private async getMarketContextFromVault(
-    tenantId: string
-  ): Promise<{ sentiments: string[]; signals: string[] }> {
+  private async getMarketContextFromVault(): Promise<{ sentiments: string[]; signals: string[] }> {
     const vault = getMemoryVault();
-    const pendingSignals = await vault.getPendingSignals(tenantId, this.identity.id);
+    const pendingSignals = await vault.getPendingSignals(this.identity.id);
 
     const sentiments: string[] = [];
     const signals: string[] = [];
@@ -1586,7 +1577,7 @@ export class TrendScout extends BaseSpecialist {
     }
 
     // Read sentiment insights
-    const sentimentInsights = await readAgentInsights(tenantId, this.identity.id, {
+    const sentimentInsights = await readAgentInsights(this.identity.id, {
       type: 'MARKET',
       limit: 5,
     });

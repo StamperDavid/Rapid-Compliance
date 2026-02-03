@@ -1459,7 +1459,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
 
     // Write workflow state to vault
     vault.write(
-      tenantId,
       'WORKFLOW',
       `workflow_${workflow.id}`,
       {
@@ -1478,7 +1477,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
 
     // Share insight about the workflow composition
     await shareInsight(
-      tenantId,
       this.identity.id,
       'CONTENT',
       `Workflow Composed: ${workflow.name}`,
@@ -1504,7 +1502,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
     const urgency = executionResult.status === 'FAILED' ? 'HIGH' : 'LOW';
 
     await broadcastSignal(
-      tenantId,
       this.identity.id,
       executionResult.status === 'COMPLETED' ? 'WORKFLOW_COMPLETED' : 'WORKFLOW_FAILED',
       urgency,
@@ -1525,10 +1522,8 @@ export class WorkflowOptimizer extends BaseSpecialist {
   /**
    * Check for pending signals that might affect workflow execution
    */
-  private async checkWorkflowSignals(
-    tenantId: string
-  ): Promise<{ shouldPause: boolean; reasons: string[] }> {
-    const signals = await checkPendingSignals(tenantId, this.identity.id);
+  private async checkWorkflowSignals(): Promise<{ shouldPause: boolean; reasons: string[] }> {
+    const signals = await checkPendingSignals(this.identity.id);
 
     const shouldPause = signals.some(
       s => s.value.urgency === 'CRITICAL' &&
@@ -1554,7 +1549,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
     const vault = getMemoryVault();
 
     vault.write(
-      tenantId,
       'PERFORMANCE',
       `workflow_analytics_${analytics.workflowId}`,
       {
@@ -1572,7 +1566,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
 
     // Share performance insight
     await shareInsight(
-      tenantId,
       this.identity.id,
       'PERFORMANCE',
       `Workflow Performance: ${analytics.workflowId}`,
@@ -1601,7 +1594,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
 
     for (const agentId of agentIds) {
       const entry = vault.read<{ available: boolean; load: number }>(
-        tenantId,
         'CONTEXT',
         `agent_status_${agentId}`,
         this.identity.id

@@ -1405,7 +1405,7 @@ export class ReputationManager extends BaseManager {
 
     // Load response templates from TenantMemoryVault
     const templateKey = `review_template_${reviewData.rating}_star`;
-    const cachedTemplate = this.memoryVault.read(tenantId, 'CONTENT', templateKey, this.identity.id);
+    const cachedTemplate = this.memoryVault.read('CONTENT', templateKey, this.identity.id);
 
     // Delegate to REVIEW_SPECIALIST for response generation
     const message: AgentMessage = {
@@ -1448,7 +1448,6 @@ export class ReputationManager extends BaseManager {
 
         // Store notification in TenantMemoryVault using PERFORMANCE insight type
         void shareInsight(
-          tenantId,
           this.identity.id,
           'PERFORMANCE', // Using PERFORMANCE as closest match for review alerts
           `Negative Review Alert: ${reviewData.rating}-star`,
@@ -1464,7 +1463,6 @@ export class ReputationManager extends BaseManager {
 
         // Also store raw data in vault for cross-agent access
         this.memoryVault.write(
-          tenantId,
           'SIGNAL',
           `negative_review_${taskId}`,
           {
@@ -1480,7 +1478,6 @@ export class ReputationManager extends BaseManager {
       // Cache successful response template for future use
       if (report.status === 'COMPLETED' && responseData) {
         this.memoryVault.write(
-          tenantId,
           'CONTENT',
           templateKey,
           responseData.responseText,
@@ -1615,7 +1612,6 @@ export class ReputationManager extends BaseManager {
 
     // Broadcast signal to OUTREACH_MANAGER to trigger review request sequence
     void broadcastSignal(
-      tenantId,
       this.identity.id,
       'reputation.review_solicitation_requested',
       'MEDIUM', // Medium urgency - not critical but should be processed soon
@@ -1631,7 +1627,6 @@ export class ReputationManager extends BaseManager {
 
     // Store solicitation record for tracking using AUDIENCE insight type
     void shareInsight(
-      tenantId,
       this.identity.id,
       'AUDIENCE', // AUDIENCE is closest match for customer-related insights
       `Review Solicitation: ${saleData.customerName}`,
@@ -1647,7 +1642,6 @@ export class ReputationManager extends BaseManager {
 
     // Also store raw data for cross-agent access
     this.memoryVault.write(
-      tenantId,
       'CONTEXT',
       `solicitation_${taskId}`,
       {
@@ -1695,7 +1689,7 @@ export class ReputationManager extends BaseManager {
     }
 
     // Check if CONTENT_MANAGER has ready assets
-    const contentAssets = this.memoryVault.read(tenantId, 'CONTENT', 'gmb_assets', this.identity.id);
+    const contentAssets = this.memoryVault.read('CONTENT', 'gmb_assets', this.identity.id);
 
     // Delegate to GMB_SPECIALIST with action-specific payload
     const message: AgentMessage = {
@@ -1737,7 +1731,6 @@ export class ReputationManager extends BaseManager {
       // Broadcast completion signal
       if (report.status === 'COMPLETED') {
         void broadcastSignal(
-          tenantId,
           this.identity.id,
           'reputation.gmb_updated',
           'LOW', // Low urgency - informational update
@@ -1881,7 +1874,7 @@ export class ReputationManager extends BaseManager {
     );
 
     // Determine trend
-    const cachedPreviousBrief = this.memoryVault.read(tenantId, 'INSIGHT', 'previous_reputation_brief', this.identity.id);
+    const cachedPreviousBrief = this.memoryVault.read('INSIGHT', 'previous_reputation_brief', this.identity.id);
     let trend: 'IMPROVING' | 'DECLINING' | 'STABLE' = 'STABLE';
     if (cachedPreviousBrief?.value) {
       const previousScore = (cachedPreviousBrief.value as ReputationBrief).trustScore?.overall ?? trustScoreOverall;
@@ -1925,13 +1918,12 @@ export class ReputationManager extends BaseManager {
     };
 
     // Cache brief for trend analysis
-    this.memoryVault.write(tenantId, 'INSIGHT', 'previous_reputation_brief', brief, this.identity.id, {
+    this.memoryVault.write('INSIGHT', 'previous_reputation_brief', brief, this.identity.id, {
       ttlMs: 7 * 24 * 60 * 60 * 1000, // 7 day cache
     });
 
     // Share as insight for cross-agent consumption
     void shareInsight(
-      tenantId,
       this.identity.id,
       'PERFORMANCE', // PERFORMANCE is appropriate for trust metrics
       `Reputation Brief: Trust Score ${trustScoreOverall}/100`,

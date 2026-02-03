@@ -1913,7 +1913,6 @@ Budget: ${budget}`;
 
       // Store campaign brief as STRATEGY entry
       vault.write(
-        tenantId,
         'STRATEGY',
         `campaign_brief_${campaignBrief.briefId}`,
         campaignBrief,
@@ -1937,7 +1936,6 @@ Budget: ${budget}`;
       };
 
       await shareInsight(
-        tenantId,
         this.identity.id,
         insight.type,
         insight.title,

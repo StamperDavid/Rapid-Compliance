@@ -1769,7 +1769,7 @@ export class RevenueDirector extends BaseManager {
 
     // Query win/loss signals from TenantMemoryVault
     const vault = this.memoryVault;
-    const signals = vault.query(tenantId, this.identity.id, {
+    const signals = vault.query(this.identity.id, {
       category: 'SIGNAL',
       tags: ['deal.won', 'deal.lost', 'deal.created'],
       sortBy: 'createdAt',
@@ -1891,7 +1891,6 @@ export class RevenueDirector extends BaseManager {
 
     // Share the insight with other agents via TenantMemoryVault
     await shareInsight(
-      tenantId,
       this.identity.id,
       'PERFORMANCE' as InsightData['type'],
       'Revenue Performance Brief',
@@ -2033,11 +2032,8 @@ export class RevenueDirector extends BaseManager {
    * Uses TenantMemoryVault for cross-agent communication
    */
   private async shareClosedWonSignal(leadData: LeadData, closingResult: ClosingStrategyResult): Promise<void> {
-    const tenantId = 'default'; // Would be extracted from context in production
-
     // Broadcast signal to LEAD_QUALIFIER for continuous feedback loop
     await broadcastSignal(
-      tenantId,
       this.identity.id,
       'DEAL_CLOSED_WON',
       'HIGH',
@@ -2197,7 +2193,7 @@ export class RevenueDirector extends BaseManager {
 
     // Query win/loss signals from TenantMemoryVault
     const vault = this.memoryVault;
-    const signals = vault.query(tenantId, this.identity.id, {
+    const signals = vault.query(this.identity.id, {
       category: 'SIGNAL',
       tags: ['deal.won', 'deal.lost'],
       sortBy: 'createdAt',
@@ -2225,7 +2221,6 @@ export class RevenueDirector extends BaseManager {
 
     // Share the tuning insight
     await shareInsight(
-      tenantId,
       this.identity.id,
       'STRATEGY' as InsightData['type'],
       'Golden Master Persona Tuning',
@@ -2343,7 +2338,6 @@ export class RevenueDirector extends BaseManager {
 
     // Share battlecard synthesis as insight
     await shareInsight(
-      tenantId,
       this.identity.id,
       'CONTENT' as InsightData['type'],
       'Objection Handling Battlecards',

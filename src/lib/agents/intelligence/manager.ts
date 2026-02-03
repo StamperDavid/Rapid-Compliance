@@ -1025,7 +1025,6 @@ export class IntelligenceManager extends BaseManager {
       // Store the full brief as a STRATEGY entry
       const vault = getMemoryVault();
       vault.write(
-        tenantId,
         'STRATEGY',
         `intelligence_brief_${brief.briefId}`,
         brief,
@@ -1036,7 +1035,6 @@ export class IntelligenceManager extends BaseManager {
       // Share key insights for cross-agent consumption
       if (brief.synthesis.keyFindings.length > 0 && brief.synthesis.keyFindings[0] !== 'Insufficient data for key findings') {
         await shareInsight(
-          tenantId,
           this.identity.id,
           'MARKET' as InsightData['type'],
           'Market Intelligence Brief',
@@ -1056,7 +1054,6 @@ export class IntelligenceManager extends BaseManager {
       // Broadcast signal if there are threats
       if (brief.synthesis.threats.length > 0 && brief.synthesis.threats[0] !== 'No immediate threats detected') {
         await broadcastSignal(
-          tenantId,
           this.identity.id,
           'MARKET_THREATS_DETECTED',
           'MEDIUM',

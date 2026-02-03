@@ -677,7 +677,6 @@ export class BuilderManager extends BaseManager {
 
       // Store build result in TenantMemoryVault
       await shareInsight(
-        payload.tenantId,
         'BUILDER_MANAGER',
         'CONTENT',
         'Website Build Complete',
@@ -693,7 +692,6 @@ export class BuilderManager extends BaseManager {
 
       // Broadcast website.build_complete signal
       const signalResult = await broadcastSignal(
-        payload.tenantId,
         'BUILDER_MANAGER',
         'website.build_complete',
         'MEDIUM',
@@ -816,7 +814,7 @@ export class BuilderManager extends BaseManager {
 
     try {
       // Read insights from ARCHITECT_MANAGER
-      const insights = await readAgentInsights(tenantId, 'BUILDER_MANAGER', {
+      const insights = await readAgentInsights('BUILDER_MANAGER', {
         type: 'CONTENT',
         minConfidence: 70,
         limit: 10,

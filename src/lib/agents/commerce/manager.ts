@@ -604,7 +604,6 @@ export class CommerceManager extends BaseManager {
 
       // Store checkout insight
       await shareInsight(
-        tenantId,
         this.identity.id,
         'WORKFLOW' as InsightData['type'],
         'Checkout Initiated',
@@ -668,7 +667,6 @@ export class CommerceManager extends BaseManager {
 
       // Broadcast completion signal
       await broadcastSignal(
-        tenantId,
         this.identity.id,
         'commerce.checkout_complete',
         'HIGH',
@@ -778,7 +776,6 @@ export class CommerceManager extends BaseManager {
       // If payment failed, broadcast dunning signal to OUTREACH_MANAGER
       if (resultData?.dunningSignal?.shouldTrigger) {
         await broadcastSignal(
-          tenantId,
           this.identity.id,
           'commerce.payment_failed',
           'CRITICAL',
@@ -832,7 +829,6 @@ export class CommerceManager extends BaseManager {
 
       // Broadcast cancellation signal
       await broadcastSignal(
-        tenantId,
         this.identity.id,
         'commerce.subscription_cancelled',
         'HIGH',
@@ -1107,7 +1103,6 @@ export class CommerceManager extends BaseManager {
 
       // Store insight
       await shareInsight(
-        tenantId,
         this.identity.id,
         'PERFORMANCE' as InsightData['type'],
         'Commerce Revenue Brief',
@@ -1290,7 +1285,6 @@ export class CommerceManager extends BaseManager {
     try {
       // Try to read from vault first
       const cachedSettings = this.memoryVault.read(
-        tenantId,
         'CONTEXT',
         'commerce_settings',
         this.identity.id
@@ -1318,7 +1312,6 @@ export class CommerceManager extends BaseManager {
 
       // Cache in vault
       this.memoryVault.write(
-        tenantId,
         'CONTEXT',
         'commerce_settings',
         settings,

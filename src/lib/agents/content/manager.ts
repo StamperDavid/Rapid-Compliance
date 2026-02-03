@@ -1556,7 +1556,7 @@ export class ContentManager extends BaseManager {
     blueprintId?: string
   ): Promise<{ technicalBrief: TechnicalBrief } | null> {
     try {
-      const insights = await readAgentInsights(tenantId, 'ARCHITECT_MANAGER', {
+      const insights = await readAgentInsights('ARCHITECT_MANAGER', {
         type: 'CONTENT',
         limit: 5,
       });
@@ -1586,7 +1586,6 @@ export class ContentManager extends BaseManager {
   private async storeContentInsights(tenantId: string, contentPackage: ContentPackage): Promise<void> {
     try {
       await shareInsight(
-        tenantId,
         this.identity.id,
         'CONTENT',
         'Content Package Generated',
@@ -1615,7 +1614,6 @@ export class ContentManager extends BaseManager {
   private async broadcastContentReady(tenantId: string, contentPackage: ContentPackage): Promise<void> {
     try {
       await broadcastSignal(
-        tenantId,
         this.identity.id,
         'content.package_ready',
         'MEDIUM',

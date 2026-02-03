@@ -948,7 +948,7 @@ export class ArchitectManager extends BaseManager {
     // Load Intelligence Briefs from TenantMemoryVault
     let intelligenceBriefs: InsightEntry[] = [];
     try {
-      intelligenceBriefs = await readAgentInsights(tenantId, this.identity.id, {
+      intelligenceBriefs = await readAgentInsights(this.identity.id, {
         minConfidence: 50,
         limit: 10,
       });
@@ -2201,7 +2201,6 @@ DELIVERABLES:
     // Store the site architecture as an insight
     try {
       await shareInsight(
-        tenantId,
         this.identity.id,
         'CONTENT',
         'Site Architecture Blueprint',
@@ -2225,7 +2224,6 @@ DELIVERABLES:
     let signalSuccess = false;
     try {
       await broadcastSignal(
-        tenantId,
         this.identity.id,
         'site.blueprint_ready',
         'HIGH',
