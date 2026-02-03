@@ -5,10 +5,11 @@
 
 /**
  * Single-tenant default organization ID
- * PENTHOUSE MODEL: Hardcoded to 'rapid-compliance' for single-tenant deployment
- * This is the ONLY organization in the system - we are NOT a multi-tenant platform
+ * PENTHOUSE MODEL: Hardcoded to 'rapid-compliance-root' for single-tenant deployment
+ * Identity: RapidCompliance.US — the ONLY organization in the system
+ * This is NOT a multi-tenant platform
  */
-export const DEFAULT_ORG_ID = 'rapid-compliance' as const;
+export const DEFAULT_ORG_ID = 'rapid-compliance-root' as const;
 
 /**
  * Single-tenant organization configuration
@@ -16,7 +17,7 @@ export const DEFAULT_ORG_ID = 'rapid-compliance' as const;
  */
 export const COMPANY_CONFIG = {
   id: DEFAULT_ORG_ID,
-  name: 'Rapid Compliance',
+  name: 'RapidCompliance.US',
 } as const;
 
 /**

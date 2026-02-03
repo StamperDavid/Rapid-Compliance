@@ -8,7 +8,7 @@ Last Commit: `62642bd3 feat: implement single-tenant conversion (Phases 1, 2, 5)
 ## What Was Completed
 
 ### Phase 1: Constants & Types ✅
-- Added `DEFAULT_ORG_ID = 'default-org'` to `src/lib/constants/platform.ts`
+- Set `DEFAULT_ORG_ID = 'rapid-compliance-root'` in `src/lib/constants/platform.ts`
 - Converted RBAC from 5-level to 4-level: `superadmin | admin | manager | employee`
 - Updated `src/types/unified-rbac.ts` with new hierarchy
 - Simplified `src/types/organization.ts` (removed workspace interfaces)

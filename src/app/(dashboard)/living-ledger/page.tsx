@@ -20,6 +20,7 @@ import { NextBestActionsCard } from '@/components/crm/NextBestActionsCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { Deal } from '@/lib/crm/deal-service';
 import type { DealHealthScore } from '@/lib/crm/deal-health';
 import type { ActionRecommendations } from '@/lib/crm/next-best-action-engine';
@@ -62,7 +63,7 @@ export default function LivingLedgerPage() {
         // For demo purposes, using mock data
         // In production, this would fetch from Firestore
         const userOrgId = user?.organizationId;
-        const defaultOrgId = (userOrgId ?? 'default-org');
+        const defaultOrgId = (userOrgId ?? DEFAULT_ORG_ID);
         const mockDeals: Deal[] = [
           {
             id: 'deal-1',
@@ -182,7 +183,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': (() => { const v = user?.organizationId; return (v !== '' && v != null) ? v : 'default-org'; })(),
+          'x-organization-id': (() => { const v = user?.organizationId; return (v !== '' && v != null) ? v : DEFAULT_ORG_ID; })(),
           'x-workspace-id': 'default',
         },
         body: JSON.stringify({
@@ -208,7 +209,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': (() => { const v = user?.organizationId; return (v !== '' && v != null) ? v : 'default-org'; })(),
+          'x-organization-id': (() => { const v = user?.organizationId; return (v !== '' && v != null) ? v : DEFAULT_ORG_ID; })(),
           'x-workspace-id': 'default',
         },
       });

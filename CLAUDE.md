@@ -2,7 +2,21 @@
 
 > **Scope:** All Claude Code sessions in this project
 > **Branch:** dev
-> **Last Updated:** January 30, 2026
+> **Last Updated:** February 3, 2026
+
+---
+
+## System Identity
+
+**This is a Single-Tenant system.** The platform identity is **RapidCompliance.US**.
+
+- **Architecture:** Penthouse Model (single company, NOT a SaaS/multi-tenant platform)
+- **Organization ID:** `rapid-compliance-root` (defined in `src/lib/constants/platform.ts`)
+- **Firebase Project:** `rapid-compliance-65f87`
+- **Domain:** RapidCompliance.US
+- **Clients** purchase services and products — they do NOT receive SaaS tenants
+
+All code, routes, agents, and database paths operate under this single identity. There is no org-switching, no tenant isolation, and no multi-org logic. Any remnant of multi-tenant patterns should be treated as legacy debt and removed.
 
 ---
 
@@ -142,6 +156,43 @@ grep -r "any" src/app/api/ --include="*.ts" | grep -v node_modules
 
 # Git status before commit
 git status
+```
+
+---
+
+## Worktree Protocol
+
+This project uses **git worktrees** to enable parallel development without branch-switching.
+
+### Active Worktrees
+
+| Worktree | Path | Branch | Purpose |
+|----------|------|--------|---------|
+| Primary | `D:\Future Rapid Compliance` | `dev` | Main development (production-bound) |
+| Rapid-Dev | `D:\rapid-dev` | `rapid-dev` | Feature development and experimentation |
+| AI Features | `D:\rapid-ai-features` | `feature/agent-enhancements` | AI agent work |
+| Sandbox | `D:\rapid-sandbox` | `experiment/ui-refactor` | UI experiments |
+
+### Rules for Sub-Agents
+
+1. **Always confirm which worktree you are operating in** before making changes. Check the working directory path.
+2. **Never modify files across worktree boundaries.** If a task targets `rapid-dev`, all file reads/writes must use `D:\rapid-dev\...` paths.
+3. **The `dev` branch is production-bound.** Only reviewed, tested code lands here. Use `rapid-dev` for in-progress work.
+4. **Merging:** When `rapid-dev` work is complete, merge into `dev` via PR or direct merge — never force-push.
+5. **Shared constants:** `DEFAULT_ORG_ID`, `COMPANY_CONFIG`, and platform identity are defined in `src/lib/constants/platform.ts`. These are the same across all worktrees (they come from the same repo).
+
+### Creating New Worktrees
+
+```bash
+# From the primary worktree:
+git worktree add <path> -b <new-branch> dev
+```
+
+### Listing / Removing Worktrees
+
+```bash
+git worktree list
+git worktree remove <path>
 ```
 
 ---

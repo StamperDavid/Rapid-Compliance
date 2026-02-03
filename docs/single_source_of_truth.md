@@ -1,7 +1,7 @@
 # RapidCompliance.US - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 2, 2026 (Multi-Tenant Purge Complete)
+**Last Updated:** February 3, 2026 (DEFAULT_ORG_ID updated to rapid-compliance-root, identity lock applied)
 **Branches:** `dev` at commit `e8a707c0`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -204,7 +204,7 @@ function validateProjectId(): void {
 
 **Implementation:**
 - Created `src/app/(dashboard)/` route group with 108 files (layout + 107 pages)
-- All pages use `DEFAULT_ORG_ID = 'salesvelocity'` instead of `useParams()`
+- All pages use `DEFAULT_ORG_ID = 'rapid-compliance-root'` instead of `useParams()`
 - Legacy URLs redirect via middleware (`/workspace/*` → `/(dashboard)/*`)
 
 #### Middleware Redirects
@@ -263,7 +263,7 @@ Legacy workspace URLs are automatically redirected:
 ### Conversion Phases
 
 #### Phase 1: Constants & Types
-1. Add `DEFAULT_ORG_ID = 'default-org'` to `src/lib/constants/platform.ts`
+1. Add `DEFAULT_ORG_ID = 'rapid-compliance-root'` to `src/lib/constants/platform.ts`
 2. Update `src/types/unified-rbac.ts` to 4-level hierarchy:
    - Remove `superadmin` and `owner`
    - Add `superadmin` (combines superadmin + owner permissions)
@@ -432,7 +432,7 @@ Tasks are tracked in Claude Code session. Current status:
 | File | Change |
 |------|--------|
 | `src/lib/firebase/config.ts` | Added `CriticalConfigurationError` kill-switch |
-| `src/lib/constants/platform.ts` | `DEFAULT_ORG_ID = 'salesvelocity'` |
+| `src/lib/constants/platform.ts` | `DEFAULT_ORG_ID = 'rapid-compliance-root'` |
 | `src/app/(dashboard)/` | 108 new files (flattened routes) |
 | `src/middleware.ts` | Legacy `/workspace/*` redirects |
 | `src/app/api/voice/ai-agent/route.ts` | Uses `DEFAULT_ORG_ID` |
@@ -559,7 +559,7 @@ Tasks are tracked in Claude Code session. Current status:
 
 ### Dashboard Routes (108 in /(dashboard)/* - Flattened Single-Tenant)
 
-> **Note:** These routes were migrated from `/workspace/[orgId]/*` to `/(dashboard)/*` as part of the single-tenant conversion. All routes now use `DEFAULT_ORG_ID = 'rapid-compliance'` internally.
+> **Note:** These routes were migrated from `/workspace/[orgId]/*` to `/(dashboard)/*` as part of the single-tenant conversion. All routes now use `DEFAULT_ORG_ID = 'rapid-compliance-root'` internally.
 
 **Core Navigation:**
 - `/dashboard`, `/settings`, `/analytics`, `/integrations`, `/templates`
