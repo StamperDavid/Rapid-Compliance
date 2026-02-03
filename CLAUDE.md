@@ -96,6 +96,18 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
 
+### 4b. Sync Active Worktrees
+
+After pushing to `dev`, Claude must also merge `dev` into any active worktree branches that are running a local dev server (e.g., `rapid-dev` at `D:\rapid-dev`). This ensures `localhost:3000` reflects the latest changes immediately.
+
+```bash
+# From the target worktree:
+cd D:\rapid-dev
+git merge origin/dev --no-edit
+```
+
+If the merge has conflicts, resolve them before proceeding. Always clear the `.next` cache after merging (`rm -rf .next`) so the dev server picks up the new code.
+
 ### 5. Update Single Source of Truth
 
 At the end of each session where architecture, routes, agents, or significant functionality changed, Claude must update:
