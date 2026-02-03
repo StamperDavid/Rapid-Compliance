@@ -18,7 +18,6 @@ let initPromise: Promise<Auth | null> | null = null;
 
 interface UserProfileData {
   role?: string;
-  organizationId?: string;
 }
 
 async function initializeAdminAuth(): Promise<Auth | null> {
@@ -131,22 +130,17 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
     const decodedToken = await auth.verifyIdToken(token);
     logger.debug('[API Auth] Token verified', { file: 'api-auth.ts', email: decodedToken.email });
 
-    // Extract custom claims with proper type checking
+    // Extract role from custom claims
     const customClaims = decodedToken as Record<string, unknown>;
     const roleFromClaims = typeof customClaims.role === 'string' ? customClaims.role : undefined;
-    const orgIdFromClaims = typeof customClaims.organizationId === 'string' ? customClaims.organizationId : undefined;
-    const adminFromClaims = customClaims.admin === true;
 
     logger.debug('[API Auth] Token claims', {
       file: 'api-auth.ts',
       role: roleFromClaims,
-      organizationId: orgIdFromClaims,
-      admin: adminFromClaims,
     });
 
     // First try to get role from token claims (set via Firebase Auth custom claims)
     let role = roleFromClaims;
-    let organizationId = orgIdFromClaims;
 
     // If no role in claims, try to fetch from Firestore
     if (!role) {
@@ -158,12 +152,10 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
           if (userDoc.exists) {
             const userProfile = userDoc.data() as UserProfileData | undefined;
             role = userProfile?.role;
-            organizationId = organizationId ?? userProfile?.organizationId;
             logger.debug('[API Auth] User profile loaded via Admin SDK', {
               file: 'api-auth.ts',
               uid: decodedToken.uid,
               role,
-              organizationId,
             });
           }
         }
@@ -176,8 +168,7 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
           if (userProfile) {
             const profileData = userProfile as UserProfileData;
             role = profileData.role;
-            organizationId = organizationId ?? profileData.organizationId;
-            logger.debug('[API Auth] User profile loaded via client SDK', { file: 'api-auth.ts', role, organizationId });
+            logger.debug('[API Auth] User profile loaded via client SDK', { file: 'api-auth.ts', role });
           }
         } catch (clientError: unknown) {
           const clientErrorMessage = clientError instanceof Error ? clientError.message : 'Unknown error';
@@ -263,19 +254,12 @@ export async function requireRole(
 }
 
 /**
- * Require organization membership
- * Single-tenant mode: All authenticated users belong to DEFAULT_ORG_ID
+ * @deprecated Use requireAuth() instead. In single-tenant mode all authenticated
+ * users belong to DEFAULT_ORG_ID — organization membership checks are unnecessary.
  */
 export async function requireOrganization(
   request: NextRequest,
   _organizationId?: string
 ): Promise<{ user: AuthenticatedUser } | NextResponse> {
-  const authResult = await requireAuth(request);
-
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  // Single-tenant mode: user always has organizationId = DEFAULT_ORG_ID
-  return authResult;
+  return requireAuth(request);
 }
