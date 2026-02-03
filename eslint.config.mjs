@@ -55,8 +55,9 @@ export default tseslint.config(
       'jest.config.js',
       'jest.setup.js',
       'jest.globalTeardown.js',
-      // All scripts folder JS files (not type-checked)
+      // All scripts folder files (not type-checked, outside tsconfig scope)
       'scripts/**/*.js',
+      'scripts/**/*.ts',
     ],
   },
 

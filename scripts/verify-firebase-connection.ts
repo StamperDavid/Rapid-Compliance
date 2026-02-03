@@ -9,6 +9,11 @@ import { initializeApp, cert, getApps, deleteApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+/**
+ * Must match DEFAULT_ORG_ID in src/lib/constants/platform.ts
+ * Duplicated here because scripts/ is outside the tsconfig project scope.
+ */
+const DEFAULT_ORG_ID = 'rapid-compliance-root';
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
@@ -17,7 +22,7 @@ async function verifyConnection(): Promise<void> {
   console.log('🔥 Firebase Connection Verification');
   console.log('═'.repeat(50));
   console.log(`Project: ${process.env.FIREBASE_ADMIN_PROJECT_ID}`);
-  console.log(`Target Collection: organizations/salesvelocity`);
+  console.log(`Target Collection: organizations/${DEFAULT_ORG_ID}`);
   console.log('═'.repeat(50));
 
   // Clean up any existing app instances
@@ -56,7 +61,7 @@ async function verifyConnection(): Promise<void> {
       verifiedAt: new Date().toISOString(),
     };
 
-    const docRef = db.collection('organizations').doc('salesvelocity');
+    const docRef = db.collection('organizations').doc(DEFAULT_ORG_ID);
     await docRef.set(testDoc, { merge: true });
     console.log('✅ Write successful!');
 
