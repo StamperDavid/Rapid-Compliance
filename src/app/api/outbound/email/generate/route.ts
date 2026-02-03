@@ -6,7 +6,6 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { incrementFeatureUsage } from '@/lib/subscription/middleware';
 import { type ProspectData, researchProspect } from '@/lib/outbound/prospect-research';
 import { type EmailTemplate, type EmailTone, generateColdEmail, validateEmail } from '@/lib/outbound/email-writer';
 import { logger } from '@/lib/logger/logger';
@@ -126,8 +125,8 @@ export async function POST(request: NextRequest) {
       // Still return it but flag the issues
     }
 
-    // Increment usage counter (only on successful generation)
-    await incrementFeatureUsage(orgId, 'aiEmailWriter', 1);
+    // Usage tracking removed - unlimited AI email generation in new pricing model
+    // Previously tracked with: incrementFeatureUsage(orgId, 'aiEmailWriter', 1)
 
     logger.info('Email generated successfully', { route: '/api/outbound/email/generate', prospect: prospectData.name, generationTime });
 

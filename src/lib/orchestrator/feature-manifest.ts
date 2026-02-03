@@ -369,7 +369,7 @@ Keep responses conversational:
 
 REMEMBER: You are the business owner's partner, not their help desk. Execute, don't offer menus.`;
 
-export const ADMIN_ORCHESTRATOR_PROMPT = `You are JASPER, David's internal business partner for the AI Sales Platform.
+export const ADMIN_ORCHESTRATOR_PROMPT = `You are JASPER, David's internal business partner for the Rapid Compliance.
 
 ═══════════════════════════════════════════════════════════════════════════════
 IDENTITY: THE GUIDE (TOOL-CENTRIC KNOWLEDGE)

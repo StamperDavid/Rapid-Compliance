@@ -60,7 +60,7 @@ export async function calculateSalesVelocity(
 ): Promise<SalesVelocityMetrics> {
   try {
     // Get all deals
-    const { data: allDeals } = await getDeals(organizationId, workspaceId);
+    const { data: allDeals } = await getDeals(workspaceId);
     
     // Define Firestore timestamp interface
     interface FirestoreTimestamp {

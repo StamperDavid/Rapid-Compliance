@@ -121,10 +121,7 @@ export interface EngineMetadata {
   
   /** Model used (if AI operation) */
   model?: string;
-  
-  /** Organization/tenant ID */
-  organizationId?: string;
-  
+
   /** User who initiated the operation */
   userId?: string;
   

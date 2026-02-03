@@ -1,7 +1,7 @@
 /**
  * SEO Management
  * Site-wide SEO settings, robots.txt, analytics integration
- * CRITICAL: Multi-tenant - scoped to organizationId
+ * NOTE: Single-tenant - uses DEFAULT_ORG_ID
  */
 
 'use client';

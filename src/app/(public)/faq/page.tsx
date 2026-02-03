@@ -15,7 +15,7 @@ const faqItems: FAQItem[] = [
   // Getting Started
   {
     category: 'Getting Started',
-    question: 'How do I get started with SalesVelocity.ai?',
+    question: 'How do I get started with RapidCompliance.US?',
     answer: 'Getting started is easy! Sign up for a 14-day free trial, complete the onboarding questionnaire about your business, and your AI agent will be ready to train. The whole process takes less than an hour.'
   },
   {
@@ -153,7 +153,7 @@ export default function FAQPage() {
             Frequently Asked Questions
           </h1>
           <p className="text-xl text-gray-300 mb-8">
-            Find answers to common questions about SalesVelocity.ai
+            Find answers to common questions about RapidCompliance.US
           </p>
         </div>
       </section>

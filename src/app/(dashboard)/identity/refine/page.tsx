@@ -8,8 +8,20 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
-import type { BrandDNA } from '@/types/organization';
 import { TTS_PROVIDER_INFO, type TTSEngineType, type TTSVoice } from '@/lib/voice/tts/types';
+
+// Minimal BrandDNA type for this component
+interface BrandDNA {
+  companyDescription: string;
+  uniqueValue: string;
+  targetAudience: string;
+  toneOfVoice: string;
+  communicationStyle: string;
+  keyPhrases: string[];
+  avoidPhrases: string[];
+  industry: string;
+  competitors: string[];
+}
 
 // Workforce Identity Configuration
 interface WorkforceIdentity {
@@ -215,7 +227,7 @@ export default function IdentityRefinementPage() {
             companyDescription: onboardingData.problemSolved ?? '',
             uniqueValue: onboardingData.uniqueValue ?? '',
             targetAudience: onboardingData.targetCustomer ?? '',
-            toneOfVoice: (onboardingData.tone ?? 'professional') as typeof prev.brandDNA.toneOfVoice,
+            toneOfVoice: (onboardingData.tone ?? 'professional'),
             industry: onboardingData.industry ?? '',
           },
           personalityArchetype: mapToneToArchetype(onboardingData.tone ?? 'professional'),

@@ -6,6 +6,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface Contact {
   id: string;
@@ -61,11 +62,11 @@ export interface PaginatedResult<T> {
  * Get contacts with pagination and filtering
  */
 export async function getContacts(
-  organizationId: string,
   workspaceId: string = 'default',
   filters?: ContactFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<Contact>> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const constraints: QueryConstraint[] = [];
 
@@ -110,10 +111,10 @@ export async function getContacts(
  * Get a single contact
  */
 export async function getContact(
-  organizationId: string,
   contactId: string,
   workspaceId: string = 'default'
 ): Promise<Contact | null> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const contact = await FirestoreService.get<Contact>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/contacts/records`,
@@ -138,10 +139,10 @@ export async function getContact(
  * Create a new contact
  */
 export async function createContact(
-  organizationId: string,
   data: Omit<Contact, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>,
   workspaceId: string = 'default'
 ): Promise<Contact> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const contactId = `contact-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
@@ -183,11 +184,11 @@ export async function createContact(
  * Update contact
  */
 export async function updateContact(
-  organizationId: string,
   contactId: string,
   updates: Partial<Omit<Contact, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>>,
   workspaceId: string = 'default'
 ): Promise<Contact> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const updatedData = {
       ...updates,
@@ -206,7 +207,7 @@ export async function updateContact(
       updatedFields: Object.keys(updates),
     });
 
-    const contact = await getContact(organizationId, contactId, workspaceId);
+    const contact = await getContact(contactId, workspaceId);
     if (!contact) {
       throw new Error('Contact not found after update');
     }
@@ -223,10 +224,10 @@ export async function updateContact(
  * Delete contact
  */
 export async function deleteContact(
-  organizationId: string,
   contactId: string,
   workspaceId: string = 'default'
 ): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.delete(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/contacts/records`,
@@ -245,12 +246,12 @@ export async function deleteContact(
  * Mark contact as VIP
  */
 export async function markAsVIP(
-  organizationId: string,
   contactId: string,
   workspaceId: string = 'default'
 ): Promise<Contact> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
-    const contact = await updateContact(organizationId, contactId, { isVIP: true }, workspaceId);
+    const contact = await updateContact(contactId, { isVIP: true }, workspaceId);
 
     logger.info('Contact marked as VIP', { organizationId, contactId });
 
@@ -266,13 +267,13 @@ export async function markAsVIP(
  * Add tags to contact
  */
 export async function addTags(
-  organizationId: string,
   contactId: string,
   newTags: string[],
   workspaceId: string = 'default'
 ): Promise<Contact> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
-    const contact = await getContact(organizationId, contactId, workspaceId);
+    const contact = await getContact(contactId, workspaceId);
     if (!contact) {
       throw new Error('Contact not found');
     }
@@ -280,7 +281,7 @@ export async function addTags(
     const existingTags = contact.tags ?? [];
     const mergedTags = [...new Set([...existingTags, ...newTags])];
 
-    const updated = await updateContact(organizationId, contactId, { tags: mergedTags }, workspaceId);
+    const updated = await updateContact(contactId, { tags: mergedTags }, workspaceId);
 
     logger.info('Tags added to contact', {
       organizationId,
@@ -301,14 +302,14 @@ export async function addTags(
  * Search contacts
  */
 export async function searchContacts(
-  organizationId: string,
   searchTerm: string,
   workspaceId: string = 'default',
   options?: PaginationOptions
 ): Promise<PaginatedResult<Contact>> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Get all contacts (filtered by search term client-side)
-    const result = await getContacts(organizationId, workspaceId, undefined, options);
+    const result = await getContacts(workspaceId, undefined, options);
 
     const searchLower = searchTerm.toLowerCase();
     const filtered = result.data.filter(contact =>
@@ -341,15 +342,15 @@ export async function searchContacts(
  * Record contact interaction
  */
 export async function recordInteraction(
-  organizationId: string,
   contactId: string,
   type: 'email' | 'call' | 'meeting' | 'note',
   details: Record<string, unknown>,
   workspaceId: string = 'default'
 ): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Update last contacted timestamp
-    await updateContact(organizationId, contactId, {
+    await updateContact(contactId, {
       lastContactedAt: new Date(),
     }, workspaceId);
 

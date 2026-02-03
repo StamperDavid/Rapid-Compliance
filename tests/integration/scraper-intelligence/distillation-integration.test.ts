@@ -4,7 +4,7 @@
  * Tests the end-to-end distillation flow with REAL Firestore operations.
  */
 
-import { describe, it, expect, beforeAll, afterAll, afterEach } from '@jest/globals';
+import { describe, it, expect, afterEach } from '@jest/globals';
 import {
   distillScrape,
   distillBatch,
@@ -171,7 +171,6 @@ describe('Distillation Engine Integration Tests', () => {
       const scrape = await getTemporaryScrape(result.tempScrapeId);
       expect(scrape).not.toBeNull();
       expect(scrape?.url).toBe('https://abchvac.example.com');
-      expect(scrape?.organizationId).toBe(TEST_ORG_ID);
       
       // Verify fluff was removed
       expect(scrape?.cleanedContent).not.toContain('© 2025');

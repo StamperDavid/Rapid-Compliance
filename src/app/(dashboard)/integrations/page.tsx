@@ -109,7 +109,6 @@ export default function IntegrationsPage() {
 
       const integration: ConnectedIntegration = {
         id: `integration_${Date.now()}`,
-        organizationId: orgId,
         provider: providerId,
         providerId,
         providerName: INTEGRATION_PROVIDERS[providerId].name,

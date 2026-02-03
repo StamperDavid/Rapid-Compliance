@@ -61,7 +61,6 @@ export default function StripeIntegration({
         icon: '💳',
         category: 'payment',
         status: 'active',
-        organizationId: orgId,
         apiKey: `${apiKey.substring(0, 10)  }...`, // Show partial key
         settings: {
           autoCreateCustomers: true,

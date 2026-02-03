@@ -4,7 +4,7 @@
  * Tests real Firestore interactions for training data management.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, afterEach } from '@jest/globals';
 import { db } from '@/lib/firebase-admin';
 import {
   submitFeedback,
@@ -24,7 +24,6 @@ import {
   saveTemporaryScrape,
   getTemporaryScrape,
 } from '@/lib/scraper-intelligence/discovery-archive-service';
-import type { ClientFeedback, TrainingData } from '@/types/scraper-intelligence';
 
 describe('Training Manager Integration Tests', () => {
   const testOrgId = `test_org_${Date.now()}`;
@@ -44,7 +43,7 @@ describe('Training Manager Integration Tests', () => {
     for (const { collection, id } of createdIds.reverse()) {
       try {
         await db.collection(collection).doc(id).delete();
-      } catch (error) {
+      } catch {
         // Ignore errors during cleanup
       }
     }
@@ -83,12 +82,11 @@ describe('Training Manager Integration Tests', () => {
 
       expect(feedback).toBeDefined();
       expect(feedback.feedbackType).toBe('correct');
-      expect(feedback.organizationId).toBe(testOrgId);
       expect(feedback.userId).toBe(testUserId);
       expect(feedback.processed).toBe(false);
 
       // Wait a bit for async processing
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       // Check that feedback was processed
       const feedbackDoc = await db
@@ -154,7 +152,7 @@ describe('Training Manager Integration Tests', () => {
       expect(scrape?.flaggedForDeletion).toBe(false);
 
       // Wait for processing
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       // Training data should have negative count
       const trainingData = await getTrainingData(testOrgId, 'test_signal');
@@ -194,7 +192,7 @@ describe('Training Manager Integration Tests', () => {
       trackForCleanup('training_feedback', feedback1.id);
 
       // Wait for processing
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       // Get initial training data
       const trainingData1 = await getTrainingData(testOrgId, 'growth_signal');
@@ -221,7 +219,7 @@ describe('Training Manager Integration Tests', () => {
         trackForCleanup('training_feedback', feedback2.id);
 
         // Wait for processing
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
         // Get updated training data
         const trainingData2 = await getTrainingData(testOrgId, 'growth_signal');
@@ -302,7 +300,7 @@ describe('Training Manager Integration Tests', () => {
       trackForCleanup('training_feedback', feedback.id);
 
       // Wait for processing
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       // Get training data
       const trainingData = await getTrainingData(testOrgId, 'test_signal');
@@ -381,7 +379,7 @@ describe('Training Manager Integration Tests', () => {
 
       trackForCleanup('training_feedback', feedback1.id);
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       // Get initial training data
       const initialData = await getTrainingData(testOrgId, 'rollback_signal');
@@ -399,7 +397,7 @@ describe('Training Manager Integration Tests', () => {
         'Create version 2'
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => { setTimeout(resolve, 500); });
 
       // Reactivate (creates version 3)
       await activateTrainingData(
@@ -409,7 +407,7 @@ describe('Training Manager Integration Tests', () => {
         'Create version 3'
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => { setTimeout(resolve, 500); });
 
       // Get current version
       const currentData = await getAllTrainingData(testOrgId, false);
@@ -425,7 +423,7 @@ describe('Training Manager Integration Tests', () => {
         'Testing rollback'
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => { setTimeout(resolve, 500); });
 
       // Verify rollback
       const rolledBackData = await getAllTrainingData(testOrgId, false);
@@ -501,7 +499,7 @@ describe('Training Manager Integration Tests', () => {
       });
 
       // Wait for processing
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => { setTimeout(resolve, 1500); });
 
       // Get analytics
       const analytics = await getTrainingAnalytics(testOrgId);
@@ -568,7 +566,7 @@ describe('Training Manager Integration Tests', () => {
       expect(feedbacks.some((f) => f.feedbackType === 'incorrect')).toBe(true);
 
       // Clean up training data
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => { setTimeout(resolve, 1000); });
       const allTraining = await getAllTrainingData(testOrgId, false);
       allTraining.forEach((td) => {
         trackForCleanup('training_data', td.id);
@@ -606,7 +604,7 @@ describe('Training Manager Integration Tests', () => {
       expect(Array.isArray(unprocessed)).toBe(true);
 
       // Clean up training data
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => { setTimeout(resolve, 1000); });
       const allTraining = await getAllTrainingData(testOrgId, false);
       allTraining.forEach((td) => {
         trackForCleanup('training_data', td.id);
@@ -675,7 +673,7 @@ describe('Training Manager Integration Tests', () => {
 
       trackForCleanup('training_feedback', feedback.id);
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       const trainingData = await getTrainingData(testOrgId, 'error_signal');
       const pattern = trainingData[0];

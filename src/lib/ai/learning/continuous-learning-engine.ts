@@ -200,7 +200,6 @@ async function getLearningConfig(
   } catch (_error) {
     // Return default config if not found
     return {
-      organizationId,
       autoCollectTrainingData: true,
       minConfidenceForCollection: 80,
       minRatingForCollection: 4,

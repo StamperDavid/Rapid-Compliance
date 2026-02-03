@@ -39,13 +39,11 @@ interface PayPalFunctionParams {
 export async function executePayPalFunction(
   functionName: string,
   parameters: Record<string, unknown>,
-  integration: ConnectedIntegration
+  _integration: ConnectedIntegration
 ): Promise<unknown> {
-  const organizationId = (integration.organizationId !== '' && integration.organizationId != null) ? integration.organizationId : '';
-
-  if (!organizationId) {
-    throw new Error('Organization ID not configured');
-  }
+  // Import DEFAULT_ORG_ID for single-tenant
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const organizationId = DEFAULT_ORG_ID;
 
   // Type guard for parameters
   const params = parameters as PayPalFunctionParams;

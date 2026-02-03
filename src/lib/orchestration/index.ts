@@ -2,7 +2,7 @@
  * Orchestration Module - The Sovereign Corporate Brain Neural Net
  * 
  * This module exports the Signal Bus infrastructure that powers
- * real-time intelligence coordination across the Universal AI Sales Platform.
+ * real-time intelligence coordination across the Universal Rapid Compliance.
  * 
  * EXPORTS:
  * - SignalCoordinator: Main orchestration class

@@ -111,7 +111,6 @@ export interface PayPalIntegration {
   description?: string;
   icon?: string;
   category?: string;
-  organizationId?: string;
   status: 'active' | 'inactive' | 'error';
   settings: PaymentIntegrationSettings;
   clientId?: string;
@@ -130,7 +129,6 @@ export interface StripeIntegration {
   description?: string;
   icon?: string;
   category?: string;
-  organizationId?: string;
   status: 'active' | 'inactive' | 'error';
   settings: PaymentIntegrationSettings;
   apiKey?: string;
@@ -157,7 +155,6 @@ export interface XeroIntegration {
   description?: string;
   icon?: string;
   category?: string;
-  organizationId?: string;
   organizationName?: string;
   status: 'active' | 'inactive' | 'error';
   settings?: Record<string, unknown>;
@@ -183,7 +180,6 @@ export interface QuickBooksIntegration {
   description?: string;
   icon?: string;
   category?: string;
-  organizationId?: string;
   status: 'active' | 'inactive' | 'error';
   settings?: Record<string, unknown>;
   syncSettings?: AccountingSyncSettings;
@@ -215,7 +211,6 @@ export interface SlackIntegration {
   description?: string;
   icon?: string;
   category?: string;
-  organizationId?: string;
   status: 'active' | 'inactive' | 'error';
   settings: SlackIntegrationSettings;
   teamName?: string;
@@ -260,7 +255,6 @@ export interface ZapierIntegration {
   description?: string;
   icon?: string;
   category?: string;
-  organizationId?: string;
   status: 'active' | 'inactive' | 'error';
   settings: ZapierIntegrationSettings;
   webhookUrl?: string;
@@ -426,7 +420,6 @@ export interface UserProfile {
   title?: string;
   department?: string;
   role?: string;
-  organizationId?: string;
   [key: string]: unknown;
 }
 
@@ -471,7 +464,6 @@ export interface IntegrationProvider {
 
 export interface ConnectedIntegration {
   id: string;
-  organizationId: string;
   provider: string;
   providerId: string;
   providerName: string;
@@ -490,7 +482,6 @@ export interface ConnectedIntegration {
 }
 
 export interface FunctionCallRequest {
-  organizationId: string;
   integrationId: string;
   functionName: string;
   parameters: Record<string, unknown>;

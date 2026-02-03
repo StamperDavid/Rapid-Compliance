@@ -89,7 +89,7 @@ export interface UnifiedUser {
 // =============================================================================
 
 export interface UnifiedPermissions {
-  // Platform Administration (platform_admin only)
+  // Platform Administration (superadmin only)
   canAccessPlatformAdmin: boolean;
   canManageAllOrganizations: boolean;
   canViewSystemHealth: boolean;
@@ -519,7 +519,7 @@ export type NavigationCategory =
   | 'analytics'        // Analytics: Overview, Revenue, Pipeline, Sequences
   | 'website'          // Website: Pages, Blog, Domains, SEO, Settings
   | 'settings'         // Settings: Organization, Integrations, API Keys, Billing
-  | 'system'           // System (platform_admin only): Health, Orgs, Users, Flags, Logs
+  | 'system'           // System (superadmin only): Health, Orgs, Users, Flags, Logs
   | 'admin_org_view'   // Admin Org View: Overview, Edit, Back to List (admin context)
   | 'admin_support';   // Admin Support: Impersonate, Bulk Ops, Exports, API Health (admin context)
 

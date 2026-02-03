@@ -136,7 +136,6 @@ export async function createWorkflow(
     const workflow: Workflow = {
       ...data,
       id: workflowId,
-      organizationId,
       workspaceId,
       status: data.status ?? 'draft',
       stats: {

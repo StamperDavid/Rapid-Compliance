@@ -118,7 +118,6 @@ describe('Workflow UI Integration', () => {
   it('should execute workflow (workflow page → workflow engine)', async () => {
     const workflow: Workflow = {
       id: 'test-workflow',
-      organizationId: testOrgId,
       workspaceId: testWorkspaceId,
       name: 'Test',
       trigger: { type: 'manual', id: 'trigger-1', name: 'Manual', requireConfirmation: false },

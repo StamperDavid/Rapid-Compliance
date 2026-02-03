@@ -45,7 +45,6 @@ export async function collectTrainingExample(params: {
   // Create training example
   const example: TrainingExample = {
     id: `example_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    organizationId,
     conversationId,
     messages: messages.map(m => ({
       role: m.role as 'system' | 'user' | 'assistant',
@@ -89,7 +88,6 @@ export async function collectFromTrainingScenario(params: {
   
   const example: TrainingExample = {
     id: `example_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    organizationId,
     messages: [
       { role: 'system', content: scenario.systemPrompt },
       { role: 'user', content: scenario.userMessage },
@@ -134,7 +132,6 @@ export async function collectFromHumanCorrection(params: {
   
   const example: TrainingExample = {
     id: `example_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    organizationId,
     conversationId,
     messages: [
       { role: 'system', content: systemPrompt },

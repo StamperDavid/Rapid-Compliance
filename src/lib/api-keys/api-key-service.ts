@@ -93,9 +93,8 @@ class APIKeyService {
     
     // Return cached keys if still valid
     if (this.keysCache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
-      if (this.keysCache.organizationId === organizationId) {
-        return this.keysCache;
-      }
+      // In single-tenant, cache is org-agnostic
+      return this.keysCache;
     }
 
     // Fetch from Firestore
@@ -191,7 +190,6 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     const updatedKeys: APIKeysConfig = {
       ...existingKeys,
       ...keys,
-      organizationId,
       updatedAt: new Date(),
       updatedBy: 'current-user', // TODO: Get from auth context
     };
@@ -290,7 +288,6 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
           // Convert platform keys format to APIKeysConfig format
           return {
             id: 'keys-platform',
-            organizationId: 'platform',
             firebase: platformKeys.firebase ?? {},
             googleCloud: platformKeys.googleCloud ?? {},
             ai: {
@@ -372,7 +369,6 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
   private getDefaultKeys(organizationId: string): APIKeysConfig {
     return {
       id: `keys-${organizationId}`,
-      organizationId,
       firebase: {
         apiKey: '',
         authDomain: '',

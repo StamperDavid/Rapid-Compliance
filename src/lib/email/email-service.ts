@@ -138,7 +138,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
 async function sendViaSendGrid(options: EmailOptions, credentials: Record<string, unknown>): Promise<EmailResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
   const fromEmail = options.from ?? (typeof credentials.fromEmail === 'string' ? credentials.fromEmail : 'noreply@example.com');
-  const fromName = options.fromName ?? (typeof credentials.fromName === 'string' ? credentials.fromName : 'AI Sales Platform');
+  const fromName = options.fromName ?? (typeof credentials.fromName === 'string' ? credentials.fromName : 'Rapid Compliance');
 
   interface SendGridPayload {
     personalizations: Array<{

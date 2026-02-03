@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // In production, this would come from Firestore
     return NextResponse.json({
       seo: {
-        title: 'AI Sales Platform - GoHighLevel Killer',
+        title: 'Rapid Compliance - GoHighLevel Killer',
         description: 'The only AI-native business automation platform you need.',
         keywords: ['AI sales', 'voice agents', 'CRM automation'],
         ogImage: '',

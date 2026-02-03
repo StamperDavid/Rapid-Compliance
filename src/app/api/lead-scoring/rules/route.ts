@@ -100,11 +100,17 @@ export async function GET(req: NextRequest) {
       const updatedAt = data.updatedAt && typeof data.updatedAt === 'object' && 'toDate' in data.updatedAt
         ? data.updatedAt.toDate()
         : new Date();
-      return {
-        ...data,
+      const scoringRules: ScoringRules = {
+        ...DEFAULT_SCORING_RULES,
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        isActive: data.isActive ?? false,
         createdAt,
         updatedAt,
-      } as ScoringRules;
+        createdBy: data.createdBy ?? '',
+      };
+      return scoringRules;
     });
 
     return NextResponse.json({
@@ -193,7 +199,6 @@ export async function POST(req: NextRequest) {
     const rules: ScoringRules = {
       ...DEFAULT_SCORING_RULES,
       id: rulesId,
-      organizationId,
       name,
       description,
       isActive: isActive ?? false,

@@ -6,8 +6,8 @@ import { ClientProviders } from '@/components/ClientProviders';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'SalesVelocity.ai - Accelerate Your Growth',
-  description: 'AI-powered sales automation platform with custom AI agents, CRM, and e-commerce',
+  title: 'RapidCompliance.US - Accelerate Your Growth',
+  description: 'Rapid Compliance platform with custom AI agents, CRM, and e-commerce',
 };
 
 export default function RootLayout({

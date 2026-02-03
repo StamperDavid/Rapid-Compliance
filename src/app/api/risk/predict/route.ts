@@ -241,7 +241,6 @@ export async function POST(request: NextRequest) {
     
     // Get deal for signal emission
     const deal = await getDeal(
-      validatedRequest.organizationId,
       validatedRequest.dealId,
       validatedRequest.workspaceId
     );

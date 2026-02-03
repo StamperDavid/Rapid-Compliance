@@ -5,8 +5,13 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import type { ChatMessage, ModelName } from '@/types/ai-models';
-import type { Organization } from '@/types/organization';
 import type { ConversationMessage } from '@/types/agent-memory';
+
+// Minimal Organization type for this route
+interface Organization {
+  id: string;
+  [key: string]: unknown;
+}
 
 // Force Node.js runtime (required for Firebase Admin SDK)
 export const runtime = 'nodejs';

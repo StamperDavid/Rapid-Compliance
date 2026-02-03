@@ -140,7 +140,6 @@ export interface CustomReport {
   id: string;
   name: string;
   description?: string;
-  organizationId: string;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

@@ -1,0 +1,121 @@
+import { type NextRequest, NextResponse } from 'next/server';
+import { listForms, createForm } from '@/lib/forms/form-service';
+import type { FormDefinition } from '@/lib/forms/types';
+import { z } from 'zod';
+import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+
+const CreateFormBodySchema = z.object({
+  workspaceId: z.string().optional(),
+  name: z.string().min(1, 'Form name is required'),
+  description: z.string().optional(),
+});
+
+/**
+ * GET /api/forms
+ * List all forms for RapidCompliance.US
+ */
+export async function GET(
+  request: NextRequest
+) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const workspaceIdParam = searchParams.get('workspaceId');
+    const workspaceId = workspaceIdParam ?? 'default';
+    const status = searchParams.get('status') as FormDefinition['status'] | null;
+    const category = searchParams.get('category');
+    const pageSizeParam = searchParams.get('pageSize');
+    const pageSize = parseInt(pageSizeParam ?? '50');
+
+    const result = await listForms(workspaceId, {
+      status: status ?? undefined,
+      category: category ?? undefined,
+      pageSize,
+    });
+
+    return NextResponse.json(result);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch forms';
+    logger.error('Failed to fetch forms:', error instanceof Error ? error : undefined);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/forms
+ * Create a new form
+ */
+export async function POST(
+  request: NextRequest
+) {
+  try {
+    const rawBody: unknown = await request.json();
+    const parseResult = CreateFormBodySchema.safeParse(rawBody);
+
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.errors[0]?.message ?? 'Invalid form data' },
+        { status: 400 }
+      );
+    }
+
+    const { workspaceId: workspaceIdInput, name, description } = parseResult.data;
+    const workspaceId = workspaceIdInput ?? 'default';
+
+    // Create form with default settings
+    const formData: Omit<FormDefinition, 'id' | 'createdAt' | 'updatedAt' | 'submissionCount' | 'viewCount'> = {
+      name,
+      description: description ?? '',
+      status: 'draft',
+      version: 1,
+      fieldCount: 0,
+      pages: [
+        {
+          id: `page_${Date.now()}`,
+          title: 'Page 1',
+          order: 0,
+        },
+      ],
+      settings: {
+        submitButtonText: 'Submit',
+        showProgressBar: true,
+        showPageNumbers: true,
+        allowSaveDraft: false,
+        confirmationType: 'message',
+        confirmationMessage: 'Thank you for your submission!',
+        sendEmailNotification: false,
+        sendAutoReply: false,
+        showBranding: true,
+        enableCaptcha: false,
+        requireLogin: false,
+      },
+      behavior: {
+        maxSubmissions: 0,
+        allowMultipleSubmissions: true,
+        showThankYouPage: true,
+        enableSaveAndContinue: false,
+      },
+      crmMapping: {
+        enabled: false,
+        entityType: 'lead',
+        fieldMappings: [],
+        createNew: true,
+        updateExisting: false,
+      },
+      trackingEnabled: true,
+      publicAccess: true,
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      organizationId: DEFAULT_ORG_ID,
+      workspaceId,
+    };
+
+    const form = await createForm(workspaceId, formData);
+
+    return NextResponse.json(form, { status: 201 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to create form';
+    logger.error('Failed to create form:', error instanceof Error ? error : undefined);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

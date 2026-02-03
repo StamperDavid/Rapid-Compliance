@@ -162,7 +162,6 @@ export async function submitFeedback(params: {
 
     const feedback: ClientFeedback = {
       id: feedbackId,
-      organizationId,
       userId,
       feedbackType: params.feedbackType,
       signalId: params.signalId,
@@ -189,14 +188,6 @@ export async function submitFeedback(params: {
       );
     }
 
-    // Verify scrape belongs to organization
-    if (scrape.organizationId !== organizationId) {
-      throw new TrainingManagerError(
-        'Unauthorized: scrape belongs to different organization',
-        'UNAUTHORIZED',
-        403
-      );
-    }
 
     // Save feedback to database
     await db.collection(FEEDBACK_COLLECTION).doc(feedbackId).set({
@@ -258,7 +249,7 @@ export async function submitFeedback(params: {
  */
 async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
   try {
-    const { organizationId, signalId, sourceText, feedbackType } = feedback;
+    const { signalId, sourceText, feedbackType } = feedback;
 
     // Extract pattern from source text
     // For now, use the source text as the pattern
@@ -271,9 +262,9 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
     }
 
     // Look for existing training data with this pattern
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const existing = await db
       .collection(TRAINING_DATA_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .where('signalId', '==', signalId)
       .where('pattern', '==', pattern)
       .limit(1)
@@ -318,7 +309,7 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
           // Log history
           logTrainingHistory(transaction, {
             trainingDataId: doc.id,
-            organizationId,
+            organizationId: '',
             userId: feedback.userId,
             changeType: 'updated',
             previousValue: latestData,
@@ -337,7 +328,7 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
           // Log history
           logTrainingHistory(transaction, {
             trainingDataId: doc.id,
-            organizationId,
+            organizationId: '',
             userId: feedback.userId,
             changeType: 'updated',
             previousValue: trainingData,
@@ -352,7 +343,6 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
 
       const newTrainingData: TrainingData = {
         id: trainingDataId,
-        organizationId,
         signalId,
         pattern,
         patternType: 'keyword',
@@ -380,7 +370,6 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
 
       logger.info('Created new training data from feedback', {
         trainingDataId,
-        organizationId,
         signalId,
         pattern: pattern.substring(0, 50),
       });
@@ -394,7 +383,6 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
   } catch (error) {
     logger.error('Error processing feedback', error instanceof Error ? error : new Error(String(error)), {
       feedbackId: feedback.id,
-      organizationId: feedback.organizationId,
     });
     throw error;
   }
@@ -463,9 +451,9 @@ export async function getTrainingData(
   activeOnly: boolean = true
 ): Promise<TrainingData[]> {
   try {
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     let query = db
       .collection(TRAINING_DATA_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .where('signalId', '==', signalId);
 
     if (activeOnly) {
@@ -500,15 +488,13 @@ export async function getAllTrainingData(
   activeOnly: boolean = true
 ): Promise<TrainingData[]> {
   try {
-    let query = db
-      .collection(TRAINING_DATA_COLLECTION)
-      .where('organizationId', '==', organizationId);
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    const collectionRef = db.collection(TRAINING_DATA_COLLECTION);
+    const baseQuery = activeOnly
+      ? collectionRef.where('active', '==', true)
+      : collectionRef;
 
-    if (activeOnly) {
-      query = query.where('active', '==', true);
-    }
-
-    const docs = await query.orderBy('lastUpdatedAt', 'desc').get();
+    const docs = await baseQuery.orderBy('lastUpdatedAt', 'desc').get();
 
     return docs.docs.map((doc) => toTrainingData(doc.data()));
   } catch (error) {
@@ -553,15 +539,6 @@ export async function deactivateTrainingData(
       }
 
       const trainingData = toTrainingData(doc.data());
-
-      // Verify ownership
-      if (trainingData.organizationId !== organizationId) {
-        throw new TrainingManagerError(
-          'Unauthorized: training data belongs to different organization',
-          'UNAUTHORIZED',
-          403
-        );
-      }
 
       const now = new Date();
       const updatedData = {
@@ -642,15 +619,6 @@ export async function activateTrainingData(
 
       const trainingData = toTrainingData(doc.data());
 
-      // Verify ownership
-      if (trainingData.organizationId !== organizationId) {
-        throw new TrainingManagerError(
-          'Unauthorized: training data belongs to different organization',
-          'UNAUTHORIZED',
-          403
-        );
-      }
-
       const now = new Date();
       const updatedData = {
         ...trainingData,
@@ -729,7 +697,6 @@ function logTrainingHistory(
   const history: TrainingHistory = {
     id: historyId,
     trainingDataId: params.trainingDataId,
-    organizationId: params.organizationId,
     userId: params.userId,
     changeType: params.changeType,
     previousValue: params.previousValue,
@@ -758,10 +725,10 @@ export async function getTrainingHistory(
   organizationId: string
 ): Promise<TrainingHistory[]> {
   try {
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const docs = await db
       .collection(TRAINING_HISTORY_COLLECTION)
       .where('trainingDataId', '==', trainingDataId)
-      .where('organizationId', '==', organizationId)
       .orderBy('changedAt', 'desc')
       .get();
 
@@ -805,10 +772,10 @@ export async function rollbackTrainingData(
 ): Promise<void> {
   try {
     // Get history for target version
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const historyDocs = await db
       .collection(TRAINING_HISTORY_COLLECTION)
       .where('trainingDataId', '==', trainingDataId)
-      .where('organizationId', '==', organizationId)
       .where('version', '==', targetVersion)
       .limit(1)
       .get();
@@ -845,15 +812,6 @@ export async function rollbackTrainingData(
       }
 
       const currentData = toTrainingData(doc.data());
-
-      // Verify ownership
-      if (currentData.organizationId !== organizationId) {
-        throw new TrainingManagerError(
-          'Unauthorized: training data belongs to different organization',
-          'UNAUTHORIZED',
-          403
-        );
-      }
 
       const now = new Date();
       const rolledBackData = {
@@ -919,10 +877,10 @@ export async function getFeedbackForScrape(
   organizationId: string
 ): Promise<ClientFeedback[]> {
   try {
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const docs = await db
       .collection(FEEDBACK_COLLECTION)
       .where('sourceScrapeId', '==', sourceScrapeId)
-      .where('organizationId', '==', organizationId)
       .orderBy('submittedAt', 'desc')
       .get();
 
@@ -959,9 +917,9 @@ export async function getUnprocessedFeedback(
   limit: number = 100
 ): Promise<ClientFeedback[]> {
   try {
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const docs = await db
       .collection(FEEDBACK_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .where('processed', '==', false)
       .orderBy('submittedAt', 'asc')
       .limit(limit)
@@ -1008,9 +966,9 @@ export async function getTrainingAnalytics(organizationId: string): Promise<{
 }> {
   try {
     // Get feedback stats
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const feedbackDocs = await db
       .collection(FEEDBACK_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .get();
 
     const totalFeedback = feedbackDocs.size;
@@ -1034,9 +992,9 @@ export async function getTrainingAnalytics(organizationId: string): Promise<{
     });
 
     // Get training data stats
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const trainingDocs = await db
       .collection(TRAINING_DATA_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .get();
 
     const totalPatterns = trainingDocs.size;

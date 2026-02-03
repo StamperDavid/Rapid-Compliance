@@ -5,8 +5,7 @@
 
 export interface APIKeysConfig {
   id: string;
-  organizationId: string;
-  
+
   // Firebase / Google Cloud
   firebase: {
     apiKey: string;

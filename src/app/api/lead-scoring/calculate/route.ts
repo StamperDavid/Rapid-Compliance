@@ -74,7 +74,6 @@ export async function POST(req: NextRequest) {
 
       const request: BatchLeadScoreRequest = {
         leadIds,
-        organizationId,
         scoringRulesId,
         forceRescore,
       };
@@ -111,7 +110,6 @@ export async function POST(req: NextRequest) {
 
     const request: LeadScoreRequest = {
       leadId,
-      organizationId,
       scoringRulesId,
       forceRescore,
       discoveryData,

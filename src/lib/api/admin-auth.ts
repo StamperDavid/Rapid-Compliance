@@ -55,7 +55,7 @@ interface UserData {
 }
 
 /**
- * Verify the request is from an authenticated admin (platform_admin or admin).
+ * Verify the request is from an authenticated admin (superadmin or admin).
  * Uses Firebase Custom Claims as the source of truth for authorization.
  *
  * @param request - The incoming request
@@ -163,7 +163,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     };
 
     // Check for admin roles using claims-based validation
-    // Allow platform_admin and admin roles
+    // Allow superadmin and admin roles
     if (!hasAdminRole(effectiveClaims)) {
       logger.warn('Non-admin access attempt', {
         userId,
@@ -179,9 +179,9 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
-    // Log Platform Admin (God Mode) access
+    // Log Superadmin access
     if (isPlatformAdminClaims(effectiveClaims)) {
-      logger.info('Platform Admin (God Mode) access', {
+      logger.info('Superadmin access', {
         userId,
         email: userData.email,
         role: effectiveClaims.role,
@@ -191,7 +191,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
 
     // Determine if this is a super admin with global access
     const isGlobalAdmin = isSuperAdmin(effectiveClaims);
-    // Determine if this is a platform admin (God Mode)
+    // Determine if this is a superadmin (full system access)
     const isPlatformAdmin = isPlatformAdminClaims(effectiveClaims);
 
     return {

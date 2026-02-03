@@ -116,7 +116,6 @@ export async function POST(request: NextRequest) {
     // Create template document
     const templateData: PageTemplate = {
       id: `template_${Date.now()}`,
-      organizationId, // CRITICAL: Set org ownership
       name: template.name,
       description: template.description ?? '',
       category: template.category ?? 'other',

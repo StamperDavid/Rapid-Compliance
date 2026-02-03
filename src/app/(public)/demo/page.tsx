@@ -23,7 +23,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
     {
       id: 'welcome',
       role: 'assistant',
-      content: "Hi there! 👋 I'm the AI sales agent for SalesVelocity.ai. I can answer questions about our platform, help you understand pricing, or show you how our AI agents work. What would you like to know?",
+      content: "Hi there! 👋 I'm the AI sales agent for RapidCompliance.US. I can answer questions about our platform, help you understand pricing, or show you how our AI agents work. What would you like to know?",
       timestamp: new Date(),
     }
   ]);
@@ -121,7 +121,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
           <span className="text-2xl">🤖</span>
         </div>
         <div>
-          <h3 className="text-white font-semibold text-lg">SalesVelocity AI Agent</h3>
+          <h3 className="text-white font-semibold text-lg">Rapid Compliance AI Agent</h3>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
             <span className="text-white/80 text-sm">Online now</span>

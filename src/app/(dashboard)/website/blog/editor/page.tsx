@@ -1,7 +1,7 @@
 /**
  * Blog Post Editor
  * Create and edit blog posts using the visual editor
- * CRITICAL: Multi-tenant - scoped to organizationId
+ * NOTE: Single-tenant - uses DEFAULT_ORG_ID
  */
 
 'use client';
@@ -69,7 +69,6 @@ export default function BlogPostEditorPage() {
   const createBlankPost = useCallback(() => {
     const newPost: BlogPost = {
       id: `post_${Date.now()}`,
-      organizationId: orgId,
       slug: 'new-post',
       title: 'Untitled Post',
       excerpt: '',
@@ -93,7 +92,7 @@ export default function BlogPostEditorPage() {
 
     setPost(newPost);
     setLoading(false);
-  }, [orgId, user?.email, user?.displayName]);
+  }, [user?.email, user?.displayName]);
 
   useEffect(() => {
     void loadCategories();
@@ -501,7 +500,6 @@ export default function BlogPostEditorPage() {
           <EditorCanvas
             page={{
               id: post.id,
-              organizationId: post.organizationId,
               title: post.title,
               slug: post.slug,
               content: post.content,

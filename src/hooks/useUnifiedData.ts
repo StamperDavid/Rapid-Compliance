@@ -3,8 +3,8 @@
  * Automatic tenant-scoped data operations for the unified Command Center
  *
  * These hooks automatically scope data queries to the authenticated user's tenant:
- * - If platform_admin with no selected tenant: returns platform aggregate data
- * - If platform_admin with selected tenant: returns that tenant's data
+ * - If superadmin with no selected tenant: returns platform aggregate data
+ * - If superadmin with selected tenant: returns that tenant's data
  * - For all other roles: returns their tenant's data
  */
 
@@ -96,10 +96,10 @@ export function useTenantData<T>(
       return;
     }
 
-    // Platform admin with no tenant selected - return empty for now
+    // Superadmin with no tenant selected - return empty for now
     // In the future, this could return aggregated platform-level data
     if (isAdmin && user.tenantId === null) {
-      logger.info('Platform admin with no tenant - returning empty data', {
+      logger.info('Superadmin with no tenant - returning empty data', {
         collection: collectionName,
         file: 'useUnifiedData.ts',
       });
@@ -259,7 +259,7 @@ export function useTenantDoc<T>(
       return;
     }
 
-    // Platform admin with no tenant - return null
+    // Superadmin with no tenant - return null
     if (isAdmin && user.tenantId === null) {
       setData(null);
       setLoading(false);
@@ -453,7 +453,7 @@ export function useTenantRecords<T>(
 }
 
 /**
- * Fetch all organizations (platform admin only)
+ * Fetch all organizations (superadmin only)
  *
  * @returns All organizations with loading and error states
  *

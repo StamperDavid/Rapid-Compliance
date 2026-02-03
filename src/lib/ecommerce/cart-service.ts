@@ -6,6 +6,7 @@
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Cart, CartItem, AppliedDiscount } from '@/types/ecommerce';
 import { Timestamp } from 'firebase/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface ProductData {
   id: string;
@@ -113,7 +114,6 @@ async function createCart(
     id: sessionId,
     sessionId,
     ...(userId && { userId }), // Only include userId if defined
-    organizationId,
     workspaceId,
     items: [],
     subtotal: 0,
@@ -356,8 +356,11 @@ function recalculateCartTotals(cart: Cart): void {
  * Save cart to Firestore
  */
 async function saveCart(cart: Cart): Promise<void> {
+  // Use organizationId from function parameter context (passed separately)
+  // Cart itself doesn't have organizationId property in single-tenant
+  const organizationId = DEFAULT_ORG_ID;
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${cart.organizationId}/workspaces/${cart.workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${cart.workspaceId}/carts`,
     cart.id,
     {
       ...cart,

@@ -13,10 +13,10 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { runDealHealthCheck } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /** Request body interface for health check */
 interface HealthCheckRequestBody {
-  organizationId?: string;
   workspaceId?: string;
 }
 
@@ -27,21 +27,18 @@ function parseBody(rawBody: unknown): HealthCheckRequestBody {
   }
   const b = rawBody as Record<string, unknown>;
   return {
-    organizationId: typeof b.organizationId === 'string' ? b.organizationId : undefined,
     workspaceId: typeof b.workspaceId === 'string' ? b.workspaceId : undefined,
   };
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Get orgId and workspaceId from headers or body
+    // Single-tenant mode: orgId is always DEFAULT_ORG_ID
+    const organizationId = DEFAULT_ORG_ID;
+
+    // Get workspaceId from headers or body
     const rawBody = await request.json().catch(() => ({})) as unknown;
     const body = parseBody(rawBody);
-    const orgIdFromHeader = request.headers.get('x-organization-id');
-    const organizationId = (body.organizationId !== '' && body.organizationId != null) ? body.organizationId
-      : (orgIdFromHeader !== '' && orgIdFromHeader != null) ? orgIdFromHeader
-      : 'default-org';
-
     const wsIdFromHeader = request.headers.get('x-workspace-id');
     const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId
       : (wsIdFromHeader !== '' && wsIdFromHeader != null) ? wsIdFromHeader

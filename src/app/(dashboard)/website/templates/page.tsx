@@ -1,7 +1,7 @@
 /**
  * Template Browser
  * Browse and apply page templates
- * CRITICAL: Multi-tenant - templates can be org-specific or platform-wide
+ * NOTE: Single-tenant - uses DEFAULT_ORG_ID
  */
 
 'use client';
@@ -251,7 +251,7 @@ export default function TemplateBrowserPage() {
                     PREMIUM
                   </div>
                 )}
-                {template.organizationId && (
+                {!template.isPublic && (
                   <div style={{
                     position: 'absolute',
                     top: '0.75rem',

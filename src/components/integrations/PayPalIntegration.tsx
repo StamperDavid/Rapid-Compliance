@@ -65,7 +65,6 @@ export default function PayPalIntegration({
         icon: '💳',
         category: 'payment',
         status: 'active',
-        organizationId: orgId,
         clientId: `${clientId.substring(0, 10)  }...`,
         clientSecret: '***',
         mode,

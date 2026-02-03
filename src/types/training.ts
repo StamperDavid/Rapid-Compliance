@@ -11,7 +11,6 @@ import type { Timestamp } from 'firebase/firestore';
  */
 export interface TrainingSession {
   id: string;
-  organizationId: string;
   workspaceId?: string;
   goldenMasterId: string;
   
@@ -129,7 +128,6 @@ export interface PromptUpdate {
  */
 export interface GoldenMasterUpdateRequest {
   id: string;
-  organizationId: string;
   goldenMasterId: string;
   
   // Source training sessions
@@ -210,7 +208,6 @@ export interface ImpactAnalysis {
  * Aggregate analytics across training sessions
  */
 export interface TrainingAnalytics {
-  organizationId: string;
   goldenMasterId: string;
   
   // Time range
@@ -257,7 +254,6 @@ export interface TrainingAnalytics {
  * Track progress toward Golden Master deployment
  */
 export interface TrainingProgress {
-  organizationId: string;
   goldenMasterId: string;
   
   // Foundation topics (required)
@@ -290,8 +286,7 @@ export interface TrainingProgress {
  */
 export interface ABTestConfig {
   id: string;
-  organizationId: string;
-  
+
   // Versions being tested
   versionA: {
     goldenMasterId: string;

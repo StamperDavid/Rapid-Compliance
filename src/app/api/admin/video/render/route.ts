@@ -73,20 +73,8 @@ export async function POST(request: NextRequest) {
       metadata,
     } = validation.data;
 
-    // Authorization check: platform admins can access any org,
-    // regular admins can only access their own org
-    if (
-      !authResult.user.isPlatformAdmin &&
-      authResult.user.organizationId !== organizationId
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Access denied to this organization',
-        },
-        { status: 403 }
-      );
-    }
+    // PENTHOUSE: Single-tenant mode - all admins have access to the organization
+    // Cross-org access checks removed
 
     logger.info('[AdminVideoRender] Starting video render job', {
       organizationId,
@@ -185,19 +173,8 @@ export async function GET(request: NextRequest) {
 
     const { jobId: validJobId, organizationId: validOrgId } = validation.data;
 
-    // Authorization check
-    if (
-      !authResult.user.isPlatformAdmin &&
-      authResult.user.organizationId !== validOrgId
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Access denied to this organization',
-        },
-        { status: 403 }
-      );
-    }
+    // PENTHOUSE: Single-tenant mode - all admins have access to the organization
+    // Cross-org access checks removed
 
     // Get job status from Firestore
     const videoJobService = createVideoJobService(validOrgId);

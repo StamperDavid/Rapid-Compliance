@@ -303,7 +303,6 @@ async function getUserLeadCount(
     else {since.setDate(since.getDate() - 30);}
 
     const result = await getLeads(
-      organizationId,
       workspaceId,
       { ownerId: userId },
       { pageSize: 1000 }

@@ -1,7 +1,7 @@
 /**
  * Visual Page Builder - Main Editor
  * Three-panel layout: Widgets | Canvas | Properties
- * CRITICAL: Multi-tenant - all pages scoped to organizationId
+ * NOTE: Single-tenant - uses DEFAULT_ORG_ID
  */
 
 'use client';
@@ -164,7 +164,6 @@ export default function PageEditorPage() {
   const createBlankPageStable = React.useCallback(() => {
     const newPage: Page = {
       id: `page_${Date.now()}`,
-      organizationId: orgId,
       slug: 'new-page',
       title: 'Untitled Page',
       content: [],
@@ -183,7 +182,7 @@ export default function PageEditorPage() {
     setPage(newPage);
     pushState(newPage);
     setLoading(false);
-  }, [orgId, user, pushState]);
+  }, [user, pushState]);
 
   useEffect(() => {
     if (pageId) {

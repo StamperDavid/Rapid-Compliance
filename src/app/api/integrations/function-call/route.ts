@@ -10,6 +10,7 @@ import type { FunctionCallRequest } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface RequestPayload {
   integrationId: string;
@@ -33,11 +34,9 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
 
-    if (!user.organizationId) {
-      return errors.badRequest('Organization ID required');
-    }
+    // Single-tenant: use default organization ID
+    const organizationId = DEFAULT_ORG_ID;
 
     // Parse request
     const body = await request.json() as RequestPayload;
@@ -55,7 +54,6 @@ export async function POST(request: NextRequest) {
 
     // Build function call request
     const functionCallRequest: FunctionCallRequest = {
-      organizationId: user.organizationId,
       conversationId: conversationId ?? '',
       customerId: customerId ?? '',
       integrationId,
@@ -67,7 +65,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Execute the function
-    const result = await executeFunctionCall(functionCallRequest);
+    const result = await executeFunctionCall(functionCallRequest, organizationId);
 
     return NextResponse.json(result);
   } catch (error: unknown) {

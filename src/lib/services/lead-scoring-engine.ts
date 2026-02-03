@@ -22,6 +22,7 @@ import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import { discoverCompany, discoverPerson, type DiscoveredCompany, type DiscoveredPerson } from './discovery-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import {
   DEFAULT_SCORING_RULES,
   type LeadScore,
@@ -89,17 +90,16 @@ export async function calculateLeadScore(
       throw new Error('Admin DAL not initialized');
     }
 
-    const { leadId, organizationId, scoringRulesId, forceRescore, discoveryData } = request;
+    const { leadId, scoringRulesId, forceRescore, discoveryData } = request;
 
     logger.info('Calculating lead score', {
       leadId,
-      organizationId,
       forceRescore,
     });
 
     // Step 1: Check cache (unless force rescore)
     if (!forceRescore) {
-      const cached = await getCachedScore(leadId, organizationId);
+      const cached = await getCachedScore(leadId, DEFAULT_ORG_ID);
       if (cached) {
         logger.info('Lead score cache HIT', {
           leadId,
@@ -111,7 +111,7 @@ export async function calculateLeadScore(
     }
 
     // Step 2: Get scoring rules
-    const rules = await getScoringRules(organizationId, scoringRulesId);
+    const rules = await getScoringRules(DEFAULT_ORG_ID, scoringRulesId);
     if (!rules) {
       throw new Error('No active scoring rules found');
     }
@@ -119,7 +119,7 @@ export async function calculateLeadScore(
     // Step 3: Get discovery data
     const { company, person } = await getDiscoveryData(
       leadId,
-      organizationId,
+      DEFAULT_ORG_ID,
       discoveryData
     );
 
@@ -127,7 +127,7 @@ export async function calculateLeadScore(
     const companyFitScore = calculateCompanyFit(company, rules);
     const personFitScore = calculatePersonFit(person, rules);
     const intentSignalsScore = detectIntentSignals(company, person, rules);
-    const engagementScore = await calculateEngagement(leadId, organizationId, rules);
+    const engagementScore = await calculateEngagement(leadId, DEFAULT_ORG_ID, rules);
 
     // Step 5: Calculate total score
     const totalScore = Math.min(
@@ -172,7 +172,7 @@ export async function calculateLeadScore(
     };
 
     // Step 9: Cache the score
-    await cacheScore(leadId, organizationId, rules.id, score, company, person);
+    await cacheScore(leadId, DEFAULT_ORG_ID, rules.id, score, company, person);
 
     logger.info('Lead score calculated', {
       leadId,
@@ -182,13 +182,12 @@ export async function calculateLeadScore(
     });
 
     // Step 10: Emit Signal Bus signals based on score
-    await emitScoringSignals(leadId, organizationId, score, company, person);
+    await emitScoringSignals(leadId, DEFAULT_ORG_ID, score, company, person);
 
     return score;
   } catch (error) {
     logger.error('Failed to calculate lead score', error instanceof Error ? error : new Error(String(error)), {
       leadId: request.leadId,
-      organizationId: request.organizationId,
     });
     throw error;
   }
@@ -200,10 +199,9 @@ export async function calculateLeadScore(
 export async function calculateLeadScoresBatch(
   request: BatchLeadScoreRequest
 ): Promise<Map<string, LeadScore>> {
-  const { leadIds, organizationId, scoringRulesId, forceRescore } = request;
+  const { leadIds, scoringRulesId, forceRescore } = request;
 
   logger.info('Batch lead scoring started', {
-    organizationId,
     leadsCount: leadIds.length,
   });
 
@@ -218,7 +216,6 @@ export async function calculateLeadScoresBatch(
       batch.map((leadId) =>
         calculateLeadScore({
           leadId,
-          organizationId,
           scoringRulesId,
           forceRescore,
         })
@@ -236,7 +233,6 @@ export async function calculateLeadScoresBatch(
   }
 
   logger.info('Batch lead scoring complete', {
-    organizationId,
     totalLeads: leadIds.length,
     successCount: results.size,
     failedCount: leadIds.length - results.size,
@@ -868,10 +864,10 @@ async function calculateEngagement(
     }
 
     // Get sequence enrollments for this lead
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const enrollments = await adminDal.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
       ref
         .where('leadId', '==', leadId)
-        .where('organizationId', '==', organizationId)
     );
 
     let hasEmailOpened = false;
@@ -1202,7 +1198,6 @@ async function createDefaultScoringRules(organizationId: string): Promise<Scorin
 
   const rules: ScoringRules = {
     id: rulesId,
-    organizationId,
     ...DEFAULT_SCORING_RULES,
     createdAt: now,
     updatedAt: now,
@@ -1297,7 +1292,6 @@ async function cacheScore(
     const storedScore: Omit<StoredLeadScore, 'id'> = {
       ...score,
       leadId,
-      organizationId,
       scoringRulesId,
       snapshot: {
         companyDomain: company?.domain,

@@ -7,7 +7,6 @@ import type { EntityFilter } from './entity';
  */
 export interface Workflow {
   id: string;
-  organizationId: string;
   workspaceId: string;
   
   // Basic info
@@ -171,7 +170,6 @@ export interface WorkflowParameter {
  */
 export interface WorkflowTriggerData {
   // Core identifiers
-  organizationId?: string;
   workspaceId?: string;
   recordId?: string;
   id?: string;

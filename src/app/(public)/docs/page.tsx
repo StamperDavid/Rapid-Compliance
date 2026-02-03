@@ -22,7 +22,7 @@ function FallbackContent() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-white mb-6">Documentation</h1>
-          <p className="text-xl text-gray-300 mb-8">Everything you need to know about using SalesVelocity.ai</p>
+          <p className="text-xl text-gray-300 mb-8">Everything you need to know about using RapidCompliance.US</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">

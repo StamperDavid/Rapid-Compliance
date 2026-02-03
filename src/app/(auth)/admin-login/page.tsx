@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
       
       logger.info('✅ Firebase Auth successful', { email: user.email, file: 'page.tsx' });
       
-      // Verify user is a platform_admin by checking their Firestore document
+      // Verify user is a superadmin by checking their Firestore document
       const token = await user.getIdToken();
       
       // Call API to verify admin status and get user data
@@ -259,8 +259,8 @@ export default function AdminLoginPage() {
 
         <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#0a0a0a', borderRadius: '0.5rem' }}>
           <div style={{ fontSize: '0.75rem', color: '#666', lineHeight: '1.5' }}>
-            <strong>Super Admin Access:</strong> This login requires a platform_admin account.
-            Contact your platform administrator if you need access.
+            <strong>Super Admin Access:</strong> This login requires a superadmin account.
+            Contact your system administrator if you need access.
           </div>
         </div>
       </div>

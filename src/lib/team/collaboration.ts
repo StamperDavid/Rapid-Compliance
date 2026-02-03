@@ -376,14 +376,14 @@ async function calculateUserMetrics(
     const { getActivities } = await import('@/lib/crm/activity-service');
 
     // Get leads created by user
-    const leadsResult = await getLeads(organizationId, workspaceId, { ownerId: userId }, { pageSize: 1000 });
+    const leadsResult = await getLeads(workspaceId, { ownerId: userId }, { pageSize: 1000 });
     const leadsInPeriod = leadsResult.data.filter((l: HasCreatedAt) => {
       const createdAt = toDate(l.createdAt);
       return createdAt >= startDate && createdAt <= endDate;
     });
 
     // Get deals closed by user
-    const dealsResult = await getDeals(organizationId, workspaceId, { ownerId: userId }, { pageSize: 1000 });
+    const dealsResult = await getDeals(workspaceId, { ownerId: userId }, { pageSize: 1000 });
     const dealsClosedWon = dealsResult.data.filter((d: HasActualCloseDate) => {
       if (d.stage !== 'closed_won') {return false;}
       const closedAt = toDate(d.actualCloseDate ?? d.updatedAt);

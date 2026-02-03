@@ -35,8 +35,20 @@ import {
   type InsightData,
 } from '../shared/tenant-memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
-import type { BrandDNA as _BrandDNA } from '@/types/organization';
 import { logger } from '@/lib/logger/logger';
+
+// Minimal BrandDNA type for this manager (used by getBrandDNA return type)
+interface _BrandDNA {
+  companyDescription?: string;
+  uniqueValue?: string;
+  targetAudience?: string;
+  toneOfVoice?: string;
+  communicationStyle?: string;
+  keyPhrases?: string[];
+  avoidPhrases?: string[];
+  industry?: string;
+  competitors?: string[];
+}
 
 // ============================================================================
 // SYSTEM PROMPT - Industry-Agnostic Marketing Orchestration

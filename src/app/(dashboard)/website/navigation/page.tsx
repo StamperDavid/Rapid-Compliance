@@ -1,7 +1,7 @@
 /**
  * Navigation Management
  * Build and manage site navigation (header menu, footer)
- * CRITICAL: Multi-tenant - scoped to organizationId
+ * NOTE: Single-tenant - uses DEFAULT_ORG_ID
  */
 
 'use client';
@@ -51,7 +51,6 @@ export default function NavigationManagementPage() {
         // Initialize default navigation
         setNavigation({
           id: 'nav',
-          organizationId: orgId,
           header: [],
           footer: {
             columns: [],

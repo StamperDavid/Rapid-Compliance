@@ -250,15 +250,15 @@ export async function updateSequence(
 /**
  * List sequences for organization
  */
-export async function listSequences(organizationId: string): Promise<Sequence[]> {
+export async function listSequences(_organizationId: string): Promise<Sequence[]> {
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
     }
 
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const snapshot = await adminDal.safeQuery('SEQUENCES', (ref) =>
       ref
-        .where('organizationId', '==', organizationId)
         .orderBy('createdAt', 'desc')
     );
 
@@ -1110,9 +1110,9 @@ export async function processDueSequenceSteps(organizationId: string): Promise<n
     const now = new Date();
 
     // Find all enrollments that are due for execution
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const dueEnrollments = await adminDal.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
       ref
-        .where('organizationId', '==', organizationId)
         .where('status', '==', 'active')
         .where('nextExecutionAt', '<=', Timestamp.fromDate(now))
         .limit(100) // Process in batches

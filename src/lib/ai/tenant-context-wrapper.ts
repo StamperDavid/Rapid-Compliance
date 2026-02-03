@@ -61,46 +61,39 @@ export interface CountVerificationResult {
 
 /**
  * Build the Hidden System Header for tenant isolation.
- * This header is prepended to every AI prompt to enforce data boundaries.
+ * PENTHOUSE MODEL: Single-tenant deployment - all users belong to Rapid Compliance.
  *
  * @param context - The tenant context
  * @returns The isolation header string
  */
 export function buildTenantIsolationHeader(context: TenantContext): string {
   if (context.isGlobalAdmin) {
-    // Admin (Jasper) has read access to all organizations
-    return `[SYSTEM ISOLATION: ADMIN MODE]
-You are operating in a strict multi-tenant environment as a PLATFORM ADMINISTRATOR.
-You have READ-ONLY access to all organizations for monitoring and analytics purposes.
-You must NEVER modify data in any organization without explicit authorization.
-You must NEVER leak data from one organization to users of another organization.
+    // Superadmin (Jasper) has full access within the single organization
+    return `[SYSTEM CONTEXT: ADMIN MODE]
+You are operating within Rapid Compliance's single-tenant platform.
+You have full administrative access for monitoring and management.
 All data access is logged for compliance and audit purposes.
 
 Current Session:
 - Role: Platform Administrator
-- Access Level: Global Read
+- Organization: Rapid Compliance
 - Audit Trail: ENABLED
-[END ISOLATION HEADER]
+[END CONTEXT HEADER]
 
 `;
   }
 
-  // Client agents are strictly isolated to their organization
-  return `[SYSTEM ISOLATION: STRICT TENANT MODE]
-You are operating in a strict multi-tenant environment.
-You represent: ${context.orgName}
-Your Organization ID is: ${context.orgId}
-Your Industry: ${context.industry ?? 'General'}
+  // Standard users operate within the single organization
+  return `[SYSTEM CONTEXT: SINGLE-TENANT MODE]
+You are operating within Rapid Compliance's platform.
+Organization: ${context.orgName}
+Industry: ${context.industry ?? 'General'}
 
-CRITICAL SECURITY RULES:
-1. You are FORBIDDEN from accessing data outside Organization ID: ${context.orgId}
-2. You are FORBIDDEN from hallucinating or generating fake data about other organizations
-3. You must ONLY reference data that has been explicitly provided to you
-4. If asked about other organizations, respond: "I only have access to ${context.orgName} data."
-5. All responses must be scoped to the current organization context
-
-Violation of these rules is a critical security breach.
-[END ISOLATION HEADER]
+CONTEXT RULES:
+1. You represent Rapid Compliance
+2. You must ONLY reference data that has been explicitly provided to you
+3. All responses should align with Rapid Compliance's business goals
+[END CONTEXT HEADER]
 
 `;
 }
@@ -240,7 +233,7 @@ export function buildJasperContext(
   return {
     orgId: DEFAULT_ORG_ID,
     orgName: 'Rapid Compliance',
-    industry: 'platform_administration',
+    industry: 'system_administration',
     role: 'superadmin',
     isGlobalAdmin: true,
   };

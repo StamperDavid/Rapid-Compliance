@@ -18,12 +18,10 @@ export async function executeZoomFunction(
   parameters: Record<string, unknown>,
   integration: ConnectedIntegration
 ): Promise<unknown> {
-  const organizationId = (integration.organizationId !== '' && integration.organizationId != null) ? integration.organizationId : '';
+  // Import DEFAULT_ORG_ID for single-tenant
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const organizationId = DEFAULT_ORG_ID;
   const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
-
-  if (!organizationId) {
-    throw new Error('Organization ID not configured');
-  }
 
   if (!accessToken) {
     throw new Error('Zoom access token not configured');

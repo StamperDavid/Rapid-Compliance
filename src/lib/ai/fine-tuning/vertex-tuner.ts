@@ -75,7 +75,6 @@ export async function createVertexAIFineTuningJob(params: {
   // Save job to Firestore
   const job: FineTuningJob = {
     id: `job_${Date.now()}`,
-    organizationId,
     provider: 'google',
     baseModel,
     datasetId: 'uploaded',

@@ -10,10 +10,8 @@ import {
   createLead,
   updateLead,
   deleteLead,
-  enrichLead,
   searchLeads,
   bulkUpdateLeads,
-  type Lead,
 } from '@/lib/crm/lead-service';
 import { FirestoreService } from '@/lib/db/firestore-service';
 
@@ -34,8 +32,8 @@ describe('LeadService', () => {
     // Cleanup: Delete test lead if exists
     if (testLeadId) {
       try {
-        await deleteLead(testOrgId, testLeadId, testWorkspaceId);
-      } catch (error) {
+        await deleteLead(testLeadId, testWorkspaceId);
+      } catch {
         // Ignore cleanup errors
       }
     }
@@ -53,7 +51,7 @@ describe('LeadService', () => {
       };
 
       // Disable auto-enrichment to test default score behavior
-      const lead = await createLead(testOrgId, leadData, testWorkspaceId, { autoEnrich: false });
+      const lead = await createLead(leadData, testWorkspaceId, { autoEnrich: false });
       testLeadId = lead.id;
 
       expect(lead).toBeDefined();
@@ -68,7 +66,7 @@ describe('LeadService', () => {
     });
 
     it('should create lead with custom score', async () => {
-      const lead = await createLead(testOrgId, {
+      const lead = await createLead({
         firstName: 'Jane',
         lastName: 'Smith',
         email: 'jane@example.com',
@@ -84,7 +82,7 @@ describe('LeadService', () => {
   describe('getLead', () => {
     it('should retrieve an existing lead', async () => {
       // Create a lead
-      const created = await createLead(testOrgId, {
+      const created = await createLead({
         firstName: 'Test',
         lastName: 'User',
         email: 'test@example.com',
@@ -93,7 +91,7 @@ describe('LeadService', () => {
       testLeadId = created.id;
 
       // Retrieve it
-      const lead = await getLead(testOrgId, testLeadId, testWorkspaceId);
+      const lead = await getLead(testLeadId, testWorkspaceId);
 
       expect(lead).toBeDefined();
       expect(lead?.id).toBe(testLeadId);
@@ -101,7 +99,7 @@ describe('LeadService', () => {
     });
 
     it('should return null for non-existent lead', async () => {
-      const lead = await getLead(testOrgId, 'non-existent-id', testWorkspaceId);
+      const lead = await getLead('non-existent-id', testWorkspaceId);
       expect(lead).toBeNull();
     });
   });
@@ -109,7 +107,7 @@ describe('LeadService', () => {
   describe('updateLead', () => {
     it('should update lead fields', async () => {
       // Create a lead
-      const created = await createLead(testOrgId, {
+      const created = await createLead({
         firstName: 'Original',
         lastName: 'Name',
         email: 'original@example.com',
@@ -118,7 +116,7 @@ describe('LeadService', () => {
       testLeadId = created.id;
 
       // Update it
-      const updated = await updateLead(testOrgId, testLeadId, {
+      const updated = await updateLead(testLeadId, {
         firstName: 'Updated',
         status: 'qualified',
         score: 90,
@@ -137,7 +135,7 @@ describe('LeadService', () => {
       // Create multiple leads
       const leadIds: string[] = [];
       for (let i = 0; i < 10; i++) {
-        const lead = await createLead(testOrgId, {
+        const lead = await createLead({
           firstName: `Lead`,
           lastName: `${i}`,
           email: `lead${i}@example.com`,
@@ -147,14 +145,14 @@ describe('LeadService', () => {
       }
 
       // Get first page
-      const result = await getLeads(testOrgId, testWorkspaceId, undefined, { pageSize: 5 });
+      const result = await getLeads(testWorkspaceId, undefined, { pageSize: 5 });
 
       expect(result.data).toHaveLength(5);
       expect(result.hasMore).toBe(true);
       expect(result.lastDoc).toBeDefined();
 
       // Get second page
-      const page2 = await getLeads(testOrgId, testWorkspaceId, undefined, {
+      const page2 = await getLeads(testWorkspaceId, undefined, {
         pageSize: 5,
         lastDoc: result.lastDoc!,
       });
@@ -164,20 +162,20 @@ describe('LeadService', () => {
 
       // Cleanup
       for (const id of leadIds) {
-        await deleteLead(testOrgId, id, testWorkspaceId);
+        await deleteLead(id, testWorkspaceId);
       }
     });
 
     it('should filter leads by status', async () => {
       // Create leads with different statuses
-      const newLead = await createLead(testOrgId, {
+      const newLead = await createLead({
         firstName: 'New',
         lastName: 'Lead',
         email: 'new@example.com',
         status: 'new' as const,
       }, testWorkspaceId);
 
-      const qualifiedLead = await createLead(testOrgId, {
+      const qualifiedLead = await createLead({
         firstName: 'Qualified',
         lastName: 'Lead',
         email: 'qualified@example.com',
@@ -185,20 +183,20 @@ describe('LeadService', () => {
       }, testWorkspaceId);
 
       // Filter by status
-      const result = await getLeads(testOrgId, testWorkspaceId, { status: 'qualified' });
+      const result = await getLeads(testWorkspaceId, { status: 'qualified' });
 
       expect(result.data.length).toBeGreaterThanOrEqual(1);
       expect(result.data.every(l => l.status === 'qualified')).toBe(true);
 
       // Cleanup
-      await deleteLead(testOrgId, newLead.id, testWorkspaceId);
-      await deleteLead(testOrgId, qualifiedLead.id, testWorkspaceId);
+      await deleteLead(newLead.id, testWorkspaceId);
+      await deleteLead(qualifiedLead.id, testWorkspaceId);
     });
   });
 
   describe('searchLeads', () => {
     it('should search leads by name', async () => {
-      const lead = await createLead(testOrgId, {
+      const lead = await createLead({
         firstName: 'Searchable',
         lastName: 'Lead',
         email: 'searchable@example.com',
@@ -206,14 +204,14 @@ describe('LeadService', () => {
       }, testWorkspaceId);
       testLeadId = lead.id;
 
-      const result = await searchLeads(testOrgId, 'Searchable', testWorkspaceId);
+      const result = await searchLeads('Searchable', testWorkspaceId);
 
       expect(result.data.length).toBeGreaterThanOrEqual(1);
       expect(result.data.some(l => l.id === testLeadId)).toBe(true);
     });
 
     it('should search leads by email', async () => {
-      const lead = await createLead(testOrgId, {
+      const lead = await createLead({
         firstName: 'Test',
         lastName: 'User',
         email: 'unique-email@example.com',
@@ -221,7 +219,7 @@ describe('LeadService', () => {
       }, testWorkspaceId);
       testLeadId = lead.id;
 
-      const result = await searchLeads(testOrgId, 'unique-email', testWorkspaceId);
+      const result = await searchLeads('unique-email', testWorkspaceId);
 
       expect(result.data.some(l => l.id === testLeadId)).toBe(true);
     });
@@ -230,21 +228,21 @@ describe('LeadService', () => {
   describe('bulkUpdateLeads', () => {
     it('should update multiple leads at once', async () => {
       // Create 3 leads
-      const lead1 = await createLead(testOrgId, {
+      const lead1 = await createLead({
         firstName: 'Bulk1',
         lastName: 'Test',
         email: 'bulk1@example.com',
         status: 'new' as const,
       }, testWorkspaceId);
 
-      const lead2 = await createLead(testOrgId, {
+      const lead2 = await createLead({
         firstName: 'Bulk2',
         lastName: 'Test',
         email: 'bulk2@example.com',
         status: 'new' as const,
       }, testWorkspaceId);
 
-      const lead3 = await createLead(testOrgId, {
+      const lead3 = await createLead({
         firstName: 'Bulk3',
         lastName: 'Test',
         email: 'bulk3@example.com',
@@ -253,7 +251,6 @@ describe('LeadService', () => {
 
       // Bulk update
       const successCount = await bulkUpdateLeads(
-        testOrgId,
         [lead1.id, lead2.id, lead3.id],
         { status: 'contacted' },
         testWorkspaceId
@@ -262,28 +259,28 @@ describe('LeadService', () => {
       expect(successCount).toBe(3);
 
       // Verify updates
-      const updated1 = await getLead(testOrgId, lead1.id, testWorkspaceId);
+      const updated1 = await getLead(lead1.id, testWorkspaceId);
       expect(updated1?.status).toBe('contacted');
 
       // Cleanup
-      await deleteLead(testOrgId, lead1.id, testWorkspaceId);
-      await deleteLead(testOrgId, lead2.id, testWorkspaceId);
-      await deleteLead(testOrgId, lead3.id, testWorkspaceId);
+      await deleteLead(lead1.id, testWorkspaceId);
+      await deleteLead(lead2.id, testWorkspaceId);
+      await deleteLead(lead3.id, testWorkspaceId);
     });
   });
 
   describe('deleteLead', () => {
     it('should delete a lead', async () => {
-      const lead = await createLead(testOrgId, {
+      const lead = await createLead({
         firstName: 'Delete',
         lastName: 'Me',
         email: 'deleteme@example.com',
         status: 'new' as const,
       }, testWorkspaceId);
 
-      await deleteLead(testOrgId, lead.id, testWorkspaceId);
+      await deleteLead(lead.id, testWorkspaceId);
 
-      const deleted = await getLead(testOrgId, lead.id, testWorkspaceId);
+      const deleted = await getLead(lead.id, testWorkspaceId);
       expect(deleted).toBeNull();
     });
   });

@@ -70,7 +70,6 @@ export class SequenceEngine {
       id: `enrollment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       sequenceId,
       prospectId,
-      organizationId,
       status: 'active',
       currentStep: 0,
       enrolledAt: new Date().toISOString(),
@@ -772,8 +771,9 @@ export class SequenceEngine {
    * Save enrollment
    */
   private static async saveEnrollment(enrollment: ProspectEnrollment): Promise<void> {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${enrollment.organizationId}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
       enrollment.id,
       enrollment,
       false

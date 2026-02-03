@@ -13,7 +13,6 @@ import type { Timestamp } from 'firebase/firestore';
  */
 export interface CustomTool {
   id: string;
-  organizationId: string;
   name: string;
   description?: string;
   icon: string; // emoji or lucide icon name (e.g., "Wrench", "Calculator", or emoji)

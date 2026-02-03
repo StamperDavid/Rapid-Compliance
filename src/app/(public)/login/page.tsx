@@ -38,7 +38,7 @@ export default function LoginPage() {
    * UNIFIED LOGIN ARCHITECTURE: SMART ROLE REDIRECTION
    *
    * This handler implements role-based routing after authentication:
-   * - platform_admin users → /admin (Platform Admin Dashboard)
+   * - superadmin users → /admin (Platform Admin Dashboard)
    * - All other users → /workspace/{orgId}/dashboard (Tenant Workspace)
    *
    * The redirecting state prevents FOUC (Flash of Unstyled Content) by

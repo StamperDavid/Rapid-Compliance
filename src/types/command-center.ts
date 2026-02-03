@@ -59,7 +59,9 @@ export interface NavItem {
  * Permissions are hierarchical:
  * - 'view_*' permissions allow read-only access
  * - 'manage_*' permissions allow full CRUD operations
- * - 'platform_admin' grants all permissions
+ * - 'platform_admin' grants all permissions (deprecated, use superadmin)
+ *
+ * @deprecated This type is legacy. Use UnifiedPermissions from unified-rbac.ts instead.
  */
 export type AdminPermission =
   | 'view_organizations'
@@ -71,7 +73,7 @@ export type AdminPermission =
   | 'view_analytics'
   | 'manage_system'
   | 'manage_agents'
-  | 'platform_admin';
+  | 'platform_admin'; // @deprecated Use superadmin instead
 
 // ============================================================================
 // AI Specialist Categories and Configuration
@@ -200,8 +202,6 @@ export interface TrainingExample {
  * Complete context for the Admin Command Center session
  */
 export interface CommandCenterContext {
-  /** Current organization ID being administered */
-  organizationId: string;
   /** Currently authenticated admin user */
   adminUser: AdminUser;
   /** List of active AI specialists in this org */
@@ -212,9 +212,11 @@ export interface CommandCenterContext {
 
 /**
  * Admin role levels defining access scope
+ *
+ * @deprecated This type is legacy. Use AccountRole from unified-rbac.ts instead.
  */
 export type AdminRole =
-  | 'platform_admin'  // Full platform access (formerly super_admin)
+  | 'platform_admin'  // @deprecated Use 'superadmin' instead - Full platform access
   | 'admin'           // Organization-level access
   | 'support'         // Read + limited write access
   | 'viewer';         // Read-only access

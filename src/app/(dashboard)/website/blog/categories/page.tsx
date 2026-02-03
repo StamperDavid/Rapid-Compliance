@@ -1,7 +1,7 @@
 /**
  * Blog Categories Management
  * Create and manage blog categories
- * CRITICAL: Multi-tenant - scoped to organizationId
+ * NOTE: Single-tenant - uses DEFAULT_ORG_ID
  */
 
 'use client';

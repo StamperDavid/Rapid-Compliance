@@ -41,7 +41,6 @@ export class AutonomousPostingAgent {
   constructor(organizationId: string, config?: Partial<PostingAgentConfig>) {
     this.organizationId = organizationId;
     this.config = {
-      organizationId,
       platforms: config?.platforms ?? ['twitter', 'linkedin'],
       contentSources: config?.contentSources ?? [
         { type: 'ai_generated', enabled: true, priority: 1 },
@@ -399,7 +398,6 @@ export class AutonomousPostingAgent {
       for (const platform of platforms) {
         const scheduledPost: ScheduledPost = {
           id: `${postId}-${platform}`,
-          organizationId: this.organizationId,
           platform,
           content: finalContent,
           mediaUrls: options.mediaUrls,
@@ -472,7 +470,6 @@ export class AutonomousPostingAgent {
       for (const platform of platforms) {
         const queuedPost: QueuedPost = {
           id: `${postId}-${platform}`,
-          organizationId: this.organizationId,
           platform,
           content: finalContent,
           mediaUrls: options.mediaUrls,
@@ -707,7 +704,6 @@ export class AutonomousPostingAgent {
 
     const post: SocialMediaPost = {
       id: postId,
-      organizationId: this.organizationId,
       platform: data.platform,
       content: data.content,
       mediaUrls: data.mediaUrls,

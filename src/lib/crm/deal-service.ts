@@ -4,10 +4,11 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
- 
+
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getClientSignalCoordinator } from '@/lib/orchestration/coordinator-factory-client';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface Deal {
   id: string;
@@ -55,11 +56,11 @@ export interface PaginatedResult<T> {
  * Get deals with pagination and filtering
  */
 export async function getDeals(
-  organizationId: string,
   workspaceId: string = 'default',
   filters?: DealFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<Deal>> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const constraints: QueryConstraint[] = [];
 
@@ -101,10 +102,10 @@ export async function getDeals(
  * Get a single deal
  */
 export async function getDeal(
-  organizationId: string,
   dealId: string,
   workspaceId: string = 'default'
 ): Promise<Deal | null> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const deal = await FirestoreService.get<Deal>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
@@ -129,10 +130,10 @@ export async function getDeal(
  * Create a new deal
  */
 export async function createDeal(
-  organizationId: string,
   data: Omit<Deal, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>,
   workspaceId: string = 'default'
 ): Promise<Deal> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const dealId = `deal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
@@ -183,11 +184,11 @@ export async function createDeal(
  * Update deal
  */
 export async function updateDeal(
-  organizationId: string,
   dealId: string,
   updates: Partial<Omit<Deal, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>>,
   workspaceId: string = 'default'
 ): Promise<Deal> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const updatedData = {
       ...updates,
@@ -206,7 +207,7 @@ export async function updateDeal(
       updatedFields: Object.keys(updates),
     });
 
-    const deal = await getDeal(organizationId, dealId, workspaceId);
+    const deal = await getDeal(dealId, workspaceId);
     if (!deal) {
       throw new Error('Deal not found after update');
     }
@@ -223,14 +224,14 @@ export async function updateDeal(
  * Move deal to next stage
  */
 export async function moveDealToStage(
-  organizationId: string,
   dealId: string,
   newStage: Deal['stage'],
   workspaceId: string = 'default'
 ): Promise<Deal> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Get current deal for event firing
-    const currentDeal = await getDeal(organizationId, dealId, workspaceId);
+    const currentDeal = await getDeal(dealId, workspaceId);
     if (!currentDeal) {
       throw new Error('Deal not found');
     }
@@ -247,7 +248,7 @@ export async function moveDealToStage(
       updates.probability = newStage === 'closed_won' ? 100 : 0;
     }
 
-    const deal = await updateDeal(organizationId, dealId, updates, workspaceId);
+    const deal = await updateDeal(dealId, updates, workspaceId);
 
     // Fire CRM event
     try {
@@ -305,10 +306,10 @@ export async function moveDealToStage(
  * Delete deal
  */
 export async function deleteDeal(
-  organizationId: string,
   dealId: string,
   workspaceId: string = 'default'
 ): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.delete(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
@@ -327,11 +328,11 @@ export async function deleteDeal(
  * Get pipeline summary
  */
 export async function getPipelineSummary(
-  organizationId: string,
   workspaceId: string = 'default'
 ): Promise<Record<string, { count: number; totalValue: number }>> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
-    const { data: allDeals } = await getDeals(organizationId, workspaceId);
+    const { data: allDeals } = await getDeals(workspaceId);
 
     const summary: Record<string, { count: number; totalValue: number }> = {};
     const stages: Deal['stage'][] = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];

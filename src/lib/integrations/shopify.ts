@@ -242,7 +242,6 @@ export async function syncShopifyOrdersToCRM(
         // Create or update customer as lead
         if (order.customer.email) {
           await createLead(
-            organizationId,
             {
               firstName: (order.customer.firstName !== '' && order.customer.firstName != null) ? order.customer.firstName : 'Shopify',
               lastName: (order.customer.lastName !== '' && order.customer.lastName != null) ? order.customer.lastName : 'Customer',
@@ -256,7 +255,7 @@ export async function syncShopifyOrdersToCRM(
         }
 
         // Create deal for order
-        await createDeal(organizationId, {
+        await createDeal({
           name: `Shopify Order #${order.orderNumber}`,
           value: order.totalPrice,
           stage: order.financialStatus === 'paid' ? 'closed_won' : 'negotiation',

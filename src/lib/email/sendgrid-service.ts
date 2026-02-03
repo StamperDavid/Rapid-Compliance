@@ -7,7 +7,7 @@ import sgMail, { type MailDataRequired, type ResponseError } from '@sendgrid/mai
 import { logger } from '@/lib/logger/logger';
 
 const FROM_EMAIL =(process.env.FROM_EMAIL !== '' && process.env.FROM_EMAIL != null) ? process.env.FROM_EMAIL : 'noreply@yourdomain.com';
-const FROM_NAME =(process.env.FROM_NAME !== '' && process.env.FROM_NAME != null) ? process.env.FROM_NAME : 'AI Sales Platform';
+const FROM_NAME =(process.env.FROM_NAME !== '' && process.env.FROM_NAME != null) ? process.env.FROM_NAME : 'Rapid Compliance';
 
 export interface SendEmailOptions {
   to: string;

@@ -152,7 +152,6 @@ export interface LinkedInConfig {
   accessToken: string;
   refreshToken?: string;
   expiresAt?: Date;
-  organizationId?: string;
   personId?: string;
 }
 
@@ -221,7 +220,6 @@ export type PostStatus =
 
 export interface SocialMediaPost {
   id: string;
-  organizationId: string;
   platform: SocialPlatform;
   content: string;
   mediaUrls?: string[];
@@ -261,7 +259,6 @@ export interface QueuedPost extends SocialMediaPost {
 
 export interface PostQueue {
   id: string;
-  organizationId: string;
   platform: SocialPlatform;
   posts: QueuedPost[];
   settings: QueueSettings;
@@ -283,7 +280,6 @@ export interface QueueSettings {
 // =============================================================================
 
 export interface PostingAgentConfig {
-  organizationId: string;
   platforms: SocialPlatform[];
   contentSources: ContentSource[];
   schedule: PostingSchedule;

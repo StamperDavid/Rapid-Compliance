@@ -71,9 +71,8 @@ export async function predictDealRisk(
     
     // 1. Get deal data
     const deal = await getDeal(
-      request.organizationId,
       request.dealId,
-(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
+      (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
     );
     
     if (!deal) {

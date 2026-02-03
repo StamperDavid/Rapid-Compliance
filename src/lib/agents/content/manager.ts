@@ -46,6 +46,19 @@ import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
 import type { TechnicalBrief, PageSEORequirements } from '../architect/manager';
 
+// Minimal BrandDNA type for this manager (used by getBrandDNA return type)
+interface _BrandDNA {
+  companyDescription?: string;
+  uniqueValue?: string;
+  targetAudience?: string;
+  toneOfVoice?: string;
+  communicationStyle?: string;
+  keyPhrases?: string[];
+  avoidPhrases?: string[];
+  industry?: string;
+  competitors?: string[];
+}
+
 // ============================================================================
 // SYSTEM PROMPT - Multi-Modal Content Production Orchestration
 // ============================================================================
@@ -643,7 +656,7 @@ export class ContentManager extends BaseManager {
         keyPhrases: brandDNA.keyPhrases ?? [],
         avoidPhrases: brandDNA.avoidPhrases ?? [],
         colorPalette: {
-          primary: brandDNA.primaryColor ?? '#2563eb',
+          primary: '#2563eb', // Default primary color (primaryColor removed from BrandDNA)
           secondary: '#7c3aed',
           accent: '#f59e0b',
           neutral: '#6b7280',

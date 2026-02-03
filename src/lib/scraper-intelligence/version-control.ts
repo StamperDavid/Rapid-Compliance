@@ -236,14 +236,14 @@ export async function compareVersions(
   trainingDataId: string,
   fromVersion: number,
   toVersion: number,
-  organizationId: string
+  _organizationId: string
 ): Promise<VersionDiff> {
   try {
     // Get history for both versions
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const historyDocs = await db
       .collection(TRAINING_HISTORY_COLLECTION)
       .where('trainingDataId', '==', trainingDataId)
-      .where('organizationId', '==', organizationId)
       .orderBy('version', 'asc')
       .get();
 
@@ -327,9 +327,9 @@ export async function createBranch(params: {
     }
 
     // Check if branch already exists
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const existing = await db
       .collection(TRAINING_BRANCHES_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .where('name', '==', name)
       .limit(1)
       .get();
@@ -343,9 +343,9 @@ export async function createBranch(params: {
     }
 
     // Snapshot current training data
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const trainingDocs = await db
       .collection(TRAINING_DATA_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .get();
 
     const snapshot: Record<string, TrainingData> = {};
@@ -450,9 +450,9 @@ export async function mergeBranch(
     }
 
     // Get current training data
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const currentDocs = await db
       .collection(TRAINING_DATA_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .get();
 
     const currentData: Record<string, TrainingData> = {};
@@ -575,15 +575,13 @@ export async function listBranches(
   activeOnly: boolean = true
 ): Promise<Branch[]> {
   try {
-    let query = db
-      .collection(TRAINING_BRANCHES_COLLECTION)
-      .where('organizationId', '==', organizationId);
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    const collectionRef = db.collection(TRAINING_BRANCHES_COLLECTION);
+    const baseQuery = activeOnly
+      ? collectionRef.where('active', '==', true)
+      : collectionRef;
 
-    if (activeOnly) {
-      query = query.where('active', '==', true);
-    }
-
-    const docs = await query.orderBy('createdAt', 'desc').get();
+    const docs = await baseQuery.orderBy('createdAt', 'desc').get();
 
     return docs.docs.map((doc) => {
       const docData = doc.data();
@@ -624,15 +622,13 @@ export async function generateChangelog(
   sinceDate?: Date
 ): Promise<Changelog> {
   try {
-    let query = db
-      .collection(TRAINING_HISTORY_COLLECTION)
-      .where('organizationId', '==', organizationId);
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    const collectionRef = db.collection(TRAINING_HISTORY_COLLECTION);
+    const baseQuery = sinceDate
+      ? collectionRef.where('changedAt', '>=', sinceDate)
+      : collectionRef;
 
-    if (sinceDate) {
-      query = query.where('changedAt', '>=', sinceDate);
-    }
-
-    const docs = await query.orderBy('changedAt', 'desc').limit(100).get();
+    const docs = await baseQuery.orderBy('changedAt', 'desc').limit(100).get();
 
     const entriesByVersion = new Map<number, ChangelogEntry>();
 
@@ -745,9 +741,6 @@ export function validateIntegrity(trainingData: TrainingData): {
   if (!trainingData.id) {
     errors.push('Missing id');
   }
-  if (!trainingData.organizationId) {
-    errors.push('Missing organizationId');
-  }
   if (!trainingData.signalId) {
     errors.push('Missing signalId');
   }
@@ -799,10 +792,10 @@ export async function recoverFromHistory(
 ): Promise<TrainingData | null> {
   try {
     // Get all history entries for this training data
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const historyDocs = await db
       .collection(TRAINING_HISTORY_COLLECTION)
       .where('trainingDataId', '==', trainingDataId)
-      .where('organizationId', '==', organizationId)
       .orderBy('version', 'desc')
       .get();
 

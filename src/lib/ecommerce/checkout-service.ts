@@ -164,11 +164,11 @@ async function validateCart(cart: Cart): Promise<void> {
   if (cart.items.length === 0) {
     throw new Error('Cart is empty');
   }
-  
+
   // Validate each item
   for (const item of cart.items) {
     // Check if product still exists
-    const product = await getProduct(cart.workspaceId, cart.organizationId, item.productId);
+    const product = await getProduct(cart.workspaceId, item.productId);
     if (!product) {
       throw new Error(`Product ${item.productName} is no longer available`);
     }
@@ -319,10 +319,14 @@ function generateOrderNumber(_workspaceId: string): string {
 /**
  * Get product (helper)
  */
-async function getProduct(workspaceId: string, organizationId: string, productId: string): Promise<Record<string, unknown> | null> {
+async function getProduct(workspaceId: string, productId: string, organizationId?: string): Promise<Record<string, unknown> | null> {
+  // Import DEFAULT_ORG_ID
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const orgId = organizationId ?? DEFAULT_ORG_ID;
+
   // Similar to cart-service implementation
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
   
@@ -332,7 +336,7 @@ async function getProduct(workspaceId: string, organizationId: string, productId
   
   const productSchema = (ecommerceConfig as unknown as EcommerceConfig).productSchema;
   const product = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/${productSchema}/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/${workspaceId}/entities/${productSchema}/records`,
     productId
   );
   

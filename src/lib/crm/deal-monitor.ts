@@ -459,7 +459,7 @@ export async function runDealHealthCheck(
 
     // Get all active deals
     const { getDeals } = await import('./deal-service');
-    const { data: deals } = await getDeals(organizationId, workspaceId, {
+    const { data: deals } = await getDeals(workspaceId, {
       // Filter out closed deals
     });
 

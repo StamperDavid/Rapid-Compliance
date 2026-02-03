@@ -60,7 +60,6 @@ export default function EmailSequencesPage() {
       
       const newSequence: OutboundSequence = {
         id: sequenceId,
-        organizationId: orgId,
         name,
         description,
         status: 'draft',

@@ -142,7 +142,6 @@ export async function smartEnrollInSequence(params: {
     // Step 1: Calculate/fetch lead score
     const score = await calculateLeadScore({
       leadId,
-      organizationId,
       forceRescore: false, // Use cache if available
     });
 
@@ -322,10 +321,10 @@ export async function processSequenceStepsWithPriority(
     const now = new Date();
 
     // Get all due enrollments (using environment-aware collection path)
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const snapshot = await db
       .collection(COLLECTIONS.SEQUENCE_ENROLLMENTS)
-      .where('organizationId', '==', organizationId)
       .where('status', '==', 'active')
       .where('nextExecutionAt', '<=', Timestamp.fromDate(now))
       .get();
@@ -416,10 +415,10 @@ export async function rescoreActiveSequenceLeads(
     logger.info('Rescoring active sequence leads', { organizationId });
 
     // Get all active enrollments (using environment-aware collection path)
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const snapshot = await db
       .collection(COLLECTIONS.SEQUENCE_ENROLLMENTS)
-      .where('organizationId', '==', organizationId)
       .where('status', '==', 'active')
       .get();
 
@@ -438,7 +437,6 @@ export async function rescoreActiveSequenceLeads(
           // Rescore the lead
           const score = await calculateLeadScore({
             leadId,
-            organizationId,
             forceRescore: true,
           });
 
@@ -552,22 +550,21 @@ export async function getRecommendedSequence(params: {
   organizationId: string;
   availableSequences?: Sequence[];
 }): Promise<Sequence | null> {
-  const { leadId, organizationId, availableSequences } = params;
+  const { leadId, organizationId: _organizationId, availableSequences } = params;
 
   try {
     // Calculate lead score (for future smart matching implementation)
     const _score = await calculateLeadScore({
       leadId,
-      organizationId,
     });
 
     // Get available sequences (using environment-aware collection path)
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const sequences =
       availableSequences ??
       (await db
         .collection(COLLECTIONS.SEQUENCES)
-        .where('organizationId', '==', organizationId)
         .where('isActive', '==', true)
         .get()
         .then((snap) => snap.docs.map((doc) => doc.data() as Sequence)));

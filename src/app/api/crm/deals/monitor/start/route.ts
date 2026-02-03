@@ -13,10 +13,10 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { startDealMonitor } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /** Request body interface for starting deal monitor */
 interface StartDealMonitorRequestBody {
-  organizationId?: string;
   workspaceId?: string;
   autoGenerateRecommendations?: boolean;
   autoRecalculateHealth?: boolean;
@@ -30,7 +30,6 @@ function parseBody(rawBody: unknown): StartDealMonitorRequestBody {
   }
   const b = rawBody as Record<string, unknown>;
   return {
-    organizationId: typeof b.organizationId === 'string' ? b.organizationId : undefined,
     workspaceId: typeof b.workspaceId === 'string' ? b.workspaceId : undefined,
     autoGenerateRecommendations: typeof b.autoGenerateRecommendations === 'boolean' ? b.autoGenerateRecommendations : undefined,
     autoRecalculateHealth: typeof b.autoRecalculateHealth === 'boolean' ? b.autoRecalculateHealth : undefined,
@@ -40,12 +39,12 @@ function parseBody(rawBody: unknown): StartDealMonitorRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
+    // Single-tenant mode: orgId is always DEFAULT_ORG_ID
+    const organizationId = DEFAULT_ORG_ID;
+
     // Get config from request body
     const rawBody = await request.json().catch(() => ({})) as unknown;
     const body = parseBody(rawBody);
-    const headerOrgId = request.headers.get('x-organization-id');
-    const organizationId = (body.organizationId !== '' && body.organizationId != null) ? body.organizationId :
-      ((headerOrgId !== '' && headerOrgId != null) ? headerOrgId : 'default-org');
 
     const headerWorkspaceId = request.headers.get('x-workspace-id');
     const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId :

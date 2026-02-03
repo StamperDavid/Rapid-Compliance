@@ -7,6 +7,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface EnrichmentData {
   linkedInUrl?: string;
@@ -64,11 +65,11 @@ export interface PaginatedResult<T> {
  * Get leads with pagination and filtering
  */
 export async function getLeads(
-  organizationId: string,
   workspaceId: string = 'default',
   filters?: LeadFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<Lead>> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const constraints: QueryConstraint[] = [];
 
@@ -115,10 +116,10 @@ export async function getLeads(
  * Get a single lead by ID
  */
 export async function getLead(
-  organizationId: string,
   leadId: string,
   workspaceId: string = 'default'
 ): Promise<Lead | null> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const lead = await FirestoreService.get<Lead>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/leads/records`,
@@ -143,11 +144,11 @@ export async function getLead(
  * Create a new lead with auto-enrichment
  */
 export async function createLead(
-  organizationId: string,
   data: Omit<Lead, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>,
   workspaceId: string = 'default',
   options: { autoEnrich?: boolean; skipDuplicateCheck?: boolean } = {}
 ): Promise<Lead> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const leadId = `lead-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
@@ -249,14 +250,14 @@ export async function createLead(
  * Update an existing lead
  */
 export async function updateLead(
-  organizationId: string,
   leadId: string,
   updates: Partial<Omit<Lead, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>>,
   workspaceId: string = 'default'
 ): Promise<Lead> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Get current lead for comparison
-    const currentLead = await getLead(organizationId, leadId, workspaceId);
+    const currentLead = await getLead(leadId, workspaceId);
     if (!currentLead) {
       throw new Error('Lead not found');
     }
@@ -279,7 +280,7 @@ export async function updateLead(
     });
 
     // Return updated lead
-    const lead = await getLead(organizationId, leadId, workspaceId);
+    const lead = await getLead(leadId, workspaceId);
     if (!lead) {
       throw new Error('Lead not found after update');
     }
@@ -325,10 +326,10 @@ export async function updateLead(
  * Delete a lead
  */
 export async function deleteLead(
-  organizationId: string,
   leadId: string,
   workspaceId: string = 'default'
 ): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.delete(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/leads/records`,
@@ -347,12 +348,12 @@ export async function deleteLead(
  * Enrich a lead with external data
  */
 export async function enrichLead(
-  organizationId: string,
   leadId: string,
   workspaceId: string = 'default'
 ): Promise<Lead> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
-    const lead = await getLead(organizationId, leadId, workspaceId);
+    const lead = await getLead(leadId, workspaceId);
     if (!lead) {
       throw new Error('Lead not found');
     }
@@ -374,7 +375,7 @@ export async function enrichLead(
     }
 
     // Update lead with enrichment data
-    const updatedLead = await updateLead(organizationId, leadId, {
+    const updatedLead = await updateLead(leadId, {
       enrichmentData: enrichmentData ?? undefined,
       score: calculateEnrichedScore(lead, enrichmentData),
       updatedAt: new Date(),
@@ -431,17 +432,17 @@ function calculateEnrichedScore(lead: Lead, enrichmentData: EnrichmentData | nul
  * Bulk operations
  */
 export async function bulkUpdateLeads(
-  organizationId: string,
   leadIds: string[],
   updates: Partial<Lead>,
   workspaceId: string = 'default'
 ): Promise<number> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     let successCount = 0;
 
     for (const leadId of leadIds) {
       try {
-        await updateLead(organizationId, leadId, updates, workspaceId);
+        await updateLead(leadId, updates, workspaceId);
         successCount++;
       } catch (error) {
         logger.warn('Failed to update lead in bulk operation', { leadId, error: error instanceof Error ? error.message : String(error) });
@@ -467,15 +468,15 @@ export async function bulkUpdateLeads(
  * Search leads
  */
 export async function searchLeads(
-  organizationId: string,
   searchTerm: string,
   workspaceId: string = 'default',
   options?: PaginationOptions
 ): Promise<PaginatedResult<Lead>> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // For now, get all and filter (Firestore doesn't have full-text search)
     // In production, use Algolia or Elasticsearch
-    const result = await getLeads(organizationId, workspaceId, undefined, options);
+    const result = await getLeads(workspaceId, undefined, options);
 
     const searchLower = searchTerm.toLowerCase();
     const filtered = result.data.filter(lead =>

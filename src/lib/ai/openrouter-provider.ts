@@ -192,7 +192,7 @@ export class OpenRouterProvider {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': (process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000',
-        'X-Title': 'AI Sales Platform',
+        'X-Title': 'Rapid Compliance',
       },
       body: JSON.stringify({
         model,
@@ -278,7 +278,7 @@ export class OpenRouterProvider {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': (process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000',
-        'X-Title': 'AI Sales Platform',
+        'X-Title': 'Rapid Compliance',
       },
       body: JSON.stringify(requestBody),
     });

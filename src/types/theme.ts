@@ -6,7 +6,6 @@ import type { Timestamp } from 'firebase/firestore';
  */
 export interface Theme {
   id: string;
-  organizationId: string;
   workspaceId?: string; // If null, it's org-level theme
   
   // Basic info

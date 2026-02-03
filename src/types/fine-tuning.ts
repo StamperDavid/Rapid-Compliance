@@ -7,8 +7,7 @@ import type { Timestamp } from 'firebase/firestore';
 
 export interface TrainingExample {
   id: string;
-  organizationId: string;
-  
+
   // Conversation
   messages: Array<{
     role: 'system' | 'user' | 'assistant';
@@ -39,8 +38,7 @@ export interface TrainingExample {
 
 export interface FineTuningDataset {
   id: string;
-  organizationId: string;
-  
+
   // Dataset info
   name: string;
   description: string;
@@ -71,8 +69,7 @@ export interface FineTuningDataset {
 
 export interface FineTuningJob {
   id: string;
-  organizationId: string;
-  
+
   // Configuration
   provider: 'openai' | 'google';
   baseModel: string;
@@ -115,8 +112,7 @@ export interface FineTuningJob {
 
 export interface FineTunedModel {
   id: string;
-  organizationId: string;
-  
+
   // Model info
   provider: 'openai' | 'google';
   baseModel: string;
@@ -151,8 +147,6 @@ export interface FineTunedModel {
 }
 
 export interface ModelPerformanceComparison {
-  organizationId: string;
-  
   // Models being compared
   models: Array<{
     id: string;
@@ -181,8 +175,6 @@ export interface ModelPerformanceComparison {
 }
 
 export interface ContinuousLearningConfig {
-  organizationId: string;
-  
   // Auto-collection
   autoCollectTrainingData: boolean;
   minConfidenceForCollection: number; // 0-100

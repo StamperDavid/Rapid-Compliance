@@ -15,7 +15,7 @@ function FallbackContent() {
         <div className="prose prose-invert max-w-none space-y-8">
           <section>
             <p className="text-gray-300 text-lg leading-relaxed">
-              Welcome to SalesVelocity.ai. By accessing or using our platform, you agree to be bound 
+              Welcome to RapidCompliance.US. By accessing or using our platform, you agree to be bound 
               by these Terms of Service. Please read them carefully.
             </p>
           </section>
@@ -38,7 +38,7 @@ function FallbackContent() {
 
           <section>
             <p className="text-gray-400">
-              Questions? Contact us at legal@salesvelocity.ai
+              Questions? Contact us at legal@rapidcompliance.us
             </p>
           </section>
         </div>

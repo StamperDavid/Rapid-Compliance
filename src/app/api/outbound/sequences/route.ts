@@ -162,7 +162,6 @@ export async function POST(request: NextRequest) {
 
     const sequence: OutboundSequence = {
       id: sequenceId,
-      organizationId: orgId,
       name,
       description,
       status: 'draft',

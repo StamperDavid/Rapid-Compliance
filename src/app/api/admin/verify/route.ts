@@ -54,12 +54,12 @@ interface FirebaseAuthError extends Error {
 
 /**
  * POST /api/admin/verify
- * Verifies that the authenticated user is a platform_admin or admin.
+ * Verifies that the authenticated user is a superadmin or admin.
  * Uses Firebase Custom Claims as the source of truth for authorization.
  *
  * Claims-Based Authorization:
  * - Parses tenant_id claim for organization scope
- * - Checks admin: true claim for global read access
+ * - Checks admin: true claim for admin-level access
  * - Validates role claim for admin-level access
  *
  * Returns user data including tenant claims if authorized.

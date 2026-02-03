@@ -52,14 +52,6 @@ export async function GET(request: NextRequest) {
 
     const navigationData = navDoc.data() as Navigation;
 
-    // CRITICAL: Double-check organizationId matches
-    if (navigationData.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json({ navigation: navigationData });
   } catch (error) {
     logger.error('Failed to fetch navigation', error instanceof Error ? error : new Error(String(error)), {

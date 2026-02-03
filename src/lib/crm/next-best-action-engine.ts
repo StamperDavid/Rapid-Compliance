@@ -115,7 +115,7 @@ export async function generateNextBestActions(
     // Step 2: Get deal data if not provided
     if (!deal) {
       const { getDeal } = await import('./deal-service');
-      const fetchedDeal = await getDeal(organizationId, dealId, workspaceId);
+      const fetchedDeal = await getDeal(dealId, workspaceId);
       if (!fetchedDeal) {
         throw new Error('Deal not found');
       }

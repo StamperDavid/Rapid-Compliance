@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { generateNextBestActions } from '@/lib/crm/next-best-action-engine';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export async function GET(
   request: NextRequest,
@@ -20,10 +21,8 @@ export async function GET(
   try {
     const dealId = params.dealId;
 
-    // Get orgId and workspaceId from headers or session
-    // For now, using default values (TODO: Add proper auth)
-    const orgIdHeader = request.headers.get('x-organization-id');
-    const organizationId = (orgIdHeader !== '' && orgIdHeader != null) ? orgIdHeader : 'default-org';
+    // Single-tenant mode: orgId is always DEFAULT_ORG_ID
+    const organizationId = DEFAULT_ORG_ID;
     const wsIdHeader = request.headers.get('x-workspace-id');
     const workspaceId = (wsIdHeader !== '' && wsIdHeader != null) ? wsIdHeader : 'default';
 

@@ -4,15 +4,57 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import type {
-  BrandDNA,
-  ToolTrainingContext,
-  VoiceTrainingSettings,
-  SocialTrainingSettings,
-  SEOTrainingSettings,
-} from '@/types/organization';
 
 const FILE = 'brand-dna-service.ts';
+
+// Type definitions for Brand DNA and tool training
+export interface BrandDNA {
+  companyDescription: string;
+  uniqueValue: string;
+  targetAudience: string;
+  toneOfVoice: string;
+  communicationStyle: string;
+  keyPhrases: string[];
+  avoidPhrases: string[];
+  industry: string;
+  competitors: string[];
+  updatedAt?: unknown;
+  updatedBy?: string;
+}
+
+export interface ToolTrainingContext {
+  toolType: 'voice' | 'social' | 'seo';
+  orgId: string;
+  inheritFromBrandDNA?: boolean;
+  inheritedBrandDNA?: BrandDNA;
+  overrides?: Partial<BrandDNA>;
+  customInstructions?: string;
+  toolSettings?: VoiceTrainingSettings | SocialTrainingSettings | SEOTrainingSettings;
+  lastSyncedAt?: string;
+}
+
+export interface VoiceTrainingSettings {
+  greetingScript?: string;
+  toneOfVoice?: string;
+  callHandoffInstructions?: string;
+  [key: string]: unknown;
+}
+
+export interface SocialTrainingSettings {
+  emojiUsage?: string;
+  ctaStyle?: string;
+  contentThemes?: string[];
+  postingPersonality?: string;
+  [key: string]: unknown;
+}
+
+export interface SEOTrainingSettings {
+  writingStyle?: string;
+  targetSearchIntent?: string;
+  targetKeywords?: string[];
+  audienceExpertiseLevel?: string;
+  [key: string]: unknown;
+}
 
 /**
  * Get Brand DNA for an organization

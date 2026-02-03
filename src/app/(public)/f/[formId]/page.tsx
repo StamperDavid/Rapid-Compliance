@@ -966,7 +966,7 @@ export default function PublicFormPage() {
           <div style={styles.branding}>
             <p style={styles.brandingText}>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- External branding link */}
-              Powered by <a href="/" style={styles.brandingLink}>AI Sales Platform</a>
+              Powered by <a href="/" style={styles.brandingLink}>Rapid Compliance</a>
             </p>
           </div>
         )}

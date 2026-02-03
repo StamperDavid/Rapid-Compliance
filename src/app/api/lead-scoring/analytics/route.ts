@@ -194,7 +194,6 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => a.date.localeCompare(b.date));
 
     const analytics: LeadScoreAnalytics = {
-      organizationId,
       period: {
         start: startDate,
         end: endDate,

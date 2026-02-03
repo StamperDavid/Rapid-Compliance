@@ -29,6 +29,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Helper to ensure db is available
 function getDb() {
@@ -70,10 +71,10 @@ const _getAnalyticsCollectionPath = (orgId: string, workspaceId: string, formId:
  * Create a new form definition
  */
 export async function createForm(
-  orgId: string,
   workspaceId: string,
   formData: Omit<FormDefinition, 'id' | 'createdAt' | 'updatedAt' | 'submissionCount' | 'viewCount'>
 ): Promise<FormDefinition> {
+  const orgId = DEFAULT_ORG_ID;
   const formsRef = collection(getDb(), getFormsCollectionPath(orgId, workspaceId));
   const formDoc = doc(formsRef);
   const formId = formDoc.id;
@@ -101,10 +102,10 @@ export async function createForm(
  * Get a form by ID
  */
 export async function getForm(
-  orgId: string,
   workspaceId: string,
   formId: string
 ): Promise<FormDefinition | null> {
+  const orgId = DEFAULT_ORG_ID;
   const formRef = doc(getDb(), getFormsCollectionPath(orgId, workspaceId), formId);
   const formSnap = await getDoc(formRef);
 
@@ -119,11 +120,11 @@ export async function getForm(
  * Update a form definition
  */
 export async function updateForm(
-  orgId: string,
   workspaceId: string,
   formId: string,
   updates: Partial<FormDefinition>
 ): Promise<void> {
+  const orgId = DEFAULT_ORG_ID;
   const formRef = doc(getDb(), getFormsCollectionPath(orgId, workspaceId), formId);
 
   await updateDoc(formRef, {
@@ -139,10 +140,10 @@ export async function updateForm(
  * Delete a form
  */
 export async function deleteForm(
-  orgId: string,
   workspaceId: string,
   formId: string
 ): Promise<void> {
+  const orgId = DEFAULT_ORG_ID;
   const formRef = doc(getDb(), getFormsCollectionPath(orgId, workspaceId), formId);
   await deleteDoc(formRef);
 
@@ -153,7 +154,6 @@ export async function deleteForm(
  * List forms with pagination
  */
 export async function listForms(
-  orgId: string,
   workspaceId: string,
   options: {
     status?: FormStatus;
@@ -168,6 +168,7 @@ export async function listForms(
   lastDoc: QueryDocumentSnapshot | null;
   hasMore: boolean;
 }> {
+  const orgId = DEFAULT_ORG_ID;
   const {
     status,
     category,
@@ -210,10 +211,10 @@ export async function listForms(
  * Publish a form
  */
 export async function publishForm(
-  orgId: string,
   workspaceId: string,
   formId: string
 ): Promise<void> {
+  const orgId = DEFAULT_ORG_ID;
   const formRef = doc(getDb(), getFormsCollectionPath(orgId, workspaceId), formId);
 
   await updateDoc(formRef, {
@@ -229,18 +230,18 @@ export async function publishForm(
  * Duplicate a form
  */
 export async function duplicateForm(
-  orgId: string,
   workspaceId: string,
   formId: string,
   newName?: string
 ): Promise<FormDefinition> {
-  const originalForm = await getForm(orgId, workspaceId, formId);
+  const orgId = DEFAULT_ORG_ID;
+  const originalForm = await getForm(workspaceId, formId);
 
   if (!originalForm) {
     throw new Error(`Form not found: ${formId}`);
   }
 
-  const duplicatedForm = await createForm(orgId, workspaceId, {
+  const duplicatedForm = await createForm(workspaceId, {
     ...originalForm,
     name: newName ?? `${originalForm.name} (Copy)`,
     status: 'draft',
@@ -263,7 +264,6 @@ export async function duplicateForm(
  * Create a form submission
  */
 export async function createSubmission(
-  orgId: string,
   workspaceId: string,
   formId: string,
   submissionData: {
@@ -273,10 +273,11 @@ export async function createSubmission(
     resumeToken?: string;
   }
 ): Promise<FormSubmission> {
+  const orgId = DEFAULT_ORG_ID;
   const { responses, metadata, isPartial = false, resumeToken } = submissionData;
 
   // Get form to validate and get version
-  const form = await getForm(orgId, workspaceId, formId);
+  const form = await getForm(workspaceId, formId);
   if (!form) {
     throw new Error(`Form not found: ${formId}`);
   }
@@ -347,11 +348,11 @@ export async function createSubmission(
  * Get a submission by ID
  */
 export async function getSubmission(
-  orgId: string,
   workspaceId: string,
   formId: string,
   submissionId: string
 ): Promise<FormSubmission | null> {
+  const orgId = DEFAULT_ORG_ID;
   const submissionRef = doc(
     getDb(),
     getSubmissionsCollectionPath(orgId, workspaceId, formId),
@@ -370,11 +371,11 @@ export async function getSubmission(
  * Get submission by resume token (for save and continue)
  */
 export async function getSubmissionByResumeToken(
-  orgId: string,
   workspaceId: string,
   formId: string,
   resumeToken: string
 ): Promise<FormSubmission | null> {
+  const orgId = DEFAULT_ORG_ID;
   const submissionsRef = collection(getDb(), getSubmissionsCollectionPath(orgId, workspaceId, formId));
   const q = query(
     submissionsRef,
@@ -396,7 +397,6 @@ export async function getSubmissionByResumeToken(
  * Update a partial submission
  */
 export async function updatePartialSubmission(
-  orgId: string,
   workspaceId: string,
   formId: string,
   submissionId: string,
@@ -406,6 +406,7 @@ export async function updatePartialSubmission(
     isPartial: boolean;
   }
 ): Promise<void> {
+  const orgId = DEFAULT_ORG_ID;
   const submissionRef = doc(
     getDb(),
     getSubmissionsCollectionPath(orgId, workspaceId, formId),
@@ -451,7 +452,6 @@ export async function updatePartialSubmission(
  * List submissions with pagination
  */
 export async function listSubmissions(
-  orgId: string,
   workspaceId: string,
   formId: string,
   options: {
@@ -466,6 +466,7 @@ export async function listSubmissions(
   lastDoc: QueryDocumentSnapshot | null;
   hasMore: boolean;
 }> {
+  const orgId = DEFAULT_ORG_ID;
   const { status, startDate, endDate, pageSize = 50, lastDoc } = options;
 
   const submissionsRef = collection(getDb(), getSubmissionsCollectionPath(orgId, workspaceId, formId));
@@ -505,11 +506,11 @@ export async function listSubmissions(
  * Delete a submission
  */
 export async function deleteSubmission(
-  orgId: string,
   workspaceId: string,
   formId: string,
   submissionId: string
 ): Promise<void> {
+  const orgId = DEFAULT_ORG_ID;
   const submissionRef = doc(
     getDb(),
     getSubmissionsCollectionPath(orgId, workspaceId, formId),
@@ -536,12 +537,12 @@ export async function deleteSubmission(
  * Track a form view
  */
 export async function trackFormView(
-  orgId: string,
   workspaceId: string,
   formId: string,
   metadata: Partial<SubmissionMetadata>,
   sessionId: string
 ): Promise<string> {
+  const orgId = DEFAULT_ORG_ID;
   const viewsRef = collection(getDb(), getViewsCollectionPath(orgId, workspaceId, formId));
   const viewDoc = doc(viewsRef);
   const viewId = viewDoc.id;
@@ -576,12 +577,12 @@ export async function trackFormView(
  * Mark a form view as converted
  */
 export async function markViewAsConverted(
-  orgId: string,
   workspaceId: string,
   formId: string,
   viewId: string,
   submissionId: string
 ): Promise<void> {
+  const orgId = DEFAULT_ORG_ID;
   const viewRef = doc(getDb(), getViewsCollectionPath(orgId, workspaceId, formId), viewId);
 
   await updateDoc(viewRef, {

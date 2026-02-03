@@ -33,7 +33,7 @@ export function generateEmailHTML(options: EmailHTMLOptions): string {
   const brandingPrimaryColor = options.branding?.primaryColor;
   const brandingCompanyName = options.branding?.companyName;
   const primaryColor = (brandingPrimaryColor !== '' && brandingPrimaryColor != null) ? brandingPrimaryColor : '#2563eb';
-  const companyName = (brandingCompanyName !== '' && brandingCompanyName != null) ? brandingCompanyName : 'AI Sales Platform';
+  const companyName = (brandingCompanyName !== '' && brandingCompanyName != null) ? brandingCompanyName : 'Rapid Compliance';
   
   return `
 <!DOCTYPE html>

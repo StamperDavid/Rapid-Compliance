@@ -77,7 +77,6 @@ export default function ZapierIntegration({
         icon: '⚡',
         category: 'automation',
         status: 'active',
-        organizationId: 'demo-org',
         webhookUrl,
         settings: {
           enabledZaps: [],

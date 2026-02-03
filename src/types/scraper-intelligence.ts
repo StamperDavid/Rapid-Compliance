@@ -551,11 +551,6 @@ export interface TemporaryScrape {
   id: string;
 
   /**
-   * Organization that initiated the scrape
-   */
-  organizationId: string;
-
-  /**
    * Workspace context (if applicable)
    */
   workspaceId?: string;
@@ -644,7 +639,6 @@ export interface TemporaryScrape {
 // Zod schema for TemporaryScrape
 export const TemporaryScrapeSchema = z.object({
   id: z.string().min(1),
-  organizationId: z.string().min(1),
   workspaceId: z.string().optional(),
   url: z.string().url(),
   rawHtml: z.string(),
@@ -781,11 +775,6 @@ export interface ClientFeedback {
   id: string;
 
   /**
-   * Organization that submitted the feedback
-   */
-  organizationId: string;
-
-  /**
    * User who submitted the feedback
    */
   userId: string;
@@ -864,7 +853,6 @@ export interface ClientFeedback {
 // Zod schema for ClientFeedback
 export const ClientFeedbackSchema = z.object({
   id: z.string().min(1),
-  organizationId: z.string().min(1),
   userId: z.string().min(1),
   feedbackType: z.enum(['correct', 'incorrect', 'missing', 'false_positive', 'low_confidence']),
   signalId: z.string().min(1),
@@ -892,11 +880,6 @@ export interface TrainingData {
    * Unique ID for this training record
    */
   id: string;
-
-  /**
-   * Organization this training belongs to
-   */
-  organizationId: string;
 
   /**
    * Signal ID this training is for
@@ -994,7 +977,6 @@ export interface TrainingData {
 // Zod schema for TrainingData
 export const TrainingDataSchema = z.object({
   id: z.string().min(1),
-  organizationId: z.string().min(1),
   signalId: z.string().min(1),
   pattern: z.string().min(1),
   patternType: z.enum(['keyword', 'regex', 'embedding']),
@@ -1040,11 +1022,6 @@ export interface TrainingHistory {
   trainingDataId: string;
 
   /**
-   * Organization ID
-   */
-  organizationId: string;
-
-  /**
    * User who made the change
    */
   userId: string;
@@ -1084,7 +1061,6 @@ export interface TrainingHistory {
 export const TrainingHistorySchema = z.object({
   id: z.string().min(1),
   trainingDataId: z.string().min(1),
-  organizationId: z.string().min(1),
   userId: z.string().min(1),
   changeType: z.enum(['created', 'updated', 'deleted', 'activated', 'deactivated']),
   previousValue: TrainingDataSchema.optional(),

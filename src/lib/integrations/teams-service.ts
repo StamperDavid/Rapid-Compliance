@@ -222,7 +222,7 @@ export async function createChannel(
 
     const response: unknown = await client.api(`/teams/${teamId}/channels`).post({
       displayName: channelName,
-      description: description ?? 'Channel created by AI Sales Platform',
+      description: description ?? 'Channel created by Rapid Compliance',
     });
 
     if (!isValidGraphResponse<TeamsChannelCreateResponse>(response)) {

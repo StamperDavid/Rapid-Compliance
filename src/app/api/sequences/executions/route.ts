@@ -152,12 +152,11 @@ async function getRecentExecutions(
     const executions: SequenceExecution[] = [];
 
     // Fetch native Hunter-Closer sequence enrollments
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const enrollmentsRef = adminDal.getCollection('SEQUENCE_ENROLLMENTS');
-    let nativeQuery = enrollmentsRef.where('organizationId', '==', organizationId);
-
-    if (sequenceId) {
-      nativeQuery = nativeQuery.where('sequenceId', '==', sequenceId);
-    }
+    const nativeQuery = sequenceId
+      ? enrollmentsRef.where('sequenceId', '==', sequenceId)
+      : enrollmentsRef;
 
     const nativeEnrollmentsSnap = await nativeQuery
       .orderBy('enrolledAt', 'desc')

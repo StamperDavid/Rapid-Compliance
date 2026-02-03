@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get lead
-    const lead = await getLead(organizationId, leadId, workspaceId);
+    const lead = await getLead(leadId, workspaceId);
     if (!lead) {
       return NextResponse.json(
         { error: 'Lead not found' },
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const routingResult = await routeLead(organizationId, workspaceId, lead);
 
     // Update lead with assignment
-    await updateLead(organizationId, leadId, {
+    await updateLead(leadId, {
       ownerId: routingResult.assignedTo,
     }, workspaceId);
 

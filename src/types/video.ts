@@ -14,7 +14,6 @@ export type VideoResolution = '720p' | '1080p' | '4k';
 
 export interface VideoGenerationRequest {
   id?: string;
-  organizationId: string;
   userId: string;
   provider: VideoProvider;
   type: 'avatar' | 'text-to-video' | 'image-to-video';
@@ -46,7 +45,6 @@ export interface VideoGenerationRequest {
 export interface VideoGenerationResponse {
   id: string;
   requestId: string;
-  organizationId: string;
 
   status: VideoStatus;
   provider: VideoProvider;
@@ -124,7 +122,6 @@ export interface HeyGenVoice {
 
 export interface VideoTemplate {
   id: string;
-  organizationId: string;
 
   name: string;
   description?: string;
@@ -184,7 +181,6 @@ export interface VideoPlaceholder {
 
 export interface VideoProject {
   id: string;
-  organizationId: string;
   userId: string;
 
   name: string;
@@ -235,7 +231,6 @@ export interface VideoProjectVideo {
 
 export interface VideoAnalytics {
   videoId: string;
-  organizationId: string;
 
   // Views
   totalViews: number;
@@ -266,7 +261,6 @@ export interface VideoAnalytics {
 
 export interface VideoWaitlistEntry {
   id: string;
-  organizationId: string;
   userId?: string;
 
   email: string;

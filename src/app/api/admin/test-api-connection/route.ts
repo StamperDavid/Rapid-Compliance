@@ -318,8 +318,8 @@ async function testOpenRouterConnection(apiKey?: string): Promise<ConnectionTest
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://salesvelocity.ai',
-        'X-Title': 'SalesVelocity AI'
+        'HTTP-Referer': 'https://rapidcompliance.us',
+        'X-Title': 'Rapid Compliance'
       },
       body: JSON.stringify({
         model: 'openai/gpt-3.5-turbo',

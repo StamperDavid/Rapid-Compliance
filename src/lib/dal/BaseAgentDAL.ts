@@ -53,7 +53,7 @@ export interface WriteOptions {
 }
 
 /**
- * BaseAgentDAL - Core Data Access Layer for AI Sales Platform
+ * BaseAgentDAL - Core Data Access Layer for Rapid Compliance
  * 
  * Usage Example:
  * ```typescript

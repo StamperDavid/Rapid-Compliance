@@ -34,16 +34,17 @@ function _toIntegrationParams<T extends Record<string, unknown>>(params: Record<
  * Execute a function call from the AI agent
  */
 export async function executeFunctionCall(
-  request: FunctionCallRequest
+  request: FunctionCallRequest,
+  organizationId: string
 ): Promise<FunctionCallResponse> {
   const startTime = Date.now();
-  
-  logger.info('Function Calling Executing request.functionName} for org request.organizationId}', { file: 'function-calling.ts' });
-  
+
+  logger.info(`Function Calling Executing ${request.functionName} for org ${organizationId}`, { file: 'function-calling.ts' });
+
   try {
     // Get the integration
     const integration = await getConnectedIntegration(
-      request.organizationId,
+      organizationId,
       request.integrationId
     );
     
@@ -187,7 +188,6 @@ export async function executeFunctionCall(
     
     // Log the action
     await logIntegrationAction({
-      organizationId: request.organizationId,
       integrationId: request.integrationId,
       functionName: request.functionName,
       parameters: request.parameters,
@@ -211,7 +211,6 @@ export async function executeFunctionCall(
 
     // Log the error
     await logIntegrationAction({
-      organizationId: request.organizationId,
       integrationId: request.integrationId,
       functionName: request.functionName,
       parameters: request.parameters,
@@ -233,7 +232,6 @@ export async function executeFunctionCall(
 }
 
 interface IntegrationLog {
-  organizationId: string;
   integrationId: string;
   functionName: string;
   parameters: Record<string, unknown>;
@@ -273,9 +271,10 @@ async function getConnectedIntegration(
 async function logIntegrationAction(log: IntegrationLog): Promise<void> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${log.organizationId}/integrationLogs`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationLogs`,
       `log_${Date.now()}`,
       {
         ...log,

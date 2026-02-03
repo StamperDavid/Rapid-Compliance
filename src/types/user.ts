@@ -29,11 +29,8 @@ export interface User {
     };
   };
   
-  // Current context (for multi-tenancy)
-  currentContext?: {
-    organizationId: string;
-    workspaceId: string;
-  };
+  // Single-tenant context (RapidCompliance.US)
+  // organizationId removed - always 'rapid-compliance'
   
   // Metadata
   createdAt: Timestamp;
@@ -66,8 +63,7 @@ export interface UserSession {
     ipAddress: string;
   };
   
-  // Context
-  organizationId?: string;
+  // Context - single tenant, orgId always 'rapid-compliance'
   workspaceId?: string;
   
   // Metadata
@@ -84,7 +80,7 @@ export interface UserSession {
  */
 export interface Invitation {
   id: string;
-  organizationId: string;
+  // organizationId removed - single tenant
   workspaceId?: string;
   
   // Invitee

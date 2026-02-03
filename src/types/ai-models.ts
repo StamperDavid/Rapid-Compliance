@@ -199,7 +199,6 @@ export interface IntelligentResponse {
 export interface FineTuningConfig {
   provider: AIProvider;
   baseModel: ModelName;
-  organizationId: string;
   
   // Training data
   trainingDataPath: string;
@@ -255,8 +254,6 @@ export type ModelSelectionStrategy =
  * Model Configuration for Organization
  */
 export interface OrganizationModelConfig {
-  organizationId: string;
-  
   // Primary model
   primaryModel: ModelName;
   

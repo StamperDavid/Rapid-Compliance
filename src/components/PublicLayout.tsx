@@ -84,7 +84,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment or reach out to us at support@salesvelocity.ai",
+        content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment or reach out to us at support@rapidcompliance.us",
         timestamp: new Date(),
       };
       setChatMessages(prev => [...prev, errorMessage]);
@@ -110,7 +110,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 /* eslint-disable-next-line @next/next/no-img-element -- Dynamic theme logo URL from CMS */
                 <img
                   src={theme.logoUrl}
-                  alt={(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}
+                  alt={(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'RapidCompliance.US'}
                   style={{
                     height: `${theme.logoHeight ?? 48}px`,
                     width: 'auto',
@@ -122,7 +122,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   className="text-2xl font-bold"
                   style={{ color: theme.textColor, fontFamily: theme.headingFont }}
                 >
-                  {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}
+                  {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'RapidCompliance.US'}
                 </span>
               )}
             </Link>
@@ -255,7 +255,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center" style={{ color: theme.textColor, opacity: 0.6 }}>
-            <p>© {new Date().getFullYear()} {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'RapidCompliance.US'}. All rights reserved.</p>
           </div>
         </div>
       </footer>

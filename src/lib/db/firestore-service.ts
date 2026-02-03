@@ -24,6 +24,41 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config'
 import { logger } from '../logger/logger';
+import { DEFAULT_ORG_ID } from '../constants/platform';
+
+// ============================================================================
+// PENTHOUSE MODEL: Single-Tenant Path Builder
+// All paths now use the hardcoded DEFAULT_ORG_ID instead of dynamic orgId
+// ============================================================================
+
+/**
+ * Build organization-scoped collection path.
+ * PENTHOUSE MODEL: Always uses DEFAULT_ORG_ID.
+ * @param subPath - Sub-collection path (e.g., 'workspaces', 'emailCampaigns')
+ */
+function orgPath(subPath: string): string {
+  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${subPath}`;
+}
+
+/**
+ * Build workspace-scoped collection path.
+ * PENTHOUSE MODEL: Always uses DEFAULT_ORG_ID.
+ * @param workspaceId - Workspace ID
+ * @param subPath - Sub-collection path (e.g., 'schemas', 'workflows')
+ */
+function workspacePath(workspaceId: string, subPath: string): string {
+  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${subPath}`;
+}
+
+/**
+ * Build entity-scoped collection path for records.
+ * PENTHOUSE MODEL: Always uses DEFAULT_ORG_ID.
+ * @param workspaceId - Workspace ID
+ * @param entityName - Entity name
+ */
+function entityRecordsPath(workspaceId: string, entityName: string): string {
+  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${entityName}/${COLLECTIONS.RECORDS}`;
+}
 
 // Helper to check if Firestore is available
 function ensureFirestore() {
@@ -377,33 +412,35 @@ export class OrganizationService {
 
 /**
  * Workspace-specific operations
+ * PENTHOUSE MODEL: All methods use DEFAULT_ORG_ID internally
+ * @deprecated orgId parameters are ignored - kept for backwards compatibility during migration
  */
 export class WorkspaceService {
-  static async get(orgId: string, workspaceId: string) {
+  static async get(_orgId: string, workspaceId: string) {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}`,
+      orgPath(COLLECTIONS.WORKSPACES),
       workspaceId
     );
   }
 
-  static async getAll(orgId: string) {
+  static async getAll(_orgId?: string) {
     return FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}`
+      orgPath(COLLECTIONS.WORKSPACES)
     );
   }
 
-  static async set(orgId: string, workspaceId: string, data: Record<string, unknown>) {
+  static async set(_orgId: string, workspaceId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}`,
+      orgPath(COLLECTIONS.WORKSPACES),
       workspaceId,
       data,
       false
     );
   }
 
-  static subscribe(orgId: string, workspaceId: string, callback: (data: Record<string, unknown> | null) => void) {
+  static subscribe(_orgId: string, workspaceId: string, callback: (data: Record<string, unknown> | null) => void) {
     return FirestoreService.subscribe(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}`,
+      orgPath(COLLECTIONS.WORKSPACES),
       workspaceId,
       callback
     );
@@ -412,33 +449,35 @@ export class WorkspaceService {
 
 /**
  * Schema-specific operations
+ * PENTHOUSE MODEL: All methods use DEFAULT_ORG_ID internally
+ * @deprecated orgId parameters are ignored - kept for backwards compatibility during migration
  */
 export class SchemaService {
-  static async get(orgId: string, workspaceId: string, schemaId: string) {
+  static async get(_orgId: string, workspaceId: string, schemaId: string) {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      workspacePath(workspaceId, COLLECTIONS.SCHEMAS),
       schemaId
     );
   }
 
-  static async getAll(orgId: string, workspaceId: string) {
+  static async getAll(_orgId: string, workspaceId: string) {
     return FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`
+      workspacePath(workspaceId, COLLECTIONS.SCHEMAS)
     );
   }
 
-  static async set(orgId: string, workspaceId: string, schemaId: string, data: Record<string, unknown>) {
+  static async set(_orgId: string, workspaceId: string, schemaId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      workspacePath(workspaceId, COLLECTIONS.SCHEMAS),
       schemaId,
       data,
       false
     );
   }
 
-  static subscribe(orgId: string, workspaceId: string, schemaId: string, callback: (data: Record<string, unknown> | null) => void) {
+  static subscribe(_orgId: string, workspaceId: string, schemaId: string, callback: (data: Record<string, unknown> | null) => void) {
     return FirestoreService.subscribe(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      workspacePath(workspaceId, COLLECTIONS.SCHEMAS),
       schemaId,
       callback
     );
@@ -447,34 +486,37 @@ export class SchemaService {
 
 /**
  * Record-specific operations (dynamic entities)
- * Path: organizations/{orgId}/workspaces/{workspaceId}/entities/{entityName}/records
+ * Path: organizations/{DEFAULT_ORG_ID}/workspaces/{workspaceId}/entities/{entityName}/records
+ * PENTHOUSE MODEL: All methods use DEFAULT_ORG_ID internally
+ * @deprecated orgId parameters are ignored - kept for backwards compatibility during migration
  */
 export class RecordService {
-  private static getCollectionPath(orgId: string, workspaceId: string, entityName: string): string {
-    return `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${entityName}/${COLLECTIONS.RECORDS}`;
+  private static getCollectionPath(_orgId: string, workspaceId: string, entityName: string): string {
+    return entityRecordsPath(workspaceId, entityName);
   }
 
-  static async get(orgId: string, workspaceId: string, entityName: string, recordId: string) {
+  static async get(_orgId: string, workspaceId: string, entityName: string, recordId: string) {
     return FirestoreService.get(
-      RecordService.getCollectionPath(orgId, workspaceId, entityName),
+      entityRecordsPath(workspaceId, entityName),
       recordId
     );
   }
 
-  static async getAll(orgId: string, workspaceId: string, entityName: string, filters: QueryConstraint[] = []) {
+  static async getAll(_orgId: string, workspaceId: string, entityName: string, filters: QueryConstraint[] = []) {
     return FirestoreService.getAll(
-      RecordService.getCollectionPath(orgId, workspaceId, entityName),
+      entityRecordsPath(workspaceId, entityName),
       filters
     );
   }
 
   /**
    * Get records with pagination
+   * PENTHOUSE MODEL: orgId parameter ignored
    * @param pageSize - Number of records per page (default 50, max 100)
    * @param lastDoc - Document snapshot to start after (for cursor pagination)
    */
   static async getAllPaginated(
-    orgId: string,
+    _orgId: string,
     workspaceId: string,
     entityName: string,
     filters: QueryConstraint[] = [],
@@ -482,40 +524,40 @@ export class RecordService {
     lastDoc?: QueryDocumentSnapshot
   ) {
     return FirestoreService.getAllPaginated(
-      RecordService.getCollectionPath(orgId, workspaceId, entityName),
+      entityRecordsPath(workspaceId, entityName),
       filters,
       Math.min(pageSize, 100), // Enforce max page size
       lastDoc
     );
   }
 
-  static async set(orgId: string, workspaceId: string, entityName: string, recordId: string, data: Record<string, unknown>) {
+  static async set(_orgId: string, workspaceId: string, entityName: string, recordId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      RecordService.getCollectionPath(orgId, workspaceId, entityName),
+      entityRecordsPath(workspaceId, entityName),
       recordId,
       data,
       false
     );
   }
 
-  static async update(orgId: string, workspaceId: string, entityName: string, recordId: string, data: Record<string, unknown>) {
+  static async update(_orgId: string, workspaceId: string, entityName: string, recordId: string, data: Record<string, unknown>) {
     return FirestoreService.update(
-      RecordService.getCollectionPath(orgId, workspaceId, entityName),
+      entityRecordsPath(workspaceId, entityName),
       recordId,
       data
     );
   }
 
-  static async delete(orgId: string, workspaceId: string, entityName: string, recordId: string) {
+  static async delete(_orgId: string, workspaceId: string, entityName: string, recordId: string) {
     return FirestoreService.delete(
-      RecordService.getCollectionPath(orgId, workspaceId, entityName),
+      entityRecordsPath(workspaceId, entityName),
       recordId
     );
   }
 
-  static subscribe(orgId: string, workspaceId: string, entityName: string, filters: QueryConstraint[], callback: (data: Record<string, unknown>[]) => void) {
+  static subscribe(_orgId: string, workspaceId: string, entityName: string, filters: QueryConstraint[], callback: (data: Record<string, unknown>[]) => void) {
     return FirestoreService.subscribeToCollection(
-      RecordService.getCollectionPath(orgId, workspaceId, entityName),
+      entityRecordsPath(workspaceId, entityName),
       filters,
       callback
     );
@@ -524,42 +566,45 @@ export class RecordService {
 
 /**
  * Workflow-specific operations
+ * PENTHOUSE MODEL: All methods use DEFAULT_ORG_ID internally
+ * @deprecated orgId parameters are ignored - kept for backwards compatibility during migration
  */
 export class WorkflowService {
-  static async get(orgId: string, workspaceId: string, workflowId: string) {
+  static async get(_orgId: string, workspaceId: string, workflowId: string) {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+      workspacePath(workspaceId, COLLECTIONS.WORKFLOWS),
       workflowId
     );
   }
 
-  static async getAll(orgId: string, workspaceId: string) {
+  static async getAll(_orgId: string, workspaceId: string) {
     return FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`
+      workspacePath(workspaceId, COLLECTIONS.WORKFLOWS)
     );
   }
 
   /**
    * Get workflows with pagination
+   * PENTHOUSE MODEL: orgId parameter ignored
    */
   static async getAllPaginated(
-    orgId: string,
+    _orgId: string,
     workspaceId: string,
     constraints: QueryConstraint[] = [],
     pageSize: number = 50,
     lastDoc?: QueryDocumentSnapshot
   ) {
     return FirestoreService.getAllPaginated(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+      workspacePath(workspaceId, COLLECTIONS.WORKFLOWS),
       constraints,
       Math.min(pageSize, 100),
       lastDoc
     );
   }
 
-  static async set(orgId: string, workspaceId: string, workflowId: string, data: Record<string, unknown>) {
+  static async set(_orgId: string, workspaceId: string, workflowId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+      workspacePath(workspaceId, COLLECTIONS.WORKFLOWS),
       workflowId,
       data,
       false
@@ -569,41 +614,44 @@ export class WorkflowService {
 
 /**
  * Email Campaign operations
+ * PENTHOUSE MODEL: All methods use DEFAULT_ORG_ID internally
+ * @deprecated orgId parameters are ignored - kept for backwards compatibility during migration
  */
 export class EmailCampaignService {
-  static async get(orgId: string, campaignId: string) {
+  static async get(_orgId: string, campaignId: string) {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
+      orgPath(COLLECTIONS.EMAIL_CAMPAIGNS),
       campaignId
     );
   }
 
-  static async getAll(orgId: string) {
+  static async getAll(_orgId?: string) {
     return FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`
+      orgPath(COLLECTIONS.EMAIL_CAMPAIGNS)
     );
   }
 
   /**
    * Get campaigns with pagination
+   * PENTHOUSE MODEL: orgId parameter ignored
    */
   static async getAllPaginated(
-    orgId: string,
+    _orgId: string,
     constraints: QueryConstraint[] = [],
     pageSize: number = 50,
     lastDoc?: QueryDocumentSnapshot
   ) {
     return FirestoreService.getAllPaginated(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
+      orgPath(COLLECTIONS.EMAIL_CAMPAIGNS),
       constraints,
       Math.min(pageSize, 100),
       lastDoc
     );
   }
 
-  static async set(orgId: string, campaignId: string, data: Record<string, unknown>) {
+  static async set(_orgId: string, campaignId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
+      orgPath(COLLECTIONS.EMAIL_CAMPAIGNS),
       campaignId,
       data,
       false
@@ -613,40 +661,42 @@ export class EmailCampaignService {
 
 /**
  * Lead Nurturing operations
+ * PENTHOUSE MODEL: All methods use DEFAULT_ORG_ID internally
+ * @deprecated orgId parameters are ignored - kept for backwards compatibility during migration
  */
 export class LeadNurturingService {
-  static async getSequence(orgId: string, sequenceId: string) {
+  static async getSequence(_orgId: string, sequenceId: string) {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.NURTURE_SEQUENCES}`,
+      orgPath(COLLECTIONS.NURTURE_SEQUENCES),
       sequenceId
     );
   }
 
-  static async getAllSequences(orgId: string) {
+  static async getAllSequences(_orgId?: string) {
     return FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.NURTURE_SEQUENCES}`
+      orgPath(COLLECTIONS.NURTURE_SEQUENCES)
     );
   }
 
-  static async setSequence(orgId: string, sequenceId: string, data: Record<string, unknown>) {
+  static async setSequence(_orgId: string, sequenceId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.NURTURE_SEQUENCES}`,
+      orgPath(COLLECTIONS.NURTURE_SEQUENCES),
       sequenceId,
       data,
       false
     );
   }
 
-  static async getEnrichment(orgId: string, leadId: string) {
+  static async getEnrichment(_orgId: string, leadId: string) {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.LEAD_ENRICHMENTS}`,
+      orgPath(COLLECTIONS.LEAD_ENRICHMENTS),
       leadId
     );
   }
 
-  static async setEnrichment(orgId: string, leadId: string, data: Record<string, unknown>) {
+  static async setEnrichment(_orgId: string, leadId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.LEAD_ENRICHMENTS}`,
+      orgPath(COLLECTIONS.LEAD_ENRICHMENTS),
       leadId,
       data,
       false

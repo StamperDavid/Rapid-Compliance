@@ -19,7 +19,6 @@ export interface SequenceSettings {
 
 export interface OutboundSequence {
   id: string;
-  organizationId: string;
   workspaceId?: string;
   
   // Metadata
@@ -164,7 +163,6 @@ export interface ProspectEnrollment {
   id: string;
   sequenceId: string;
   prospectId: string; // CRM contact/lead ID
-  organizationId: string;
   
   // Status
   status: 'active' | 'completed' | 'paused' | 'removed' | 'bounced' | 'unsubscribed';

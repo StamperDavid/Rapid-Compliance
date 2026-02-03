@@ -116,7 +116,6 @@ export async function joinVideoWaitlist(
     }
 
     const entry: Omit<VideoWaitlistEntry, 'id'> = {
-      organizationId,
       email: email.trim().toLowerCase(),
       name: options?.name ?? undefined,
       userId: options?.userId ?? undefined,
@@ -165,11 +164,12 @@ export async function joinVideoWaitlist(
  * @stub Returns coming soon response
  */
 export async function generateVideo(
+  organizationId: string,
   _request: VideoGenerationRequest
 ): Promise<ComingSoonResponse & { request?: VideoGenerationRequest }> {
   // Log interest for analytics
   await logVideoInterest(
-    _request.organizationId,
+    organizationId,
     `generate_video_${_request.provider}`,
     _request.userId,
     { type: _request.type }
@@ -322,9 +322,10 @@ export async function listVideoTemplates(
  * @stub Returns coming soon response
  */
 export async function createVideoTemplate(
+  organizationId: string,
   _template: Omit<VideoTemplate, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<ComingSoonResponse> {
-  await logVideoInterest(_template.organizationId, 'create_template');
+  await logVideoInterest(organizationId, 'create_template');
   return createComingSoonResponse('Template creation');
 }
 
@@ -352,9 +353,10 @@ export async function listVideoProjects(
  * @stub Returns coming soon response
  */
 export async function createVideoProject(
+  organizationId: string,
   _project: Omit<VideoProject, 'id' | 'createdAt' | 'updatedAt' | 'videos'>
 ): Promise<ComingSoonResponse> {
-  await logVideoInterest(_project.organizationId, 'create_project');
+  await logVideoInterest(organizationId, 'create_project');
   return createComingSoonResponse('Project creation');
 }
 

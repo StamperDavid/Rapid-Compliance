@@ -9,13 +9,26 @@
  * @module persona-mapper
  */
 
-import type { IndustryType } from '@/types/organization';
-
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export type PersonaContext = 'admin' | 'client';
+
+// Industry type definition
+export type IndustryType =
+  | 'service'
+  | 'manufacturing'
+  | 'ecommerce'
+  | 'real_estate'
+  | 'finance'
+  | 'education'
+  | 'hospitality'
+  | 'legal'
+  | 'nonprofit'
+  | 'sales'
+  | 'transportation'
+  | 'custom';
 
 export interface IndustryPersona {
   /** Industry identifier */

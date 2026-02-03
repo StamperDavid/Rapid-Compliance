@@ -7,8 +7,33 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
-import type { SocialTrainingSettings, BrandDNA } from '@/types/organization';
 import type { ModelName } from '@/types/ai-models';
+
+// Minimal type definitions for this component
+interface SocialTrainingSettings {
+  emojiUsage: 'none' | 'light' | 'heavy';
+  ctaStyle: 'soft' | 'direct' | 'question';
+  contentThemes: string[];
+  hashtagStrategy: string;
+  postingPersonality: string;
+  platformPreferences?: {
+    twitter?: { maxLength: number; style: string };
+    linkedin?: { format: string; tone: string };
+    instagram?: { captionStyle: string; hashtagCount: number };
+  };
+}
+
+interface BrandDNA {
+  companyDescription?: string;
+  uniqueValue?: string;
+  targetAudience?: string;
+  toneOfVoice?: string;
+  communicationStyle?: string;
+  keyPhrases?: string[];
+  avoidPhrases?: string[];
+  industry?: string;
+  competitors?: string[];
+}
 
 type TabType = 'settings' | 'generate' | 'history' | 'knowledge';
 type PlatformType = 'twitter' | 'linkedin' | 'instagram';
@@ -89,7 +114,7 @@ export default function SocialMediaTrainingPage() {
   const [overrideForSocial, setOverrideForSocial] = useState(false);
   const [socialBrandOverrides, setSocialBrandOverrides] = useState({
     companyDescription: '',
-    toneOfVoice: '' as BrandDNA['toneOfVoice'] | '',
+    toneOfVoice: '' as BrandDNA['toneOfVoice'] | undefined,
     keyPhrases: [] as string[],
   });
 

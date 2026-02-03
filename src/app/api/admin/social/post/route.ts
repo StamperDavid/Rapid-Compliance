@@ -1,6 +1,6 @@
 /**
  * Admin Platform Social Media Post API
- * POST to platform social accounts (SalesVelocity.ai official accounts)
+ * POST to platform social accounts (RapidCompliance.US official accounts)
  * Uses platform-level API keys from environment variables
  *
  * Features:
@@ -486,11 +486,11 @@ export async function GET(request: NextRequest) {
       platforms: {
         twitter: {
           configured: twitterConfigured,
-          handle: process.env.PLATFORM_TWITTER_HANDLE ?? '@SalesVelocityAI',
+          handle: process.env.PLATFORM_TWITTER_HANDLE ?? '@RapidComplianceUS',
         },
         linkedin: {
           configured: linkedInConfigured,
-          companyName: 'SalesVelocity.ai',
+          companyName: 'RapidCompliance.US',
         },
       },
       recentPosts: recentPosts.map(transformPost),

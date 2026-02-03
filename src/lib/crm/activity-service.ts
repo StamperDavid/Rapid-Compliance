@@ -58,7 +58,6 @@ export async function createActivity(
     const activity: Activity = {
       ...data,
       id: activityId,
-      organizationId,
       workspaceId,
       occurredAt: data.occurredAt ?? Timestamp.fromDate(now),
       createdAt: Timestamp.fromDate(now),

@@ -1,11 +1,10 @@
 /**
  * Website Builder Types
- * Multi-tenant architecture - all data scoped to organizationId
+ * Single-tenant architecture for RapidCompliance.US
  */
 
 export interface SiteConfig {
   id: string;
-  organizationId: string; // CRITICAL: Always present for isolation
   
   // Domain settings
   subdomain: string; // e.g., "acme" → acme.yourplatform.com
@@ -51,7 +50,6 @@ export interface AnalyticsConfig {
 
 export interface Page {
   id: string;
-  organizationId: string; // CRITICAL: Isolation
 
   // Basic info
   slug: string; // URL path
@@ -262,8 +260,7 @@ export interface AnimationConfig {
 
 export interface BlogPost {
   id: string;
-  organizationId: string; // CRITICAL: Isolation
-  
+
   // Basic info
   slug: string;
   title: string;
@@ -302,8 +299,7 @@ export interface BlogPost {
 
 export interface SiteTheme {
   id: string;
-  organizationId: string; // CRITICAL: Isolation
-  
+
   // Branding
   branding: WebsiteBrandingConfig;
   
@@ -377,8 +373,7 @@ export interface WebsiteLayoutConfig {
 
 export interface Navigation {
   id: string;
-  organizationId: string; // CRITICAL: Isolation
-  
+
   header: NavItem[];
   footer: FooterConfig;
   
@@ -416,7 +411,6 @@ export interface SocialLink {
 
 export interface PageTemplate {
   id: string;
-  organizationId?: string; // Optional - null = platform template, set = custom template
   
   name: string;
   description: string;
@@ -438,7 +432,6 @@ export interface PageTemplate {
 
 export interface CustomDomain {
   id: string; // Domain name (e.g., "www.acme.com")
-  organizationId: string; // CRITICAL: One domain = one org
   
   // Verification
   verified: boolean;

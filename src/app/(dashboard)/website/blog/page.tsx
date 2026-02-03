@@ -1,7 +1,7 @@
 /**
  * Blog Posts Management
  * List and manage all blog posts
- * CRITICAL: Multi-tenant - scoped to organizationId
+ * NOTE: Single-tenant - uses DEFAULT_ORG_ID
  */
 
 'use client';

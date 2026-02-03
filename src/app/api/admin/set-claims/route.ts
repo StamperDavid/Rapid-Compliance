@@ -1,12 +1,12 @@
 /**
  * Admin API: Set Firebase Custom Claims
- * Allows platform_admin to set custom claims for role-based access control
+ * Allows superadmin to set custom claims for role-based access control
  *
  * POST /api/admin/set-claims
- * Body: { userId: string, role: 'platform_admin' | 'platform_admin' | 'admin', tenantId?: string }
+ * Body: { userId: string, role: 'superadmin' | 'admin', tenantId?: string }
  *
  * Security:
- * - Requires platform_admin authentication
+ * - Requires superadmin authentication
  * - Rate limited to prevent abuse
  * - All claim changes are audited
  * - Uses Firebase Admin SDK for server-side claim management
@@ -30,7 +30,7 @@ import { logger } from '@/lib/logger/logger';
 /**
  * Valid role types for the platform
  */
-type RoleType = 'platform_admin'   | 'admin';
+type RoleType = 'superadmin' | 'admin';
 
 /**
  * Request body for setting custom claims
@@ -71,7 +71,7 @@ interface SetClaimsResponse {
 function isValidRole(role: unknown): role is RoleType {
   return (
     typeof role === 'string' &&
-    (role === 'platform_admin' || role === 'platform_admin' || role === 'admin')
+    (role === 'superadmin' || role === 'admin')
   );
 }
 
@@ -113,8 +113,8 @@ function isSetClaimsRequestBody(body: unknown): body is SetClaimsRequestBody {
  * Sets custom claims on a Firebase user for RBAC
  *
  * Security considerations:
- * - Only platform_admin can set claims
- * - Claims include tenant_id for multi-tenancy
+ * - Only superadmin can set claims
+ * - Claims include tenant_id for organization scoping
  * - All role changes are logged for audit trail
  * - Rate limited to prevent abuse
  */
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     return rateLimitResponse;
   }
 
-  // Verify the requester is a platform_admin
+  // Verify the requester is a superadmin
   const authResult = await verifyAdminRequest(request);
 
   if (isAuthError(authResult)) {
@@ -139,15 +139,15 @@ export async function POST(request: NextRequest) {
     return createErrorResponse(authResult.error, authResult.status);
   }
 
-  // Enforce platform_admin requirement for claim modification
+  // Enforce superadmin requirement for claim modification
   if (!authResult.user.isPlatformAdmin) {
-    logger.warn('Non-platform-admin attempted to set claims', {
+    logger.warn('Non-superadmin attempted to set claims', {
       route: '/api/admin/set-claims',
       userId: authResult.user.uid,
       userRole: authResult.user.role,
     });
     return createErrorResponse(
-      'Platform admin access required to set custom claims',
+      'Superadmin access required to set custom claims',
       403
     );
   }
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
 
     if (!isSetClaimsRequestBody(rawBody)) {
       return createErrorResponse(
-        'Invalid request body. Required: userId (string), role (platform_admin|platform_admin|admin), tenantId (string, optional)',
+        'Invalid request body. Required: userId (string), role (superadmin|admin), tenantId (string, optional)',
         400
       );
     }

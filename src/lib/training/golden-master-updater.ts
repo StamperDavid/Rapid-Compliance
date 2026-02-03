@@ -46,7 +46,6 @@ export async function createUpdateRequest(
   // Create update request
   const updateRequest: GoldenMasterUpdateRequest = {
     id: `update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    organizationId,
     goldenMasterId,
     sourceSessionIds,
     improvements,
@@ -242,11 +241,12 @@ function analyzeImpact(
  * Apply an approved update request to the Golden Master
  */
 export async function applyUpdateRequest(
+  organizationId: string,
   updateRequest: GoldenMasterUpdateRequest
 ): Promise<GoldenMaster> {
   logger.info('GM Updater Applying update request updateRequest.id}', { file: 'golden-master-updater.ts' });
 
-  const { organizationId, goldenMasterId, proposedChanges } = updateRequest;
+  const { goldenMasterId, proposedChanges } = updateRequest;
 
   // Get current Golden Master
   const currentGM = await getGoldenMaster(organizationId, goldenMasterId);

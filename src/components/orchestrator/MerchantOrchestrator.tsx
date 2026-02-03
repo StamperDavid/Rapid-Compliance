@@ -20,8 +20,8 @@ import {
   getIndustryPersona,
   buildPersonaSystemPrompt,
   type IndustryPersona,
+  type IndustryType,
 } from '@/lib/ai/persona-mapper';
-import type { IndustryType } from '@/types/organization';
 import { ImplementationGuide, type ImplementationContext } from '@/lib/orchestrator/implementation-guide';
 import { SystemHealthService, type SystemHealthReport } from '@/lib/orchestrator/system-health-service';
 

@@ -5,8 +5,7 @@
 
 export interface ImportSession {
   id: string;
-  organizationId: string;
-  
+
   // File info
   fileName: string;
   fileSize: number;

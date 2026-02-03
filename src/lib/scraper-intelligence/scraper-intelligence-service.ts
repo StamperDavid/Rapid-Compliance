@@ -367,9 +367,9 @@ export async function listResearchIntelligence(
   organizationId: string
 ): Promise<Array<{ industryId: string; research: ResearchIntelligence }>> {
   try {
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const snapshot = await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .get();
 
     const results = snapshot.docs.map((doc) => {
@@ -552,9 +552,9 @@ export async function querySignalsByPlatform(
   limit: number = 100
 ): Promise<Array<{ recordId: string; signals: ExtractedSignal[] }>> {
   try {
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const snapshot = await db
       .collection(EXTRACTED_SIGNALS_COLLECTION)
-      .where('organizationId', '==', organizationId)
       .limit(limit)
       .get();
 

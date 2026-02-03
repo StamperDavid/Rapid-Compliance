@@ -7,9 +7,30 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
-import type { VoiceTrainingSettings, BrandDNA } from '@/types/organization';
 import { TTS_PROVIDER_INFO, DEFAULT_TTS_CONFIGS, type TTSEngineType, type TTSVoice, type APIKeyMode } from '@/lib/voice/tts/types';
 import type { ModelName } from '@/types/ai-models';
+
+// Minimal type definitions for this component
+interface VoiceTrainingSettings {
+  greetingScript?: string;
+  toneOfVoice?: string;
+  callHandoffInstructions?: string;
+  objectionHandling?: Record<string, string>;
+  qualificationCriteria?: string[];
+  [key: string]: unknown;
+}
+
+interface BrandDNA {
+  companyDescription?: string;
+  uniqueValue?: string;
+  targetAudience?: string;
+  toneOfVoice?: string;
+  communicationStyle?: string;
+  keyPhrases?: string[];
+  avoidPhrases?: string[];
+  industry?: string;
+  competitors?: string[];
+}
 
 // Types
 interface CallMessage {
@@ -460,7 +481,7 @@ export default function VoiceAITrainingLabPage() {
   const handleTestVoice = async () => {
     setTestingVoice(true);
     try {
-      const testText = voiceSettings.greetingScript || 'Hello, this is a test of your selected voice engine. The quality sounds great!';
+      const testText = voiceSettings.greetingScript ?? 'Hello, this is a test of your selected voice engine. The quality sounds great!';
       const response = await fetch('/api/voice/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -594,7 +615,7 @@ export default function VoiceAITrainingLabPage() {
     }
     setVoiceSettings(prev => ({
       ...prev,
-      qualificationCriteria: [...prev.qualificationCriteria, newCriteria.trim()],
+      qualificationCriteria: [...(prev.qualificationCriteria ?? []), newCriteria.trim()],
     }));
     setNewCriteria('');
   };
@@ -602,7 +623,7 @@ export default function VoiceAITrainingLabPage() {
   const handleRemoveCriteria = (index: number) => {
     setVoiceSettings(prev => ({
       ...prev,
-      qualificationCriteria: prev.qualificationCriteria.filter((_, i) => i !== index),
+      qualificationCriteria: (prev.qualificationCriteria ?? []).filter((_, i) => i !== index),
     }));
   };
 
@@ -615,7 +636,7 @@ export default function VoiceAITrainingLabPage() {
     const greetingMessage: CallMessage = {
       id: `msg_${Date.now()}`,
       role: 'agent',
-      content: voiceSettings.greetingScript || 'Hello, thank you for calling. How may I assist you today?',
+      content: voiceSettings.greetingScript ?? 'Hello, thank you for calling. How may I assist you today?',
       timestamp: new Date().toISOString(),
     };
     setCallMessages([greetingMessage]);
@@ -765,7 +786,7 @@ ${brandDNA?.avoidPhrases?.join(', ') ?? 'Avoid pushy or aggressive language'}
 
 ## Qualification Criteria
 When speaking with prospects, try to qualify them based on:
-${voiceSettings.qualificationCriteria.map(c => `- ${c}`).join('\n')}
+${(voiceSettings.qualificationCriteria ?? []).map(c => `- ${c}`).join('\n')}
 
 ## Call Hand-off Instructions
 ${voiceSettings.callHandoffInstructions ?? 'Transfer to a manager if the caller requests escalation.'}
@@ -1368,7 +1389,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   </p>
 
                   <div style={{ marginBottom: '1rem' }}>
-                    {voiceSettings.qualificationCriteria.map((criteria, index) => (
+                    {(voiceSettings.qualificationCriteria ?? []).map((criteria, index) => (
                       <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>
                         <span style={{ flex: 1, fontSize: '0.875rem' }}>{criteria}</span>
                         <button
@@ -1634,7 +1655,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       </div>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: '#666666' }}>Qualification Criteria:</span>
-                        <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>{voiceSettings.qualificationCriteria.length}</span>
+                        <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>{(voiceSettings.qualificationCriteria ?? []).length}</span>
                       </div>
                       <div>
                         <span style={{ fontSize: '0.75rem', color: '#666666' }}>Brand DNA:</span>

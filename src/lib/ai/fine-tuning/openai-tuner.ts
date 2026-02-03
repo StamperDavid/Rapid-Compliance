@@ -85,7 +85,6 @@ export async function createOpenAIFineTuningJob(params: {
   // Save job to Firestore
   const job: FineTuningJob = {
     id: `job_${Date.now()}`,
-    organizationId,
     provider: 'openai',
     baseModel,
     datasetId: 'uploaded',

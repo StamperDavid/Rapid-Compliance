@@ -99,7 +99,7 @@ export default function PenthouseDashboardLayout({
           />
         )}
 
-        {/* Left Sidebar - Shows all features for platform_admin via useFeatureVisibility */}
+        {/* Left Sidebar - Shows all features for superadmin via useFeatureVisibility */}
         <aside
           className={`
             fixed md:relative

@@ -11,15 +11,14 @@ import {
   validateIntegrity,
   exportChangelogToMarkdown,
   VersionControlError,
+  type Changelog,
 } from '@/lib/scraper-intelligence/version-control';
 import type { TrainingData } from '@/types/scraper-intelligence';
-import type { Changelog } from '@/lib/scraper-intelligence/version-control';
 
 describe('Version Control', () => {
   describe('generateDiff', () => {
     const baseTrainingData: TrainingData = {
       id: 'training_123',
-      organizationId: 'org_123',
       signalId: 'signal_456',
       pattern: 'hiring engineers',
       patternType: 'keyword',
@@ -122,12 +121,12 @@ describe('Version Control', () => {
     });
 
     it('should detect added field', () => {
-      const before: any = { ...baseTrainingData, embedding: undefined };
-      const after: any = {
+      const before = { ...baseTrainingData, embedding: undefined } as unknown as TrainingData;
+      const after = {
         ...baseTrainingData,
         embedding: [0.1, 0.2, 0.3],
         version: 2,
-      };
+      } as unknown as TrainingData;
 
       const diff = generateDiff(before, after);
 
@@ -137,11 +136,11 @@ describe('Version Control', () => {
     });
 
     it('should detect removed field', () => {
-      const before: any = {
+      const before = {
         ...baseTrainingData,
         embedding: [0.1, 0.2, 0.3],
-      };
-      const after: any = { ...baseTrainingData, embedding: undefined, version: 2 };
+      } as unknown as TrainingData;
+      const after = { ...baseTrainingData, embedding: undefined, version: 2 } as unknown as TrainingData;
 
       const diff = generateDiff(before, after);
 
@@ -171,7 +170,6 @@ describe('Version Control', () => {
   describe('validateIntegrity', () => {
     const validTrainingData: TrainingData = {
       id: 'training_123',
-      organizationId: 'org_123',
       signalId: 'signal_456',
       pattern: 'hiring engineers',
       patternType: 'keyword',
@@ -194,7 +192,7 @@ describe('Version Control', () => {
     });
 
     it('should detect missing id', () => {
-      const invalid: any = { ...validTrainingData, id: '' };
+      const invalid = { ...validTrainingData, id: '' } as TrainingData;
 
       const result = validateIntegrity(invalid);
 
@@ -203,7 +201,7 @@ describe('Version Control', () => {
     });
 
     it('should detect missing organizationId', () => {
-      const invalid: any = { ...validTrainingData, organizationId: '' };
+      const invalid = { ...validTrainingData, organizationId: '' } as TrainingData;
 
       const result = validateIntegrity(invalid);
 
@@ -212,7 +210,7 @@ describe('Version Control', () => {
     });
 
     it('should detect missing signalId', () => {
-      const invalid: any = { ...validTrainingData, signalId: '' };
+      const invalid = { ...validTrainingData, signalId: '' } as TrainingData;
 
       const result = validateIntegrity(invalid);
 
@@ -221,7 +219,7 @@ describe('Version Control', () => {
     });
 
     it('should detect missing pattern', () => {
-      const invalid: any = { ...validTrainingData, pattern: '' };
+      const invalid = { ...validTrainingData, pattern: '' } as TrainingData;
 
       const result = validateIntegrity(invalid);
 
@@ -298,12 +296,12 @@ describe('Version Control', () => {
     });
 
     it('should detect multiple errors', () => {
-      const invalid: any = {
+      const invalid = {
         ...validTrainingData,
         id: '',
         confidence: -10,
         positiveCount: -1,
-      };
+      } as TrainingData;
 
       const result = validateIntegrity(invalid);
 
@@ -490,9 +488,8 @@ describe('Version Control', () => {
 
   describe('Edge Cases', () => {
     it('should handle diff with null values', () => {
-      const before: any = {
+      const before = {
         id: 'training_123',
-        organizationId: 'org_123',
         signalId: 'signal_456',
         pattern: 'test',
         patternType: 'keyword',
@@ -506,12 +503,12 @@ describe('Version Control', () => {
         version: 1,
         active: true,
         metadata: null,
-      };
-      const after: any = {
+      } as unknown as TrainingData;
+      const after = {
         ...before,
         metadata: { test: 'value' },
         version: 2,
-      };
+      } as unknown as TrainingData;
 
       const diff = generateDiff(before, after);
 
@@ -523,7 +520,6 @@ describe('Version Control', () => {
     it('should handle validation with boundary values', () => {
       const boundary: TrainingData = {
         id: 'training_123',
-        organizationId: 'org_123',
         signalId: 'signal_456',
         pattern: 'a', // Minimal pattern
         patternType: 'keyword',

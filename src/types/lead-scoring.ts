@@ -103,7 +103,6 @@ export type IntentSignalType =
  */
 export interface ScoringRules {
   id: string;
-  organizationId: string;
   name: string;
   description?: string;
   
@@ -250,7 +249,6 @@ export interface EngagementRules {
 export interface StoredLeadScore extends LeadScore {
   id: string;
   leadId: string;
-  organizationId: string;
   scoringRulesId: string;
   
   /** Discovery data snapshot (for score explanation) */
@@ -270,8 +268,7 @@ export interface StoredLeadScore extends LeadScore {
  */
 export interface LeadScoreRequest {
   leadId: string;
-  organizationId: string;
-  
+
   /** Optional: Use specific scoring rules (defaults to active rules) */
   scoringRulesId?: string;
   
@@ -290,7 +287,6 @@ export interface LeadScoreRequest {
  */
 export interface BatchLeadScoreRequest {
   leadIds: string[];
-  organizationId: string;
   scoringRulesId?: string;
   forceRescore?: boolean;
 }
@@ -303,7 +299,6 @@ export interface BatchLeadScoreRequest {
  * Aggregated scoring analytics
  */
 export interface LeadScoreAnalytics {
-  organizationId: string;
   period: {
     start: Date;
     end: Date;
@@ -356,7 +351,7 @@ export interface LeadScoreAnalytics {
 /**
  * Default scoring rules template
  */
-export const DEFAULT_SCORING_RULES: Omit<ScoringRules, 'id' | 'organizationId' | 'createdAt' | 'updatedAt' | 'createdBy'> = {
+export const DEFAULT_SCORING_RULES: Omit<ScoringRules, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'> = {
   name: 'Default Scoring Rules',
   description: 'Standard lead scoring configuration',
   isActive: true,

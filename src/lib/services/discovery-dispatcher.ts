@@ -170,11 +170,11 @@ export async function processDiscoveryTask(
 
     // Execute discovery based on type
     if (task.type === 'company') {
-      const companyResult = await discoverCompany(task.target, task.organizationId);
+      const companyResult = await discoverCompany(task.target, '');
       discoveryResult = companyResult.company;
       fromCache = companyResult.fromCache ?? false;
     } else {
-      const personResult = await discoverPerson(task.target, task.organizationId);
+      const personResult = await discoverPerson(task.target, '');
       discoveryResult = personResult.person;
       fromCache = personResult.fromCache ?? false;
     }
@@ -210,7 +210,6 @@ export async function processDiscoveryTask(
         version: '1.0.0',
         startedAt: new Date(startTime),
         completedAt: new Date(),
-        organizationId: task.organizationId,
       }
     );
 
@@ -248,7 +247,6 @@ export async function processDiscoveryTask(
         version: '1.0.0',
         startedAt: new Date(startTime),
         completedAt: new Date(),
-        organizationId: task.organizationId,
       }
     );
   }
@@ -263,23 +261,20 @@ export async function processDiscoveryTask(
  */
 async function findIdleTasks(
   limit: number,
-  organizationId?: string
+  _organizationId?: string
 ): Promise<DiscoveryTask[]> {
   try {
     // Query for entities with workflow.stage='discovery' and workflow.status='idle'
     // In a real implementation, you'd have a dedicated queue collection
     // For now, we'll simulate by checking a hypothetical 'discoveryQueue' collection
 
-    let query = db.collection('discoveryQueue')
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    const query = db.collection('discoveryQueue')
       .where('workflow.stage', '==', 'discovery')
       .where('workflow.status', '==', 'idle')
       .orderBy('priority', 'desc')
       .orderBy('createdAt', 'asc')
       .limit(limit);
-
-    if (organizationId) {
-      query = query.where('organizationId', '==', organizationId);
-    }
 
     const snapshot = await query.get();
 
@@ -306,7 +301,7 @@ async function findIdleTasks(
         id: doc.id,
         type: data.type as 'company' | 'person',
         target: data.target as string,
-        organizationId: data.organizationId as string,
+        organizationId: '',
         workspaceId: data.workspaceId as string,
         workflow: {
           ...workflowData,

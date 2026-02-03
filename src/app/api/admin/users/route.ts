@@ -169,9 +169,9 @@ function transformFirestoreUser(docId: string, data: FirestoreUserData): UserDat
 
 /**
  * GET /api/admin/users
- * Fetches users for platform_admin with pagination
+ * Fetches users for superadmin with pagination
  * Uses Admin SDK to bypass client-side Firestore rules
- * 
+ *
  * Query params:
  * - organizationId: filter by org (optional)
  * - limit: page size (default 50, max 100)
@@ -198,25 +198,22 @@ export async function GET(request: NextRequest) {
     
     // Parse query params for filtering and pagination
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
+    // PENTHOUSE: organizationId param no longer used (single-tenant mode)
     const limitParam = searchParams.get('limit');
     const pageSize = Math.min(parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50'), 100);
     const startAfter = searchParams.get('startAfter'); // ISO timestamp
     
     // Build query using Admin DAL
+    // PENTHOUSE: organizationId filter removed (single-tenant mode)
     const usersSnapshot = await adminDal.safeQuery('USERS', (ref) => {
       let query = ref.orderBy('createdAt', 'desc');
-      
-      if (organizationId) {
-        query = query.where('organizationId', '==', organizationId);
-      }
-      
+
       // Add cursor if provided
       if (startAfter) {
         const cursorDate = new Date(startAfter);
         query = query.startAfter(cursorDate);
       }
-      
+
       // Fetch one extra to check if there are more results
       return query.limit(pageSize + 1);
     });
@@ -267,7 +264,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/admin/users
- * Updates a user (platform_admin only)
+ * Updates a user (superadmin only)
  */
 export async function PATCH(request: NextRequest) {
   // Verify admin authentication  

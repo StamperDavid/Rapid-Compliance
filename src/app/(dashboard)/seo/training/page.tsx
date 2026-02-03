@@ -7,8 +7,34 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
-import type { SEOTrainingSettings, BrandDNA } from '@/types/organization';
 import type { ModelName } from '@/types/ai-models';
+
+// Minimal type definitions for this component
+interface SEOTrainingSettings {
+  targetSearchIntent: 'informational' | 'transactional' | 'navigational' | 'commercial';
+  writingStyle: 'scientific' | 'conversational' | 'journalistic' | 'technical';
+  targetKeywords: string[];
+  contentLength: 'short' | 'medium' | 'long' | 'comprehensive';
+  structurePreferences: {
+    useHeaders: boolean;
+    useLists: boolean;
+    useFAQ: boolean;
+    useImages: boolean;
+  };
+  audienceExpertiseLevel: 'beginner' | 'intermediate' | 'expert';
+}
+
+interface BrandDNA {
+  companyDescription: string;
+  uniqueValue: string;
+  targetAudience: string;
+  toneOfVoice: string;
+  communicationStyle: string;
+  keyPhrases: string[];
+  avoidPhrases: string[];
+  industry: string;
+  competitors: string[];
+}
 
 // SaaS Premium Dark Theme Colors
 const COLORS = {

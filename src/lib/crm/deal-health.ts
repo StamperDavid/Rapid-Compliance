@@ -67,7 +67,7 @@ export async function calculateDealHealth(
   dealId: string
 ): Promise<DealHealthScore> {
   try {
-    const deal = await getDeal(organizationId, dealId, workspaceId);
+    const deal = await getDeal(dealId, workspaceId);
     if (!deal) {
       throw new Error('Deal not found');
     }

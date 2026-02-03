@@ -44,7 +44,19 @@ import {
   broadcastSignal,
 } from '../../shared/tenant-memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
-import type { BrandDNA } from '@/types/organization';
+
+// Minimal BrandDNA type for this manager
+interface BrandDNA {
+  companyDescription?: string;
+  uniqueValue?: string;
+  targetAudience?: string;
+  toneOfVoice?: string;
+  communicationStyle?: string;
+  keyPhrases?: string[];
+  avoidPhrases?: string[];
+  industry?: string;
+  competitors?: string[];
+}
 
 // ============================================================================
 // SPECIALIST CONFIGURATIONS (for dynamic resolution)

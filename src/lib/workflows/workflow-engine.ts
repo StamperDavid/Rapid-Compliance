@@ -113,13 +113,13 @@ export async function executeWorkflowImpl(
     execution.completedAt = new Date();
 
     // Store execution in Firestore
-    const orgId = triggerData?.organizationId ?? workflow.organizationId;
     const workspaceId = triggerData?.workspaceId ?? workflow.workspaceId;
-    
-    if (orgId && workspaceId) {
+    const organizationId = triggerData?.organizationId as string | undefined;
+
+    if (organizationId && workspaceId) {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
         execution.id,
         {
           ...execution,
@@ -197,7 +197,7 @@ async function executeAction(
   triggerData: WorkflowTriggerData,
   workflow: Workflow
 ): Promise<unknown> {
-  const organizationId = triggerData?.organizationId ?? workflow.workspaceId;
+  const organizationId = triggerData?.organizationId as string | undefined;
 
   if (!organizationId) {
     throw new Error('Organization ID required for workflow execution');

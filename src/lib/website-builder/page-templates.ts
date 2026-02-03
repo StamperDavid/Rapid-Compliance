@@ -12,7 +12,6 @@ import type { PageTemplate } from '@/types/website';
  */
 export const businessLandingTemplate: PageTemplate = {
   id: 'business-landing',
-  organizationId: undefined, // Platform template
   name: 'Business Landing Page',
   description: 'Perfect for showcasing your business with hero, features, and call-to-action',
   category: 'business',
@@ -249,7 +248,6 @@ export const businessLandingTemplate: PageTemplate = {
  */
 export const saasHomepageTemplate: PageTemplate = {
   id: 'saas-homepage',
-  organizationId: undefined,
   name: 'SaaS Homepage',
   description: 'Modern SaaS landing page with hero, features, pricing, and testimonials',
   category: 'saas',
@@ -524,7 +522,6 @@ export const saasHomepageTemplate: PageTemplate = {
  */
 export const ecommerceStorefrontTemplate: PageTemplate = {
   id: 'ecommerce-storefront',
-  organizationId: undefined,
   name: 'E-commerce Storefront',
   description: 'Modern storefront design perfect for showcasing products',
   category: 'ecommerce',
@@ -713,7 +710,6 @@ export const ecommerceStorefrontTemplate: PageTemplate = {
  */
 export const portfolioTemplate: PageTemplate = {
   id: 'portfolio',
-  organizationId: undefined,
   name: 'Portfolio',
   description: 'Showcase your work with a beautiful portfolio layout',
   category: 'portfolio',
@@ -944,7 +940,6 @@ export const portfolioTemplate: PageTemplate = {
  */
 export const agencyTemplate: PageTemplate = {
   id: 'agency',
-  organizationId: undefined,
   name: 'Agency',
   description: 'Perfect for digital agencies showcasing services and case studies',
   category: 'agency',
@@ -1182,7 +1177,6 @@ export const agencyTemplate: PageTemplate = {
  */
 export const blogMagazineTemplate: PageTemplate = {
   id: 'blog-magazine',
-  organizationId: undefined,
   name: 'Blog/Magazine',
   description: 'Clean blog layout perfect for content creators',
   category: 'blog',
@@ -1399,7 +1393,6 @@ export const blogMagazineTemplate: PageTemplate = {
  */
 export const comingSoonTemplate: PageTemplate = {
   id: 'coming-soon',
-  organizationId: undefined,
   name: 'Coming Soon',
   description: 'Build anticipation with a countdown timer and email capture',
   category: 'other',
@@ -1516,7 +1509,6 @@ export const comingSoonTemplate: PageTemplate = {
  */
 export const contactAboutTemplate: PageTemplate = {
   id: 'contact-about',
-  organizationId: undefined,
   name: 'Contact & About',
   description: 'Contact page with form, map, and team information',
   category: 'business',

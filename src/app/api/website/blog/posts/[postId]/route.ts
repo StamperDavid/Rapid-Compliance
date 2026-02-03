@@ -99,14 +99,6 @@ export async function GET(
 
     const postData = postDoc.data() as BlogPost;
 
-    // CRITICAL: Double-check organizationId matches
-    if (postData.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json({
       post: {
         ...postData,
@@ -174,11 +166,10 @@ export async function PUT(
 
     const existingData = existingPost.data() as BlogPost | undefined;
 
-    // CRITICAL: Verify post belongs to this org
-    if (existingData?.organizationId !== organizationId) {
+    if (!existingData) {
       return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
+        { error: 'Post data not found' },
+        { status: 404 }
       );
     }
 
@@ -200,7 +191,6 @@ export async function PUT(
       ...(post.featured !== undefined && { featured: post.featured }),
       ...(post.readTime !== undefined && { readTime: post.readTime }),
       id: postId,
-      organizationId, // CRITICAL: Ensure org doesn't change
       updatedAt: new Date().toISOString(),
       lastEditedBy: 'system',
     };
@@ -266,16 +256,6 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Post not found' },
         { status: 404 }
-      );
-    }
-
-    const postData = postDoc.data() as BlogPost | undefined;
-
-    // CRITICAL: Verify post belongs to this org
-    if (postData?.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       );
     }
 

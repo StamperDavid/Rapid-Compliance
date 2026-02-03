@@ -26,7 +26,8 @@
 import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
 import { getPaymentSpecialist } from './payment/specialist';
-import { getSubscriptionSpecialist, type SubscriptionState } from './subscription/specialist';
+// REMOVED: import { getSubscriptionSpecialist, type SubscriptionState } from './subscription/specialist';
+// Subscription specialist file has been deleted - subscription features temporarily disabled
 import { getCatalogManager } from './catalog/specialist';
 import { PricingStrategist } from './pricing/specialist';
 import {
@@ -329,7 +330,8 @@ export class CommerceManager extends BaseManager {
 
     const specialistFactories = [
       { name: 'PAYMENT_SPECIALIST', factory: getPaymentSpecialist },
-      { name: 'SUBSCRIPTION_SPECIALIST', factory: getSubscriptionSpecialist },
+      // REMOVED: { name: 'SUBSCRIPTION_SPECIALIST', factory: getSubscriptionSpecialist },
+      // Subscription specialist file deleted - subscription features temporarily disabled
       { name: 'CATALOG_MANAGER', factory: getCatalogManager },
       { name: 'PRICING_STRATEGIST', factory: () => new PricingStrategist() },
       // INVENTORY_MANAGER uses existing inventory specialist
@@ -770,7 +772,7 @@ export class CommerceManager extends BaseManager {
           targetAgent: string;
           sequence: { action: string; template: string };
         };
-        state?: SubscriptionState;
+        state?: string; // Changed from SubscriptionState (deleted type)
       } | null;
 
       // If payment failed, broadcast dunning signal to OUTREACH_MANAGER

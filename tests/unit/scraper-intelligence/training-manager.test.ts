@@ -5,9 +5,7 @@
  * Bayesian confidence scoring, and version control.
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import type { ClientFeedback, TrainingData } from '@/types/scraper-intelligence';
-
+import { describe, it, expect, jest } from '@jest/globals';
 // Mock dependencies
 jest.mock('@/lib/firebase-admin', () => ({
   db: {
@@ -34,9 +32,6 @@ import { db } from '@/lib/firebase-admin';
 import {
   submitFeedback,
   getTrainingData,
-  deactivateTrainingData,
-  activateTrainingData,
-  rollbackTrainingData,
   getTrainingAnalytics,
   resetRateLimiter,
   TrainingManagerError,
@@ -95,7 +90,6 @@ describe('Training Manager', () => {
 
       expect(result).toBeDefined();
       expect(result.feedbackType).toBe('correct');
-      expect(result.organizationId).toBe('org_123');
       expect(result.userId).toBe('user_456');
       expect(result.signalId).toBe('signal_789');
       expect(mockSet).toHaveBeenCalled();
@@ -203,7 +197,6 @@ describe('Training Manager', () => {
     it('should reject feedback for scrape from different organization', async () => {
       (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue({
         ...mockScrape,
-        organizationId: 'org_different',
       });
 
       const params = {
@@ -340,7 +333,7 @@ describe('Training Manager', () => {
         get: mockGet,
       });
 
-      const mockWhere: any = jest.fn((field: string, op: string, value: any) => {
+      const mockWhere: any = jest.fn((field: string, _op: string, _value: unknown) => {
         if (field === 'active') {
           return { orderBy: mockOrderBy };
         }
@@ -405,7 +398,7 @@ describe('Training Manager', () => {
       });
 
       let activeFilterApplied = false;
-      const mockWhere: any = jest.fn((field: string, op: string, value: any) => {
+      const mockWhere: any = jest.fn((field: string, _op: string, _value: unknown) => {
         if (field === 'active') {
           activeFilterApplied = true;
           return { orderBy: mockOrderBy };

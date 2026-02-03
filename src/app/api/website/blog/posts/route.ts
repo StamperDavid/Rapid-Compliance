@@ -85,22 +85,19 @@ export async function GET(request: NextRequest) {
 
     snapshot.forEach((doc) => {
       const data = doc.data() as BlogPost;
-      // CRITICAL: Double-check organizationId matches
-      if (data.organizationId === organizationId) {
-        // Apply status filter
-        if (status && data.status !== status) {
-          return;
-        }
+      // Apply status filter
+      if (status && data.status !== status) {
+        return;
+      }
 
-        const post: BlogPost = {
-          ...data,
-          id: doc.id,
-        };
+      const post: BlogPost = {
+        ...data,
+        id: doc.id,
+      };
 
-        // Filter by category if specified
-        if (!category || post.categories.includes(category)) {
-          posts.push(post);
-        }
+      // Filter by category if specified
+      if (!category || post.categories.includes(category)) {
+        posts.push(post);
       }
     });
 
@@ -147,7 +144,6 @@ export async function POST(request: NextRequest) {
     const postId = post.id ?? `post_${Date.now()}`;
     const postData: BlogPost = {
       id: postId,
-      organizationId,
       slug: post.slug ?? '',
       title: post.title,
       excerpt: post.excerpt ?? '',
