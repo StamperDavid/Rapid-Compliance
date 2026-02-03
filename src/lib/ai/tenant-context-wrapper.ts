@@ -61,7 +61,7 @@ export interface CountVerificationResult {
 
 /**
  * Build the Hidden System Header for tenant isolation.
- * PENTHOUSE MODEL: Single-tenant deployment - all users belong to Rapid Compliance.
+ * PENTHOUSE MODEL: Single-tenant deployment - all users belong to SalesVelocity.
  *
  * @param context - The tenant context
  * @returns The isolation header string
@@ -70,13 +70,13 @@ export function buildTenantIsolationHeader(context: TenantContext): string {
   if (context.isGlobalAdmin) {
     // Superadmin (Jasper) has full access within the single organization
     return `[SYSTEM CONTEXT: ADMIN MODE]
-You are operating within Rapid Compliance's single-tenant platform.
+You are operating within SalesVelocity's single-tenant platform.
 You have full administrative access for monitoring and management.
 All data access is logged for compliance and audit purposes.
 
 Current Session:
 - Role: Platform Administrator
-- Organization: Rapid Compliance
+- Organization: SalesVelocity
 - Audit Trail: ENABLED
 [END CONTEXT HEADER]
 
@@ -85,14 +85,14 @@ Current Session:
 
   // Standard users operate within the single organization
   return `[SYSTEM CONTEXT: SINGLE-TENANT MODE]
-You are operating within Rapid Compliance's platform.
+You are operating within SalesVelocity's platform.
 Organization: ${context.orgName}
 Industry: ${context.industry ?? 'General'}
 
 CONTEXT RULES:
-1. You represent Rapid Compliance
+1. You represent SalesVelocity
 2. You must ONLY reference data that has been explicitly provided to you
-3. All responses should align with Rapid Compliance's business goals
+3. All responses should align with SalesVelocity's business goals
 [END CONTEXT HEADER]
 
 `;
@@ -147,7 +147,7 @@ export function buildTenantContext(
 ): TenantContext {
   return {
     orgId: DEFAULT_ORG_ID,
-    orgName: orgData?.name ?? 'Rapid Compliance',
+    orgName: orgData?.name ?? 'SalesVelocity',
     industry: orgData?.industry,
     role: claims.role ?? undefined,
     isGlobalAdmin: claims.role === 'superadmin',
@@ -232,7 +232,7 @@ export function buildJasperContext(
 ): TenantContext {
   return {
     orgId: DEFAULT_ORG_ID,
-    orgName: 'Rapid Compliance',
+    orgName: 'SalesVelocity',
     industry: 'system_administration',
     role: 'superadmin',
     isGlobalAdmin: true,

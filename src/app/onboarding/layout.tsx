@@ -8,7 +8,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Get Started - Rapid Compliance',
+  title: 'Get Started - SalesVelocity',
   description: 'Create your AI-powered sales agent in minutes. Start with your industry, then customize to your business.',
 };
 

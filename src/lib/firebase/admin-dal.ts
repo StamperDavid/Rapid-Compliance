@@ -61,10 +61,12 @@ export class FirestoreAdminDAL {
 
   /**
    * Get an organization sub-collection reference
-   * Usage: adminDal.getOrgCollection('org123', 'records')
+   * Usage: adminDal.getOrgCollection('records')
+   *
+   * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID - this is a single-tenant system
    */
-  getOrgCollection(orgId: string, subCollection: string): CollectionReference {
-    const path = getOrgSubCollection(orgId, subCollection);
+  getOrgCollection(subCollection: string): CollectionReference {
+    const path = getOrgSubCollection(subCollection);
     return this.db.collection(path);
   }
 
@@ -495,23 +497,29 @@ export class FirestoreAdminDAL {
   // ========================================
 
   /**
-   * Get all workflows for an organization
+   * Get all workflows
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
-  async getAllWorkflows(organizationId: string): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getOrgCollection(organizationId, 'workflows');
+  async getAllWorkflows(_organizationId?: string): Promise<Array<Record<string, unknown>>> {
+    const colRef = this.getOrgCollection('workflows');
     const snapshot = await colRef.get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
   /**
    * Get workflow executions in a date range
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getWorkflowExecutions(
-    organizationId: string,
+    _organizationId: string | undefined,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getOrgCollection(organizationId, 'workflowExecutions');
+    const colRef = this.getOrgCollection('workflowExecutions');
     const snapshot = await colRef
       .where('startedAt', '>=', startDate)
       .where('startedAt', '<=', endDate)
@@ -521,9 +529,12 @@ export class FirestoreAdminDAL {
 
   /**
    * Get email generations in a date range
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   getEmailGenerations(
-    _organizationId: string,
+    _organizationId: string | undefined,
     _startDate: Date,
     _endDate: Date
   ): Array<Record<string, unknown>> {
@@ -534,9 +545,12 @@ export class FirestoreAdminDAL {
 
   /**
    * Get all active deals
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
-  async getActiveDeals(organizationId: string): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getOrgCollection(organizationId, 'deals');
+  async getActiveDeals(_organizationId?: string): Promise<Array<Record<string, unknown>>> {
+    const colRef = this.getOrgCollection('deals');
     const snapshot = await colRef
       .where('status', 'in', ['active', 'open', 'in_progress'])
       .get();
@@ -545,25 +559,31 @@ export class FirestoreAdminDAL {
 
   /**
    * Get deals snapshot at a specific date (for trend comparison)
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getDealsSnapshot(
-    organizationId: string,
+    _organizationId: string | undefined,
     _snapshotDate: Date
   ): Promise<Array<Record<string, unknown>>> {
     // This would require historical snapshots
     // For now, return current active deals
-    return this.getActiveDeals(organizationId);
+    return this.getActiveDeals();
   }
 
   /**
    * Get closed deals in a date range
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getClosedDeals(
-    organizationId: string,
+    _organizationId: string | undefined,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getOrgCollection(organizationId, 'deals');
+    const colRef = this.getOrgCollection('deals');
     const snapshot = await colRef
       .where('status', 'in', ['won', 'lost', 'closed'])
       .where('closedAt', '>=', startDate)
@@ -574,13 +594,16 @@ export class FirestoreAdminDAL {
 
   /**
    * Get won deals in a date range
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getWonDeals(
-    organizationId: string,
+    _organizationId: string | undefined,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getOrgCollection(organizationId, 'deals');
+    const colRef = this.getOrgCollection('deals');
     const snapshot = await colRef
       .where('status', '==', 'won')
       .where('closedAt', '>=', startDate)
@@ -591,18 +614,24 @@ export class FirestoreAdminDAL {
 
   /**
    * Get revenue forecast
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
-  async getRevenueForecast(organizationId: string): Promise<Record<string, unknown> | null> {
-    const docRef = this.getOrgCollection(organizationId, 'forecasts').doc('current');
+  async getRevenueForecast(_organizationId?: string): Promise<Record<string, unknown> | null> {
+    const docRef = this.getOrgCollection('forecasts').doc('current');
     const snapshot = await docRef.get();
     return snapshot.exists ? (snapshot.data() as Record<string, unknown>) : null;
   }
 
   /**
-   * Get sales reps for an organization
+   * Get sales reps
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
-  async getSalesReps(organizationId: string): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getOrgCollection(organizationId, 'users');
+  async getSalesReps(_organizationId?: string): Promise<Array<Record<string, unknown>>> {
+    const colRef = this.getOrgCollection('users');
     const snapshot = await colRef
       .where('role', '==', 'sales')
       .get();
@@ -611,14 +640,17 @@ export class FirestoreAdminDAL {
 
   /**
    * Get deals for a specific rep in a date range
+   *
+   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
+   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getRepDeals(
-    organizationId: string,
+    _organizationId: string | undefined,
     repId: string,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
-    const colRef = this.getOrgCollection(organizationId, 'deals');
+    const colRef = this.getOrgCollection('deals');
     const snapshot = await colRef
       .where('ownerId', '==', repId)
       .where('createdAt', '>=', startDate)

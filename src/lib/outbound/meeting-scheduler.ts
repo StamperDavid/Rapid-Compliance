@@ -471,15 +471,15 @@ async function getUserMeetings(
 
 async function getMeetingById(
   meetingId: string,
-  organizationId: string
+  _organizationId: string
 ): Promise<ScheduledMeeting | null> {
   const { db } = await import('@/lib/firebase/config');
   if (!db) {throw new Error('Firestore not initialized');}
   
   const { doc, getDoc } = await import('firebase/firestore');
   const { getOrgSubCollection } = await import('@/lib/firebase/collections');
-  
-  const meetingPath = getOrgSubCollection(organizationId, 'meetings');
+
+  const meetingPath = getOrgSubCollection('meetings');
   const meetingDoc = await getDoc(doc(db, meetingPath, meetingId));
   
   return meetingDoc.exists() ? (meetingDoc.data() as ScheduledMeeting) : null;
@@ -648,8 +648,8 @@ async function sendMeetingUpdate(
     
     const { doc, getDoc } = await import('firebase/firestore');
     const { getOrgSubCollection } = await import('@/lib/firebase/collections');
-    
-    const settingsPath = getOrgSubCollection(meeting.organizationId, 'settings');
+
+    const settingsPath = getOrgSubCollection('settings');
     interface OrgEmailSettings {
       companyName?: string;
       replyToEmail?: string;

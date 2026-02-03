@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
 
     const integrationId = `google_${Date.now()}`;
-    const integrationsPath = getOrgSubCollection(orgId, 'integrations');
+    const integrationsPath = getOrgSubCollection('integrations');
     await adminDb
       .collection(integrationsPath)
       .doc(integrationId)

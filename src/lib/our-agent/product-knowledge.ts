@@ -4,7 +4,7 @@
  */
 
 export const OUR_PRODUCT_KNOWLEDGE = `
-# Rapid Compliance - Product Knowledge Base
+# SalesVelocity - Product Knowledge Base
 
 ## What We Do
 We provide an AI-powered sales platform that combines a trainable AI sales agent, CRM, workflow automation, and e-commerce into one powerful solution.
@@ -236,7 +236,7 @@ All tiers include ALL features - no gating, no limits. You only pay based on you
 export const OUR_AGENT_PERSONA = {
   name: "Alex",
   tone: "professional yet friendly",
-  greeting: "Hi! I'm Alex, an AI sales assistant for the Rapid Compliance. I can answer any questions about our platform, pricing, or how to get started. What would you like to know?",
+  greeting: "Hi! I'm Alex, an AI sales assistant for SalesVelocity. I can answer any questions about our platform, pricing, or how to get started. What would you like to know?",
   closingMessage: "Thanks for chatting with me! Ready to start your free trial? I can help you get set up right now, or feel free to reach out anytime.",
   objectives: [
     "Qualify leads by understanding their needs",

@@ -1,4 +1,4 @@
-# RapidCompliance.US - Single Source of Truth
+# SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
 **Last Updated:** February 3, 2026 (Ironclad Architecture Rules codified — One Company, Workforce Registry, Theme Governance, Navigation Hierarchy, Firebase Flat Pathing)
@@ -41,7 +41,7 @@
 | RBAC Roles | 4 | `superadmin`, `admin`, `manager`, `employee` |
 | Firestore Collections | 60+ | Active |
 
-**Architecture:** Single-company deployment for RapidCompliance.US. Clients purchase services/products - they do NOT get SaaS tenants.
+**Architecture:** Single-company deployment for SalesVelocity.ai. Clients purchase services/products - they do NOT get SaaS tenants.
 
 ### Technology Stack
 
@@ -134,7 +134,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | Aspect | Detail |
 |--------|--------|
 | **Constant** | `DEFAULT_ORG_ID = 'rapid-compliance-root'` in `src/lib/constants/platform.ts` |
-| **Company Config** | `COMPANY_CONFIG = { id: 'rapid-compliance-root', name: 'RapidCompliance.US' }` |
+| **Company Config** | `COMPANY_CONFIG = { id: 'rapid-compliance-root', name: 'SalesVelocity.ai' }` |
 | **Firebase Project** | `rapid-compliance-65f87` (enforced by `CriticalConfigurationError` kill-switch) |
 | **Validation Helpers** | `isDefaultOrg(orgId)` confirms identity; `getDefaultOrgId()` returns the constant |
 
@@ -333,7 +333,7 @@ All three functions are hardcoded to `DEFAULT_ORG_ID`. There is no dynamic org p
 
 ### Overview
 
-RapidCompliance.US is a **single-company sales and marketing super tool**. This is NOT a SaaS platform. Clients purchase professional services and products - they do NOT get their own tenant/workspace.
+SalesVelocity.ai is a **single-company sales and marketing super tool**. This is NOT a SaaS platform. Clients purchase professional services and products - they do NOT get their own tenant/workspace.
 
 ### Multi-Tenant Purge Summary (February 2, 2026)
 
@@ -1240,7 +1240,7 @@ These agents operate independently of the L1/L2/L3 swarm hierarchy:
 
 | Agent | Type | Path | Status | Description |
 |-------|------|------|--------|-------------|
-| Jasper Golden Master | Platform Chat Agent | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Public-facing AI sales agent on RapidCompliance.US landing page. Routes via OpenRouter to multiple models. 9 tool functions for delegation to swarm agents. |
+| Jasper Golden Master | Platform Chat Agent | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Public-facing AI sales agent on SalesVelocity.ai landing page. Routes via OpenRouter to multiple models. 9 tool functions for delegation to swarm agents. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
 | Autonomous Posting Agent | Social Media Automation | `src/lib/social/autonomous-posting-agent.ts` | FUNCTIONAL | Manages autonomous content posting across LinkedIn and Twitter/X with scheduling, queueing, and analytics tracking. |
 | Chat Session Service | Agent Infrastructure | `src/lib/agent/chat-session-service.ts` | FUNCTIONAL | Manages real-time AI chat sessions and agent instance lifecycle. `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) handles ephemeral agent instances spawned from Golden Masters. |

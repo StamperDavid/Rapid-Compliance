@@ -114,12 +114,12 @@ export async function getCurrentUser(request: Request): Promise<{
  */
 export async function verifyOrgAccess(
   userId: string,
-  organizationId: string
+  _organizationId: string
 ): Promise<boolean> {
   try {
     // Use environment-aware collection path via helper
     const { getOrgSubCollection } = await import('./firebase/collections');
-    const membersPath = getOrgSubCollection(organizationId, 'members');
+    const membersPath = getOrgSubCollection('members');
     const userOrgRef = db.collection(membersPath).doc(userId);
 
     const doc = await userOrgRef.get();

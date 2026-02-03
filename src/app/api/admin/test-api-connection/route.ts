@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       const { adminDb } = await import('@/lib/firebase/admin');
       const { getOrgSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
-        const apiKeysPath = getOrgSubCollection(orgId, 'apiKeys');
+        const apiKeysPath = getOrgSubCollection('apiKeys');
         await adminDb
           .collection(apiKeysPath)
           .doc(orgId)
@@ -318,8 +318,8 @@ async function testOpenRouterConnection(apiKey?: string): Promise<ConnectionTest
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://rapidcompliance.us',
-        'X-Title': 'Rapid Compliance'
+        'HTTP-Referer': 'https://salesvelocity.ai',
+        'X-Title': 'SalesVelocity'
       },
       body: JSON.stringify({
         model: 'openai/gpt-3.5-turbo',

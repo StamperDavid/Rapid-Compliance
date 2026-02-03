@@ -29,7 +29,7 @@ export interface User {
     };
   };
   
-  // Single-tenant context (RapidCompliance.US)
+  // Single-tenant context (SalesVelocity.ai)
   // organizationId removed - always 'rapid-compliance'
   
   // Metadata

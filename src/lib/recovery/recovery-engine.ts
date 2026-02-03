@@ -91,8 +91,8 @@ export class RecoveryEngine {
       to: merchant.email,
       subject: emailTemplate.subject,
       html: emailTemplate.html,
-      from: 'support@rapidcompliance.us',
-      fromName: 'Rapid Compliance Team',
+      from: 'support@salesvelocity.ai',
+      fromName: 'SalesVelocity Team',
       tracking: { trackOpens: true, trackClicks: true },
       metadata: {
         merchantId: merchant.id,
@@ -347,7 +347,7 @@ export class RecoveryEngine {
     const firstName = merchant.fullName.split(' ')[0];
 
     return {
-      quick_setup: `Hi ${firstName}! Your AI sales agent is 90% ready. Finish in 2 min: ${shortUrl} - Rapid Compliance`,
+      quick_setup: `Hi ${firstName}! Your AI sales agent is 90% ready. Finish in 2 min: ${shortUrl} - SalesVelocity`,
       finish_signup: `${firstName}, complete your signup to get 1,000 free records + 14-day trial: ${shortUrl}`,
       personal_reach: `${firstName}, quick question - was there something that stopped you from finishing your setup? Reply or click: ${shortUrl}`,
       final_offer: `Last chance ${firstName}! Your reserved spot expires soon. Get your AI sales team now: ${shortUrl}`,
@@ -362,7 +362,7 @@ export class RecoveryEngine {
 
     return {
       personal_assist: `
-Hi ${firstName}, this is the Rapid Compliance team calling.
+Hi ${firstName}, this is the SalesVelocity team calling.
 
 We noticed you started setting up your AI sales agent ${merchant.industryName ? `for ${merchant.industryName}` : ''} but didn't complete the signup.
 
@@ -374,7 +374,7 @@ Would you like me to walk you through the rest of the setup right now?
       `.trim(),
 
       final_offer: `
-Hi ${firstName}, this is a quick call from Rapid Compliance.
+Hi ${firstName}, this is a quick call from SalesVelocity.
 
 I see your trial reservation is about to expire. Before it does, I wanted to make sure you didn't have any questions holding you back.
 

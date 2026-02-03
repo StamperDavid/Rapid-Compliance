@@ -1,6 +1,6 @@
 /**
  * Role-Based Access Control (RBAC) System
- * Single-Tenant Rapid Compliance Model
+ * Single-Tenant SalesVelocity Model
  *
  * Role Hierarchy (highest to lowest):
  * - superadmin: Full company access, user management, all features

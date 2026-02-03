@@ -8,7 +8,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Penthouse Dashboard Layout
- * Single-tenant layout using the unified RapidCompliance.US Admin Sidebar.
+ * Single-tenant layout using the unified SalesVelocity.ai Admin Sidebar.
  * Dark theme enforced. All routes (/leads, /deals, /analytics, etc.) flow through here.
  */
 export default function PenthouseDashboardLayout({

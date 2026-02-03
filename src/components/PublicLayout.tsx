@@ -84,7 +84,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment or reach out to us at support@rapidcompliance.us",
+        content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment or reach out to us at support@salesvelocity.ai",
         timestamp: new Date(),
       };
       setChatMessages(prev => [...prev, errorMessage]);
@@ -110,7 +110,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 /* eslint-disable-next-line @next/next/no-img-element -- Dynamic theme logo URL from CMS */
                 <img
                   src={theme.logoUrl}
-                  alt={(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'RapidCompliance.US'}
+                  alt={(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}
                   style={{
                     height: `${theme.logoHeight ?? 48}px`,
                     width: 'auto',
@@ -122,7 +122,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   className="text-2xl font-bold"
                   style={{ color: theme.textColor, fontFamily: theme.headingFont }}
                 >
-                  {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'RapidCompliance.US'}
+                  {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}
                 </span>
               )}
             </Link>
@@ -150,7 +150,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               <Link
                 href="/onboarding/industry"
                 className="px-4 py-2 rounded-lg font-semibold transition hover:opacity-90"
-                style={{ backgroundColor: theme.primaryColor ?? '#6366f1', color: '#ffffff' }}
+                style={{ backgroundColor: theme.primaryColor ?? 'var(--color-primary)', color: 'var(--color-text-primary)' }}
               >
                 Start Free Trial
               </Link>
@@ -197,7 +197,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 <Link
                   href="/onboarding/industry"
                   className="px-4 py-2 rounded-lg font-semibold transition text-center"
-                  style={{ backgroundColor: theme.primaryColor ?? '#6366f1', color: '#ffffff' }}
+                  style={{ backgroundColor: theme.primaryColor ?? 'var(--color-primary)', color: 'var(--color-text-primary)' }}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Start Free Trial
@@ -216,7 +216,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       {/* Footer */}
       <footer 
         className="py-12 px-4 sm:px-6 lg:px-8 border-t border-white/10"
-        style={{ backgroundColor: theme.footerBackground ?? '#0a0a0a' }}
+        style={{ backgroundColor: theme.footerBackground ?? 'var(--color-bg-paper)' }}
       >
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
@@ -255,7 +255,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center" style={{ color: theme.textColor, opacity: 0.6 }}>
-            <p>© {new Date().getFullYear()} {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'RapidCompliance.US'}. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -280,7 +280,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             {/* Header */}
             <div 
               className="px-4 py-3 flex items-center justify-between"
-              style={{ backgroundColor: theme.primaryColor ?? '#6366f1' }}
+              style={{ backgroundColor: theme.primaryColor ?? 'var(--color-primary)' }}
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
@@ -352,7 +352,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   onClick={() => void sendMessage()}
                   disabled={!inputValue.trim() || isTyping}
                   className="px-3 py-2 rounded-xl transition disabled:opacity-50"
-                  style={{ backgroundColor: theme.primaryColor ?? '#6366f1', color: '#fff' }}
+                  style={{ backgroundColor: theme.primaryColor ?? 'var(--color-primary)', color: 'var(--color-text-primary)' }}
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -369,7 +369,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           id="platform-chat-toggle"
           onClick={() => setIsChatOpen(!isChatOpen)}
           className="w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-white text-2xl hover:scale-110 transition"
-          style={{ backgroundColor: theme.primaryColor ?? '#6366f1' }}
+          style={{ backgroundColor: theme.primaryColor ?? 'var(--color-primary)' }}
         >
           {isChatOpen ? '✕' : '💬'}
         </button>

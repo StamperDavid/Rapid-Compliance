@@ -130,9 +130,9 @@ export default function AdminLoginPage() {
     }
   };
 
-  const bgPaper = '#1a1a1a';
-  const borderColor = '#333';
-  const primaryColor = '#6366f1';
+  const bgPaper = 'var(--color-bg-elevated)';
+  const borderColor = 'var(--color-border-light)';
+  const primaryColor = 'var(--color-primary)';
 
   return (
     <div style={{
@@ -140,7 +140,7 @@ export default function AdminLoginPage() {
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      backgroundColor: '#000',
+      backgroundColor: 'var(--color-bg-main)',
       padding: '2rem'
     }}>
       <div style={{
@@ -152,10 +152,10 @@ export default function AdminLoginPage() {
         padding: '2rem'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
             Admin Login
           </h1>
-          <p style={{ fontSize: '0.875rem', color: '#666' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
             Platform administration access
           </p>
         </div>
@@ -163,10 +163,10 @@ export default function AdminLoginPage() {
         {!isFirebaseReady && (
           <div style={{
             padding: '0.75rem',
-            backgroundColor: '#78350f',
-            border: '1px solid #92400e',
+            backgroundColor: 'color-mix(in srgb, var(--color-warning) 15%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-warning) 30%, transparent)',
             borderRadius: '0.5rem',
-            color: '#fbbf24',
+            color: 'var(--color-warning-light)',
             fontSize: '0.875rem',
             marginBottom: '1rem'
           }}>
@@ -177,10 +177,10 @@ export default function AdminLoginPage() {
         {error && (
           <div style={{
             padding: '0.75rem',
-            backgroundColor: '#7f1d1d',
-            border: '1px solid #991b1b',
+            backgroundColor: 'color-mix(in srgb, var(--color-error) 15%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-error) 30%, transparent)',
             borderRadius: '0.5rem',
-            color: '#fca5a5',
+            color: 'var(--color-error-light)',
             fontSize: '0.875rem',
             marginBottom: '1rem'
           }}>
@@ -190,7 +190,7 @@ export default function AdminLoginPage() {
 
         <form onSubmit={(e) => { void handleLogin(e); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#999' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
               Email
             </label>
             <input
@@ -202,10 +202,10 @@ export default function AdminLoginPage() {
               style={{
                 width: '100%',
                 padding: '0.625rem 1rem',
-                backgroundColor: '#0a0a0a',
+                backgroundColor: 'var(--color-bg-paper)',
                 border: `1px solid ${borderColor}`,
                 borderRadius: '0.5rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.875rem',
                 opacity: loading ? 0.5 : 1
               }}
@@ -214,7 +214,7 @@ export default function AdminLoginPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#999' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
               Password
             </label>
             <input
@@ -226,10 +226,10 @@ export default function AdminLoginPage() {
               style={{
                 width: '100%',
                 padding: '0.625rem 1rem',
-                backgroundColor: '#0a0a0a',
+                backgroundColor: 'var(--color-bg-paper)',
                 border: `1px solid ${borderColor}`,
                 borderRadius: '0.5rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.875rem',
                 opacity: loading ? 0.5 : 1
               }}
@@ -243,8 +243,8 @@ export default function AdminLoginPage() {
             style={{
               width: '100%',
               padding: '0.75rem 1.5rem',
-              backgroundColor: loading || !isFirebaseReady ? '#4b5563' : primaryColor,
-              color: '#fff',
+              backgroundColor: loading || !isFirebaseReady ? 'var(--color-neutral-600)' : primaryColor,
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
@@ -257,8 +257,8 @@ export default function AdminLoginPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#0a0a0a', borderRadius: '0.5rem' }}>
-          <div style={{ fontSize: '0.75rem', color: '#666', lineHeight: '1.5' }}>
+        <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', lineHeight: '1.5' }}>
             <strong>Super Admin Access:</strong> This login requires a superadmin account.
             Contact your system administrator if you need access.
           </div>

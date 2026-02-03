@@ -8,12 +8,12 @@
 
 ## System Identity
 
-**This is a Single-Tenant system.** The platform identity is **RapidCompliance.US**.
+**This is a Single-Tenant system.** The platform identity is **SalesVelocity.ai**.
 
 - **Architecture:** Penthouse Model (single company, NOT a SaaS/multi-tenant platform)
 - **Organization ID:** `rapid-compliance-root` (defined in `src/lib/constants/platform.ts`)
 - **Firebase Project:** `rapid-compliance-65f87`
-- **Domain:** RapidCompliance.US
+- **Domain:** SalesVelocity.ai
 - **Clients** purchase services and products — they do NOT receive SaaS tenants
 
 All code, routes, agents, and database paths operate under this single identity. There is no org-switching, no tenant isolation, and no multi-org logic. Any remnant of multi-tenant patterns should be treated as legacy debt and removed.

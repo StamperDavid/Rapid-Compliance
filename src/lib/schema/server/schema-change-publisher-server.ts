@@ -12,7 +12,7 @@ export class SchemaChangeEventPublisherServer {
    * Publish schema change event (SERVER SIDE with admin SDK)
    */
   static async publishEvent(event: SchemaChangeEvent): Promise<void> {
-    const schemaChangeEventsPath = getOrgSubCollection(event.organizationId, 'schemaChangeEvents');
+    const schemaChangeEventsPath = getOrgSubCollection('schemaChangeEvents');
     await db
       .collection(schemaChangeEventsPath)
       .doc(event.id)
@@ -39,7 +39,7 @@ export class SchemaChangeEventPublisherServer {
     organizationId: string,
     eventId: string
   ): Promise<void> {
-    const schemaChangeEventsPath = getOrgSubCollection(organizationId, 'schemaChangeEvents');
+    const schemaChangeEventsPath = getOrgSubCollection('schemaChangeEvents');
     await db
       .collection(schemaChangeEventsPath)
       .doc(eventId)

@@ -45,7 +45,7 @@ export async function POST(
     }
 
     // Get current schema using Admin DAL
-    const schemasCollection = adminDal.getOrgCollection(organizationId, 'schemas');
+    const schemasCollection = adminDal.getOrgCollection('schemas');
     const schemaDoc = await schemasCollection.doc(params.schemaId).get();
     
     if (!schemaDoc.exists) {

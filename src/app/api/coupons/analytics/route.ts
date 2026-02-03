@@ -7,7 +7,7 @@ import type { CouponRedemption, MerchantCoupon } from '@/types/pricing';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
- * GET: Get coupon analytics for RapidCompliance.US
+ * GET: Get coupon analytics for SalesVelocity.ai
  */
 export async function GET(
   request: NextRequest
@@ -19,7 +19,7 @@ export async function GET(
     }
 
     // Get all coupons
-    const couponsPath = getMerchantCouponsCollection(DEFAULT_ORG_ID);
+    const couponsPath = getMerchantCouponsCollection();
     const coupons = await FirestoreService.getAll<MerchantCoupon>(couponsPath) ?? [];
 
     // Get redemptions for this org

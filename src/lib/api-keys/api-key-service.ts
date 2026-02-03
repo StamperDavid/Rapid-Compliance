@@ -318,7 +318,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       const { adminDb } = await import('../firebase/admin');
       const { getOrgSubCollection } = await import('../firebase/collections');
       if (adminDb) {
-        const apiKeysPath = getOrgSubCollection(organizationId, 'apiKeys');
+        const apiKeysPath = getOrgSubCollection('apiKeys');
         const snap = await adminDb
           .collection(apiKeysPath)
           .doc(organizationId)

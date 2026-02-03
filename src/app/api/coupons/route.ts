@@ -32,7 +32,7 @@ const CouponInputSchema = z.object({
 });
 
 /**
- * GET: Retrieve all merchant coupons for RapidCompliance.US
+ * GET: Retrieve all merchant coupons for SalesVelocity.ai
  */
 export async function GET(
   request: NextRequest
@@ -44,7 +44,7 @@ export async function GET(
     }
 
     // Get all coupons from merchant's sub-collection
-    const couponsPath = getMerchantCouponsCollection(DEFAULT_ORG_ID);
+    const couponsPath = getMerchantCouponsCollection();
     const coupons = await FirestoreService.getAll<MerchantCoupon>(couponsPath);
 
     return NextResponse.json({
@@ -85,7 +85,7 @@ export async function POST(
 
     const couponData = parseResult.data;
     const normalizedCode = couponData.code.toUpperCase().trim();
-    const couponsPath = getMerchantCouponsCollection(DEFAULT_ORG_ID);
+    const couponsPath = getMerchantCouponsCollection();
     const now = new Date().toISOString();
     let couponId = couponData.id;
     let isNew = false;

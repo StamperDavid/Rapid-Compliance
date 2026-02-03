@@ -173,7 +173,7 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
       category: 'pricing',
       title: 'Current Pricing Tiers',
       content: `
-# Rapid Compliance Pricing - Volume-Based Model
+# SalesVelocity Pricing - Volume-Based Model
 
 **Pricing Philosophy:** Success-Linked Pricing - Pay for what you store, not what you use.
 

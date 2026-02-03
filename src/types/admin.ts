@@ -1,7 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
 
 /**
- * Admin Types for Rapid Compliance
+ * Admin Types for SalesVelocity
  * Single-Tenant Model - Company Settings & System Configuration
  */
 

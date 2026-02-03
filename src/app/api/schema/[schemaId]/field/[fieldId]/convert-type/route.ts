@@ -124,7 +124,7 @@ export async function POST(
     const db = getFirestore();
 
     // Get schema to get schema name (using environment-aware paths)
-    const schemasPath = getOrgSubCollection(organizationId, 'schemas');
+    const schemasPath = getOrgSubCollection('schemas');
     const schemaRef = db.collection(schemasPath).doc(params.schemaId);
 
     const schemaDoc = await schemaRef.get();
@@ -147,7 +147,7 @@ export async function POST(
     }
 
     // Get all records (using environment-aware paths for entities)
-    const entitiesPath = getOrgSubCollection(organizationId, 'entities');
+    const entitiesPath = getOrgSubCollection('entities');
     const recordsPath = adminDal.getSubColPath('records');
     const recordsRef = db.collection(`${entitiesPath}/${schemaName}/${recordsPath}`);
     

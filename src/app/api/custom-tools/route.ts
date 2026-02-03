@@ -7,7 +7,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 /**
  * Custom Tools API Route
  *
- * Handles CRUD operations for RapidCompliance.US custom tools.
+ * Handles CRUD operations for SalesVelocity.ai custom tools.
  * Tools are stored in: organizations/{orgId}/customTools/{toolId}
  */
 
@@ -81,7 +81,7 @@ function getCollectionPath(): string {
 /**
  * GET /api/custom-tools
  *
- * Get all custom tools for RapidCompliance.US, or a single tool by ID.
+ * Get all custom tools for SalesVelocity.ai, or a single tool by ID.
  * Query params:
  *   - id: (optional) specific tool ID to fetch
  */

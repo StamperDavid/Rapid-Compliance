@@ -53,28 +53,28 @@ export function NextBestActionsCard({
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'High':
-        return '#ef4444';
+        return 'var(--color-error)';
       case 'Medium':
-        return '#f59e0b';
+        return 'var(--color-warning)';
       case 'Low':
-        return '#6b7280';
+        return 'var(--color-neutral-500)';
       default:
-        return '#6b7280';
+        return 'var(--color-neutral-500)';
     }
   };
 
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
       case 'critical':
-        return '#dc2626';
+        return 'var(--color-error-dark)';
       case 'high':
-        return '#f59e0b';
+        return 'var(--color-warning)';
       case 'medium':
-        return '#6366f1';
+        return 'var(--color-primary)';
       case 'low':
-        return '#10b981';
+        return 'var(--color-success)';
       default:
-        return '#6b7280';
+        return 'var(--color-neutral-500)';
     }
   };
 
@@ -98,11 +98,11 @@ export function NextBestActionsCard({
         <div
           style={{
             padding: '0.75rem',
-            backgroundColor: '#0a0a0a',
+            backgroundColor: 'var(--color-bg-paper)',
             borderRadius: '0.5rem',
-            border: '1px solid #1a1a1a',
+            border: '1px solid var(--color-border-main)',
             fontSize: '0.75rem',
-            color: '#666',
+            color: 'var(--color-text-disabled)',
             textAlign: 'center',
           }}
         >
@@ -125,10 +125,10 @@ export function NextBestActionsCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '1.25rem' }}>{getActionIcon(topAction.type)}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#fff' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
               {topAction.title}
             </div>
-            <div style={{ fontSize: '0.625rem', color: '#999', marginTop: '0.125rem' }}>
+            <div style={{ fontSize: '0.625rem', color: 'var(--color-text-secondary)', marginTop: '0.125rem' }}>
               {topAction.suggestedTimeline}
             </div>
           </div>
@@ -150,7 +150,7 @@ export function NextBestActionsCard({
   return (
     <div
       style={{
-        backgroundColor: '#0a0a0a',
+        backgroundColor: 'var(--color-bg-paper)',
         border: `1px solid ${getUrgencyColor(recommendations.urgency)}`,
         borderRadius: '0.75rem',
         padding: '1.5rem',
@@ -160,10 +160,10 @@ export function NextBestActionsCard({
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#fff', margin: 0 }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--color-text-primary)', margin: 0 }}>
               Next Best Actions
             </h3>
-            <p style={{ fontSize: '0.875rem', color: '#999', marginTop: '0.25rem', margin: 0 }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem', margin: 0 }}>
               {recommendations.dealName}
             </p>
           </div>
@@ -215,12 +215,12 @@ export function NextBestActionsCard({
               <span style={{ fontSize: '1.5rem' }}>{getActionIcon(action.type)}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                  <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: '#fff', margin: 0 }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--color-text-primary)', margin: 0 }}>
                     {action.title}
                   </h4>
                   <span style={{ fontSize: '0.625rem' }}>{getImpactIcon(action.estimatedImpact)}</span>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#999', margin: 0 }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', margin: 0 }}>
                   {action.description}
                 </p>
               </div>
@@ -245,7 +245,7 @@ export function NextBestActionsCard({
                 <div style={{ fontSize: '0.625rem', color: '#666', marginBottom: '0.25rem' }}>
                   Reasoning:
                 </div>
-                <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.6875rem', color: '#999' }}>
+                <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.6875rem', color: 'var(--color-text-secondary)' }}>
                   {action.reasoning.map((reason, ridx) => (
                     <li key={ridx} style={{ marginBottom: '0.125rem' }}>
                       {reason}
@@ -259,10 +259,10 @@ export function NextBestActionsCard({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{ fontSize: '0.625rem', color: '#666' }}>
-                  Timeline: <span style={{ color: '#fff', fontWeight: '600' }}>{action.suggestedTimeline}</span>
+                  Timeline: <span style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>{action.suggestedTimeline}</span>
                 </div>
                 <div style={{ fontSize: '0.625rem', color: '#666' }}>
-                  Impact: <span style={{ color: '#fff', fontWeight: '600' }}>{action.estimatedImpact}</span>
+                  Impact: <span style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>{action.estimatedImpact}</span>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

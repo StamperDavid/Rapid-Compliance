@@ -13,7 +13,7 @@ const CreateFormBodySchema = z.object({
 
 /**
  * GET /api/forms
- * List all forms for RapidCompliance.US
+ * List all forms for SalesVelocity.ai
  */
 export async function GET(
   request: NextRequest

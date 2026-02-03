@@ -662,7 +662,7 @@ async function testTeams(webhookUrl: string): Promise<NextResponse> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        text: 'Rapid Compliance: Test message - your Teams webhook is configured correctly!',
+        text: 'SalesVelocity: Test message - your Teams webhook is configured correctly!',
       }),
     });
 

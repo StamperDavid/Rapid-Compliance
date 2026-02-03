@@ -547,7 +547,7 @@ const AGENTS: Agent[] = [
     type: 'Platform Chat Agent',
     path: 'Firestore: organizations/platform/goldenMasters/',
     capabilities: ['public_chat', 'lead_qualification', 'product_demos', 'pricing_discussion', 'tool_delegation'],
-    note: 'Public-facing AI sales agent on RapidCompliance.US landing page. Routes via OpenRouter to multiple models. Has 9 tool functions for delegation to swarm agents.',
+    note: 'Public-facing AI sales agent on SalesVelocity.ai landing page. Routes via OpenRouter to multiple models. Has 9 tool functions for delegation to swarm agents.',
   },
   {
     name: 'VOICE_AGENT_HANDLER',

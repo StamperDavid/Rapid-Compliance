@@ -24,6 +24,7 @@
 
 import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { getTikTokExpert } from './tiktok/specialist';
 import { getTwitterExpert } from './twitter/specialist';
 import { getFacebookAdsExpert } from './facebook/specialist';
@@ -498,16 +499,8 @@ export class MarketingManager extends BaseManager {
     try {
       const payload = message.payload as CampaignGoal;
 
-      // SECURITY: Validate tenantId - multi-tenant scoping is mandatory
-      const tenantId = payload?.tenantId;
-      if (!tenantId) {
-        return this.createReport(
-          taskId,
-          'FAILED',
-          null,
-          ['tenantId is REQUIRED - multi-tenant scoping is mandatory']
-        );
-      }
+      // Single-tenant system: always use DEFAULT_ORG_ID
+      const tenantId = DEFAULT_ORG_ID;
 
       if (!payload?.message && !payload?.objective) {
         return this.createReport(

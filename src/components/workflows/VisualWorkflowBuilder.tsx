@@ -176,11 +176,11 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
   };
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#000' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-bg-main)' }}>
       {/* Header */}
-      <div style={{ padding: '1rem 2rem', backgroundColor: '#1a1a1a', borderBottom: '1px solid #333' }}>
+      <div style={{ padding: '1rem 2rem', backgroundColor: 'var(--color-bg-elevated)', borderBottom: '1px solid var(--color-border-light)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
             Visual Workflow Builder
           </h2>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -188,7 +188,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               onClick={handleExport}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: '#333',
+                backgroundColor: 'var(--color-border-light)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '0.375rem',
@@ -203,7 +203,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               onClick={onCancel}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: '#333',
+                backgroundColor: 'var(--color-border-light)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '0.375rem',
@@ -243,7 +243,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                 width: '100%',
                 padding: '0.5rem',
                 backgroundColor: '#0a0a0a',
-                border: '1px solid #333',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.25rem',
                 color: '#fff',
                 fontSize: '0.875rem',
@@ -262,7 +262,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                 width: '100%',
                 padding: '0.5rem',
                 backgroundColor: '#0a0a0a',
-                border: '1px solid #333',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.25rem',
                 color: '#fff',
                 fontSize: '0.875rem',
@@ -288,7 +288,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                 width: '100%',
                 padding: '0.5rem',
                 backgroundColor: '#0a0a0a',
-                border: '1px solid #333',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.25rem',
                 color: '#fff',
                 fontSize: '0.875rem',
@@ -307,7 +307,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
           </h3>
           
           <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
               Communication
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -318,7 +318,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   style={{
                     padding: '0.75rem',
                     backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.375rem',
                     color: '#fff',
                     cursor: 'pointer',
@@ -336,7 +336,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
               CRM
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -347,7 +347,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   style={{
                     padding: '0.75rem',
                     backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.375rem',
                     color: '#fff',
                     cursor: 'pointer',
@@ -364,7 +364,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
               Logic & Flow
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -375,7 +375,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   style={{
                     padding: '0.75rem',
                     backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.375rem',
                     color: '#fff',
                     cursor: 'pointer',
@@ -392,7 +392,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
           </div>
 
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
               Integration
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -403,7 +403,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   style={{
                     padding: '0.75rem',
                     backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.375rem',
                     color: '#fff',
                     cursor: 'pointer',
@@ -471,12 +471,12 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               </button>
             </div>
             
-            <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '1.5rem', padding: '0.75rem', backgroundColor: '#0a0a0a', borderRadius: '0.375rem' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.375rem' }}>
               {(selectedNode.data as { label?: string }).label ?? 'Node'}
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', fontWeight: '500' }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', fontWeight: '500' }}>
                 Display Label
               </label>
               <input
@@ -495,7 +495,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   width: '100%',
                   padding: '0.5rem',
                   backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.25rem',
                   color: '#fff',
                   fontSize: '0.875rem',
@@ -503,11 +503,11 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               />
             </div>
 
-            <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', borderRadius: '0.375rem', marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.375rem', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>
                 Configuration
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#999' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
                 Node-specific settings will appear here based on the selected action type.
               </div>
             </div>

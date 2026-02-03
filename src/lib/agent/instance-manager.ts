@@ -598,7 +598,7 @@ ${this.summarizeRecentConversations(customerMemory)}
         const { adminDb } = await import('@/lib/firebase/admin');
         const { getOrgSubCollection } = await import('@/lib/firebase/collections');
         if (adminDb) {
-          const goldenMastersPath = getOrgSubCollection(orgId, 'goldenMasters');
+          const goldenMastersPath = getOrgSubCollection('goldenMasters');
           const snap = await adminDb
             .collection(goldenMastersPath)
             .get();
@@ -645,7 +645,7 @@ ${this.summarizeRecentConversations(customerMemory)}
         const { adminDb } = await import('@/lib/firebase/admin');
         const { getOrgSubCollection } = await import('@/lib/firebase/collections');
         if (adminDb) {
-          const customerMemoriesPath = getOrgSubCollection(orgId, 'customerMemories');
+          const customerMemoriesPath = getOrgSubCollection('customerMemories');
           const doc = await adminDb
             .collection(customerMemoriesPath)
             .doc(customerId)
@@ -730,7 +730,7 @@ ${this.summarizeRecentConversations(customerMemory)}
         const { adminDb } = await import('@/lib/firebase/admin');
         const { getOrgSubCollection } = await import('@/lib/firebase/collections');
         if (adminDb) {
-          const customerMemoriesPath = getOrgSubCollection(memory.orgId, 'customerMemories');
+          const customerMemoriesPath = getOrgSubCollection('customerMemories');
           await adminDb
             .collection(customerMemoriesPath)
             .doc(memory.customerId)

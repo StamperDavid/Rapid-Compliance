@@ -1,6 +1,6 @@
 /**
  * Website Builder Types
- * Single-tenant architecture for RapidCompliance.US
+ * Single-tenant architecture for SalesVelocity.ai
  */
 
 export interface SiteConfig {

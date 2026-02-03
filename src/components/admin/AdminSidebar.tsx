@@ -2,7 +2,7 @@
 
 /**
  * Admin Sidebar Component
- * RapidCompliance.US - Penthouse Admin Navigation
+ * SalesVelocity.ai - Penthouse Admin Navigation
  *
  * Full command-center sidebar exposing all 51 AI agents, 130+ routes,
  * and 215+ API endpoints across CRM, Sales, Marketing, AI, and more.
@@ -99,8 +99,8 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'command-center',
     label: 'Command Center',
     items: [
-      { id: 'dashboard', label: 'Dashboard', href: '/admin', icon: LayoutDashboard, iconColor: '#6366f1' },
-      { id: 'workforce-hq', label: 'Workforce HQ', href: '/admin/workforce', icon: Monitor, iconColor: '#8b5cf6' },
+      { id: 'dashboard', label: 'Dashboard', href: '/admin', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
+      { id: 'workforce-hq', label: 'Workforce HQ', href: '/admin/workforce', icon: Monitor, iconColor: 'var(--color-secondary)' },
     ],
   },
   // ── CRM ─────────────────────────────────────────────────────────────
@@ -108,11 +108,11 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'crm',
     label: 'CRM',
     items: [
-      { id: 'leads', label: 'Leads', href: '/leads', icon: Users, iconColor: '#6366f1' },
-      { id: 'deals', label: 'Deals / Pipeline', href: '/deals', icon: Handshake, iconColor: '#8b5cf6' },
-      { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Contact, iconColor: '#06b6d4' },
-      { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: '#10b981' },
-      { id: 'living-ledger', label: 'Living Ledger', href: '/admin/living-ledger', icon: BookOpen, iconColor: '#f59e0b' },
+      { id: 'leads', label: 'Leads', href: '/leads', icon: Users, iconColor: 'var(--color-primary)' },
+      { id: 'deals', label: 'Deals / Pipeline', href: '/deals', icon: Handshake, iconColor: 'var(--color-secondary)' },
+      { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Contact, iconColor: 'var(--color-cyan)' },
+      { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)' },
+      { id: 'living-ledger', label: 'Living Ledger', href: '/admin/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── Lead Gen ────────────────────────────────────────────────────────
@@ -120,9 +120,9 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'lead-gen',
     label: 'Lead Gen',
     items: [
-      { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: '#6366f1' },
-      { id: 'lead-research', label: 'Lead Research', href: '/leads/research', icon: Microscope, iconColor: '#8b5cf6' },
-      { id: 'lead-scoring', label: 'Lead Scoring', href: '/lead-scoring', icon: Target, iconColor: '#10b981' },
+      { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-primary)' },
+      { id: 'lead-research', label: 'Lead Research', href: '/leads/research', icon: Microscope, iconColor: 'var(--color-secondary)' },
+      { id: 'lead-scoring', label: 'Lead Scoring', href: '/lead-scoring', icon: Target, iconColor: 'var(--color-success)' },
     ],
   },
   // ── Outbound / Sales ────────────────────────────────────────────────
@@ -130,12 +130,12 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'outbound',
     label: 'Outbound',
     items: [
-      { id: 'outbound-hub', label: 'Outbound', href: '/outbound', icon: Send, iconColor: '#6366f1' },
-      { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: '#8b5cf6' },
-      { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: '#06b6d4' },
-      { id: 'email-writer', label: 'Email Writer', href: '/email-writer', icon: PenTool, iconColor: '#10b981' },
-      { id: 'nurture', label: 'Nurture', href: '/nurture', icon: Sprout, iconColor: '#f59e0b' },
-      { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: '#ef4444' },
+      { id: 'outbound-hub', label: 'Outbound', href: '/outbound', icon: Send, iconColor: 'var(--color-primary)' },
+      { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: 'var(--color-secondary)' },
+      { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: 'var(--color-cyan)' },
+      { id: 'email-writer', label: 'Email Writer', href: '/email-writer', icon: PenTool, iconColor: 'var(--color-success)' },
+      { id: 'nurture', label: 'Nurture', href: '/nurture', icon: Sprout, iconColor: 'var(--color-warning)' },
+      { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)' },
     ],
   },
   // ── Content Factory ─────────────────────────────────────────────────
@@ -143,10 +143,10 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'content-factory',
     label: 'Content Factory',
     items: [
-      { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: '#6366f1' },
-      { id: 'social-media', label: 'Social Media', href: '/social/campaigns', icon: Share2, iconColor: '#8b5cf6' },
-      { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: '#06b6d4' },
-      { id: 'battlecards', label: 'Battlecards', href: '/battlecards', icon: Swords, iconColor: '#f59e0b' },
+      { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)' },
+      { id: 'social-media', label: 'Social Media', href: '/social/campaigns', icon: Share2, iconColor: 'var(--color-secondary)' },
+      { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: 'var(--color-cyan)' },
+      { id: 'battlecards', label: 'Battlecards', href: '/battlecards', icon: Swords, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── AI Workforce ────────────────────────────────────────────────────
@@ -154,14 +154,14 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'ai-workforce',
     label: 'AI Workforce',
     items: [
-      { id: 'agent-registry', label: 'Agent Registry', href: '/admin/ai-agents', icon: Bot, iconColor: '#06b6d4' },
-      { id: 'training-center', label: 'Training Center', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: '#10b981' },
-      { id: 'agent-persona', label: 'Agent Persona', href: '/settings/ai-agents/persona', icon: UserCog, iconColor: '#8b5cf6' },
-      { id: 'voice-ai', label: 'Voice AI Lab', href: '/voice/training', icon: Phone, iconColor: '#f59e0b' },
-      { id: 'social-ai', label: 'Social AI Lab', href: '/social/training', icon: Megaphone, iconColor: '#ec4899' },
-      { id: 'seo-ai', label: 'SEO AI Lab', href: '/seo/training', icon: SearchCode, iconColor: '#14b8a6' },
-      { id: 'datasets', label: 'Datasets', href: '/ai/datasets', icon: Database, iconColor: '#6366f1' },
-      { id: 'fine-tuning', label: 'Fine-Tuning', href: '/ai/fine-tuning', icon: Sliders, iconColor: '#f97316' },
+      { id: 'agent-registry', label: 'Agent Registry', href: '/admin/ai-agents', icon: Bot, iconColor: 'var(--color-cyan)' },
+      { id: 'training-center', label: 'Training Center', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)' },
+      { id: 'agent-persona', label: 'Agent Persona', href: '/settings/ai-agents/persona', icon: UserCog, iconColor: 'var(--color-secondary)' },
+      { id: 'voice-ai', label: 'Voice AI Lab', href: '/voice/training', icon: Phone, iconColor: 'var(--color-warning)' },
+      { id: 'social-ai', label: 'Social AI Lab', href: '/social/training', icon: Megaphone, iconColor: 'var(--color-accent)' },
+      { id: 'seo-ai', label: 'SEO AI Lab', href: '/seo/training', icon: SearchCode, iconColor: 'var(--color-teal)' },
+      { id: 'datasets', label: 'Datasets', href: '/ai/datasets', icon: Database, iconColor: 'var(--color-primary)' },
+      { id: 'fine-tuning', label: 'Fine-Tuning', href: '/ai/fine-tuning', icon: Sliders, iconColor: 'var(--color-orange)' },
     ],
   },
   // ── Automation ──────────────────────────────────────────────────────
@@ -169,9 +169,9 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'automation',
     label: 'Automation',
     items: [
-      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: '#6366f1' },
-      { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: '#10b981' },
-      { id: 'lead-routing', label: 'Lead Routing', href: '/settings/lead-routing', icon: Route, iconColor: '#8b5cf6' },
+      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-primary)' },
+      { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)' },
+      { id: 'lead-routing', label: 'Lead Routing', href: '/settings/lead-routing', icon: Route, iconColor: 'var(--color-secondary)' },
     ],
   },
   // ── E-Commerce ──────────────────────────────────────────────────────
@@ -179,9 +179,9 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'ecommerce',
     label: 'E-Commerce',
     items: [
-      { id: 'products', label: 'Products', href: '/products', icon: Package, iconColor: '#6366f1' },
-      { id: 'orders', label: 'Orders', href: '/analytics/ecommerce', icon: ShoppingCart, iconColor: '#8b5cf6' },
-      { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: '#f59e0b' },
+      { id: 'products', label: 'Products', href: '/products', icon: Package, iconColor: 'var(--color-primary)' },
+      { id: 'orders', label: 'Orders', href: '/analytics/ecommerce', icon: ShoppingCart, iconColor: 'var(--color-secondary)' },
+      { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── Compliance ──────────────────────────────────────────────────────
@@ -189,8 +189,8 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'compliance',
     label: 'Compliance',
     items: [
-      { id: 'compliance-reports', label: 'Compliance Reports', href: '/admin/compliance-reports', icon: ShieldCheck, iconColor: '#10b981' },
-      { id: 'audit-log', label: 'Audit Log', href: '/website/audit-log', icon: ScrollText, iconColor: '#f59e0b' },
+      { id: 'compliance-reports', label: 'Compliance Reports', href: '/admin/compliance-reports', icon: ShieldCheck, iconColor: 'var(--color-success)' },
+      { id: 'audit-log', label: 'Audit Log', href: '/website/audit-log', icon: ScrollText, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── Analytics ───────────────────────────────────────────────────────
@@ -198,11 +198,11 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'analytics',
     label: 'Analytics',
     items: [
-      { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: '#06b6d4' },
-      { id: 'revenue', label: 'Revenue', href: '/analytics/revenue', icon: TrendingUp, iconColor: '#10b981' },
-      { id: 'pipeline', label: 'Pipeline', href: '/analytics/pipeline', icon: BarChart3, iconColor: '#6366f1' },
-      { id: 'sales-perf', label: 'Sales Performance', href: '/analytics/sales', icon: Activity, iconColor: '#8b5cf6' },
-      { id: 'sequence-analytics', label: 'Sequences', href: '/sequences/analytics', icon: LineChart, iconColor: '#f59e0b' },
+      { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)' },
+      { id: 'revenue', label: 'Revenue', href: '/analytics/revenue', icon: TrendingUp, iconColor: 'var(--color-success)' },
+      { id: 'pipeline', label: 'Pipeline', href: '/analytics/pipeline', icon: BarChart3, iconColor: 'var(--color-primary)' },
+      { id: 'sales-perf', label: 'Sales Performance', href: '/analytics/sales', icon: Activity, iconColor: 'var(--color-secondary)' },
+      { id: 'sequence-analytics', label: 'Sequences', href: '/sequences/analytics', icon: LineChart, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── Website ─────────────────────────────────────────────────────────
@@ -210,12 +210,12 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'website',
     label: 'Website',
     items: [
-      { id: 'site-editor', label: 'Site Editor', href: '/website/editor', icon: Globe, iconColor: '#6366f1' },
-      { id: 'pages', label: 'Pages', href: '/website/pages', icon: FileEdit, iconColor: '#8b5cf6' },
-      { id: 'blog', label: 'Blog', href: '/website/blog', icon: BookOpenText, iconColor: '#06b6d4' },
-      { id: 'seo', label: 'SEO', href: '/website/seo', icon: Search, iconColor: '#10b981' },
-      { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: '#14b8a6' },
-      { id: 'site-settings', label: 'Site Settings', href: '/website/settings', icon: Cog, iconColor: '#f59e0b' },
+      { id: 'site-editor', label: 'Site Editor', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)' },
+      { id: 'pages', label: 'Pages', href: '/website/pages', icon: FileEdit, iconColor: 'var(--color-secondary)' },
+      { id: 'blog', label: 'Blog', href: '/website/blog', icon: BookOpenText, iconColor: 'var(--color-cyan)' },
+      { id: 'seo', label: 'SEO', href: '/website/seo', icon: Search, iconColor: 'var(--color-success)' },
+      { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: 'var(--color-teal)' },
+      { id: 'site-settings', label: 'Site Settings', href: '/website/settings', icon: Cog, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── Settings ────────────────────────────────────────────────────────
@@ -223,12 +223,12 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'settings',
     label: 'Settings',
     items: [
-      { id: 'general', label: 'General', href: '/settings', icon: Settings, iconColor: '#999' },
-      { id: 'users-team', label: 'Users & Team', href: '/settings/users', icon: UsersRound, iconColor: '#6366f1' },
-      { id: 'integrations', label: 'Integrations', href: '/settings/integrations', icon: Plug, iconColor: '#8b5cf6' },
-      { id: 'api-keys', label: 'API Keys', href: '/settings/api-keys', icon: KeyRound, iconColor: '#10b981' },
-      { id: 'theme', label: 'Theme & Branding', href: '/settings/theme', icon: Palette, iconColor: '#f59e0b' },
-      { id: 'security', label: 'Security', href: '/settings/security', icon: Lock, iconColor: '#ef4444' },
+      { id: 'general', label: 'General', href: '/settings', icon: Settings, iconColor: 'var(--color-text-secondary)' },
+      { id: 'users-team', label: 'Users & Team', href: '/settings/users', icon: UsersRound, iconColor: 'var(--color-primary)' },
+      { id: 'integrations', label: 'Integrations', href: '/settings/integrations', icon: Plug, iconColor: 'var(--color-secondary)' },
+      { id: 'api-keys', label: 'API Keys', href: '/settings/api-keys', icon: KeyRound, iconColor: 'var(--color-success)' },
+      { id: 'theme', label: 'Theme & Branding', href: '/settings/theme', icon: Palette, iconColor: 'var(--color-warning)' },
+      { id: 'security', label: 'Security', href: '/settings/security', icon: Lock, iconColor: 'var(--color-error)' },
     ],
   },
 ];
@@ -334,7 +334,7 @@ export default function AdminSidebar() {
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  RapidCompliance.US
+                  SalesVelocity.ai
                 </div>
                 <div
                   style={{
@@ -560,7 +560,7 @@ export default function AdminSidebar() {
                   color: 'var(--color-text-disabled)',
                 }}
               >
-                RapidCompliance.US
+                SalesVelocity.ai
               </div>
               <div
                 style={{

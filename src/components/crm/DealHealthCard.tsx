@@ -24,26 +24,26 @@ export function DealHealthCard({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'healthy':
-        return '#10b981'; // green
+        return 'var(--color-success)'; // green
       case 'at-risk':
-        return '#f59e0b'; // yellow
+        return 'var(--color-warning)'; // yellow
       case 'critical':
-        return '#ef4444'; // red
+        return 'var(--color-error)'; // red
       default:
-        return '#6b7280'; // gray
+        return 'var(--color-neutral-500)'; // gray
     }
   };
 
   const getStatusBg = (status: string) => {
     switch (status) {
       case 'healthy':
-        return '#065f46'; // dark green
+        return 'var(--color-success-dark)'; // dark green
       case 'at-risk':
-        return '#78350f'; // dark yellow
+        return 'var(--color-warning-dark)'; // dark yellow
       case 'critical':
-        return '#7f1d1d'; // dark red
+        return 'var(--color-error-dark)'; // dark red
       default:
-        return '#1f2937'; // dark gray
+        return 'var(--color-neutral-800)'; // dark gray
     }
   };
 
@@ -63,7 +63,7 @@ export function DealHealthCard({
           alignItems: 'center',
           gap: '0.75rem',
           padding: '0.75rem',
-          backgroundColor: '#0a0a0a',
+          backgroundColor: 'var(--color-bg-paper)',
           borderRadius: '0.5rem',
           border: `1px solid ${getStatusColor(health.status)}`,
         }}
@@ -76,7 +76,7 @@ export function DealHealthCard({
               cy="20"
               r="18"
               fill="none"
-              stroke="#1a1a1a"
+              stroke="var(--color-bg-elevated)"
               strokeWidth="3"
             />
             <circle
@@ -119,7 +119,7 @@ export function DealHealthCard({
             {health.status}
           </div>
           {dealName && (
-            <div style={{ fontSize: '0.625rem', color: '#999', marginTop: '0.125rem' }}>
+            <div style={{ fontSize: '0.625rem', color: 'var(--color-text-secondary)', marginTop: '0.125rem' }}>
               {dealName}
             </div>
           )}
@@ -141,11 +141,11 @@ export function DealHealthCard({
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#fff', margin: 0 }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--color-text-primary)', margin: 0 }}>
               Deal Health
             </h3>
             {dealName && (
-              <p style={{ fontSize: '0.875rem', color: '#999', marginTop: '0.25rem', margin: 0 }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem', margin: 0 }}>
                 {dealName}
               </p>
             )}
@@ -175,7 +175,7 @@ export function DealHealthCard({
               cy="60"
               r="50"
               fill="none"
-              stroke="#1a1a1a"
+              stroke="var(--color-bg-elevated)"
               strokeWidth="8"
             />
             <circle
@@ -209,14 +209,14 @@ export function DealHealthCard({
             >
               {health.overall}
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#999' }}>out of 100</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>out of 100</div>
           </div>
         </div>
       </div>
 
       {/* Health Factors */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem', margin: 0 }}>
+        <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-neutral-300)', marginBottom: '0.75rem', margin: 0 }}>
           Health Factors
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -224,12 +224,12 @@ export function DealHealthCard({
             <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#fff' }}>{factor.name}</span>
-                  <span style={{ fontSize: '0.625rem', color: factor.impact === 'positive' ? '#10b981' : factor.impact === 'negative' ? '#ef4444' : '#999' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-primary)' }}>{factor.name}</span>
+                  <span style={{ fontSize: '0.625rem', color: factor.impact === 'positive' ? 'var(--color-success)' : factor.impact === 'negative' ? 'var(--color-error)' : 'var(--color-text-secondary)' }}>
                     {factor.impact === 'positive' ? '↑' : factor.impact === 'negative' ? '↓' : '→'}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.625rem', color: '#666' }}>{factor.description}</div>
+                <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>{factor.description}</div>
               </div>
               <div style={{ fontSize: '0.875rem', fontWeight: '700', color: getStatusColor(health.status) }}>
                 {factor.score}
@@ -242,7 +242,7 @@ export function DealHealthCard({
       {/* Warnings */}
       {health.warnings.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
-          <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem', margin: 0 }}>
+          <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-neutral-300)', marginBottom: '0.75rem', margin: 0 }}>
             ⚠️ Warnings
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -251,11 +251,11 @@ export function DealHealthCard({
                 key={idx}
                 style={{
                   padding: '0.5rem',
-                  backgroundColor: '#1a1a1a',
-                  borderLeft: '3px solid #f59e0b',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  borderLeft: '3px solid var(--color-warning)',
                   borderRadius: '0.25rem',
                   fontSize: '0.75rem',
-                  color: '#fbbf24',
+                  color: 'var(--color-warning-light)',
                 }}
               >
                 {warning}
@@ -268,7 +268,7 @@ export function DealHealthCard({
       {/* Recommendations */}
       {health.recommendations.length > 0 && (
         <div>
-          <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem', margin: 0 }}>
+          <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-neutral-300)', marginBottom: '0.75rem', margin: 0 }}>
             💡 Recommendations
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -277,11 +277,11 @@ export function DealHealthCard({
                 key={idx}
                 style={{
                   padding: '0.5rem',
-                  backgroundColor: '#1a1a1a',
-                  borderLeft: '3px solid #6366f1',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  borderLeft: '3px solid var(--color-primary)',
                   borderRadius: '0.25rem',
                   fontSize: '0.75rem',
-                  color: '#a5b4fc',
+                  color: 'var(--color-primary-light)',
                 }}
               >
                 {rec}

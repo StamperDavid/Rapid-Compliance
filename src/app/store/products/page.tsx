@@ -320,7 +320,7 @@ export default function ProductCatalogPage() {
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
           {theme.branding.showPoweredBy && (
-            <p>Powered by Rapid Compliance</p>
+            <p>Powered by SalesVelocity</p>
           )}
           <p>© {new Date().getFullYear()} {theme.branding.companyName}. All rights reserved.</p>
         </div>

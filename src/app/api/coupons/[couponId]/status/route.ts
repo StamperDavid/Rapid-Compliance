@@ -42,7 +42,7 @@ export async function PATCH(
     }
 
     const { status } = parseResult.data;
-    const couponsPath = getMerchantCouponsCollection(DEFAULT_ORG_ID);
+    const couponsPath = getMerchantCouponsCollection();
 
     // Check if coupon exists
     const existingCoupon = await FirestoreService.get<MerchantCoupon>(couponsPath, couponId);

@@ -557,7 +557,7 @@ IMPORTANT:
  * @example
  * ```typescript
  * const battlecard = await generateBattlecard(profile, {
- *   ourProduct: 'Rapid Compliance',
+ *   ourProduct: 'SalesVelocity',
  *   ourCompanyInfo: {
  *     strengths: ['AI-powered automation', 'Native discovery engine'],
  *     pricing: 'Mid-market positioning'

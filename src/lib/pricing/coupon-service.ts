@@ -313,7 +313,7 @@ export class CouponService {
     const normalizedCode = code.toUpperCase().trim();
 
     // Get coupon from merchant's collection
-    const couponsPath = getMerchantCouponsCollection(organizationId);
+    const couponsPath = getMerchantCouponsCollection();
     const couponsRef = collection(this.db, couponsPath);
     const q = query(couponsRef, where('code', '==', normalizedCode));
     const snapshot = await getDocs(q);
@@ -467,7 +467,7 @@ export class CouponService {
     await setDoc(redemptionRef, redemption);
 
     // Increment coupon usage
-    const couponPath = getMerchantCouponsCollection(organizationId);
+    const couponPath = getMerchantCouponsCollection();
     const couponRef = doc(this.db, couponPath, coupon.id);
     await updateDoc(couponRef, {
       current_uses: increment(1),
@@ -516,7 +516,7 @@ export class CouponService {
     const orgIsInternalAdmin = isInternalAdmin || await this.isInternalAdminOrg(organizationId);
 
     // Get all AI-authorized coupons for this organization
-    const couponsPath = getMerchantCouponsCollection(organizationId);
+    const couponsPath = getMerchantCouponsCollection();
     const couponsRef = collection(this.db, couponsPath);
     const q = query(
       couponsRef,
@@ -654,7 +654,7 @@ export class CouponService {
       created_by: createdBy,
     };
 
-    const couponPath = getMerchantCouponsCollection(organizationId);
+    const couponPath = getMerchantCouponsCollection();
     const couponRef = doc(this.db, couponPath, couponId);
     await setDoc(couponRef, coupon);
 
@@ -664,8 +664,8 @@ export class CouponService {
   /**
    * Get all merchant coupons for an organization
    */
-  static async getMerchantCoupons(organizationId: string): Promise<MerchantCoupon[]> {
-    const couponPath = getMerchantCouponsCollection(organizationId);
+  static async getMerchantCoupons(_organizationId: string): Promise<MerchantCoupon[]> {
+    const couponPath = getMerchantCouponsCollection();
     const couponsRef = collection(this.db, couponPath);
     const snapshot = await getDocs(couponsRef);
 
@@ -683,7 +683,7 @@ export class CouponService {
     couponId: string,
     updates: Partial<MerchantCoupon>
   ): Promise<void> {
-    const couponPath = getMerchantCouponsCollection(organizationId);
+    const couponPath = getMerchantCouponsCollection();
     const couponRef = doc(this.db, couponPath, couponId);
 
     await updateDoc(couponRef, {

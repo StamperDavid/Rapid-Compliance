@@ -60,7 +60,7 @@ export class FieldTypeConverterServer {
     estimatedFailures: number;
   }> {
     // Get schema (using environment-aware paths)
-    const schemasPath = getOrgSubCollection(organizationId, 'schemas');
+    const schemasPath = getOrgSubCollection('schemas');
     const schemaDoc = await db
       .collection(schemasPath)
       .doc(schemaId)
@@ -79,7 +79,7 @@ export class FieldTypeConverterServer {
 
     // Get records (using environment-aware paths for nested entities)
     const { getPrefix } = await import('@/lib/firebase/collections');
-    const entitiesPath = getOrgSubCollection(organizationId, 'entities');
+    const entitiesPath = getOrgSubCollection('entities');
     const recordsPath = `${getPrefix()}records`;
     const recordsSnapshot = await db
       .collection(`${entitiesPath}/${schemaName}/${recordsPath}`)

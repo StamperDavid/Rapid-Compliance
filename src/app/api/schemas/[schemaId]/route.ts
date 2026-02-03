@@ -30,7 +30,7 @@ export async function GET(
       );
     }
 
-    const schemasCollection = adminDal.getOrgCollection(organizationId, 'schemas');
+    const schemasCollection = adminDal.getOrgCollection('schemas');
     const docSnap = await schemasCollection.doc(params.schemaId).get();
 
     if (!docSnap.exists) {
@@ -73,7 +73,7 @@ export async function DELETE(
       );
     }
 
-    const schemasCollection = adminDal.getOrgCollection(organizationId, 'schemas');
+    const schemasCollection = adminDal.getOrgCollection('schemas');
     const docRef = schemasCollection.doc(params.schemaId);
 
     const docSnap = await docRef.get();

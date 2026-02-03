@@ -1,16 +1,18 @@
 /**
  * Centralized Collection Names
  * Supports environment-aware prefixes for test data isolation
- * 
+ *
  * CRITICAL: This file prevents test data pollution by automatically prefixing
  * collection names based on the environment.
- * 
+ *
  * ENVIRONMENT ISOLATION STRATEGY:
  * - Production (NEXT_PUBLIC_APP_ENV === 'production'): No prefix
  * - All other environments (dev, staging, test): 'test_' prefix
- * 
+ *
  * This prevents the "ticking time bomb" of test data polluting production.
  */
+
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Check NEXT_PUBLIC_APP_ENV first, fallback to NODE_ENV
 const APP_ENV = (process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV) || 'development';
@@ -32,14 +34,14 @@ export const COLLECTIONS = {
   // ========================================
   ORGANIZATIONS: `${PREFIX}organizations`,
   USERS: `${PREFIX}users`,
-  
+
   // ========================================
   // CRM COLLECTIONS
   // ========================================
   LEADS: `${PREFIX}leads`,
   CONTACTS: `${PREFIX}contacts`,
   DEALS: `${PREFIX}deals`,
-  
+
   // ========================================
   // AUTOMATION COLLECTIONS
   // ========================================
@@ -47,14 +49,14 @@ export const COLLECTIONS = {
   SEQUENCE_ENROLLMENTS: `${PREFIX}sequenceEnrollments`,
   CAMPAIGNS: `${PREFIX}campaigns`,
   WORKFLOWS: `${PREFIX}workflows`,
-  
+
   // ========================================
   // E-COMMERCE COLLECTIONS
   // ========================================
   PRODUCTS: `${PREFIX}products`,
   ORDERS: `${PREFIX}orders`,
   CARTS: `${PREFIX}carts`,
-  
+
   // ========================================
   // AI & TRAINING COLLECTIONS
   // ========================================
@@ -63,7 +65,7 @@ export const COLLECTIONS = {
   FINE_TUNING_JOBS: `${PREFIX}fineTuningJobs`,
   AB_TESTS: `${PREFIX}abTests`,
   BASE_MODELS: `${PREFIX}baseModels`,
-  
+
   // ========================================
   // SYSTEM COLLECTIONS
   // ========================================
@@ -71,20 +73,20 @@ export const COLLECTIONS = {
   API_KEYS: `${PREFIX}apiKeys`,
   AUDIT_LOGS: `${PREFIX}auditLogs`,
   INTEGRATIONS: `${PREFIX}integrations`,
-  
+
   // ========================================
   // WEBSITE BUILDER COLLECTIONS
   // ========================================
   PAGES: `${PREFIX}pages`,
   BLOG_POSTS: `${PREFIX}blogPosts`,
   DOMAINS: `${PREFIX}domains`,
-  
+
   // ========================================
   // ANALYTICS COLLECTIONS
   // ========================================
   ANALYTICS_EVENTS: `${PREFIX}analyticsEvents`,
   REPORTS: `${PREFIX}reports`,
-  
+
   // ========================================
   // TEMPLATE MANAGEMENT COLLECTIONS
   // ========================================
@@ -108,36 +110,40 @@ export const getCollection = (name: keyof typeof COLLECTIONS): string => {
 
 /**
  * Helper for organization sub-collections
- * Usage: getOrgSubCollection('org123', 'records')
- * Returns: 'organizations/org123/records' (or 'test_organizations/org123/test_records' in test mode)
+ * Usage: getOrgSubCollection('records')
+ * Returns: 'organizations/rapid-compliance-root/records' (or 'test_organizations/rapid-compliance-root/test_records' in test mode)
+ *
+ * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID - this is a single-tenant system
  */
 export const getOrgSubCollection = (
-  orgId: string,
   subCollection: string
 ): string => {
-  return `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${PREFIX}${subCollection}`;
+  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${PREFIX}${subCollection}`;
 };
 
 /**
  * Helper for schema sub-collections
- * Usage: getSchemaSubCollection('org123', 'schema456', 'fields')
- * Returns: 'organizations/org123/schemas/schema456/fields'
+ * Usage: getSchemaSubCollection('schema456', 'fields')
+ * Returns: 'organizations/rapid-compliance-root/schemas/schema456/fields'
+ *
+ * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID - this is a single-tenant system
  */
 export const getSchemaSubCollection = (
-  orgId: string,
   schemaId: string,
   subCollection: string
 ): string => {
-  return `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${PREFIX}schemas/${schemaId}/${PREFIX}${subCollection}`;
+  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${PREFIX}schemas/${schemaId}/${PREFIX}${subCollection}`;
 };
 
 /**
  * Helper for merchant coupons sub-collection
- * Usage: getMerchantCouponsCollection('org123')
- * Returns: 'organizations/org123/merchant_coupons'
+ * Usage: getMerchantCouponsCollection()
+ * Returns: 'organizations/rapid-compliance-root/merchant_coupons'
+ *
+ * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID - this is a single-tenant system
  */
-export const getMerchantCouponsCollection = (orgId: string): string => {
-  return `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${PREFIX}merchant_coupons`;
+export const getMerchantCouponsCollection = (): string => {
+  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${PREFIX}merchant_coupons`;
 };
 
 /**

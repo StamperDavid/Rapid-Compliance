@@ -168,7 +168,7 @@ function initializeSendGrid(): void {
  */
 function getFromAddress(): { email: string; name: string } {
   const fromEmail = process.env.FROM_EMAIL;
-  const fromName =(process.env.FROM_NAME !== '' && process.env.FROM_NAME != null) ? process.env.FROM_NAME : 'Rapid Compliance';
+  const fromName =(process.env.FROM_NAME !== '' && process.env.FROM_NAME != null) ? process.env.FROM_NAME : 'SalesVelocity';
   
   if (!fromEmail) {
     throw new Error('FROM_EMAIL environment variable is required');
@@ -358,9 +358,9 @@ export async function sendEmail(
  */
 async function saveDeliveryRecord(record: EmailDeliveryRecord): Promise<void> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection(record.organizationId, 'email_deliveries'))
+    .collection(getOrgSubCollection('email_deliveries'))
     .doc(record.id);
-  
+
   await deliveriesRef.set(record);
 }
 
@@ -379,7 +379,7 @@ export async function updateDeliveryStatus(
   }
 ): Promise<void> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
+    .collection(getOrgSubCollection('email_deliveries'))
     .doc(deliveryId);
   
   const updates: Partial<EmailDeliveryRecord> = {
@@ -416,7 +416,7 @@ export async function incrementOpenCount(
   deliveryId: string
 ): Promise<void> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
+    .collection(getOrgSubCollection('email_deliveries'))
     .doc(deliveryId);
   
   await deliveriesRef.update({
@@ -437,7 +437,7 @@ export async function incrementClickCount(
   deliveryId: string
 ): Promise<void> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
+    .collection(getOrgSubCollection('email_deliveries'))
     .doc(deliveryId);
   
   await deliveriesRef.update({
@@ -458,7 +458,7 @@ export async function getDeliveryRecord(
   deliveryId: string
 ): Promise<EmailDeliveryRecord | null> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
+    .collection(getOrgSubCollection('email_deliveries'))
     .doc(deliveryId);
   
   const doc = await deliveriesRef.get();
@@ -478,7 +478,7 @@ export async function getDeliveryRecordsForDeal(
   dealId: string
 ): Promise<EmailDeliveryRecord[]> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
+    .collection(getOrgSubCollection('email_deliveries'))
     .where('dealId', '==', dealId)
     .orderBy('createdAt', 'desc')
     .limit(100);
@@ -508,7 +508,7 @@ export async function getDeliveryStatsForUser(
   bounceRate: number;
 }> {
   let query = ensureAdminDb()
-    .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
+    .collection(getOrgSubCollection('email_deliveries'))
     .where('userId', '==', userId);
   
   if (startDate) {

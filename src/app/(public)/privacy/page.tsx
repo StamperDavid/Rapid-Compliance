@@ -15,7 +15,7 @@ function FallbackContent() {
         <div className="prose prose-invert max-w-none space-y-8">
           <section>
             <p className="text-gray-300 text-lg leading-relaxed">
-              At RapidCompliance.US, we take your privacy seriously. This Privacy Policy explains how we collect, 
+              At SalesVelocity.ai, we take your privacy seriously. This Privacy Policy explains how we collect,
               use, disclose, and safeguard your information when you use our platform.
             </p>
           </section>
@@ -38,7 +38,7 @@ function FallbackContent() {
 
           <section>
             <p className="text-gray-400">
-              Questions? Contact us at privacy@rapidcompliance.us
+              Questions? Contact us at privacy@salesvelocity.ai
             </p>
           </section>
         </div>

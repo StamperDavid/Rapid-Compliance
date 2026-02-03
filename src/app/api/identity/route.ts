@@ -40,7 +40,7 @@ const SaveIdentityBodySchema = z.object({
 
 /**
  * GET /api/identity
- * Load the workforce identity configuration for RapidCompliance.US
+ * Load the workforce identity configuration for SalesVelocity.ai
  */
 export async function GET(
   _req: NextRequest
@@ -97,7 +97,7 @@ export async function GET(
 
 /**
  * POST /api/identity
- * Save the workforce identity configuration for RapidCompliance.US
+ * Save the workforce identity configuration for SalesVelocity.ai
  */
 export async function POST(
   req: NextRequest

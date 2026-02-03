@@ -21,8 +21,8 @@ function FallbackContent() {
         <section className="mb-12">
           <h2 className="text-3xl font-bold text-white mb-4">Our Mission</h2>
           <p className="text-gray-300 text-lg leading-relaxed mb-4">
-            We believe every business deserves access to world-class sales automation, 
-            regardless of size or budget. RapidCompliance.US democratizes cutting-edge 
+            We believe every business deserves access to world-class sales automation,
+            regardless of size or budget. SalesVelocity.ai democratizes cutting-edge
             technology, making it accessible to startups and enterprises alike.
           </p>
         </section>
@@ -30,7 +30,7 @@ function FallbackContent() {
         <section className="mb-12">
           <h2 className="text-3xl font-bold text-white mb-4">Our Story</h2>
           <p className="text-gray-300 text-lg leading-relaxed mb-4">
-            Founded in 2024, RapidCompliance.US emerged from a simple observation: most businesses 
+            Founded in 2024, SalesVelocity.ai emerged from a simple observation: most businesses
             struggle with lead qualification, follow-ups, and sales process consistency.
           </p>
         </section>

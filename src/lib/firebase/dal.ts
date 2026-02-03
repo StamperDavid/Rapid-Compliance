@@ -1,7 +1,7 @@
 /**
  * Data Access Layer (DAL)
  * Safe wrapper for all Firestore operations with environment awareness
- * 
+ *
  * CRITICAL FEATURES:
  * - Automatic environment-aware collection naming
  * - Dry-run mode for testing
@@ -46,15 +46,15 @@ interface WriteOptions {
 
 export class FirestoreDAL {
   private db: Firestore;
-  
+
   constructor(firestoreInstance: Firestore) {
     this.db = firestoreInstance;
   }
-  
+
   // ========================================
   // COLLECTION REFERENCES
   // ========================================
-  
+
   /**
    * Get a collection reference with environment-aware naming
    * Usage: dal.getCollection('ORGANIZATIONS')
@@ -63,23 +63,25 @@ export class FirestoreDAL {
     const name = COLLECTIONS[collectionName];
     return collection(this.db, name);
   }
-  
+
   /**
    * Get an organization sub-collection reference
-   * Usage: dal.getOrgCollection('org123', 'records')
+   * Usage: dal.getOrgCollection('records')
+   *
+   * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID - this is a single-tenant system
    */
-  getOrgCollection(orgId: string, subCollection: string): CollectionReference {
-    const path = getOrgSubCollection(orgId, subCollection);
+  getOrgCollection(subCollection: string): CollectionReference {
+    const path = getOrgSubCollection(subCollection);
     return collection(this.db, path);
   }
-  
+
   // ========================================
   // SAFE WRITE OPERATIONS
   // ========================================
-  
+
   /**
    * Safe setDoc with environment awareness and audit logging
-   * 
+   *
    * @example
    * await dal.safeSetDoc('ORGANIZATIONS', 'org123', {
    *   name: 'Acme Inc',
@@ -93,7 +95,7 @@ export class FirestoreDAL {
     options?: WriteOptions & { merge?: boolean }
   ): Promise<void> {
     const collectionRef = COLLECTIONS[collectionName];
-    
+
     // Dry run mode - log without executing
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would write to Firestore', {
@@ -105,14 +107,14 @@ export class FirestoreDAL {
       });
       return;
     }
-    
+
     // TODO: Add organization-scoped access check
     // if (options?.organizationId) {
     //   await this.verifyOrgAccess(options.userId, options.organizationId);
     // }
-    
+
     const docRef = doc(this.db, collectionRef, docId) as DocumentReference<T>;
-    
+
     logger.info('✍️ Writing to Firestore', {
       collection: collectionRef,
       docId,
@@ -120,7 +122,7 @@ export class FirestoreDAL {
       userId: options?.userId,
       file: 'dal.ts'
     });
-    
+
     const setOptions: SetOptions = options?.merge ? { merge: true } : {};
     await setDoc(docRef, data, setOptions);
 
@@ -128,10 +130,10 @@ export class FirestoreDAL {
       this.logAudit('CREATE', collectionRef, docId, data as Record<string, unknown>, options?.userId);
     }
   }
-  
+
   /**
    * Safe updateDoc with environment awareness and audit logging
-   * 
+   *
    * @example
    * await dal.safeUpdateDoc('ORGANIZATIONS', 'org123', {
    *   name: 'Updated Name',
@@ -145,7 +147,7 @@ export class FirestoreDAL {
     options?: WriteOptions
   ): Promise<void> {
     const collectionRef = COLLECTIONS[collectionName];
-    
+
     // Dry run mode
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would update Firestore', {
@@ -156,9 +158,9 @@ export class FirestoreDAL {
       });
       return;
     }
-    
+
     const docRef = doc(this.db, collectionRef, docId) as DocumentReference<T>;
-    
+
     logger.info('📝 Updating Firestore', {
       collection: collectionRef,
       docId,
@@ -166,17 +168,17 @@ export class FirestoreDAL {
       userId: options?.userId,
       file: 'dal.ts'
     });
-    
+
     await updateDoc(docRef, data);
 
     if (options?.audit) {
       this.logAudit('UPDATE', collectionRef, docId, data as Record<string, unknown>, options?.userId);
     }
   }
-  
+
   /**
    * Safe deleteDoc with environment awareness and production protection
-   * 
+   *
    * @example
    * await dal.safeDeleteDoc('ORGANIZATIONS', 'org123', {
    *   audit: true,
@@ -189,7 +191,7 @@ export class FirestoreDAL {
     options?: WriteOptions
   ): Promise<void> {
     const collectionRef = COLLECTIONS[collectionName];
-    
+
     // Dry run mode
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would delete from Firestore', {
@@ -199,7 +201,7 @@ export class FirestoreDAL {
       });
       return;
     }
-    
+
     // CRITICAL: Production delete protection
     if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_PROD_DELETES) {
       throw new Error(
@@ -207,9 +209,9 @@ export class FirestoreDAL {
         'This is a safety measure to prevent accidental data loss.'
       );
     }
-    
+
     const docRef = doc(this.db, collectionRef, docId);
-    
+
     logger.warn('🗑️ Deleting from Firestore', {
       collection: collectionRef,
       docId,
@@ -217,17 +219,17 @@ export class FirestoreDAL {
       userId: options?.userId,
       file: 'dal.ts'
     });
-    
+
     await deleteDoc(docRef);
 
     if (options?.audit) {
       this.logAudit('DELETE', collectionRef, docId, {}, options?.userId);
     }
   }
-  
+
   /**
    * Safe addDoc (auto-generated ID)
-   * 
+   *
    * @example
    * const docRef = await dal.safeAddDoc('LEADS', {
    *   email: 'john@example.com',
@@ -240,7 +242,7 @@ export class FirestoreDAL {
     options?: WriteOptions
   ): Promise<DocumentReference> {
     const collectionRef = COLLECTIONS[collectionName];
-    
+
     // Dry run mode
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would add to Firestore', {
@@ -251,16 +253,16 @@ export class FirestoreDAL {
       // Return a fake doc ref in dry run mode
       return doc(this.db, collectionRef, 'dry-run-doc-id');
     }
-    
+
     const colRef = collection(this.db, collectionRef);
-    
+
     logger.info('➕ Adding to Firestore', {
       collection: collectionRef,
       env: process.env.NODE_ENV,
       userId: options?.userId,
       file: 'dal.ts'
     });
-    
+
     const docRef = await addDoc(colRef, data);
 
     if (options?.audit) {
@@ -269,11 +271,11 @@ export class FirestoreDAL {
 
     return docRef;
   }
-  
+
   // ========================================
   // SAFE READ OPERATIONS
   // ========================================
-  
+
   /**
    * Safe getDoc with logging
    */
@@ -292,7 +294,7 @@ export class FirestoreDAL {
 
     return getDoc(docRef);
   }
-  
+
   /**
    * Safe getDocs with query support
    */
@@ -312,11 +314,11 @@ export class FirestoreDAL {
     const q = query(colRef, ...queryConstraints);
     return getDocs(q);
   }
-  
+
   // ========================================
   // AUDIT LOGGING
   // ========================================
-  
+
   /**
    * Log an audit trail entry
    * In a production system, this would write to an audit log collection
@@ -344,11 +346,11 @@ export class FirestoreDAL {
     // TODO: Implement actual audit log storage
     // await addDoc(collection(this.db, COLLECTIONS.AUDIT_LOGS), auditEntry);
   }
-  
+
   // ========================================
   // ACCESS CONTROL (Coming Soon)
   // ========================================
-  
+
   /**
    * Verify that a user has access to an organization
    * This will be implemented as part of the security enhancement

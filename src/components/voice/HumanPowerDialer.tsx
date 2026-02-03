@@ -66,14 +66,14 @@ const DEFAULT_CONFIG: DialerConfig = {
 };
 
 const CALL_OUTCOMES = [
-  { id: 'connected', label: 'Connected', color: '#10b981' },
-  { id: 'voicemail', label: 'Voicemail', color: '#f59e0b' },
-  { id: 'no-answer', label: 'No Answer', color: '#6b7280' },
-  { id: 'busy', label: 'Busy', color: '#ef4444' },
-  { id: 'wrong-number', label: 'Wrong Number', color: '#dc2626' },
-  { id: 'callback', label: 'Callback Requested', color: '#3b82f6' },
-  { id: 'not-interested', label: 'Not Interested', color: '#9ca3af' },
-  { id: 'qualified', label: 'Qualified Lead', color: '#22c55e' },
+  { id: 'connected', label: 'Connected', color: 'var(--color-success)' },
+  { id: 'voicemail', label: 'Voicemail', color: 'var(--color-warning)' },
+  { id: 'no-answer', label: 'No Answer', color: 'var(--color-neutral-500)' },
+  { id: 'busy', label: 'Busy', color: 'var(--color-error)' },
+  { id: 'wrong-number', label: 'Wrong Number', color: 'var(--color-error-dark)' },
+  { id: 'callback', label: 'Callback Requested', color: 'var(--color-info)' },
+  { id: 'not-interested', label: 'Not Interested', color: 'var(--color-neutral-400)' },
+  { id: 'qualified', label: 'Qualified Lead', color: 'var(--color-success-light)' },
 ];
 
 export default function HumanPowerDialer({
@@ -445,22 +445,22 @@ export default function HumanPowerDialer({
 
   const getStatusColor = (status: ActiveCall['status']): string => {
     const colors: Record<ActiveCall['status'], string> = {
-      dialing: '#f59e0b',
-      ringing: '#3b82f6',
-      connected: '#10b981',
-      'on-hold': '#6b7280',
-      transferring: '#8b5cf6',
-      ended: '#9ca3af',
+      dialing: 'var(--color-warning)',
+      ringing: 'var(--color-info)',
+      connected: 'var(--color-success)',
+      'on-hold': 'var(--color-neutral-500)',
+      transferring: 'var(--color-secondary)',
+      ended: 'var(--color-neutral-400)',
     };
     return colors[status];
   };
 
   return (
-    <div className={className} style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#0a0a0a', borderRadius: '1rem', overflow: 'hidden' }}>
+    <div className={className} style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--color-bg-paper)', borderRadius: '1rem', overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ padding: '1rem 1.5rem', backgroundColor: '#111', borderBottom: '1px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '1rem 1.5rem', backgroundColor: 'var(--color-neutral-900)', borderBottom: '1px solid var(--color-border-main)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
             Power Dialer
           </h2>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -471,7 +471,7 @@ export default function HumanPowerDialer({
                     onClick={() => {
                       void resumeDialer();
                     }}
-                    style={{ padding: '0.5rem 1rem', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--color-success)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                   >
                     Resume
                   </button>
@@ -480,7 +480,7 @@ export default function HumanPowerDialer({
                     onClick={() => {
                       pauseDialer();
                     }}
-                    style={{ padding: '0.5rem 1rem', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--color-warning)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                   >
                     Pause
                   </button>
@@ -489,7 +489,7 @@ export default function HumanPowerDialer({
                   onClick={() => {
                     stopDialer();
                   }}
-                  style={{ padding: '0.5rem 1rem', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                  style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--color-error)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                 >
                   Stop
                 </button>
@@ -499,7 +499,7 @@ export default function HumanPowerDialer({
                 onClick={() => {
                   void startDialer();
                 }}
-                style={{ padding: '0.5rem 1rem', backgroundColor: '#6366f1', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--color-primary)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
               >
                 Start Dialing
               </button>
@@ -509,51 +509,51 @@ export default function HumanPowerDialer({
 
         <button
           onClick={() => setShowSettings(!showSettings)}
-          style={{ padding: '0.5rem', backgroundColor: '#222', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', color: '#999' }}
+          style={{ padding: '0.5rem', backgroundColor: 'var(--color-border-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.375rem', cursor: 'pointer', color: 'var(--color-text-secondary)' }}
         >
           Settings
         </button>
       </div>
 
       {/* Stats Bar */}
-      <div style={{ padding: '0.75rem 1.5rem', backgroundColor: '#111', borderBottom: '1px solid #222', display: 'flex', gap: '2rem' }}>
+      <div style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-neutral-900)', borderBottom: '1px solid var(--color-border-main)', display: 'flex', gap: '2rem' }}>
         <div>
-          <span style={{ color: '#666', fontSize: '0.75rem' }}>Total Calls</span>
-          <div style={{ color: '#fff', fontWeight: '600' }}>{stats.totalCalls}</div>
+          <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>Total Calls</span>
+          <div style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>{stats.totalCalls}</div>
         </div>
         <div>
-          <span style={{ color: '#666', fontSize: '0.75rem' }}>Connected</span>
-          <div style={{ color: '#10b981', fontWeight: '600' }}>{stats.connected}</div>
+          <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>Connected</span>
+          <div style={{ color: 'var(--color-success)', fontWeight: '600' }}>{stats.connected}</div>
         </div>
         <div>
-          <span style={{ color: '#666', fontSize: '0.75rem' }}>Voicemails</span>
-          <div style={{ color: '#f59e0b', fontWeight: '600' }}>{stats.voicemails}</div>
+          <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>Voicemails</span>
+          <div style={{ color: 'var(--color-warning)', fontWeight: '600' }}>{stats.voicemails}</div>
         </div>
         <div>
-          <span style={{ color: '#666', fontSize: '0.75rem' }}>No Answer</span>
-          <div style={{ color: '#6b7280', fontWeight: '600' }}>{stats.noAnswer}</div>
+          <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>No Answer</span>
+          <div style={{ color: 'var(--color-neutral-500)', fontWeight: '600' }}>{stats.noAnswer}</div>
         </div>
         <div>
-          <span style={{ color: '#666', fontSize: '0.75rem' }}>Talk Time</span>
-          <div style={{ color: '#fff', fontWeight: '600' }}>{formatDuration(stats.totalTalkTime)}</div>
+          <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>Talk Time</span>
+          <div style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>{formatDuration(stats.totalTalkTime)}</div>
         </div>
         <div>
-          <span style={{ color: '#666', fontSize: '0.75rem' }}>Remaining</span>
-          <div style={{ color: '#3b82f6', fontWeight: '600' }}>{contacts.length - currentIndex}</div>
+          <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>Remaining</span>
+          <div style={{ color: 'var(--color-info)', fontWeight: '600' }}>{contacts.length - currentIndex}</div>
         </div>
       </div>
 
       {/* Main Content */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Call Lines */}
-        <div style={{ width: '280px', borderRight: '1px solid #222', overflowY: 'auto' }}>
+        <div style={{ width: '280px', borderRight: '1px solid var(--color-border-main)', overflowY: 'auto' }}>
           <div style={{ padding: '1rem' }}>
-            <h3 style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
               Active Lines ({activeCalls.length}/{config.maxConcurrentCalls})
             </h3>
 
             {activeCalls.length === 0 ? (
-              <div style={{ padding: '2rem', textAlign: 'center', color: '#666', fontSize: '0.875rem' }}>
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                 No active calls
               </div>
             ) : (
@@ -564,20 +564,20 @@ export default function HumanPowerDialer({
                     onClick={() => setSelectedCall(call)}
                     style={{
                       padding: '0.75rem',
-                      backgroundColor: selectedCall?.id === call.id ? '#1a1a1a' : 'transparent',
-                      border: `1px solid ${selectedCall?.id === call.id ? '#333' : 'transparent'}`,
+                      backgroundColor: selectedCall?.id === call.id ? 'var(--color-bg-elevated)' : 'transparent',
+                      border: `1px solid ${selectedCall?.id === call.id ? 'var(--color-border-light)' : 'transparent'}`,
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <span style={{ fontWeight: '600', color: '#fff', fontSize: '0.875rem' }}>
+                      <span style={{ fontWeight: '600', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                         Line {call.line}
                       </span>
                       <span style={{
                         padding: '0.125rem 0.375rem',
                         backgroundColor: getStatusColor(call.status),
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         borderRadius: '0.25rem',
                         fontSize: '0.625rem',
                         fontWeight: '600',
@@ -586,10 +586,10 @@ export default function HumanPowerDialer({
                         {call.status}
                       </span>
                     </div>
-                    <div style={{ color: '#ccc', fontSize: '0.875rem' }}>{call.contact.name}</div>
-                    <div style={{ color: '#666', fontSize: '0.75rem' }}>{call.contact.phone}</div>
+                    <div style={{ color: 'var(--color-neutral-300)', fontSize: '0.875rem' }}>{call.contact.name}</div>
+                    <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>{call.contact.phone}</div>
                     {call.status === 'connected' && (
-                      <div style={{ color: '#10b981', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                      <div style={{ color: 'var(--color-success)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                         {formatDuration(call.duration)}
                       </div>
                     )}
@@ -605,14 +605,14 @@ export default function HumanPowerDialer({
           {selectedCall ? (
             <>
               {/* Contact Info */}
-              <div style={{ padding: '1.5rem', borderBottom: '1px solid #222' }}>
+              <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border-main)' }}>
                 <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between' }}>
                   <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
                       {selectedCall.contact.name}
                     </h2>
-                    <p style={{ color: '#999', margin: '0.25rem 0' }}>{selectedCall.contact.company}</p>
-                    <p style={{ color: '#6366f1', margin: 0 }}>{selectedCall.contact.phone}</p>
+                    <p style={{ color: 'var(--color-text-secondary)', margin: '0.25rem 0' }}>{selectedCall.contact.company}</p>
+                    <p style={{ color: 'var(--color-primary)', margin: 0 }}>{selectedCall.contact.phone}</p>
                   </div>
 
                   {/* Call Controls */}
@@ -625,9 +625,9 @@ export default function HumanPowerDialer({
                           }}
                           style={{
                             padding: '0.5rem 1rem',
-                            backgroundColor: selectedCall.muted ? '#ef4444' : '#222',
-                            color: '#fff',
-                            border: '1px solid #333',
+                            backgroundColor: selectedCall.muted ? 'var(--color-error)' : 'var(--color-border-main)',
+                            color: 'var(--color-text-primary)',
+                            border: '1px solid var(--color-border-light)',
                             borderRadius: '0.375rem',
                             cursor: 'pointer',
                             fontSize: '0.875rem',
@@ -641,9 +641,9 @@ export default function HumanPowerDialer({
                           }}
                           style={{
                             padding: '0.5rem 1rem',
-                            backgroundColor: selectedCall.status === 'on-hold' ? '#f59e0b' : '#222',
-                            color: '#fff',
-                            border: '1px solid #333',
+                            backgroundColor: selectedCall.status === 'on-hold' ? 'var(--color-warning)' : 'var(--color-border-main)',
+                            color: 'var(--color-text-primary)',
+                            border: '1px solid var(--color-border-light)',
                             borderRadius: '0.375rem',
                             cursor: 'pointer',
                             fontSize: '0.875rem',
@@ -655,9 +655,9 @@ export default function HumanPowerDialer({
                           onClick={() => setShowTransfer(true)}
                           style={{
                             padding: '0.5rem 1rem',
-                            backgroundColor: '#222',
-                            color: '#fff',
-                            border: '1px solid #333',
+                            backgroundColor: 'var(--color-border-main)',
+                            color: 'var(--color-text-primary)',
+                            border: '1px solid var(--color-border-light)',
                             borderRadius: '0.375rem',
                             cursor: 'pointer',
                             fontSize: '0.875rem',
@@ -673,8 +673,8 @@ export default function HumanPowerDialer({
                       }}
                       style={{
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#ef4444',
-                        color: '#fff',
+                        backgroundColor: 'var(--color-error)',
+                        color: 'var(--color-text-primary)',
                         border: 'none',
                         borderRadius: '0.375rem',
                         cursor: 'pointer',
@@ -689,8 +689,8 @@ export default function HumanPowerDialer({
 
                 {/* Voicemail Drop */}
                 {selectedCall.answeredBy === 'machine' && config.voicemailDropEnabled && (
-                  <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem' }}>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#f59e0b', marginBottom: '0.5rem' }}>
+                  <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem' }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-warning)', marginBottom: '0.5rem' }}>
                       Voicemail Detected
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -700,10 +700,10 @@ export default function HumanPowerDialer({
                         style={{
                           flex: 1,
                           padding: '0.5rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
+                          backgroundColor: 'var(--color-bg-paper)',
+                          border: '1px solid var(--color-border-light)',
                           borderRadius: '0.375rem',
-                          color: '#fff',
+                          color: 'var(--color-text-primary)',
                         }}
                       >
                         <option value="">Select voicemail to drop...</option>
@@ -717,8 +717,8 @@ export default function HumanPowerDialer({
                         }}
                         style={{
                           padding: '0.5rem 1rem',
-                          backgroundColor: '#f59e0b',
-                          color: '#fff',
+                          backgroundColor: 'var(--color-warning)',
+                          color: 'var(--color-text-primary)',
                           border: 'none',
                           borderRadius: '0.375rem',
                           cursor: 'pointer',
@@ -736,7 +736,7 @@ export default function HumanPowerDialer({
               {/* Notes & Disposition */}
               <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto' }}>
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     Call Notes
                   </label>
                   <textarea
@@ -747,10 +747,10 @@ export default function HumanPowerDialer({
                       width: '100%',
                       minHeight: '120px',
                       padding: '0.75rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-elevated)',
+                      border: '1px solid var(--color-border-light)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                       resize: 'vertical',
                     }}
@@ -768,9 +768,9 @@ export default function HumanPowerDialer({
                         onClick={() => setSelectedOutcome(outcome.id)}
                         style={{
                           padding: '0.5rem 1rem',
-                          backgroundColor: selectedOutcome === outcome.id ? outcome.color : '#1a1a1a',
-                          color: '#fff',
-                          border: `1px solid ${selectedOutcome === outcome.id ? outcome.color : '#333'}`,
+                          backgroundColor: selectedOutcome === outcome.id ? outcome.color : 'var(--color-bg-elevated)',
+                          color: 'var(--color-text-primary)',
+                          border: `1px solid ${selectedOutcome === outcome.id ? outcome.color : 'var(--color-border-light)'}`,
                           borderRadius: '0.375rem',
                           cursor: 'pointer',
                           fontSize: '0.875rem',
@@ -791,8 +791,8 @@ export default function HumanPowerDialer({
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: selectedOutcome ? '#6366f1' : '#333',
-                      color: '#fff',
+                      backgroundColor: selectedOutcome ? 'var(--color-primary)' : 'var(--color-border-light)',
+                      color: 'var(--color-text-primary)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       cursor: selectedOutcome ? 'pointer' : 'not-allowed',
@@ -806,7 +806,7 @@ export default function HumanPowerDialer({
               </div>
             </>
           ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-disabled)' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>No active call selected</div>
                 <p>{isActive ? 'Waiting for next call...' : 'Click "Start Dialing" to begin'}</p>
@@ -828,13 +828,13 @@ export default function HumanPowerDialer({
           zIndex: 100,
         }}>
           <div style={{
-            backgroundColor: '#1a1a1a',
+            backgroundColor: 'var(--color-bg-elevated)',
             borderRadius: '1rem',
             padding: '1.5rem',
             width: '400px',
             maxWidth: '90vw',
           }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
               Transfer Call
             </h3>
             <input
@@ -848,7 +848,7 @@ export default function HumanPowerDialer({
                 backgroundColor: '#0a0a0a',
                 border: '1px solid #333',
                 borderRadius: '0.5rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '1rem',
                 marginBottom: '1rem',
               }}
@@ -859,9 +859,9 @@ export default function HumanPowerDialer({
                 style={{
                   flex: 1,
                   padding: '0.75rem',
-                  backgroundColor: '#222',
-                  color: '#fff',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-border-main)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
                 }}
@@ -875,8 +875,8 @@ export default function HumanPowerDialer({
                 style={{
                   flex: 1,
                   padding: '0.75rem',
-                  backgroundColor: '#6366f1',
-                  color: '#fff',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
@@ -902,7 +902,7 @@ export default function HumanPowerDialer({
           zIndex: 100,
         }}>
           <div style={{
-            backgroundColor: '#1a1a1a',
+            backgroundColor: 'var(--color-bg-elevated)',
             borderRadius: '1rem',
             padding: '1.5rem',
             width: '500px',
@@ -914,7 +914,7 @@ export default function HumanPowerDialer({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                   Max Concurrent Lines (1-3)
                 </label>
                 <input
@@ -926,10 +926,10 @@ export default function HumanPowerDialer({
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-paper)',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.375rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                   }}
                 />
               </div>
@@ -941,7 +941,7 @@ export default function HumanPowerDialer({
                   onChange={e => setConfig({ ...config, voicemailDetection: e.target.checked })}
                   style={{ width: '1.25rem', height: '1.25rem' }}
                 />
-                <label style={{ color: '#ccc', fontSize: '0.875rem' }}>
+                <label style={{ color: 'var(--color-neutral-300)', fontSize: '0.875rem' }}>
                   Enable voicemail detection
                 </label>
               </div>
@@ -953,7 +953,7 @@ export default function HumanPowerDialer({
                   onChange={e => setConfig({ ...config, voicemailDropEnabled: e.target.checked })}
                   style={{ width: '1.25rem', height: '1.25rem' }}
                 />
-                <label style={{ color: '#ccc', fontSize: '0.875rem' }}>
+                <label style={{ color: 'var(--color-neutral-300)', fontSize: '0.875rem' }}>
                   Enable voicemail drops
                 </label>
               </div>
@@ -965,7 +965,7 @@ export default function HumanPowerDialer({
                   onChange={e => setConfig({ ...config, localPresence: e.target.checked })}
                   style={{ width: '1.25rem', height: '1.25rem' }}
                 />
-                <label style={{ color: '#ccc', fontSize: '0.875rem' }}>
+                <label style={{ color: 'var(--color-neutral-300)', fontSize: '0.875rem' }}>
                   Local presence (use local area codes)
                 </label>
               </div>
@@ -977,7 +977,7 @@ export default function HumanPowerDialer({
                   onChange={e => setConfig({ ...config, autoAdvance: e.target.checked })}
                   style={{ width: '1.25rem', height: '1.25rem' }}
                 />
-                <label style={{ color: '#ccc', fontSize: '0.875rem' }}>
+                <label style={{ color: 'var(--color-neutral-300)', fontSize: '0.875rem' }}>
                   Auto-advance to next contact
                 </label>
               </div>
@@ -988,8 +988,8 @@ export default function HumanPowerDialer({
                 onClick={() => setShowSettings(false)}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: '#6366f1',
-                  color: '#fff',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
