@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

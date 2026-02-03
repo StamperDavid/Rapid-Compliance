@@ -56,7 +56,6 @@ function isPagesApiResponse(data: unknown): data is PagesApiResponse {
 
 export default function PublicSitePage() {
   const params = useParams();
-  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
   const orgId = DEFAULT_ORG_ID;
   const slug = (params.slug as string[]) || [''];
   const pagePath = slug.join('/') || 'home';

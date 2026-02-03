@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { Timestamp } from 'firebase-admin/firestore';
@@ -92,19 +92,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify authentication
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
     const { user } = authResult;
-    if (!user.organizationId) {
-      return NextResponse.json(
-        { error: 'Organization ID is required' },
-        { status: 400 }
-      );
-    }
-
     const organizationId = user.organizationId;
     const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get('limit');

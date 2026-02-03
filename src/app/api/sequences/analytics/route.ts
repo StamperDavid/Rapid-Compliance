@@ -9,7 +9,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
@@ -189,19 +189,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify authentication
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
     const { user } = authResult;
     const organizationId = user.organizationId;
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'Organization ID not found' },
-        { status: 400 }
-      );
-    }
     const { searchParams } = new URL(request.url);
     const sequenceId = searchParams.get('sequenceId');
     

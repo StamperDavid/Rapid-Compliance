@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/email-service';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { emailSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Authentication
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

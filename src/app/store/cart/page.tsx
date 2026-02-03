@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useToast } from '@/hooks/useToast';
 import { getOrCreateCart, removeFromCart, updateCartItemQuantity } from '@/lib/ecommerce/cart-service';
@@ -16,14 +16,10 @@ import type { Cart } from '@/types/ecommerce';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export default function ShoppingCartPage() {
-  const params = useParams();
   const router = useRouter();
   const { theme } = useTheme();
   const toast = useToast();
-  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
   const orgId = DEFAULT_ORG_ID;
-  // Keep URL param for routing purposes
-  const urlOrgId = params.orgId as string;
 
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,15 +85,15 @@ export default function ShoppingCartPage() {
   };
 
   const handleCheckout = () => {
-    router.push(`/store/${urlOrgId}/checkout`);
+    router.push('/store/checkout');
   };
 
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: theme.colors.background.main,
         color: theme.colors.text.primary
@@ -108,8 +104,8 @@ export default function ShoppingCartPage() {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       backgroundColor: theme.colors.background.main,
       color: theme.colors.text.primary
     }}>
@@ -125,7 +121,7 @@ export default function ShoppingCartPage() {
               Shopping Cart
             </h1>
             <button
-              onClick={() => router.push(`/store/${urlOrgId}/products`)}
+              onClick={() => router.push('/store/products')}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: 'transparent',
@@ -143,8 +139,8 @@ export default function ShoppingCartPage() {
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.5rem' }}>
         {!cart || cart.items.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
+          <div style={{
+            textAlign: 'center',
             padding: '4rem 0',
             color: theme.colors.text.secondary
           }}>
@@ -152,7 +148,7 @@ export default function ShoppingCartPage() {
             <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Your cart is empty</h2>
             <p style={{ marginBottom: '2rem' }}>Add some products to get started!</p>
             <button
-              onClick={() => router.push(`/store/${urlOrgId}/products`)}
+              onClick={() => router.push('/store/products')}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: theme.colors.primary.main,
@@ -213,7 +209,7 @@ export default function ShoppingCartPage() {
                     <p style={{ color: theme.colors.text.secondary, fontSize: '0.875rem', marginBottom: '1rem' }}>
                       ${item.price.toFixed(2)} each
                     </p>
-                    
+
                     {/* Quantity Controls */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <button
@@ -303,9 +299,9 @@ export default function ShoppingCartPage() {
                     <span style={{ color: theme.colors.text.secondary }}>Shipping</span>
                     <span>{cart.shipping > 0 ? `$${cart.shipping.toFixed(2)}` : 'Calculated at checkout'}</span>
                   </div>
-                  
-                  <div style={{ 
-                    borderTop: `1px solid ${theme.colors.border.light}`, 
+
+                  <div style={{
+                    borderTop: `1px solid ${theme.colors.border.light}`,
                     paddingTop: '1rem',
                     display: 'flex',
                     justifyContent: 'space-between',

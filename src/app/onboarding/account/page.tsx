@@ -16,7 +16,8 @@ import { useOnboardingStore } from '@/lib/stores/onboarding-store';
 import { useAuth } from '@/hooks/useAuth';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/config';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { Building2, Lock, Eye, EyeOff } from 'lucide-react';
 
@@ -29,11 +30,9 @@ export default function AccountCreationPage() {
     fullName,
     email: storedEmail,
     phoneNumber,
-    nicheDescription,
     companyName: storedCompanyName,
     setAccountInfo,
     setStep,
-    planId,
     trialRecords,
   } = useOnboardingStore();
 
@@ -57,7 +56,7 @@ export default function AccountCreationPage() {
   // If already logged in, redirect to their workspace
   useEffect(() => {
     if (user) {
-      router.push('/workspace');
+      router.push('/');
     }
   }, [user, router]);
 
@@ -111,54 +110,33 @@ export default function AccountCreationPage() {
 
       const userId = userCredential.user.uid;
 
-      // Create organization with default trial plan
-      const orgId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      await setDoc(doc(db, COLLECTIONS.ORGANIZATIONS, orgId), {
-        name: formData.companyName,
-        industry: selectedIndustry?.id ?? 'other',
-        industryName: selectedIndustry?.name ?? customIndustry ?? 'Other',
-        customIndustry: customIndustry ?? null,
-        nicheDescription: nicheDescription ?? null,
-
-        // Default Trial Plan - no payment required
-        subscription: {
-          tier: planId,
-          status: 'trial',
-          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          isTrialing: true,
-          trialRequiresPayment: false,
-          recordCount: 0,
-          recordCapacity: trialRecords,
-        },
-
-        // Owner info
-        ownerId: userId,
-        members: [userId],
-
-        // Timestamps
-        createdAt: serverTimestamp(),
+      // Add user to existing platform organization
+      const orgRef = doc(db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+      await updateDoc(orgRef, {
+        members: arrayUnion(userId),
         updatedAt: serverTimestamp(),
       });
 
-      // Create user profile with full contact info
+      // Create user profile linked to platform org
       await setDoc(doc(db, COLLECTIONS.USERS, userId), {
         email: formData.email,
         displayName: fullName ?? formData.companyName,
         fullName: fullName ?? null,
         phoneNumber: phoneNumber ?? null,
-        organizations: [orgId],
-        defaultOrganization: orgId,
+        organizationId: DEFAULT_ORG_ID,
+        organizations: [DEFAULT_ORG_ID],
+        defaultOrganization: DEFAULT_ORG_ID,
+        companyName: formData.companyName,
+        industry: selectedIndustry?.id ?? 'other',
+        industryName: selectedIndustry?.name ?? customIndustry ?? 'Other',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      // Store account info
+      // Store account info and redirect
       setAccountInfo(formData.email, formData.companyName);
       setStep('business');
-
-      // Redirect to business onboarding
-      router.push(`/workspace/${orgId}/onboarding`);
+      router.push('/onboarding/business');
     } catch (error: unknown) {
       console.error('Account creation error:', error);
 

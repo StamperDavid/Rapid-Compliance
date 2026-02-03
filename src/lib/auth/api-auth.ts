@@ -253,13 +253,3 @@ export async function requireRole(
   return { user };
 }
 
-/**
- * @deprecated Use requireAuth() instead. In single-tenant mode all authenticated
- * users belong to DEFAULT_ORG_ID — organization membership checks are unnecessary.
- */
-export async function requireOrganization(
-  request: NextRequest,
-  _organizationId?: string
-): Promise<{ user: AuthenticatedUser } | NextResponse> {
-  return requireAuth(request);
-}

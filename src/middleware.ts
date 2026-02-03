@@ -74,6 +74,22 @@ export function middleware(request: NextRequest) {
   // The /sites/[orgId] routes still exist for URL compatibility but always use
   // the same organization internally
 
+  // Redirect legacy /store/[orgId]/* to /store/*
+  if (pathname.match(/^\/store\/[^/]+\/(products|cart|checkout)/)) {
+    const newUrl = request.nextUrl.clone();
+    newUrl.pathname = pathname.replace(/^\/store\/[^/]+/, '/store');
+    newUrl.search = search;
+    return NextResponse.redirect(newUrl, 308);
+  }
+
+  // Redirect legacy /sites/[orgId]/* to /sites/*
+  if (pathname.match(/^\/sites\/[^/]+\//)) {
+    const newUrl = request.nextUrl.clone();
+    newUrl.pathname = pathname.replace(/^\/sites\/[^/]+/, '/sites');
+    newUrl.search = search;
+    return NextResponse.redirect(newUrl, 308);
+  }
+
   // Allow all other routes through
   return NextResponse.next();
 }

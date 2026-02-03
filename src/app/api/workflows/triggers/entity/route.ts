@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { handleEntityChange } from '@/lib/workflows/triggers/firestore-trigger';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

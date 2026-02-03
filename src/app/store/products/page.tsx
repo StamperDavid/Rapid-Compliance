@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -25,13 +25,9 @@ interface Product {
 }
 
 export default function ProductCatalogPage() {
-  const params = useParams();
   const router = useRouter();
   const { theme } = useTheme();
-  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
   const orgId = DEFAULT_ORG_ID;
-  // Keep URL param for routing purposes
-  const urlOrgId = params.orgId as string;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,15 +76,15 @@ export default function ProductCatalogPage() {
   });
 
   const handleProductClick = (productId: string) => {
-    router.push(`/store/${urlOrgId}/products/${productId}`);
+    router.push(`/store/products/${productId}`);
   };
 
   if (loading) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: theme.colors.background.main,
         color: theme.colors.text.primary
@@ -99,8 +95,8 @@ export default function ProductCatalogPage() {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       backgroundColor: theme.colors.background.main,
       color: theme.colors.text.primary
     }}>
@@ -128,7 +124,7 @@ export default function ProductCatalogPage() {
               </h1>
             </div>
             <button
-              onClick={() => router.push(`/store/${urlOrgId}/cart`)}
+              onClick={() => router.push('/store/cart')}
               style={{
                 padding: '0.625rem 1.25rem',
                 backgroundColor: theme.colors.primary.main,
@@ -203,8 +199,8 @@ export default function ProductCatalogPage() {
 
         {/* Product Grid */}
         {filteredProducts.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
+          <div style={{
+            textAlign: 'center',
             padding: '4rem 0',
             color: theme.colors.text.secondary
           }}>
@@ -262,17 +258,17 @@ export default function ProductCatalogPage() {
 
                 {/* Product Info */}
                 <div style={{ padding: '1rem' }}>
-                  <h3 style={{ 
-                    fontSize: '1.125rem', 
+                  <h3 style={{
+                    fontSize: '1.125rem',
                     fontWeight: '600',
                     margin: '0 0 0.5rem 0',
                     color: theme.colors.text.primary
                   }}>
                     {product.name}
                   </h3>
-                  
-                  <p style={{ 
-                    fontSize: '0.875rem', 
+
+                  <p style={{
+                    fontSize: '0.875rem',
                     color: theme.colors.text.secondary,
                     margin: '0 0 1rem 0',
                     display: '-webkit-box',
@@ -283,19 +279,19 @@ export default function ProductCatalogPage() {
                     {product.description}
                   </p>
 
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between' 
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
                   }}>
-                    <span style={{ 
-                      fontSize: '1.5rem', 
+                    <span style={{
+                      fontSize: '1.5rem',
                       fontWeight: 'bold',
                       color: theme.colors.primary.main
                     }}>
                       ${product.price.toFixed(2)}
                     </span>
-                    
+
                     {!product.inStock && (
                       <span style={{
                         fontSize: '0.75rem',

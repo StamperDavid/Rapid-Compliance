@@ -69,6 +69,8 @@
   --color-surface-active: rgba(99, 102, 241, 0.2);
   --color-text-tertiary: var(--color-text-disabled);
   --color-primary-surface: rgba(99, 102, 241, 0.1);
+  --color-primary-rgb: 99, 102, 241;
+  --gradient-brand: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
 
   /* Sidebar specific */
   --sidebar-width: 280px;

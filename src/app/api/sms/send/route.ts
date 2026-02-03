@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { sendSMS, type SMSOptions } from '@/lib/sms/sms-service';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { smsSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Authentication
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

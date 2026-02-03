@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth'
 import { logger } from '@/lib/logger/logger';
 
 export interface ThemeConfig {
@@ -71,42 +70,31 @@ const DEFAULT_THEME: ThemeConfig = {
 };
 
 /**
- * Hook to load organization-specific theme from Firestore
- * Each organization can have their own colors, fonts, logos, etc.
- * Perfect for white-label multi-tenant SaaS
+ * Hook to load platform theme from Firestore
+ * Loads global theme config and applies CSS variables to document.documentElement
  */
 export function useOrgTheme() {
-  const { user } = useAuth();
   const [theme, setTheme] = useState<ThemeConfig>(DEFAULT_THEME);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadOrgTheme = async () => {
-      if (!user?.organizationId) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const themeData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/settings`,
-          'theme'
-        );
+        const { FirestoreService } = await import('@/lib/db/firestore-service');
+        const themeData = await FirestoreService.get('platform_settings', 'theme');
 
         if (themeData) {
-          // Merge with defaults to ensure all properties exist
           setTheme({ ...DEFAULT_THEME, ...themeData } as ThemeConfig);
         }
       } catch (error) {
-        logger.error('Failed to load organization theme:', error instanceof Error ? error : new Error(String(error)), { file: 'useOrgTheme.ts' });
+        logger.error('Failed to load platform theme:', error instanceof Error ? error : new Error(String(error)), { file: 'useOrgTheme.ts' });
       } finally {
         setLoading(false);
       }
     };
 
     void loadOrgTheme();
-  }, [user?.organizationId]);
+  }, []);
 
   // Apply CSS variables whenever theme changes
   useEffect(() => {

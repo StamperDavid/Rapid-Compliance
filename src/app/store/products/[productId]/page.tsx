@@ -32,10 +32,7 @@ export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { theme } = useTheme();
-  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
   const orgId = DEFAULT_ORG_ID;
-  // Keep URL param for routing purposes
-  const urlOrgId = params.orgId as string;
   const productId = params.productId as string;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -77,7 +74,7 @@ export default function ProductDetailPage() {
 
       // Show success and redirect to cart
       toast.success('Added to cart!');
-      router.push(`/store/${urlOrgId}/cart`);
+      router.push('/store/cart');
     } catch (error) {
       logger.error('Error adding to cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       toast.error('Failed to add to cart');
@@ -88,10 +85,10 @@ export default function ProductDetailPage() {
 
   if (loading || !product) {
     return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: theme.colors.background.main,
         color: theme.colors.text.primary
@@ -102,8 +99,8 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
+    <div style={{
+      minHeight: '100vh',
       backgroundColor: theme.colors.background.main,
       color: theme.colors.text.primary
     }}>
@@ -116,7 +113,7 @@ export default function ProductDetailPage() {
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button
-              onClick={() => router.push(`/store/${urlOrgId}/products`)}
+              onClick={() => router.push('/store/products')}
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: 'transparent',
@@ -129,7 +126,7 @@ export default function ProductDetailPage() {
               ← Back to Products
             </button>
             <button
-              onClick={() => router.push(`/store/${urlOrgId}/cart`)}
+              onClick={() => router.push('/store/cart')}
               style={{
                 padding: '0.625rem 1.25rem',
                 backgroundColor: theme.colors.primary.main,
@@ -174,7 +171,7 @@ export default function ProductDetailPage() {
                 <span style={{ fontSize: '6rem' }}>📦</span>
               )}
             </div>
-            
+
             {(product.images?.length ?? 0) > 1 && (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {product.images?.map((img, idx) => (
@@ -204,7 +201,7 @@ export default function ProductDetailPage() {
             <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
               {product.name}
             </h1>
-            
+
             {product.category ? (
               <p style={{
                 fontSize: '0.875rem',

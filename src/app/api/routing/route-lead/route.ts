@@ -29,7 +29,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { hasUnifiedPermission, type AccountRole } from '@/types/unified-rbac';
 import { routeLead as executeRouting, type RoutingResult } from '@/lib/crm/lead-routing';
 import { getLead, updateLead } from '@/lib/crm/lead-service';
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     // 1. AUTHENTICATION & AUTHORIZATION
     // =========================================================================
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
 
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -135,14 +135,6 @@ export async function POST(request: NextRequest) {
           error: 'Insufficient permissions. canAssignRecords permission required.',
         },
         { status: 403 }
-      );
-    }
-
-    // Ensure organization ID is present
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization context required' },
-        { status: 400 }
       );
     }
 

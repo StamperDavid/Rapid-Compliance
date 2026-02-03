@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import { MerchantOrchestrator } from '@/components/orchestrator';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Admin Layout
@@ -26,7 +28,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         className="admin-theme-scope"
         style={{
           minHeight: '100vh',
-          backgroundColor: '#000',
+          backgroundColor: 'var(--color-bg-main)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -37,14 +39,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             style={{
               width: '40px',
               height: '40px',
-              border: '3px solid #333',
-              borderTopColor: '#6366f1',
+              border: '3px solid var(--color-border-light)',
+              borderTopColor: 'var(--color-primary)',
               borderRadius: '50%',
               animation: 'spin 0.8s linear infinite',
               margin: '0 auto 1rem',
             }}
           />
-          <p style={{ color: '#999', fontSize: '0.875rem' }}>Verifying admin access...</p>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Verifying admin access...</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
@@ -56,7 +58,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="admin-theme-scope" style={{ minHeight: '100vh', backgroundColor: '#000' }}>
+    <div className="admin-theme-scope" style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <AdminSidebar />
 
       {/* Main content area offset by sidebar width */}
@@ -69,6 +71,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       >
         {children}
       </main>
+
+      <MerchantOrchestrator orgId={DEFAULT_ORG_ID} />
     </div>
   );
 }

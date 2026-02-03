@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { getOrCreateCart } from '@/lib/ecommerce/cart-service';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
@@ -28,18 +28,14 @@ interface Cart {
 }
 
 export default function CheckoutPage() {
-  const params = useParams();
   const router = useRouter();
   const { theme } = useTheme();
-  // Use DEFAULT_ORG_ID for single-tenant - URL param kept for backward compatibility
   const orgId = DEFAULT_ORG_ID;
-  // Keep URL param for routing purposes
-  const urlOrgId = params.orgId as string;
 
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     email: '',
     name: '',
@@ -57,13 +53,13 @@ export default function CheckoutPage() {
     try {
       const sessionId = localStorage.getItem('cartSessionId');
       if (!sessionId) {
-        router.push(`/store/${urlOrgId}/cart`);
+        router.push('/store/cart');
         return;
       }
 
       const cartData = await getOrCreateCart(sessionId, 'default', orgId);
       if (!cartData.items || cartData.items.length === 0) {
-        router.push(`/store/${urlOrgId}/cart`);
+        router.push('/store/cart');
         return;
       }
 
@@ -73,7 +69,7 @@ export default function CheckoutPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, router, urlOrgId]);
+  }, [orgId, router]);
 
   useEffect(() => {
     void loadCart();
@@ -130,7 +126,7 @@ export default function CheckoutPage() {
 
       // Clear cart and redirect to success
       localStorage.removeItem('cartSessionId');
-      router.push(`/store/${urlOrgId}/checkout/success?orderId=${order.id}`);
+      router.push(`/store/checkout/success?orderId=${order.id}`);
     } catch (error) {
       logger.error('Checkout error:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       const message = error instanceof Error && error.message ? error.message : 'Checkout failed. Please try again.';
@@ -195,7 +191,7 @@ export default function CheckoutPage() {
                   <div>${item.subtotal.toFixed(2)}</div>
                 </div>
               ))}
-              
+
               <div style={{ marginTop: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: theme.colors.text.secondary }}>
                   <span>Subtotal</span>
@@ -225,4 +221,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-

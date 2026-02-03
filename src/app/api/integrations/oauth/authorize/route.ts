@@ -4,7 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { generateAuthUrl } from '@/lib/integrations/oauth-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -35,13 +35,6 @@ export async function GET(request: NextRequest) {
 
     const { user } = authResult;
     const organizationId = user.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
-    }
 
     const workspaceIdForAuth = (workspaceId !== '' && workspaceId != null) ? workspaceId : undefined;
     const authUrl = await generateAuthUrl(organizationId, workspaceIdForAuth, integrationId, provider);

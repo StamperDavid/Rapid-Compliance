@@ -4,7 +4,7 @@
  */
 
 import type { NextRequest } from 'next/server';
-import { requireAuth, requireRole, requireOrganization, type AuthenticatedUser } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole, type AuthenticatedUser } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import type { AccountRole } from '@/types/unified-rbac';
 
@@ -60,17 +60,18 @@ export async function requireUserRole(
 
 /**
  * Require organization membership for an API route
+ * In single-tenant mode, this is equivalent to requireAuthToken
  */
 export async function requireUserOrganization(
   request: NextRequest,
-  organizationId?: string
+  _organizationId?: string
 ): Promise<AuthenticatedUser> {
-  const result = await requireOrganization(request, organizationId);
-  
+  const result = await requireAuth(request);
+
   if ('status' in result) {
     throw new Error('Organization access denied');
   }
-  
+
   return result.user;
 }
 

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import {
   getIntegration,
   updateIntegration,
@@ -21,16 +21,12 @@ export async function GET(
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
     const { user } = authResult;
-
-    if (!user.organizationId) {
-      return errors.badRequest('Organization ID required');
-    }
 
     const integration = await getIntegration(user.organizationId, params.integrationId);
 
@@ -63,7 +59,7 @@ export async function PATCH(
   { params }: { params: { integrationId: string } }
 ) {
   try {
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -75,10 +71,6 @@ export async function PATCH(
     }
 
     const { user } = authResult;
-
-    if (!user.organizationId) {
-      return errors.badRequest('Organization ID required');
-    }
 
     const updateData = {
       ...(bodyResult.data.accessToken && { accessToken: bodyResult.data.accessToken }),
@@ -106,16 +98,12 @@ export async function DELETE(
   { params }: { params: { integrationId: string } }
 ) {
   try {
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
     const { user } = authResult;
-
-    if (!user.organizationId) {
-      return errors.badRequest('Organization ID required');
-    }
 
     await deleteIntegration(user.organizationId, params.integrationId);
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { MerchantOrchestrator } from '@/components/orchestrator';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
@@ -17,10 +18,11 @@ export default function PenthouseDashboardLayout({
 }) {
   const orgId = DEFAULT_ORG_ID;
   const { user } = useAuth();
+  useOrgTheme();
 
   // If no user, still render children (auth guards on individual pages handle redirects)
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       {user && <AdminSidebar />}
 
       {/* Main content area offset by sidebar width */}

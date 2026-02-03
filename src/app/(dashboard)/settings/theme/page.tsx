@@ -106,10 +106,10 @@ export default function ThemeEditorPage() {
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const { FirestoreService } = await import('@/lib/db/firestore-service');
         const themeData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.THEMES}`,
-          'default'
+          'platform_settings',
+          'theme'
         );
         
         if (themeData) {
@@ -225,21 +225,20 @@ export default function ThemeEditorPage() {
 
     try {
       // Save to Firestore
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.THEMES}`,
-        'default',
+        'platform_settings',
+        'theme',
         {
           ...theme,
           updatedAt: new Date().toISOString(),
-          organizationId: orgId,
         },
         false
       );
-      
+
       // Also save to localStorage as fallback/cache
       localStorage.setItem('appTheme', JSON.stringify(theme));
-      
+
       // Apply favicon if present
       if (theme.branding.favicon) {
         const favicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
@@ -258,20 +257,34 @@ export default function ThemeEditorPage() {
         document.title = `${theme.branding.companyName} - CRM`;
       }
 
-      // Apply CSS custom properties for global theme
+      // Apply all CSS custom properties for global theme
       const root = document.documentElement;
       root.style.setProperty('--color-primary', theme.colors.primary.main);
+      root.style.setProperty('--color-primary-light', theme.colors.primary.light);
+      root.style.setProperty('--color-primary-dark', theme.colors.primary.dark);
       root.style.setProperty('--color-secondary', theme.colors.secondary.main);
       root.style.setProperty('--color-accent', theme.colors.accent.main);
+      root.style.setProperty('--color-success', theme.colors.success.main);
+      root.style.setProperty('--color-error', theme.colors.error.main);
+      root.style.setProperty('--color-warning', theme.colors.warning.main);
+      root.style.setProperty('--color-info', theme.colors.info.main);
+      root.style.setProperty('--color-bg-main', theme.colors.background.main);
+      root.style.setProperty('--color-bg-paper', theme.colors.background.paper);
+      root.style.setProperty('--color-bg-elevated', theme.colors.background.elevated);
+      root.style.setProperty('--color-text-primary', theme.colors.text.primary);
+      root.style.setProperty('--color-text-secondary', theme.colors.text.secondary);
+      root.style.setProperty('--color-text-disabled', theme.colors.text.disabled);
+      root.style.setProperty('--color-border-main', theme.colors.border.main);
+      root.style.setProperty('--color-border-light', theme.colors.border.light);
+      root.style.setProperty('--color-border-strong', theme.colors.border.strong);
       root.style.setProperty('--font-heading', theme.typography.fontFamily.heading);
       root.style.setProperty('--font-body', theme.typography.fontFamily.body);
+      root.style.setProperty('--font-mono', theme.typography.fontFamily.mono);
+      root.style.setProperty('--radius-card', theme.layout.borderRadius.card);
+      root.style.setProperty('--radius-button', theme.layout.borderRadius.button);
+      root.style.setProperty('--radius-input', theme.layout.borderRadius.input);
 
       setSaveMessage({ type: 'success', message: 'Theme saved and applied successfully!' });
-      
-      // Trigger a page reload to apply theme changes everywhere
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to save theme';
       setSaveMessage({ type: 'error', message: errorMessage });

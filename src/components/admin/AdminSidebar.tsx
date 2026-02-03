@@ -292,16 +292,16 @@ export default function AdminSidebar() {
         } md:translate-x-0`}
         style={{
           width: currentWidth,
-          backgroundColor: '#0a0a0a',
-          borderRight: '1px solid #1f1f1f',
+          backgroundColor: 'var(--color-bg-paper)',
+          borderRight: '1px solid var(--color-border-light)',
         }}
       >
         {/* Header / Branding */}
         <div
           style={{
             padding: isCollapsed ? '1.25rem 0.75rem' : '1.5rem 1.25rem',
-            borderBottom: '1px solid #1f1f1f',
-            backgroundColor: '#0f0f0f',
+            borderBottom: '1px solid var(--color-border-light)',
+            backgroundColor: 'var(--color-bg-elevated)',
           }}
         >
           {!isCollapsed ? (
@@ -311,12 +311,12 @@ export default function AdminSidebar() {
                   width: 36,
                   height: 36,
                   borderRadius: '0.5rem',
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  background: 'var(--gradient-brand)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 700,
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   flexShrink: 0,
                 }}
@@ -328,7 +328,7 @@ export default function AdminSidebar() {
                   style={{
                     fontSize: '0.9375rem',
                     fontWeight: 700,
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -339,7 +339,7 @@ export default function AdminSidebar() {
                 <div
                   style={{
                     fontSize: '0.6875rem',
-                    color: '#6366f1',
+                    color: 'var(--color-primary)',
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
@@ -355,12 +355,12 @@ export default function AdminSidebar() {
                 width: 36,
                 height: 36,
                 borderRadius: '0.5rem',
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                background: 'var(--gradient-brand)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 700,
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.875rem',
                 margin: '0 auto',
               }}
@@ -383,12 +383,12 @@ export default function AdminSidebar() {
               width: 28,
               height: 28,
               borderRadius: '0.375rem',
-              border: '1px solid #2a2a2a',
-              backgroundColor: '#141414',
+              border: '1px solid var(--color-border-light)',
+              backgroundColor: 'var(--color-bg-elevated)',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: '#666',
+              color: 'var(--color-text-disabled)',
             }}
           >
             {isCollapsed ? (
@@ -411,13 +411,13 @@ export default function AdminSidebar() {
               width: 28,
               height: 28,
               borderRadius: '0.375rem',
-              border: '1px solid #2a2a2a',
-              backgroundColor: '#141414',
+              border: '1px solid var(--color-border-light)',
+              backgroundColor: 'var(--color-bg-elevated)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              color: '#666',
+              color: 'var(--color-text-disabled)',
             }}
           >
             <X className="w-4 h-4" />
@@ -453,7 +453,7 @@ export default function AdminSidebar() {
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      color: hasActiveItem ? '#6366f1' : '#555',
+                      color: hasActiveItem ? 'var(--color-primary)' : 'var(--color-text-disabled)',
                     }}
                   >
                     <span
@@ -476,7 +476,7 @@ export default function AdminSidebar() {
                   <div
                     style={{
                       height: 1,
-                      backgroundColor: '#1f1f1f',
+                      backgroundColor: 'var(--color-border-light)',
                       margin: '0.5rem 0.75rem',
                     }}
                   />
@@ -501,27 +501,27 @@ export default function AdminSidebar() {
                           padding: isCollapsed ? '0.625rem 0' : '0.625rem 1.25rem',
                           justifyContent: isCollapsed ? 'center' : 'flex-start',
                           textDecoration: 'none',
-                          backgroundColor: active ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
-                          borderLeft: active ? '3px solid #6366f1' : '3px solid transparent',
-                          color: active ? '#fff' : '#888',
+                          backgroundColor: active ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
+                          borderLeft: active ? '3px solid var(--color-primary)' : '3px solid transparent',
+                          color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                           transition: 'all 0.15s ease',
                         }}
                         onMouseEnter={(e) => {
                           if (!active) {
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
-                            e.currentTarget.style.color = '#ccc';
+                            e.currentTarget.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.04)';
+                            e.currentTarget.style.color = 'var(--color-text-primary)';
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (!active) {
                             e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = '#888';
+                            e.currentTarget.style.color = 'var(--color-text-secondary)';
                           }
                         }}
                       >
                         <Icon
                           className="w-4 h-4 flex-shrink-0"
-                          style={{ color: active ? item.iconColor : '#666' }}
+                          style={{ color: active ? item.iconColor : 'var(--color-text-disabled)' }}
                         />
                         {!isCollapsed && (
                           <span
@@ -548,8 +548,8 @@ export default function AdminSidebar() {
         <div
           style={{
             padding: '0.75rem 1.25rem',
-            borderTop: '1px solid #1f1f1f',
-            backgroundColor: '#0f0f0f',
+            borderTop: '1px solid var(--color-border-light)',
+            backgroundColor: 'var(--color-bg-elevated)',
           }}
         >
           {!isCollapsed ? (
@@ -557,7 +557,7 @@ export default function AdminSidebar() {
               <div
                 style={{
                   fontSize: '0.6875rem',
-                  color: '#444',
+                  color: 'var(--color-text-disabled)',
                 }}
               >
                 RapidCompliance.US
@@ -565,7 +565,7 @@ export default function AdminSidebar() {
               <div
                 style={{
                   fontSize: '0.625rem',
-                  color: '#333',
+                  color: 'var(--color-text-disabled)',
                   fontFamily: 'monospace',
                 }}
               >
@@ -576,7 +576,7 @@ export default function AdminSidebar() {
             <div
               style={{
                 fontSize: '0.6875rem',
-                color: '#444',
+                color: 'var(--color-text-disabled)',
                 textAlign: 'center',
               }}
             >
@@ -589,15 +589,15 @@ export default function AdminSidebar() {
       {/* Mobile Toggle Button */}
       <button
         type="button"
-        className="md:hidden fixed bottom-4 right-4 z-40"
+        className="md:hidden fixed bottom-4 left-4 z-40"
         onClick={handleMobileToggle}
         aria-label="Toggle sidebar"
         style={{
           width: 56,
           height: 56,
           borderRadius: '50%',
-          backgroundColor: '#6366f1',
-          boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+          backgroundColor: 'var(--color-primary)',
+          boxShadow: '0 4px 12px rgba(var(--color-primary-rgb), 0.3)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

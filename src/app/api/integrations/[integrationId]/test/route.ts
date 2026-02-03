@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { testIntegration } from '@/lib/integrations/integration-manager';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -16,16 +16,12 @@ export async function POST(
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/test');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireOrganization(request);
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
     const { user } = authResult;
-
-    if (!user.organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
 
     const result = await testIntegration(user.organizationId, params.integrationId);
 
