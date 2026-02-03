@@ -34,6 +34,7 @@ interface BaseAgent {
   path: string;
   note: string;
   manager?: string;
+  capabilities?: string[];
 }
 
 interface OrchestratorAgent extends BaseAgent {
@@ -50,13 +51,11 @@ interface ManagerAgent extends BaseAgent {
 interface SpecialistAgent extends BaseAgent {
   level: 'L3';
   manager: string;
-  capabilities?: string[];
 }
 
 interface StandaloneAgent extends BaseAgent {
   level: 'Standalone';
   type: string;
-  capabilities?: string[];
 }
 
 type Agent = OrchestratorAgent | ManagerAgent | SpecialistAgent | StandaloneAgent;
@@ -885,13 +884,13 @@ function AgentCard({ agent }: { agent: Agent }) {
       )}
 
       {/* Capabilities */}
-      {'capabilities' in agent && agent.capabilities && agent.capabilities.length > 0 && (
+      {agent.capabilities && agent.capabilities.length > 0 && (
         <div>
           <div style={{ fontSize: '0.6875rem', color: '#666', marginBottom: '0.5rem', fontWeight: 600 }}>
             CAPABILITIES
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-            {agent.capabilities.slice(0, 5).map((cap: string) => (
+            {agent.capabilities.slice(0, 5).map((cap) => (
               <span
                 key={cap}
                 style={{
