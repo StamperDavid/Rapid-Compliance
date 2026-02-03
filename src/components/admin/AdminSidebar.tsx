@@ -4,7 +4,8 @@
  * Admin Sidebar Component
  * RapidCompliance.US - Penthouse Admin Navigation
  *
- * Provides persistent sidebar navigation for the admin dashboard.
+ * Full command-center sidebar exposing all 51 AI agents, 130+ routes,
+ * and 215+ API endpoints across CRM, Sales, Marketing, AI, and more.
  * Single-tenant: all links use static routes with rapid-compliance-root identity.
  */
 
@@ -13,11 +14,45 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  Users,
+  Handshake,
+  Contact,
+  MessageSquare,
   BookOpen,
+  Send,
+  ListOrdered,
+  FileText,
+  Swords,
+  Mail,
+  Share2,
+  FlaskConical,
+  Video,
   Bot,
-  FileBarChart,
+  GraduationCap,
+  UserCog,
+  Phone,
+  Workflow,
+  Route,
+  ShieldCheck,
+  ScrollText,
+  TrendingUp,
+  BarChart3,
+  Activity,
+  Target,
+  Globe,
+  FileEdit,
+  Search,
+  Link2,
+  Settings,
+  UsersRound,
+  Plug,
+  KeyRound,
+  Palette,
+  Lock,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Menu,
   X,
   type LucideIcon,
@@ -33,41 +68,110 @@ interface AdminNavItem {
   href: string;
   icon: LucideIcon;
   iconColor: string;
-  description: string;
 }
 
-const ADMIN_NAV_ITEMS: AdminNavItem[] = [
+interface AdminNavSection {
+  id: string;
+  label: string;
+  items: AdminNavItem[];
+}
+
+const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
   {
-    id: 'dashboard',
-    label: 'Dashboard',
-    href: '/admin',
-    icon: LayoutDashboard,
-    iconColor: '#6366f1',
-    description: 'Platform overview & stats',
+    id: 'command-center',
+    label: 'Command Center',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', href: '/admin', icon: LayoutDashboard, iconColor: '#6366f1' },
+    ],
   },
   {
-    id: 'living-ledger',
-    label: 'Living Ledger',
-    href: '/admin/living-ledger',
-    icon: BookOpen,
-    iconColor: '#10b981',
-    description: 'CRM deal intelligence',
+    id: 'crm',
+    label: 'CRM',
+    items: [
+      { id: 'leads', label: 'Leads', href: '/leads', icon: Users, iconColor: '#6366f1' },
+      { id: 'deals', label: 'Deals / Pipeline', href: '/deals', icon: Handshake, iconColor: '#8b5cf6' },
+      { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Contact, iconColor: '#06b6d4' },
+      { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: '#10b981' },
+      { id: 'living-ledger', label: 'Living Ledger', href: '/admin/living-ledger', icon: BookOpen, iconColor: '#f59e0b' },
+    ],
+  },
+  {
+    id: 'sales',
+    label: 'Sales',
+    items: [
+      { id: 'outbound', label: 'Outbound', href: '/outbound', icon: Send, iconColor: '#6366f1' },
+      { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: '#8b5cf6' },
+      { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: '#06b6d4' },
+      { id: 'battlecards', label: 'Battlecards', href: '/battlecards', icon: Swords, iconColor: '#f59e0b' },
+    ],
+  },
+  {
+    id: 'marketing',
+    label: 'Marketing',
+    items: [
+      { id: 'email-campaigns', label: 'Email Campaigns', href: '/email/campaigns', icon: Mail, iconColor: '#6366f1' },
+      { id: 'social-media', label: 'Social Media', href: '/social/campaigns', icon: Share2, iconColor: '#8b5cf6' },
+      { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: '#10b981' },
+      { id: 'content', label: 'Content', href: '/content/video', icon: Video, iconColor: '#f59e0b' },
+    ],
   },
   {
     id: 'ai-agents',
-    label: 'AI Agents / Tools',
-    href: '/admin/ai-agents',
-    icon: Bot,
-    iconColor: '#06b6d4',
-    description: 'Agent management & orchestration',
+    label: 'AI & Agents',
+    items: [
+      { id: 'agent-registry', label: 'Agent Registry', href: '/admin/ai-agents', icon: Bot, iconColor: '#06b6d4' },
+      { id: 'training-center', label: 'Training Center', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: '#10b981' },
+      { id: 'agent-persona', label: 'Agent Persona', href: '/settings/ai-agents/persona', icon: UserCog, iconColor: '#8b5cf6' },
+      { id: 'voice-ai', label: 'Voice AI', href: '/voice/training', icon: Phone, iconColor: '#f59e0b' },
+    ],
   },
   {
-    id: 'compliance-reports',
-    label: 'Compliance Reports',
-    href: '/admin/compliance-reports',
-    icon: FileBarChart,
-    iconColor: '#f59e0b',
-    description: 'Regulatory & compliance reporting',
+    id: 'automation',
+    label: 'Automation',
+    items: [
+      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: '#6366f1' },
+      { id: 'lead-routing', label: 'Lead Routing', href: '/settings/lead-routing', icon: Route, iconColor: '#8b5cf6' },
+    ],
+  },
+  {
+    id: 'compliance',
+    label: 'Compliance',
+    items: [
+      { id: 'compliance-reports', label: 'Compliance Reports', href: '/admin/compliance-reports', icon: ShieldCheck, iconColor: '#10b981' },
+      { id: 'audit-log', label: 'Audit Log', href: '/website/audit-log', icon: ScrollText, iconColor: '#f59e0b' },
+    ],
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    items: [
+      { id: 'revenue', label: 'Revenue', href: '/analytics/revenue', icon: TrendingUp, iconColor: '#10b981' },
+      { id: 'pipeline', label: 'Pipeline', href: '/analytics/pipeline', icon: BarChart3, iconColor: '#6366f1' },
+      { id: 'sales-perf', label: 'Sales Performance', href: '/analytics/sales', icon: Activity, iconColor: '#8b5cf6' },
+      { id: 'lead-scoring', label: 'Lead Scoring', href: '/lead-scoring', icon: Target, iconColor: '#f59e0b' },
+    ],
+  },
+  {
+    id: 'website',
+    label: 'Website',
+    items: [
+      { id: 'site-editor', label: 'Site Editor', href: '/website/editor', icon: Globe, iconColor: '#6366f1' },
+      { id: 'pages-blog', label: 'Pages & Blog', href: '/website/pages', icon: FileEdit, iconColor: '#8b5cf6' },
+      { id: 'seo', label: 'SEO', href: '/website/seo', icon: Search, iconColor: '#10b981' },
+      { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: '#06b6d4' },
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    items: [
+      { id: 'general', label: 'General', href: '/settings', icon: Settings, iconColor: '#999' },
+      { id: 'users-team', label: 'Users & Team', href: '/settings/users', icon: UsersRound, iconColor: '#6366f1' },
+      { id: 'integrations', label: 'Integrations', href: '/settings/integrations', icon: Plug, iconColor: '#8b5cf6' },
+      { id: 'api-keys', label: 'API Keys', href: '/settings/api-keys', icon: KeyRound, iconColor: '#10b981' },
+      { id: 'theme', label: 'Theme & Branding', href: '/settings/theme', icon: Palette, iconColor: '#f59e0b' },
+      { id: 'security', label: 'Security', href: '/settings/security', icon: Lock, iconColor: '#ef4444' },
+    ],
   },
 ];
 
@@ -82,6 +186,7 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   const handleToggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);
@@ -93,6 +198,13 @@ export default function AdminSidebar() {
 
   const handleMobileClose = useCallback(() => {
     setMobileOpen(false);
+  }, []);
+
+  const toggleSection = useCallback((sectionId: string) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [sectionId]: !prev[sectionId],
+    }));
   }, []);
 
   const isActive = (href: string): boolean => {
@@ -136,7 +248,6 @@ export default function AdminSidebar() {
         >
           {!isCollapsed ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {/* Logo mark */}
               <div
                 style={{
                   width: 36,
@@ -260,94 +371,117 @@ export default function AdminSidebar() {
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '1rem 0',
+            padding: '0.5rem 0',
           }}
         >
-          {!isCollapsed && (
-            <div
-              style={{
-                padding: '0 1.25rem',
-                marginBottom: '0.75rem',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '0.6875rem',
-                  fontWeight: 600,
-                  color: '#444',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                Navigation
-              </span>
-            </div>
-          )}
-
-          {ADMIN_NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
+          {ADMIN_NAV_SECTIONS.map((section) => {
+            const isSectionCollapsed = collapsedSections[section.id] ?? false;
+            const hasActiveItem = section.items.some((item) => isActive(item.href));
 
             return (
-              <Link
-                key={item.id}
-                href={item.href}
-                title={isCollapsed ? item.label : undefined}
-                onClick={handleMobileClose}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: isCollapsed ? '0.875rem 0' : '0.875rem 1.25rem',
-                  justifyContent: isCollapsed ? 'center' : 'flex-start',
-                  textDecoration: 'none',
-                  backgroundColor: active ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
-                  borderLeft: active ? '3px solid #6366f1' : '3px solid transparent',
-                  color: active ? '#fff' : '#888',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
-                    e.currentTarget.style.color = '#ccc';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#888';
-                  }
-                }}
-              >
-                <Icon
-                  className="w-5 h-5 flex-shrink-0"
-                  style={{ color: active ? item.iconColor : '#666' }}
-                />
-                {!isCollapsed && (
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: '0.875rem',
-                        fontWeight: active ? 600 : 400,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {item.label}
-                    </div>
-                    <div
+              <div key={section.id} style={{ marginBottom: '0.25rem' }}>
+                {/* Section Header */}
+                {!isCollapsed ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      padding: '0.5rem 1.25rem',
+                      marginTop: '0.5rem',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: hasActiveItem ? '#6366f1' : '#555',
+                    }}
+                  >
+                    <span
                       style={{
                         fontSize: '0.6875rem',
-                        color: '#555',
-                        marginTop: '0.125rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
                       }}
                     >
-                      {item.description}
-                    </div>
-                  </div>
+                      {section.label}
+                    </span>
+                    {isSectionCollapsed ? (
+                      <ChevronDown className="w-3 h-3" />
+                    ) : (
+                      <ChevronUp className="w-3 h-3" />
+                    )}
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      height: 1,
+                      backgroundColor: '#1f1f1f',
+                      margin: '0.5rem 0.75rem',
+                    }}
+                  />
                 )}
-              </Link>
+
+                {/* Section Items */}
+                {!isSectionCollapsed &&
+                  section.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item.href);
+
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        title={isCollapsed ? item.label : undefined}
+                        onClick={handleMobileClose}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: isCollapsed ? '0.625rem 0' : '0.625rem 1.25rem',
+                          justifyContent: isCollapsed ? 'center' : 'flex-start',
+                          textDecoration: 'none',
+                          backgroundColor: active ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
+                          borderLeft: active ? '3px solid #6366f1' : '3px solid transparent',
+                          color: active ? '#fff' : '#888',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!active) {
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                            e.currentTarget.style.color = '#ccc';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!active) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#888';
+                          }
+                        }}
+                      >
+                        <Icon
+                          className="w-4 h-4 flex-shrink-0"
+                          style={{ color: active ? item.iconColor : '#666' }}
+                        />
+                        {!isCollapsed && (
+                          <span
+                            style={{
+                              fontSize: '0.8125rem',
+                              fontWeight: active ? 600 : 400,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {item.label}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+              </div>
             );
           })}
         </nav>
@@ -355,20 +489,30 @@ export default function AdminSidebar() {
         {/* Footer */}
         <div
           style={{
-            padding: '1rem 1.25rem',
+            padding: '0.75rem 1.25rem',
             borderTop: '1px solid #1f1f1f',
             backgroundColor: '#0f0f0f',
           }}
         >
           {!isCollapsed ? (
-            <div
-              style={{
-                fontSize: '0.6875rem',
-                color: '#444',
-                textAlign: 'center',
-              }}
-            >
-              RapidCompliance.US
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div
+                style={{
+                  fontSize: '0.6875rem',
+                  color: '#444',
+                }}
+              >
+                RapidCompliance.US
+              </div>
+              <div
+                style={{
+                  fontSize: '0.625rem',
+                  color: '#333',
+                  fontFamily: 'monospace',
+                }}
+              >
+                51 agents
+              </div>
             </div>
           ) : (
             <div

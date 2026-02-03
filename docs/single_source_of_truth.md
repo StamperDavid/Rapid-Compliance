@@ -36,7 +36,7 @@
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 148 | Verified (single-tenant flat routes) |
 | API Endpoints (route.ts) | 215 | Functional |
-| AI Agents | 47 | **47 FUNCTIONAL (100% Complete)** |
+| AI Agents | 51 | **51 FUNCTIONAL (47 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `superadmin`, `admin`, `manager`, `employee` |
 | Firestore Collections | 60+ | Active |
 
@@ -649,13 +649,14 @@ Tasks are tracked in Claude Code session. Current status:
 
 ### Agent Swarm Overview
 
-**Total Agents:** 47 (1 orchestrator + 9 managers + 37 specialists)
+**Total Agents:** 51 (47 swarm + 4 standalone)
+- **Swarm Agents:** 47 (1 orchestrator + 9 managers + 37 specialists)
+- **Standalone Agents:** 4 (outside swarm hierarchy)
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL | 47 | **100% SWARM COMPLETION** - All agents fully operational |
-| ENHANCED SHELL | 0 | All managers now fully orchestrating |
-| SHELL | 0 | No shells remaining |
+| FUNCTIONAL (Swarm) | 47 | **100% SWARM COMPLETION** - All agents fully operational |
+| FUNCTIONAL (Standalone) | 4 | Jasper Golden Master, Voice Agent, Autonomous Posting Agent, Chat Session Service |
 | GHOST | 0 | All specialists have been implemented |
 
 ### Master Orchestrator (1) - L1 Swarm CEO
@@ -1030,6 +1031,17 @@ The REPUTATION_MANAGER implements brand defense through coordinated review manag
 - GMB_SPECIALIST: Local SEO optimization, profile updates, map pack positioning
 - SENTIMENT_ANALYST: Deep sentiment analysis, crisis detection, trend monitoring
 
+### Standalone Agents (4) - Outside Swarm Hierarchy
+
+These agents operate independently of the L1/L2/L3 swarm hierarchy:
+
+| Agent | Type | Path | Status | Description |
+|-------|------|------|--------|-------------|
+| Jasper Golden Master | Platform Chat Agent | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Public-facing AI sales agent on RapidCompliance.US landing page. Routes via OpenRouter to multiple models. 9 tool functions for delegation to swarm agents. |
+| Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
+| Autonomous Posting Agent | Social Media Automation | `src/lib/social/autonomous-posting-agent.ts` | FUNCTIONAL | Manages autonomous content posting across LinkedIn and Twitter/X with scheduling, queueing, and analytics tracking. |
+| Chat Session Service | Agent Infrastructure | `src/lib/agent/chat-session-service.ts` | FUNCTIONAL | Manages real-time AI chat sessions and agent instance lifecycle. `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) handles ephemeral agent instances spawned from Golden Masters. |
+
 ### Agent File Locations
 
 ```
@@ -1070,6 +1082,9 @@ src/lib/agents/
 │   └── copy/specialist.ts
 ├── commerce/
 │   ├── manager.ts
+│   ├── payment/specialist.ts
+│   ├── subscription/specialist.ts
+│   ├── catalog/specialist.ts
 │   ├── pricing/specialist.ts
 │   └── inventory/specialist.ts
 ├── outreach/
@@ -1097,6 +1112,13 @@ src/lib/agents/
     ├── review/specialist.ts
     ├── review-manager/specialist.ts
     └── case-study/specialist.ts
+
+# Standalone Agent Files (outside swarm)
+src/lib/orchestrator/jasper-tools.ts    # Jasper Golden Master tools
+src/lib/voice/voice-agent-handler.ts    # Voice AI Agent (Prospector/Closer)
+src/lib/social/autonomous-posting-agent.ts  # Autonomous Social Posting
+src/lib/agent/chat-session-service.ts   # Chat Session Service
+src/lib/agent/instance-manager.ts       # Agent Instance Manager
 ```
 
 ---

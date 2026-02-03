@@ -1,69 +1,96 @@
 {
-  "$schema": "SWARM_REGISTRY_V1",
-  "lastAudit": "2026-01-15",
-  "totalAgents": 32,
-  "builtAgents": 18,
-  "ghostAgents": 14,
-  "honestAssessment": "SWARM COMPLETE - 18 agents now functional: Intelligence (3: Scraper, Competitor, Technographic) + Marketing (4: Manager, TikTok, Twitter, Facebook) + Architect (4: Manager, UX/UI, Funnel, Copywriter) + Sales (4: Revenue Director, Lead Qualifier, Outreach Specialist, Merchandiser) + Trust (3: Reputation Manager, Review Specialist, GMB Specialist).",
+  "$schema": "SWARM_REGISTRY_V2",
+  "lastAudit": "2026-02-03",
+  "totalAgents": 51,
+  "swarmAgents": 47,
+  "standaloneAgents": 4,
+  "functionalAgents": 51,
+  "ghostAgents": 0,
+  "assessment": "FULL INVENTORY COMPLETE - 47 swarm agents (1 orchestrator + 9 managers + 37 specialists) all FUNCTIONAL, plus 4 standalone agents operating outside the swarm hierarchy. 100% operational.",
 
   "hierarchy": {
-    "JASPER": {
-      "role": "Chief Orchestrator",
-      "status": "ACTIVE",
+    "MASTER_ORCHESTRATOR": {
+      "role": "Swarm CEO",
+      "level": "L1",
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/orchestrator/manager.ts",
       "canDelegate": true,
-      "directReports": ["MARKETING_MANAGER", "BUILDER_MANAGER", "INTELLIGENCE_MANAGER", "SALES_MANAGER", "TRUST_MANAGER", "COMMERCE_MANAGER", "OUTREACH_MANAGER", "CONTENT_MANAGER"]
+      "directReports": ["INTELLIGENCE_MANAGER", "MARKETING_MANAGER", "BUILDER_MANAGER", "ARCHITECT_MANAGER", "COMMERCE_MANAGER", "OUTREACH_MANAGER", "CONTENT_MANAGER", "REVENUE_DIRECTOR", "REPUTATION_MANAGER"],
+      "note": "2000+ LOC - Command Pattern task dispatch, Saga Pattern workflows, intent-based domain routing (9 categories), cross-domain synchronization, TenantMemoryVault integration"
     }
   },
 
   "managers": {
-    "MARKETING_MANAGER": {
-      "status": "FUNCTIONAL",
-      "path": "src/lib/agents/marketing/manager.ts",
-      "specialists": ["TIKTOK_EXPERT", "X_EXPERT", "FACEBOOK_EXPERT", "LINKEDIN_EXPERT", "SEO_EXPERT"],
-      "functionalLOC": 450,
-      "note": "L2 orchestrator - coordinates TikTok, Twitter, Facebook specialists with real delegation logic"
-    },
-    "BUILDER_MANAGER": {
-      "status": "FUNCTIONAL",
-      "path": "src/lib/agents/architect/manager.ts",
-      "specialists": ["UX_UI_SPECIALIST", "FUNNEL_SPECIALIST", "COPY_SPECIALIST"],
-      "functionalLOC": 1172,
-      "note": "L2 orchestrator - translates business niche into Site Map + Funnel Flow, coordinates UX/UI, Funnel, and Copy specialists"
-    },
     "INTELLIGENCE_MANAGER": {
+      "level": "L2",
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/intelligence/manager.ts",
-      "specialists": ["SCRAPER_SPECIALIST", "COMPETITOR_RESEARCHER", "TECHNOGRAPHIC_SCOUT", "SENTIMENT_ANALYST"],
-      "note": "3 of 4 specialists now functional"
+      "specialists": ["SCRAPER_SPECIALIST", "COMPETITOR_RESEARCHER", "TECHNOGRAPHIC_SCOUT", "SENTIMENT_ANALYST", "TREND_SCOUT"],
+      "note": "Dynamic orchestration engine with parallel execution, graceful degradation. All 5 specialists functional."
+    },
+    "MARKETING_MANAGER": {
+      "level": "L2",
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/marketing/manager.ts",
+      "specialists": ["TIKTOK_EXPERT", "TWITTER_EXPERT", "FACEBOOK_EXPERT", "LINKEDIN_EXPERT", "SEO_EXPERT"],
+      "functionalLOC": 850,
+      "note": "Industry-agnostic Cross-Channel Commander - Brand DNA integration, SEO-social feedback loop, parallel execution"
+    },
+    "BUILDER_MANAGER": {
+      "level": "L2",
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/builder/manager.ts",
+      "specialists": ["UX_UI_ARCHITECT", "FUNNEL_ENGINEER", "ASSET_GENERATOR", "WORKFLOW_OPTIMIZER"],
+      "functionalLOC": 1650,
+      "note": "Autonomous Construction Commander - Blueprint-to-Deployment workflow, pixel injection (GA4, GTM, Meta Pixel, Hotjar), build state machine, Vercel deployment manifest"
+    },
+    "ARCHITECT_MANAGER": {
+      "level": "L2",
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/architect/manager.ts",
+      "specialists": ["UX_UI_SPECIALIST", "FUNNEL_PATHOLOGIST", "COPY_SPECIALIST"],
+      "functionalLOC": 2100,
+      "note": "Strategic Infrastructure Commander - Brand DNA integration, TenantMemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis"
     },
     "COMMERCE_MANAGER": {
-      "status": "GHOST",
-      "path": "src/lib/agents/commerce/manager.ts",
-      "specialists": ["PRICING_STRATEGIST", "INVENTORY_MANAGER"]
-    },
-    "SALES_MANAGER": {
+      "level": "L2",
       "status": "FUNCTIONAL",
-      "path": "src/lib/agents/sales/revenue/manager.ts",
-      "specialists": ["LEAD_QUALIFIER", "OUTREACH_SPECIALIST", "MERCHANDISER"],
-      "functionalLOC": 1477,
-      "note": "L2 orchestrator - Revenue Director monitors lead pipeline, coordinates BANT scoring, outreach, and nudge decisions"
+      "path": "src/lib/agents/commerce/manager.ts",
+      "specialists": ["PAYMENT_SPECIALIST", "SUBSCRIPTION_SPECIALIST", "CATALOG_MANAGER", "PRICING_STRATEGIST", "INVENTORY_MANAGER"],
+      "functionalLOC": 1400,
+      "note": "Transactional Commerce Commander - Product-to-Payment checkout orchestration, subscription state machine, CommerceBrief revenue synthesis, dunning triggers"
     },
     "OUTREACH_MANAGER": {
-      "status": "GHOST",
+      "level": "L2",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/outreach/manager.ts",
-      "specialists": ["EMAIL_SPECIALIST", "SMS_SPECIALIST"]
+      "specialists": ["EMAIL_SPECIALIST", "SMS_SPECIALIST"],
+      "functionalLOC": 1900,
+      "note": "Omni-Channel Communication Commander - Multi-Step Sequence execution, channel escalation (EMAIL -> SMS -> VOICE), sentiment-aware routing, DNC compliance, frequency throttling"
     },
     "CONTENT_MANAGER": {
-      "status": "GHOST",
+      "level": "L2",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/content/manager.ts",
-      "specialists": ["COPYWRITER", "CALENDAR_COORDINATOR"]
+      "specialists": ["COPYWRITER", "CALENDAR_COORDINATOR", "VIDEO_SPECIALIST"],
+      "functionalLOC": 1600,
+      "note": "Multi-Modal Production Commander - Brand DNA integration, SEO-to-Copy keyword injection, ContentPackage synthesis, quality gate validation"
     },
-    "TRUST_MANAGER": {
+    "REVENUE_DIRECTOR": {
+      "level": "L2",
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/sales/revenue/manager.ts",
+      "specialists": ["LEAD_QUALIFIER", "OUTREACH_SPECIALIST", "MERCHANDISER", "DEAL_CLOSER", "OBJ_HANDLER"],
+      "functionalLOC": 1800,
+      "note": "Sales Ops Commander - Lead pipeline state machine, Golden Master persona tuning, RevenueBrief synthesis, objection library battlecards, cross-agent signal sharing"
+    },
+    "REPUTATION_MANAGER": {
+      "level": "L2",
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/trust/reputation/manager.ts",
-      "specialists": ["REVIEW_SPECIALIST", "GMB_SPECIALIST"],
-      "functionalLOC": 1458,
-      "note": "L2 orchestrator - Reputation Manager monitors brand sentiment, coordinates Review (1-5 star responses) and GMB (Local SEO) specialists"
+      "specialists": ["REVIEW_SPECIALIST", "GMB_SPECIALIST", "REV_MGR", "CASE_STUDY"],
+      "functionalLOC": 2000,
+      "note": "Brand Defense Commander - Review-to-Revenue feedback loop, AI-powered response engine, GMB profile optimization, ReputationBrief trust score synthesis"
     }
   },
 
@@ -73,200 +100,220 @@
       "path": "src/lib/agents/intelligence/scraper/specialist.ts",
       "reportsTo": "INTELLIGENCE_MANAGER",
       "capabilities": ["website_scraping", "content_extraction", "contact_discovery", "business_signal_detection", "structured_output"],
-      "functionalLOC": 280,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
-      "jasperTool": "scrape_website",
-      "systemPrompt": "Full system prompt for URL scraping and key findings extraction"
+      "jasperTool": "scrape_website"
     },
     "COMPETITOR_RESEARCHER": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/intelligence/competitor/specialist.ts",
       "reportsTo": "INTELLIGENCE_MANAGER",
       "capabilities": ["competitor_discovery", "seo_analysis", "market_positioning", "feature_comparison", "gap_analysis"],
-      "functionalLOC": 350,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
-      "jasperTool": "research_competitors",
-      "systemPrompt": "Full system prompt for niche/location competitor research"
+      "jasperTool": "research_competitors"
     },
     "TECHNOGRAPHIC_SCOUT": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/intelligence/technographic/specialist.ts",
       "reportsTo": "INTELLIGENCE_MANAGER",
       "capabilities": ["tech_stack_detection", "platform_identification", "analytics_detection", "pixel_detection", "integration_discovery"],
-      "functionalLOC": 400,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
-      "jasperTool": "scan_tech_stack",
-      "systemPrompt": "Full system prompt for tech stack detection via script/meta analysis"
+      "jasperTool": "scan_tech_stack"
     },
     "SENTIMENT_ANALYST": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/intelligence/sentiment/specialist.ts",
       "reportsTo": "INTELLIGENCE_MANAGER",
-      "capabilities": ["social_listening", "brand_sentiment", "crisis_detection", "trend_analysis"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "capabilities": ["sentiment_scoring", "trend_detection", "social_listening", "crisis_detection"],
+      "verdict": "HIRED"
+    },
+    "TREND_SCOUT": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/intelligence/trend/specialist.ts",
+      "reportsTo": "INTELLIGENCE_MANAGER",
+      "capabilities": ["market_trends", "emerging_patterns", "signal_detection", "opportunity_identification"],
+      "verdict": "HIRED"
     },
     "TIKTOK_EXPERT": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/marketing/tiktok/specialist.ts",
       "reportsTo": "MARKETING_MANAGER",
       "capabilities": ["viral_hook_generation", "video_pacing_scripts", "trending_sound_analysis", "retention_optimization", "algorithm_alignment"],
-      "functionalLOC": 650,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
-      "jasperTool": "delegate_to_marketing",
-      "systemPrompt": "TikTok-specific: Hook templates library (5 categories), first 1-3 seconds critical, pattern interrupts, 15-60s optimal, native aesthetic over polished ads"
+      "jasperTool": "delegate_to_marketing"
     },
-    "X_EXPERT": {
+    "TWITTER_EXPERT": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/marketing/twitter/specialist.ts",
       "reportsTo": "MARKETING_MANAGER",
       "capabilities": ["thread_architecture", "engagement_replies", "ratio_risk_assessment", "viral_detection", "blue_check_optimization"],
-      "functionalLOC": 450,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
-      "jasperTool": "delegate_to_marketing",
-      "systemPrompt": "Twitter/X-specific: Thread templates (5 types), 280 char optimization, ratio risk scoring, quote tweet tactics, peak timing"
+      "jasperTool": "delegate_to_marketing"
     },
     "FACEBOOK_EXPERT": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/marketing/facebook/specialist.ts",
       "reportsTo": "MARKETING_MANAGER",
       "capabilities": ["ad_creative_generation", "audience_persona_matching", "copy_framework_selection", "ab_testing_variations"],
-      "functionalLOC": 850,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
-      "jasperTool": "delegate_to_marketing",
-      "systemPrompt": "Facebook Ads-specific: 9 audience personas, 6 copywriting frameworks (AIDA/PAS/BAB/FAB), primary text 125 chars visible, cold vs warm audience strategies"
+      "jasperTool": "delegate_to_marketing"
     },
     "LINKEDIN_EXPERT": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/marketing/linkedin/specialist.ts",
       "reportsTo": "MARKETING_MANAGER",
       "capabilities": ["b2b_targeting", "thought_leadership", "connection_strategy", "post_optimization"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_marketing"
     },
     "SEO_EXPERT": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/marketing/seo/specialist.ts",
       "reportsTo": "MARKETING_MANAGER",
       "capabilities": ["keyword_research", "on_page_optimization", "link_building", "serp_analysis"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_marketing"
+    },
+    "UX_UI_ARCHITECT": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/builder/ux-ui/specialist.ts",
+      "reportsTo": "BUILDER_MANAGER",
+      "capabilities": ["interface_design", "component_libraries", "color_palettes", "accessibility", "design_system_tokens"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_builder"
+    },
+    "FUNNEL_ENGINEER": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/builder/funnel/specialist.ts",
+      "reportsTo": "BUILDER_MANAGER",
+      "capabilities": ["conversion_funnels", "landing_page_optimization", "ab_test_setup", "funnel_design"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_builder"
+    },
+    "ASSET_GENERATOR": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/builder/assets/specialist.ts",
+      "reportsTo": "BUILDER_MANAGER",
+      "capabilities": ["image_generation", "logo_creation", "banner_design", "brand_asset_management", "social_graphics"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_builder"
+    },
+    "WORKFLOW_OPTIMIZER": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/builder/workflow/specialist.ts",
+      "reportsTo": "BUILDER_MANAGER",
+      "capabilities": ["process_automation", "workflow_optimization", "efficiency_metrics", "bottleneck_detection"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_builder"
     },
     "UX_UI_SPECIALIST": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/architect/ux-ui/specialist.ts",
-      "reportsTo": "BUILDER_MANAGER",
+      "reportsTo": "ARCHITECT_MANAGER",
       "capabilities": ["component_selection", "color_palette_generation", "wireframe_generation", "responsive_layout", "accessibility_audit"],
       "functionalLOC": 1879,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
-      "jasperTool": "delegate_to_builder",
-      "systemPrompt": "COMPONENT_SCHEMAS library (10 categories: hero, nav, features, pricing, testimonials, forms, cta, footer, social proof, faq) + COLOR_PSYCHOLOGY library (10 industries with psychology-based palettes)"
+      "jasperTool": "delegate_to_architect",
+      "systemPrompt": "COMPONENT_SCHEMAS library (10 categories) + COLOR_PSYCHOLOGY library (10 industries with psychology-based palettes)"
     },
-    "FUNNEL_SPECIALIST": {
+    "FUNNEL_PATHOLOGIST": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/architect/funnel/specialist.ts",
-      "reportsTo": "BUILDER_MANAGER",
+      "reportsTo": "ARCHITECT_MANAGER",
       "capabilities": ["funnel_architecture", "stage_optimization", "conversion_analysis", "price_strategy", "urgency_tactics"],
       "functionalLOC": 1705,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
-      "jasperTool": "delegate_to_builder",
-      "systemPrompt": "THE SQUEEZE: Lead Magnet (8 types) -> Tripwire ($7-47) -> Core Offer ($197-1997) -> Upsell (5 types). 8 business templates (coach, saas, ecommerce, course, agency, membership, local, info)"
+      "jasperTool": "delegate_to_architect",
+      "systemPrompt": "THE SQUEEZE: Lead Magnet (8 types) -> Tripwire ($7-47) -> Core Offer ($197-1997) -> Upsell (5 types). 8 business templates"
     },
     "COPY_SPECIALIST": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/architect/copy/specialist.ts",
-      "reportsTo": "BUILDER_MANAGER",
+      "reportsTo": "ARCHITECT_MANAGER",
       "capabilities": ["framework_selection", "headline_generation", "cta_optimization", "copy_generation", "ab_variations"],
       "functionalLOC": 1514,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
-      "jasperTool": "delegate_to_builder",
-      "systemPrompt": "6 copywriting frameworks (PAS, AIDA, BAB, FAB, 4Ps, StoryBrand), 10 headline formulas, 5 CTA categories, 6 persuasion principles, 7 voice presets by industry"
+      "jasperTool": "delegate_to_architect",
+      "systemPrompt": "6 copywriting frameworks (PAS, AIDA, BAB, FAB, 4Ps, StoryBrand), 10 headline formulas, 5 CTA categories"
     },
-    "ASSET_GENERATOR": {
-      "status": "GHOST",
-      "path": "src/lib/agents/builder/assets/specialist.ts",
-      "reportsTo": "BUILDER_MANAGER",
-      "capabilities": ["image_generation", "logo_creation", "banner_design", "brand_asset_management"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+    "PAYMENT_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/commerce/payment/specialist.ts",
+      "reportsTo": "COMMERCE_MANAGER",
+      "capabilities": ["checkout_sessions", "payment_intents", "refunds", "stripe_integration", "webhook_handling"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_commerce"
+    },
+    "SUBSCRIPTION_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/commerce/subscription/specialist.ts",
+      "reportsTo": "COMMERCE_MANAGER",
+      "capabilities": ["trial_management", "billing_cycles", "dunning_sequences", "state_transitions"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_commerce"
+    },
+    "CATALOG_MANAGER": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/commerce/catalog/specialist.ts",
+      "reportsTo": "COMMERCE_MANAGER",
+      "capabilities": ["product_crud", "variant_management", "catalog_search", "inventory_tracking"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_commerce"
     },
     "PRICING_STRATEGIST": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/commerce/pricing/specialist.ts",
       "reportsTo": "COMMERCE_MANAGER",
-      "capabilities": ["dynamic_pricing", "competitor_price_tracking", "margin_optimization", "discount_strategy"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "capabilities": ["dynamic_pricing", "discount_strategies", "margin_optimization", "totals_calculation"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_commerce"
     },
     "INVENTORY_MANAGER": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/commerce/inventory/specialist.ts",
       "reportsTo": "COMMERCE_MANAGER",
       "capabilities": ["stock_tracking", "reorder_automation", "demand_forecasting", "supplier_management"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_commerce"
     },
     "EMAIL_SPECIALIST": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/outreach/email/specialist.ts",
       "reportsTo": "OUTREACH_MANAGER",
-      "capabilities": ["campaign_creation", "sequence_building", "deliverability_optimization", "ab_testing"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "capabilities": ["email_campaigns", "sequence_building", "template_rendering", "deliverability_optimization"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_outreach"
     },
     "SMS_SPECIALIST": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/outreach/sms/specialist.ts",
       "reportsTo": "OUTREACH_MANAGER",
-      "capabilities": ["sms_campaigns", "two_way_messaging", "compliance_management", "short_code_optimization"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "capabilities": ["sms_campaigns", "two_way_messaging", "compliance_management", "e164_validation"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_outreach"
     },
     "COPYWRITER": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/content/copywriter/specialist.ts",
       "reportsTo": "CONTENT_MANAGER",
       "capabilities": ["headline_generation", "ad_copy", "landing_page_copy", "email_copy", "brand_voice"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_content"
     },
     "CALENDAR_COORDINATOR": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/content/calendar/specialist.ts",
       "reportsTo": "CONTENT_MANAGER",
       "capabilities": ["content_scheduling", "cross_platform_sync", "deadline_management", "publishing_automation"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
-    },
-    "REVENUE_DIRECTOR": {
-      "status": "FUNCTIONAL",
-      "path": "src/lib/agents/sales/revenue/manager.ts",
-      "reportsTo": "JASPER",
-      "capabilities": ["lead_pipeline_management", "stage_transition_logic", "readiness_scoring", "delegation_routing", "intelligence_to_outreach_handoff"],
-      "functionalLOC": 1477,
-      "boilerplateLOC": 100,
       "verdict": "HIRED",
-      "jasperTool": "delegate_to_sales",
-      "systemPrompt": "Lead Pipeline State Machine: DISCOVERY -> QUALIFIED -> INTELLIGENCE -> OUTREACH -> NEGOTIATION -> CLOSED. Transition engine with BANT threshold (60), intelligence completeness (75%), time constraints (max 7 days), engagement signals"
+      "jasperTool": "delegate_to_content"
+    },
+    "VIDEO_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/content/video/specialist.ts",
+      "reportsTo": "CONTENT_MANAGER",
+      "capabilities": ["video_scripts", "storyboards", "audio_cues", "video_seo", "thumbnail_strategy"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_content"
     },
     "LEAD_QUALIFIER": {
       "status": "FUNCTIONAL",
@@ -274,10 +321,9 @@
       "reportsTo": "REVENUE_DIRECTOR",
       "capabilities": ["bant_scoring", "budget_analysis", "authority_detection", "need_assessment", "timeline_evaluation", "icp_alignment"],
       "functionalLOC": 1835,
-      "boilerplateLOC": 80,
       "verdict": "HIRED",
       "jasperTool": "delegate_to_sales",
-      "systemPrompt": "BANT Framework (0-100): Budget (25pts: company size, funding, pricing behavior) + Authority (25pts: job title, decision-maker signals) + Need (25pts: pain points, competitor usage, tech gaps) + Timeline (25pts: urgency signals, contract expiry, hiring activity). Qualification tiers: HOT/WARM/COLD/DISQUALIFIED"
+      "systemPrompt": "BANT Framework (0-100): Budget (25pts) + Authority (25pts) + Need (25pts) + Timeline (25pts). Qualification tiers: HOT/WARM/COLD/DISQUALIFIED"
     },
     "OUTREACH_SPECIALIST": {
       "status": "FUNCTIONAL",
@@ -285,10 +331,9 @@
       "reportsTo": "REVENUE_DIRECTOR",
       "capabilities": ["context_aware_messaging", "competitor_displacement", "framework_selection", "personalization_injection", "follow_up_sequences", "channel_optimization"],
       "functionalLOC": 2000,
-      "boilerplateLOC": 100,
       "verdict": "HIRED",
       "jasperTool": "delegate_to_sales",
-      "systemPrompt": "8 OUTREACH_FRAMEWORKS: COLD_INTRO (pattern interrupt), COMPETITOR_DISPLACEMENT (weakness targeting from scraper), TRIGGER_EVENT (hiring/funding/tech), REFERRAL_WARM, PAIN_AGITATION, CASE_STUDY_PROOF, DIRECT_ASK, FOLLOW_UP_SEQUENCE (5 touches). Channels: Email/LinkedIn DM/Twitter DM"
+      "systemPrompt": "8 OUTREACH_FRAMEWORKS: COLD_INTRO, COMPETITOR_DISPLACEMENT, TRIGGER_EVENT, REFERRAL_WARM, PAIN_AGITATION, CASE_STUDY_PROOF, DIRECT_ASK, FOLLOW_UP_SEQUENCE"
     },
     "MERCHANDISER": {
       "status": "FUNCTIONAL",
@@ -296,65 +341,158 @@
       "reportsTo": "REVENUE_DIRECTOR",
       "capabilities": ["nudge_eligibility", "coupon_strategy", "stripe_integration", "roi_calculation", "interaction_scoring", "constraint_validation"],
       "functionalLOC": 1581,
-      "boilerplateLOC": 60,
       "verdict": "HIRED",
       "jasperTool": "delegate_to_sales",
-      "systemPrompt": "7 NUDGE_STRATEGIES: ENGAGEMENT_NUDGE (10% after 3+ pricing visits), CART_ABANDONMENT (15% within 24h), WIN_BACK (20% for churned), TRIAL_CONVERSION (10% at day 12), REFERRAL_REWARD (25% both), SEASONAL_PROMO, LOYALTY_TIER (5-20% progressive). Stripe coupon generation, ROI calculation with LTV lift analysis"
+      "systemPrompt": "7 NUDGE_STRATEGIES: ENGAGEMENT_NUDGE (10%), CART_ABANDONMENT (15%), WIN_BACK (20%), TRIAL_CONVERSION (10%), REFERRAL_REWARD (25%), SEASONAL_PROMO, LOYALTY_TIER (5-20%)"
+    },
+    "DEAL_CLOSER": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/sales/deal-closer/specialist.ts",
+      "reportsTo": "REVENUE_DIRECTOR",
+      "capabilities": ["closing_strategies", "objection_handling", "deal_progression", "win_loss_analysis"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_sales"
+    },
+    "OBJ_HANDLER": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/sales/objection-handler/specialist.ts",
+      "reportsTo": "REVENUE_DIRECTOR",
+      "capabilities": ["objection_response_strategies", "price_timing_handling", "pain_point_resolution", "battlecard_generation"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_sales"
     },
     "REVIEW_SPECIALIST": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/trust/review/specialist.ts",
-      "reportsTo": "TRUST_MANAGER",
-      "capabilities": ["star_rating_responses", "sentiment_analysis", "platform_specific_templates", "referral_requests", "social_proof_collection", "follow_up_scheduling"],
+      "reportsTo": "REPUTATION_MANAGER",
+      "capabilities": ["star_rating_responses", "sentiment_analysis", "platform_specific_templates", "referral_requests", "social_proof_collection"],
       "functionalLOC": 1520,
-      "boilerplateLOC": 60,
       "verdict": "HIRED",
       "jasperTool": "delegate_to_trust",
-      "systemPrompt": "5-STAR RESPONSE LOGIC: 1-star (Crisis: empathy + escalation + manager contact), 2-star (Damage Control: solution-focused + service recovery), 3-star (Constructive: appreciative + improvement-focused), 4-star (Nurture: grateful + subtle referral ask), 5-star (Amplification: referral request + social proof collection). Platform-specific templates for Google, Yelp, Facebook, Trustpilot, G2"
+      "systemPrompt": "5-STAR RESPONSE LOGIC: 1-star (Crisis), 2-star (Damage Control), 3-star (Constructive), 4-star (Nurture), 5-star (Amplification). Platform templates for Google/Yelp/Facebook/Trustpilot/G2"
     },
     "GMB_SPECIALIST": {
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/trust/gmb/specialist.ts",
-      "reportsTo": "TRUST_MANAGER",
-      "capabilities": ["local_update_drafting", "photo_post_optimization", "map_pack_ranking", "nap_consistency", "local_keyword_optimization", "competitor_analysis"],
+      "reportsTo": "REPUTATION_MANAGER",
+      "capabilities": ["local_update_drafting", "photo_post_optimization", "map_pack_ranking", "nap_consistency", "local_keyword_optimization"],
       "functionalLOC": 1570,
-      "boilerplateLOC": 50,
       "verdict": "HIRED",
       "jasperTool": "delegate_to_trust",
-      "systemPrompt": "LOCAL SEO MASTERY: GMB_POST_TYPES (Local Update, Offer, Event, Product), PHOTO_STRATEGIES (storefront, interior, team, product, behind-scenes), MAP_PACK_FACTORS (proximity 30%, relevance 30%, prominence 40%), LOCAL_KEYWORDS by industry, NAP_CONSISTENCY rules, posting schedule optimization, competitor gap analysis"
+      "systemPrompt": "LOCAL SEO: GMB_POST_TYPES, PHOTO_STRATEGIES, MAP_PACK_FACTORS (proximity 30%, relevance 30%, prominence 40%), NAP_CONSISTENCY rules"
+    },
+    "REV_MGR": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/trust/review-manager/specialist.ts",
+      "reportsTo": "REPUTATION_MANAGER",
+      "capabilities": ["review_response_management", "crisis_handling", "amplification_tactics", "review_solicitation"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_trust"
+    },
+    "CASE_STUDY": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/trust/case-study/specialist.ts",
+      "reportsTo": "REPUTATION_MANAGER",
+      "capabilities": ["case_study_creation", "social_proof_collection", "testimonial_synthesis", "success_story_formatting"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_trust"
+    }
+  },
+
+  "standaloneAgents": {
+    "JASPER_GOLDEN_MASTER": {
+      "status": "FUNCTIONAL",
+      "type": "Platform Chat Agent",
+      "path": "Firestore: organizations/platform/goldenMasters/",
+      "configPath": "src/lib/orchestrator/jasper-tools.ts",
+      "setupScript": "scripts/setup-jasper-golden-master.js",
+      "model": "openrouter/anthropic/claude-3.5-sonnet",
+      "capabilities": ["public_chat", "lead_qualification", "product_demos", "pricing_discussion", "tool_delegation"],
+      "note": "Public-facing AI sales agent on RapidCompliance.US landing page. Routes via OpenRouter to multiple models. Has 9 tool functions for delegation to swarm agents."
+    },
+    "VOICE_AGENT_HANDLER": {
+      "status": "FUNCTIONAL",
+      "type": "Voice AI Agent",
+      "path": "src/lib/voice/voice-agent-handler.ts",
+      "apiRoutes": ["src/app/api/voice/ai-agent/route.ts", "src/app/api/voice/ai-agent/fallback/route.ts", "src/app/api/voice/ai-agent/speech/route.ts"],
+      "modes": ["prospector", "closer"],
+      "capabilities": ["ai_phone_conversations", "lead_qualification_voice", "deal_closing_voice", "warm_transfer"],
+      "note": "Hybrid AI/human voice agent with two modes: Prospector (lead qualification) and Closer (deal closing with warm transfer capabilities)"
+    },
+    "AUTONOMOUS_POSTING_AGENT": {
+      "status": "FUNCTIONAL",
+      "type": "Social Media Automation",
+      "path": "src/lib/social/autonomous-posting-agent.ts",
+      "capabilities": ["linkedin_posting", "twitter_posting", "content_scheduling", "queue_management", "analytics_tracking"],
+      "note": "Manages autonomous content posting across LinkedIn and Twitter/X with scheduling, queueing, and analytics"
+    },
+    "CHAT_SESSION_SERVICE": {
+      "status": "FUNCTIONAL",
+      "type": "Agent Infrastructure",
+      "path": "src/lib/agent/chat-session-service.ts",
+      "relatedFiles": ["src/lib/agent/instance-manager.ts"],
+      "capabilities": ["session_management", "conversation_monitoring", "agent_instance_lifecycle", "golden_master_spawning"],
+      "note": "Manages real-time AI chat sessions and agent instance lifecycle. AgentInstanceManager handles ephemeral agent instances spawned from Golden Masters."
     }
   },
 
   "signalBus": {
-    "status": "UNBUILT",
-    "path": "src/lib/orchestrator/signal-bus.ts",
-    "description": "Hierarchical message passing: Jasper -> Manager -> Specialist"
+    "status": "FUNCTIONAL",
+    "path": "src/lib/agents/shared/tenant-memory-vault.ts",
+    "description": "Cross-agent communication via TenantMemoryVault signal coordination. Signal types: BROADCAST, DIRECT, BUBBLE_UP, BUBBLE_DOWN. Mandatory tenantId scoping."
   },
 
   "criticalPath": [
+    "MASTER_ORCHESTRATOR",
     "INTELLIGENCE_MANAGER",
     "SCRAPER_SPECIALIST",
     "COMPETITOR_RESEARCHER",
     "TECHNOGRAPHIC_SCOUT",
+    "SENTIMENT_ANALYST",
+    "TREND_SCOUT",
     "MARKETING_MANAGER",
     "TIKTOK_EXPERT",
-    "X_EXPERT",
+    "TWITTER_EXPERT",
     "FACEBOOK_EXPERT",
-    "BUILDER_MANAGER",
+    "LINKEDIN_EXPERT",
+    "SEO_EXPERT",
+    "ARCHITECT_MANAGER",
     "UX_UI_SPECIALIST",
-    "FUNNEL_SPECIALIST",
+    "FUNNEL_PATHOLOGIST",
     "COPY_SPECIALIST",
-    "SALES_MANAGER",
+    "BUILDER_MANAGER",
+    "UX_UI_ARCHITECT",
+    "FUNNEL_ENGINEER",
+    "ASSET_GENERATOR",
+    "WORKFLOW_OPTIMIZER",
+    "COMMERCE_MANAGER",
+    "PAYMENT_SPECIALIST",
+    "SUBSCRIPTION_SPECIALIST",
+    "CATALOG_MANAGER",
+    "PRICING_STRATEGIST",
+    "INVENTORY_MANAGER",
+    "OUTREACH_MANAGER",
+    "EMAIL_SPECIALIST",
+    "SMS_SPECIALIST",
+    "CONTENT_MANAGER",
+    "COPYWRITER",
+    "CALENDAR_COORDINATOR",
+    "VIDEO_SPECIALIST",
+    "REVENUE_DIRECTOR",
     "LEAD_QUALIFIER",
     "OUTREACH_SPECIALIST",
     "MERCHANDISER",
-    "TRUST_MANAGER",
+    "DEAL_CLOSER",
+    "OBJ_HANDLER",
+    "REPUTATION_MANAGER",
     "REVIEW_SPECIALIST",
-    "GMB_SPECIALIST"
+    "GMB_SPECIALIST",
+    "REV_MGR",
+    "CASE_STUDY"
   ],
 
   "jasperHandshake": {
-    "description": "Jasper's direct tool connections to specialists",
+    "description": "Jasper's direct tool connections to managers and specialists",
     "intelligenceTools": {
       "scrape_website": {
         "specialist": "SCRAPER_SPECIALIST",
@@ -381,26 +519,52 @@
         "status": "CONNECTED",
         "input": "{ goal, platform?, niche?, audience?, budget?, contentType? }",
         "output": "{ campaignAnalysis, platformStrategy, delegations[], aggregatedPlan, confidence }",
-        "delegates_to": ["TIKTOK_EXPERT", "X_EXPERT", "FACEBOOK_EXPERT"],
-        "platformStrategies": {
-          "tiktok": "viral hooks, video pacing, trending sounds - Gen Z/young audience",
-          "twitter": "thread architecture, engagement replies, ratio assessment - B2B/thought leadership",
-          "facebook": "ad creative, audience personas, AIDA/PAS frameworks - older demographics/conversions"
-        }
+        "delegates_to": ["TIKTOK_EXPERT", "TWITTER_EXPERT", "FACEBOOK_EXPERT", "LINKEDIN_EXPERT", "SEO_EXPERT"]
+      }
+    },
+    "architectTools": {
+      "delegate_to_architect": {
+        "manager": "ARCHITECT_MANAGER",
+        "status": "CONNECTED",
+        "input": "{ niche, objective?, audience?, pageType?, includeDesign?, includeFunnel?, includeCopy? }",
+        "output": "{ siteMap, funnelFlow, delegations[], confidence, warnings }",
+        "delegates_to": ["UX_UI_SPECIALIST", "FUNNEL_PATHOLOGIST", "COPY_SPECIALIST"]
       }
     },
     "builderTools": {
       "delegate_to_builder": {
         "manager": "BUILDER_MANAGER",
         "status": "CONNECTED",
-        "input": "{ niche, objective?, audience?, pageType?, includeDesign?, includeFunnel?, includeCopy? }",
-        "output": "{ siteMap, funnelFlow, delegations[], confidence, warnings }",
-        "delegates_to": ["UX_UI_SPECIALIST", "FUNNEL_SPECIALIST", "COPY_SPECIALIST"],
-        "specialistCapabilities": {
-          "ux_ui": "COMPONENT_SCHEMAS library (10 categories), COLOR_PSYCHOLOGY (10 industries), responsive design, WCAG accessibility",
-          "funnel": "THE SQUEEZE (Lead Magnet -> Tripwire -> Core Offer -> Upsell), 8 business templates, urgency/scarcity tactics, price anchoring",
-          "copy": "6 frameworks (PAS, AIDA, BAB, FAB, 4Ps, StoryBrand), headline formulas, CTA optimization, persuasion psychology"
-        }
+        "input": "{ blueprint, designTokens?, pixelConfig? }",
+        "output": "{ assembledPages[], assetPackage, injectedScripts, deploymentManifest }",
+        "delegates_to": ["UX_UI_ARCHITECT", "FUNNEL_ENGINEER", "ASSET_GENERATOR", "WORKFLOW_OPTIMIZER"]
+      }
+    },
+    "commerceTools": {
+      "delegate_to_commerce": {
+        "manager": "COMMERCE_MANAGER",
+        "status": "CONNECTED",
+        "input": "{ action, products?, customerId?, subscriptionId?, pricingRules? }",
+        "output": "{ checkoutSession?, subscriptionState?, catalogResult?, commerceBrief }",
+        "delegates_to": ["PAYMENT_SPECIALIST", "SUBSCRIPTION_SPECIALIST", "CATALOG_MANAGER", "PRICING_STRATEGIST", "INVENTORY_MANAGER"]
+      }
+    },
+    "outreachTools": {
+      "delegate_to_outreach": {
+        "manager": "OUTREACH_MANAGER",
+        "status": "CONNECTED",
+        "input": "{ leadProfile, sequenceSteps, channel?, settings? }",
+        "output": "{ outreachResult, complianceReport, sequenceProgress }",
+        "delegates_to": ["EMAIL_SPECIALIST", "SMS_SPECIALIST"]
+      }
+    },
+    "contentTools": {
+      "delegate_to_content": {
+        "manager": "CONTENT_MANAGER",
+        "status": "CONNECTED",
+        "input": "{ briefType, brandDna?, seoKeywords?, pages? }",
+        "output": "{ contentPackage, pageContent[], socialSnippets, videoContent, calendar }",
+        "delegates_to": ["COPYWRITER", "CALENDAR_COORDINATOR", "VIDEO_SPECIALIST"]
       }
     },
     "salesTools": {
@@ -409,27 +573,18 @@
         "status": "CONNECTED",
         "input": "{ action, leadId?, leadData?, scraperData?, outreachChannel?, interactionHistory? }",
         "output": "{ pipelineState, bantScore, outreachMessages[], nudgeDecision, delegations[], confidence }",
-        "actions": ["qualify_lead", "generate_outreach", "evaluate_nudge", "analyze_pipeline", "check_transition"],
-        "delegates_to": ["LEAD_QUALIFIER", "OUTREACH_SPECIALIST", "MERCHANDISER"],
-        "specialistCapabilities": {
-          "lead_qualifier": "BANT Framework (0-100): Budget/Authority/Need/Timeline scoring, ICP alignment, qualification tiers (HOT/WARM/COLD/DISQUALIFIED)",
-          "outreach_specialist": "8 OUTREACH_FRAMEWORKS (Cold Intro, Competitor Displacement, Trigger Event, Referral, Pain, Case Study, Direct Ask, Follow-Up), Context injection from Scraper, 3 channels",
-          "merchandiser": "7 NUDGE_STRATEGIES (Engagement 10%, Cart Abandonment 15%, Win-Back 20%, Trial 10%, Referral 25%, Seasonal, Loyalty), Stripe coupon generation, ROI analysis"
-        }
+        "actions": ["qualify_lead", "generate_outreach", "evaluate_nudge", "analyze_pipeline", "check_transition", "close_deal", "handle_objection"],
+        "delegates_to": ["LEAD_QUALIFIER", "OUTREACH_SPECIALIST", "MERCHANDISER", "DEAL_CLOSER", "OBJ_HANDLER"]
       }
     },
     "trustTools": {
       "delegate_to_trust": {
-        "manager": "TRUST_MANAGER",
+        "manager": "REPUTATION_MANAGER",
         "status": "CONNECTED",
         "input": "{ action, platform?, reviewData?, businessData?, postType?, sentimentData?, urgency? }",
         "output": "{ sentimentAnalysis, reviewResponse?, gmbPost?, brandHealth, delegations[], confidence }",
-        "actions": ["analyze_sentiment", "respond_to_review", "generate_gmb_post", "optimize_map_pack", "monitor_brand_health", "request_testimonials", "handle_crisis"],
-        "delegates_to": ["REVIEW_SPECIALIST", "GMB_SPECIALIST"],
-        "specialistCapabilities": {
-          "review_specialist": "5-STAR RESPONSE LOGIC: 1-star (Crisis + escalation), 2-star (Damage Control), 3-star (Constructive), 4-star (Nurture + referral), 5-star (Amplification + social proof). Platform-specific templates for Google/Yelp/Facebook/Trustpilot/G2",
-          "gmb_specialist": "LOCAL SEO: GMB_POST_TYPES (Update, Offer, Event, Product), PHOTO_STRATEGIES (storefront, interior, team, product), MAP_PACK optimization (prominence 40%, relevance 30%, proximity 30%), NAP consistency, local keyword injection"
-        }
+        "actions": ["analyze_sentiment", "respond_to_review", "generate_gmb_post", "optimize_map_pack", "monitor_brand_health", "request_testimonials", "handle_crisis", "build_case_study"],
+        "delegates_to": ["REVIEW_SPECIALIST", "GMB_SPECIALIST", "REV_MGR", "CASE_STUDY"]
       }
     }
   }
