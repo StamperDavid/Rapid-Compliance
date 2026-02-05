@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       logger.error('Teams OAuth error', new Error(error), { state });
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${state ?? 'default'}/settings/integrations?error=teams_auth_failed`
+        `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=teams_auth_failed`
       );
     }
 
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const validation = teamsCallbackSchema.safeParse({ code, state, error });
     if (!validation.success) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${state ?? 'default'}/settings/integrations?error=invalid_callback`
+        `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=invalid_callback`
       );
     }
 
@@ -122,12 +122,12 @@ export async function GET(request: NextRequest) {
     logger.info('Teams connected successfully', { organizationId });
 
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${organizationId}/settings/integrations?success=teams_connected`
+      `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?success=teams_connected`
     );
   } catch (error: unknown) {
     logger.error('Teams callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/teams/callback' });
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/workspace/default/settings/integrations?error=teams_callback_failed`
+      `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=teams_callback_failed`
     );
   }
 }

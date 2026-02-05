@@ -58,24 +58,24 @@ async function checkAdmin() {
       
       // Check permissions
       console.log('🔐 PERMISSION CHECK:');
-      if (userData.role === 'platform_admin') {
-        console.log('   ✅ Has platform_admin role - should be able to create orgs');
-      } else if (['admin', 'owner'].includes(userData.role)) {
-        console.log(`   ⚠️  Has ${userData.role} role - can create orgs IF org exists`);
+      if (userData.role === 'admin') {
+        console.log('   ✅ Has admin role - should be able to create orgs');
+      } else if (userData.role === 'user') {
+        console.log(`   ⚠️  Has user role - limited access`);
       } else {
         console.log(`   ❌ Has ${userData.role || 'NO'} role - CANNOT create orgs`);
       }
       console.log('');
-      
+
       // Recommendation
       console.log('💡 SOLUTION:');
       if (!userData.organizationId || userData.organizationId === 'platform') {
         console.log('   1. Create the "platform" organization');
         console.log('      Run: node scripts/create-platform-org.js');
         console.log('');
-        console.log('   2. Ensure user has platform_admin role');
-        if (userData.role !== 'platform_admin') {
-          console.log('      Need to update user role to "platform_admin"');
+        console.log('   2. Ensure user has admin role');
+        if (userData.role !== 'admin') {
+          console.log('      Need to update user role to "admin"');
         }
       }
       console.log('');

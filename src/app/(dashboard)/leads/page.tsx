@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -43,7 +41,6 @@ const STATUS_FILTERS = [
 
 export default function LeadsPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -61,14 +58,14 @@ export default function LeadsPage() {
       searchParams.set('lastDoc', String(lastDoc));
     }
 
-    const response = await fetch(`/api/workspace/${orgId}/leads?${searchParams}`);
+    const response = await fetch(`/api/leads?${searchParams}`);
 
     if (!response.ok) {
       throw new Error('Failed to fetch leads');
     }
 
     return response.json() as Promise<{ data: Lead[]; lastDoc: unknown; hasMore: boolean }>;
-  }, [orgId, filter]);
+  }, [filter]);
 
   const {
     data: leads,

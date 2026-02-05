@@ -56,11 +56,6 @@ export interface NavItem {
 /**
  * Available administrative permissions in the platform
  *
- * Permissions are hierarchical:
- * - 'view_*' permissions allow read-only access
- * - 'manage_*' permissions allow full CRUD operations
- * - 'platform_admin' grants all permissions (deprecated, use superadmin)
- *
  * @deprecated This type is legacy. Use UnifiedPermissions from unified-rbac.ts instead.
  */
 export type AdminPermission =
@@ -72,8 +67,7 @@ export type AdminPermission =
   | 'manage_billing'
   | 'view_analytics'
   | 'manage_system'
-  | 'manage_agents'
-  | 'platform_admin'; // @deprecated Use superadmin instead
+  | 'manage_agents';
 
 // ============================================================================
 // AI Specialist Categories and Configuration
@@ -215,11 +209,7 @@ export interface CommandCenterContext {
  *
  * @deprecated This type is legacy. Use AccountRole from unified-rbac.ts instead.
  */
-export type AdminRole =
-  | 'platform_admin'  // @deprecated Use 'superadmin' instead - Full platform access
-  | 'admin'           // Organization-level access
-  | 'support'         // Read + limited write access
-  | 'viewer';         // Read-only access
+export type AdminRole = 'admin';
 
 /**
  * Administrative user information

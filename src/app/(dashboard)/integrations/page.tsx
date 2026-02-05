@@ -85,7 +85,7 @@ export default function IntegrationsPage() {
   const handleConnect = (provider: IntegrationProvider) => {
     if (provider.requiresOAuth) {
       // Redirect to OAuth flow
-      window.location.href = `/api/integrations/oauth/authorize?provider=${provider.id}&orgId=${orgId}`;
+      window.location.href = `/api/integrations/oauth/authorize?provider=${provider.id}`;
     } else if (provider.requiresAPIKey) {
       // Show API key input modal
       setPendingProvider(provider);

@@ -6,10 +6,10 @@ import type { Timestamp } from 'firebase/firestore';
  */
 
 /**
- * Admin role type - simplified for penthouse model
- * superadmin = highest authority in the company
+ * Admin role type - penthouse binary RBAC
+ * All admin panel users are 'admin'
  */
-export type AdminRole = 'superadmin' | 'admin';
+export type AdminRole = 'admin';
 
 export interface AdminUser {
   id: string;
@@ -57,7 +57,7 @@ export interface AdminPermissions {
 }
 
 export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
-  superadmin: {
+  admin: {
     canViewUsers: true,
     canCreateUsers: true,
     canEditUsers: true,
@@ -69,23 +69,6 @@ export const ADMIN_ROLE_PERMISSIONS: Record<AdminRole, AdminPermissions> = {
     canManageAPIKeys: true,
     canViewSystemHealth: true,
     canManageFeatureFlags: true,
-    canViewAuditLogs: true,
-    canExportData: true,
-    canImportData: true,
-    canViewAnalytics: true,
-  },
-  admin: {
-    canViewUsers: true,
-    canCreateUsers: true,
-    canEditUsers: true,
-    canSuspendUsers: true,
-    canDeleteUsers: false,
-    canViewSettings: true,
-    canManageSettings: true,
-    canManageIntegrations: true,
-    canManageAPIKeys: true,
-    canViewSystemHealth: true,
-    canManageFeatureFlags: false,
     canViewAuditLogs: true,
     canExportData: true,
     canImportData: true,

@@ -102,7 +102,7 @@ export async function searchWorkspace(
           title,
           subtitle: schema.name,
           description: recordNotes ?? recordDescription,
-          url: `/workspace/${orgId}/entities/${schema.id}/${recordId}`,
+          url: `/entities/${schema.id}/${recordId}`,
           metadata: record as Record<string, unknown>,
         });
       }

@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -36,7 +34,6 @@ interface Contact {
 
 export default function ContactsPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchContacts = useCallback(async (lastDoc?: unknown) => {
@@ -49,14 +46,14 @@ export default function ContactsPage() {
       searchParams.set('lastDoc', String(lastDoc));
     }
 
-    const response = await fetch(`/api/workspace/${orgId}/contacts?${searchParams}`);
+    const response = await fetch(`/api/contacts?${searchParams}`);
 
     if (!response.ok) {
       throw new Error('Failed to fetch contacts');
     }
 
     return response.json() as Promise<{ data: Contact[]; lastDoc: unknown; hasMore: boolean }>;
-  }, [orgId]);
+  }, []);
 
   const {
     data: contacts,

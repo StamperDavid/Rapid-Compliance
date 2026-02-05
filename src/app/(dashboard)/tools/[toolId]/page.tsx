@@ -27,7 +27,7 @@ export default function CustomToolPage() {
   useEffect(() => {
     const fetchTool = async () => {
       try {
-        const response = await fetch(`/api/workspace/${orgId}/custom-tools?id=${toolId}`);
+        const response = await fetch(`/api/custom-tools?id=${toolId}`);
 
         if (!response.ok) {
           if (response.status === 404) {

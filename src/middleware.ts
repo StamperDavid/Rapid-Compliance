@@ -33,7 +33,7 @@ export function middleware(request: NextRequest) {
   //
   // The admin layout (src/app/admin/layout.tsx) enforces:
   // - Unauthenticated users → /admin-login
-  // - Non-superadmin users → /workspace/{orgId}/dashboard (with proper context)
+  // - Non-admin users → /workspace/{orgId}/dashboard (with proper context)
   // ============================================================================
 
   // Allow all /admin/* routes through - let layout handle auth

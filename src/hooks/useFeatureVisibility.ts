@@ -76,7 +76,7 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
 
   // Build filtered navigation - applies uniformly to all roles
   const filteredNav = useMemo(() => {
-    const fullNav = buildNavigationStructure(organizationId);
+    const fullNav = buildNavigationStructure();
 
     if (!settings) {
       return fullNav; // No settings = show everything
@@ -98,7 +98,7 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
       }))
       // Remove empty sections
       .filter(section => section.items.length > 0);
-  }, [organizationId, settings]);
+  }, [settings]);
 
   // Count hidden features - applies uniformly to all roles
   const hiddenCount = useMemo(() => {

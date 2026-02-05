@@ -74,7 +74,7 @@ export default function RiskDashboardPage() {
 
       // Fetch deal details
       const dealResponse = await fetch(
-        `/api/workspace/${organizationId}/deals?dealId=${dealId}`,
+        `/api/deals?dealId=${dealId}`,
         {
           method: 'GET',
           headers: {

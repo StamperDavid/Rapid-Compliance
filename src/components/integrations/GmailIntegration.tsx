@@ -65,10 +65,9 @@ export default function GmailIntegration({
     try {
       // Get current user and org from context or URL
       const userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
-      const orgId = window.location.pathname.split('/')[2] || 'current-org';
 
       // Redirect to real Google OAuth flow
-      window.location.href = `/api/integrations/google/auth?userId=${userId}&orgId=${orgId}`;
+      window.location.href = `/api/integrations/google/auth?userId=${userId}`;
     } catch (error) {
       console.error('Failed to start Gmail OAuth:', error);
       setIsConnecting(false);

@@ -512,7 +512,7 @@ function CRMContent() {
       }}>
         {/* Brand */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid #1a1a1a' }}>
-          <Link href={user?.organizationId ? `/workspace/${user.organizationId}/dashboard` : '/login'} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', cursor: 'pointer' }}>
+          <Link href={user?.organizationId ? `/dashboard` : '/login'} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', cursor: 'pointer' }}>
             {logoUrl ? (
               <Image src={logoUrl} alt={brandName} width={sidebarOpen ? 150 : 32} height={sidebarOpen ? 40 : 32} style={{ maxHeight: sidebarOpen ? '40px' : '32px', maxWidth: sidebarOpen ? '150px' : '32px', objectFit: 'contain' }} />
             ) : (
@@ -537,7 +537,7 @@ function CRMContent() {
         <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
           {/* Dashboard Link */}
           <Link
-            href={user?.organizationId ? `/workspace/${user.organizationId}/dashboard` : '/login'}
+            href={user?.organizationId ? `/dashboard` : '/login'}
             style={{
               width: '100%',
               padding: '0.875rem 1.25rem',

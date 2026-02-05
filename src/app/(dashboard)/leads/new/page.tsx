@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger/logger';
@@ -13,7 +11,6 @@ import type { DataQualityScore } from '@/lib/crm/data-quality';
 export default function NewLeadPage() {
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
   const [lead, setLead] = useState({ firstName: '', lastName: '', email: '', phone: '', company: '', title: '', source: '', status: 'new' as const });
   const [saving, setSaving] = useState(false);
   const [duplicateResult, setDuplicateResult] = useState<DuplicateDetectionResult | null>(null);
@@ -77,7 +74,7 @@ export default function NewLeadPage() {
     try {
       setSaving(true);
 
-      const response = await fetch(`/api/workspace/${orgId}/leads`, {
+      const response = await fetch(`/api/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -97,7 +94,7 @@ export default function NewLeadPage() {
     } finally {
       setSaving(false);
     }
-  }, [orgId, lead, router, toast]);
+  }, [lead, router, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       false
     );
 
-    return NextResponse.redirect(`/workspace/${orgId}/integrations?success=slack`);
+    return NextResponse.redirect(`/integrations?success=slack`);
   } catch (_error) {
     return NextResponse.redirect('/integrations?error=oauth_failed');
   }

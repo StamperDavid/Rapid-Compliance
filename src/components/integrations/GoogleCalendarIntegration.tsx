@@ -48,7 +48,7 @@ export default function GoogleCalendarIntegration({
       }
 
       // Redirect to REAL Google OAuth
-      window.location.href = `/api/integrations/google/auth?userId=${user.uid}&orgId=${org.id}`;
+      window.location.href = `/api/integrations/google/auth?userId=${user.uid}`;
     } catch (error) {
       logger.error('Connection failed:', error instanceof Error ? error : new Error(String(error)), { file: 'GoogleCalendarIntegration.tsx' });
       setIsConnecting(false);

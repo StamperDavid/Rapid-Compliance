@@ -35,8 +35,8 @@ export default function LoginPage() {
    * UNIFIED LOGIN ARCHITECTURE: SMART ROLE REDIRECTION
    *
    * This handler implements role-based routing after authentication:
-   * - superadmin users → /admin (Platform Admin Dashboard)
-   * - All other users → /workspace/{orgId}/dashboard (Workspace)
+   * - admin users → /admin (Platform Admin Dashboard)
+   * - All other users → /dashboard
    *
    * The redirecting state prevents FOUC (Flash of Unstyled Content) by
    * showing a clean loading indicator during the navigation transition.
@@ -78,8 +78,8 @@ export default function LoginPage() {
       });
 
       // SMART ROLE REDIRECTION
-      // Admin roles (superadmin/admin) route to /admin, all others to dashboard
-      if (userRole === 'superadmin' || userRole === 'admin') {
+      // Admin role routes to /admin, all others to dashboard
+      if (userRole === 'admin') {
         logger.info('Admin detected, redirecting to /admin', {
           uid: user.uid,
           file: 'login/page.tsx'
