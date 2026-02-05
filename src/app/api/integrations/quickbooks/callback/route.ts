@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   try {
     // Decode and validate state
     let userId = 'default';
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const orgId = DEFAULT_ORG_ID;
 
     if (state) {
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     logger.info('QuickBooks integration saved', { route: '/api/integrations/quickbooks/callback', orgId, realmId });
 
-    // SINGLE-TENANT: Redirect to flat route, not workspace-scoped
+    // PENTHOUSE: Redirect to flat route, not workspace-scoped
     return NextResponse.redirect('/settings/integrations?success=quickbooks');
   } catch (error) {
     const _errorMessage = error instanceof Error ? error.message : 'Unknown error';

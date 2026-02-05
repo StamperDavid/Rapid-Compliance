@@ -1,7 +1,7 @@
 /**
  * Audit Log Viewer
  * View all website builder events (publish, unpublish, domain changes, etc.)
- * NOTE: Single-tenant - uses DEFAULT_ORG_ID
+ * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

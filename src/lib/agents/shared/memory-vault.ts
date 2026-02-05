@@ -1,16 +1,16 @@
 /**
- * Tenant Memory Vault - Shared Stateful Memory Across Agents
+ * Memory Vault - Shared Stateful Memory Across Agents
  *
  * Shared memory infrastructure that enables agents to communicate
  * through a common state store.
  *
  * ARCHITECTURE:
  * - All agents read from and write to this vault
- * - Data is scoped by tenantId (DEFAULT_ORG_ID in single-tenant mode)
+ * - Data is scoped by organization (DEFAULT_ORG_ID)
  * - Supports cross-agent signals, insights, and context sharing
  * - Enables "Chain of Action" patterns where agents build on each other's work
  *
- * @module agents/shared/tenant-memory-vault
+ * @module agents/shared/memory-vault
  */
 
 import { logger } from '@/lib/logger/logger';
@@ -44,7 +44,7 @@ export type MemoryPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
  */
 export interface MemoryEntry<T = unknown> {
   id: string;
-  tenantId: string;
+  orgId: string;
   category: MemoryCategory;
   key: string;
   value: T;
@@ -191,17 +191,17 @@ const PRIORITY_ORDER: Record<MemoryPriority, number> = {
 };
 
 // ============================================================================
-// TENANT MEMORY VAULT CLASS
+// MEMORY VAULT CLASS
 // ============================================================================
 
 /**
- * TenantMemoryVault - The shared memory store for cross-agent communication
+ * MemoryVault - The shared memory store for cross-agent communication
  *
  * This is the central nervous system of the agent swarm. Every agent reads
  * from and writes to this vault, enabling coordinated intelligence.
  */
-export class TenantMemoryVault {
-  private static instance: TenantMemoryVault | null = null;
+export class MemoryVault {
+  private static instance: MemoryVault | null = null;
 
   // In-memory storage (would be Firestore in production)
   private store: Map<string, Map<string, MemoryEntry>> = new Map();
@@ -216,22 +216,22 @@ export class TenantMemoryVault {
   private accessMetrics: Map<string, { reads: number; writes: number }> = new Map();
 
   private constructor() {
-    logger.info('[TenantMemoryVault] Initialized - Cross-agent memory active');
+    logger.info('[MemoryVault] Initialized - Cross-agent memory active');
   }
 
   /**
    * Get singleton instance
    */
-  static getInstance(): TenantMemoryVault {
-    TenantMemoryVault.instance ??= new TenantMemoryVault();
-    return TenantMemoryVault.instance;
+  static getInstance(): MemoryVault {
+    MemoryVault.instance ??= new MemoryVault();
+    return MemoryVault.instance;
   }
 
   /**
    * Reset instance (for testing)
    */
   static resetInstance(): void {
-    TenantMemoryVault.instance = null;
+    MemoryVault.instance = null;
   }
 
   // ==========================================================================
@@ -248,21 +248,21 @@ export class TenantMemoryVault {
     agentId: string,
     options: WriteOptions = {}
   ): MemoryEntry<T> {
-    // Use DEFAULT_ORG_ID internally (single-tenant mode)
-    const tenantId = DEFAULT_ORG_ID;
+    // Use DEFAULT_ORG_ID internally
+    const orgId = DEFAULT_ORG_ID;
 
-    // Get or create tenant store
-    if (!this.store.has(tenantId)) {
-      this.store.set(tenantId, new Map());
+    // Get or create organization store
+    if (!this.store.has(orgId)) {
+      this.store.set(orgId, new Map());
     }
-    const tenantStore = this.store.get(tenantId);
-    if (!tenantStore) {
-      throw new Error('[TenantMemoryVault] Failed to initialize tenant store');
+    const store = this.store.get(orgId);
+    if (!store) {
+      throw new Error('[MemoryVault] Failed to initialize organization store');
     }
 
     // Check for existing entry
     const existingKey = `${category}:${key}`;
-    const existing = tenantStore.get(existingKey);
+    const existing = store.get(existingKey);
 
     if (existing && !options.overwrite) {
       // Update existing entry
@@ -276,12 +276,12 @@ export class TenantMemoryVault {
         metadata: { ...existing.metadata, ...options.metadata },
       };
 
-      tenantStore.set(existingKey, updated);
-      this.notifySubscribers(tenantId, updated);
-      this.trackWrite(tenantId);
+      store.set(existingKey, updated);
+      this.notifySubscribers(orgId, updated);
+      this.trackWrite(orgId);
 
-      logger.info('[TenantMemoryVault] Entry updated', {
-        tenantId,
+      logger.info('[MemoryVault] Entry updated', {
+        orgId,
         category,
         key,
         agentId,
@@ -295,7 +295,7 @@ export class TenantMemoryVault {
     const now = new Date();
     const entry: MemoryEntry<T> = {
       id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      tenantId,
+      orgId,
       category,
       key,
       value,
@@ -310,12 +310,12 @@ export class TenantMemoryVault {
       accessCount: 0,
     };
 
-    tenantStore.set(existingKey, entry);
-    this.notifySubscribers(tenantId, entry);
-    this.trackWrite(tenantId);
+    store.set(existingKey, entry);
+    this.notifySubscribers(orgId, entry);
+    this.trackWrite(orgId);
 
-    logger.info('[TenantMemoryVault] Entry created', {
-      tenantId,
+    logger.info('[MemoryVault] Entry created', {
+      orgId,
       category,
       key,
       agentId,
@@ -435,16 +435,16 @@ export class TenantMemoryVault {
     key: string,
     agentId: string
   ): MemoryEntry<T> | null {
-    // Use DEFAULT_ORG_ID internally (single-tenant mode)
-    const tenantId = DEFAULT_ORG_ID;
+    // Use DEFAULT_ORG_ID internally
+    const orgId = DEFAULT_ORG_ID;
 
-    const tenantStore = this.store.get(tenantId);
-    if (!tenantStore) {
+    const store = this.store.get(orgId);
+    if (!store) {
       return null;
     }
 
     const entryKey = `${category}:${key}`;
-    const entry = tenantStore.get(entryKey) as MemoryEntry<T> | undefined;
+    const entry = store.get(entryKey) as MemoryEntry<T> | undefined;
 
     if (!entry) {
       return null;
@@ -452,7 +452,7 @@ export class TenantMemoryVault {
 
     // Check expiration
     if (entry.expiresAt && new Date() > entry.expiresAt) {
-      tenantStore.delete(entryKey);
+      store.delete(entryKey);
       return null;
     }
 
@@ -460,7 +460,7 @@ export class TenantMemoryVault {
     entry.accessCount += 1;
     entry.lastAccessedBy = agentId;
     entry.lastAccessedAt = new Date();
-    this.trackRead(tenantId);
+    this.trackRead(orgId);
 
     return entry;
   }
@@ -472,16 +472,16 @@ export class TenantMemoryVault {
     agentId: string,
     options: QueryOptions = {}
   ): MemoryEntry[] {
-    // Use DEFAULT_ORG_ID internally (single-tenant mode)
-    const tenantId = DEFAULT_ORG_ID;
+    // Use DEFAULT_ORG_ID internally
+    const orgId = DEFAULT_ORG_ID;
 
-    const tenantStore = this.store.get(tenantId);
-    if (!tenantStore) {
+    const store = this.store.get(orgId);
+    if (!store) {
       return [];
     }
 
     const now = new Date();
-    let entries = Array.from(tenantStore.values());
+    let entries = Array.from(store.values());
 
     // Filter expired unless explicitly included
     if (!options.includeExpired) {
@@ -543,13 +543,13 @@ export class TenantMemoryVault {
     entries = entries.slice(offset, offset + limit);
 
     // Track access
-    this.trackRead(tenantId);
+    this.trackRead(orgId);
 
     return entries;
   }
 
   /**
-   * Get all insights for a tenant
+   * Get all insights for the organization
    */
   async getInsights(
     agentId: string,
@@ -650,21 +650,21 @@ export class TenantMemoryVault {
     callback: MemorySubscriptionCallback,
     options: SubscriptionOptions = {}
   ): () => void {
-    // Use DEFAULT_ORG_ID internally (single-tenant mode)
-    const tenantId = DEFAULT_ORG_ID;
+    // Use DEFAULT_ORG_ID internally
+    const orgId = DEFAULT_ORG_ID;
 
-    if (!this.subscriptions.has(tenantId)) {
-      this.subscriptions.set(tenantId, new Map());
+    if (!this.subscriptions.has(orgId)) {
+      this.subscriptions.set(orgId, new Map());
     }
 
-    const tenantSubs = this.subscriptions.get(tenantId);
-    if (!tenantSubs) {
-      throw new Error('[TenantMemoryVault] Failed to initialize tenant subscriptions');
+    const subs = this.subscriptions.get(orgId);
+    if (!subs) {
+      throw new Error('[MemoryVault] Failed to initialize organization subscriptions');
     }
-    tenantSubs.set(subscriberId, { callback, options });
+    subs.set(subscriberId, { callback, options });
 
-    logger.info('[TenantMemoryVault] Subscription added', {
-      tenantId,
+    logger.info('[MemoryVault] Subscription added', {
+      orgId,
       subscriberId,
       category: options.category,
       tags: options.tags,
@@ -672,9 +672,9 @@ export class TenantMemoryVault {
 
     // Return unsubscribe function
     return () => {
-      tenantSubs.delete(subscriberId);
-      logger.info('[TenantMemoryVault] Subscription removed', {
-        tenantId,
+      subs.delete(subscriberId);
+      logger.info('[MemoryVault] Subscription removed', {
+        orgId,
         subscriberId,
       });
     };
@@ -683,11 +683,11 @@ export class TenantMemoryVault {
   /**
    * Notify subscribers of changes
    */
-  private notifySubscribers(tenantId: string, entry: MemoryEntry): void {
-    const tenantSubs = this.subscriptions.get(tenantId);
-    if (!tenantSubs) {return;}
+  private notifySubscribers(orgId: string, entry: MemoryEntry): void {
+    const subs = this.subscriptions.get(orgId);
+    if (!subs) {return;}
 
-    for (const [_subscriberId, { callback, options }] of tenantSubs) {
+    for (const [_subscriberId, { callback, options }] of subs) {
       // Check if subscriber wants this category
       if (options.category && options.category !== entry.category) {
         continue;
@@ -707,7 +707,7 @@ export class TenantMemoryVault {
       try {
         callback(entry);
       } catch (error) {
-        logger.error('[TenantMemoryVault] Subscription callback error', error instanceof Error ? error : new Error(String(error)));
+        logger.error('[MemoryVault] Subscription callback error', error instanceof Error ? error : new Error(String(error)));
       }
     }
   }
@@ -755,20 +755,20 @@ export class TenantMemoryVault {
   }
 
   /**
-   * Get vault statistics for a tenant
+   * Get vault statistics
    */
   getStats(): {
     totalEntries: number;
     byCategory: Record<MemoryCategory, number>;
     metrics: { reads: number; writes: number };
   } {
-    // Use DEFAULT_ORG_ID internally (single-tenant mode)
-    const tenantId = DEFAULT_ORG_ID;
+    // Use DEFAULT_ORG_ID internally
+    const orgId = DEFAULT_ORG_ID;
 
-    const tenantStore = this.store.get(tenantId);
-    const metrics = this.accessMetrics.get(tenantId) ?? { reads: 0, writes: 0 };
+    const store = this.store.get(orgId);
+    const metrics = this.accessMetrics.get(orgId) ?? { reads: 0, writes: 0 };
 
-    if (!tenantStore) {
+    if (!store) {
       return {
         totalEntries: 0,
         byCategory: {
@@ -784,12 +784,12 @@ export class TenantMemoryVault {
       STRATEGY: 0, WORKFLOW: 0, PERFORMANCE: 0, CONTEXT: 0, CROSS_AGENT: 0,
     };
 
-    for (const entry of tenantStore.values()) {
+    for (const entry of store.values()) {
       byCategory[entry.category] += 1;
     }
 
     return {
-      totalEntries: tenantStore.size,
+      totalEntries: store.size,
       byCategory,
       metrics,
     };
@@ -799,25 +799,25 @@ export class TenantMemoryVault {
    * Clean expired entries
    */
   cleanExpired(): number {
-    // Use DEFAULT_ORG_ID internally (single-tenant mode)
-    const tenantId = DEFAULT_ORG_ID;
+    // Use DEFAULT_ORG_ID internally
+    const orgId = DEFAULT_ORG_ID;
 
-    const tenantStore = this.store.get(tenantId);
-    if (!tenantStore) {return 0;}
+    const store = this.store.get(orgId);
+    if (!store) {return 0;}
 
     const now = new Date();
     let cleaned = 0;
 
-    for (const [key, entry] of tenantStore) {
+    for (const [key, entry] of store) {
       if (entry.expiresAt && entry.expiresAt < now) {
-        tenantStore.delete(key);
+        store.delete(key);
         cleaned += 1;
       }
     }
 
     if (cleaned > 0) {
-      logger.info('[TenantMemoryVault] Cleaned expired entries', {
-        tenantId,
+      logger.info('[MemoryVault] Cleaned expired entries', {
+        orgId,
         count: cleaned,
       });
     }
@@ -829,21 +829,21 @@ export class TenantMemoryVault {
   // PRIVATE HELPERS
   // ==========================================================================
 
-  private trackRead(tenantId: string): void {
-    if (!this.accessMetrics.has(tenantId)) {
-      this.accessMetrics.set(tenantId, { reads: 0, writes: 0 });
+  private trackRead(orgId: string): void {
+    if (!this.accessMetrics.has(orgId)) {
+      this.accessMetrics.set(orgId, { reads: 0, writes: 0 });
     }
-    const metrics = this.accessMetrics.get(tenantId);
+    const metrics = this.accessMetrics.get(orgId);
     if (metrics) {
       metrics.reads += 1;
     }
   }
 
-  private trackWrite(tenantId: string): void {
-    if (!this.accessMetrics.has(tenantId)) {
-      this.accessMetrics.set(tenantId, { reads: 0, writes: 0 });
+  private trackWrite(orgId: string): void {
+    if (!this.accessMetrics.has(orgId)) {
+      this.accessMetrics.set(orgId, { reads: 0, writes: 0 });
     }
-    const metrics = this.accessMetrics.get(tenantId);
+    const metrics = this.accessMetrics.get(orgId);
     if (metrics) {
       metrics.writes += 1;
     }
@@ -855,16 +855,16 @@ export class TenantMemoryVault {
 // ============================================================================
 
 /**
- * Get the TenantMemoryVault singleton
+ * Get the MemoryVault singleton
  */
-export function getMemoryVault(): TenantMemoryVault {
-  return TenantMemoryVault.getInstance();
+export function getMemoryVault(): MemoryVault {
+  return MemoryVault.getInstance();
 }
 
 /**
- * Get the default tenant ID for single-tenant mode
+ * Get the default organization ID
  */
-export function getDefaultTenantId(): string {
+export function getDefaultOrgId(): string {
   return DEFAULT_ORG_ID;
 }
 
@@ -955,4 +955,4 @@ export async function checkPendingSignals(
   return vault.getPendingSignals(agentId);
 }
 
-logger.info('[TenantMemoryVault] Module loaded - Shared memory infrastructure ready');
+logger.info('[MemoryVault] Module loaded - Shared memory infrastructure ready');

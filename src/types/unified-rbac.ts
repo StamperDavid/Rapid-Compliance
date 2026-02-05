@@ -1,12 +1,10 @@
 /**
  * Unified Role-Based Access Control (RBAC) System
- * Single source of truth for single-tenant deployment
+ * Single source of truth for penthouse deployment
  *
- * 4-Level Hierarchy (Single-Tenant Mode):
- * - superadmin: Full system access, user management, billing, all features
- * - admin: Organization management, API keys, theme, user management
- * - manager: Team management, workflows, marketing, sales
- * - employee: Individual contributor - create/edit own records only
+ * Binary Roles:
+ * - admin: Full system access, user management, billing, all features
+ * - user: Standard contributor - CRM, marketing, sales, limited management
  */
 
 import type { LucideIcon } from 'lucide-react';
@@ -17,45 +15,11 @@ import type { Timestamp } from 'firebase/firestore';
 // =============================================================================
 
 /**
- * Unified account role hierarchy (highest to lowest):
- * - superadmin: Full system access, user management, billing, all features
- * - admin: Organization management, API keys, theme, user management
- * - manager: Team management, workflows, marketing, sales
- * - employee: Individual contributor - create/edit own records only
+ * Binary account roles:
+ * - admin: Full system access, user management, billing, all features
+ * - user: Standard contributor - create/edit records, limited management
  */
-export type AccountRole = 'superadmin' | 'admin' | 'manager' | 'employee';
-
-/**
- * @deprecated Legacy role type - now unified to AccountRole. Will be removed.
- */
-export type LegacyAccountRole = 'owner' | 'admin' | 'manager' | 'employee';
-
-/**
- * Role hierarchy for permission comparisons
- */
-export const ACCOUNT_ROLE_HIERARCHY: Record<AccountRole, number> = {
-  superadmin: 4,
-  admin: 3,
-  manager: 2,
-  employee: 1,
-};
-
-/**
- * Maps legacy roles to new 4-level hierarchy
- * Use this during migration to convert existing role assignments
- */
-export function migrateLegacyRole(legacyRole: LegacyAccountRole): AccountRole {
-  switch (legacyRole) {
-    case 'owner':
-      return 'superadmin';
-    case 'admin':
-      return 'admin';
-    case 'manager':
-      return 'manager';
-    case 'employee':
-      return 'employee';
-  }
-}
+export type AccountRole = 'admin' | 'user';
 
 // =============================================================================
 // UNIFIED USER - Single user interface for the Command Center
@@ -66,9 +30,6 @@ export interface UnifiedUser {
   email: string;
   displayName: string;
   role: AccountRole;
-
-  /** Organization/Tenant ID - uses DEFAULT_ORG_ID in single-tenant mode */
-  tenantId: string;
 
   /** Avatar URL */
   avatarUrl?: string;
@@ -89,7 +50,7 @@ export interface UnifiedUser {
 // =============================================================================
 
 export interface UnifiedPermissions {
-  // Platform Administration (superadmin only)
+  // Platform Administration (admin only)
   canAccessPlatformAdmin: boolean;
   canManageAllOrganizations: boolean;
   canViewSystemHealth: boolean;
@@ -171,10 +132,10 @@ export interface UnifiedPermissions {
  * Complete permission set for each role
  */
 export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> = {
-  superadmin: {
-    // Platform Administration - FULL ACCESS (single-tenant: system settings)
+  admin: {
+    // Platform Administration - FULL ACCESS
     canAccessPlatformAdmin: true,
-    canManageAllOrganizations: true, // In single-tenant, manages the single org
+    canManageAllOrganizations: true,
     canViewSystemHealth: true,
     canManageFeatureFlags: true,
     canViewAuditLogs: true,
@@ -250,86 +211,7 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
     canManageProducts: true,
   },
 
-  admin: {
-    // Platform Administration - NO ACCESS
-    canAccessPlatformAdmin: false,
-    canManageAllOrganizations: false,
-    canViewSystemHealth: false,
-    canManageFeatureFlags: false,
-    canViewAuditLogs: false,
-    canManageSystemSettings: false,
-    canImpersonateUsers: false,
-    canAccessSupportTools: false,
-
-    // Organization Management - LIMITED
-    canManageOrganization: true,
-    canManageBilling: false,
-    canManageAPIKeys: true,
-    canManageTheme: true,
-    canDeleteOrganization: false,
-
-    // User Management - FULL ACCESS
-    canInviteUsers: true,
-    canRemoveUsers: true,
-    canChangeUserRoles: true,
-    canViewAllUsers: true,
-
-    // Data Management - FULL ACCESS
-    canCreateSchemas: true,
-    canEditSchemas: true,
-    canDeleteSchemas: true,
-    canExportData: true,
-    canImportData: true,
-    canDeleteData: true,
-    canViewAllRecords: true,
-
-    // CRM Operations - FULL ACCESS
-    canCreateRecords: true,
-    canEditRecords: true,
-    canDeleteRecords: true,
-    canViewOwnRecordsOnly: false,
-    canAssignRecords: true,
-
-    // Workflows & Automation - FULL ACCESS
-    canCreateWorkflows: true,
-    canEditWorkflows: true,
-    canDeleteWorkflows: true,
-
-    // AI Agents & Swarm - FULL ACCESS
-    canTrainAIAgents: true,
-    canDeployAIAgents: true,
-    canManageAIAgents: true,
-    canAccessSwarmPanel: true,
-
-    // Marketing - FULL ACCESS
-    canManageSocialMedia: true,
-    canManageEmailCampaigns: true,
-    canManageWebsite: true,
-
-    // Sales - FULL ACCESS
-    canViewLeads: true,
-    canManageLeads: true,
-    canViewDeals: true,
-    canManageDeals: true,
-    canAccessVoiceAgents: true,
-
-    // Reports & Analytics - FULL ACCESS (except platform)
-    canViewReports: true,
-    canCreateReports: true,
-    canExportReports: true,
-    canViewPlatformAnalytics: false,
-
-    // Settings - FULL ACCESS
-    canAccessSettings: true,
-    canManageIntegrations: true,
-
-    // E-Commerce - FULL ACCESS
-    canManageEcommerce: true,
-    canProcessOrders: true,
-    canManageProducts: true,
-  },
-
-  manager: {
+  user: {
     // Platform Administration - NO ACCESS
     canAccessPlatformAdmin: false,
     canManageAllOrganizations: false,
@@ -347,8 +229,8 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
     canManageTheme: false,
     canDeleteOrganization: false,
 
-    // User Management - LIMITED
-    canInviteUsers: true,
+    // User Management - VIEW ONLY
+    canInviteUsers: false,
     canRemoveUsers: false,
     canChangeUserRoles: false,
     canViewAllUsers: true,
@@ -358,11 +240,11 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
     canEditSchemas: false,
     canDeleteSchemas: false,
     canExportData: true,
-    canImportData: true,
+    canImportData: false,
     canDeleteData: false,
     canViewAllRecords: true,
 
-    // CRM Operations - LIMITED
+    // CRM Operations - CREATE/EDIT
     canCreateRecords: true,
     canEditRecords: true,
     canDeleteRecords: false,
@@ -407,85 +289,6 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
     canProcessOrders: true,
     canManageProducts: true,
   },
-
-  employee: {
-    // Platform Administration - NO ACCESS
-    canAccessPlatformAdmin: false,
-    canManageAllOrganizations: false,
-    canViewSystemHealth: false,
-    canManageFeatureFlags: false,
-    canViewAuditLogs: false,
-    canManageSystemSettings: false,
-    canImpersonateUsers: false,
-    canAccessSupportTools: false,
-
-    // Organization Management - NO ACCESS
-    canManageOrganization: false,
-    canManageBilling: false,
-    canManageAPIKeys: false,
-    canManageTheme: false,
-    canDeleteOrganization: false,
-
-    // User Management - NO ACCESS
-    canInviteUsers: false,
-    canRemoveUsers: false,
-    canChangeUserRoles: false,
-    canViewAllUsers: false,
-
-    // Data Management - LIMITED
-    canCreateSchemas: false,
-    canEditSchemas: false,
-    canDeleteSchemas: false,
-    canExportData: false,
-    canImportData: false,
-    canDeleteData: false,
-    canViewAllRecords: false,
-
-    // CRM Operations - LIMITED
-    canCreateRecords: true,
-    canEditRecords: true,
-    canDeleteRecords: false,
-    canViewOwnRecordsOnly: true,
-    canAssignRecords: false,
-
-    // Workflows & Automation - NO ACCESS
-    canCreateWorkflows: false,
-    canEditWorkflows: false,
-    canDeleteWorkflows: false,
-
-    // AI Agents & Swarm - NO ACCESS
-    canTrainAIAgents: false,
-    canDeployAIAgents: false,
-    canManageAIAgents: false,
-    canAccessSwarmPanel: false,
-
-    // Marketing - NO ACCESS
-    canManageSocialMedia: false,
-    canManageEmailCampaigns: false,
-    canManageWebsite: false,
-
-    // Sales - LIMITED
-    canViewLeads: true,
-    canManageLeads: false,
-    canViewDeals: true,
-    canManageDeals: false,
-    canAccessVoiceAgents: false,
-
-    // Reports & Analytics - LIMITED
-    canViewReports: true,
-    canCreateReports: false,
-    canExportReports: false,
-    canViewPlatformAnalytics: false,
-
-    // Settings - NO ACCESS
-    canAccessSettings: false,
-    canManageIntegrations: false,
-
-    // E-Commerce - LIMITED
-    canManageEcommerce: false,
-    canProcessOrders: true,
-    canManageProducts: false,
-  },
 };
 
 // =============================================================================
@@ -494,34 +297,20 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
 
 /**
  * Navigation section categories
- * These map to the sidebar sections visible based on role
- *
- * 11 Operational Sections (available to all roles):
- * - command_center, crm, lead_gen, outbound, automation,
- *   content_factory, ai_workforce, ecommerce, analytics, website, settings
- *
- * 1 System Section (superadmin only):
- * - system
- *
- * Admin-Only Sections (superadmin in admin context):
- * - admin_org_view: Navigation for viewing organization details in admin panel
- * - admin_support: Support tools (impersonate, exports, bulk ops, API health)
  */
 export type NavigationCategory =
-  | 'command_center'   // Command Center: Workforce HQ, Dashboard, Conversations
-  | 'crm'              // CRM: Leads, Deals, Contacts, Living Ledger
-  | 'lead_gen'         // Lead Gen: Forms, Research, Scoring
-  | 'outbound'         // Outbound: Sequences, Campaigns, Email Writer, Nurture, Calls
-  | 'automation'       // Automation: Workflows, A/B Tests
-  | 'content_factory'  // Content Factory: Video, Social, Proposals, Battlecards
-  | 'ai_workforce'     // AI Workforce: Training, Voice AI, Social AI, SEO AI, Datasets, Fine-Tuning
-  | 'ecommerce'        // E-Commerce: Products, Orders, Storefront
-  | 'analytics'        // Analytics: Overview, Revenue, Pipeline, Sequences
-  | 'website'          // Website: Pages, Blog, Domains, SEO, Settings
-  | 'settings'         // Settings: Organization, Integrations, API Keys, Billing
-  | 'system'           // System (superadmin only): Health, Orgs, Users, Flags, Logs
-  | 'admin_org_view'   // Admin Org View: Overview, Edit, Back to List (admin context)
-  | 'admin_support';   // Admin Support: Impersonate, Bulk Ops, Exports, API Health (admin context)
+  | 'command_center'
+  | 'crm'
+  | 'lead_gen'
+  | 'outbound'
+  | 'automation'
+  | 'content_factory'
+  | 'ai_workforce'
+  | 'ecommerce'
+  | 'analytics'
+  | 'website'
+  | 'settings'
+  | 'system';
 
 /**
  * Navigation item definition
@@ -608,17 +397,10 @@ export function getUnifiedPermissions(role: AccountRole): UnifiedPermissions {
 }
 
 /**
- * Check if user is superadmin (has full system access)
+ * Check if user is admin (has full system access)
  */
-export function isSuperadminRole(role: AccountRole | null | undefined): boolean {
-  return role === 'superadmin';
-}
-
-/**
- * @deprecated Use isSuperadminRole instead. Will be removed.
- */
-export function isPlatformAdminRole(role: AccountRole | LegacyAccountRole | null | undefined): boolean {
-  return role === 'superadmin';
+export function isAdmin(role: AccountRole | null | undefined): boolean {
+  return role === 'admin';
 }
 
 /**
@@ -631,29 +413,10 @@ export function isRoleAtLeast(
   if (!role) {
     return false;
   }
-  return ACCOUNT_ROLE_HIERARCHY[role] >= ACCOUNT_ROLE_HIERARCHY[minimumRole];
-}
-
-/**
- * Compare two roles
- */
-export function isRoleHigherThanUnified(
-  role1: AccountRole,
-  role2: AccountRole
-): boolean {
-  return ACCOUNT_ROLE_HIERARCHY[role1] > ACCOUNT_ROLE_HIERARCHY[role2];
-}
-
-/**
- * Get the default tenant ID for a role
- * In single-tenant mode, all roles use DEFAULT_ORG_ID
- */
-export function getDefaultTenantId(
-  _role: AccountRole,
-  userTenantId: string
-): string {
-  // In single-tenant mode, all users belong to the same org
-  return userTenantId;
+  if (minimumRole === 'user') {
+    return true;
+  }
+  return role === 'admin';
 }
 
 /**

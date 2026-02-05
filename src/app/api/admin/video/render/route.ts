@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       metadata,
     } = validation.data;
 
-    // PENTHOUSE: Single-tenant mode - all admins have access to the organization
+    // PENTHOUSE: Penthouse model - all admins have access to the organization
     // Cross-org access checks removed
 
     logger.info('[AdminVideoRender] Starting video render job', {
@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
 
     const { jobId: validJobId, organizationId: validOrgId } = validation.data;
 
-    // PENTHOUSE: Single-tenant mode - all admins have access to the organization
+    // PENTHOUSE: Penthouse model - all admins have access to the organization
     // Cross-org access checks removed
 
     // Get job status from Firestore

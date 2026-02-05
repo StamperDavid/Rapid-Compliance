@@ -1,7 +1,7 @@
 /**
  * Custom Domains Management
  * Add, verify, and manage custom domains for the website
- * NOTE: Single-tenant - uses DEFAULT_ORG_ID
+ * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

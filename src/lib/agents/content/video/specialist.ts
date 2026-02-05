@@ -23,7 +23,7 @@ import {
   broadcastSignal,
   readAgentInsights,
   type ContentData,
-} from '../../shared/tenant-memory-vault';
+} from '../../shared/memory-vault';
 // DEFAULT_ORG_ID available from '@/lib/constants/platform' if needed
 
 // ============================================================================

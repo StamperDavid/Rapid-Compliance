@@ -144,7 +144,7 @@ export async function saveToDiscoveryArchive(params: {
     const contentHash = calculateContentHash(rawHtml);
 
     // Check if this exact content already exists (30-day cache)
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const existing = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('contentHash', '==', contentHash)
@@ -279,7 +279,7 @@ export async function flagArchiveEntryForDeletion(scrapeId: string): Promise<voi
  */
 export async function deleteFlaggedArchiveEntries(organizationId: string): Promise<number> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const flagged = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('flaggedForDeletion', '==', true)
@@ -329,7 +329,7 @@ export async function deleteExpiredArchiveEntries(organizationId: string): Promi
   try {
     const now = new Date();
 
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const expired = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('expiresAt', '<=', now)
@@ -414,7 +414,7 @@ export async function getFromDiscoveryArchiveByHash(
   contentHash: string
 ): Promise<TemporaryScrape | null> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('contentHash', '==', contentHash)
@@ -460,7 +460,7 @@ export async function getFromDiscoveryArchiveByUrl(
   url: string
 ): Promise<TemporaryScrape[]> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('url', '==', url)
@@ -517,7 +517,7 @@ export async function calculateStorageCost(organizationId: string): Promise<{
   projectedSavingsWithTTL: number;
 }> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const scrapes = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .get();
@@ -587,7 +587,7 @@ export async function getStorageStats(organizationId: string): Promise<{
   newestScrape: Date | null;
 }> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const scrapes = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .get();

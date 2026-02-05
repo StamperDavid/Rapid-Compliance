@@ -2,8 +2,8 @@
  * System Prompt Compiler
  * Compiles the final system prompt from all components
  *
- * Security: Includes tenant isolation headers to enforce data boundaries.
- * All prompts are wrapped with organization context to prevent cross-tenant access.
+ * Security: Includes organization isolation headers to enforce data boundaries.
+ * All prompts are wrapped with organization context to prevent cross-organization access.
  */
 
 import type {
@@ -11,7 +11,7 @@ import type {
   KnowledgeBase,
   BehaviorConfig
 } from '@/types/agent-memory';
-import { buildClientAgentContext } from '@/lib/ai/tenant-context-wrapper';
+import { buildClientAgentContext } from '@/lib/ai/context-wrapper';
 
 /** Business context fields used in prompt generation */
 export interface BusinessContextFields {
@@ -52,8 +52,8 @@ export interface BusinessContextFields {
   industryRegulations?: string;
 }
 
-/** Tenant isolation context for multi-tenant security */
-export interface TenantIsolationContext {
+/** Organization isolation context for data security */
+export interface IsolationContext {
   /** Organization ID */
   orgId: string;
   /** Organization name */
@@ -67,19 +67,19 @@ export interface PromptComponents {
   agentPersona: AgentPersona;
   behaviorConfig: BehaviorConfig;
   knowledgeBase: KnowledgeBase;
-  /** Optional tenant isolation context (required for production) */
-  tenantContext?: TenantIsolationContext;
+  /** Optional isolation context (required for production) */
+  isolationContext?: IsolationContext;
 }
 
 /**
  * Compile system prompt from all components
  *
- * SECURITY: Prepends tenant isolation header to enforce data boundaries.
+ * SECURITY: Prepends organization isolation header to enforce data boundaries.
  */
 export function compileSystemPrompt(
   components: PromptComponents
 ): string {
-  const { businessContext, agentPersona, behaviorConfig, knowledgeBase, tenantContext } = components;
+  const { businessContext, agentPersona, behaviorConfig, knowledgeBase, isolationContext } = components;
 
   // Extract business context strings to avoid empty strings in prompt (Explicit Ternary for STRINGS)
   const businessName = (businessContext.businessName !== '' && businessContext.businessName != null) ? businessContext.businessName : 'the company';
@@ -88,18 +88,18 @@ export function compileSystemPrompt(
   const uniqueValue = (businessContext.uniqueValue !== '' && businessContext.uniqueValue != null) ? businessContext.uniqueValue : 'Our commitment to quality';
   const targetCustomer = (businessContext.targetCustomer !== '' && businessContext.targetCustomer != null) ? businessContext.targetCustomer : 'Anyone who needs our services';
 
-  // Build tenant isolation header (CRITICAL FOR SECURITY)
-  let tenantIsolationHeader = '';
-  if (tenantContext) {
-    tenantIsolationHeader = buildClientAgentContext(
-      tenantContext.orgId,
-      tenantContext.orgName,
-      tenantContext.industry ?? industry,
+  // Build isolation header (CRITICAL FOR SECURITY)
+  let isolationHeader = '';
+  if (isolationContext) {
+    isolationHeader = buildClientAgentContext(
+      isolationContext.orgId,
+      isolationContext.orgName,
+      isolationContext.industry ?? industry,
       agentPersona.name ?? 'AI Assistant'
     );
   }
 
-  let prompt = `${tenantIsolationHeader}You are an AI sales and customer service agent for ${businessName}.
+  let prompt = `${isolationHeader}You are an AI sales and customer service agent for ${businessName}.
 
 # Your Role & Objectives
 ${agentPersona.objectives.map(obj => `- ${obj}`).join('\n')}

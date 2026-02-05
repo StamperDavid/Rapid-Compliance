@@ -864,7 +864,7 @@ async function calculateEngagement(
     }
 
     // Get sequence enrollments for this lead
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const enrollments = await adminDal.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
       ref
         .where('leadId', '==', leadId)

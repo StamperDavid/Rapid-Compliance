@@ -357,7 +357,7 @@ function recalculateCartTotals(cart: Cart): void {
  */
 async function saveCart(cart: Cart): Promise<void> {
   // Use organizationId from function parameter context (passed separately)
-  // Cart itself doesn't have organizationId property in single-tenant
+  // Cart itself doesn't have organizationId property in penthouse model
   const organizationId = DEFAULT_ORG_ID;
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${cart.workspaceId}/carts`,

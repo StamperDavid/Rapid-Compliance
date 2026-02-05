@@ -1,7 +1,7 @@
 /**
  * Custom Domains API
  * Manage custom domains for websites
- * CRITICAL: Multi-tenant isolation - validates organizationId
+ * CRITICAL: Organization isolation - validates organizationId
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

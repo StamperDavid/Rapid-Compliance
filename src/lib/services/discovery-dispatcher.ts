@@ -268,7 +268,7 @@ async function findIdleTasks(
     // In a real implementation, you'd have a dedicated queue collection
     // For now, we'll simulate by checking a hypothetical 'discoveryQueue' collection
 
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const query = db.collection('discoveryQueue')
       .where('workflow.stage', '==', 'discovery')
       .where('workflow.status', '==', 'idle')

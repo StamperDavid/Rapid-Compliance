@@ -3,7 +3,7 @@
 /**
  * Admin Living Ledger
  * CRM deal intelligence dashboard accessible from the admin panel.
- * Uses DEFAULT_ORG_ID (rapid-compliance-root) for single-tenant access.
+ * Uses DEFAULT_ORG_ID (rapid-compliance-root) for penthouse access.
  */
 
 import React, { useState, useEffect } from 'react';

@@ -1348,7 +1348,7 @@ TECHNICAL AGENTS (3):
     provisioner: {
       section: 'Provisioner System',
       content: `
-PURPOSE: Automatic setup of organization infrastructure for new tenants.
+PURPOSE: Automatic setup of organization infrastructure for new organizations.
 
 PROCESS:
 1. New user signs up via Firebase Auth
@@ -1369,13 +1369,13 @@ ERROR HANDLING:
 STACK:
 - Framework: Next.js 15 (App Router)
 - Hosting: Vercel (serverless)
-- Database: Firebase Firestore (multi-tenant)
+- Database: Firebase Firestore (penthouse model)
 - Auth: Firebase Auth
 - AI Gateway: OpenRouter (100+ models)
 - Voice: TTS via VoiceEngineFactory
 
-MULTI-TENANCY:
-- Each org has isolated data in Firestore
+PENTHOUSE MODEL:
+- Organization data isolated in Firestore
 - Feature visibility configurable per-org
 - Agents inherit organization context
       `.trim(),

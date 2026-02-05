@@ -179,7 +179,7 @@ export interface APIKeysConfig {
     microsoft365?: {
       clientId: string;
       clientSecret: string;
-      tenantId: string;
+      orgId: string;
       refreshToken?: string;
     };
     mailchimp?: {

@@ -1,7 +1,7 @@
 /**
  * Templates API
  * Manage custom page templates
- * CRITICAL: Multi-tenant - custom templates scoped to organizationId
+ * CRITICAL: Organization-scoped - custom templates scoped to organizationId
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

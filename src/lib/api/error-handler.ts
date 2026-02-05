@@ -199,12 +199,12 @@ export const errors = {
 
 /**
  * Validate authentication from request
- * SINGLE-TENANT MODE: Always returns DEFAULT_ORG_ID
+ * PENTHOUSE: Always returns DEFAULT_ORG_ID
  * The request parameter is kept for interface compatibility but not used for org determination
  */
 export function validateAuth(_request: Request): string {
-  // SINGLE-TENANT: Always return the platform's organization ID
-  // No dynamic tenant-switching allowed - this is SalesVelocity.ai's penthouse model
+  // PENTHOUSE: Always return the platform's organization ID
+  // No dynamic org-switching allowed - this is SalesVelocity.ai's penthouse model
   return DEFAULT_ORG_ID;
 }
 

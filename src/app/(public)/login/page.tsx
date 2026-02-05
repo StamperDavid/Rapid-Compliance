@@ -7,7 +7,6 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config'
 import { logger } from '@/lib/logger/logger';
-import type { AccountRole } from '@/types/unified-rbac';
 
 interface FirebaseError {
   code: string;
@@ -19,9 +18,7 @@ interface FirebaseError {
  * Used for role-based login redirection
  */
 interface UserDocument {
-  organizationId?: string;
-  tenantId?: string;
-  role?: AccountRole;
+  role?: string;
 }
 
 export default function LoginPage() {
@@ -39,7 +36,7 @@ export default function LoginPage() {
    *
    * This handler implements role-based routing after authentication:
    * - superadmin users → /admin (Platform Admin Dashboard)
-   * - All other users → /dashboard (Single-Tenant Dashboard)
+   * - All other users → /workspace/{orgId}/dashboard (Workspace)
    *
    * The redirecting state prevents FOUC (Flash of Unstyled Content) by
    * showing a clean loading indicator during the navigation transition.
@@ -81,16 +78,14 @@ export default function LoginPage() {
       });
 
       // SMART ROLE REDIRECTION
-      // Superadmins are routed to /admin, all others to their workspace
-      if (userRole === 'superadmin') {
-        logger.info('Platform admin detected, redirecting to /admin', {
+      // Admin roles (superadmin/admin) route to /admin, all others to dashboard
+      if (userRole === 'superadmin' || userRole === 'admin') {
+        logger.info('Admin detected, redirecting to /admin', {
           uid: user.uid,
           file: 'login/page.tsx'
         });
         // Set redirecting state to show clean loading UI (prevents FOUC)
         setRedirecting(true);
-        // Clear any tenant context for platform admin scope
-        // (activeTenant will be null in admin context)
         router.push('/admin');
         return;
       }
@@ -98,7 +93,7 @@ export default function LoginPage() {
       // Set redirecting state for clean transition
       setRedirecting(true);
 
-      // Single-tenant: redirect all users to flat dashboard route
+      // PENTHOUSE: Redirect to flat dashboard route
       router.push('/dashboard');
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));

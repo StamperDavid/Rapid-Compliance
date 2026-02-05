@@ -41,7 +41,7 @@ export async function executePayPalFunction(
   parameters: Record<string, unknown>,
   _integration: ConnectedIntegration
 ): Promise<unknown> {
-  // Import DEFAULT_ORG_ID for single-tenant
+  // Import DEFAULT_ORG_ID for penthouse
   const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   const organizationId = DEFAULT_ORG_ID;
 

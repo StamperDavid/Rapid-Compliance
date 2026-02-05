@@ -18,7 +18,7 @@ export async function executeZoomFunction(
   parameters: Record<string, unknown>,
   integration: ConnectedIntegration
 ): Promise<unknown> {
-  // Import DEFAULT_ORG_ID for single-tenant
+  // Import DEFAULT_ORG_ID for penthouse
   const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   const organizationId = DEFAULT_ORG_ID;
   const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';

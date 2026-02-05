@@ -27,7 +27,7 @@ import { logger } from '../logger/logger';
 import { DEFAULT_ORG_ID } from '../constants/platform';
 
 // ============================================================================
-// PENTHOUSE MODEL: Single-Tenant Path Builder
+// PENTHOUSE MODEL: Penthouse Path Builder
 // All paths now use the hardcoded DEFAULT_ORG_ID instead of dynamic orgId
 // ============================================================================
 
@@ -68,7 +68,7 @@ function ensureFirestore() {
   return db;
 }
 
-// Collection names following multi-tenant structure
+// Collection names following penthouse structure
 export const COLLECTIONS = {
   ORGANIZATIONS: 'organizations',
   WORKSPACES: 'workspaces',

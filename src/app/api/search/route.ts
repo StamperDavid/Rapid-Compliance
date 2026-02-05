@@ -22,12 +22,12 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    // Auth verified - user is authenticated (single-tenant, no org check needed)
+    // Auth verified - user is authenticated (penthouse, no org check needed)
     const { user: _user } = authResult;
 
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q');
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const orgId = DEFAULT_ORG_ID;
     const workspaceId = searchParams.get('workspaceId') ?? 'default';
     const limitParam = searchParams.get('limit');
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     const { workspaceId: validatedWorkspaceId, q: validatedQuery, limit: validatedLimit } = validation.data;
 
-    // SINGLE-TENANT: No org access check needed - all authenticated users access the same org
+    // PENTHOUSE: No org access check needed - all authenticated users access the same org
     const results = await searchWorkspace(orgId, validatedWorkspaceId, validatedQuery, { limit: validatedLimit });
 
     return NextResponse.json({

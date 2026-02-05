@@ -1,7 +1,7 @@
 /**
  * Visual Page Builder - Main Editor
  * Three-panel layout: Widgets | Canvas | Properties
- * NOTE: Single-tenant - uses DEFAULT_ORG_ID
+ * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

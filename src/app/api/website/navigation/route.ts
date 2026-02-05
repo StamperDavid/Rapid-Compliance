@@ -1,7 +1,7 @@
 /**
  * Navigation API
  * Manage site navigation (header menu, footer)
- * CRITICAL: Multi-tenant - scoped to organizationId
+ * CRITICAL: Organization-scoped - scoped to organizationId
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

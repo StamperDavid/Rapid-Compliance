@@ -12,12 +12,12 @@
  * - Parallel specialist execution with graceful degradation
  * - Pixel/Script injection (Google Analytics, Meta Pixel, GTM)
  * - Build state machine tracking (PENDING → ASSEMBLING → INJECTING → DEPLOYING → LIVE)
- * - TenantMemoryVault integration for cross-agent coordination
+ * - MemoryVault integration for cross-agent coordination
  * - SignalBus broadcast for downstream managers
  *
  * ORCHESTRATION PATTERN:
  * 1. Receive site.blueprint_ready signal from ARCHITECT_MANAGER
- * 2. Load SiteArchitecture from TenantMemoryVault
+ * 2. Load SiteArchitecture from MemoryVault
  * 3. Coordinate UX_UI, FUNNEL, ASSET specialists in parallel
  * 4. Assemble page components from blueprint
  * 5. Inject tracking pixels and conversion scripts
@@ -35,7 +35,7 @@ import {
   broadcastSignal,
   readAgentInsights,
   type InsightEntry,
-} from '../shared/tenant-memory-vault';
+} from '../shared/memory-vault';
 import type {
   SiteArchitecture,
   PageDefinition,
@@ -626,7 +626,7 @@ export class BuilderManager extends BaseManager {
       // Reset state machine
       this.resetStateMachine();
 
-      // Phase 1: Load blueprint from TenantMemoryVault
+      // Phase 1: Load blueprint from MemoryVault
       this.transitionState('PENDING_BLUEPRINT', 'build_requested');
       const blueprint = await this.loadBlueprintFromVault(payload.blueprintId);
 
@@ -662,7 +662,7 @@ export class BuilderManager extends BaseManager {
       // Phase 5: Complete and broadcast
       this.transitionState('LIVE', 'deployment_ready');
 
-      // Store build result in TenantMemoryVault
+      // Store build result in MemoryVault
       await shareInsight(
         'BUILDER_MANAGER',
         'CONTENT',
@@ -788,12 +788,12 @@ export class BuilderManager extends BaseManager {
   // ==========================================================================
 
   /**
-   * Load site blueprint from TenantMemoryVault
+   * Load site blueprint from MemoryVault
    */
   private async loadBlueprintFromVault(
     blueprintId?: string
   ): Promise<SiteArchitecture | null> {
-    this.log('INFO', `Loading blueprint from TenantMemoryVault for organization: ${DEFAULT_ORG_ID}`);
+    this.log('INFO', `Loading blueprint from MemoryVault for organization: ${DEFAULT_ORG_ID}`);
 
     try {
       // Read insights from ARCHITECT_MANAGER
@@ -807,7 +807,7 @@ export class BuilderManager extends BaseManager {
       const blueprintInsight = this.findBlueprintInsight(insights, blueprintId);
 
       if (!blueprintInsight) {
-        this.log('WARN', 'No blueprint found in TenantMemoryVault');
+        this.log('WARN', 'No blueprint found in MemoryVault');
         return null;
       }
 

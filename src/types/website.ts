@@ -1,6 +1,6 @@
 /**
  * Website Builder Types
- * Single-tenant architecture for SalesVelocity.ai
+ * Penthouse architecture for SalesVelocity.ai
  */
 
 export interface SiteConfig {

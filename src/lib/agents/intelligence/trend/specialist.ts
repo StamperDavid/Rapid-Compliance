@@ -24,7 +24,7 @@ import {
   broadcastSignal,
   readAgentInsights,
   type SignalData,
-} from '../../shared/tenant-memory-vault';
+} from '../../shared/memory-vault';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this specialist

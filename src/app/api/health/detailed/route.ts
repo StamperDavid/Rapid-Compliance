@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Require admin role for detailed health
-    const authResult = await requireRole(request, ['admin', 'superadmin']);
+    const authResult = await requireRole(request, ['admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

@@ -1,8 +1,5 @@
-// STATUS: SINGLE-TENANT MODE - SalesVelocity.ai Penthouse Model
-// All broadcasts and listeners use DEFAULT_ORG_ID (rapid-compliance-root)
-// PATTERN: Registry Pattern with single tenant registry
-// NOTE: Internal tenantId parameters are kept for interface compatibility
-//       but all callers should pass DEFAULT_ORG_ID
+// STATUS: PENTHOUSE MODE - SalesVelocity.ai Penthouse Model
+// Flat global registry - no org isolation, no multi-org routing
 
 import type {
   Signal,
@@ -12,13 +9,10 @@ import type {
 } from '../agents/types';
 import { logger } from '@/lib/logger/logger';
 
-// Re-export DEFAULT_ORG_ID for use by callers
-export { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 type SignalListener = (signal: Signal) => void;
 
 // ============================================================================
-// TENANT-SCOPED REGISTRY TYPES
+// REGISTRY TYPES
 // ============================================================================
 
 /**
@@ -47,10 +41,9 @@ export interface SignalHistoryOptions {
 }
 
 /**
- * TenantRegistry - Isolated container for a single tenant's signal infrastructure
- * Each tenant gets their own registry, preventing any cross-tenant data leakage
+ * Global registry - single flat container for all signal infrastructure
  */
-interface TenantRegistry {
+interface Registry {
   handlers: Map<string, SignalHandler>;           // agentId -> handler
   listeners: Map<string, Set<SignalListener>>;    // agentId -> listeners
   hierarchy: Map<string, string>;                 // child -> parent
@@ -58,29 +51,16 @@ interface TenantRegistry {
   processedSignals: Set<string>;                  // deduplication cache
   pendingSignals: Signal[];                       // queue for async processing
   signalHistory: SignalHistoryEntry[];            // telemetry/audit log
-  createdAt: Date;
-  lastActivityAt: Date;
-}
-
-/**
- * Validation result for tenant context checks
- */
-interface TenantValidationResult {
-  valid: boolean;
-  error?: string;
 }
 
 // ============================================================================
-// SIGNALBUS - SINGLE-TENANT MODE (SalesVelocity.ai)
+// SIGNALBUS - PENTHOUSE FLAT BUS (SalesVelocity.ai)
 // ============================================================================
 
 /**
  * SignalBus - The nervous system of the Agent Swarm
  *
- * SINGLE-TENANT DEPLOYMENT:
- * - Uses DEFAULT_ORG_ID (rapid-compliance-root) for all operations
- * - tenantId parameters kept for interface compatibility
- * - Single registry serves the entire platform
+ * Single global registry. Agents subscribe and publish to one flat bus.
  *
  * Supports four signal types:
  * - BROADCAST: Send to all agents
@@ -89,249 +69,123 @@ interface TenantValidationResult {
  * - BUBBLE_DOWN: Jasper -> Manager -> Specialist
  */
 export class SignalBus {
-  // Master registry: Map<tenantId, TenantRegistry> for O(1) tenant lookup
-  private tenantRegistries: Map<string, TenantRegistry> = new Map();
+  private registry: Registry;
 
-  // Global metrics (no tenant data, just counts for monitoring)
   private metrics = {
     totalSignalsSent: 0,
     totalSignalsFailed: 0,
-    activeRegistries: 0,
   };
 
-  // The chain of command root
   private static readonly JASPER = 'JASPER';
 
   constructor() {
-    logger.info('[SignalBus] Initialized with strict tenant isolation');
+    this.registry = this.createRegistry();
+    logger.info('[SignalBus] Initialized (penthouse flat bus)');
   }
 
-  // ==========================================================================
-  // TENANT REGISTRY MANAGEMENT
-  // ==========================================================================
-
-  /**
-   * Get or create a tenant-specific registry
-   * O(1) lookup time
-   */
-  private getOrCreateRegistry(tenantId: string): TenantRegistry {
-    if (!tenantId || tenantId.trim() === '') {
-      throw new Error('[SignalBus] SECURITY VIOLATION: tenantId is REQUIRED');
-    }
-
-    let registry = this.tenantRegistries.get(tenantId);
-
-    if (!registry) {
-      registry = {
-        handlers: new Map(),
-        listeners: new Map(),
-        hierarchy: new Map(),
-        children: new Map(),
-        processedSignals: new Set(),
-        pendingSignals: [],
-        signalHistory: [],
-        createdAt: new Date(),
-        lastActivityAt: new Date(),
-      };
-      // Initialize Jasper as root for this tenant
-      registry.children.set(SignalBus.JASPER, new Set());
-      this.tenantRegistries.set(tenantId, registry);
-      this.metrics.activeRegistries++;
-
-      logger.info('[SignalBus] Created tenant registry', { tenantId });
-    }
-
-    registry.lastActivityAt = new Date();
+  private createRegistry(): Registry {
+    const registry: Registry = {
+      handlers: new Map(),
+      listeners: new Map(),
+      hierarchy: new Map(),
+      children: new Map(),
+      processedSignals: new Set(),
+      pendingSignals: [],
+      signalHistory: [],
+    };
+    registry.children.set(SignalBus.JASPER, new Set());
     return registry;
   }
 
-  /**
-   * Validate tenant context before any operation
-   * Middleware pattern for security enforcement
-   */
-  private validateTenantContext(tenantId: string, operation: string): TenantValidationResult {
-    if (!tenantId || tenantId.trim() === '') {
-      return {
-        valid: false,
-        error: `[SignalBus] ${operation}: tenantId is REQUIRED - multi-tenant scoping is mandatory`,
-      };
-    }
-
-    // Additional validation can be added here to check against TenantMemoryVault
-    // For now, we validate format and non-empty
-    if (typeof tenantId !== 'string' || tenantId.length < 1) {
-      return {
-        valid: false,
-        error: `[SignalBus] ${operation}: Invalid tenantId format`,
-      };
-    }
-
-    return { valid: true };
-  }
-
-  /**
-   * Validate signal has required tenant context
-   */
-  private validateSignalTenant(signal: Signal): TenantValidationResult {
-    if (!signal.tenantId || signal.tenantId.trim() === '') {
-      return {
-        valid: false,
-        error: `[SignalBus] Signal ${signal.id} missing required tenantId`,
-      };
-    }
-    return { valid: true };
-  }
-
   // ==========================================================================
-  // AGENT REGISTRATION (TENANT-SCOPED)
+  // AGENT REGISTRATION
   // ==========================================================================
 
   /**
-   * Register an agent in a tenant's hierarchy
-   * @param tenantId - REQUIRED: The tenant context
+   * Register an agent in the hierarchy
    * @param agentId - The agent being registered
    * @param parentId - Parent agent (null = reports to Jasper)
    * @param handler - Signal handler for this agent
    */
   registerAgent(
-    tenantId: string,
     agentId: string,
     parentId: string | null,
     handler: SignalHandler
   ): void {
-    const validation = this.validateTenantContext(tenantId, 'registerAgent');
-    if (!validation.valid) {
-      throw new Error(validation.error);
-    }
-
-    // Ensure handler has matching tenantId
-    if (handler.tenantId !== tenantId) {
-      throw new Error(
-        `[SignalBus] Handler tenantId mismatch: expected ${tenantId}, got ${handler.tenantId}`
-      );
-    }
-
-    const registry = this.getOrCreateRegistry(tenantId);
-    registry.handlers.set(agentId, handler);
+    this.registry.handlers.set(agentId, handler);
 
     if (parentId) {
-      registry.hierarchy.set(agentId, parentId);
-      if (!registry.children.has(parentId)) {
-        registry.children.set(parentId, new Set());
+      this.registry.hierarchy.set(agentId, parentId);
+      if (!this.registry.children.has(parentId)) {
+        this.registry.children.set(parentId, new Set());
       }
-      registry.children.get(parentId)?.add(agentId);
+      this.registry.children.get(parentId)?.add(agentId);
     } else {
-      // Direct report to Jasper
-      registry.hierarchy.set(agentId, SignalBus.JASPER);
-      registry.children.get(SignalBus.JASPER)?.add(agentId);
+      this.registry.hierarchy.set(agentId, SignalBus.JASPER);
+      this.registry.children.get(SignalBus.JASPER)?.add(agentId);
     }
 
     logger.debug('[SignalBus] Agent registered', {
-      tenantId,
       agentId,
       parentId: parentId ?? 'JASPER',
     });
   }
 
   /**
-   * Unregister an agent from a tenant's hierarchy
+   * Unregister an agent from the hierarchy
    */
-  unregisterAgent(tenantId: string, agentId: string): void {
-    const validation = this.validateTenantContext(tenantId, 'unregisterAgent');
-    if (!validation.valid) {
-      throw new Error(validation.error);
-    }
-
-    const registry = this.tenantRegistries.get(tenantId);
-    if (!registry) {
-      return; // No registry = nothing to unregister
-    }
-
-    const parent = registry.hierarchy.get(agentId);
+  unregisterAgent(agentId: string): void {
+    const parent = this.registry.hierarchy.get(agentId);
     if (parent) {
-      registry.children.get(parent)?.delete(agentId);
+      this.registry.children.get(parent)?.delete(agentId);
     }
-    registry.hierarchy.delete(agentId);
-    registry.handlers.delete(agentId);
-    registry.listeners.delete(agentId);
+    this.registry.hierarchy.delete(agentId);
+    this.registry.handlers.delete(agentId);
+    this.registry.listeners.delete(agentId);
 
-    logger.debug('[SignalBus] Agent unregistered', { tenantId, agentId });
+    logger.debug('[SignalBus] Agent unregistered', { agentId });
   }
 
   // ==========================================================================
-  // SUBSCRIPTION (TENANT-SCOPED)
+  // SUBSCRIPTION
   // ==========================================================================
 
   /**
-   * Subscribe to signals for a specific agent within a tenant
-   * @param tenantId - REQUIRED: The tenant context
+   * Subscribe to signals for a specific agent
    * @param agentId - The agent to subscribe for
    * @param listener - Callback function for signals
    * @returns Unsubscribe function
    */
   subscribe(
-    tenantId: string,
     agentId: string,
     listener: SignalListener
   ): () => void {
-    const validation = this.validateTenantContext(tenantId, 'subscribe');
-    if (!validation.valid) {
-      throw new Error(validation.error);
+    if (!this.registry.listeners.has(agentId)) {
+      this.registry.listeners.set(agentId, new Set());
     }
+    this.registry.listeners.get(agentId)?.add(listener);
 
-    const registry = this.getOrCreateRegistry(tenantId);
+    logger.debug('[SignalBus] Listener subscribed', { agentId });
 
-    if (!registry.listeners.has(agentId)) {
-      registry.listeners.set(agentId, new Set());
-    }
-    registry.listeners.get(agentId)?.add(listener);
-
-    logger.debug('[SignalBus] Listener subscribed', { tenantId, agentId });
-
-    // Return unsubscribe function with tenant context captured
     return () => {
-      const currentRegistry = this.tenantRegistries.get(tenantId);
-      if (currentRegistry) {
-        currentRegistry.listeners.get(agentId)?.delete(listener);
-        logger.debug('[SignalBus] Listener unsubscribed', { tenantId, agentId });
-      }
+      this.registry.listeners.get(agentId)?.delete(listener);
+      logger.debug('[SignalBus] Listener unsubscribed', { agentId });
     };
   }
 
   // ==========================================================================
-  // SIGNAL SENDING (TENANT-SCOPED)
+  // SIGNAL SENDING
   // ==========================================================================
 
   /**
    * Send a signal through the bus
-   * @param signal - MUST contain valid tenantId
+   * @param signal - The signal to send
    * @returns Reports from handlers
    */
   async send(signal: Signal): Promise<AgentReport[]> {
-    // SECURITY: Validate tenant context
-    const validation = this.validateSignalTenant(signal);
-    if (!validation.valid) {
-      logger.error('[SignalBus] SECURITY: Signal rejected', undefined, {
-        requestId: signal.id,
-        error: validation.error ?? 'Unknown validation error',
-      });
-      this.metrics.totalSignalsFailed++;
-      return [{
-        agentId: 'SIGNAL_BUS',
-        timestamp: new Date(),
-        taskId: signal.id,
-        status: 'FAILED',
-        data: null,
-        errors: [validation.error ?? 'Invalid tenant context'],
-      }];
-    }
-
-    const registry = this.getOrCreateRegistry(signal.tenantId);
-
     // Deduplication check
-    if (registry.processedSignals.has(signal.id)) {
+    if (this.registry.processedSignals.has(signal.id)) {
       logger.warn(`[SignalBus] Duplicate signal ignored: ${signal.id}`, {
-        organizationId: signal.tenantId,
         requestId: signal.id,
       });
       return [];
@@ -340,7 +194,6 @@ export class SignalBus {
     // Max hops check
     if (signal.hops.length >= signal.maxHops) {
       logger.error(`[SignalBus] Signal exceeded max hops: ${signal.id}`, undefined, {
-        organizationId: signal.tenantId,
         requestId: signal.id,
       });
       return [{
@@ -353,18 +206,18 @@ export class SignalBus {
       }];
     }
 
-    registry.processedSignals.add(signal.id);
+    this.registry.processedSignals.add(signal.id);
     this.metrics.totalSignalsSent++;
 
     switch (signal.type) {
       case 'BROADCAST':
-        return this.handleBroadcast(signal, registry);
+        return this.handleBroadcast(signal);
       case 'DIRECT':
-        return this.handleDirect(signal, registry);
+        return this.handleDirect(signal);
       case 'BUBBLE_UP':
-        return this.handleBubbleUp(signal, registry);
+        return this.handleBubbleUp(signal);
       case 'BUBBLE_DOWN':
-        return this.handleBubbleDown(signal, registry);
+        return this.handleBubbleDown(signal);
       default:
         return [{
           agentId: 'SIGNAL_BUS',
@@ -378,16 +231,12 @@ export class SignalBus {
   }
 
   /**
-   * BROADCAST - Send to all registered agents WITHIN THE TENANT
-   * SECURITY: Only iterates handlers in the tenant's registry
+   * BROADCAST - Send to all registered agents
    */
-  private async handleBroadcast(
-    signal: Signal,
-    registry: TenantRegistry
-  ): Promise<AgentReport[]> {
+  private async handleBroadcast(signal: Signal): Promise<AgentReport[]> {
     const reports: AgentReport[] = [];
 
-    for (const [agentId, handler] of registry.handlers) {
+    for (const [agentId, handler] of this.registry.handlers) {
       if (handler.canHandle(signal)) {
         signal.hops.push(agentId);
         const startTime = Date.now();
@@ -395,10 +244,8 @@ export class SignalBus {
           const report = await handler.handle(signal);
           const durationMs = Date.now() - startTime;
           reports.push(report);
-          this.notifyListeners(registry, agentId, signal);
-          // Record successful signal in history
+          this.notifyListeners(agentId, signal);
           this.recordSignalHistory(
-            signal.tenantId,
             signal,
             agentId,
             report.status === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
@@ -409,7 +256,6 @@ export class SignalBus {
           const durationMs = Date.now() - startTime;
           const errorMsg = error instanceof Error ? error.message : String(error);
           logger.error(`[SignalBus] Handler error for ${agentId}`, error instanceof Error ? error : undefined, {
-            organizationId: signal.tenantId,
             error: errorMsg,
           });
           reports.push({
@@ -420,8 +266,7 @@ export class SignalBus {
             data: null,
             errors: [errorMsg],
           });
-          // Record failed signal in history
-          this.recordSignalHistory(signal.tenantId, signal, agentId, 'FAILED', durationMs, errorMsg);
+          this.recordSignalHistory(signal, agentId, 'FAILED', durationMs, errorMsg);
         }
       }
     }
@@ -430,37 +275,31 @@ export class SignalBus {
   }
 
   /**
-   * DIRECT - Send to specific agent WITHIN THE TENANT
+   * DIRECT - Send to specific agent
    */
-  private async handleDirect(
-    signal: Signal,
-    registry: TenantRegistry
-  ): Promise<AgentReport[]> {
-    const handler = registry.handlers.get(signal.target);
+  private async handleDirect(signal: Signal): Promise<AgentReport[]> {
+    const handler = this.registry.handlers.get(signal.target);
 
     if (!handler) {
-      // Record failed delivery attempt
-      this.recordSignalHistory(signal.tenantId, signal, signal.target, 'FAILED', 0, 'Agent not found in tenant');
+      this.recordSignalHistory(signal, signal.target, 'FAILED', 0, 'Agent not found');
       return [{
         agentId: 'SIGNAL_BUS',
         timestamp: new Date(),
         taskId: signal.id,
         status: 'FAILED',
         data: null,
-        errors: [`Agent not found in tenant: ${signal.target}`],
+        errors: [`Agent not found: ${signal.target}`],
       }];
     }
 
     signal.hops.push(signal.target);
-    this.notifyListeners(registry, signal.target, signal);
+    this.notifyListeners(signal.target, signal);
 
     const startTime = Date.now();
     try {
       const report = await handler.handle(signal);
       const durationMs = Date.now() - startTime;
-      // Record in history
       this.recordSignalHistory(
-        signal.tenantId,
         signal,
         signal.target,
         report.status === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
@@ -471,8 +310,7 @@ export class SignalBus {
     } catch (error) {
       const durationMs = Date.now() - startTime;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      // Record failed signal in history
-      this.recordSignalHistory(signal.tenantId, signal, signal.target, 'FAILED', durationMs, errorMsg);
+      this.recordSignalHistory(signal, signal.target, 'FAILED', durationMs, errorMsg);
       return [{
         agentId: signal.target,
         timestamp: new Date(),
@@ -485,30 +323,26 @@ export class SignalBus {
   }
 
   /**
-   * BUBBLE_UP - Specialist -> Manager -> Jasper (TENANT-SCOPED)
+   * BUBBLE_UP - Specialist -> Manager -> Jasper
    */
-  private async handleBubbleUp(
-    signal: Signal,
-    registry: TenantRegistry
-  ): Promise<AgentReport[]> {
+  private async handleBubbleUp(signal: Signal): Promise<AgentReport[]> {
     const reports: AgentReport[] = [];
     let currentAgent = signal.origin;
 
     while (currentAgent && currentAgent !== SignalBus.JASPER) {
-      const parent = registry.hierarchy.get(currentAgent);
-      if (!parent) {break;}
+      const parent = this.registry.hierarchy.get(currentAgent);
+      if (!parent) { break; }
 
-      const handler = registry.handlers.get(parent);
+      const handler = this.registry.handlers.get(parent);
       if (handler?.canHandle(signal)) {
         signal.hops.push(parent);
         try {
           const report = await handler.handle(signal);
           reports.push(report);
-          this.notifyListeners(registry, parent, signal);
+          this.notifyListeners(parent, signal);
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
           logger.error(`[SignalBus] Bubble-up handler error for ${parent}`, error instanceof Error ? error : undefined, {
-            organizationId: signal.tenantId,
             error: errorMsg,
           });
         }
@@ -521,15 +355,12 @@ export class SignalBus {
   }
 
   /**
-   * BUBBLE_DOWN - Jasper -> Manager -> Specialist (TENANT-SCOPED)
+   * BUBBLE_DOWN - Jasper -> Manager -> Specialist
    */
-  private async handleBubbleDown(
-    signal: Signal,
-    registry: TenantRegistry
-  ): Promise<AgentReport[]> {
+  private async handleBubbleDown(signal: Signal): Promise<AgentReport[]> {
     const reports: AgentReport[] = [];
     const startNode = signal.origin || SignalBus.JASPER;
-    const targetPath = this.findPathToTarget(registry, startNode, signal.target);
+    const targetPath = this.findPathToTarget(startNode, signal.target);
 
     if (!targetPath) {
       return [{
@@ -538,18 +369,18 @@ export class SignalBus {
         taskId: signal.id,
         status: 'FAILED',
         data: null,
-        errors: [`No path from ${startNode} to ${signal.target} in tenant`],
+        errors: [`No path from ${startNode} to ${signal.target}`],
       }];
     }
 
     for (const agentId of targetPath) {
-      const handler = registry.handlers.get(agentId);
+      const handler = this.registry.handlers.get(agentId);
       if (handler?.canHandle(signal)) {
         signal.hops.push(agentId);
         try {
           const report = await handler.handle(signal);
           reports.push(report);
-          this.notifyListeners(registry, agentId, signal);
+          this.notifyListeners(agentId, signal);
 
           if (report.status === 'BLOCKED' || report.status === 'FAILED') {
             break;
@@ -557,7 +388,6 @@ export class SignalBus {
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
           logger.error(`[SignalBus] Bubble-down handler error for ${agentId}`, error instanceof Error ? error : undefined, {
-            organizationId: signal.tenantId,
             error: errorMsg,
           });
           break;
@@ -569,28 +399,24 @@ export class SignalBus {
   }
 
   /**
-   * Find path from parent to descendant within tenant hierarchy
+   * Find path from parent to descendant within hierarchy
    */
-  private findPathToTarget(
-    registry: TenantRegistry,
-    from: string,
-    to: string
-  ): string[] | null {
+  private findPathToTarget(from: string, to: string): string[] | null {
     const queue: Array<{ node: string; path: string[] }> = [{ node: from, path: [] }];
     const visited = new Set<string>();
 
     while (queue.length > 0) {
       const current = queue.shift();
-      if (!current) {break;}
+      if (!current) { break; }
 
       if (current.node === to) {
         return current.path;
       }
 
-      if (visited.has(current.node)) {continue;}
+      if (visited.has(current.node)) { continue; }
       visited.add(current.node);
 
-      const childNodes = registry.children.get(current.node);
+      const childNodes = this.registry.children.get(current.node);
       if (childNodes) {
         for (const child of childNodes) {
           queue.push({
@@ -605,14 +431,10 @@ export class SignalBus {
   }
 
   /**
-   * Notify listeners for an agent (TENANT-SCOPED)
+   * Notify listeners for an agent
    */
-  private notifyListeners(
-    registry: TenantRegistry,
-    agentId: string,
-    signal: Signal
-  ): void {
-    const agentListeners = registry.listeners.get(agentId);
+  private notifyListeners(agentId: string, signal: Signal): void {
+    const agentListeners = this.registry.listeners.get(agentId);
     if (agentListeners) {
       for (const listener of agentListeners) {
         try {
@@ -620,7 +442,6 @@ export class SignalBus {
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
           logger.error(`[SignalBus] Listener error for ${agentId}`, error instanceof Error ? error : undefined, {
-            organizationId: signal.tenantId,
             error: errorMsg,
           });
         }
@@ -633,24 +454,16 @@ export class SignalBus {
   // ==========================================================================
 
   /**
-   * Create a signal with required tenant context
-   * @param tenantId - REQUIRED: The tenant context
+   * Create a signal
    */
   createSignal(
-    tenantId: string,
     type: Signal['type'],
     origin: string,
     target: string,
     message: AgentMessage
   ): Signal {
-    const validation = this.validateTenantContext(tenantId, 'createSignal');
-    if (!validation.valid) {
-      throw new Error(validation.error);
-    }
-
     return {
       id: `sig_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-      tenantId,
       type,
       origin,
       target,
@@ -663,95 +476,48 @@ export class SignalBus {
   }
 
   // ==========================================================================
-  // TENANT LIFECYCLE MANAGEMENT
+  // LIFECYCLE MANAGEMENT
   // ==========================================================================
 
   /**
-   * Tear down all resources for a tenant
-   * MUST be called when a tenant session terminates to prevent memory leaks
-   * @param tenantId - The tenant to clean up
+   * Reset the bus - clears all handlers, listeners, history
    */
-  tearDown(tenantId: string): {
-    success: boolean;
+  reset(): {
     cleanedHandlers: number;
     cleanedListeners: number;
     cleanedSignals: number;
   } {
-    const validation = this.validateTenantContext(tenantId, 'tearDown');
-    if (!validation.valid) {
-      logger.warn('[SignalBus] tearDown called with invalid tenantId', { tenantId });
-      return {
-        success: false,
-        cleanedHandlers: 0,
-        cleanedListeners: 0,
-        cleanedSignals: 0
-      };
-    }
-
-    const registry = this.tenantRegistries.get(tenantId);
-    if (!registry) {
-      logger.debug('[SignalBus] No registry to tear down', { tenantId });
-      return {
-        success: true,
-        cleanedHandlers: 0,
-        cleanedListeners: 0,
-        cleanedSignals: 0
-      };
-    }
-
     const stats = {
-      cleanedHandlers: registry.handlers.size,
-      cleanedListeners: Array.from(registry.listeners.values())
+      cleanedHandlers: this.registry.handlers.size,
+      cleanedListeners: Array.from(this.registry.listeners.values())
         .reduce((sum, set) => sum + set.size, 0),
-      cleanedSignals: registry.processedSignals.size + registry.pendingSignals.length + registry.signalHistory.length,
+      cleanedSignals: this.registry.processedSignals.size +
+        this.registry.pendingSignals.length +
+        this.registry.signalHistory.length,
     };
 
-    // Clear all registry data
-    registry.handlers.clear();
-    registry.listeners.clear();
-    registry.hierarchy.clear();
-    registry.signalHistory.length = 0;
-    registry.children.clear();
-    registry.processedSignals.clear();
-    registry.pendingSignals.length = 0;
+    this.registry = this.createRegistry();
 
-    // Remove the registry
-    this.tenantRegistries.delete(tenantId);
-    this.metrics.activeRegistries--;
+    logger.info('[SignalBus] Registry reset', stats);
 
-    logger.info('[SignalBus] Tenant registry torn down', {
-      tenantId,
-      ...stats,
-    });
-
-    return { success: true, ...stats };
+    return stats;
   }
 
   /**
-   * Cleanup expired signals for a tenant (for long-running sessions)
+   * Cleanup expired signals
    */
-  cleanupExpiredSignals(tenantId: string): number {
-    const validation = this.validateTenantContext(tenantId, 'cleanupExpiredSignals');
-    if (!validation.valid) {
-      return 0;
-    }
-
-    const registry = this.tenantRegistries.get(tenantId);
-    if (!registry) {
-      return 0;
-    }
-
+  cleanupExpiredSignals(): number {
     const now = Date.now();
-    const initialSize = registry.pendingSignals.length;
+    const initialSize = this.registry.pendingSignals.length;
 
-    registry.pendingSignals = registry.pendingSignals.filter(
+    this.registry.pendingSignals = this.registry.pendingSignals.filter(
       signal => signal.expiresAt.getTime() > now
     );
 
-    const cleaned = initialSize - registry.pendingSignals.length;
+    const cleaned = initialSize - this.registry.pendingSignals.length;
 
     if (cleaned > 0) {
-      logger.debug('[SignalBus] Cleaned expired signals', { tenantId, cleaned });
+      logger.debug('[SignalBus] Cleaned expired signals', { cleaned });
     }
 
     return cleaned;
@@ -762,79 +528,53 @@ export class SignalBus {
   // ==========================================================================
 
   /**
-   * Get swarm state for a specific tenant
+   * Get swarm state
    */
-  getSwarmState(tenantId: string): {
+  getSwarmState(): {
     registeredAgents: string[];
     hierarchy: Record<string, string>;
     pendingSignals: number;
     processedSignals: number;
-  } | null {
-    const validation = this.validateTenantContext(tenantId, 'getSwarmState');
-    if (!validation.valid) {
-      return null;
-    }
-
-    const registry = this.tenantRegistries.get(tenantId);
-    if (!registry) {
-      return {
-        registeredAgents: [],
-        hierarchy: {},
-        pendingSignals: 0,
-        processedSignals: 0,
-      };
-    }
-
+  } {
     const hierarchyObj: Record<string, string> = {};
-    for (const [child, parent] of registry.hierarchy) {
+    for (const [child, parent] of this.registry.hierarchy) {
       hierarchyObj[child] = parent;
     }
 
     return {
-      registeredAgents: Array.from(registry.handlers.keys()),
+      registeredAgents: Array.from(this.registry.handlers.keys()),
       hierarchy: hierarchyObj,
-      pendingSignals: registry.pendingSignals.length,
-      processedSignals: registry.processedSignals.size,
+      pendingSignals: this.registry.pendingSignals.length,
+      processedSignals: this.registry.processedSignals.size,
     };
   }
 
   /**
-   * Get global metrics (no tenant-specific data)
+   * Get global metrics
    */
-  getGlobalMetrics(): {
+  getMetrics(): {
     totalSignalsSent: number;
     totalSignalsFailed: number;
-    activeRegistries: number;
   } {
     return { ...this.metrics };
   }
 
   /**
-   * Visualize the hierarchy for a tenant (debugging)
+   * Visualize the hierarchy (debugging)
    */
-  printHierarchy(tenantId: string): string {
-    const validation = this.validateTenantContext(tenantId, 'printHierarchy');
-    if (!validation.valid) {
-      return `Error: ${validation.error}`;
-    }
-
-    const registry = this.tenantRegistries.get(tenantId);
-    if (!registry) {
-      return `No registry found for tenant: ${tenantId}`;
-    }
-
+  printHierarchy(): string {
     const lines: string[] = [
-      `=== AGENT HIERARCHY (Tenant: ${tenantId}) ===`,
+      '=== AGENT HIERARCHY ===',
       'JASPER (Root Orchestrator)',
     ];
 
     const printChildren = (parentId: string, indent: number): void => {
-      const childSet = registry.children.get(parentId);
-      if (!childSet) {return;}
+      const childSet = this.registry.children.get(parentId);
+      if (!childSet) { return; }
 
       for (const childId of childSet) {
         const prefix = `${'  '.repeat(indent)}├─ `;
-        const handler = registry.handlers.get(childId);
+        const handler = this.registry.handlers.get(childId);
         const status = handler ? '✓' : '✗ GHOST';
         lines.push(`${prefix}${childId} [${status}]`);
         printChildren(childId, indent + 1);
@@ -845,48 +585,23 @@ export class SignalBus {
     return lines.join('\n');
   }
 
-  /**
-   * Check if a tenant has an active registry
-   */
-  hasTenantRegistry(tenantId: string): boolean {
-    return this.tenantRegistries.has(tenantId);
-  }
-
-  /**
-   * Get list of active tenant IDs (for monitoring only)
-   */
-  getActiveTenantIds(): string[] {
-    return Array.from(this.tenantRegistries.keys());
-  }
-
   // ==========================================================================
   // SIGNAL HISTORY & TELEMETRY
   // ==========================================================================
 
   /**
-   * Record a signal in the history for telemetry/audit purposes
+   * Record a signal in the history for telemetry/audit
    * @internal Used by signal handlers
    */
   recordSignalHistory(
-    tenantId: string,
     signal: Signal,
     targetAgentId: string,
     status: SignalHistoryEntry['status'],
     durationMs?: number,
     errorMessage?: string
   ): void {
-    const validation = this.validateTenantContext(tenantId, 'recordSignalHistory');
-    if (!validation.valid) {
-      return;
-    }
-
-    const registry = this.tenantRegistries.get(tenantId);
-    if (!registry) {
-      return;
-    }
-
     const entry: SignalHistoryEntry = {
-      signal: { ...signal }, // Clone to prevent mutation
+      signal: { ...signal },
       processedAt: new Date(),
       targetAgentId,
       status,
@@ -894,68 +609,44 @@ export class SignalBus {
       errorMessage,
     };
 
-    // Add to history (prepend for most recent first)
-    registry.signalHistory.unshift(entry);
+    this.registry.signalHistory.unshift(entry);
 
-    // Cap history at 1000 entries per tenant to prevent memory bloat
     const MAX_HISTORY = 1000;
-    if (registry.signalHistory.length > MAX_HISTORY) {
-      registry.signalHistory = registry.signalHistory.slice(0, MAX_HISTORY);
+    if (this.registry.signalHistory.length > MAX_HISTORY) {
+      this.registry.signalHistory = this.registry.signalHistory.slice(0, MAX_HISTORY);
     }
   }
 
   /**
-   * Get signal history for a tenant with efficient filtering
-   * SECURITY: Strictly scoped to the provided tenantId
+   * Get signal history with efficient filtering
    *
-   * @param tenantId - REQUIRED: The tenant context
    * @param options - Query options for filtering
    * @returns Filtered signal history entries
    */
-  getHistory(
-    tenantId: string,
-    options: SignalHistoryOptions = {}
-  ): {
+  getHistory(options: SignalHistoryOptions = {}): {
     entries: SignalHistoryEntry[];
     total: number;
     hasMore: boolean;
   } {
-    const validation = this.validateTenantContext(tenantId, 'getHistory');
-    if (!validation.valid) {
-      logger.warn('[SignalBus] getHistory called with invalid tenantId', { tenantId });
-      return { entries: [], total: 0, hasMore: false };
-    }
+    let filtered = this.registry.signalHistory;
 
-    const registry = this.tenantRegistries.get(tenantId);
-    if (!registry) {
-      return { entries: [], total: 0, hasMore: false };
-    }
-
-    // Apply filters efficiently
-    let filtered = registry.signalHistory;
-
-    // Filter by agentId (most common filter - apply first)
     if (options.agentId) {
       filtered = filtered.filter(entry => entry.targetAgentId === options.agentId);
     }
 
-    // Filter by status
     if (options.status) {
       filtered = filtered.filter(entry => entry.status === options.status);
     }
 
-    // Filter by signal type
     if (options.signalType) {
       filtered = filtered.filter(entry => entry.signal.type === options.signalType);
     }
 
-    // Filter by time range (since)
     if (options.since) {
       const sinceTime = options.since.getTime();
       filtered = filtered.filter(entry => entry.processedAt.getTime() >= sinceTime);
     }
 
-    // Filter by time range (until)
     if (options.until) {
       const untilTime = options.until.getTime();
       filtered = filtered.filter(entry => entry.processedAt.getTime() <= untilTime);
@@ -963,9 +654,8 @@ export class SignalBus {
 
     const total = filtered.length;
 
-    // Apply pagination
     const offset = options.offset ?? 0;
-    const limit = Math.min(options.limit ?? 100, 500); // Cap at 500 to prevent over-fetching
+    const limit = Math.min(options.limit ?? 100, 500);
 
     const paginated = filtered.slice(offset, offset + limit);
     const hasMore = offset + limit < total;
@@ -980,25 +670,15 @@ export class SignalBus {
   /**
    * Get aggregated statistics for an agent's signal history
    */
-  getAgentStats(tenantId: string, agentId: string): {
+  getAgentStats(agentId: string): {
     totalSignals: number;
     successCount: number;
     failureCount: number;
     pendingCount: number;
     averageDurationMs: number;
     lastActivity: Date | null;
-  } | null {
-    const validation = this.validateTenantContext(tenantId, 'getAgentStats');
-    if (!validation.valid) {
-      return null;
-    }
-
-    const registry = this.tenantRegistries.get(tenantId);
-    if (!registry) {
-      return null;
-    }
-
-    const agentHistory = registry.signalHistory.filter(e => e.targetAgentId === agentId);
+  } {
+    const agentHistory = this.registry.signalHistory.filter(e => e.targetAgentId === agentId);
 
     if (agentHistory.length === 0) {
       return {
@@ -1047,12 +727,8 @@ export function getSignalBus(): SignalBus {
 
 export function resetSignalBus(): void {
   if (signalBusInstance) {
-    // Tear down all tenant registries before reset
-    const tenantIds = signalBusInstance.getActiveTenantIds();
-    for (const tenantId of tenantIds) {
-      signalBusInstance.tearDown(tenantId);
-    }
+    signalBusInstance.reset();
   }
   signalBusInstance = null;
-  logger.info('[SignalBus] Instance reset - all tenant registries cleared');
+  logger.info('[SignalBus] Instance reset');
 }

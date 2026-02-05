@@ -1,7 +1,7 @@
 /**
  * Navigation Management
  * Build and manage site navigation (header menu, footer)
- * NOTE: Single-tenant - uses DEFAULT_ORG_ID
+ * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

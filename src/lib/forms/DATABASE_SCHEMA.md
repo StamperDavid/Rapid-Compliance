@@ -5,7 +5,7 @@
 This document describes the Firestore database schema for the Form Builder module. The design is optimized for:
 
 1. **Read-heavy workloads** - Form rendering needs to be fast
-2. **Multi-tenant isolation** - Each organization's data is completely separate
+2. **Organization isolation** - Each organization's data is completely separate
 3. **Efficient querying** - Common queries are supported with composite indexes
 4. **Scalability** - Subcollections prevent document size limits
 

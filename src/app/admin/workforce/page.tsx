@@ -74,7 +74,7 @@ const AGENTS: Agent[] = [
     path: 'src/lib/agents/orchestrator/manager.ts',
     role: 'Swarm CEO',
     directReports: ['INTELLIGENCE_MANAGER', 'MARKETING_MANAGER', 'BUILDER_MANAGER', 'ARCHITECT_MANAGER', 'COMMERCE_MANAGER', 'OUTREACH_MANAGER', 'CONTENT_MANAGER', 'REVENUE_DIRECTOR', 'REPUTATION_MANAGER'],
-    note: '2000+ LOC - Command Pattern task dispatch, Saga Pattern workflows, intent-based domain routing (9 categories), cross-domain synchronization, TenantMemoryVault integration',
+    note: '2000+ LOC - Command Pattern task dispatch, Saga Pattern workflows, intent-based domain routing (9 categories), cross-domain synchronization, MemoryVault integration',
   },
 
   // L2 - Managers
@@ -112,7 +112,7 @@ const AGENTS: Agent[] = [
     status: 'FUNCTIONAL',
     path: 'src/lib/agents/architect/manager.ts',
     specialists: ['UX_UI_SPECIALIST', 'FUNNEL_PATHOLOGIST', 'COPY_SPECIALIST'],
-    note: 'Strategic Infrastructure Commander - Brand DNA integration, TenantMemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis',
+    note: 'Strategic Infrastructure Commander - Brand DNA integration, MemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis',
   },
   {
     name: 'COMMERCE_MANAGER',

@@ -8,7 +8,7 @@
  * this type-safe, auditable pipeline.
  * 
  * CRITICAL FEATURES:
- * - Multi-tenant isolation via orgId
+ * - Organization isolation via orgId
  * - TTL-based signal expiration (default 30 days)
  * - Priority-based signal handling (High/Med/Low)
  * - Confidence scoring for AI-driven decisions
@@ -234,7 +234,7 @@ export interface SalesSignal {
   leadId?: string;
   
   /**
-   * Organization ID - CRITICAL for multi-tenant isolation
+   * Organization ID - CRITICAL for organization isolation
    * All signals MUST have an orgId to prevent cross-org data leakage
    */
   orgId: string;
@@ -341,7 +341,7 @@ export interface SignalSubscription {
   
   /**
    * Organization ID to scope the subscription
-   * REQUIRED for multi-tenant isolation
+   * REQUIRED for organization isolation
    */
   orgId: string;
   

@@ -6,7 +6,7 @@
  *
  * Full command-center sidebar exposing all 51 AI agents, 130+ routes,
  * and 215+ API endpoints across CRM, Sales, Marketing, AI, and more.
- * Single-tenant: all links use static routes with rapid-compliance-root identity.
+ * Penthouse: all links use static routes with rapid-compliance-root identity.
  */
 
 import React, { useState, useCallback } from 'react';

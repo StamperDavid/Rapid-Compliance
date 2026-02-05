@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { user } = authResult;
-    if (user.role !== 'superadmin' && user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json<UpdateAgentPricingError>(
         { success: false, error: 'Unauthorized' },
         { status: 403 }

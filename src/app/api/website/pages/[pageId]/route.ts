@@ -1,6 +1,6 @@
 /**
  * Single Page API
- * CRITICAL: Multi-tenant isolation - validates organizationId on every request
+ * CRITICAL: Organization isolation - validates organizationId on every request
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

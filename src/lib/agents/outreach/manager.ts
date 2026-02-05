@@ -10,7 +10,7 @@
  * - Dynamic specialist resolution via SwarmRegistry pattern
  * - Multi-step sequence execution with channel escalation
  * - Sentiment-aware routing via INTELLIGENCE_MANAGER
- * - DNC list compliance via TenantMemoryVault
+ * - DNC list compliance via MemoryVault
  * - Throttle controls for spam prevention
  * - Dynamic template injection from CONTENT_MANAGER
  *
@@ -32,7 +32,7 @@ import {
   broadcastSignal,
   type InsightData,
   type SignalData as _SignalData,
-} from '../shared/tenant-memory-vault';
+} from '../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
@@ -68,8 +68,8 @@ Before ANY outreach:
 4. If sentiment is POSITIVE → Proceed with standard cadence
 
 ### Compliance Controls
-1. Check TenantMemoryVault for DNC (Do Not Contact) list
-2. Respect tenant CommunicationSettings (frequency, quiet hours)
+1. Check MemoryVault for DNC (Do Not Contact) list
+2. Respect CommunicationSettings (frequency, quiet hours)
 3. Track opt-outs and unsubscribes
 4. Enforce TCPA, CAN-SPAM, GDPR compliance
 
@@ -93,7 +93,7 @@ Best for: High-value leads, complex conversations, relationship building
 6. Execute via appropriate specialist
 7. Monitor engagement signals
 8. Escalate channel if no response within timeout
-9. Log all activities to TenantMemoryVault
+9. Log all activities to MemoryVault
 
 ## OUTPUT: OutreachResult
 Your output provides comprehensive outreach execution details with:
@@ -181,7 +181,7 @@ export interface LeadProfile {
 }
 
 /**
- * Communication settings from tenant
+ * Communication settings for the organization
  */
 export interface CommunicationSettings {
   emailEnabled: boolean;
@@ -1118,7 +1118,7 @@ export class OutreachManager extends BaseManager {
   }
 
   /**
-   * Get communication settings for tenant
+   * Get communication settings for the organization
    */
   private getCommunicationSettings(): CommunicationSettings {
     try {
@@ -1162,7 +1162,7 @@ export class OutreachManager extends BaseManager {
   // ==========================================================================
 
   /**
-   * Query sentiment from INTELLIGENCE_MANAGER via TenantMemoryVault
+   * Query sentiment from INTELLIGENCE_MANAGER via MemoryVault
    */
   private async querySentiment(
     lead: LeadProfile

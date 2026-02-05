@@ -43,7 +43,7 @@ import {
   broadcastSignal,
   readAgentInsights,
   type InsightEntry,
-} from '../shared/tenant-memory-vault';
+} from '../shared/memory-vault';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
@@ -407,7 +407,7 @@ interface SwarmStatus {
  * User goal input
  */
 interface UserGoal {
-  tenantId: string;
+  orgId: string;
   goal: string;
   context?: Record<string, unknown>;
   priority?: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
@@ -524,14 +524,14 @@ When processing a goal, classify intent into:
 Return structured JSON with saga status, command results, and aggregated metrics.
 
 ## RULES
-1. ALWAYS identify tenant context before processing
+1. ALWAYS identify organization context before processing
 2. DECOMPOSE complex goals into atomic manager tasks
 3. RESPECT manager capabilities - don't overload
 4. MONITOR saga progress and report status
 5. HANDLE failures with compensation when possible
 6. AGGREGATE briefs from all managers for status
 7. BROADCAST signals for cross-manager coordination
-8. STORE insights in TenantMemoryVault for learning`;
+8. STORE insights in MemoryVault for learning`;
 
 // ============================================================================
 // CONFIGURATION
@@ -657,14 +657,14 @@ export class MasterOrchestrator extends BaseManager {
 
     try {
       const payload = message.payload as Record<string, unknown>;
-      const tenantId = payload.tenantId as string;
+      const orgId = payload.orgId as string;
 
-      if (!tenantId) {
+      if (!orgId) {
         return this.createReport(
           taskId,
           'FAILED',
           null,
-          ['tenantId is REQUIRED - multi-tenant scoping is mandatory']
+          ['orgId is REQUIRED - organization scoping is mandatory']
         );
       }
 
@@ -673,13 +673,13 @@ export class MasterOrchestrator extends BaseManager {
 
       switch (requestType) {
         case 'GOAL':
-          return await this.handleGoalRequest(taskId, tenantId, payload, startTime);
+          return await this.handleGoalRequest(taskId, orgId, payload, startTime);
         case 'STATUS':
-          return await this.handleStatusRequest(taskId, tenantId, startTime);
+          return await this.handleStatusRequest(taskId, orgId, startTime);
         case 'SAGA_EXECUTE':
-          return await this.handleSagaExecuteRequest(taskId, tenantId, payload, startTime);
+          return await this.handleSagaExecuteRequest(taskId, orgId, payload, startTime);
         case 'COMMAND':
-          return await this.handleCommandRequest(taskId, tenantId, payload, startTime);
+          return await this.handleCommandRequest(taskId, orgId, payload, startTime);
         default:
           return this.createReport(
             taskId,
@@ -726,7 +726,7 @@ export class MasterOrchestrator extends BaseManager {
     const goalId = `goal_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const startTime = Date.now();
 
-    this.log('INFO', `Processing goal: "${userGoal.goal}" for tenant ${userGoal.tenantId}`);
+    this.log('INFO', `Processing goal: "${userGoal.goal}" for organization ${userGoal.orgId}`);
 
     // Step 1: Classify intent
     const { intent, confidence, matchedRule } = this.classifyIntent(userGoal.goal);
@@ -743,7 +743,7 @@ export class MasterOrchestrator extends BaseManager {
     if (matchedRule?.sagaTemplate && tasks.length > 1) {
       const template = SAGA_TEMPLATES[matchedRule.sagaTemplate];
       if (template) {
-        saga = this.createSagaFromTemplate(goalId, userGoal.tenantId, template, userGoal);
+        saga = this.createSagaFromTemplate(goalId, userGoal.orgId, template, userGoal);
         this.activeSagas.set(saga.id, saga);
         this.log('INFO', `Created saga: ${template.name} with ${template.steps.length} steps`);
       } else {
@@ -751,8 +751,8 @@ export class MasterOrchestrator extends BaseManager {
       }
     }
 
-    // Step 4: Store goal insight in TenantMemoryVault
-    await this.storeGoalInsight(userGoal.tenantId, goalId, userGoal.goal, intent, confidence);
+    // Step 4: Store goal insight in MemoryVault
+    await this.storeGoalInsight(userGoal.orgId, goalId, userGoal.goal, intent, confidence);
 
     // Calculate estimated duration
     const estimatedTotalDurationMs = tasks.reduce((sum, t) => sum + t.estimatedDurationMs, 0);
@@ -849,7 +849,7 @@ export class MasterOrchestrator extends BaseManager {
           description: `${step.name} - ${step.action}`,
           manager: step.manager,
           action: step.action,
-          payload: { goal: userGoal.goal, context: userGoal.context, tenantId: userGoal.tenantId },
+          payload: { goal: userGoal.goal, context: userGoal.context, orgId: userGoal.orgId },
           dependencies: step.dependsOn.map(dep => {
             const depTask = tasks.find(t => t.id.includes(dep));
             return depTask?.id ?? '';
@@ -866,7 +866,7 @@ export class MasterOrchestrator extends BaseManager {
         description: `Execute ${intent} via ${matchedRule.primaryManager}`,
         manager: matchedRule.primaryManager,
         action: intent,
-        payload: { goal: userGoal.goal, context: userGoal.context, tenantId: userGoal.tenantId },
+        payload: { goal: userGoal.goal, context: userGoal.context, orgId: userGoal.orgId },
         dependencies: [],
         priority: 100,
         estimatedDurationMs: 60000,
@@ -881,7 +881,7 @@ export class MasterOrchestrator extends BaseManager {
           description: `Supporting ${intent} via ${supportManager}`,
           manager: supportManager,
           action: `SUPPORT_${intent}`,
-          payload: { goal: userGoal.goal, context: userGoal.context, tenantId: userGoal.tenantId },
+          payload: { goal: userGoal.goal, context: userGoal.context, orgId: userGoal.orgId },
           dependencies: [tasks[0].id],
           priority: 60,
           estimatedDurationMs: 30000,
@@ -919,7 +919,7 @@ export class MasterOrchestrator extends BaseManager {
    */
   private createSagaFromTemplate(
     goalId: string,
-    tenantId: string,
+    orgId: string,
     template: SagaTemplate,
     userGoal: UserGoal
   ): Saga {
@@ -936,7 +936,7 @@ export class MasterOrchestrator extends BaseManager {
           action: step.action,
           goal: userGoal.goal,
           context: userGoal.context,
-          tenantId,
+          orgId,
         },
         priority: step.required ? 'HIGH' : 'NORMAL',
         dependencies: step.dependsOn.map(dep => {
@@ -1168,7 +1168,7 @@ export class MasterOrchestrator extends BaseManager {
         priority: command.priority,
         payload: {
           ...command.payload,
-          tenantId: DEFAULT_ORG_ID,
+          orgId: DEFAULT_ORG_ID,
           commandId: command.id,
         },
         requiresResponse: true,
@@ -1261,7 +1261,7 @@ export class MasterOrchestrator extends BaseManager {
       overallHealth = 'OFFLINE';
     }
 
-    // Get recent insights from TenantMemoryVault
+    // Get recent insights from MemoryVault
     const insights = await readAgentInsights('MASTER_ORCHESTRATOR', { limit: 10 });
 
     // Calculate success rate
@@ -1352,12 +1352,12 @@ export class MasterOrchestrator extends BaseManager {
    */
   private async handleGoalRequest(
     taskId: string,
-    tenantId: string,
+    orgId: string,
     payload: Record<string, unknown>,
     startTime: number
   ): Promise<AgentReport> {
     const userGoal: UserGoal = {
-      tenantId,
+      orgId,
       goal: payload.goal as string,
       context: payload.context as Record<string, unknown> | undefined,
       priority: payload.priority as UserGoal['priority'],
@@ -1387,7 +1387,7 @@ export class MasterOrchestrator extends BaseManager {
    */
   private async handleStatusRequest(
     taskId: string,
-    tenantId: string,
+    orgId: string,
     startTime: number
   ): Promise<AgentReport> {
     const status = await this.getSwarmStatus();
@@ -1403,7 +1403,7 @@ export class MasterOrchestrator extends BaseManager {
    */
   private async handleSagaExecuteRequest(
     taskId: string,
-    tenantId: string,
+    orgId: string,
     payload: Record<string, unknown>,
     startTime: number
   ): Promise<AgentReport> {
@@ -1415,12 +1415,12 @@ export class MasterOrchestrator extends BaseManager {
     }
 
     const userGoal: UserGoal = {
-      tenantId,
+      orgId,
       goal: payload.goal as string ?? `Execute ${templateName}`,
       context: payload.context as Record<string, unknown>,
     };
 
-    const saga = this.createSagaFromTemplate(`goal_${Date.now()}`, tenantId, template, userGoal);
+    const saga = this.createSagaFromTemplate(`goal_${Date.now()}`, orgId, template, userGoal);
     this.activeSagas.set(saga.id, saga);
 
     const result = await this.executeSaga(saga);
@@ -1436,7 +1436,7 @@ export class MasterOrchestrator extends BaseManager {
    */
   private async handleCommandRequest(
     taskId: string,
-    tenantId: string,
+    orgId: string,
     payload: Record<string, unknown>,
     startTime: number
   ): Promise<AgentReport> {
@@ -1490,10 +1490,10 @@ export class MasterOrchestrator extends BaseManager {
   // ==========================================================================
 
   /**
-   * Store goal insight in TenantMemoryVault
+   * Store goal insight in MemoryVault
    */
   private async storeGoalInsight(
-    tenantId: string,
+    orgId: string,
     goalId: string,
     goal: string,
     intent: IntentCategory,

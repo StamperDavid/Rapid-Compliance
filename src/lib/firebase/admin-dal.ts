@@ -63,7 +63,7 @@ export class FirestoreAdminDAL {
    * Get an organization sub-collection reference
    * Usage: adminDal.getOrgCollection('records')
    *
-   * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID - this is a single-tenant system
+   * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID
    */
   getOrgCollection(subCollection: string): CollectionReference {
     const path = getOrgSubCollection(subCollection);

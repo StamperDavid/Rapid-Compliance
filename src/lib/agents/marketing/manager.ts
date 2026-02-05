@@ -3,7 +3,7 @@
  * STATUS: FUNCTIONAL
  *
  * Industry-Agnostic Cross-Channel Commander for marketing campaign orchestration.
- * Dynamically adapts to ANY business context via TenantMemoryVault Brand DNA.
+ * Dynamically adapts to ANY business context via MemoryVault Brand DNA.
  *
  * ARCHITECTURE:
  * - Zero hardcoded industry assumptions - all context derived at runtime
@@ -34,7 +34,7 @@ import {
   getMemoryVault,
   shareInsight,
   type InsightData,
-} from '../shared/tenant-memory-vault';
+} from '../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
 
@@ -59,7 +59,7 @@ const SYSTEM_PROMPT = `You are the Marketing Manager, an industry-agnostic L2 or
 
 ## YOUR ROLE
 You coordinate 5 platform specialists to execute unified marketing campaigns for ANY business type.
-All industry context, brand voice, and messaging guidelines are loaded dynamically from the tenant's Brand DNA.
+All industry context, brand voice, and messaging guidelines are loaded dynamically from the organization's Brand DNA.
 
 SPECIALISTS YOU ORCHESTRATE:
 - TIKTOK_EXPERT: Short-form viral video, Gen Z/young millennials, trending content
@@ -71,7 +71,7 @@ SPECIALISTS YOU ORCHESTRATE:
 ## INDUSTRY-AGNOSTIC APPROACH
 - NEVER assume a specific industry (trucking, SaaS, retail, etc.)
 - ALWAYS derive context from the Brand DNA loaded at runtime
-- Adapt messaging to match the tenant's unique voice and audience
+- Adapt messaging to match the organization's unique voice and audience
 - Use industry-specific terminology ONLY when provided in Brand DNA
 
 ## CAMPAIGN ORCHESTRATION FLOW
@@ -81,7 +81,7 @@ SPECIALISTS YOU ORCHESTRATE:
 4. Inject keywords into social content briefs
 5. Delegate to relevant platform specialists in parallel
 6. Aggregate results into unified CampaignBrief
-7. Store insights in TenantMemoryVault for learning
+7. Store insights in MemoryVault for learning
 
 ## SEO-SOCIAL FEEDBACK LOOP
 Before delegating to social specialists:
@@ -108,7 +108,7 @@ Best for: B2B sales, executive targeting, professional content, recruitment, par
 Best for: Keyword strategy, content optimization, organic search visibility
 
 ## BRAND VOICE CONSISTENCY
-All content must reflect the tenant's Brand DNA:
+All content must reflect the organization's Brand DNA:
 - Tone of voice (warm, professional, direct, casual, etc.)
 - Key phrases to use
 - Phrases to avoid
@@ -297,15 +297,15 @@ export interface CampaignGoal {
   };
   kpis?: string[];
   contentType?: 'video' | 'image' | 'text' | 'mixed';
-  tenantId?: string; // For Brand DNA lookup
+  orgId?: string; // For Brand DNA lookup
 }
 
 /**
- * Brand context loaded from TenantMemoryVault
+ * Brand context loaded from MemoryVault
  * Provides industry-specific customization at runtime
  */
 export interface BrandContext {
-  tenantId: string;
+  orgId: string;
   companyDescription: string;
   uniqueValue: string;
   targetAudience: string;
@@ -499,7 +499,7 @@ export class MarketingManager extends BaseManager {
     try {
       const payload = message.payload as CampaignGoal;
 
-      // Single-tenant system: uses DEFAULT_ORG_ID internally where needed
+      // Penthouse model system: uses DEFAULT_ORG_ID internally where needed
 
       if (!payload?.message && !payload?.objective) {
         return this.createReport(
@@ -515,7 +515,7 @@ export class MarketingManager extends BaseManager {
       // Execute full campaign orchestration
       const campaignBrief = await this.orchestrateCampaign(payload, taskId, startTime);
 
-      // Store insights in TenantMemoryVault for cross-agent learning
+      // Store insights in MemoryVault for cross-agent learning
       await this.storeCampaignInsights(campaignBrief);
 
       return this.createReport(taskId, 'COMPLETED', campaignBrief);
@@ -566,7 +566,7 @@ export class MarketingManager extends BaseManager {
   // ==========================================================================
 
   /**
-   * Load Brand DNA from TenantMemoryVault for industry-agnostic customization
+   * Load Brand DNA from MemoryVault for industry-agnostic customization
    */
   private async loadBrandContext(): Promise<BrandContext> {
     // Check cache first
@@ -584,7 +584,7 @@ export class MarketingManager extends BaseManager {
       }
 
       const brandContext: BrandContext = {
-        tenantId: DEFAULT_ORG_ID,
+        orgId: DEFAULT_ORG_ID,
         companyDescription: brandDNA.companyDescription ?? '',
         uniqueValue: brandDNA.uniqueValue ?? '',
         targetAudience: brandDNA.targetAudience ?? '',
@@ -613,7 +613,7 @@ export class MarketingManager extends BaseManager {
    */
   private createDefaultBrandContext(): BrandContext {
     return {
-      tenantId: DEFAULT_ORG_ID,
+      orgId: DEFAULT_ORG_ID,
       companyDescription: '',
       uniqueValue: '',
       targetAudience: '',
@@ -843,7 +843,7 @@ export class MarketingManager extends BaseManager {
           seed: this.extractKeywordSeed(goal, brandContext),
           industry: brandContext.industry,
           targetCount: 15,
-          organizationId: brandContext.tenantId,
+          organizationId: brandContext.orgId,
         },
         timestamp: new Date(),
         priority: 'HIGH',
@@ -1426,7 +1426,7 @@ export class MarketingManager extends BaseManager {
         secondary: seoGuidance.secondaryKeywords,
         recommendations: seoGuidance.contentRecommendations,
       } : null,
-      organizationId: brandContext.tenantId,
+      organizationId: brandContext.orgId,
     };
 
     // Platform-specific payload structure
@@ -1895,11 +1895,11 @@ Budget: ${budget}`;
   }
 
   // ==========================================================================
-  // TENANT MEMORY VAULT INTEGRATION
+  // MEMORY VAULT INTEGRATION
   // ==========================================================================
 
   /**
-   * Store campaign insights in TenantMemoryVault for cross-agent learning
+   * Store campaign insights in MemoryVault for cross-agent learning
    */
   private async storeCampaignInsights(
     campaignBrief: CampaignBrief

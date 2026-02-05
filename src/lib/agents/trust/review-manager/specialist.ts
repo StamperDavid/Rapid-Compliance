@@ -3,7 +3,7 @@
  * STATUS: FUNCTIONAL
  *
  * Expert in automated sentiment analysis and SEO-optimized review response generation.
- * Implements single-tenant reputation management with brand-specific keyword injection.
+ * Implements reputation management with brand-specific keyword injection.
  *
  * CAPABILITIES:
  * - Review scanning and analysis
@@ -13,7 +13,7 @@
  * - Brand voice consistency
  * - Reputation trend analysis
  *
- * SINGLE-TENANT: All operations use DEFAULT_ORG_ID
+ * PENTHOUSE: All operations use DEFAULT_ORG_ID
  */
 
 import { BaseSpecialist } from '../../base-specialist';
@@ -24,7 +24,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 // CORE TYPES & INTERFACES
 // ============================================================================
 
-interface TenantContext {
+interface BusinessContext {
   organizationId: string;
   brandName: string;
   industry: string;
@@ -181,7 +181,7 @@ interface SEOOptimization {
 
 interface ReviewManagerRequest {
   action: 'ANALYZE' | 'RESPOND' | 'CAMPAIGN' | 'BULK_ANALYZE' | 'TREND_REPORT';
-  tenantContext: TenantContext;
+  businessContext: BusinessContext;
   payload: ReviewPayload;
 }
 
@@ -344,7 +344,7 @@ const SYSTEM_PROMPT = `You are the Review Manager Specialist, an expert in reput
 ## YOUR ROLE
 You analyze incoming reviews, perform sentiment analysis, and generate brand-consistent, SEO-optimized responses. You also create review request campaigns to build positive reputation.
 
-## SINGLE-TENANT AWARENESS
+## PENTHOUSE AWARENESS
 All operations use the default organization (DEFAULT_ORG_ID):
 - Brand name and voice must match the organization
 - SEO keywords are organization-specific
@@ -395,7 +395,7 @@ const CONFIG: SpecialistConfig = {
       'seo_response_generation',
       'review_campaign_creation',
       'brand_voice_consistency',
-      'multi_tenant_reputation',
+      'reputation_management',
       'trend_analysis',
     ],
   },
@@ -426,12 +426,12 @@ const CONFIG: SpecialistConfig = {
 
 export class ReviewManagerSpecialist extends BaseSpecialist {
   private responseCache: Map<string, OptimizedResponse>;
-  private tenantVoiceCache: Map<string, BrandVoice>;
+  private brandVoiceCache: Map<string, BrandVoice>;
 
   constructor() {
     super(CONFIG);
     this.responseCache = new Map();
-    this.tenantVoiceCache = new Map();
+    this.brandVoiceCache = new Map();
   }
 
   async initialize(): Promise<void> {
@@ -449,8 +449,8 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     try {
       const request = message.payload as ReviewManagerRequest;
 
-      if (!request?.tenantContext) {
-        return this.createReport(taskId, 'FAILED', null, ['Missing tenant context']);
+      if (!request?.businessContext) {
+        return this.createReport(taskId, 'FAILED', null, ['Missing business context']);
       }
 
       this.log('INFO', `Processing ${request.action} for organization: ${DEFAULT_ORG_ID}`);
@@ -460,27 +460,27 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
       switch (request.action) {
         case 'ANALYZE':
           if (request.payload.type === 'single_review') {
-            result = await this.analyzeAndRespond(request.payload.review, request.tenantContext);
+            result = await this.analyzeAndRespond(request.payload.review, request.businessContext);
           }
           break;
         case 'RESPOND':
           if (request.payload.type === 'single_review') {
-            result = await this.generateOptimizedResponse(request.payload.review, request.tenantContext);
+            result = await this.generateOptimizedResponse(request.payload.review, request.businessContext);
           }
           break;
         case 'CAMPAIGN':
           if (request.payload.type === 'campaign_request') {
-            result = await this.createReviewCampaign(request.payload.campaignConfig, request.tenantContext);
+            result = await this.createReviewCampaign(request.payload.campaignConfig, request.businessContext);
           }
           break;
         case 'BULK_ANALYZE':
           if (request.payload.type === 'bulk_reviews') {
-            result = await this.bulkAnalyze(request.payload.reviews, request.tenantContext);
+            result = await this.bulkAnalyze(request.payload.reviews, request.businessContext);
           }
           break;
         case 'TREND_REPORT':
           if (request.payload.type === 'trend_request') {
-            result = await this.generateTrendReport(request.payload.dateRange, request.tenantContext);
+            result = await this.generateTrendReport(request.payload.dateRange, request.businessContext);
           }
           break;
         default:
@@ -743,7 +743,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
   async generateOptimizedResponse(
     review: IncomingReview,
-    tenantContext: TenantContext
+    businessContext: BusinessContext
   ): Promise<OptimizedResponse> {
     await Promise.resolve(); // Async boundary for interface compliance
     // Analyze sentiment first
@@ -754,13 +754,13 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     const template = templates[Math.floor(Math.random() * templates.length)];
 
     // Generate topic response
-    const topicResponse = this.generateTopicResponse(sentiment.topics, tenantContext);
+    const topicResponse = this.generateTopicResponse(sentiment.topics, businessContext);
 
     // Build SEO keyword sentence
-    const seoKeywordSentence = this.buildSEOSentence(tenantContext);
+    const seoKeywordSentence = this.buildSEOSentence(businessContext);
 
     // Generate call to action
-    const callToAction = this.generateCallToAction(sentiment.level, tenantContext);
+    const callToAction = this.generateCallToAction(sentiment.level, businessContext);
 
     // Build resolution/escalation offers for negative reviews
     const resolutionOffer = sentiment.level === 'NEGATIVE'
@@ -777,40 +777,40 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     let responseText = template
       .replace(/{rating}/g, String(review.rating))
       .replace(/{reviewerName}/g, review.reviewerName)
-      .replace(/{brandName}/g, tenantContext.brandName)
+      .replace(/{brandName}/g, businessContext.brandName)
       .replace(/{topicResponse}/g, topicResponse)
       .replace(/{seoKeywordSentence}/g, seoKeywordSentence)
-      .replace(/{seoKeyword1}/g, tenantContext.seoKeywords[0] ?? 'excellent service')
-      .replace(/{seoKeyword2}/g, tenantContext.seoKeywords[1] ?? 'customer satisfaction')
-      .replace(/{callToAction}/g, tenantContext.responseSettings.includeCallToAction ? callToAction : '')
+      .replace(/{seoKeyword1}/g, businessContext.seoKeywords[0] ?? 'excellent service')
+      .replace(/{seoKeyword2}/g, businessContext.seoKeywords[1] ?? 'customer satisfaction')
+      .replace(/{callToAction}/g, businessContext.responseSettings.includeCallToAction ? callToAction : '')
       .replace(/{resolutionOffer}/g, resolutionOffer)
       .replace(/{escalationOffer}/g, escalationOffer)
       .replace(/{improvementCommitment}/g, improvementCommitment);
 
     // Apply brand voice
-    responseText = this.applyBrandVoice(responseText, tenantContext.brandVoice);
+    responseText = this.applyBrandVoice(responseText, businessContext.brandVoice);
 
     // Trim to max length
-    if (responseText.length > tenantContext.responseSettings.maxResponseLength) {
-      responseText = `${responseText.substring(0, tenantContext.responseSettings.maxResponseLength - 3)  }...`;
+    if (responseText.length > businessContext.responseSettings.maxResponseLength) {
+      responseText = `${responseText.substring(0, businessContext.responseSettings.maxResponseLength - 3)  }...`;
     }
 
     // Calculate SEO score
-    const seoScore = this.calculateSEOScore(responseText, tenantContext);
+    const seoScore = this.calculateSEOScore(responseText, businessContext);
 
     // Calculate brand voice score
-    const brandVoiceScore = this.calculateBrandVoiceScore(responseText, tenantContext.brandVoice);
+    const brandVoiceScore = this.calculateBrandVoiceScore(responseText, businessContext.brandVoice);
 
     // Determine if approval required
-    const requiresApproval = review.rating < tenantContext.responseSettings.requireApprovalBelow;
+    const requiresApproval = review.rating < businessContext.responseSettings.requireApprovalBelow;
 
     return {
       responseText,
       seoScore,
-      keywordsInjected: this.getInjectedKeywords(responseText, tenantContext),
+      keywordsInjected: this.getInjectedKeywords(responseText, businessContext),
       brandVoiceScore,
-      personalizedElements: [review.reviewerName, tenantContext.brandName, ...sentiment.topics.map((t) => t.topic)],
-      callToAction: tenantContext.responseSettings.includeCallToAction ? callToAction : undefined,
+      personalizedElements: [review.reviewerName, businessContext.brandName, ...sentiment.topics.map((t) => t.topic)],
+      callToAction: businessContext.responseSettings.includeCallToAction ? callToAction : undefined,
       metadata: {
         generatedAt: new Date(),
         organizationId: DEFAULT_ORG_ID,
@@ -822,13 +822,13 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     };
   }
 
-  private generateTopicResponse(topics: TopicExtraction[], tenantContext: TenantContext): string {
+  private generateTopicResponse(topics: TopicExtraction[], businessContext: BusinessContext): string {
     if (topics.length === 0) {return '';}
 
     const topTopic = topics[0];
     const responses: Record<string, Record<string, string>> = {
       service_quality: {
-        positive: `Our team at ${tenantContext.brandName} takes pride in delivering exceptional service.`,
+        positive: `Our team at ${businessContext.brandName} takes pride in delivering exceptional service.`,
         negative: `We apologize that our service didn't meet your expectations.`,
         neutral: `We're always working to improve our service standards.`,
       },
@@ -848,7 +848,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
         neutral: `We're always looking to improve our response times.`,
       },
       professionalism: {
-        positive: `Professionalism is at the core of what we do at ${tenantContext.brandName}.`,
+        positive: `Professionalism is at the core of what we do at ${businessContext.brandName}.`,
         negative: `This behavior doesn't reflect our values, and we're addressing it.`,
         neutral: `We hold ourselves to high professional standards.`,
       },
@@ -862,25 +862,25 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     return '';
   }
 
-  private buildSEOSentence(tenantContext: TenantContext): string {
-    const keywords = tenantContext.seoKeywords;
+  private buildSEOSentence(businessContext: BusinessContext): string {
+    const keywords = businessContext.seoKeywords;
     if (keywords.length === 0) {return '';}
 
     const templates = [
-      `At ${tenantContext.brandName}, we're dedicated to providing ${keywords[0]}.`,
-      `Thank you for choosing ${tenantContext.brandName} for your ${keywords[0]} needs.`,
-      `We're proud to offer ${keywords[0]} in ${tenantContext.industry}.`,
+      `At ${businessContext.brandName}, we're dedicated to providing ${keywords[0]}.`,
+      `Thank you for choosing ${businessContext.brandName} for your ${keywords[0]} needs.`,
+      `We're proud to offer ${keywords[0]} in ${businessContext.industry}.`,
     ];
 
     return templates[Math.floor(Math.random() * templates.length)];
   }
 
-  private generateCallToAction(level: SentimentLevel, tenantContext: TenantContext): string {
+  private generateCallToAction(level: SentimentLevel, businessContext: BusinessContext): string {
     if (level === 'VERY_POSITIVE' || level === 'POSITIVE') {
-      return `We'd love to serve you again at ${tenantContext.brandName}!`;
+      return `We'd love to serve you again at ${businessContext.brandName}!`;
     }
     if (level === 'NEUTRAL') {
-      return `Visit us again and experience the best of ${tenantContext.brandName}.`;
+      return `Visit us again and experience the best of ${businessContext.brandName}.`;
     }
     return `We hope to have another opportunity to serve you better.`;
   }
@@ -906,17 +906,17 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     return result.trim().replace(/\s+/g, ' ');
   }
 
-  private calculateSEOScore(text: string, tenantContext: TenantContext): number {
+  private calculateSEOScore(text: string, businessContext: BusinessContext): number {
     let score = 0;
     const lowerText = text.toLowerCase();
 
     // Brand name present
-    if (lowerText.includes(tenantContext.brandName.toLowerCase())) {
+    if (lowerText.includes(businessContext.brandName.toLowerCase())) {
       score += 30;
     }
 
     // SEO keywords present
-    tenantContext.seoKeywords.forEach((keyword, index) => {
+    businessContext.seoKeywords.forEach((keyword, index) => {
       if (lowerText.includes(keyword.toLowerCase())) {
         score += 20 - index * 5; // First keyword worth more
       }
@@ -924,7 +924,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
     // Natural language (not keyword stuffed)
     const wordCount = text.split(/\s+/).length;
-    const keywordDensity = tenantContext.seoKeywords.filter((k) => lowerText.includes(k.toLowerCase())).length / wordCount;
+    const keywordDensity = businessContext.seoKeywords.filter((k) => lowerText.includes(k.toLowerCase())).length / wordCount;
 
     if (keywordDensity < 0.1) {
       score += 20; // Good - not stuffed
@@ -960,9 +960,9 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     return Math.max(0, Math.min(100, score));
   }
 
-  private getInjectedKeywords(text: string, tenantContext: TenantContext): string[] {
+  private getInjectedKeywords(text: string, businessContext: BusinessContext): string[] {
     const lowerText = text.toLowerCase();
-    return tenantContext.seoKeywords.filter((keyword) =>
+    return businessContext.seoKeywords.filter((keyword) =>
       lowerText.includes(keyword.toLowerCase())
     );
   }
@@ -983,10 +983,10 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
   private async analyzeAndRespond(
     review: IncomingReview,
-    tenantContext: TenantContext
+    businessContext: BusinessContext
   ): Promise<{ sentiment: SentimentAnalysisResult; response: OptimizedResponse }> {
     const sentiment = this.analyzeSentiment(review.text);
-    const response = await this.generateOptimizedResponse(review, tenantContext);
+    const response = await this.generateOptimizedResponse(review, businessContext);
 
     return { sentiment, response };
   }
@@ -997,7 +997,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
   private async bulkAnalyze(
     reviews: IncomingReview[],
-    tenantContext: TenantContext
+    businessContext: BusinessContext
   ): Promise<{
     analyses: Array<{ reviewId: string; sentiment: SentimentAnalysisResult; response?: OptimizedResponse }>;
     summary: BulkAnalysisSummary;
@@ -1005,8 +1005,8 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     const analyses = await Promise.all(
       reviews.map(async (review) => {
         const sentiment = this.analyzeSentiment(review.text);
-        const response = tenantContext.responseSettings.autoRespond && review.rating >= tenantContext.responseSettings.minRatingForAutoResponse
-          ? await this.generateOptimizedResponse(review, tenantContext)
+        const response = businessContext.responseSettings.autoRespond && review.rating >= businessContext.responseSettings.minRatingForAutoResponse
+          ? await this.generateOptimizedResponse(review, businessContext)
           : undefined;
 
         return { reviewId: review.id, sentiment, response };
@@ -1097,7 +1097,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
   async createReviewCampaign(
     config: Partial<ReviewRequestCampaign>,
-    tenantContext: TenantContext
+    businessContext: BusinessContext
   ): Promise<ReviewRequestCampaign> {
     await Promise.resolve(); // Async boundary for interface compliance
     const campaignId = `campaign_${Date.now()}`;
@@ -1116,8 +1116,8 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
       { type: 'sms', enabled: false, timing: '24_hours_post_service', frequency: 'once' },
     ];
 
-    // Build templates with tenant personalization
-    const templates = this.buildCampaignTemplates(tenantContext, channels);
+    // Build templates with business context personalization
+    const templates = this.buildCampaignTemplates(businessContext, channels);
 
     // Build schedule
     const schedule: CampaignSchedule = config.schedule ?? {
@@ -1138,9 +1138,9 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
     // Build SEO optimization
     const seoOptimization: SEOOptimization = {
-      targetKeywords: tenantContext.seoKeywords,
-      localSEOTerms: this.generateLocalSEOTerms(tenantContext),
-      serviceKeywords: this.generateServiceKeywords(tenantContext),
+      targetKeywords: businessContext.seoKeywords,
+      localSEOTerms: this.generateLocalSEOTerms(businessContext),
+      serviceKeywords: this.generateServiceKeywords(businessContext),
       locationTerms: [],
       naturalLanguageGoals: [
         'Encourage authentic detailed reviews',
@@ -1163,7 +1163,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
   }
 
   private buildCampaignTemplates(
-    tenantContext: TenantContext,
+    businessContext: BusinessContext,
     channels: CampaignChannel[]
   ): CampaignTemplate[] {
     const templates: CampaignTemplate[] = [];
@@ -1176,13 +1176,13 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
         templates.push({
           channelType: 'email',
           subject: emailTemplate.subject
-            .replace(/{brandName}/g, tenantContext.brandName),
+            .replace(/{brandName}/g, businessContext.brandName),
           body: emailTemplate.body
-            .replace(/{brandName}/g, tenantContext.brandName)
-            .replace(/{ownerName}/g, tenantContext.responseSettings.ownerName ?? 'The Team')
-            .replace(/{seoKeywordSentence}/g, this.buildSEOSentence(tenantContext))
-            .replace(/{seoKeyword1}/g, tenantContext.seoKeywords[0] ?? 'excellent service'),
-          reviewLinks: this.buildReviewLinks(tenantContext),
+            .replace(/{brandName}/g, businessContext.brandName)
+            .replace(/{ownerName}/g, businessContext.responseSettings.ownerName ?? 'The Team')
+            .replace(/{seoKeywordSentence}/g, this.buildSEOSentence(businessContext))
+            .replace(/{seoKeyword1}/g, businessContext.seoKeywords[0] ?? 'excellent service'),
+          reviewLinks: this.buildReviewLinks(businessContext),
           personalizations: ['customerName', 'productOrService', 'reviewLink'],
         });
       }
@@ -1192,8 +1192,8 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
         templates.push({
           channelType: 'sms',
           body: smsTemplate
-            .replace(/{brandName}/g, tenantContext.brandName),
-          reviewLinks: this.buildReviewLinks(tenantContext),
+            .replace(/{brandName}/g, businessContext.brandName),
+          reviewLinks: this.buildReviewLinks(businessContext),
           personalizations: ['customerName', 'shortLink'],
         });
       }
@@ -1202,7 +1202,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     return templates;
   }
 
-  private buildReviewLinks(_tenantContext: TenantContext): ReviewLinkConfig[] {
+  private buildReviewLinks(_businessContext: BusinessContext): ReviewLinkConfig[] {
     // In production, these would come from organization configuration
     return [
       { platform: 'google', url: `https://g.page/${DEFAULT_ORG_ID}/review`, priority: 1 },
@@ -1211,16 +1211,16 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     ];
   }
 
-  private generateLocalSEOTerms(tenantContext: TenantContext): string[] {
+  private generateLocalSEOTerms(businessContext: BusinessContext): string[] {
     return [
-      `${tenantContext.brandName} reviews`,
-      `${tenantContext.industry} near me`,
-      `best ${tenantContext.industry}`,
+      `${businessContext.brandName} reviews`,
+      `${businessContext.industry} near me`,
+      `best ${businessContext.industry}`,
     ];
   }
 
-  private generateServiceKeywords(tenantContext: TenantContext): string[] {
-    return tenantContext.keywords.slice(0, 5);
+  private generateServiceKeywords(businessContext: BusinessContext): string[] {
+    return businessContext.keywords.slice(0, 5);
   }
 
   // ==========================================================================
@@ -1229,7 +1229,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
   private async generateTrendReport(
     dateRange: { start: Date; end: Date },
-    _tenantContext: TenantContext
+    _businessContext: BusinessContext
   ): Promise<TrendReport> {
     await Promise.resolve(); // Async boundary for interface compliance
     // In production, this would query actual review data
@@ -1317,7 +1317,7 @@ export {
 };
 
 export type {
-  TenantContext,
+  BusinessContext,
   BrandVoice,
   IncomingReview,
   SentimentAnalysisResult,

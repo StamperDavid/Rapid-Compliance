@@ -113,7 +113,7 @@ export const getCollection = (name: keyof typeof COLLECTIONS): string => {
  * Usage: getOrgSubCollection('records')
  * Returns: 'organizations/rapid-compliance-root/records' (or 'test_organizations/rapid-compliance-root/test_records' in test mode)
  *
- * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID - this is a single-tenant system
+ * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID
  */
 export const getOrgSubCollection = (
   subCollection: string
@@ -126,7 +126,7 @@ export const getOrgSubCollection = (
  * Usage: getSchemaSubCollection('schema456', 'fields')
  * Returns: 'organizations/rapid-compliance-root/schemas/schema456/fields'
  *
- * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID - this is a single-tenant system
+ * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID
  */
 export const getSchemaSubCollection = (
   schemaId: string,
@@ -140,7 +140,7 @@ export const getSchemaSubCollection = (
  * Usage: getMerchantCouponsCollection()
  * Returns: 'organizations/rapid-compliance-root/merchant_coupons'
  *
- * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID - this is a single-tenant system
+ * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID
  */
 export const getMerchantCouponsCollection = (): string => {
   return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${PREFIX}merchant_coupons`;

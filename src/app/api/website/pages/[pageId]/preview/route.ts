@@ -1,7 +1,7 @@
 /**
  * Page Preview API
  * Generate shareable preview links and retrieve preview data
- * CRITICAL: Multi-tenant isolation - validates organizationId
+ * CRITICAL: Organization isolation - validates organizationId
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
