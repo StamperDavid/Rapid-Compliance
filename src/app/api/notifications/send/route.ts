@@ -14,6 +14,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sendNotificationRequestSchema } from '@/lib/notifications/validation';
 import { NotificationService } from '@/lib/notifications/notification-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Rate limiting map (in-memory for simplicity)
@@ -63,10 +64,8 @@ export async function POST(request: NextRequest) {
     // Validate request
     const validatedData = sendNotificationRequestSchema.parse(body);
 
-    // Get organization ID (from session/auth)
-    // TODO: Implement proper authentication
-    const orgIdHeader = request.headers.get('x-org-id');
-    const orgId = (orgIdHeader !== '' && orgIdHeader != null) ? orgIdHeader : 'default_org';
+    // PENTHOUSE: always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
 
     // Check rate limit (50 req/min per org)
     const rateLimit = checkRateLimit(`send:${orgId}`, 50, 60000);

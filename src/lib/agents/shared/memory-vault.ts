@@ -6,7 +6,7 @@
  *
  * ARCHITECTURE:
  * - All agents read from and write to this vault
- * - Data is scoped by organization (DEFAULT_ORG_ID)
+ * - Global flat store (PENTHOUSE: single-tenant, no org scoping)
  * - Supports cross-agent signals, insights, and context sharing
  * - Enables "Chain of Action" patterns where agents build on each other's work
  *
@@ -203,17 +203,17 @@ const PRIORITY_ORDER: Record<MemoryPriority, number> = {
 export class MemoryVault {
   private static instance: MemoryVault | null = null;
 
-  // In-memory storage (would be Firestore in production)
-  private store: Map<string, Map<string, MemoryEntry>> = new Map();
+  // In-memory storage - flat global store (PENTHOUSE: no org scoping)
+  private store: Map<string, MemoryEntry> = new Map();
 
-  // Subscriptions for real-time updates
-  private subscriptions: Map<string, Map<string, {
+  // Subscriptions for real-time updates - flat (no org scoping)
+  private subscriptions: Map<string, {
     callback: MemorySubscriptionCallback;
     options: SubscriptionOptions;
-  }>> = new Map();
+  }> = new Map();
 
-  // Access metrics
-  private accessMetrics: Map<string, { reads: number; writes: number }> = new Map();
+  // Access metrics - flat (no org scoping)
+  private accessMetrics = { reads: 0, writes: 0 };
 
   private constructor() {
     logger.info('[MemoryVault] Initialized - Cross-agent memory active');
@@ -248,21 +248,8 @@ export class MemoryVault {
     agentId: string,
     options: WriteOptions = {}
   ): MemoryEntry<T> {
-    // Use DEFAULT_ORG_ID internally
-    const orgId = DEFAULT_ORG_ID;
-
-    // Get or create organization store
-    if (!this.store.has(orgId)) {
-      this.store.set(orgId, new Map());
-    }
-    const store = this.store.get(orgId);
-    if (!store) {
-      throw new Error('[MemoryVault] Failed to initialize organization store');
-    }
-
-    // Check for existing entry
     const existingKey = `${category}:${key}`;
-    const existing = store.get(existingKey);
+    const existing = this.store.get(existingKey);
 
     if (existing && !options.overwrite) {
       // Update existing entry
@@ -276,12 +263,11 @@ export class MemoryVault {
         metadata: { ...existing.metadata, ...options.metadata },
       };
 
-      store.set(existingKey, updated);
-      this.notifySubscribers(orgId, updated);
-      this.trackWrite(orgId);
+      this.store.set(existingKey, updated);
+      this.notifySubscribers(updated);
+      this.trackWrite();
 
       logger.info('[MemoryVault] Entry updated', {
-        orgId,
         category,
         key,
         agentId,
@@ -295,7 +281,7 @@ export class MemoryVault {
     const now = new Date();
     const entry: MemoryEntry<T> = {
       id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      orgId,
+      orgId: DEFAULT_ORG_ID,
       category,
       key,
       value,
@@ -310,12 +296,11 @@ export class MemoryVault {
       accessCount: 0,
     };
 
-    store.set(existingKey, entry);
-    this.notifySubscribers(orgId, entry);
-    this.trackWrite(orgId);
+    this.store.set(existingKey, entry);
+    this.notifySubscribers(entry);
+    this.trackWrite();
 
     logger.info('[MemoryVault] Entry created', {
-      orgId,
       category,
       key,
       agentId,
@@ -435,16 +420,8 @@ export class MemoryVault {
     key: string,
     agentId: string
   ): MemoryEntry<T> | null {
-    // Use DEFAULT_ORG_ID internally
-    const orgId = DEFAULT_ORG_ID;
-
-    const store = this.store.get(orgId);
-    if (!store) {
-      return null;
-    }
-
     const entryKey = `${category}:${key}`;
-    const entry = store.get(entryKey) as MemoryEntry<T> | undefined;
+    const entry = this.store.get(entryKey) as MemoryEntry<T> | undefined;
 
     if (!entry) {
       return null;
@@ -452,7 +429,7 @@ export class MemoryVault {
 
     // Check expiration
     if (entry.expiresAt && new Date() > entry.expiresAt) {
-      store.delete(entryKey);
+      this.store.delete(entryKey);
       return null;
     }
 
@@ -460,7 +437,7 @@ export class MemoryVault {
     entry.accessCount += 1;
     entry.lastAccessedBy = agentId;
     entry.lastAccessedAt = new Date();
-    this.trackRead(orgId);
+    this.trackRead();
 
     return entry;
   }
@@ -469,19 +446,11 @@ export class MemoryVault {
    * Query entries by criteria
    */
   query(
-    agentId: string,
+    _agentId: string,
     options: QueryOptions = {}
   ): MemoryEntry[] {
-    // Use DEFAULT_ORG_ID internally
-    const orgId = DEFAULT_ORG_ID;
-
-    const store = this.store.get(orgId);
-    if (!store) {
-      return [];
-    }
-
     const now = new Date();
-    let entries = Array.from(store.values());
+    let entries = Array.from(this.store.values());
 
     // Filter expired unless explicitly included
     if (!options.includeExpired) {
@@ -543,7 +512,7 @@ export class MemoryVault {
     entries = entries.slice(offset, offset + limit);
 
     // Track access
-    this.trackRead(orgId);
+    this.trackRead();
 
     return entries;
   }
@@ -650,21 +619,9 @@ export class MemoryVault {
     callback: MemorySubscriptionCallback,
     options: SubscriptionOptions = {}
   ): () => void {
-    // Use DEFAULT_ORG_ID internally
-    const orgId = DEFAULT_ORG_ID;
-
-    if (!this.subscriptions.has(orgId)) {
-      this.subscriptions.set(orgId, new Map());
-    }
-
-    const subs = this.subscriptions.get(orgId);
-    if (!subs) {
-      throw new Error('[MemoryVault] Failed to initialize organization subscriptions');
-    }
-    subs.set(subscriberId, { callback, options });
+    this.subscriptions.set(subscriberId, { callback, options });
 
     logger.info('[MemoryVault] Subscription added', {
-      orgId,
       subscriberId,
       category: options.category,
       tags: options.tags,
@@ -672,22 +629,16 @@ export class MemoryVault {
 
     // Return unsubscribe function
     return () => {
-      subs.delete(subscriberId);
-      logger.info('[MemoryVault] Subscription removed', {
-        orgId,
-        subscriberId,
-      });
+      this.subscriptions.delete(subscriberId);
+      logger.info('[MemoryVault] Subscription removed', { subscriberId });
     };
   }
 
   /**
    * Notify subscribers of changes
    */
-  private notifySubscribers(orgId: string, entry: MemoryEntry): void {
-    const subs = this.subscriptions.get(orgId);
-    if (!subs) {return;}
-
-    for (const [_subscriberId, { callback, options }] of subs) {
+  private notifySubscribers(entry: MemoryEntry): void {
+    for (const [_subscriberId, { callback, options }] of this.subscriptions) {
       // Check if subscriber wants this category
       if (options.category && options.category !== entry.category) {
         continue;
@@ -762,36 +713,19 @@ export class MemoryVault {
     byCategory: Record<MemoryCategory, number>;
     metrics: { reads: number; writes: number };
   } {
-    // Use DEFAULT_ORG_ID internally
-    const orgId = DEFAULT_ORG_ID;
-
-    const store = this.store.get(orgId);
-    const metrics = this.accessMetrics.get(orgId) ?? { reads: 0, writes: 0 };
-
-    if (!store) {
-      return {
-        totalEntries: 0,
-        byCategory: {
-          INSIGHT: 0, SIGNAL: 0, CONTENT: 0, PROFILE: 0,
-          STRATEGY: 0, WORKFLOW: 0, PERFORMANCE: 0, CONTEXT: 0, CROSS_AGENT: 0,
-        },
-        metrics,
-      };
-    }
-
     const byCategory: Record<MemoryCategory, number> = {
       INSIGHT: 0, SIGNAL: 0, CONTENT: 0, PROFILE: 0,
       STRATEGY: 0, WORKFLOW: 0, PERFORMANCE: 0, CONTEXT: 0, CROSS_AGENT: 0,
     };
 
-    for (const entry of store.values()) {
+    for (const entry of this.store.values()) {
       byCategory[entry.category] += 1;
     }
 
     return {
-      totalEntries: store.size,
+      totalEntries: this.store.size,
       byCategory,
-      metrics,
+      metrics: { ...this.accessMetrics },
     };
   }
 
@@ -799,27 +733,18 @@ export class MemoryVault {
    * Clean expired entries
    */
   cleanExpired(): number {
-    // Use DEFAULT_ORG_ID internally
-    const orgId = DEFAULT_ORG_ID;
-
-    const store = this.store.get(orgId);
-    if (!store) {return 0;}
-
     const now = new Date();
     let cleaned = 0;
 
-    for (const [key, entry] of store) {
+    for (const [key, entry] of this.store) {
       if (entry.expiresAt && entry.expiresAt < now) {
-        store.delete(key);
+        this.store.delete(key);
         cleaned += 1;
       }
     }
 
     if (cleaned > 0) {
-      logger.info('[MemoryVault] Cleaned expired entries', {
-        orgId,
-        count: cleaned,
-      });
+      logger.info('[MemoryVault] Cleaned expired entries', { count: cleaned });
     }
 
     return cleaned;
@@ -829,24 +754,12 @@ export class MemoryVault {
   // PRIVATE HELPERS
   // ==========================================================================
 
-  private trackRead(orgId: string): void {
-    if (!this.accessMetrics.has(orgId)) {
-      this.accessMetrics.set(orgId, { reads: 0, writes: 0 });
-    }
-    const metrics = this.accessMetrics.get(orgId);
-    if (metrics) {
-      metrics.reads += 1;
-    }
+  private trackRead(): void {
+    this.accessMetrics.reads += 1;
   }
 
-  private trackWrite(orgId: string): void {
-    if (!this.accessMetrics.has(orgId)) {
-      this.accessMetrics.set(orgId, { reads: 0, writes: 0 });
-    }
-    const metrics = this.accessMetrics.get(orgId);
-    if (metrics) {
-      metrics.writes += 1;
-    }
+  private trackWrite(): void {
+    this.accessMetrics.writes += 1;
   }
 }
 
@@ -859,13 +772,6 @@ export class MemoryVault {
  */
 export function getMemoryVault(): MemoryVault {
   return MemoryVault.getInstance();
-}
-
-/**
- * Get the default organization ID
- */
-export function getDefaultOrgId(): string {
-  return DEFAULT_ORG_ID;
 }
 
 // ============================================================================
