@@ -23,7 +23,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // SignalBus and Agent Registry
 import { getSignalBus, type SignalHistoryEntry, type SignalHistoryOptions } from '@/lib/orchestrator/signal-bus';
@@ -197,8 +196,6 @@ export async function GET(
     }
 
     const { limit, offset, since, until, status, signalType, includePayload } = queryResult.data;
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
-    const tenantId = DEFAULT_ORG_ID;
 
     logger.info(`[AgentLogs] Fetching logs for agent ${agentId}`, {
       limit,
@@ -229,10 +226,10 @@ export async function GET(
     }
 
     // Get filtered history
-    const historyResult = signalBus.getHistory(tenantId, historyOptions);
+    const historyResult = signalBus.getHistory(historyOptions);
 
     // Get agent statistics
-    const stats = signalBus.getAgentStats(tenantId, agentId);
+    const stats = signalBus.getAgentStats(agentId);
 
     // Transform entries to API format
     const logs = historyResult.entries.map(entry => transformLogEntry(entry, includePayload));
