@@ -16,9 +16,9 @@
  * ✅ Circuit Breaker to prevent runaway AI costs
  * ✅ Throttler to prevent event loops
  * ✅ Full audit trail via signal_logs sub-collection
- * ✅ Multi-tenant isolation via orgId
+ * ✅ Organization isolation via orgId
  * ✅ TTL-based signal expiration
- * 
+ *
  * SAFETY CONTROLS:
  * - Circuit Breaker opens after 5 consecutive failures (configurable)
  * - Throttler limits to 100 signals per minute per org (configurable)

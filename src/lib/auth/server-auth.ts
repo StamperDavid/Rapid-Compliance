@@ -60,7 +60,7 @@ export async function requireUserRole(
 
 /**
  * Require organization membership for an API route
- * In single-tenant mode, this is equivalent to requireAuthToken
+ * In penthouse model, this is equivalent to requireAuthToken
  */
 export async function requireUserOrganization(
   request: NextRequest,
@@ -104,7 +104,7 @@ export async function hasRole(request: NextRequest, role: string): Promise<boole
  */
 export async function isAdmin(request: NextRequest): Promise<boolean> {
   const user = await getAuthToken(request);
-  return user?.role === 'admin' || user?.role === 'superadmin';
+  return user?.role === 'admin';
 }
 
 

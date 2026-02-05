@@ -7,8 +7,6 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config'
 import { logger } from '@/lib/logger/logger';
-import type { AccountRole } from '@/types/unified-rbac';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface FirebaseError {
   code: string;
@@ -20,9 +18,7 @@ interface FirebaseError {
  * Used for role-based login redirection
  */
 interface UserDocument {
-  organizationId?: string;
-  tenantId?: string;
-  role?: AccountRole;
+  role?: string;
 }
 
 export default function LoginPage() {
@@ -40,7 +36,7 @@ export default function LoginPage() {
    *
    * This handler implements role-based routing after authentication:
    * - superadmin users → /admin (Platform Admin Dashboard)
-   * - All other users → /workspace/{orgId}/dashboard (Tenant Workspace)
+   * - All other users → /workspace/{orgId}/dashboard (Workspace)
    *
    * The redirecting state prevents FOUC (Flash of Unstyled Content) by
    * showing a clean loading indicator during the navigation transition.
@@ -74,20 +70,17 @@ export default function LoginPage() {
 
       const userData = userDoc.data() as UserDocument;
       const userRole = userData.role;
-      // SINGLE-TENANT: Always use DEFAULT_ORG_ID - ignore stored tenantId/organizationId
-      const orgId = DEFAULT_ORG_ID;
 
       logger.info('User role detected', {
         uid: user.uid,
         role: userRole,
-        orgId: orgId,
         file: 'login/page.tsx'
       });
 
       // SMART ROLE REDIRECTION
-      // Superadmins are routed to /admin, all others to dashboard
-      if (userRole === 'superadmin') {
-        logger.info('Platform admin detected, redirecting to /admin', {
+      // Admin roles (superadmin/admin) route to /admin, all others to dashboard
+      if (userRole === 'superadmin' || userRole === 'admin') {
+        logger.info('Admin detected, redirecting to /admin', {
           uid: user.uid,
           file: 'login/page.tsx'
         });
@@ -100,7 +93,7 @@ export default function LoginPage() {
       // Set redirecting state for clean transition
       setRedirecting(true);
 
-      // SINGLE-TENANT: Redirect to flat dashboard route
+      // PENTHOUSE: Redirect to flat dashboard route
       router.push('/dashboard');
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));

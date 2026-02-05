@@ -42,7 +42,7 @@ import {
   getMemoryVault,
   shareInsight,
   broadcastSignal,
-} from '../../shared/tenant-memory-vault';
+} from '../../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
@@ -149,7 +149,7 @@ When a new review is detected (webhook.review.received):
 2. Generate draft response based on star rating and Brand DNA tone
 3. For negative reviews (1-3 stars): Flag HIGH PRIORITY, queue for human approval
 4. For positive reviews (4-5 stars): Auto-approve with review option
-5. Store response templates in TenantMemoryVault
+5. Store response templates in MemoryVault
 
 ### GMB Profile Optimization
 Coordinate with GMB_SPECIALIST to:
@@ -1395,7 +1395,7 @@ export class ReputationManager extends BaseManager {
       this.log('WARN', 'Could not load Brand DNA, using default tone');
     }
 
-    // Load response templates from TenantMemoryVault
+    // Load response templates from MemoryVault
     const templateKey = `review_template_${reviewData.rating}_star`;
     const cachedTemplate = this.memoryVault.read('CONTENT', templateKey, this.identity.id);
 
@@ -1434,11 +1434,11 @@ export class ReputationManager extends BaseManager {
         result: responseData,
       });
 
-      // For negative reviews (1-3 stars), flag for tenant notification
+      // For negative reviews (1-3 stars), flag for organization notification
       if (requiresApproval && responseData) {
         this.log('WARN', `HIGH PRIORITY: ${reviewData.rating}-star review flagged for approval`);
 
-        // Store notification in TenantMemoryVault using PERFORMANCE insight type
+        // Store notification in MemoryVault using PERFORMANCE insight type
         void shareInsight(
           this.identity.id,
           'PERFORMANCE', // Using PERFORMANCE as closest match for review alerts

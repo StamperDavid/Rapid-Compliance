@@ -1,7 +1,7 @@
 /**
  * Form Builder Types
  * Complete type definitions for form definitions, submissions, and analytics
- * Optimized for Firestore with multi-tenant structure
+ * Optimized for Firestore structure
  *
  * COLLECTION STRUCTURE:
  * organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}

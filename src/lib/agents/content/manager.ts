@@ -41,7 +41,7 @@ import {
   shareInsight,
   broadcastSignal,
   readAgentInsights,
-} from '../shared/tenant-memory-vault';
+} from '../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
 import type { TechnicalBrief, PageSEORequirements } from '../architect/manager';
@@ -252,10 +252,10 @@ const CONTENT_MANAGER_CONFIG: ManagerConfig = {
 // ============================================================================
 
 /**
- * Brand context loaded from TenantMemoryVault
+ * Brand context loaded from MemoryVault
  */
 export interface BrandContext {
-  tenantId: string;
+  orgId: string;
   companyDescription: string;
   uniqueValue: string;
   targetAudience: string;
@@ -377,7 +377,7 @@ export interface ContentCalendar {
  */
 export interface ContentPackage {
   packageId: string;
-  tenantId: string;
+  orgId: string;
   blueprintId?: string;
   createdAt: Date;
   completedAt: Date;
@@ -437,7 +437,7 @@ export interface DelegationResult {
  * Content request payload
  */
 export interface ContentRequest {
-  tenantId: string;
+  orgId: string;
   blueprintId?: string;
   technicalBrief?: TechnicalBrief;
   pages?: string[];
@@ -516,21 +516,21 @@ export class ContentManager extends BaseManager {
     try {
       const payload = message.payload as ContentRequest;
 
-      if (!payload?.tenantId) {
+      if (!payload?.orgId) {
         return this.createReport(
           taskId,
           'FAILED',
           null,
-          ['No tenantId provided in payload']
+          ['No orgId provided in payload']
         );
       }
 
-      this.log('INFO', `Processing content request for tenant: ${payload.tenantId}`);
+      this.log('INFO', `Processing content request for organization: ${payload.orgId}`);
 
       // Execute full content orchestration
       const contentPackage = await this.orchestrateContentProduction(payload, taskId, startTime);
 
-      // Store insights in TenantMemoryVault for cross-agent learning
+      // Store insights in MemoryVault for cross-agent learning
       await this.storeContentInsights(contentPackage);
 
       // Broadcast content.package_ready signal if validation passed
@@ -562,18 +562,18 @@ export class ContentManager extends BaseManager {
 
       const blueprintPayload = messagePayload.payload as {
         blueprintId?: string;
-        tenantId?: string;
+        orgId?: string;
         technicalBriefId?: string;
       } | undefined;
 
       // Fetch the full architecture from vault
       const architecture = await this.fetchArchitectureFromVault(
-        blueprintPayload?.tenantId ?? signal.origin ?? 'default',
+        blueprintPayload?.orgId ?? signal.origin ?? 'default',
         blueprintPayload?.blueprintId
       );
 
       const contentRequest: ContentRequest = {
-        tenantId: blueprintPayload?.tenantId ?? signal.origin ?? 'default',
+        orgId: blueprintPayload?.orgId ?? signal.origin ?? 'default',
         blueprintId: blueprintPayload?.blueprintId,
         technicalBrief: architecture?.technicalBrief,
       };
@@ -627,7 +627,7 @@ export class ContentManager extends BaseManager {
   // ==========================================================================
 
   /**
-   * Load Brand DNA from TenantMemoryVault for brand-consistent content
+   * Load Brand DNA from MemoryVault for brand-consistent content
    */
   private async loadBrandContext(): Promise<BrandContext> {
     // Check cache first
@@ -647,7 +647,7 @@ export class ContentManager extends BaseManager {
       }
 
       const brandContext: BrandContext = {
-        tenantId: DEFAULT_ORG_ID,
+        orgId: DEFAULT_ORG_ID,
         companyDescription: brandDNA.companyDescription ?? '',
         uniqueValue: brandDNA.uniqueValue ?? '',
         targetAudience: brandDNA.targetAudience ?? '',
@@ -679,9 +679,9 @@ export class ContentManager extends BaseManager {
   /**
    * Create default brand context when no Brand DNA exists
    */
-  private createDefaultBrandContext(tenantId: string): BrandContext {
+  private createDefaultBrandContext(orgId: string): BrandContext {
     return {
-      tenantId,
+      orgId,
       companyDescription: '',
       uniqueValue: '',
       targetAudience: '',
@@ -879,7 +879,7 @@ export class ContentManager extends BaseManager {
 
     return {
       packageId: `content_${taskId}`,
-      tenantId: request.tenantId,
+      orgId: request.orgId,
       blueprintId: request.blueprintId,
       createdAt: new Date(startTime),
       completedAt,
@@ -949,7 +949,7 @@ export class ContentManager extends BaseManager {
                 toneOfVoice: brandContext.toneOfVoice,
                 keyPhrases: brandContext.keyPhrases,
                 avoidPhrases: brandContext.avoidPhrases,
-                organizationId: request.tenantId,
+                organizationId: request.orgId,
               },
               timestamp: new Date(),
               priority: 'HIGH',
@@ -1181,7 +1181,7 @@ export class ContentManager extends BaseManager {
           brandStyle: 'modern',
           industry: brandContext.industry,
           pages: pageContent.map(p => ({ id: p.pageId, name: p.pageName })),
-          organizationId: brandContext.tenantId,
+          organizationId: brandContext.orgId,
         },
         timestamp: new Date(),
         priority: 'NORMAL',
@@ -1303,7 +1303,7 @@ export class ContentManager extends BaseManager {
           script: `Introducing ${brandContext.companyDescription}. ${brandContext.uniqueValue}`,
           platform: 'youtube',
           style: 'documentary',
-          organizationId: request.tenantId,
+          organizationId: request.orgId,
         },
         timestamp: new Date(),
         priority: 'NORMAL',
@@ -1550,10 +1550,10 @@ export class ContentManager extends BaseManager {
   // ==========================================================================
 
   /**
-   * Fetch architecture from TenantMemoryVault
+   * Fetch architecture from MemoryVault
    */
   private async fetchArchitectureFromVault(
-    tenantId: string,
+    orgId: string,
     blueprintId?: string
   ): Promise<{ technicalBrief: TechnicalBrief } | null> {
     try {
@@ -1582,7 +1582,7 @@ export class ContentManager extends BaseManager {
   }
 
   /**
-   * Store content insights in TenantMemoryVault
+   * Store content insights in MemoryVault
    */
   private async storeContentInsights(contentPackage: ContentPackage): Promise<void> {
     try {
@@ -1603,7 +1603,7 @@ export class ContentManager extends BaseManager {
         }
       );
 
-      this.log('INFO', 'Stored content insights in TenantMemoryVault');
+      this.log('INFO', 'Stored content insights in MemoryVault');
     } catch (error) {
       this.log('WARN', `Failed to store insights: ${error instanceof Error ? error.message : String(error)}`);
     }

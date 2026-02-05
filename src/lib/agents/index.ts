@@ -42,9 +42,9 @@ export { BaseManager } from './base-manager';
 // SHARED MEMORY INFRASTRUCTURE
 // ============================================================================
 
-// Tenant Memory Vault - Cross-Agent Communication
+// Memory Vault - Cross-Agent Communication
 export {
-  TenantMemoryVault,
+  MemoryVault,
   getMemoryVault,
   shareInsight,
   broadcastSignal,
@@ -61,7 +61,7 @@ export {
   type ContentData,
   type CrossAgentEntry,
   type CrossAgentData,
-} from './shared/tenant-memory-vault';
+} from './shared/memory-vault';
 
 // ============================================================================
 // MASTER ORCHESTRATOR (L1 Swarm CEO)

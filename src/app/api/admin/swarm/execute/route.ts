@@ -1,6 +1,6 @@
 /**
  * Admin Swarm Agent Execution API
- * STATUS: PRODUCTION-READY (Full 47-Agent Support) - SINGLE-TENANT
+ * STATUS: PRODUCTION-READY (Full 47-Agent Support) - PENTHOUSE MODEL
  *
  * POST to execute any functional agent from the Swarm Control Center
  * Implements circuit breaker pattern and error reporting
@@ -229,8 +229,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
     }
 
     const { agentId, taskId, payload, priority, traceId } = validation.data;
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
-    const tenantId = DEFAULT_ORG_ID;
+    // PENTHOUSE MODEL: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
 
     // ========================================================================
     // CIRCUIT BREAKER CHECK
@@ -311,8 +311,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
       priority: priority ?? 'NORMAL',
       payload: {
         ...payload,
-        // SINGLE-TENANT: tenantId included for internal consistency
-        tenantId,
+        // PENTHOUSE MODEL: orgId included for internal consistency
+        orgId,
       },
       requiresResponse: true,
       traceId: traceId ?? taskId,

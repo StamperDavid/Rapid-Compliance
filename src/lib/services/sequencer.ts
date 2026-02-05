@@ -256,7 +256,7 @@ export async function listSequences(_organizationId: string): Promise<Sequence[]
       throw new Error('Admin DAL not initialized');
     }
 
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const snapshot = await adminDal.safeQuery('SEQUENCES', (ref) =>
       ref
         .orderBy('createdAt', 'desc')
@@ -1110,7 +1110,7 @@ export async function processDueSequenceSteps(organizationId: string): Promise<n
     const now = new Date();
 
     // Find all enrollments that are due for execution
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const dueEnrollments = await adminDal.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
       ref
         .where('status', '==', 'active')

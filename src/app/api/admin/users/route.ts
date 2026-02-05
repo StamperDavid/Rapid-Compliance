@@ -198,13 +198,13 @@ export async function GET(request: NextRequest) {
     
     // Parse query params for filtering and pagination
     const { searchParams } = new URL(request.url);
-    // PENTHOUSE: organizationId param no longer used (single-tenant mode)
+    // PENTHOUSE: organizationId param no longer used (penthouse)
     const limitParam = searchParams.get('limit');
     const pageSize = Math.min(parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50'), 100);
     const startAfter = searchParams.get('startAfter'); // ISO timestamp
     
     // Build query using Admin DAL
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed (penthouse)
     const usersSnapshot = await adminDal.safeQuery('USERS', (ref) => {
       let query = ref.orderBy('createdAt', 'desc');
 

@@ -1,7 +1,7 @@
 /**
  * Page Publishing API
  * Handle publish/unpublish actions with version tracking
- * CRITICAL: Multi-tenant isolation - validates organizationId
+ * CRITICAL: Organization isolation - validates organizationId
  */
 
 import type { NextRequest } from 'next/server';

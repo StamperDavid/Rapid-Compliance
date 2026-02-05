@@ -10,7 +10,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 /**
  * Admin Layout
  * Wraps all /admin/* pages with auth guard and sidebar navigation.
- * Single-tenant: SalesVelocity.ai Penthouse model.
+ * SalesVelocity.ai Penthouse model.
  */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { adminUser, loading } = useAdminAuth();

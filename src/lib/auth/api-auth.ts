@@ -2,7 +2,7 @@
  * API Authentication Middleware
  * Validates authentication tokens and user permissions for API routes
  *
- * Single-tenant mode: All users belong to DEFAULT_ORG_ID
+ * Penthouse model: All users belong to DEFAULT_ORG_ID
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
@@ -91,9 +91,9 @@ export interface AuthenticatedUser {
   uid: string;
   email: string | null;
   emailVerified: boolean;
-  /** Always DEFAULT_ORG_ID in single-tenant mode */
+  /** Always DEFAULT_ORG_ID in penthouse model */
   organizationId: string;
-  /** User's role using 4-level RBAC */
+  /** User's role using binary RBAC */
   role?: AccountRole;
 }
 
@@ -179,7 +179,7 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
 
     logger.debug('[API Auth] Final auth result', { file: 'api-auth.ts', uid: decodedToken.uid, email: decodedToken.email, role });
 
-    // Single-tenant mode: always use DEFAULT_ORG_ID
+    // Penthouse model: always use DEFAULT_ORG_ID
     return {
       uid: decodedToken.uid,
       email: decodedToken.email ?? null,
@@ -228,7 +228,7 @@ export async function optionalAuth(
 
 /**
  * Require specific role
- * Uses 4-level RBAC: superadmin | admin | manager | employee
+ * Uses binary RBAC: admin | user
  */
 export async function requireRole(
   request: NextRequest,

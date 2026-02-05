@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { usePlatformOrganizations } from "@/hooks/useUnifiedData";
+import { useCollectionData } from "@/hooks/useUnifiedData";
+import { COLLECTIONS } from "@/lib/db/firestore-service";
 import {
   Activity,
   Building2,
@@ -16,14 +17,14 @@ import {
 
 /**
  * System Administration Page
- * Platform admin only - displays system health and administration
+ * Admin only - displays system health and administration
  */
 export default function SystemPage(): React.ReactElement {
   const { user } = useAuth();
-  const { data: organizations, loading } = usePlatformOrganizations();
+  const { data: organizations, loading } = useCollectionData<Record<string, unknown>>(COLLECTIONS.ORGANIZATIONS);
 
-  // Access control - platform admin only
-  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+  // Access control - admin only
+  if (!user?.role || user.role !== 'admin') {
     return (
       <div className="text-center py-12">
         <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-[var(--color-error)]" />
@@ -31,7 +32,7 @@ export default function SystemPage(): React.ReactElement {
           Access Denied
         </h2>
         <p className="text-[var(--color-text-secondary)]">
-          This page is only accessible to platform administrators.
+          This page is only accessible to administrators.
         </p>
       </div>
     );
@@ -162,7 +163,7 @@ export default function SystemPage(): React.ReactElement {
         </p>
         <div className="text-sm text-[var(--color-text-disabled)]">
           <p>Role: {user?.role}</p>
-          <p>Platform Admin View</p>
+          <p>Admin View</p>
         </div>
       </div>
     </div>

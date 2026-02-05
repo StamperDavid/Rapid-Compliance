@@ -206,14 +206,13 @@ export async function GET(request: NextRequest) {
     // Use the authenticated user from verifyAdminRequest
     const { user } = authResult;
 
-    // Determine if user has global access (from verifyAdminRequest's computed flags)
-    const isGlobalAdmin = user.isGlobalAdmin ?? false;
-    const effectiveOrgId = user.tenantId ?? user.organizationId;
+    // Admin always has full access in penthouse model
+    const effectiveOrgId = user.organizationId;
 
     let stats: PlatformStats;
 
-    if (isGlobalAdmin) {
-      // Super Admin: Get global platform statistics
+    {
+      // Admin: Get platform statistics
       logger.info('Fetching global platform stats for super admin', {
         email: user.email,
         uid: user.uid,
@@ -283,57 +282,10 @@ export async function GET(request: NextRequest) {
         scope: stats.scope,
       });
 
-      logger.info('Global platform stats fetched', {
+      logger.info('Platform stats fetched', {
         totalOrgs,
         totalUsers,
         trialOrgs,
-        file: 'admin-stats-route.ts',
-      });
-    } else {
-      // Regular Admin: Get org-scoped statistics
-      if (!effectiveOrgId) {
-        return createErrorResponse('No organization context available', 403);
-      }
-
-      logger.info('Fetching org-scoped stats', {
-        orgId: effectiveOrgId,
-        email: user.email,
-        uid: user.uid,
-        role: user.role,
-        file: 'admin-stats-route.ts',
-      });
-
-      // Count users in this organization
-      const orgUsersPath = `${COLLECTIONS.ORGANIZATIONS}/${effectiveOrgId}/members`;
-      const orgUsers = await getCollectionCount(orgUsersPath);
-
-      // Count workspaces in this organization
-      const workspacesPath = `${COLLECTIONS.ORGANIZATIONS}/${effectiveOrgId}/workspaces`;
-      const workspaces = await getCollectionCount(workspacesPath);
-
-      // Count agents in this organization
-      const orgAgentConfigPath = `${COLLECTIONS.ORGANIZATIONS}/${effectiveOrgId}/agentConfig`;
-      const orgAgentCount = await getCollectionCount(orgAgentConfigPath);
-
-      stats = {
-        totalOrgs: 1, // This org only
-        activeAgents: orgAgentCount > 0 ? orgAgentCount : 1, // This org's agents
-        pendingTickets: 0,
-        trialOrgs: 0,
-        totalUsers: orgUsers,
-        totalAgentCount: orgAgentCount > 0 ? orgAgentCount : 51, // Default to known count
-        swarmAgentCount: 47,
-        standaloneAgentCount: 4,
-        totalConversations: 0,
-        totalPlaybooks: 0,
-        fetchedAt: new Date().toISOString(),
-        scope: 'organization',
-      };
-
-      logger.info('Org-scoped stats fetched', {
-        orgId: effectiveOrgId,
-        users: orgUsers,
-        workspaces,
         file: 'admin-stats-route.ts',
       });
     }
@@ -344,7 +296,6 @@ export async function GET(request: NextRequest) {
         email: user.email,
         uid: user.uid,
         role: user.role,
-        isGlobalAdmin,
         orgId: effectiveOrgId,
       },
     });
@@ -379,10 +330,7 @@ export async function POST(request: NextRequest) {
     // Use the authenticated user from verifyAdminRequest
     const { user } = authResult;
 
-    // Only super admins can refresh stats
-    if (!user.isGlobalAdmin) {
-      return createErrorResponse('Super admin access required for stats refresh', 403);
-    }
+    // Admin access already verified by verifyAdminRequest
 
     // In production, this would invalidate a cache
     logger.info('Stats cache refresh requested', {

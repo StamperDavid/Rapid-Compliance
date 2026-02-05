@@ -63,7 +63,7 @@ async function handleFallback(request: NextRequest): Promise<NextResponse> {
       try {
         await callTransferService.aiToHumanHandoff({
           callId,
-          organizationId: DEFAULT_ORG_ID, // Single-tenant Penthouse model
+          organizationId: DEFAULT_ORG_ID, // Penthouse model
           aiAgentId: 'ai-prospector',
           conversationSummary: summary,
           customerSentiment: context.sentiment,

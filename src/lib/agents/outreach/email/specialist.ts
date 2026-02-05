@@ -634,7 +634,7 @@ export class EmailSpecialist extends BaseSpecialist {
   private handleDripCampaign(payload: DripCampaignPayload): DripCampaignResult {
     const { campaignName, targetAudience, senderProfile, goal, organizationId } = payload;
 
-    this.log('INFO', `Building 5-stage drip campaign: ${campaignName} for tenant ${organizationId}`);
+    this.log('INFO', `Building 5-stage drip campaign: ${campaignName} for organization ${organizationId}`);
 
     const stages: Array<{ name: string; dayDelay: number; purpose: string }> = [
       { name: 'Opening', dayDelay: 0, purpose: 'Initial introduction and hook' },

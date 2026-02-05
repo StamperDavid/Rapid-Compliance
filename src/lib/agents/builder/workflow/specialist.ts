@@ -23,7 +23,7 @@ import {
   shareInsight,
   broadcastSignal,
   checkPendingSignals,
-} from '../../shared/tenant-memory-vault';
+} from '../../shared/memory-vault';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this specialist

@@ -10,7 +10,7 @@
  * - Product-to-Payment state machine orchestration
  * - Subscription lifecycle management (TRIAL → ACTIVE → PAST_DUE → CANCELLED)
  * - Revenue reporting synthesis (CommerceBrief with MRR, Churn, Volume)
- * - TenantMemoryVault integration for tax/currency settings
+ * - MemoryVault integration for tax/currency settings
  * - SignalBus integration for dunning sequence triggers
  *
  * SPECIALISTS ORCHESTRATED:
@@ -35,7 +35,7 @@ import {
   shareInsight,
   broadcastSignal,
   type InsightData,
-} from '../shared/tenant-memory-vault';
+} from '../shared/memory-vault';
 import { logger as _logger } from '@/lib/logger/logger';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
@@ -84,8 +84,8 @@ Synthesize CommerceBrief with:
 - Transaction Volume
 - Revenue by product/category
 
-## TENANT CONTEXT
-- Fetch tax settings from TenantMemoryVault
+## ORGANIZATION CONTEXT
+- Fetch tax settings from MemoryVault
 - Apply currency preferences per organization
 - Respect billing configurations
 
@@ -153,9 +153,10 @@ interface SpecialistResult {
 }
 
 /**
- * Tenant commerce settings from TenantMemoryVault
+ * Commerce settings from MemoryVault
  */
-interface TenantCommerceSettings {
+interface CommerceSettings {
+  orgId: string;
   currency: string;
   taxEnabled: boolean;
   taxRate?: number;
@@ -169,7 +170,7 @@ interface TenantCommerceSettings {
  */
 export interface CommerceBrief {
   taskId: string;
-  tenantId: string;
+  orgId: string;
   generatedAt: string;
   executionTimeMs: number;
   revenue: {
@@ -501,8 +502,8 @@ export class CommerceManager extends BaseManager {
         return this.createReport(taskId, 'FAILED', null, ['Customer email is required']);
       }
 
-      // Step 1: Fetch tenant commerce settings from vault
-      const settings = await this.fetchTenantSettings();
+      // Step 1: Fetch commerce settings from vault
+      const settings = await this.fetchCommerceSettings();
 
       // Step 2: Validate products exist and prices are correct via CATALOG_MANAGER
       const catalogResult = await this.executeSpecialist(
@@ -510,7 +511,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'fetch_products',
-          tenantId: DEFAULT_ORG_ID,
+          orgId: DEFAULT_ORG_ID,
           organizationId,
           workspaceId,
           filters: { status: 'active' },
@@ -556,7 +557,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'initialize_checkout',
-          tenantId: DEFAULT_ORG_ID,
+          orgId: DEFAULT_ORG_ID,
           organizationId,
           workspaceId,
           items,
@@ -644,7 +645,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'validate_payment',
-          tenantId: DEFAULT_ORG_ID,
+          orgId: DEFAULT_ORG_ID,
           sessionId,
         },
         specialistResults
@@ -705,7 +706,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'start_trial',
-          tenantId: DEFAULT_ORG_ID,
+          orgId: DEFAULT_ORG_ID,
           organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           customerId: payload?.customerId as string,
           customerEmail: payload?.customerEmail as string,
@@ -747,7 +748,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'process_billing',
-          tenantId: DEFAULT_ORG_ID,
+          orgId: DEFAULT_ORG_ID,
           subscriptionId,
           paymentSucceeded,
           amount: payload?.amount as number,
@@ -810,7 +811,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'transition_state',
-          tenantId: DEFAULT_ORG_ID,
+          orgId: DEFAULT_ORG_ID,
           subscriptionId: payload?.subscriptionId as string,
           targetState: 'CANCELLED',
           reason: (payload?.reason as string) ?? 'Customer requested cancellation',
@@ -862,7 +863,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'fetch_products',
-          tenantId: DEFAULT_ORG_ID,
+          orgId: DEFAULT_ORG_ID,
           organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           workspaceId: (payload?.workspaceId as string) ?? 'default',
           filters: payload?.filters,
@@ -902,7 +903,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action,
-          tenantId: DEFAULT_ORG_ID,
+          orgId: DEFAULT_ORG_ID,
           organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           workspaceId: (payload?.workspaceId as string) ?? 'default',
           product: payload?.product,
@@ -950,7 +951,7 @@ export class CommerceManager extends BaseManager {
           taskId,
           {
             action: 'calculate_mrr',
-            tenantId: DEFAULT_ORG_ID,
+            orgId: DEFAULT_ORG_ID,
             organizationId,
           },
           specialistResults
@@ -960,7 +961,7 @@ export class CommerceManager extends BaseManager {
           taskId,
           {
             action: 'get_catalog_summary',
-            tenantId: DEFAULT_ORG_ID,
+            orgId: DEFAULT_ORG_ID,
             organizationId,
             workspaceId,
           },
@@ -1056,7 +1057,7 @@ export class CommerceManager extends BaseManager {
       // Build CommerceBrief
       const brief: CommerceBrief = {
         taskId,
-        tenantId: DEFAULT_ORG_ID,
+        orgId: DEFAULT_ORG_ID,
         generatedAt: new Date().toISOString(),
         executionTimeMs: Date.now() - startTime,
         revenue: {
@@ -1265,9 +1266,9 @@ export class CommerceManager extends BaseManager {
   }
 
   /**
-   * Fetch tenant commerce settings from TenantMemoryVault
+   * Fetch commerce settings from MemoryVault
    */
-  private async fetchTenantSettings(): Promise<TenantCommerceSettings> {
+  private async fetchCommerceSettings(): Promise<CommerceSettings> {
     try {
       // Try to read from vault first
       const cachedSettings = this.memoryVault.read(
@@ -1277,7 +1278,7 @@ export class CommerceManager extends BaseManager {
       );
 
       if (cachedSettings) {
-        return cachedSettings.value as TenantCommerceSettings;
+        return cachedSettings.value as CommerceSettings;
       }
 
       // Fetch from database
@@ -1288,7 +1289,8 @@ export class CommerceManager extends BaseManager {
         DEFAULT_ORG_ID
       );
 
-      const settings: TenantCommerceSettings = {
+      const settings: CommerceSettings = {
+        orgId: DEFAULT_ORG_ID,
         currency: (typeof orgData?.currency === 'string' ? orgData.currency : 'USD'),
         taxEnabled: true,
         taxRate: 0, // Would be fetched from tax config
@@ -1309,6 +1311,7 @@ export class CommerceManager extends BaseManager {
     } catch {
       // Return defaults on error
       return {
+        orgId: DEFAULT_ORG_ID,
         currency: 'USD',
         taxEnabled: false,
         taxInclusive: false,

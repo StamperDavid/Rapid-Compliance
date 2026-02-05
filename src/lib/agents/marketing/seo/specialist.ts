@@ -132,7 +132,7 @@ interface CrawlAnalysisPayload {
 
 interface KeywordGapPayload {
   action: 'keyword_gap';
-  tenantIndustry: string;
+  industry: string;
   currentKeywords: string[];
   competitorDomains?: string[];
   targetMarket?: string;
@@ -141,7 +141,7 @@ interface KeywordGapPayload {
 
 interface ThirtyDayStrategyPayload {
   action: '30_day_strategy';
-  tenantIndustry: string;
+  industry: string;
   currentRankings?: Array<{ keyword: string; position: number }>;
   businessGoals: string[];
   organizationId: string;
@@ -1186,9 +1186,9 @@ export class SEOExpert extends BaseSpecialist {
    * Analyze keyword gaps compared to market trends
    */
   private handleKeywordGap(payload: KeywordGapPayload): KeywordGapResult {
-    const { tenantIndustry, currentKeywords } = payload;
+    const { industry, currentKeywords } = payload;
 
-    this.log('INFO', `Running keyword gap analysis for ${tenantIndustry}`);
+    this.log('INFO', `Running keyword gap analysis for ${industry}`);
 
     // Analyze current keywords
     const currentAnalysis = currentKeywords.map(kw => ({
@@ -1199,7 +1199,7 @@ export class SEOExpert extends BaseSpecialist {
     }));
 
     // Generate gap keywords based on industry
-    const gapKeywords = this.generateGapKeywords(tenantIndustry, currentKeywords);
+    const gapKeywords = this.generateGapKeywords(industry, currentKeywords);
 
     // Identify quick wins (low difficulty, good opportunity)
     const quickWins = gapKeywords
@@ -1214,10 +1214,10 @@ export class SEOExpert extends BaseSpecialist {
       .slice(0, 5);
 
     // Generate content gap recommendations
-    const contentGaps = this.generateContentGaps(tenantIndustry, gapKeywords);
+    const contentGaps = this.generateContentGaps(industry, gapKeywords);
 
     return {
-      industry: tenantIndustry,
+      industry,
       analysisDate: new Date().toISOString(),
       currentKeywords: currentAnalysis,
       gapKeywords,
@@ -1347,9 +1347,9 @@ export class SEOExpert extends BaseSpecialist {
    * Generate a comprehensive 30-day SEO strategy
    */
   private handleThirtyDayStrategy(payload: ThirtyDayStrategyPayload): ThirtyDayStrategy {
-    const { tenantIndustry, currentRankings, businessGoals } = payload;
+    const { industry, currentRankings, businessGoals } = payload;
 
-    this.log('INFO', `Generating 30-day strategy for ${tenantIndustry}`);
+    this.log('INFO', `Generating 30-day strategy for ${industry}`);
 
     const weeks: ThirtyDayStrategy['weeks'] = [];
 
@@ -1360,7 +1360,7 @@ export class SEOExpert extends BaseSpecialist {
       tasks: [
         { day: 1, taskType: 'technical', task: 'Run comprehensive site crawl and audit', expectedOutcome: 'Identify all technical issues', effort: 'medium' },
         { day: 2, taskType: 'technical', task: 'Fix critical SSL and speed issues', expectedOutcome: 'Improved Core Web Vitals', effort: 'high' },
-        { day: 3, taskType: 'technical', task: 'Optimize meta titles and descriptions', targetKeywords: [tenantIndustry], expectedOutcome: 'Better SERP presence', effort: 'medium' },
+        { day: 3, taskType: 'technical', task: 'Optimize meta titles and descriptions', targetKeywords: [industry], expectedOutcome: 'Better SERP presence', effort: 'medium' },
         { day: 4, taskType: 'analysis', task: 'Keyword gap analysis vs competitors', expectedOutcome: 'Keyword opportunity list', effort: 'medium' },
         { day: 5, taskType: 'technical', task: 'Fix indexing and canonical issues', expectedOutcome: 'Clean site structure', effort: 'medium' },
       ],
@@ -1374,7 +1374,7 @@ export class SEOExpert extends BaseSpecialist {
       tasks: [
         { day: 8, taskType: 'content', task: 'Audit existing content for optimization opportunities', expectedOutcome: 'Content improvement roadmap', effort: 'medium' },
         { day: 9, taskType: 'content', task: 'Update top 5 pages with target keywords', targetKeywords: currentRankings?.slice(0, 5).map(r => r.keyword) ?? [], expectedOutcome: 'Improved on-page SEO', effort: 'high' },
-        { day: 10, taskType: 'content', task: 'Create cornerstone content piece', targetKeywords: [tenantIndustry, `${tenantIndustry} guide`], expectedOutcome: 'Authority content published', effort: 'high' },
+        { day: 10, taskType: 'content', task: 'Create cornerstone content piece', targetKeywords: [industry, `${industry} guide`], expectedOutcome: 'Authority content published', effort: 'high' },
         { day: 11, taskType: 'content', task: 'Internal linking optimization', expectedOutcome: 'Better link equity distribution', effort: 'medium' },
         { day: 12, taskType: 'analysis', task: 'Competitor content analysis', expectedOutcome: 'Content gap insights', effort: 'low' },
       ],
@@ -1389,7 +1389,7 @@ export class SEOExpert extends BaseSpecialist {
         { day: 15, taskType: 'outreach', task: 'Identify link building opportunities', expectedOutcome: 'Prospect list of 50+ sites', effort: 'medium' },
         { day: 16, taskType: 'content', task: 'Create linkable asset (guide/tool/study)', targetKeywords: businessGoals, expectedOutcome: 'High-value content for links', effort: 'high' },
         { day: 17, taskType: 'outreach', task: 'Guest post outreach campaign', expectedOutcome: '5-10 outreach emails sent', effort: 'medium' },
-        { day: 18, taskType: 'content', task: 'Publish supporting blog content', targetKeywords: [`${tenantIndustry} tips`, `${tenantIndustry} best practices`], expectedOutcome: 'Content cluster expansion', effort: 'medium' },
+        { day: 18, taskType: 'content', task: 'Publish supporting blog content', targetKeywords: [`${industry} tips`, `${industry} best practices`], expectedOutcome: 'Content cluster expansion', effort: 'medium' },
         { day: 19, taskType: 'analysis', task: 'Monitor and report on progress', expectedOutcome: 'Week 3 performance report', effort: 'low' },
       ],
       keyMetrics: ['Referring domains', 'Domain authority', 'Backlink quality'],
@@ -1421,14 +1421,14 @@ export class SEOExpert extends BaseSpecialist {
 
     // Add new keyword targets
     priorityKeywords.push({
-      keyword: `${tenantIndustry} solutions`,
+      keyword: `${industry} solutions`,
       currentPosition: null,
       targetPosition: 15,
       strategy: 'Create comprehensive landing page',
     });
 
     return {
-      industry: tenantIndustry,
+      industry,
       generatedDate: new Date().toISOString(),
       weeks,
       priorityKeywords,

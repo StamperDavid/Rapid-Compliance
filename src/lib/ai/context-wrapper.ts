@@ -1,13 +1,13 @@
 /**
- * Tenant Context Wrapper for AI Agents
+ * Business Context Wrapper for AI Agents
  *
- * Single-tenant mode: Simplified isolation context for AI agents.
+ * Penthouse model: Isolation context for AI agents.
  * Every prompt sent to an LLM includes a system header with organization context.
  *
- * @module tenant-context-wrapper
+ * @module business-context-wrapper
  */
 
-import type { TenantClaims } from '@/lib/auth/claims-validator';
+import type { AuthClaims } from '@/lib/auth/claims-validator';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
@@ -15,7 +15,7 @@ import { logger } from '@/lib/logger/logger';
 // TYPES
 // ============================================================================
 
-export interface TenantContext {
+export interface BusinessContext {
   /** Organization ID */
   orgId: string;
   /** Organization name for display */
@@ -24,12 +24,12 @@ export interface TenantContext {
   industry?: string;
   /** User's role within the organization */
   role?: string;
-  /** Whether user has global admin access */
-  isGlobalAdmin: boolean;
+  /** Whether user has admin access */
+  isAdmin: boolean;
 }
 
 export interface IsolatedPrompt {
-  /** The wrapped prompt with tenant isolation header */
+  /** The wrapped prompt with isolation header */
   prompt: string;
   /** Metadata about the isolation */
   metadata: {
@@ -56,21 +56,20 @@ export interface CountVerificationResult {
 }
 
 // ============================================================================
-// TENANT ISOLATION HEADER
+// ISOLATION HEADER
 // ============================================================================
 
 /**
- * Build the Hidden System Header for tenant isolation.
- * PENTHOUSE MODEL: Single-tenant deployment - all users belong to SalesVelocity.
+ * Build the Hidden System Header for context isolation.
+ * PENTHOUSE MODEL: Penthouse deployment - all users belong to SalesVelocity.
  *
- * @param context - The tenant context
+ * @param context - The business context
  * @returns The isolation header string
  */
-export function buildTenantIsolationHeader(context: TenantContext): string {
-  if (context.isGlobalAdmin) {
-    // Superadmin (Jasper) has full access within the single organization
+export function buildIsolationHeader(context: BusinessContext): string {
+  if (context.isAdmin) {
     return `[SYSTEM CONTEXT: ADMIN MODE]
-You are operating within SalesVelocity's single-tenant platform.
+You are operating within SalesVelocity's platform.
 You have full administrative access for monitoring and management.
 All data access is logged for compliance and audit purposes.
 
@@ -83,8 +82,7 @@ Current Session:
 `;
   }
 
-  // Standard users operate within the single organization
-  return `[SYSTEM CONTEXT: SINGLE-TENANT MODE]
+  return `[SYSTEM CONTEXT: PENTHOUSE MODE]
 You are operating within SalesVelocity's platform.
 Organization: ${context.orgName}
 Industry: ${context.industry ?? 'General'}
@@ -103,54 +101,54 @@ CONTEXT RULES:
 // ============================================================================
 
 /**
- * Wrap a prompt with tenant isolation context.
- * This ensures all AI interactions are properly scoped to the tenant.
+ * Wrap a prompt with business context.
+ * This ensures all AI interactions are properly scoped.
  *
  * @param prompt - The original prompt
- * @param context - The tenant context
+ * @param context - The business context
  * @returns The isolated prompt with metadata
  */
-export function wrapPromptWithTenantContext(
+export function wrapPromptWithContext(
   prompt: string,
-  context: TenantContext
+  context: BusinessContext
 ): IsolatedPrompt {
-  const isolationHeader = buildTenantIsolationHeader(context);
+  const isolationHeader = buildIsolationHeader(context);
 
-  logger.debug('Wrapping prompt with tenant isolation', {
+  logger.debug('Wrapping prompt with business context', {
     orgId: context.orgId,
-    isGlobalAdmin: context.isGlobalAdmin,
+    isAdmin: context.isAdmin,
     promptLength: prompt.length,
-    file: 'tenant-context-wrapper.ts',
+    file: 'business-context-wrapper.ts',
   });
 
   return {
     prompt: `${isolationHeader}${prompt}`,
     metadata: {
       orgId: context.orgId,
-      isolationLevel: context.isGlobalAdmin ? 'admin' : 'strict',
+      isolationLevel: context.isAdmin ? 'admin' : 'strict',
       timestamp: new Date().toISOString(),
     },
   };
 }
 
 /**
- * Build tenant context from claims and organization data.
- * Single-tenant mode: Always uses DEFAULT_ORG_ID.
+ * Build business context from claims and organization data.
+ * Penthouse model: Always uses DEFAULT_ORG_ID.
  *
- * @param claims - The user's tenant claims
+ * @param claims - The user's auth claims
  * @param orgData - Optional organization data
- * @returns The tenant context
+ * @returns The business context
  */
-export function buildTenantContext(
-  claims: TenantClaims,
+export function buildBusinessContext(
+  claims: AuthClaims,
   orgData?: { name?: string; industry?: string }
-): TenantContext {
+): BusinessContext {
   return {
     orgId: DEFAULT_ORG_ID,
     orgName: orgData?.name ?? 'SalesVelocity',
     industry: orgData?.industry,
     role: claims.role ?? undefined,
-    isGlobalAdmin: claims.role === 'superadmin',
+    isAdmin: claims.role === 'admin',
   };
 }
 
@@ -161,9 +159,6 @@ export function buildTenantContext(
 /**
  * Verify AI-generated counts against actual database counts.
  * This prevents AI from hallucinating statistics.
- *
- * IMPORTANT: This function must be called from a secure server context
- * with proper authentication.
  *
  * @param request - The count verification request
  * @param actualCountFn - Function to get actual count (injected for testability)
@@ -185,7 +180,7 @@ export async function verifyCount(
         expected: request.expectedCount,
         actual: actualCount,
         discrepancy,
-        file: 'tenant-context-wrapper.ts',
+        file: 'business-context-wrapper.ts',
       });
     }
 
@@ -199,7 +194,7 @@ export async function verifyCount(
     logger.error('Count verification error', error instanceof Error ? error : new Error(String(error)), {
       collection: request.collection,
       orgId: request.orgId,
-      file: 'tenant-context-wrapper.ts',
+      file: 'business-context-wrapper.ts',
     });
 
     return {
@@ -217,11 +212,7 @@ export async function verifyCount(
 
 /**
  * Build context for Jasper (Admin AI Assistant).
- * Single-tenant mode: Jasper operates within the single organization.
- *
- * @param adminEmail - The admin's email
- * @param platformStats - Platform statistics to include
- * @returns The admin tenant context
+ * Penthouse model: Jasper operates within the organization.
  */
 export function buildJasperContext(
   _adminEmail: string,
@@ -229,22 +220,18 @@ export function buildJasperContext(
     totalUsers?: number;
     totalAgents?: number;
   }
-): TenantContext {
+): BusinessContext {
   return {
     orgId: DEFAULT_ORG_ID,
     orgName: 'SalesVelocity',
     industry: 'system_administration',
-    role: 'superadmin',
-    isGlobalAdmin: true,
+    role: 'admin',
+    isAdmin: true,
   };
 }
 
 /**
  * Build the Jasper system prompt with verified statistics.
- * Single-tenant mode: Focus on organization-level stats.
- *
- * @param stats - Verified statistics
- * @returns The system prompt addition for Jasper
  */
 export function buildJasperStatisticsContext(stats: {
   totalUsers: number;
@@ -273,12 +260,6 @@ When reporting these statistics, use these exact values.
 /**
  * Build context for client-facing AI agents.
  * Client agents are strictly isolated to their organization.
- *
- * @param orgId - Organization ID
- * @param orgName - Organization name
- * @param industry - Industry type
- * @param agentName - The agent's name
- * @returns Context string for the agent
  */
 export function buildClientAgentContext(
   orgId: string,
@@ -286,14 +267,14 @@ export function buildClientAgentContext(
   industry: string,
   agentName: string
 ): string {
-  const context: TenantContext = {
+  const context: BusinessContext = {
     orgId,
     orgName,
     industry,
-    isGlobalAdmin: false,
+    isAdmin: false,
   };
 
-  const isolationHeader = buildTenantIsolationHeader(context);
+  const isolationHeader = buildIsolationHeader(context);
 
   return `${isolationHeader}
 You are ${agentName}, an AI assistant for ${orgName}.
@@ -311,14 +292,14 @@ Remember:
 // EXPORTS
 // ============================================================================
 
-const tenantContextWrapper = {
-  buildTenantIsolationHeader,
-  wrapPromptWithTenantContext,
-  buildTenantContext,
+const businessContextWrapper = {
+  buildIsolationHeader,
+  wrapPromptWithContext,
+  buildBusinessContext,
   verifyCount,
   buildJasperContext,
   buildJasperStatisticsContext,
   buildClientAgentContext,
 };
 
-export default tenantContextWrapper;
+export default businessContextWrapper;

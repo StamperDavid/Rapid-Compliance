@@ -1,7 +1,7 @@
 /**
  * Blog Post Publishing API
  * Handle publish/unpublish actions for blog posts
- * CRITICAL: Multi-tenant isolation - validates organizationId
+ * CRITICAL: Organization isolation - validates organizationId
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

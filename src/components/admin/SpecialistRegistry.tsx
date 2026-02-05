@@ -163,7 +163,7 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     capabilities: [
       '3-tier personalization (Connection, Follow-up, High-Value)',
       'Automation bridge for webhooks/Zapier/Make/n8n',
-      'Tenant playbook voice matching',
+      'Playbook voice matching',
       'Connection request script generation',
       'Follow-up sequence builder (5+ touches)',
       'High-value offer personalization engine',
@@ -485,7 +485,7 @@ const SPECIALIST_REGISTRY: AISpecialist[] = [
     status: 'FUNCTIONAL',
     description: 'Automated sentiment analysis bridge with SEO-optimized response generation',
     capabilities: [
-      'Multi-tenant sentiment analysis',
+      'Sentiment analysis',
       'SEO keyword injection in responses',
       'Review request campaign generation',
       'Brand voice consistency',

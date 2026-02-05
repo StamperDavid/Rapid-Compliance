@@ -38,7 +38,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return authResult;
     }
 
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const orgId = DEFAULT_ORG_ID;
 
     // Load keys from Firestore
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const body: unknown = await request.json();
 
-    // Validate required fields - orgId no longer required (single-tenant)
+    // Validate required fields - orgId no longer required (penthouse)
     const validation = validateRequired(body as Record<string, unknown>, ['service', 'key']);
     if (!validation.valid) {
       return handleAPIError(
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const orgId = DEFAULT_ORG_ID;
     const { service, key } = body as SaveApiKeyBody;
 

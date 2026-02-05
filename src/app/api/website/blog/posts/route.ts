@@ -1,7 +1,7 @@
 /**
  * Blog Posts API
  * Manage blog posts
- * CRITICAL: Multi-tenant - scoped to organizationId
+ * CRITICAL: Organization-scoped - scoped to organizationId
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

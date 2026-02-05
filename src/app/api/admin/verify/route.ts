@@ -8,11 +8,12 @@ import { createErrorResponse, createSuccessResponse } from '@/lib/api/admin-auth
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import {
-  extractTenantClaims,
+  extractAuthClaims,
   hasAdminRole,
-  isSuperAdmin,
-  type TenantClaims,
+  isAdminClaims,
+  type AuthClaims,
 } from '@/lib/auth/claims-validator';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Firestore user document structure
@@ -39,8 +40,7 @@ interface VerifyResponseData {
   organizationId: string;
   verified: boolean;
   claims: {
-    isGlobalAdmin: boolean;
-    tenantId: string | null;
+    isAdmin: boolean;
     hasAdminClaim: boolean;
   };
 }
@@ -54,25 +54,16 @@ interface FirebaseAuthError extends Error {
 
 /**
  * POST /api/admin/verify
- * Verifies that the authenticated user is a superadmin or admin.
+ * Verifies that the authenticated user is an admin.
  * Uses Firebase Custom Claims as the source of truth for authorization.
- *
- * Claims-Based Authorization:
- * - Parses tenant_id claim for organization scope
- * - Checks admin: true claim for admin-level access
- * - Validates role claim for admin-level access
- *
- * Returns user data including tenant claims if authorized.
  */
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/verify');
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
 
-    // Get the auth token from the request headers
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader?.startsWith('Bearer ')) {
@@ -89,7 +80,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Admin authentication not initialized', 500);
     }
 
-    // Verify the token and extract claims
     let decodedToken: DecodedIdToken;
     try {
       decodedToken = await adminAuth.verifyIdToken(token);
@@ -104,9 +94,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract tenant claims from the token (claims-based authorization)
-    const claimsResult = extractTenantClaims(decodedToken);
-    const claims: TenantClaims = claimsResult.claims;
+    // Extract claims from the token
+    const claimsResult = extractAuthClaims(decodedToken);
+    const claims: AuthClaims = claimsResult.claims;
 
     const userId = decodedToken.uid;
 
@@ -114,7 +104,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Server configuration error', 500);
     }
 
-    // Get user document to enrich with database role
     const userDoc = await adminDal.safeGetDoc<FirestoreUserData>('USERS', userId);
 
     if (!userDoc.exists) {
@@ -128,15 +117,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Merge token claims with database role
-    // Token claims take precedence, but we fall back to database role if claims are missing
     const effectiveRole = claims.role ?? userData.role;
-    const effectiveClaims: TenantClaims = {
+    const effectiveClaims: AuthClaims = {
       ...claims,
-      role: effectiveRole as TenantClaims['role'],
-      tenant_id: claims.tenant_id ?? userData.organizationId ?? null,
+      role: effectiveRole as AuthClaims['role'],
     };
 
-    // Check for admin roles using claims-based validation
     if (!hasAdminRole(effectiveClaims)) {
       logger.warn('Non-admin login attempt', {
         route: '/api/admin/verify',
@@ -151,18 +137,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine if this is a super admin with global access
-    const isGlobalAdmin = isSuperAdmin(effectiveClaims);
+    const isAdminUser = isAdminClaims(effectiveClaims);
 
     logger.info('Admin verified via claims', {
       route: '/api/admin/verify',
       email: effectiveClaims.email ?? userData.email,
       role: effectiveClaims.role,
-      isGlobalAdmin,
-      tenantId: effectiveClaims.tenant_id,
+      isAdmin: isAdminUser,
     });
 
-    // Build verified response with safe fallbacks
     const responseData: VerifyResponseData = {
       uid: userId,
       email: userData.email ?? decodedToken.email ?? '',
@@ -172,12 +155,10 @@ export async function POST(request: NextRequest) {
           ? userData.displayName
           : 'Admin User',
       role: effectiveClaims.role ?? userData.role ?? 'admin',
-      organizationId: effectiveClaims.tenant_id ?? userData.organizationId ?? 'platform',
+      organizationId: DEFAULT_ORG_ID,
       verified: true,
-      // Include claims metadata for frontend
       claims: {
-        isGlobalAdmin,
-        tenantId: effectiveClaims.tenant_id,
+        isAdmin: isAdminUser,
         hasAdminClaim: claims.admin ?? false,
       },
     };
@@ -190,13 +171,3 @@ export async function POST(request: NextRequest) {
     return createErrorResponse('Verification failed', 500);
   }
 }
-
-
-
-
-
-
-
-
-
-

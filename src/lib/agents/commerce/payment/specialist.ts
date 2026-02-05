@@ -433,7 +433,7 @@ export class PaymentSpecialist extends BaseSpecialist {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       if (payload.sessionId) {
-        // Find session across organizations (would need tenant context in production)
+        // Find session across organizations (would need org context in production)
         const { where } = await import('firebase/firestore');
         const sessions = await FirestoreService.getAll(
           'checkout_sessions',

@@ -33,7 +33,7 @@ function parseBody(rawBody: unknown): HealthCheckRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
-    // Single-tenant mode: orgId is always DEFAULT_ORG_ID
+    // Penthouse: orgId is always DEFAULT_ORG_ID
     const organizationId = DEFAULT_ORG_ID;
 
     // Get workspaceId from headers or body

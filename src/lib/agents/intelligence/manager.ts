@@ -14,7 +14,7 @@ import {
   shareInsight,
   broadcastSignal,
   type InsightData,
-} from '../shared/tenant-memory-vault';
+} from '../shared/memory-vault';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -225,7 +225,7 @@ You coordinate 5 specialist agents to gather comprehensive market intelligence:
 3. Execute specialists in parallel for maximum efficiency
 4. Implement graceful degradation - partial results are better than failure
 5. Synthesize outputs into a unified IntelligenceBrief
-6. Store insights in TenantMemoryVault for cross-agent consumption
+6. Store insights in MemoryVault for cross-agent consumption
 
 ## SYNTHESIS RULES
 - Weight confident results higher in synthesis
@@ -397,7 +397,7 @@ export class IntelligenceManager extends BaseManager {
         Date.now() - startTime
       );
 
-      // Store insights in TenantMemoryVault for cross-agent access
+      // Store insights in MemoryVault for cross-agent access
       await this.storeInsightsInVault(brief);
 
       // Return success even with partial results (graceful degradation)
@@ -1014,7 +1014,7 @@ export class IntelligenceManager extends BaseManager {
   }
 
   /**
-   * Store synthesized insights in the TenantMemoryVault
+   * Store synthesized insights in the MemoryVault
    */
   private async storeInsightsInVault(brief: IntelligenceBrief): Promise<void> {
     try {
@@ -1062,7 +1062,7 @@ export class IntelligenceManager extends BaseManager {
         );
       }
 
-      this.log('INFO', 'Intelligence insights stored in TenantMemoryVault');
+      this.log('INFO', 'Intelligence insights stored in MemoryVault');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.log('ERROR', `Failed to store insights in vault: ${errorMsg}`);

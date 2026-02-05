@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     const { organizationId, onboardingData } = validation.data;
 
-    // Import Admin SDK services for multi-tenant security check
+    // Import Admin SDK services for auth security check
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { COLLECTIONS } = await import('@/lib/db/firestore-service');
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         const isOwner = org.ownerId === user.uid;
         const isMember = Array.isArray(org.members) && org.members.includes(user.uid);
         const userRole = user.role ?? '';
-        const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+        const isAdmin = userRole === 'admin';
 
         if (!isOwner && !isMember && !isAdmin) {
           return NextResponse.json<ApiErrorResponse>(

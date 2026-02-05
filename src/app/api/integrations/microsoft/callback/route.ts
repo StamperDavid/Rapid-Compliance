@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { userId } = stateValidation.data;
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const orgId = DEFAULT_ORG_ID;
     const tokens = await getTokensFromCode(code);
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
     logger.info('Microsoft integration saved', { route: '/api/integrations/microsoft/callback', orgId });
 
-    // SINGLE-TENANT: Redirect to flat route, not workspace-scoped
+    // PENTHOUSE: Redirect to flat route, not workspace-scoped
     return NextResponse.redirect('/settings/integrations?success=microsoft');
   } catch (error) {
     const _errorMessage = error instanceof Error ? error.message : 'Unknown error';

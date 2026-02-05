@@ -39,7 +39,7 @@ function parseBody(rawBody: unknown): StartDealMonitorRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
-    // Single-tenant mode: orgId is always DEFAULT_ORG_ID
+    // Penthouse: orgId is always DEFAULT_ORG_ID
     const organizationId = DEFAULT_ORG_ID;
 
     // Get config from request body

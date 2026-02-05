@@ -1,6 +1,6 @@
 /**
  * Platform Pricing & Coupon Types
- * Centralized Pricing and Coupon Engine for Multi-Tenant SaaS
+ * Centralized Pricing and Coupon Engine for SalesVelocity.ai
  */
 
 // ============================================

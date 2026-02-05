@@ -103,7 +103,7 @@ export async function saveTemporaryScrape(params: {
     const contentHash = calculateContentHash(rawHtml);
 
     // Check if this exact content already exists
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const existing = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('contentHash', '==', contentHash)
@@ -236,7 +236,7 @@ export async function flagScrapeForDeletion(scrapeId: string): Promise<void> {
  */
 export async function deleteFlaggedScrapes(organizationId: string): Promise<number> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const flagged = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('flaggedForDeletion', '==', true)
@@ -286,7 +286,7 @@ export async function deleteExpiredScrapes(organizationId: string): Promise<numb
   try {
     const now = new Date();
 
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const expired = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('expiresAt', '<=', now)
@@ -371,7 +371,7 @@ export async function getTemporaryScrapeByHash(
   contentHash: string
 ): Promise<TemporaryScrape | null> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('contentHash', '==', contentHash)
@@ -417,7 +417,7 @@ export async function getTemporaryScrapesByUrl(
   url: string
 ): Promise<TemporaryScrape[]> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('url', '==', url)
@@ -474,7 +474,7 @@ export async function calculateStorageCost(organizationId: string): Promise<{
   projectedSavingsWithTTL: number;
 }> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const scrapes = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .get();
@@ -552,7 +552,7 @@ export async function getStorageStats(organizationId: string): Promise<{
   newestScrape: Date | null;
 }> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const scrapes = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .get();

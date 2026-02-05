@@ -1,7 +1,7 @@
 /**
  * Scheduled Publisher
  * Processes scheduled pages and blog posts to publish them at the right time
- * CRITICAL: Multi-tenant - processes all orgs safely
+ * CRITICAL: Organization-scoped - processes all orgs safely
  * 
  * REFACTORED: Now uses adminDal for environment-aware collection access
  */

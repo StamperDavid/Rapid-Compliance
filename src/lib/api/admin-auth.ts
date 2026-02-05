@@ -3,9 +3,8 @@
  * Centralized authentication for admin API routes
  *
  * Uses Firebase Custom Claims for authorization:
- * - tenant_id: Organization scope
- * - admin: Platform admin flag for global access
- * - role: User's role within the platform
+ * - admin: Admin flag for full access
+ * - role: User's binary role (admin | user)
  */
 
 import type { NextRequest } from 'next/server';
@@ -13,22 +12,18 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import {
-  extractTenantClaims,
+  extractAuthClaims,
   hasAdminRole,
-  isSuperAdmin,
-  isPlatformAdminClaims,
-  type TenantClaims,
+  isAdminClaims,
+  type AuthClaims,
 } from '@/lib/auth/claims-validator';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface AdminUser {
   uid: string;
   email: string;
-  role: 'superadmin' | 'admin';
+  role: 'admin';
   organizationId: string;
-  isGlobalAdmin?: boolean;
-  isPlatformAdmin?: boolean;
-  tenantId?: string | null;
 }
 
 export type AuthSuccess = {
@@ -55,7 +50,7 @@ interface UserData {
 }
 
 /**
- * Verify the request is from an authenticated admin (superadmin or admin).
+ * Verify the request is from an authenticated admin.
  * Uses Firebase Custom Claims as the source of truth for authorization.
  *
  * @param request - The incoming request
@@ -63,7 +58,6 @@ interface UserData {
  */
 export async function verifyAdminRequest(request: NextRequest): Promise<AuthResult> {
   try {
-    // Get the auth token from the request headers
     const authHeader = request.headers.get('Authorization');
 
     if (!authHeader?.startsWith('Bearer ')) {
@@ -92,7 +86,6 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
-    // Verify the token and extract claims
     let decodedToken;
     try {
       decodedToken = await adminAuth.verifyIdToken(token);
@@ -112,9 +105,9 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
-    // Extract tenant claims from the token (claims-based authorization)
-    const claimsResult = extractTenantClaims(decodedToken);
-    const claims: TenantClaims = claimsResult.claims;
+    // Extract claims from the token
+    const claimsResult = extractAuthClaims(decodedToken);
+    const claims: AuthClaims = claimsResult.claims;
 
     const userId = decodedToken.uid;
 
@@ -126,16 +119,14 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
-    // Check if user has superadmin role in token claims
-    // Superadmins can proceed without a user document
-    const hasPlatformAdminClaim = claims.role === 'superadmin';
+    // Check if user has admin role in token claims
+    const hasAdminClaim = claims.role === 'admin';
 
     // Get user document to enrich with database role
     const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(userId).get();
     const rawUserData = userDoc.exists ? userDoc.data() : null;
 
-    // If no user document and no platform admin claim, deny access
-    if (!userDoc.exists && !hasPlatformAdminClaim) {
+    if (!userDoc.exists && !hasAdminClaim) {
       return {
         success: false,
         error: 'User not found in database',
@@ -143,7 +134,6 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
-    // Build user data from document or use defaults for platform admins
     const userData: UserData = rawUserData ? {
       email: rawUserData.email as string | undefined,
       role: rawUserData.role as string | undefined,
@@ -151,19 +141,16 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     } : {
       email: decodedToken.email,
       role: claims.role ?? undefined,
-      organizationId: claims.tenant_id ?? DEFAULT_ORG_ID,
+      organizationId: DEFAULT_ORG_ID,
     };
 
     // Merge token claims with database role (token claims take precedence)
     const effectiveRole = claims.role ?? userData.role;
-    const effectiveClaims: TenantClaims = {
+    const effectiveClaims: AuthClaims = {
       ...claims,
-      role: effectiveRole as TenantClaims['role'],
-      tenant_id: claims.tenant_id ?? userData.organizationId ?? DEFAULT_ORG_ID,
+      role: effectiveRole as AuthClaims['role'],
     };
 
-    // Check for admin roles using claims-based validation
-    // Allow superadmin and admin roles
     if (!hasAdminRole(effectiveClaims)) {
       logger.warn('Non-admin access attempt', {
         userId,
@@ -179,9 +166,8 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
-    // Log Superadmin access
-    if (isPlatformAdminClaims(effectiveClaims)) {
-      logger.info('Superadmin access', {
+    if (isAdminClaims(effectiveClaims)) {
+      logger.info('Admin access', {
         userId,
         email: userData.email,
         role: effectiveClaims.role,
@@ -189,22 +175,13 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       });
     }
 
-    // Determine if this is a super admin with global access
-    const isGlobalAdmin = isSuperAdmin(effectiveClaims);
-    // Determine if this is a superadmin (full system access)
-    const isPlatformAdmin = isPlatformAdminClaims(effectiveClaims);
-
     return {
       success: true,
       user: {
         uid: userId,
         email: userData.email ?? decodedToken.email ?? '',
-        role: (effectiveClaims.role as 'superadmin' | 'admin') ?? (userData.role as 'superadmin' | 'admin'),
-        organizationId:
-          effectiveClaims.tenant_id ?? userData.organizationId ?? 'platform',
-        isGlobalAdmin,
-        isPlatformAdmin,
-        tenantId: effectiveClaims.tenant_id,
+        role: 'admin',
+        organizationId: DEFAULT_ORG_ID,
       },
     };
   } catch (error: unknown) {
@@ -245,11 +222,10 @@ export function createSuccessResponse<T>(data: T, cacheMaxAge: number = 0) {
       headers: {
         'Content-Type': 'application/json',
         'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': cacheMaxAge > 0 
-          ? `private, max-age=${cacheMaxAge}` 
+        'Cache-Control': cacheMaxAge > 0
+          ? `private, max-age=${cacheMaxAge}`
           : 'no-store, no-cache, must-revalidate',
       }
     }
   );
 }
-

@@ -2,11 +2,11 @@ import type { Timestamp } from 'firebase/firestore';
 
 /**
  * Admin Types for SalesVelocity
- * Single-Tenant Model - Company Settings & System Configuration
+ * Penthouse Model - Company Settings & System Configuration
  */
 
 /**
- * Admin role type - simplified for single-tenant
+ * Admin role type - simplified for penthouse model
  * superadmin = highest authority in the company
  */
 export type AdminRole = 'superadmin' | 'admin';

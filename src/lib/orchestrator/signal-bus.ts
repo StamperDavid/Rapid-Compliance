@@ -1,5 +1,5 @@
-// STATUS: SINGLE-TENANT MODE - SalesVelocity.ai Penthouse Model
-// Flat global registry - no tenant isolation, no multi-org routing
+// STATUS: PENTHOUSE MODE - SalesVelocity.ai Penthouse Model
+// Flat global registry - no org isolation, no multi-org routing
 
 import type {
   Signal,
@@ -54,7 +54,7 @@ interface Registry {
 }
 
 // ============================================================================
-// SIGNALBUS - SINGLE-TENANT FLAT BUS (SalesVelocity.ai)
+// SIGNALBUS - PENTHOUSE FLAT BUS (SalesVelocity.ai)
 // ============================================================================
 
 /**
@@ -80,7 +80,7 @@ export class SignalBus {
 
   constructor() {
     this.registry = this.createRegistry();
-    logger.info('[SignalBus] Initialized (single-tenant flat bus)');
+    logger.info('[SignalBus] Initialized (penthouse flat bus)');
   }
 
   private createRegistry(): Registry {

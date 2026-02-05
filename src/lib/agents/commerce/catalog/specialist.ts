@@ -6,7 +6,7 @@
  * Handles product lifecycle, variant management, and catalog synchronization.
  *
  * CAPABILITIES:
- * - Dynamic product fetching from tenant database
+ * - Dynamic product fetching from organization database
  * - Catalog CRUD operations
  * - Variant and option management
  * - Price management without industry bias
@@ -42,7 +42,7 @@ const CONFIG: SpecialistConfig = {
   },
   systemPrompt: `You are the Catalog Manager, responsible for product catalog operations.
 Your capabilities include:
-- Fetching products dynamically from tenant databases
+- Fetching products dynamically from the database
 - Managing product lifecycle (create, update, archive)
 - Handling variants and options
 - Price management without industry-specific bias

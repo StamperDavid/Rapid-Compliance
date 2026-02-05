@@ -2,7 +2,7 @@
  * Form Builder Module
  *
  * Complete form building, submission, and analytics system
- * Optimized for Firestore with multi-tenant architecture
+ * Optimized for Firestore with penthouse architecture
  *
  * @module forms
  * @version 2.0.0

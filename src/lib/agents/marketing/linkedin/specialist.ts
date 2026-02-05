@@ -301,7 +301,7 @@ interface AutomationPayloadOutput {
   };
 }
 
-interface TenantPlaybook {
+interface Playbook {
   voiceTone: 'professional' | 'friendly' | 'authoritative' | 'casual';
   valuePropositions: string[];
   targetIndustries: string[];
@@ -959,8 +959,8 @@ export class LinkedInExpert extends BaseSpecialist {
 
     this.log('INFO', `Generating Tier-1 connection request for ${targetProfile.name}`);
 
-    // Fetch tenant playbook for voice matching
-    const playbook = await this.fetchTenantPlaybook();
+    // Fetch playbook for voice matching
+    const playbook = await this.fetchPlaybook();
 
     // Generate personalized hooks based on target profile
     const hooks = this.generateConnectionHooks(targetProfile, playbook);
@@ -1002,7 +1002,7 @@ export class LinkedInExpert extends BaseSpecialist {
 
     this.log('INFO', `Generating Tier-2 follow-up sequence (${sequenceLength} messages) for ${targetProfile.name}`);
 
-    const playbook = await this.fetchTenantPlaybook();
+    const playbook = await this.fetchPlaybook();
 
     const sequence: FollowUpSequenceResult['sequence'] = [];
     const delays = [0, 3, 5, 7, 14]; // Days between messages
@@ -1044,7 +1044,7 @@ export class LinkedInExpert extends BaseSpecialist {
 
     this.log('INFO', `Generating Tier-3 high-value offer (${offerType}) for ${targetProfile.name}`);
 
-    const playbook = await this.fetchTenantPlaybook();
+    const playbook = await this.fetchPlaybook();
 
     // Build personalized offer components
     const headline = this.generateOfferHeadline(targetProfile, offerType, playbook);
@@ -1123,11 +1123,11 @@ export class LinkedInExpert extends BaseSpecialist {
   // 3-TIER PERSONALIZATION HELPER METHODS
   // ==========================================================================
 
-  private async fetchTenantPlaybook(): Promise<TenantPlaybook> {
+  private async fetchPlaybook(): Promise<Playbook> {
     // In production, this would fetch from Firestore: organizations/${DEFAULT_ORG_ID}/playbook
     this.log('INFO', `Fetching playbook for organization: ${DEFAULT_ORG_ID}`);
 
-    // Default playbook structure - would be overridden by tenant-specific data
+    // Default playbook structure - would be overridden by organization-specific data
     return Promise.resolve({
       voiceTone: 'professional',
       valuePropositions: [
@@ -1146,7 +1146,7 @@ export class LinkedInExpert extends BaseSpecialist {
     });
   }
 
-  private generateConnectionHooks(target: ConnectionRequestPayload['targetProfile'], playbook: TenantPlaybook): string[] {
+  private generateConnectionHooks(target: ConnectionRequestPayload['targetProfile'], playbook: Playbook): string[] {
     const hooks: string[] = [];
 
     // Mutual connection hook
@@ -1178,7 +1178,7 @@ export class LinkedInExpert extends BaseSpecialist {
 
   private buildConnectionMessage(
     target: ConnectionRequestPayload['targetProfile'],
-    playbook: TenantPlaybook,
+    playbook: Playbook,
     hook: string
   ): string {
     const tone = playbook.voiceTone;
@@ -1225,7 +1225,7 @@ Looking forward to connecting!`;
 
   private generateFollowUpMessage(
     target: FollowUpSequencePayload['targetProfile'],
-    playbook: TenantPlaybook,
+    playbook: Playbook,
     stageType: string,
     objective: string,
     _sequenceNum: number
@@ -1291,7 +1291,7 @@ Looking forward to connecting!`;
   private generateOfferHeadline(
     target: HighValueOfferPayload['targetProfile'],
     offerType: string,
-    playbook: TenantPlaybook
+    playbook: Playbook
   ): string {
     const headlines: Record<string, string> = {
       consultation: `Exclusive Strategy Session for ${target.company}`,
@@ -1306,20 +1306,20 @@ Looking forward to connecting!`;
 
   private generateValueProposition(
     target: HighValueOfferPayload['targetProfile'],
-    playbook: TenantPlaybook
+    playbook: Playbook
   ): string {
     const painPoint = target.painPoints?.[0] ?? `challenges facing ${target.role}s`;
     return `We understand ${painPoint}. That's why we've developed a solution that helps ${target.industry} leaders ${playbook.valuePropositions[0].toLowerCase()}.`;
   }
 
-  private generateSocialProof(industry: string, playbook: TenantPlaybook): string {
+  private generateSocialProof(industry: string, playbook: Playbook): string {
     return `Companies across ${industry} trust us because we deliver on ${playbook.uniqueSellingPoints.slice(0, 2).join(' and ')}.`;
   }
 
   private generateOfferDetails(
     offerType: string,
     target: HighValueOfferPayload['targetProfile'],
-    playbook: TenantPlaybook
+    playbook: Playbook
   ): string {
     const offers: Record<string, string> = {
       consultation: `A 30-minute strategy session tailored to ${target.company}'s unique situation - completely complimentary.`,

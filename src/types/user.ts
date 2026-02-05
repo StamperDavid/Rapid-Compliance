@@ -29,7 +29,7 @@ export interface User {
     };
   };
   
-  // Single-tenant context (SalesVelocity.ai)
+  // Penthouse context (SalesVelocity.ai)
   // organizationId removed - always 'rapid-compliance'
   
   // Metadata
@@ -63,7 +63,7 @@ export interface UserSession {
     ipAddress: string;
   };
   
-  // Context - single tenant, orgId always 'rapid-compliance'
+  // Context - penthouse model, orgId always 'rapid-compliance'
   workspaceId?: string;
   
   // Metadata
@@ -80,7 +80,7 @@ export interface UserSession {
  */
 export interface Invitation {
   id: string;
-  // organizationId removed - single tenant
+  // organizationId removed - penthouse model
   workspaceId?: string;
   
   // Invitee

@@ -1,7 +1,7 @@
 /**
  * Blog Categories Management
  * Create and manage blog categories
- * NOTE: Single-tenant - uses DEFAULT_ORG_ID
+ * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

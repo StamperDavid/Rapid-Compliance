@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    // Single-tenant: use default organization ID
+    // Penthouse: use default organization ID
     const organizationId = DEFAULT_ORG_ID;
 
     // Parse request

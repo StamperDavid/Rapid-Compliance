@@ -1,12 +1,12 @@
 /**
  * Admin API: Set Firebase Custom Claims
- * Allows superadmin to set custom claims for role-based access control
+ * Allows admin to set custom claims for role-based access control
  *
  * POST /api/admin/set-claims
- * Body: { userId: string, role: 'superadmin' | 'admin', tenantId?: string }
+ * Body: { userId: string, role: 'admin' }
  *
  * Security:
- * - Requires superadmin authentication
+ * - Requires admin authentication
  * - Rate limited to prevent abuse
  * - All claim changes are audited
  * - Uses Firebase Admin SDK for server-side claim management
@@ -22,6 +22,7 @@ import {
 } from '@/lib/api/admin-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -30,7 +31,7 @@ import { logger } from '@/lib/logger/logger';
 /**
  * Valid role types for the platform
  */
-type RoleType = 'superadmin' | 'admin';
+type RoleType = 'admin';
 
 /**
  * Request body for setting custom claims
@@ -38,14 +39,13 @@ type RoleType = 'superadmin' | 'admin';
 interface SetClaimsRequestBody {
   readonly userId: string;
   readonly role: RoleType;
-  readonly tenantId?: string;
 }
 
 /**
  * Custom claims object structure
  */
 interface CustomClaims {
-  readonly tenant_id: string;
+  readonly organizationId: string;
   readonly admin: boolean;
   readonly role: RoleType;
 }
@@ -69,15 +69,11 @@ interface SetClaimsResponse {
  * Type guard for valid role types
  */
 function isValidRole(role: unknown): role is RoleType {
-  return (
-    typeof role === 'string' &&
-    (role === 'superadmin' || role === 'admin')
-  );
+  return typeof role === 'string' && role === 'admin';
 }
 
 /**
  * Type guard for set claims request body
- * Validates required fields and types
  */
 function isSetClaimsRequestBody(body: unknown): body is SetClaimsRequestBody {
   if (typeof body !== 'object' || body === null) {
@@ -86,18 +82,11 @@ function isSetClaimsRequestBody(body: unknown): body is SetClaimsRequestBody {
 
   const obj = body as Record<string, unknown>;
 
-  // userId must be a non-empty string
   if (typeof obj.userId !== 'string' || obj.userId.length === 0) {
     return false;
   }
 
-  // role must be a valid RoleType
   if (!isValidRole(obj.role)) {
-    return false;
-  }
-
-  // tenantId is optional, but if provided must be a string
-  if (obj.tenantId !== undefined && typeof obj.tenantId !== 'string') {
     return false;
   }
 
@@ -111,15 +100,8 @@ function isSetClaimsRequestBody(body: unknown): body is SetClaimsRequestBody {
 /**
  * POST /api/admin/set-claims
  * Sets custom claims on a Firebase user for RBAC
- *
- * Security considerations:
- * - Only superadmin can set claims
- * - Claims include tenant_id for organization scoping
- * - All role changes are logged for audit trail
- * - Rate limited to prevent abuse
  */
 export async function POST(request: NextRequest) {
-  // Apply rate limiting (strict for admin endpoints)
   const rateLimitResponse = await rateLimitMiddleware(
     request,
     '/api/admin/set-claims'
@@ -128,7 +110,6 @@ export async function POST(request: NextRequest) {
     return rateLimitResponse;
   }
 
-  // Verify the requester is a superadmin
   const authResult = await verifyAdminRequest(request);
 
   if (isAuthError(authResult)) {
@@ -139,21 +120,9 @@ export async function POST(request: NextRequest) {
     return createErrorResponse(authResult.error, authResult.status);
   }
 
-  // Enforce superadmin requirement for claim modification
-  if (!authResult.user.isPlatformAdmin) {
-    logger.warn('Non-superadmin attempted to set claims', {
-      route: '/api/admin/set-claims',
-      userId: authResult.user.uid,
-      userRole: authResult.user.role,
-    });
-    return createErrorResponse(
-      'Superadmin access required to set custom claims',
-      403
-    );
-  }
+  // Admin access already verified by verifyAdminRequest
 
   try {
-    // Validate Firebase Admin SDK is available
     if (!adminAuth) {
       logger.error('Firebase Admin Auth not initialized', new Error('adminAuth is null'), {
         route: '/api/admin/set-claims',
@@ -161,7 +130,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Server configuration error', 500);
     }
 
-    // Parse and validate request body
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -175,14 +143,13 @@ export async function POST(request: NextRequest) {
 
     if (!isSetClaimsRequestBody(rawBody)) {
       return createErrorResponse(
-        'Invalid request body. Required: userId (string), role (superadmin|admin), tenantId (string, optional)',
+        'Invalid request body. Required: userId (string), role (admin)',
         400
       );
     }
 
     const body: SetClaimsRequestBody = rawBody;
 
-    // Verify target user exists before setting claims
     let targetUser;
     try {
       targetUser = await adminAuth.getUser(body.userId);
@@ -201,14 +168,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Construct custom claims object
     const claims: CustomClaims = {
-      tenant_id: body.tenantId ?? 'platform-admin',
-      admin: true, // All admin roles have this flag
+      organizationId: DEFAULT_ORG_ID,
+      admin: true,
       role: body.role,
     };
 
-    // Set custom claims on the target user
     try {
       await adminAuth.setCustomUserClaims(body.userId, claims);
     } catch (claimsError: unknown) {
@@ -219,7 +184,6 @@ export async function POST(request: NextRequest) {
           route: '/api/admin/set-claims',
           targetUserId: body.userId,
           role: body.role,
-          tenantId: body.tenantId,
         }
       );
       return createErrorResponse(
@@ -228,13 +192,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log successful claim modification for audit trail
     logger.info('Custom claims set successfully', {
       route: '/api/admin/set-claims',
       targetUserId: body.userId,
       targetUserEmail: targetUser.email ?? 'unknown',
       role: body.role,
-      tenantId: claims.tenant_id,
       setBy: authResult.user.uid,
       setByEmail: authResult.user.email,
     });

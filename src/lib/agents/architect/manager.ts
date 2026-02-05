@@ -10,17 +10,17 @@
  * - Dynamic specialist resolution via SwarmRegistry
  * - Parallel specialist execution with graceful degradation
  * - TechnicalBrief generation (API integrations, schema requirements, SEO mandates)
- * - Intelligence Brief integration from TenantMemoryVault
+ * - Intelligence Brief integration from MemoryVault
  * - SignalBus broadcast for cross-manager communication
  *
  * ORCHESTRATION PATTERN:
- * 1. Load Brand DNA from tenant context
+ * 1. Load Brand DNA from organization context
  * 2. Read existing Intelligence Briefs for market context
  * 3. Derive site architecture from brand + intelligence
  * 4. Coordinate specialists in parallel
  * 5. Synthesize into SiteArchitecture + TechnicalBrief
  * 6. Broadcast site.blueprint_ready signal
- * 7. Store blueprint in TenantMemoryVault
+ * 7. Store blueprint in MemoryVault
  */
 
 import { BaseManager } from '../base-manager';
@@ -33,7 +33,7 @@ import {
   broadcastSignal,
   readAgentInsights,
   type InsightEntry,
-} from '../shared/tenant-memory-vault';
+} from '../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
@@ -71,7 +71,7 @@ You receive brand identity and market intelligence, then create complete site ar
 4. **Competitive Positioning**: Use uniqueValue to differentiate architecture
 
 ### Intelligence Integration
-You read existing Intelligence Briefs from TenantMemoryVault to inform:
+You read existing Intelligence Briefs from MemoryVault to inform:
 - Competitor site patterns to avoid/emulate
 - Market trends affecting site structure
 - Technographic insights for integration planning
@@ -179,8 +179,8 @@ Stages: Landing Page -> Service Overview -> Booking -> Confirmation -> Reminder 
 ## COORDINATION WORKFLOW
 
 ### Phase 1: Context Loading
-1. Load Brand DNA from tenant
-2. Read Intelligence Briefs from TenantMemoryVault
+1. Load Brand DNA from organization
+2. Read Intelligence Briefs from MemoryVault
 3. Merge brand context with market intelligence
 
 ### Phase 2: Architecture Derivation
@@ -200,14 +200,14 @@ Stages: Landing Page -> Service Overview -> Booking -> Confirmation -> Reminder 
 2. Generate TechnicalBrief with requirements
 3. Calculate confidence scores
 4. Broadcast site.blueprint_ready signal
-5. Store in TenantMemoryVault
+5. Store in MemoryVault
 
 ## OUTPUT FORMAT
 You ALWAYS return structured JSON with SiteArchitecture and TechnicalBrief.
 
 ## RULES
 1. ALWAYS derive architecture from Brand DNA - never assume industry
-2. RESPECT existing Intelligence Briefs from TenantMemoryVault
+2. RESPECT existing Intelligence Briefs from MemoryVault
 3. COORDINATE specialist work - ensure visual, conversion, and copy align
 4. Be HONEST about specialist availability (GHOST/SHELL status)
 5. BROADCAST signals for downstream manager coordination
@@ -827,7 +827,7 @@ export class ArchitectManager extends BaseManager {
       this.log('INFO', `Processing blueprint request for organization: ${DEFAULT_ORG_ID}`);
 
       // Phase 1: Load context (Brand DNA + Intelligence Briefs)
-      const context = await this.loadTenantContext();
+      const context = await this.loadOrgContext();
 
       // Phase 2: Derive site requirements
       const requirements = this.deriveSiteRequirements(request, context);
@@ -836,7 +836,7 @@ export class ArchitectManager extends BaseManager {
       // Phase 3: Generate architecture
       const output = await this.generateArchitecture(request, requirements, context, taskId);
 
-      // Phase 4: Store in TenantMemoryVault and broadcast signal
+      // Phase 4: Store in MemoryVault and broadcast signal
       const signalSuccess = await this.storeAndBroadcast(output);
       output.signalBroadcast.success = signalSuccess;
 
@@ -914,9 +914,9 @@ export class ArchitectManager extends BaseManager {
   }
 
   /**
-   * Load tenant context: Brand DNA and existing Intelligence Briefs
+   * Load organization context: Brand DNA and existing Intelligence Briefs
    */
-  private async loadTenantContext(): Promise<{
+  private async loadOrgContext(): Promise<{
     brandDNA: BrandDNA | null;
     intelligenceBriefs: InsightEntry[];
   }> {
@@ -934,7 +934,7 @@ export class ArchitectManager extends BaseManager {
       this.log('WARN', `Failed to load Brand DNA: ${errorMsg}`);
     }
 
-    // Load Intelligence Briefs from TenantMemoryVault
+    // Load Intelligence Briefs from MemoryVault
     let intelligenceBriefs: InsightEntry[] = [];
     try {
       intelligenceBriefs = await readAgentInsights(this.identity.id, {
@@ -2181,7 +2181,7 @@ DELIVERABLES:
   // ==========================================================================
 
   /**
-   * Store blueprint in TenantMemoryVault and broadcast signal
+   * Store blueprint in MemoryVault and broadcast signal
    */
   private async storeAndBroadcast(output: ArchitectureOutput): Promise<boolean> {
     // Store the site architecture as an insight
@@ -2200,7 +2200,7 @@ DELIVERABLES:
         }
       );
 
-      this.log('INFO', 'Stored site architecture in TenantMemoryVault');
+      this.log('INFO', 'Stored site architecture in MemoryVault');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.log('WARN', `Failed to store architecture in vault: ${errorMsg}`);

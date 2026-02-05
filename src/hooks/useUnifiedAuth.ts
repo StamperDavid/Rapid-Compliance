@@ -1,8 +1,8 @@
 /**
  * Unified Authentication Hook
- * Single source of truth for authentication in single-tenant mode
+ * Single source of truth for authentication in SalesVelocity.ai
  *
- * 4-Level RBAC: superadmin | admin | manager | employee
+ * Binary RBAC: admin | user
  */
 
 'use client';
@@ -16,11 +16,9 @@ import {
   type AccountRole,
   type UnifiedUser,
   type UnifiedPermissions,
-  ACCOUNT_ROLE_HIERARCHY,
   getUnifiedPermissions,
-  isSuperadminRole,
+  isAdmin,
 } from '@/types/unified-rbac';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -30,7 +28,6 @@ interface AdminVerifyResponse {
   email?: string;
   name?: string;
   role?: string;
-  tenantId?: string;
 }
 
 /**
@@ -55,25 +52,36 @@ export interface UseUnifiedAuthReturn {
   loading: boolean;
   permissions: UnifiedPermissions | null;
   hasPermission: (permission: keyof UnifiedPermissions) => boolean;
-  isSuperadmin: () => boolean;
+  isAdminUser: () => boolean;
   isAtLeastRole: (minimumRole: AccountRole) => boolean;
-  /** @deprecated Use isSuperadmin instead */
-  isPlatformAdmin: () => boolean;
 }
 
 /**
- * REMOVED: createDemoUser()
- * Per Project Constitution (GROUND_TRUTH_DISCOVERY.md Part XIII):
- * - Demo user fallbacks mask authentication issues
- * - If user is not authenticated, return null (not a fake user)
- * - Platform admins must be verified via /api/admin/verify
- * - Tenant users must have valid profile in Firestore
+ * Map legacy/stored roles to binary roles.
+ * superadmin/admin/owner/platform_admin -> 'admin'
+ * manager/employee/everything else -> 'user'
  */
+function toBinaryRole(role: string | undefined | null): AccountRole {
+  if (!role) {
+    return 'user';
+  }
+  const normalized = role.toLowerCase();
+  switch (normalized) {
+    case 'superadmin':
+    case 'super_admin':
+    case 'admin':
+    case 'owner':
+    case 'platform_admin':
+      return 'admin';
+    default:
+      return 'user';
+  }
+}
 
 /**
- * Verify if user is a superadmin via the admin API
+ * Verify if user is an admin via the admin API
  */
-async function verifySuperadmin(
+async function verifyAdmin(
   firebaseUserId: string,
   firebaseUserEmail: string | null,
   idToken: string
@@ -93,13 +101,11 @@ async function verifySuperadmin(
 
     const adminData = (await response.json()) as AdminVerifyResponse;
 
-    // Superadmin verified
-    const displayName = adminData.name ?? 'Superadmin';
+    const displayName = adminData.name ?? 'Admin';
     const email = adminData.email ?? firebaseUserEmail ?? '';
 
-    logger.info('✅ Superadmin authenticated', {
+    logger.info('Admin authenticated', {
       email,
-      tenantId: DEFAULT_ORG_ID,
       file: 'useUnifiedAuth.ts',
     });
 
@@ -107,8 +113,7 @@ async function verifySuperadmin(
       id: firebaseUserId,
       email,
       displayName,
-      role: 'superadmin',
-      tenantId: DEFAULT_ORG_ID,
+      role: 'admin',
       status: 'active',
       mfaEnabled: false,
       createdAt: Timestamp.now(),
@@ -116,7 +121,7 @@ async function verifySuperadmin(
     };
   } catch (error) {
     logger.error(
-      'Error verifying superadmin:',
+      'Error verifying admin:',
       error instanceof Error ? error : new Error(String(error)),
       { file: 'useUnifiedAuth.ts' }
     );
@@ -126,7 +131,6 @@ async function verifySuperadmin(
 
 /**
  * Load user profile from Firestore
- * Single-tenant mode: always uses DEFAULT_ORG_ID
  */
 async function loadUserProfile(
   firebaseUserId: string,
@@ -147,29 +151,7 @@ async function loadUserProfile(
       return null;
     }
 
-    // Parse role with validation (4-level RBAC)
-    const roleValue = rawProfile.role;
-    let role: AccountRole;
-
-    if (
-      roleValue === 'superadmin' ||
-      roleValue === 'admin' ||
-      roleValue === 'manager' ||
-      roleValue === 'employee'
-    ) {
-      role = roleValue as AccountRole;
-    } else if (roleValue === 'owner' || roleValue === 'platform_admin') {
-      // Legacy role migration
-      role = 'superadmin';
-    } else {
-      // Default to employee if role is invalid/missing
-      logger.warn('Invalid role in user profile, defaulting to employee', {
-        userId: firebaseUserId,
-        providedRole: roleValue,
-        file: 'useUnifiedAuth.ts',
-      });
-      role = 'employee';
-    }
+    const role = toBinaryRole(rawProfile.role);
 
     const displayName =
       rawProfile.displayName ??
@@ -179,11 +161,10 @@ async function loadUserProfile(
 
     const email = firebaseUserEmail ?? '';
 
-    logger.info('✅ User authenticated', {
+    logger.info('User authenticated', {
       userId: firebaseUserId,
       email,
       role,
-      tenantId: DEFAULT_ORG_ID,
       file: 'useUnifiedAuth.ts',
     });
 
@@ -192,7 +173,6 @@ async function loadUserProfile(
       email,
       displayName,
       role,
-      tenantId: DEFAULT_ORG_ID,
       avatarUrl: rawProfile.avatarUrl,
       status: rawProfile.status ?? 'active',
       mfaEnabled: rawProfile.mfaEnabled ?? false,
@@ -212,14 +192,12 @@ async function loadUserProfile(
 /**
  * Unified Authentication Hook
  *
- * Single-tenant authentication flow:
+ * SalesVelocity authentication flow:
  * 1. Checks Firebase auth state
  * 2. If authenticated:
- *    a. Attempts to verify as superadmin via /api/admin/verify
- *    b. If not superadmin, loads from Firestore USERS collection
- *    c. Returns UnifiedUser with role (always DEFAULT_ORG_ID)
- *
- * @returns UseUnifiedAuthReturn with user, permissions, and helper functions
+ *    a. Attempts to verify as admin via /api/admin/verify
+ *    b. If not admin, loads from Firestore USERS collection
+ *    c. Returns UnifiedUser with binary role
  */
 export function useUnifiedAuth(): UseUnifiedAuthReturn {
   const [user, setUser] = useState<UnifiedUser | null>(null);
@@ -227,7 +205,6 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
   const [permissions, setPermissions] = useState<UnifiedPermissions | null>(null);
 
   useEffect(() => {
-    // Check if Firebase is configured
     if (!isFirebaseConfigured || !auth) {
       setUser(null);
       setPermissions(null);
@@ -238,7 +215,6 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
       return;
     }
 
-    // Firebase is configured - use real auth
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       void (async () => {
         if (!firebaseUser) {
@@ -252,29 +228,27 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
         }
 
         try {
-          // Get Firebase ID token for API calls
           const idToken = await firebaseUser.getIdToken();
 
-          // Check superadmin status first
-          const superadminUser = await verifySuperadmin(
+          // Check admin status first
+          const adminUser = await verifyAdmin(
             firebaseUser.uid,
             firebaseUser.email,
             idToken
           );
 
-          if (superadminUser) {
-            // User is superadmin - grant full permissions
-            setUser(superadminUser);
-            setPermissions(getUnifiedPermissions('superadmin'));
+          if (adminUser) {
+            setUser(adminUser);
+            setPermissions(getUnifiedPermissions('admin'));
             setLoading(false);
-            logger.info('Superadmin authenticated - full permissions granted', {
+            logger.info('Admin authenticated - full permissions granted', {
               userId: firebaseUser.uid,
               file: 'useUnifiedAuth.ts',
             });
             return;
           }
 
-          // Not a superadmin - load user profile
+          // Not admin - load user profile
           const userProfile = await loadUserProfile(
             firebaseUser.uid,
             firebaseUser.email,
@@ -282,14 +256,13 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
           );
 
           if (userProfile) {
-            // User is valid
             setUser(userProfile);
             setPermissions(getUnifiedPermissions(userProfile.role));
             setLoading(false);
             return;
           }
 
-          // No valid profile found - user is authenticated but not provisioned
+          // No valid profile found
           logger.error(
             'Firebase user has no profile - not provisioned',
             new Error('User not provisioned'),
@@ -320,7 +293,6 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
     return () => unsubscribe();
   }, []);
 
-  // Helper: Check if user has a specific permission
   const hasPermission = useCallback(
     (permission: keyof UnifiedPermissions): boolean => {
       if (!permissions) {
@@ -331,21 +303,19 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
     [permissions]
   );
 
-  // Helper: Check if user is superadmin
-  const isSuperadmin = useCallback((): boolean => {
-    return isSuperadminRole(user?.role);
+  const isAdminUser = useCallback((): boolean => {
+    return isAdmin(user?.role);
   }, [user?.role]);
 
-  // @deprecated Use isSuperadmin instead
-  const isPlatformAdmin = isSuperadmin;
-
-  // Helper: Check if user is at least a certain role level
   const isAtLeastRole = useCallback(
     (minimumRole: AccountRole): boolean => {
       if (!user) {
         return false;
       }
-      return ACCOUNT_ROLE_HIERARCHY[user.role] >= ACCOUNT_ROLE_HIERARCHY[minimumRole];
+      if (minimumRole === 'user') {
+        return true;
+      }
+      return user.role === 'admin';
     },
     [user]
   );
@@ -355,8 +325,7 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
     loading,
     permissions,
     hasPermission,
-    isSuperadmin,
-    isPlatformAdmin,
+    isAdminUser,
     isAtLeastRole,
   };
 }
@@ -375,13 +344,4 @@ export function useUnifiedPermission(permission: keyof UnifiedPermissions): bool
 export function useUnifiedRole(): AccountRole | null {
   const { user } = useUnifiedAuth();
   return user?.role ?? null;
-}
-
-/**
- * Hook to get the organization ID
- * Single-tenant mode: always returns DEFAULT_ORG_ID if authenticated
- */
-export function useUnifiedTenantId(): string | null {
-  const { user } = useUnifiedAuth();
-  return user ? DEFAULT_ORG_ID : null;
 }

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { user } = authResult;
-    if (user.role !== 'superadmin' && user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - Admin access required' },
         { status: 403 }
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { user } = authResult;
-    if (user.role !== 'superadmin' && user.role !== 'admin') {
+    if (user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - Admin access required' },
         { status: 403 }

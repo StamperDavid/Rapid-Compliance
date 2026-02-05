@@ -16,7 +16,7 @@
  * - Golden Master persona tuning based on win/loss signals
  * - Revenue performance synthesis (RevenueBrief)
  * - Objection handling library synthesis for battlecards
- * - Cross-agent signal sharing via TenantMemoryVault
+ * - Cross-agent signal sharing via MemoryVault
  */
 
 import { BaseManager } from '../../base-manager';
@@ -35,7 +35,7 @@ import {
   shareInsight,
   broadcastSignal,
   type InsightData,
-} from '../../shared/tenant-memory-vault';
+} from '../../shared/memory-vault';
 // Logger is used indirectly via this.log() from BaseManager
 import { logger as _logger } from '@/lib/logger/logger';
 
@@ -1754,7 +1754,7 @@ export class RevenueDirector extends BaseManager {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Query win/loss signals from TenantMemoryVault
+    // Query win/loss signals from MemoryVault
     const vault = this.memoryVault;
     const signals = vault.query(this.identity.id, {
       category: 'SIGNAL',
@@ -1875,7 +1875,7 @@ export class RevenueDirector extends BaseManager {
       confidence: Math.min(0.95, 0.5 + (signals.length / 100) * 0.45),
     };
 
-    // Share the insight with other agents via TenantMemoryVault
+    // Share the insight with other agents via MemoryVault
     await shareInsight(
       this.identity.id,
       'PERFORMANCE' as InsightData['type'],
@@ -2015,7 +2015,7 @@ export class RevenueDirector extends BaseManager {
 
   /**
    * Share Closed-Won signal to LEAD_QUALIFIER for feedback loop
-   * Uses TenantMemoryVault for cross-agent communication
+   * Uses MemoryVault for cross-agent communication
    */
   private async shareClosedWonSignal(leadData: LeadData, closingResult: ClosingStrategyResult): Promise<void> {
     // Broadcast signal to LEAD_QUALIFIER for continuous feedback loop
@@ -2177,7 +2177,7 @@ export class RevenueDirector extends BaseManager {
   async tuneGoldenMasterPersona(_taskId: string): Promise<{ tuned: boolean; adjustments: PersonaWeights }> {
     this.log('INFO', 'Tuning Golden Master persona');
 
-    // Query win/loss signals from TenantMemoryVault
+    // Query win/loss signals from MemoryVault
     const vault = this.memoryVault;
     const signals = vault.query(this.identity.id, {
       category: 'SIGNAL',
@@ -2210,7 +2210,7 @@ export class RevenueDirector extends BaseManager {
       this.identity.id,
       'STRATEGY' as InsightData['type'],
       'Golden Master Persona Tuning',
-      `Adjusted persona weights based on ${signals.length} win/loss signals`,
+      `Adjusted persona weights based on ${signals.length} closed deal signals`,
       {
         confidence: 75,
         sources: [this.identity.id],

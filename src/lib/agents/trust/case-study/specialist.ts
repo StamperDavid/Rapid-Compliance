@@ -21,7 +21,7 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 // CORE TYPES & INTERFACES
 // ============================================================================
 
-interface TenantContext {
+interface BusinessContext {
   organizationId: string;
   brandName: string;
   industry: string;
@@ -321,7 +321,7 @@ interface ExportFormat {
 
 interface CaseStudyRequest {
   successStory: SuccessStoryInput;
-  tenantContext: TenantContext;
+  businessContext: BusinessContext;
   options?: {
     includeJsonLd?: boolean;
     includeSeoMetadata?: boolean;
@@ -388,7 +388,7 @@ const METRIC_CHANGE_TEMPLATES = {
 const SYSTEM_PROMPT = `You are the Case Study Builder Specialist, an expert in transforming success story data into compelling, SEO-optimized case studies.
 
 ## YOUR ROLE
-You create structured narrative case studies from raw "Before" and "After" data. You generate JSON-LD schemas for rich search results and ensure all content is multi-tenant aware.
+You create structured narrative case studies from raw "Before" and "After" data. You generate JSON-LD schemas for rich search results and ensure all content is properly branded.
 
 ## CASE STUDY STRUCTURE
 Every case study follows this structure:
@@ -494,8 +494,8 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
     try {
       const request = message.payload as CaseStudyRequest;
 
-      if (!request?.successStory || !request?.tenantContext) {
-        return this.createReport(taskId, 'FAILED', null, ['Missing success story or tenant context']);
+      if (!request?.successStory || !request?.businessContext) {
+        return this.createReport(taskId, 'FAILED', null, ['Missing success story or business context']);
       }
 
       this.log('INFO', `Building case study for: ${request.successStory.clientName}`);
@@ -535,27 +535,27 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
 
   async buildCaseStudy(request: CaseStudyRequest): Promise<CaseStudyOutput> {
     await Promise.resolve(); // Async boundary for interface compliance
-    const { successStory, tenantContext, options } = request;
+    const { successStory, businessContext, options } = request;
     const style = options?.style ?? 'PROFESSIONAL';
     const length = options?.length ?? 'MEDIUM';
 
     // Step 1: Build formatted case study
-    const formatted = this.buildFormattedCaseStudy(successStory, tenantContext, style, length);
+    const formatted = this.buildFormattedCaseStudy(successStory, businessContext, style, length);
 
     // Step 2: Generate JSON-LD schema
     const jsonLd = options?.includeJsonLd !== false
-      ? this.generateJSONLD(successStory, tenantContext, formatted)
-      : this.generateJSONLD(successStory, tenantContext, formatted);
+      ? this.generateJSONLD(successStory, businessContext, formatted)
+      : this.generateJSONLD(successStory, businessContext, formatted);
 
     // Step 3: Generate SEO metadata
     const seoMetadata = options?.includeSeoMetadata !== false
-      ? this.generateSEOMetadata(successStory, tenantContext, formatted)
-      : this.generateSEOMetadata(successStory, tenantContext, formatted);
+      ? this.generateSEOMetadata(successStory, businessContext, formatted)
+      : this.generateSEOMetadata(successStory, businessContext, formatted);
 
     // Step 4: Generate visualization data
     const visualData = options?.includeVisualData !== false
-      ? this.generateVisualizationData(successStory, tenantContext)
-      : this.generateVisualizationData(successStory, tenantContext);
+      ? this.generateVisualizationData(successStory, businessContext)
+      : this.generateVisualizationData(successStory, businessContext);
 
     // Step 5: Generate export formats
     const exportFormats = this.generateExportFormats(
@@ -580,25 +580,25 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
 
   private buildFormattedCaseStudy(
     story: SuccessStoryInput,
-    tenant: TenantContext,
+    business: BusinessContext,
     style: 'PROFESSIONAL' | 'CASUAL' | 'TECHNICAL',
     length: 'SHORT' | 'MEDIUM' | 'LONG'
   ): FormattedCaseStudy {
     // Generate title
-    const title = this.generateTitle(story, tenant);
-    const subtitle = this.generateSubtitle(story, tenant);
+    const title = this.generateTitle(story, business);
+    const subtitle = this.generateSubtitle(story, business);
 
     // Generate executive summary
-    const executiveSummary = this.generateExecutiveSummary(story, tenant, length);
+    const executiveSummary = this.generateExecutiveSummary(story, business, length);
 
     // Build sections
-    const sections = this.buildSections(story, tenant, style);
+    const sections = this.buildSections(story, business, style);
 
     // Generate call to action
-    const callToAction = this.generateCallToAction(tenant);
+    const callToAction = this.generateCallToAction(business);
 
     // Build metadata
-    const metadata = this.buildMetadata(story, tenant);
+    const metadata = this.buildMetadata(story, business);
 
     return {
       title,
@@ -610,31 +610,31 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
     };
   }
 
-  private generateTitle(story: SuccessStoryInput, tenant: TenantContext): string {
+  private generateTitle(story: SuccessStoryInput, business: BusinessContext): string {
     const primaryOutcome = story.afterData.outcomes[0];
     const primaryMetric = this.calculateTopMetricChange(story);
 
     if (primaryMetric) {
-      return `How ${story.clientName} Achieved ${primaryMetric.change} ${primaryMetric.label} with ${tenant.productName}`;
+      return `How ${story.clientName} Achieved ${primaryMetric.change} ${primaryMetric.label} with ${business.productName}`;
     }
 
     if (primaryOutcome) {
       return `${story.clientName} Case Study: ${primaryOutcome.title}`;
     }
 
-    return `${story.clientName} Success Story | ${tenant.brandName}`;
+    return `${story.clientName} Success Story | ${business.brandName}`;
   }
 
-  private generateSubtitle(story: SuccessStoryInput, tenant: TenantContext): string {
+  private generateSubtitle(story: SuccessStoryInput, business: BusinessContext): string {
     const challenge = story.beforeData.challenges[0];
     const industry = story.clientIndustry;
 
-    return `How a ${story.clientSize} ${industry} company overcame ${challenge?.title?.toLowerCase() ?? 'key challenges'} with ${tenant.productName}`;
+    return `How a ${story.clientSize} ${industry} company overcame ${challenge?.title?.toLowerCase() ?? 'key challenges'} with ${business.productName}`;
   }
 
   private generateExecutiveSummary(
     story: SuccessStoryInput,
-    tenant: TenantContext,
+    business: BusinessContext,
     length: 'SHORT' | 'MEDIUM' | 'LONG'
   ): string {
     const template = NARRATIVE_TEMPLATES.executiveSummary[length];
@@ -653,8 +653,8 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
       .replace(/{clientName}/g, story.clientName)
       .replace(/{clientSize}/g, story.clientSize)
       .replace(/{clientIndustry}/g, story.clientIndustry)
-      .replace(/{brandName}/g, tenant.brandName)
-      .replace(/{productName}/g, tenant.productName)
+      .replace(/{brandName}/g, business.brandName)
+      .replace(/{productName}/g, business.productName)
       .replace(/{primaryChallenge}/g, primaryChallenge)
       .replace(/{challenges}/g, challenges)
       .replace(/{primaryResult}/g, primaryResult)
@@ -667,7 +667,7 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
 
   private buildSections(
     story: SuccessStoryInput,
-    tenant: TenantContext,
+    business: BusinessContext,
     style: 'PROFESSIONAL' | 'CASUAL' | 'TECHNICAL'
   ): CaseStudySection[] {
     const sections: CaseStudySection[] = [];
@@ -691,7 +691,7 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
       type: 'CHALLENGE',
       title: 'The Challenge',
       content: NARRATIVE_TEMPLATES.challengeIntro[style]
-        .replace(/{brandName}/g, tenant.brandName)
+        .replace(/{brandName}/g, business.brandName)
         .replace(/{clientName}/g, story.clientName),
       bullets: story.beforeData.challenges.map((c) => `**${c.title}**: ${c.description}`),
       metrics: this.formatBeforeMetrics(story.beforeData.metrics),
@@ -703,8 +703,8 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
       type: 'SOLUTION',
       title: 'The Solution',
       content: NARRATIVE_TEMPLATES.solutionIntro[style]
-        .replace(/{brandName}/g, tenant.brandName)
-        .replace(/{productName}/g, tenant.productName),
+        .replace(/{brandName}/g, business.brandName)
+        .replace(/{productName}/g, business.productName),
       bullets: [
         ...story.implementation.keyFeatures.map((f) => `**${f}**`),
         `Implementation timeline: ${story.implementation.timeline}`,
@@ -734,7 +734,7 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
       type: 'RESULTS',
       title: 'The Results',
       content: NARRATIVE_TEMPLATES.resultsIntro[style]
-        .replace(/{productName}/g, tenant.productName)
+        .replace(/{productName}/g, business.productName)
         .replace(/{clientName}/g, story.clientName),
       bullets: story.afterData.outcomes.map((o) => `**${o.title}**: ${o.description}`),
       metrics: this.formatResultMetrics(story.beforeData.metrics, story.afterData.metrics),
@@ -831,20 +831,20 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
     return topMetric;
   }
 
-  private generateCallToAction(tenant: TenantContext): CallToAction {
+  private generateCallToAction(business: BusinessContext): CallToAction {
     return {
       headline: `Ready to achieve similar results?`,
-      description: `See how ${tenant.brandName} can help your business transform with ${tenant.productName}.`,
+      description: `See how ${business.brandName} can help your business transform with ${business.productName}.`,
       buttonText: 'Get Started',
-      buttonUrl: `${tenant.website}/demo`,
+      buttonUrl: `${business.website}/demo`,
       secondaryAction: {
         text: 'Download Full Case Study',
-        url: `${tenant.website}/case-studies/download`,
+        url: `${business.website}/case-studies/download`,
       },
     };
   }
 
-  private buildMetadata(story: SuccessStoryInput, tenant: TenantContext): CaseStudyMetadata {
+  private buildMetadata(story: SuccessStoryInput, business: BusinessContext): CaseStudyMetadata {
     // Calculate read time (average 200 words per minute)
     const wordCount = 500; // Approximate based on content
     const readTime = Math.ceil(wordCount / 200);
@@ -853,7 +853,7 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
       clientName: story.clientName,
       industry: story.clientIndustry,
       companySize: story.clientSize,
-      products: [tenant.productName],
+      products: [business.productName],
       tags: story.tags,
       readTime,
       publishDate: story.publishDate,
@@ -867,7 +867,7 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
 
   private generateJSONLD(
     story: SuccessStoryInput,
-    tenant: TenantContext,
+    business: BusinessContext,
     formatted: FormattedCaseStudy
   ): JSONLDSchema {
     const articleBody = formatted.sections
@@ -877,22 +877,22 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
     const schema: JSONLDSchema = {
       '@context': 'https://schema.org',
       '@type': 'Article',
-      '@id': `${tenant.website}/case-studies/${story.id}`,
+      '@id': `${business.website}/case-studies/${story.id}`,
       name: formatted.title,
       description: formatted.executiveSummary,
       author: {
         '@type': 'Organization',
-        name: tenant.brandName,
-        url: tenant.website,
+        name: business.brandName,
+        url: business.website,
       },
       publisher: {
         '@type': 'Organization',
-        name: tenant.brandName,
-        logo: tenant.logo ? {
+        name: business.brandName,
+        logo: business.logo ? {
           '@type': 'ImageObject',
-          url: tenant.logo,
+          url: business.logo,
         } : undefined,
-        url: tenant.website,
+        url: business.website,
       },
       datePublished: story.publishDate.toISOString(),
       dateModified: new Date().toISOString(),
@@ -911,8 +911,8 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
         keywords: [
           ...story.tags,
           story.clientIndustry,
-          tenant.productName,
-          ...tenant.seoKeywords,
+          business.productName,
+          ...business.seoKeywords,
         ],
       },
     };
@@ -950,12 +950,12 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
 
   private generateSEOMetadata(
     story: SuccessStoryInput,
-    tenant: TenantContext,
+    business: BusinessContext,
     formatted: FormattedCaseStudy
   ): SEOMetadata {
     // Generate optimized title (50-60 chars)
     const title = this.truncateForSEO(
-      `${story.clientName} Case Study | ${tenant.brandName}`,
+      `${story.clientName} Case Study | ${business.brandName}`,
       60
     );
 
@@ -968,10 +968,10 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
     // Combine keywords
     const keywords = [
       `${story.clientIndustry} case study`,
-      `${tenant.productName} case study`,
+      `${business.productName} case study`,
       story.clientName,
       ...story.tags,
-      ...tenant.seoKeywords,
+      ...business.seoKeywords,
     ];
 
     return {
@@ -980,11 +980,11 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
       keywords,
       ogTitle: formatted.title,
       ogDescription: formatted.subtitle,
-      ogImage: story.clientLogo ?? tenant.logo,
+      ogImage: story.clientLogo ?? business.logo,
       ogType: 'article',
       twitterCard: 'summary_large_image',
-      canonicalUrl: `${tenant.website}/case-studies/${story.id}`,
-      structuredData: JSON.stringify(this.generateJSONLD(story, tenant, formatted), null, 2),
+      canonicalUrl: `${business.website}/case-studies/${story.id}`,
+      structuredData: JSON.stringify(this.generateJSONLD(story, business, formatted), null, 2),
     };
   }
 
@@ -999,9 +999,9 @@ export class CaseStudyBuilderSpecialist extends BaseSpecialist {
 
   private generateVisualizationData(
     story: SuccessStoryInput,
-    tenant: TenantContext
+    business: BusinessContext
   ): VisualizationData {
-    const primaryColor = tenant.primaryColor || 'var(--color-primary)';
+    const primaryColor = business.primaryColor || 'var(--color-primary)';
 
     // Generate metric charts
     const metrics = this.generateMetricCharts(story, primaryColor);
@@ -1280,7 +1280,7 @@ export function getCaseStudyBuilderSpecialist(): CaseStudyBuilderSpecialist {
 export { NARRATIVE_TEMPLATES, METRIC_CHANGE_TEMPLATES };
 
 export type {
-  TenantContext,
+  BusinessContext,
   SuccessStoryInput,
   CaseStudyOutput,
   FormattedCaseStudy,

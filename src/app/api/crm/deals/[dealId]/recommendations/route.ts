@@ -21,7 +21,7 @@ export async function GET(
   try {
     const dealId = params.dealId;
 
-    // Single-tenant mode: orgId is always DEFAULT_ORG_ID
+    // Penthouse: orgId is always DEFAULT_ORG_ID
     const organizationId = DEFAULT_ORG_ID;
     const wsIdHeader = request.headers.get('x-workspace-id');
     const workspaceId = (wsIdHeader !== '' && wsIdHeader != null) ? wsIdHeader : 'default';

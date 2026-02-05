@@ -93,7 +93,7 @@ class APIKeyService {
     
     // Return cached keys if still valid
     if (this.keysCache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
-      // In single-tenant, cache is org-agnostic
+      // In penthouse model, cache is org-agnostic
       return this.keysCache;
     }
 

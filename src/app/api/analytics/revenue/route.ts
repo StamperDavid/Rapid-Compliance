@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     if (rateLimitResponse) {return rateLimitResponse;}
 
     const { searchParams } = new URL(request.url);
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const orgId = DEFAULT_ORG_ID;
     const periodParam = searchParams.get('period');
     const period = (periodParam !== '' && periodParam != null) ? periodParam : '30d';

@@ -1,7 +1,7 @@
 /**
  * Audit Log API
  * View change history and publishing activity
- * CRITICAL: Multi-tenant isolation - validates organizationId
+ * CRITICAL: Organization isolation - validates organizationId
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

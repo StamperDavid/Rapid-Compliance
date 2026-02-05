@@ -367,7 +367,7 @@ export async function listResearchIntelligence(
   organizationId: string
 ): Promise<Array<{ industryId: string; research: ResearchIntelligence }>> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const snapshot = await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
       .get();
@@ -552,7 +552,7 @@ export async function querySignalsByPlatform(
   limit: number = 100
 ): Promise<Array<{ recordId: string; signals: ExtractedSignal[] }>> {
   try {
-    // PENTHOUSE: organizationId filter removed (single-tenant mode)
+    // PENTHOUSE: organizationId filter removed
     const snapshot = await db
       .collection(EXTRACTED_SIGNALS_COLLECTION)
       .limit(limit)

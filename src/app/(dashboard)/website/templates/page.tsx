@@ -1,7 +1,7 @@
 /**
  * Template Browser
  * Browse and apply page templates
- * NOTE: Single-tenant - uses DEFAULT_ORG_ID
+ * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const orgId = DEFAULT_ORG_ID;
 
     // Get agent configuration
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as SaveConfigRequestBody;
     const { selectedModel, modelConfig } = body;
 
-    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const orgId = DEFAULT_ORG_ID;
 
     // Prepare configuration data with defaults

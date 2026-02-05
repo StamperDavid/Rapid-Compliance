@@ -1,7 +1,7 @@
 /**
  * Next.js Edge Middleware
- * Single-tenant routing - all public site traffic goes to DEFAULT_ORG_ID
- * SIMPLIFIED: Removed subdomain and custom domain routing for single-tenant deployment
+ * Penthouse model routing - all public site traffic goes to DEFAULT_ORG_ID
+ * SIMPLIFIED: Removed subdomain and custom domain routing for penthouse deployment
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
@@ -68,9 +68,9 @@ export function middleware(request: NextRequest) {
   }
 
   // ============================================================================
-  // SINGLE-TENANT PUBLIC SITE ROUTING
+  // PENTHOUSE PUBLIC SITE ROUTING
   // ============================================================================
-  // For single-tenant deployment, all public site traffic uses DEFAULT_ORG_ID
+  // For penthouse deployment, all public site traffic uses DEFAULT_ORG_ID
   // The /sites/[orgId] routes still exist for URL compatibility but always use
   // the same organization internally
 

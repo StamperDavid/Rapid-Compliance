@@ -7,7 +7,7 @@
  */
 
 export {
-  TenantMemoryVault,
+  MemoryVault,
   getMemoryVault,
   shareInsight,
   broadcastSignal,
@@ -28,4 +28,4 @@ export {
   type QueryOptions,
   type MemorySubscriptionCallback,
   type SubscriptionOptions,
-} from './tenant-memory-vault';
+} from './memory-vault';

@@ -2,7 +2,7 @@
  * Firebase Configuration
  * Centralized Firebase initialization for client and server
  *
- * PENTHOUSE MODEL: Single-tenant deployment locked to rapid-compliance-65f87
+ * PENTHOUSE MODEL: Penthouse deployment locked to rapid-compliance-65f87
  */
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
@@ -24,7 +24,7 @@ export class CriticalConfigurationError extends Error {
 
 /**
  * The ONLY allowed Firebase project ID for this deployment
- * Part of the Penthouse single-tenant security model
+ * Part of the Penthouse security model
  */
 const ALLOWED_PROJECT_ID = 'rapid-compliance-65f87';
 
