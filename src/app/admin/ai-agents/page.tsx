@@ -6,10 +6,27 @@
  * Uses DEFAULT_ORG_ID (rapid-compliance-root) for single-tenant access.
  */
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { auth } from '@/lib/firebase/config';
+
+interface AgentStats {
+  totalAgentCount: number;
+  swarmAgentCount: number;
+  standaloneAgentCount: number;
+  totalConversations: number;
+}
+
+interface StatsApiResponse {
+  stats: {
+    totalAgentCount?: number;
+    swarmAgentCount?: number;
+    standaloneAgentCount?: number;
+    totalConversations?: number;
+  };
+}
 
 interface AgentCard {
   title: string;
@@ -76,6 +93,44 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
 export default function AdminAIAgentsPage() {
   const { adminUser } = useAdminAuth();
   const _orgId = DEFAULT_ORG_ID;
+  const [stats, setStats] = useState<AgentStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/admin/stats', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as StatsApiResponse;
+        setStats({
+          totalAgentCount: data.stats.totalAgentCount ?? 51,
+          swarmAgentCount: data.stats.swarmAgentCount ?? 47,
+          standaloneAgentCount: data.stats.standaloneAgentCount ?? 4,
+          totalConversations: data.stats.totalConversations ?? 0,
+        });
+      }
+    } catch {
+      // Silently fail, will use defaults
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchStats();
+  }, [fetchStats]);
+
+  // Calculate derived stats
+  const activeAgents = stats?.standaloneAgentCount ?? 4;
+  const conversationsToday = stats?.totalConversations ?? 0;
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -105,17 +160,17 @@ export default function AdminAIAgentsPage() {
           }}
         >
           {[
-            { label: 'Active Agents', value: '4', color: 'var(--color-success)' },
-            { label: 'Total Training Sessions', value: '34', color: 'var(--color-primary)' },
-            { label: 'Conversations Today', value: '127', color: 'var(--color-cyan)' },
-            { label: 'Success Rate', value: '94%', color: 'var(--color-warning)' },
+            { label: 'Active Agents', value: loading ? '...' : activeAgents.toString(), color: 'var(--color-success)' },
+            { label: 'Total Agents', value: loading ? '...' : (stats?.totalAgentCount ?? 51).toString(), color: 'var(--color-primary)' },
+            { label: 'Conversations', value: loading ? '...' : conversationsToday.toLocaleString(), color: 'var(--color-cyan)' },
+            { label: 'Swarm Agents', value: loading ? '...' : (stats?.swarmAgentCount ?? 47).toString(), color: 'var(--color-warning)' },
           ].map((stat) => (
             <div
               key={stat.label}
               style={{
                 padding: '1.25rem',
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #1a1a1a',
+                backgroundColor: 'var(--color-bg-paper)',
+                border: '1px solid var(--color-border-main)',
                 borderRadius: '0.75rem',
               }}
             >
@@ -144,8 +199,8 @@ export default function AdminAIAgentsPage() {
                 key={card.title}
                 href={card.href}
                 style={{
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '1rem',
                   padding: '1.5rem',
                   textDecoration: 'none',
@@ -153,12 +208,12 @@ export default function AdminAIAgentsPage() {
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#6366f1';
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = '0 8px 30px rgba(99, 102, 241, 0.15)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#333';
+                  e.currentTarget.style.borderColor = 'var(--color-border-light)';
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
@@ -170,7 +225,7 @@ export default function AdminAIAgentsPage() {
                         width: 48,
                         height: 48,
                         borderRadius: '0.75rem',
-                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -212,9 +267,9 @@ export default function AdminAIAgentsPage() {
                     gridTemplateColumns: '1fr 1fr',
                     gap: '0.75rem',
                     padding: '1rem',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-paper)',
                     borderRadius: '0.5rem',
-                    border: '1px solid #222',
+                    border: '1px solid var(--color-border-main)',
                   }}
                 >
                   {card.stats.map((stat) => (

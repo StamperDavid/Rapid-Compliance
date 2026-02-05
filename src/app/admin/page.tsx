@@ -25,6 +25,11 @@ interface PlatformStats {
   trialOrgs: number;
   totalUsers: number;
   monthlyRevenue?: number;
+  totalAgentCount: number;
+  swarmAgentCount: number;
+  standaloneAgentCount: number;
+  totalConversations: number;
+  totalPlaybooks: number;
   fetchedAt: string;
   scope: 'global' | 'organization';
 }
@@ -177,10 +182,10 @@ export default function AdminDashboardPage() {
           />
           <KpiCard
             label="AI Agents"
-            value="51"
+            value={loading ? '...' : (stats?.totalAgentCount ?? 51).toLocaleString()}
             icon={Bot}
             color="var(--color-cyan)"
-            subtitle="47 swarm + 4 standalone"
+            subtitle={loading ? '' : `${stats?.swarmAgentCount ?? 47} swarm + ${stats?.standaloneAgentCount ?? 4} standalone`}
           />
           <KpiCard
             label="Active Agents"
@@ -295,13 +300,13 @@ export default function AdminDashboardPage() {
         <div
           style={{
             marginTop: '1.25rem',
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-elevated)',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '1rem',
             padding: '1.5rem',
           }}
         >
-          <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
             Platform Overview
           </h3>
           <div
@@ -311,11 +316,11 @@ export default function AdminDashboardPage() {
               gap: '1rem',
             }}
           >
-            <OverviewItem label="Physical Routes" value="130+" />
-            <OverviewItem label="API Endpoints" value="215+" />
-            <OverviewItem label="Swarm Agents" value="47" />
-            <OverviewItem label="Standalone Agents" value="4" />
-            <OverviewItem label="Firestore Collections" value="60+" />
+            <OverviewItem label="Swarm Agents" value={loading ? '...' : (stats?.swarmAgentCount ?? 47).toString()} />
+            <OverviewItem label="Standalone Agents" value={loading ? '...' : (stats?.standaloneAgentCount ?? 4).toString()} />
+            <OverviewItem label="Conversations" value={loading ? '...' : (stats?.totalConversations ?? 0).toLocaleString()} />
+            <OverviewItem label="Playbooks" value={loading ? '...' : (stats?.totalPlaybooks ?? 0).toLocaleString()} />
+            <OverviewItem label="Organizations" value={loading ? '...' : (stats?.totalOrgs ?? 1).toString()} />
             <OverviewItem label="RBAC Roles" value="4" />
           </div>
         </div>

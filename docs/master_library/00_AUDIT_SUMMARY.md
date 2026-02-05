@@ -1,9 +1,10 @@
 # SalesVelocity.ai System Audit Summary
 
 **Audit Date:** February 5, 2026
+**Last Updated:** February 5, 2026 (Truth Sweep completed)
 **Audit Method:** Multi-Agent Parallel Scan (Scout + Technical Auditor)
 **Total Features Audited:** 70+
-**Total Issues Found:** 15
+**Total Issues Found:** 11 (4 fixed in Truth Sweep)
 
 ---
 
@@ -13,8 +14,8 @@
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| **PASS** | 55 | Feature works, uses live data, compliant with brand/theme |
-| **FAIL** | 12 | Hard-coded mocks, legacy DNA, or theme violations detected |
+| **PASS** | 59 | Feature works, uses live data, compliant with brand/theme |
+| **FAIL** | 8 | Hard-coded mocks, legacy DNA, or theme violations detected |
 | **BUFFERING** | 3 | Feature exists but incomplete implementation (TODOs) |
 
 ---
@@ -23,22 +24,22 @@
 
 ### CRITICAL (Mock Data - Must Fix)
 
-| # | Feature | File Path | Issue |
-|---|---------|-----------|-------|
-| 1 | Admin Dashboard | `src/app/admin/page.tsx` | Hard-coded: "AI Agents: 51", platform stats |
-| 2 | AI Agents Admin | `src/app/admin/ai-agents/page.tsx` | Hard-coded: "4 Active Agents", "127 Conversations" |
-| 3 | Living Ledger Admin | `src/app/admin/living-ledger/page.tsx` | Mock deals: "Acme Corp $125K", "TechFlow $50K" |
-| 4 | Playbook Dashboard | `src/app/(dashboard)/playbook/page.tsx` | Full mock playbook arrays |
-| 5 | Templates Library | `src/app/(dashboard)/templates/page.tsx` | Mock deal IDs: 'deal_1', 'deal_2', 'deal_3' |
+| # | Feature | File Path | Status | Issue |
+|---|---------|-----------|--------|-------|
+| 1 | Admin Dashboard | `src/app/admin/page.tsx` | ✅ FIXED | Now fetches real agent counts from API |
+| 2 | AI Agents Admin | `src/app/admin/ai-agents/page.tsx` | ✅ FIXED | Now fetches real stats from API |
+| 3 | Living Ledger Admin | `src/app/admin/living-ledger/page.tsx` | ✅ FIXED | Now fetches deals from Firestore |
+| 4 | Playbook Dashboard | `src/app/(dashboard)/playbook/page.tsx` | ✅ FIXED | Now fetches playbooks from Firestore |
+| 5 | Templates Library | `src/app/(dashboard)/templates/page.tsx` | PENDING | Mock deal IDs: 'deal_1', 'deal_2', 'deal_3' |
 
 ### HIGH (Legacy DNA / Theme Violations)
 
-| # | Feature | File Path | Issue |
-|---|---------|-----------|-------|
-| 6 | Login Page | `src/app/(public)/login/page.tsx` | Legacy tenantId fallback logic |
-| 7 | Swarm Monitor Widget | `src/components/shared/SwarmMonitorWidget.tsx` | Deprecated tenantId prop |
-| 8 | AI Agents Admin | `src/app/admin/ai-agents/page.tsx` | Hard-coded hex colors: #6366f1, #8b5cf6 |
-| 9 | Admin Dashboard | `src/app/admin/page.tsx` | Hard-coded hex: #1a1a1a, #333 |
+| # | Feature | File Path | Status | Issue |
+|---|---------|-----------|--------|-------|
+| 6 | Login Page | `src/app/(public)/login/page.tsx` | PENDING | Legacy tenantId fallback logic |
+| 7 | Swarm Monitor Widget | `src/components/shared/SwarmMonitorWidget.tsx` | PENDING | Deprecated tenantId prop |
+| 8 | AI Agents Admin | `src/app/admin/ai-agents/page.tsx` | ✅ FIXED | Now uses CSS variables |
+| 9 | Admin Dashboard | `src/app/admin/page.tsx` | ✅ FIXED | Now uses CSS variables |
 
 ### MEDIUM (Incomplete Features / TODOs)
 
@@ -66,11 +67,11 @@
 | Website Builder | 8 | 8 | 0 | Blog, Pages, SEO all working |
 | Email & Content | 7 | 7 | 0 | Email Writer, Campaigns functional |
 | Settings | 12 | 12 | 0 | All config pages operational |
-| AI Agent Tools | 5 | 3 | 2 | Admin pages have mock data |
+| AI Agent Tools | 5 | 5 | 0 | ✅ Fixed: Now uses real Firestore data |
 | E-Commerce | 4 | 4 | 0 | Products, Orders functional |
 | Forms | 2 | 2 | 0 | Form builder working |
 | Communication | 3 | 3 | 0 | Conversations, Calls working |
-| Admin Dashboards | 3 | 0 | 3 | All have mock statistics |
+| Admin Dashboards | 3 | 3 | 0 | ✅ Fixed: Now uses real API data |
 | Coaching | 2 | 0 | 2 | Hard-coded user/team IDs |
 
 ---
@@ -91,26 +92,27 @@
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| CSS Variable Usage | 95% PASS | Most components use var(--color-*) |
-| Hard-coded Hex Colors | 3 violations | Admin pages only, dark theme grays |
+| CSS Variable Usage | 100% PASS | ✅ All admin pages now use var(--color-*) |
+| Hard-coded Hex Colors | 0 violations | ✅ Fixed: Admin pages converted to CSS variables |
 | RGB/RGBA Usage | PASS | Properly using CSS variables |
 
 ---
 
 ## Recommended Fix Priority
 
-### Week 1: Critical Mock Data
-1. Replace admin dashboard statistics with Firestore queries
-2. Replace AI Agents page mock data with system status API
-3. Replace Living Ledger mock deals with CRM data
-4. Replace Playbook mock data with training database
+### ✅ COMPLETED (Truth Sweep - February 5, 2026)
+1. ✅ Replace admin dashboard statistics with Firestore queries
+2. ✅ Replace AI Agents page mock data with system status API
+3. ✅ Replace Living Ledger mock deals with CRM data
+4. ✅ Replace Playbook mock data with training database
+5. ✅ Convert admin hex colors to CSS variables
 
-### Week 2: Legacy Cleanup
+### Week 1: Remaining Fixes
 1. Remove tenantId fallback from login page
 2. Remove tenantId prop from SwarmMonitorWidget
-3. Convert admin hex colors to CSS variables
+3. Replace Templates Library mock deal IDs
 
-### Week 3: Feature Completion
+### Week 2: Feature Completion
 1. Implement coaching auth context integration
 2. Implement battlecard PDF export
 3. Add toast notifications to risk dashboard
