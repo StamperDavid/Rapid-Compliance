@@ -8,6 +8,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getEmail, parseEmailHeaders, getEmailBody, type GmailMessage } from '@/lib/integrations/gmail-service';
 import { classifyReply, sendReplyEmail, type ReplyClassification } from '@/lib/outbound/reply-handler';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -138,7 +139,6 @@ export async function POST(request: NextRequest) {
           await processNewEmail(
             msg.message.id,
             integration.userId,
-            integration.organizationId,
             {
               access_token: integration.credentials.access_token,
               refresh_token: integration.credentials.refresh_token,
@@ -278,7 +278,6 @@ async function findIntegrationByEmail(email: string): Promise<GmailIntegration |
 async function processNewEmail(
   messageId: string,
   userId: string,
-  organizationId: string,
   tokens: { access_token: string; refresh_token?: string }
 ): Promise<void> {
   try {
@@ -334,7 +333,7 @@ async function processNewEmail(
           }
         } else {
           // Save for human review
-          await saveForReview(organizationId, emailData, classification);
+          await saveForReview(emailData, classification);
           logger.info('Saved for human review', { route: '/api/webhooks/gmail' });
         }
         break;
@@ -342,38 +341,36 @@ async function processNewEmail(
       case 'book_meeting':
         // Trigger meeting scheduler
         logger.info('Triggering meeting scheduler', { route: '/api/webhooks/gmail' });
-        // TODO: Implement auto-meeting booking
-        await saveForReview(organizationId, emailData, classification);
+        await saveForReview(emailData, classification);
         break;
 
       case 'unenroll':
         // Remove from sequences
         logger.info('Unenrolling prospect', { route: '/api/webhooks/gmail' });
         await unenrollProspectFromSequences(
-          organizationId,
           headers.from,
           classification.intent === 'unsubscribe' ? 'unsubscribed' : 'replied'
         );
-        await saveForReview(organizationId, emailData, classification);
+        await saveForReview(emailData, classification);
         break;
 
       case 'mark_as_converted':
         // Mark prospect as converted
         logger.info('Marking prospect as converted', { route: '/api/webhooks/gmail' });
-        await unenrollProspectFromSequences(organizationId, headers.from, 'converted');
-        await saveForReview(organizationId, emailData, classification);
+        await unenrollProspectFromSequences(headers.from, 'converted');
+        await saveForReview(emailData, classification);
         break;
 
       case 'pause_sequence':
         // Pause but don't remove from sequence
         logger.info('Pausing sequences for prospect', { route: '/api/webhooks/gmail' });
-        await pauseProspectSequences(organizationId, headers.from);
-        await saveForReview(organizationId, emailData, classification);
+        await pauseProspectSequences(headers.from);
+        await saveForReview(emailData, classification);
         break;
 
       default:
         // Save for review
-        await saveForReview(organizationId, emailData, classification);
+        await saveForReview(emailData, classification);
     }
   } catch (error) {
     logger.error('Error processing Gmail email', error instanceof Error ? error : new Error(String(error)), { route: '/api/webhooks/gmail' });
@@ -384,15 +381,14 @@ async function processNewEmail(
  * Unenroll prospect from all active sequences
  */
 async function unenrollProspectFromSequences(
-  organizationId: string,
   prospectEmail: string,
   reason: 'manual' | 'replied' | 'converted' | 'unsubscribed' | 'bounced'
 ): Promise<void> {
   try {
-    // Find prospect by email
+    // PENTHOUSE: query directly under DEFAULT_ORG_ID
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
       [where('email', '==', prospectEmail)]
     );
 
@@ -409,16 +405,14 @@ async function unenrollProspectFromSequences(
 
     const prospectId = firstProspect.id;
 
-    // Find all active enrollments for this prospect
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
       [
         where('prospectId', '==', prospectId),
         where('status', '==', 'active'),
       ]
     );
 
-    // Unenroll from each sequence
     const { SequenceEngine } = await import('@/lib/outbound/sequence-engine');
     for (const enrollment of enrollments) {
       if (!isEnrollment(enrollment)) {
@@ -428,7 +422,7 @@ async function unenrollProspectFromSequences(
       await SequenceEngine['unenrollProspect'](
         prospectId,
         enrollment.sequenceId,
-        organizationId,
+        DEFAULT_ORG_ID,
         reason
       );
       logger.info('Unenrolled prospect from sequence', {
@@ -447,13 +441,13 @@ async function unenrollProspectFromSequences(
  * Pause prospect sequences (don't unenroll)
  */
 async function pauseProspectSequences(
-  organizationId: string,
   prospectEmail: string
 ): Promise<void> {
   try {
+    // PENTHOUSE: query directly under DEFAULT_ORG_ID
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
       [where('email', '==', prospectEmail)]
     );
 
@@ -466,23 +460,21 @@ async function pauseProspectSequences(
 
     const prospectId = firstProspect.id;
 
-    // Find all active enrollments
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
       [
         where('prospectId', '==', prospectId),
         where('status', '==', 'active'),
       ]
     );
 
-    // Pause each enrollment
     for (const enrollment of enrollments) {
       if (!isEnrollment(enrollment)) {
         continue;
       }
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
         enrollment.id,
         {
           ...enrollment,
@@ -506,7 +498,6 @@ async function pauseProspectSequences(
  * Save email for human review
  */
 async function saveForReview(
-  organizationId: string,
   email: GmailMessage,
   classification: ReplyClassification
 ): Promise<void> {
@@ -515,7 +506,7 @@ async function saveForReview(
 
   const emailId = email.id ?? `unknown_${Date.now()}`;
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/inbox`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/inbox`,
     emailId,
     {
       id: emailId,

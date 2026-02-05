@@ -1,13 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
 // Type definitions
-interface Organization {
-  id: string;
-  name?: string;
-}
-
 interface CallRecord {
   id: string;
   twilioCallSid: string;
@@ -17,15 +13,6 @@ interface CallRecord {
 }
 
 // Type guards
-function isOrganization(value: unknown): value is Organization {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    typeof (value as Organization).id === 'string'
-  );
-}
-
 function isCallRecord(value: unknown): value is CallRecord {
   return (
     typeof value === 'object' &&
@@ -53,48 +40,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'CallSid required' }, { status: 400 });
     }
 
-    // Find call record by Twilio SID
-    const orgs = await FirestoreService.getAll('organizations', []);
+    // PENTHOUSE: query directly under DEFAULT_ORG_ID
+    const calls = await FirestoreService.getAll(
+      `organizations/${DEFAULT_ORG_ID}/workspaces/default/calls`,
+      []
+    );
 
-    for (const org of orgs) {
-      if (!isOrganization(org)) {
-        continue;
+    const call = calls.find((c: unknown) => {
+      if (!isCallRecord(c)) {
+        return false;
       }
+      return c.twilioCallSid === callSid;
+    });
 
-      const calls = await FirestoreService.getAll(
-        `organizations/${org.id}/workspaces/default/calls`,
-        []
+    if (call && isCallRecord(call)) {
+      await FirestoreService.update(
+        `organizations/${DEFAULT_ORG_ID}/workspaces/default/calls`,
+        call.id,
+        {
+          status: callStatus,
+          duration: duration ? parseInt(duration) : null,
+          recordingUrl: recordingUrl ?? null,
+          updatedAt: new Date().toISOString(),
+        }
       );
 
-      const call = calls.find((c: unknown) => {
-        if (!isCallRecord(c)) {
-          return false;
-        }
-        return c.twilioCallSid === callSid;
+      logger.info('Voice call status updated', {
+        route: '/api/webhooks/voice',
+        callId: call.id,
+        status: callStatus,
+        duration: duration ? parseInt(duration) : 0,
       });
-
-      if (call && isCallRecord(call)) {
-        // Update call record
-        await FirestoreService.update(
-          `organizations/${org.id}/workspaces/default/calls`,
-          call.id,
-          {
-            status: callStatus,
-            duration: duration ? parseInt(duration) : null,
-            recordingUrl: recordingUrl ?? null,
-            updatedAt: new Date().toISOString(),
-          }
-        );
-
-        logger.info('Voice call status updated', {
-          route: '/api/webhooks/voice',
-          callId: call.id,
-          status: callStatus,
-          duration: duration ? parseInt(duration) : 0,
-        });
-
-        break;
-      }
     }
 
     return NextResponse.json({ success: true });

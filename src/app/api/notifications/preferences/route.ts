@@ -14,6 +14,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { updatePreferencesRequestSchema } from '@/lib/notifications/validation';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { Timestamp } from 'firebase/firestore';
 import type { NotificationPreferences } from '@/lib/notifications/types';
 
@@ -72,13 +73,10 @@ function checkRateLimit(key: string, limit: number, windowMs: number): {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID and org ID (from session/auth)
-    // TODO: Implement proper authentication
+    // Get user ID (from session/auth) - PENTHOUSE: always use DEFAULT_ORG_ID
     const userIdHeader = request.headers.get('x-user-id');
     const userId = (userIdHeader && userIdHeader !== '') ? userIdHeader : 'default_user';
-
-    const orgIdHeader = request.headers.get('x-org-id');
-    const orgId = (orgIdHeader && orgIdHeader !== '') ? orgIdHeader : 'default_org';
+    const orgId = DEFAULT_ORG_ID;
 
     // Check rate limit
     const rateLimit = checkRateLimit(`prefs:${userId}`, 30, 60000);
@@ -159,14 +157,11 @@ export async function PUT(request: NextRequest) {
 
     const body = rawBody as UpdatePreferencesRequestBody;
 
-    // Get user ID and org ID (from session/auth)
+    // Get user ID - PENTHOUSE: always use DEFAULT_ORG_ID
     const userIdHeader = request.headers.get('x-user-id');
     const bodyUserId = typeof body.userId === 'string' ? body.userId : undefined;
     const userId: string = userIdHeader ?? bodyUserId ?? 'default_user';
-
-    const orgIdHeader = request.headers.get('x-org-id');
-    const bodyOrgId = typeof body.orgId === 'string' ? body.orgId : undefined;
-    const orgId: string = orgIdHeader ?? bodyOrgId ?? 'default_org';
+    const orgId = DEFAULT_ORG_ID;
 
     // Add userId and orgId to body for validation
     body.userId = userId;

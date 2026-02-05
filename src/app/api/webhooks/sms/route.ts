@@ -6,17 +6,12 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
-
-// Type definitions
-interface Organization {
-  id: string;
-  name?: string;
-}
 
 interface SMSMessage {
   id: string;
@@ -52,15 +47,6 @@ const TWILIO_STATUS_MAP = {
 } as const;
 
 // Type guards
-function isOrganization(value: unknown): value is Organization {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    typeof (value as Organization).id === 'string'
-  );
-}
-
 function isSMSMessage(value: unknown): value is SMSMessage {
   return (
     typeof value === 'object' &&
@@ -159,51 +145,35 @@ async function updateSMSRecord(
   }
 ): Promise<void> {
   try {
-    // Find SMS record by messageSid across all organizations
-    const orgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS, []);
+    // PENTHOUSE: query directly under DEFAULT_ORG_ID
+    const smsMessages = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
+      []
+    );
 
-    for (const org of orgs) {
-      if (!isOrganization(org)) {
-        continue;
+    const smsRecord = smsMessages.find((sms: unknown) => {
+      if (!isSMSMessage(sms)) {
+        return false;
       }
+      return sms.messageId === messageSid;
+    });
 
-      try {
-        // Search for SMS in this org
-        const smsMessages = await FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${org.id}/smsMessages`,
-          []
-        );
-
-        const smsRecord = smsMessages.find((sms: unknown) => {
-          if (!isSMSMessage(sms)) {
-            return false;
-          }
-          return sms.messageId === messageSid;
-        });
-
-        if (smsRecord && isSMSMessage(smsRecord)) {
-          // Update the record
-          await FirestoreService.update(
-            `${COLLECTIONS.ORGANIZATIONS}/${org.id}/smsMessages`,
-            smsRecord.id,
-            {
-              ...updates,
-              updatedAt: new Date().toISOString(),
-            }
-          );
-
-          logger.info('SMS record updated', {
-            route: '/api/webhooks/sms',
-            orgId: org.id,
-            smsId: smsRecord.id
-          });
-
-          return; // Found and updated, exit
+    if (smsRecord && isSMSMessage(smsRecord)) {
+      await FirestoreService.update(
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
+        smsRecord.id,
+        {
+          ...updates,
+          updatedAt: new Date().toISOString(),
         }
-      } catch (err) {
-        logger.debug('Error searching org for SMS', { orgId: org.id, error: err instanceof Error ? err.message : String(err) });
-        continue;
-      }
+      );
+
+      logger.info('SMS record updated', {
+        route: '/api/webhooks/sms',
+        smsId: smsRecord.id
+      });
+
+      return;
     }
 
     logger.warn('SMS record not found', {
@@ -231,72 +201,60 @@ async function handleSMSFailure(
       errorMessage
     });
 
-    // Get SMS record to find associated enrollment
-    const orgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS, []);
+    // PENTHOUSE: query directly under DEFAULT_ORG_ID
+    const smsMessages = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
+      []
+    );
 
-    for (const org of orgs) {
-      if (!isOrganization(org)) {
-        continue;
+    const smsRecord = smsMessages.find((sms: unknown) => {
+      if (!isSMSMessage(sms)) {
+        return false;
       }
+      return sms.messageId === messageSid;
+    });
 
-      const smsMessages = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${org.id}/smsMessages`,
-        []
+    if (smsRecord && isSMSMessage(smsRecord) && smsRecord.enrollmentId) {
+      const enrollment = await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+        smsRecord.enrollmentId
       );
 
-      const smsRecord = smsMessages.find((sms: unknown) => {
-        if (!isSMSMessage(sms)) {
-          return false;
-        }
-        return sms.messageId === messageSid;
-      });
+      if (enrollment && isEnrollment(enrollment)) {
+        const stepActions = enrollment.stepActions ?? [];
+        const action = stepActions.find((a: StepAction) => a.stepId === smsRecord.stepId);
+        if (action) {
+          action.status = 'failed';
+          action.error = errorMessage ?? `Error ${errorCode}`;
+          action.updatedAt = new Date().toISOString();
 
-      if (smsRecord && isSMSMessage(smsRecord) && smsRecord.enrollmentId) {
-        // Get the enrollment
-        const enrollment = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${org.id}/enrollments`,
-          smsRecord.enrollmentId
-        );
-
-        if (enrollment && isEnrollment(enrollment)) {
-          // Update enrollment step action
-          const stepActions = enrollment.stepActions ?? [];
-          const action = stepActions.find((a: StepAction) => a.stepId === smsRecord.stepId);
-          if (action) {
-            action.status = 'failed';
-            action.error = errorMessage ?? `Error ${errorCode}`;
-            action.updatedAt = new Date().toISOString();
-
-            await FirestoreService.update(
-              `${COLLECTIONS.ORGANIZATIONS}/${org.id}/enrollments`,
-              smsRecord.enrollmentId,
-              {
-                stepActions,
-                updatedAt: new Date().toISOString(),
-              }
-            );
-          }
-
-          // For hard failures (invalid number), unenroll from sequence
-          const hardFailureCodes = ['21211', '21614', '21617']; // Invalid number, landline, etc.
-          if (errorCode && hardFailureCodes.includes(errorCode)) {
-            const { SequenceEngine } = await import('@/lib/outbound/sequence-engine');
-            await SequenceEngine['unenrollProspect'](
-              enrollment.prospectId,
-              enrollment.sequenceId,
-              org.id,
-              'bounced'
-            );
-
-            logger.info('Prospect unenrolled due to SMS hard bounce', {
-              route: '/api/webhooks/sms',
-              errorCode,
-              enrollmentId: smsRecord.enrollmentId,
-            });
-          }
+          await FirestoreService.update(
+            `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+            smsRecord.enrollmentId,
+            {
+              stepActions,
+              updatedAt: new Date().toISOString(),
+            }
+          );
         }
 
-        return;
+        // For hard failures (invalid number), unenroll from sequence
+        const hardFailureCodes = ['21211', '21614', '21617'];
+        if (errorCode && hardFailureCodes.includes(errorCode)) {
+          const { SequenceEngine } = await import('@/lib/outbound/sequence-engine');
+          await SequenceEngine['unenrollProspect'](
+            enrollment.prospectId,
+            enrollment.sequenceId,
+            DEFAULT_ORG_ID,
+            'bounced'
+          );
+
+          logger.info('Prospect unenrolled due to SMS hard bounce', {
+            route: '/api/webhooks/sms',
+            errorCode,
+            enrollmentId: smsRecord.enrollmentId,
+          });
+        }
       }
     }
   } catch (error) {
