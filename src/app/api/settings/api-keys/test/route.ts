@@ -9,6 +9,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Type definitions for API responses
 interface OpenAIErrorResponse {
@@ -74,11 +75,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
     const service = searchParams.get('service');
 
-    if (!orgId || !service) {
-      return errors.badRequest('Missing required parameters');
+    if (!service) {
+      return errors.badRequest('Missing required parameter: service');
     }
 
     // Load API keys

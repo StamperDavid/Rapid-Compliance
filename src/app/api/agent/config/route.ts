@@ -3,6 +3,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Agent Configuration Types
@@ -79,12 +80,8 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
-
-    if (!orgId) {
-      return errors.badRequest('Organization ID required');
-    }
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
 
     // Get agent configuration
     const agentConfigRaw = await FirestoreService.get(
@@ -143,11 +140,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as SaveConfigRequestBody;
-    const { orgId, selectedModel, modelConfig } = body;
+    const { selectedModel, modelConfig } = body;
 
-    if (!orgId) {
-      return errors.badRequest('Organization ID required');
-    }
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
 
     // Prepare configuration data with defaults
     const configData: AgentConfigData = {

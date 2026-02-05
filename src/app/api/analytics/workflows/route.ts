@@ -3,6 +3,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Helper function to safely convert various date formats to Date object
@@ -55,14 +56,11 @@ export async function GET(request: NextRequest) {
     if (rateLimitResponse) {return rateLimitResponse;}
 
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
-    const period = (searchParams.get('period') !== '' && searchParams.get('period') != null) 
-      ? searchParams.get('period') 
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
+    const period = (searchParams.get('period') !== '' && searchParams.get('period') != null)
+      ? searchParams.get('period')
       : '30d';
-
-    if (!orgId) {
-      return errors.badRequest('orgId is required');
-    }
 
     // Calculate date range based on period
     const now = new Date();

@@ -9,6 +9,7 @@ import { getTokensFromCode } from '@/lib/integrations/outlook-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,7 +44,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect('/integrations?error=invalid_state');
     }
 
-    const { userId, orgId } = stateValidation.data;
+    const { userId } = stateValidation.data;
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
     const tokens = await getTokensFromCode(code);
 
     await FirestoreService.set(
@@ -65,7 +68,8 @@ export async function GET(request: NextRequest) {
 
     logger.info('Microsoft integration saved', { route: '/api/integrations/microsoft/callback', orgId });
 
-    return NextResponse.redirect(`/workspace/${orgId}/integrations?success=microsoft`);
+    // SINGLE-TENANT: Redirect to flat route, not workspace-scoped
+    return NextResponse.redirect('/settings/integrations?success=microsoft');
   } catch (error) {
     const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Microsoft OAuth callback error', error instanceof Error ? error : undefined, { route: '/api/integrations/microsoft/callback' });

@@ -14,6 +14,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { db } from '@/lib/firebase-admin';
 import crypto from 'crypto';
 import type { SlackOAuthState } from '@/lib/slack/types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * GET /api/slack/oauth/authorize
@@ -30,20 +31,21 @@ export async function GET(request: NextRequest) {
     
     // Get parameters
     const searchParams = request.nextUrl.searchParams;
-    const orgId = searchParams.get('orgId');
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
     const userId = searchParams.get('userId');
     const redirectUrl = searchParams.get('redirectUrl');
-    
-    if (!orgId || !userId) {
+
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Missing required parameters: orgId, userId' },
+        { error: 'Missing required parameter: userId' },
         { status: 400 }
       );
     }
-    
+
     // Generate state token
     const state = crypto.randomBytes(32).toString('hex');
-    
+
     // Store state in Firestore (expires in 10 minutes)
     const oauthState: SlackOAuthState = {
       state,

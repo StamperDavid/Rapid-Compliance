@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { VoiceEngineFactory, type TTSEngineType, type TTSSynthesizeRequest } from '@/lib/voice/tts';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface TTSPostBody {
   text?: string;
@@ -26,7 +27,8 @@ interface TTSPostBody {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const orgId = searchParams.get('orgId');
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
     const engine = searchParams.get('engine') as TTSEngineType | null;
     const action = searchParams.get('action');
 
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get org config
-    if (action === 'config' && orgId) {
+    if (action === 'config') {
       const config = await VoiceEngineFactory.getOrgConfig(orgId);
       return NextResponse.json({ success: true, config });
     }
@@ -50,16 +52,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get voices for an engine
-    if (orgId) {
-      const voices = await VoiceEngineFactory.listVoices(orgId, engine ?? undefined);
-      return NextResponse.json({ success: true, voices, engine: engine ?? 'native' });
-    }
-
-    return NextResponse.json({
-      success: true,
-      providers: VoiceEngineFactory.getAllProviderInfo(),
-      defaultEngine: 'native',
-    });
+    const voices = await VoiceEngineFactory.listVoices(orgId, engine ?? undefined);
+    return NextResponse.json({ success: true, voices, engine: engine ?? 'native' });
   } catch (error) {
     console.error('TTS GET error:', error);
     return NextResponse.json(
@@ -76,7 +70,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as TTSPostBody;
-    const { text, organizationId, engine, voiceId, settings, action, apiKey, config, userId } = body;
+    const { text, engine, voiceId, settings, action, apiKey, config, userId } = body;
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const organizationId = DEFAULT_ORG_ID;
 
     // Validate API key
     if (action === 'validate-key') {
@@ -92,9 +88,9 @@ export async function POST(request: NextRequest) {
 
     // Save org config
     if (action === 'save-config') {
-      if (!organizationId || !config || !userId) {
+      if (!config || !userId) {
         return NextResponse.json(
-          { success: false, error: 'organizationId, config, and userId are required' },
+          { success: false, error: 'config and userId are required' },
           { status: 400 }
         );
       }
@@ -103,9 +99,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Synthesize text
-    if (!text || !organizationId) {
+    if (!text) {
       return NextResponse.json(
-        { success: false, error: 'text and organizationId are required' },
+        { success: false, error: 'text is required' },
         { status: 400 }
       );
     }

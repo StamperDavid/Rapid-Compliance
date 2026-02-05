@@ -11,6 +11,7 @@ import type { OutboundSequence, SequenceStep, SendTime, StepCondition, SequenceS
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 type StepType = 'email' | 'linkedin_message' | 'sms' | 'call_task' | 'manual_task';
 
@@ -59,16 +60,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
     const limitParam = searchParams.get('limit');
     const pageSize = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
-
-    if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID is required' },
-        { status: 400 }
-      );
-    }
 
     // NEW PRICING MODEL: All features available to all active subscriptions
     // Feature check no longer needed - everyone gets email sequences!
@@ -113,11 +108,9 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Invalid request body');
     }
 
-    const { orgId, name, description, steps, autoEnroll = false } = body;
-
-    if (!orgId) {
-      return errors.badRequest('Organization ID is required');
-    }
+    const { name, description, steps, autoEnroll = false } = body;
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
 
     if (!name) {
       return errors.badRequest('Sequence name is required');

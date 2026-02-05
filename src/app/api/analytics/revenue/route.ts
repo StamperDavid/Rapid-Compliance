@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Helper function to convert various date formats to Date object
@@ -34,13 +35,10 @@ export async function GET(request: NextRequest) {
     if (rateLimitResponse) {return rateLimitResponse;}
 
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
     const periodParam = searchParams.get('period');
     const period = (periodParam !== '' && periodParam != null) ? periodParam : '30d';
-
-    if (!orgId) {
-      return errors.badRequest('orgId is required');
-    }
 
     // Use caching for analytics queries
     const analytics = await withCache(

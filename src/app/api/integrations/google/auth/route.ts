@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,10 +20,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const orgId = searchParams.get('orgId');
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
 
-    if (!userId || !orgId) {
-      return errors.badRequest('Missing userId or orgId');
+    if (!userId) {
+      return errors.badRequest('Missing userId');
     }
 
     // Store state for callback

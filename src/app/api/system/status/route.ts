@@ -21,6 +21,7 @@ import {
 } from '@/lib/agents/orchestrator/manager';
 import type { AgentStatus } from '@/lib/agents/types';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RESPONSE TYPES - Frontend-optimized shapes
@@ -709,9 +710,8 @@ export async function GET(
       );
     }
 
-    // Get tenant ID from query params or auth context
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') ?? authResult.user.tenantId ?? 'default';
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const tenantId = DEFAULT_ORG_ID;
 
     logger.info('[SystemStatus] Fetching swarm status', {
       tenantId,

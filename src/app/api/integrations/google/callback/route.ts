@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/google-calendar-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Zod schema for OAuth state validation
 const OAuthStateSchema = z.object({
@@ -52,7 +53,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=invalid_state'));
     }
 
-    const { userId, orgId } = stateValidation.data;
+    const { userId } = stateValidation.data;
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
 
     // Exchange code for tokens
     const tokens = await getTokensFromCode(code);

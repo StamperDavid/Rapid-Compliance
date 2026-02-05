@@ -8,6 +8,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config'
 import { logger } from '@/lib/logger/logger';
 import type { AccountRole } from '@/types/unified-rbac';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface FirebaseError {
   code: string;
@@ -73,7 +74,8 @@ export default function LoginPage() {
 
       const userData = userDoc.data() as UserDocument;
       const userRole = userData.role;
-      const orgId = userData.tenantId ?? userData.organizationId;
+      // SINGLE-TENANT: Always use DEFAULT_ORG_ID - ignore stored tenantId/organizationId
+      const orgId = DEFAULT_ORG_ID;
 
       logger.info('User role detected', {
         uid: user.uid,
@@ -83,7 +85,7 @@ export default function LoginPage() {
       });
 
       // SMART ROLE REDIRECTION
-      // Superadmins are routed to /admin, all others to their workspace
+      // Superadmins are routed to /admin, all others to dashboard
       if (userRole === 'superadmin') {
         logger.info('Platform admin detected, redirecting to /admin', {
           uid: user.uid,
@@ -91,22 +93,15 @@ export default function LoginPage() {
         });
         // Set redirecting state to show clean loading UI (prevents FOUC)
         setRedirecting(true);
-        // Clear any tenant context for platform admin scope
-        // (activeTenant will be null in admin context)
         router.push('/admin');
         return;
-      }
-
-      // Tenant user validation
-      if (!orgId) {
-        throw new Error('No organization associated with this account.');
       }
 
       // Set redirecting state for clean transition
       setRedirecting(true);
 
-      // Redirect tenant users to their workspace dashboard
-      router.push(`/workspace/${orgId}/dashboard`);
+      // SINGLE-TENANT: Redirect to flat dashboard route
+      router.push('/dashboard');
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       logger.error('Login error:', error, { file: 'login/page.tsx' });

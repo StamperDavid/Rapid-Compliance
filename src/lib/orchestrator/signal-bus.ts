@@ -1,6 +1,8 @@
-// STATUS: HARDENED - Strict Multi-Tenant Isolation Implemented
-// SECURITY: All broadcasts and listeners are scoped by tenantId
-// PATTERN: Registry Pattern with O(1) tenant lookup
+// STATUS: SINGLE-TENANT MODE - SalesVelocity.ai Penthouse Model
+// All broadcasts and listeners use DEFAULT_ORG_ID (rapid-compliance-root)
+// PATTERN: Registry Pattern with single tenant registry
+// NOTE: Internal tenantId parameters are kept for interface compatibility
+//       but all callers should pass DEFAULT_ORG_ID
 
 import type {
   Signal,
@@ -9,6 +11,9 @@ import type {
   AgentReport,
 } from '../agents/types';
 import { logger } from '@/lib/logger/logger';
+
+// Re-export DEFAULT_ORG_ID for use by callers
+export { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 type SignalListener = (signal: Signal) => void;
 
@@ -66,24 +71,22 @@ interface TenantValidationResult {
 }
 
 // ============================================================================
-// SIGNALBUS - HARDENED MULTI-TENANT IMPLEMENTATION
+// SIGNALBUS - SINGLE-TENANT MODE (SalesVelocity.ai)
 // ============================================================================
 
 /**
  * SignalBus - The nervous system of the Agent Swarm
  *
- * SECURITY HARDENED:
- * - All operations require explicit tenantId
- * - O(1) tenant lookup via Map<TenantId, TenantRegistry>
- * - No global state - complete tenant isolation
- * - Automatic cleanup via tearDown(tenantId)
- * - Middleware validation against TenantMemoryVault
+ * SINGLE-TENANT DEPLOYMENT:
+ * - Uses DEFAULT_ORG_ID (rapid-compliance-root) for all operations
+ * - tenantId parameters kept for interface compatibility
+ * - Single registry serves the entire platform
  *
  * Supports four signal types:
- * - BROADCAST: Send to all agents within a tenant
- * - DIRECT: Send to specific agent within a tenant
- * - BUBBLE_UP: Specialist -> Manager -> Jasper (tenant-scoped)
- * - BUBBLE_DOWN: Jasper -> Manager -> Specialist (tenant-scoped)
+ * - BROADCAST: Send to all agents
+ * - DIRECT: Send to specific agent
+ * - BUBBLE_UP: Specialist -> Manager -> Jasper
+ * - BUBBLE_DOWN: Jasper -> Manager -> Specialist
  */
 export class SignalBus {
   // Master registry: Map<tenantId, TenantRegistry> for O(1) tenant lookup

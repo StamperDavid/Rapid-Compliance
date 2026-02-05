@@ -5,6 +5,7 @@ import { searchQuerySchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,12 +22,14 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+    // Auth verified - user is authenticated (single-tenant, no org check needed)
+    const { user: _user } = authResult;
 
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q');
-    const orgId = searchParams.get('orgId');
-    const workspaceId = searchParams.get('workspaceId');
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
+    const workspaceId = searchParams.get('workspaceId') ?? 'default';
     const limitParam = searchParams.get('limit');
     const limit = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
 
@@ -48,14 +51,10 @@ export async function GET(request: NextRequest) {
       return errors.validation('Validation failed', { errors: zodErrors });
     }
 
-    const { orgId: validatedOrgId, workspaceId: validatedWorkspaceId, q: validatedQuery, limit: validatedLimit } = validation.data;
+    const { workspaceId: validatedWorkspaceId, q: validatedQuery, limit: validatedLimit } = validation.data;
 
-    // Verify user has access to this organization
-    if (user.organizationId !== validatedOrgId) {
-      return errors.forbidden('Access denied to this organization');
-    }
-
-    const results = await searchWorkspace(validatedOrgId, validatedWorkspaceId, validatedQuery, { limit: validatedLimit });
+    // SINGLE-TENANT: No org access check needed - all authenticated users access the same org
+    const results = await searchWorkspace(orgId, validatedWorkspaceId, validatedQuery, { limit: validatedLimit });
 
     return NextResponse.json({
       success: true,

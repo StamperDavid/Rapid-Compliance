@@ -9,6 +9,7 @@ import { getTokensFromCode } from '@/lib/integrations/quickbooks-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,8 @@ export async function GET(request: NextRequest) {
   try {
     // Decode and validate state
     let userId = 'default';
-    let orgId = 'default';
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
 
     if (state) {
       const decodedState: unknown = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
 
       if (stateValidation.success) {
         userId = stateValidation.data.userId;
-        orgId = stateValidation.data.orgId;
+        // orgId is now always DEFAULT_ORG_ID, ignore state.orgId
       } else {
         logger.warn('Invalid QuickBooks OAuth state', { errors: JSON.stringify(stateValidation.error.errors) });
       }
@@ -75,7 +77,8 @@ export async function GET(request: NextRequest) {
 
     logger.info('QuickBooks integration saved', { route: '/api/integrations/quickbooks/callback', orgId, realmId });
 
-    return NextResponse.redirect(`/workspace/${orgId}/integrations?success=quickbooks`);
+    // SINGLE-TENANT: Redirect to flat route, not workspace-scoped
+    return NextResponse.redirect('/settings/integrations?success=quickbooks');
   } catch (error) {
     const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('QuickBooks OAuth callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/quickbooks/callback' });

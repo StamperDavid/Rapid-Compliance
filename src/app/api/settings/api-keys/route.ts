@@ -9,6 +9,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { handleAPIError, errors, validateRequired } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface ApiKeysDocument {
   [service: string]: string | undefined;
@@ -37,12 +38,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return authResult;
     }
 
-    const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
-
-    if (!orgId) {
-      return handleAPIError(errors.badRequest('Organization ID required'));
-    }
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
 
     // Load keys from Firestore
     const apiKeys = await FirestoreService.get<ApiKeysDocument>(
@@ -96,15 +93,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const body: unknown = await request.json();
 
-    // Validate required fields
-    const validation = validateRequired(body as Record<string, unknown>, ['orgId', 'service', 'key']);
+    // Validate required fields - orgId no longer required (single-tenant)
+    const validation = validateRequired(body as Record<string, unknown>, ['service', 'key']);
     if (!validation.valid) {
       return handleAPIError(
         errors.badRequest('Missing required fields', { missing: validation.missing })
       );
     }
 
-    const { orgId, service, key } = body as SaveApiKeyBody;
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const orgId = DEFAULT_ORG_ID;
+    const { service, key } = body as SaveApiKeyBody;
 
     // Load existing keys
     const existingKeys: ApiKeysDocument = await FirestoreService.get<ApiKeysDocument>(
