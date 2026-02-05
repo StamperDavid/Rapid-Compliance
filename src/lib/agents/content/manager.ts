@@ -45,6 +45,7 @@ import {
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
 import type { TechnicalBrief, PageSEORequirements } from '../architect/manager';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Minimal BrandDNA type for this manager (used by getBrandDNA return type)
 interface _BrandDNA {
@@ -530,11 +531,11 @@ export class ContentManager extends BaseManager {
       const contentPackage = await this.orchestrateContentProduction(payload, taskId, startTime);
 
       // Store insights in TenantMemoryVault for cross-agent learning
-      await this.storeContentInsights(payload.tenantId, contentPackage);
+      await this.storeContentInsights(contentPackage);
 
       // Broadcast content.package_ready signal if validation passed
       if (contentPackage.validation.passed) {
-        await this.broadcastContentReady(payload.tenantId, contentPackage);
+        await this.broadcastContentReady(contentPackage);
       }
 
       return this.createReport(taskId, 'COMPLETED', contentPackage);
@@ -628,25 +629,25 @@ export class ContentManager extends BaseManager {
   /**
    * Load Brand DNA from TenantMemoryVault for brand-consistent content
    */
-  private async loadBrandContext(tenantId: string): Promise<BrandContext> {
+  private async loadBrandContext(): Promise<BrandContext> {
     // Check cache first
-    if (this.brandContextCache.has(tenantId)) {
-      const cached = this.brandContextCache.get(tenantId);
+    if (this.brandContextCache.has(DEFAULT_ORG_ID)) {
+      const cached = this.brandContextCache.get(DEFAULT_ORG_ID);
       if (cached) {
         return cached;
       }
     }
 
     try {
-      const brandDNA = await getBrandDNA(tenantId);
+      const brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
 
       if (!brandDNA) {
-        this.log('WARN', `No Brand DNA found for tenant ${tenantId}, using defaults`);
-        return this.createDefaultBrandContext(tenantId);
+        this.log('WARN', `No Brand DNA found for org ${DEFAULT_ORG_ID}, using defaults`);
+        return this.createDefaultBrandContext(DEFAULT_ORG_ID);
       }
 
       const brandContext: BrandContext = {
-        tenantId,
+        tenantId: DEFAULT_ORG_ID,
         companyDescription: brandDNA.companyDescription ?? '',
         uniqueValue: brandDNA.uniqueValue ?? '',
         targetAudience: brandDNA.targetAudience ?? '',
@@ -665,13 +666,13 @@ export class ContentManager extends BaseManager {
       };
 
       // Cache for performance
-      this.brandContextCache.set(tenantId, brandContext);
-      this.log('INFO', `Loaded Brand DNA for tenant ${tenantId} (Industry: ${brandContext.industry})`);
+      this.brandContextCache.set(DEFAULT_ORG_ID, brandContext);
+      this.log('INFO', `Loaded Brand DNA for org ${DEFAULT_ORG_ID} (Industry: ${brandContext.industry})`);
 
       return brandContext;
     } catch (error) {
       this.log('ERROR', `Failed to load Brand DNA: ${error instanceof Error ? error.message : String(error)}`);
-      return this.createDefaultBrandContext(tenantId);
+      return this.createDefaultBrandContext(DEFAULT_ORG_ID);
     }
   }
 
@@ -812,7 +813,7 @@ export class ContentManager extends BaseManager {
     };
 
     // Step 1: Load Brand DNA
-    const brandContext = await this.loadBrandContext(request.tenantId);
+    const brandContext = await this.loadBrandContext();
     this.log('INFO', `Brand context loaded (Tone: ${brandContext.toneOfVoice})`);
 
     // Step 2: Extract SEO context from TechnicalBrief
@@ -1583,7 +1584,7 @@ export class ContentManager extends BaseManager {
   /**
    * Store content insights in TenantMemoryVault
    */
-  private async storeContentInsights(tenantId: string, contentPackage: ContentPackage): Promise<void> {
+  private async storeContentInsights(contentPackage: ContentPackage): Promise<void> {
     try {
       await shareInsight(
         this.identity.id,
@@ -1611,7 +1612,7 @@ export class ContentManager extends BaseManager {
   /**
    * Broadcast content.package_ready signal for downstream managers
    */
-  private async broadcastContentReady(tenantId: string, contentPackage: ContentPackage): Promise<void> {
+  private async broadcastContentReady(contentPackage: ContentPackage): Promise<void> {
     try {
       await broadcastSignal(
         this.identity.id,

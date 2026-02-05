@@ -3,13 +3,12 @@
  * STATUS: FUNCTIONAL
  *
  * Expert in building structured narrative case studies from success story data.
- * Implements a multi-tenant aware narrative engine that transforms "Before" and "After"
+ * Implements a narrative engine that transforms "Before" and "After"
  * data points into formatted case studies with JSON-LD schema for SEO-rich search results.
  *
  * CAPABILITIES:
  * - Structured narrative generation (Challenge, Solution, Results)
  * - JSON-LD schema generation for rich search results
- * - Multi-tenant data transformation
  * - SEO-optimized content structure
  * - Dynamic metric visualization data
  * - PDF and web section output formats
@@ -23,7 +22,6 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 // ============================================================================
 
 interface TenantContext {
-  tenantId: string;
   organizationId: string;
   brandName: string;
   industry: string;
@@ -36,7 +34,6 @@ interface TenantContext {
 
 interface SuccessStoryInput {
   id: string;
-  tenantId: string;
   clientName: string;
   clientIndustry: string;
   clientSize: string;
@@ -417,11 +414,11 @@ Generate valid JSON-LD for:
 - Include internal links
 - Add alt text for images
 
-## MULTI-TENANT AWARENESS
-- All content branded for tenant
-- Use tenant's color scheme variables
-- Include tenant's SEO keywords
-- Reference tenant's product name
+## BRANDING
+- All content branded for the organization
+- Use organization's color scheme variables
+- Include organization's SEO keywords
+- Reference organization's product name
 
 ## OUTPUT QUALITY
 - Data-driven with specific metrics
@@ -447,7 +444,7 @@ const CONFIG: SpecialistConfig = {
       'seo_optimization',
       'metric_visualization',
       'multi_format_export',
-      'multi_tenant_branding',
+      'branding',
     ],
   },
   systemPrompt: SYSTEM_PROMPT,

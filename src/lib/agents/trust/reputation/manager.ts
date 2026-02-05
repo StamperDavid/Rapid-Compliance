@@ -44,6 +44,7 @@ import {
   broadcastSignal,
 } from '../../shared/tenant-memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Minimal BrandDNA type for this manager
 interface BrandDNA {
@@ -735,7 +736,6 @@ export interface ReviewResponse {
  * Review solicitation request for OUTREACH_MANAGER
  */
 export interface ReviewSolicitationRequest {
-  tenantId: string;
   customerId: string;
   customerName: string;
   customerEmail: string;
@@ -751,7 +751,6 @@ export interface ReviewSolicitationRequest {
  * Reputation Brief - Trust Score Synthesis output
  */
 export interface ReputationBrief {
-  tenantId: string;
   generatedAt: string;
   executionTimeMs: number;
   trustScore: {
@@ -988,8 +987,6 @@ export class ReputationManager extends BaseManager {
 
     try {
       const payload = message.payload as ReputationQueryRequest;
-      const tenantId = (message.payload as Record<string, unknown>)?.tenantId as string ??
-                       (message.payload as Record<string, unknown>)?.organizationId as string ?? '';
 
       if (!payload?.action) {
         return this.createReport(
@@ -1035,25 +1032,25 @@ export class ReputationManager extends BaseManager {
           if (!payload.reviewData) {
             return this.createReport(taskId, 'FAILED', null, ['reviewData required for GENERATE_RESPONSE']);
           }
-          result = await this.generateResponse(tenantId, payload.reviewData, taskId);
+          result = await this.generateResponse(payload.reviewData, taskId);
           break;
 
         case 'SOLICIT_REVIEW':
           if (!payload.saleData) {
             return this.createReport(taskId, 'FAILED', null, ['saleData required for SOLICIT_REVIEW']);
           }
-          result = await this.solicitReview(tenantId, payload.saleData, taskId);
+          result = await this.solicitReview(payload.saleData, taskId);
           break;
 
         case 'UPDATE_GMB_PROFILE':
           if (!payload.gmbData) {
             return this.createReport(taskId, 'FAILED', null, ['gmbData required for UPDATE_GMB_PROFILE']);
           }
-          result = await this.updateGMBProfile(tenantId, payload.gmbData, taskId);
+          result = await this.updateGMBProfile(payload.gmbData, taskId);
           break;
 
         case 'GENERATE_BRIEF':
-          result = await this.generateReputationBrief(tenantId, taskId, startTime);
+          result = await this.generateReputationBrief(taskId, startTime);
           break;
 
         default:
@@ -1076,7 +1073,6 @@ export class ReputationManager extends BaseManager {
     const taskId = signal.id;
     const payload = signal.payload?.payload as Record<string, unknown> | undefined;
     const signalType = (payload?.signalType as string) ?? (signal.payload?.type as string) ?? 'UNKNOWN';
-    const tenantId = (payload?.tenantId as string) ?? (payload?.organizationId as string) ?? '';
 
     this.log('INFO', `Received signal: ${signalType} (signalId: ${signal.id})`);
 
@@ -1109,7 +1105,6 @@ export class ReputationManager extends BaseManager {
         payload: {
           action: 'SOLICIT_REVIEW',
           saleData,
-          tenantId,
         },
         requiresResponse: true,
         traceId: taskId,
@@ -1143,7 +1138,6 @@ export class ReputationManager extends BaseManager {
         payload: {
           action: 'GENERATE_RESPONSE',
           reviewData,
-          tenantId,
         },
         requiresResponse: true,
         traceId: taskId,
@@ -1167,7 +1161,6 @@ export class ReputationManager extends BaseManager {
               author: reviewData.author,
               url: reviewData.url,
             },
-            tenantId,
           },
         });
       }
@@ -1381,7 +1374,6 @@ export class ReputationManager extends BaseManager {
    * Implements the AI-Powered Response Engine
    */
   private async generateResponse(
-    tenantId: string,
     reviewData: {
       platform: string;
       rating: number;
@@ -1397,7 +1389,7 @@ export class ReputationManager extends BaseManager {
     // Load Brand DNA for tone alignment
     let brandTone = 'professional';
     try {
-      const brandDNA = await this.loadBrandDNA(tenantId);
+      const brandDNA = await this.loadBrandDNA();
       brandTone = brandDNA?.toneOfVoice ?? 'professional';
     } catch {
       this.log('WARN', 'Could not load Brand DNA, using default tone');
@@ -1508,7 +1500,7 @@ export class ReputationManager extends BaseManager {
           action: 'analyze_sentiment',
           text: reviewData.content,
           context: `${reviewData.platform} review`,
-          organizationId: tenantId,
+          organizationId: DEFAULT_ORG_ID,
         },
         timestamp: new Date(),
         priority: 'NORMAL',
@@ -1555,7 +1547,6 @@ export class ReputationManager extends BaseManager {
    * Implements the Review-to-Revenue feedback loop
    */
   private async solicitReview(
-    tenantId: string,
     saleData: {
       customerId: string;
       customerName: string;
@@ -1573,7 +1564,7 @@ export class ReputationManager extends BaseManager {
     let brandTone = 'warm';
     let preferredPlatforms = ['google', 'yelp'];
     try {
-      const brandDNA = await this.loadBrandDNA(tenantId);
+      const brandDNA = await this.loadBrandDNA();
       brandTone = brandDNA?.toneOfVoice ?? 'warm';
       // Use Brand DNA to determine preferred review platforms
       if (brandDNA?.industry === 'restaurant' || brandDNA?.industry === 'hospitality') {
@@ -1599,7 +1590,6 @@ export class ReputationManager extends BaseManager {
 
     // Build review solicitation request for OUTREACH_MANAGER
     const solicitationRequest: ReviewSolicitationRequest = {
-      tenantId,
       customerId: saleData.customerId,
       customerName: saleData.customerName,
       customerEmail: saleData.customerEmail,
@@ -1661,7 +1651,6 @@ export class ReputationManager extends BaseManager {
    * Update GMB profile by coordinating with GMB_SPECIALIST and CONTENT_MANAGER assets
    */
   private async updateGMBProfile(
-    tenantId: string,
     gmbData: {
       location: string;
       issue: string;
@@ -1678,7 +1667,7 @@ export class ReputationManager extends BaseManager {
     // Load Brand DNA for content alignment
     let brandContext = {};
     try {
-      const brandDNA = await this.loadBrandDNA(tenantId);
+      const brandDNA = await this.loadBrandDNA();
       brandContext = {
         businessDescription: brandDNA?.companyDescription,
         industry: brandDNA?.industry,
@@ -1700,7 +1689,7 @@ export class ReputationManager extends BaseManager {
       payload: {
         action: gmbData.action ?? 'draftLocalUpdate',
         business: {
-          id: tenantId,
+          id: DEFAULT_ORG_ID,
           name: 'Business', // Business name should come from org settings, not Brand DNA
           description: (brandContext as Record<string, unknown>).businessDescription,
           location: { address: gmbData.location, city: '', state: '', zip: '' },
@@ -1757,11 +1746,10 @@ export class ReputationManager extends BaseManager {
    * Generate comprehensive ReputationBrief (Trust Score Synthesis)
    */
   private async generateReputationBrief(
-    tenantId: string,
     taskId: string,
     startTime: number
   ): Promise<ReputationBrief> {
-    this.log('INFO', `Generating Reputation Brief for tenant: ${tenantId}`);
+    this.log('INFO', `Generating Reputation Brief for organization: ${DEFAULT_ORG_ID}`);
 
     const specialistResults: Array<{
       specialistId: string;
@@ -1772,9 +1760,9 @@ export class ReputationManager extends BaseManager {
 
     // Parallel execution of specialists for comprehensive data gathering
     const specialistPromises = [
-      this.queryReviewMetrics(tenantId, taskId),
-      this.querySentimentMetrics(tenantId, taskId),
-      this.queryGMBMetrics(tenantId, taskId),
+      this.queryReviewMetrics(taskId),
+      this.querySentimentMetrics(taskId),
+      this.queryGMBMetrics(taskId),
     ];
 
     const [reviewResult, sentimentResult, gmbResult] = await Promise.allSettled(specialistPromises);
@@ -1895,7 +1883,6 @@ export class ReputationManager extends BaseManager {
     );
 
     const brief: ReputationBrief = {
-      tenantId,
       generatedAt: new Date().toISOString(),
       executionTimeMs: Date.now() - startTime,
       trustScore: {
@@ -1944,7 +1931,6 @@ export class ReputationManager extends BaseManager {
    * Query review metrics from REVIEW_SPECIALIST
    */
   private async queryReviewMetrics(
-    tenantId: string,
     taskId: string
   ): Promise<{ data: unknown; executionTimeMs: number }> {
     const start = Date.now();
@@ -1953,7 +1939,7 @@ export class ReputationManager extends BaseManager {
       type: 'COMMAND',
       from: this.identity.id,
       to: 'REVIEW_SPECIALIST',
-      payload: { action: 'getMetrics', organizationId: tenantId },
+      payload: { action: 'getMetrics', organizationId: DEFAULT_ORG_ID },
       timestamp: new Date(),
       priority: 'NORMAL',
       requiresResponse: true,
@@ -1986,7 +1972,6 @@ export class ReputationManager extends BaseManager {
    * Query sentiment metrics from SENTIMENT_ANALYST
    */
   private async querySentimentMetrics(
-    tenantId: string,
     taskId: string
   ): Promise<{ data: unknown; executionTimeMs: number }> {
     const start = Date.now();
@@ -1995,7 +1980,7 @@ export class ReputationManager extends BaseManager {
       type: 'COMMAND',
       from: this.identity.id,
       to: 'SENTIMENT_ANALYST',
-      payload: { action: 'track_brand', brandName: tenantId, texts: [], organizationId: tenantId },
+      payload: { action: 'track_brand', brandName: DEFAULT_ORG_ID, texts: [], organizationId: DEFAULT_ORG_ID },
       timestamp: new Date(),
       priority: 'NORMAL',
       requiresResponse: true,
@@ -2024,7 +2009,6 @@ export class ReputationManager extends BaseManager {
    * Query GMB metrics from GMB_SPECIALIST
    */
   private async queryGMBMetrics(
-    tenantId: string,
     taskId: string
   ): Promise<{ data: unknown; executionTimeMs: number }> {
     const start = Date.now();
@@ -2033,7 +2017,7 @@ export class ReputationManager extends BaseManager {
       type: 'COMMAND',
       from: this.identity.id,
       to: 'GMB_SPECIALIST',
-      payload: { action: 'getProfileMetrics', business: { id: tenantId } },
+      payload: { action: 'getProfileMetrics', business: { id: DEFAULT_ORG_ID } },
       timestamp: new Date(),
       priority: 'NORMAL',
       requiresResponse: true,
@@ -2059,11 +2043,11 @@ export class ReputationManager extends BaseManager {
   }
 
   /**
-   * Load Brand DNA for tenant personalization
+   * Load Brand DNA for organization personalization
    */
-  private async loadBrandDNA(tenantId: string): Promise<BrandDNA | null> {
+  private async loadBrandDNA(): Promise<BrandDNA | null> {
     try {
-      const brandDNA = await getBrandDNA(tenantId);
+      const brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
       return brandDNA;
     } catch {
       return null;

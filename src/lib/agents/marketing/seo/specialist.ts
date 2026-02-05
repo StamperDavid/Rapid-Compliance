@@ -242,7 +242,6 @@ interface CrawlHealthReport {
 }
 
 interface KeywordGapResult {
-  tenantId: string;
   industry: string;
   analysisDate: string;
   currentKeywords: {
@@ -270,7 +269,6 @@ interface KeywordGapResult {
 }
 
 interface ThirtyDayStrategy {
-  tenantId: string;
   industry: string;
   generatedDate: string;
   weeks: Array<{
@@ -888,9 +886,9 @@ export class SEOExpert extends BaseSpecialist {
    * Simulated site crawl with technical health report
    */
   private handleCrawlAnalysis(payload: CrawlAnalysisPayload): CrawlHealthReport {
-    const { siteUrl, organizationId } = payload;
+    const { siteUrl } = payload;
 
-    this.log('INFO', `Running crawl analysis for ${siteUrl} (Tenant: ${organizationId})`);
+    this.log('INFO', `Running crawl analysis for ${siteUrl}`);
 
     // Simulate SSL check
     const ssl = this.analyzeSSL(siteUrl);
@@ -1188,9 +1186,9 @@ export class SEOExpert extends BaseSpecialist {
    * Analyze keyword gaps compared to market trends
    */
   private handleKeywordGap(payload: KeywordGapPayload): KeywordGapResult {
-    const { tenantIndustry, currentKeywords, organizationId } = payload;
+    const { tenantIndustry, currentKeywords } = payload;
 
-    this.log('INFO', `Running keyword gap analysis for ${tenantIndustry} (Tenant: ${organizationId})`);
+    this.log('INFO', `Running keyword gap analysis for ${tenantIndustry}`);
 
     // Analyze current keywords
     const currentAnalysis = currentKeywords.map(kw => ({
@@ -1219,7 +1217,6 @@ export class SEOExpert extends BaseSpecialist {
     const contentGaps = this.generateContentGaps(tenantIndustry, gapKeywords);
 
     return {
-      tenantId: organizationId,
       industry: tenantIndustry,
       analysisDate: new Date().toISOString(),
       currentKeywords: currentAnalysis,
@@ -1350,9 +1347,9 @@ export class SEOExpert extends BaseSpecialist {
    * Generate a comprehensive 30-day SEO strategy
    */
   private handleThirtyDayStrategy(payload: ThirtyDayStrategyPayload): ThirtyDayStrategy {
-    const { tenantIndustry, currentRankings, businessGoals, organizationId } = payload;
+    const { tenantIndustry, currentRankings, businessGoals } = payload;
 
-    this.log('INFO', `Generating 30-day strategy for ${tenantIndustry} (Tenant: ${organizationId})`);
+    this.log('INFO', `Generating 30-day strategy for ${tenantIndustry}`);
 
     const weeks: ThirtyDayStrategy['weeks'] = [];
 
@@ -1431,7 +1428,6 @@ export class SEOExpert extends BaseSpecialist {
     });
 
     return {
-      tenantId: organizationId,
       industry: tenantIndustry,
       generatedDate: new Date().toISOString(),
       weeks,

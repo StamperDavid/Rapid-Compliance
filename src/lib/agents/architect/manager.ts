@@ -35,6 +35,7 @@ import {
   type InsightEntry,
 } from '../shared/tenant-memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Minimal BrandDNA type for this manager
 interface BrandDNA {
@@ -429,7 +430,6 @@ export interface FunnelFlow {
  */
 export interface SiteArchitecture {
   blueprintId: string;
-  tenantId: string;
   createdAt: Date;
 
   // Brand context
@@ -573,7 +573,6 @@ export interface SiteRequirements {
  * Blueprint request payload
  */
 export interface BlueprintRequest {
-  tenantId: string;
   niche?: string;
   description?: string;
   targetAudience?: string;
@@ -825,19 +824,10 @@ export class ArchitectManager extends BaseManager {
       // Parse the request payload
       const request = this.parseRequest(message);
 
-      if (!request.tenantId) {
-        return this.createReport(
-          taskId,
-          'FAILED',
-          null,
-          ['tenantId is REQUIRED - multi-tenant scoping is mandatory']
-        );
-      }
-
-      this.log('INFO', `Processing blueprint request for tenant: ${request.tenantId}`);
+      this.log('INFO', `Processing blueprint request for organization: ${DEFAULT_ORG_ID}`);
 
       // Phase 1: Load context (Brand DNA + Intelligence Briefs)
-      const context = await this.loadTenantContext(request.tenantId);
+      const context = await this.loadTenantContext();
 
       // Phase 2: Derive site requirements
       const requirements = this.deriveSiteRequirements(request, context);
@@ -847,7 +837,7 @@ export class ArchitectManager extends BaseManager {
       const output = await this.generateArchitecture(request, requirements, context, taskId);
 
       // Phase 4: Store in TenantMemoryVault and broadcast signal
-      const signalSuccess = await this.storeAndBroadcast(request.tenantId, output);
+      const signalSuccess = await this.storeAndBroadcast(output);
       output.signalBroadcast.success = signalSuccess;
 
       return this.createReport(
@@ -914,7 +904,6 @@ export class ArchitectManager extends BaseManager {
     const payload = message.payload as Record<string, unknown> | null;
 
     return {
-      tenantId: (payload?.tenantId as string) ?? '',
       niche: (payload?.niche as string) ?? undefined,
       description: (payload?.description as string) ?? undefined,
       targetAudience: (payload?.targetAudience as string) ?? undefined,
@@ -927,16 +916,16 @@ export class ArchitectManager extends BaseManager {
   /**
    * Load tenant context: Brand DNA and existing Intelligence Briefs
    */
-  private async loadTenantContext(tenantId: string): Promise<{
+  private async loadTenantContext(): Promise<{
     brandDNA: BrandDNA | null;
     intelligenceBriefs: InsightEntry[];
   }> {
-    this.log('INFO', `Loading context for tenant: ${tenantId}`);
+    this.log('INFO', `Loading context for organization: ${DEFAULT_ORG_ID}`);
 
     // Load Brand DNA
     let brandDNA: BrandDNA | null = null;
     try {
-      brandDNA = await getBrandDNA(tenantId);
+      brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
       if (brandDNA) {
         this.log('INFO', `Loaded Brand DNA: ${brandDNA.industry} industry, ${brandDNA.toneOfVoice} tone`);
       }
@@ -1188,7 +1177,6 @@ export class ArchitectManager extends BaseManager {
 
     // Step 6: Synthesize site architecture
     const siteArchitecture = this.synthesizeSiteArchitecture(
-      request.tenantId,
       requirements,
       brandDNA,
       intelligenceBriefs,
@@ -1794,7 +1782,6 @@ DELIVERABLES:
    * Synthesize all outputs into SiteArchitecture
    */
   private synthesizeSiteArchitecture(
-    tenantId: string,
     requirements: SiteRequirements,
     brandDNA: BrandDNA | null,
     intelligenceBriefs: InsightEntry[],
@@ -1804,7 +1791,7 @@ DELIVERABLES:
     specialistResults: SpecialistResult[],
     warnings: string[]
   ): SiteArchitecture {
-    const blueprintId = `blueprint_${tenantId}_${Date.now()}`;
+    const blueprintId = `blueprint_${DEFAULT_ORG_ID}_${Date.now()}`;
 
     // Extract specialist contributions
     const uxResult = specialistResults.find(r => r.specialistId === 'UX_UI_SPECIALIST');
@@ -1847,7 +1834,6 @@ DELIVERABLES:
 
     return {
       blueprintId,
-      tenantId,
       createdAt: new Date(),
       brandContext: {
         industry: requirements.industry,
@@ -2197,7 +2183,7 @@ DELIVERABLES:
   /**
    * Store blueprint in TenantMemoryVault and broadcast signal
    */
-  private async storeAndBroadcast(tenantId: string, output: ArchitectureOutput): Promise<boolean> {
+  private async storeAndBroadcast(output: ArchitectureOutput): Promise<boolean> {
     // Store the site architecture as an insight
     try {
       await shareInsight(

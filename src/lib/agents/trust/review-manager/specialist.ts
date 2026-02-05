@@ -3,28 +3,28 @@
  * STATUS: FUNCTIONAL
  *
  * Expert in automated sentiment analysis and SEO-optimized review response generation.
- * Implements multi-tenant aware reputation management with brand-specific keyword injection.
+ * Implements single-tenant reputation management with brand-specific keyword injection.
  *
  * CAPABILITIES:
- * - Multi-tenant review scanning and analysis
+ * - Review scanning and analysis
  * - Sentiment classification with confidence scoring
  * - SEO-optimized response generation with keyword injection
  * - Review request campaign generation
- * - Brand voice consistency across tenants
+ * - Brand voice consistency
  * - Reputation trend analysis
  *
- * MULTI-TENANT: All operations are tenant-context aware
+ * SINGLE-TENANT: All operations use DEFAULT_ORG_ID
  */
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CORE TYPES & INTERFACES
 // ============================================================================
 
 interface TenantContext {
-  tenantId: string;
   organizationId: string;
   brandName: string;
   industry: string;
@@ -66,7 +66,6 @@ interface IncomingReview {
   verified: boolean;
   photos?: string[];
   helpfulVotes?: number;
-  tenantId: string;
 }
 
 interface SentimentAnalysisResult {
@@ -109,7 +108,7 @@ interface OptimizedResponse {
 
 interface ResponseMetadata {
   generatedAt: Date;
-  tenantId: string;
+  organizationId: string;
   reviewId: string;
   platform: ReviewPlatform;
   requiresApproval: boolean;
@@ -118,7 +117,7 @@ interface ResponseMetadata {
 
 interface ReviewRequestCampaign {
   campaignId: string;
-  tenantId: string;
+  organizationId: string;
   name: string;
   targetAudience: CampaignAudience;
   channels: CampaignChannel[];
@@ -340,17 +339,17 @@ const CAMPAIGN_SMS_TEMPLATES = {
 // SYSTEM PROMPT
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are the Review Manager Specialist, an expert in multi-tenant reputation management and SEO-optimized review responses.
+const SYSTEM_PROMPT = `You are the Review Manager Specialist, an expert in reputation management and SEO-optimized review responses.
 
 ## YOUR ROLE
 You analyze incoming reviews, perform sentiment analysis, and generate brand-consistent, SEO-optimized responses. You also create review request campaigns to build positive reputation.
 
-## MULTI-TENANT AWARENESS
-All operations use tenantContext:
-- Brand name and voice must match the tenant
-- SEO keywords are tenant-specific
-- Response tone matches tenant's brand personality
-- All data queries filter by tenantId
+## SINGLE-TENANT AWARENESS
+All operations use the default organization (DEFAULT_ORG_ID):
+- Brand name and voice must match the organization
+- SEO keywords are organization-specific
+- Response tone matches the organization's brand personality
+- All data queries use DEFAULT_ORG_ID
 
 ## SENTIMENT ANALYSIS
 - Analyze text for emotional indicators
@@ -450,11 +449,11 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     try {
       const request = message.payload as ReviewManagerRequest;
 
-      if (!request?.tenantContext?.tenantId) {
+      if (!request?.tenantContext) {
         return this.createReport(taskId, 'FAILED', null, ['Missing tenant context']);
       }
 
-      this.log('INFO', `Processing ${request.action} for tenant: ${request.tenantContext.tenantId}`);
+      this.log('INFO', `Processing ${request.action} for organization: ${DEFAULT_ORG_ID}`);
 
       let result: unknown;
 
@@ -814,7 +813,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
       callToAction: tenantContext.responseSettings.includeCallToAction ? callToAction : undefined,
       metadata: {
         generatedAt: new Date(),
-        tenantId: tenantContext.tenantId,
+        organizationId: DEFAULT_ORG_ID,
         reviewId: review.id,
         platform: review.platform,
         requiresApproval,
@@ -1152,7 +1151,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
     return {
       campaignId,
-      tenantId: tenantContext.tenantId,
+      organizationId: DEFAULT_ORG_ID,
       name: config.name ?? `Review Campaign - ${new Date().toLocaleDateString()}`,
       targetAudience: audience,
       channels,
@@ -1203,12 +1202,12 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     return templates;
   }
 
-  private buildReviewLinks(tenantContext: TenantContext): ReviewLinkConfig[] {
-    // In production, these would come from tenant configuration
+  private buildReviewLinks(_tenantContext: TenantContext): ReviewLinkConfig[] {
+    // In production, these would come from organization configuration
     return [
-      { platform: 'google', url: `https://g.page/${tenantContext.tenantId}/review`, priority: 1 },
-      { platform: 'facebook', url: `https://facebook.com/${tenantContext.tenantId}/reviews`, priority: 2 },
-      { platform: 'yelp', url: `https://yelp.com/biz/${tenantContext.tenantId}`, priority: 3 },
+      { platform: 'google', url: `https://g.page/${DEFAULT_ORG_ID}/review`, priority: 1 },
+      { platform: 'facebook', url: `https://facebook.com/${DEFAULT_ORG_ID}/reviews`, priority: 2 },
+      { platform: 'yelp', url: `https://yelp.com/biz/${DEFAULT_ORG_ID}`, priority: 3 },
     ];
   }
 
@@ -1230,14 +1229,14 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
   private async generateTrendReport(
     dateRange: { start: Date; end: Date },
-    tenantContext: TenantContext
+    _tenantContext: TenantContext
   ): Promise<TrendReport> {
     await Promise.resolve(); // Async boundary for interface compliance
     // In production, this would query actual review data
     // For now, return a structured template
 
     return {
-      tenantId: tenantContext.tenantId,
+      organizationId: DEFAULT_ORG_ID,
       dateRange,
       generatedAt: new Date(),
       metrics: {
@@ -1271,7 +1270,7 @@ interface BulkAnalysisSummary {
 }
 
 interface TrendReport {
-  tenantId: string;
+  organizationId: string;
   dateRange: { start: Date; end: Date };
   generatedAt: Date;
   metrics: {

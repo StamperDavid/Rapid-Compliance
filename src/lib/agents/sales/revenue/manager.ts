@@ -500,7 +500,6 @@ export interface PipelineQueryRequest {
   leadIds?: string[];
   leadData?: LeadData;
   targetStage?: LeadStage;
-  tenantId?: string;
   objection?: string;
   closingOptions?: {
     includeContract?: boolean;
@@ -518,7 +517,6 @@ export interface PipelineQueryRequest {
  */
 export interface RevenueBrief {
   briefId: string;
-  tenantId: string;
   generatedAt: Date;
   period: {
     start: Date;
@@ -571,7 +569,6 @@ export interface RevenueBrief {
  * Golden Master Tuning Request
  */
 export interface GoldenMasterTuningRequest {
-  tenantId: string;
   winLossSignals: WinLossSignal[];
   currentPersonaWeights?: PersonaWeights;
 }
@@ -626,7 +623,6 @@ export interface BattlecardEntry {
  * Objection Library - Collection of battlecard entries
  */
 export interface ObjectionLibrary {
-  tenantId: string;
   lastSynthesized: Date;
   totalEntries: number;
   entriesByCategory: Record<string, number>;
@@ -860,10 +856,7 @@ export class RevenueDirector extends BaseManager {
         // =====================================================================
 
         case 'SYNTHESIZE_REVENUE_BRIEF':
-          if (!payload.tenantId) {
-            return this.createReport(taskId, 'FAILED', null, ['tenantId required for SYNTHESIZE_REVENUE_BRIEF']);
-          }
-          result = await this.synthesizeRevenueBrief(payload.tenantId, taskId);
+          result = await this.synthesizeRevenueBrief(taskId);
           break;
 
         case 'CLOSE_DEAL':
@@ -881,17 +874,11 @@ export class RevenueDirector extends BaseManager {
           break;
 
         case 'TUNE_GOLDEN_MASTER':
-          if (!payload.tenantId) {
-            return this.createReport(taskId, 'FAILED', null, ['tenantId required for TUNE_GOLDEN_MASTER']);
-          }
-          result = await this.tuneGoldenMasterPersona(payload.tenantId, taskId);
+          result = await this.tuneGoldenMasterPersona(taskId);
           break;
 
         case 'GENERATE_BATTLECARD':
-          if (!payload.tenantId) {
-            return this.createReport(taskId, 'FAILED', null, ['tenantId required for GENERATE_BATTLECARD']);
-          }
-          result = await this.synthesizeObjectionLibrary(payload.tenantId, taskId);
+          result = await this.synthesizeObjectionLibrary(taskId);
           break;
 
         default:
@@ -1761,8 +1748,8 @@ export class RevenueDirector extends BaseManager {
    * Synthesize Revenue Brief - Aggregate data from all specialists
    * Produces RevenueBrief JSON with projected vs actual revenue and pipeline velocity
    */
-  async synthesizeRevenueBrief(tenantId: string, taskId: string): Promise<RevenueBrief> {
-    this.log('INFO', `Synthesizing Revenue Brief for tenant: ${tenantId}`);
+  async synthesizeRevenueBrief(taskId: string): Promise<RevenueBrief> {
+    this.log('INFO', 'Synthesizing Revenue Brief');
 
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -1840,7 +1827,6 @@ export class RevenueDirector extends BaseManager {
     // Build Revenue Brief
     const brief: RevenueBrief = {
       briefId: `rb_${taskId}_${Date.now()}`,
-      tenantId,
       generatedAt: now,
       period: {
         start: thirtyDaysAgo,
@@ -2188,8 +2174,8 @@ export class RevenueDirector extends BaseManager {
    * Tune Golden Master Persona based on win/loss signals
    * Implements dynamic persona adjustment from CRM data
    */
-  async tuneGoldenMasterPersona(tenantId: string, _taskId: string): Promise<{ tuned: boolean; adjustments: PersonaWeights }> {
-    this.log('INFO', `Tuning Golden Master persona for tenant: ${tenantId}`);
+  async tuneGoldenMasterPersona(_taskId: string): Promise<{ tuned: boolean; adjustments: PersonaWeights }> {
+    this.log('INFO', 'Tuning Golden Master persona');
 
     // Query win/loss signals from TenantMemoryVault
     const vault = this.memoryVault;
@@ -2277,8 +2263,8 @@ export class RevenueDirector extends BaseManager {
   /**
    * Synthesize Objection Library - Generate battlecards from OBJ_HANDLER data
    */
-  async synthesizeObjectionLibrary(tenantId: string, taskId: string): Promise<ObjectionLibrary> {
-    this.log('INFO', `Synthesizing objection library for tenant: ${tenantId}`);
+  async synthesizeObjectionLibrary(taskId: string): Promise<ObjectionLibrary> {
+    this.log('INFO', 'Synthesizing objection library');
 
     if (!this.objectionHandlerInstance) {
       await this.registerAllSpecialists();
@@ -2328,7 +2314,6 @@ export class RevenueDirector extends BaseManager {
     }
 
     const library: ObjectionLibrary = {
-      tenantId,
       lastSynthesized: new Date(),
       totalEntries: battlecardEntries.length,
       entriesByCategory,

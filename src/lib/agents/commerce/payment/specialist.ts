@@ -79,7 +79,6 @@ export interface CheckoutItem {
 
 export interface CheckoutInitPayload {
   action: 'initialize_checkout';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   items: CheckoutItem[];
@@ -113,7 +112,6 @@ export interface CheckoutInitPayload {
 
 export interface PaymentIntentPayload {
   action: 'create_payment_intent';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   amount: number;
@@ -124,14 +122,12 @@ export interface PaymentIntentPayload {
 
 export interface ValidatePaymentPayload {
   action: 'validate_payment';
-  tenantId: string;
   sessionId?: string;
   paymentIntentId?: string;
 }
 
 export interface RefundPayload {
   action: 'process_refund';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   paymentIntentId: string;
@@ -141,14 +137,12 @@ export interface RefundPayload {
 
 export interface WebhookPayload {
   action: 'handle_webhook';
-  tenantId: string;
   eventType: string;
   eventData: Record<string, unknown>;
 }
 
 export interface CheckoutStatusPayload {
   action: 'checkout_session_status';
-  tenantId: string;
   sessionId: string;
 }
 
@@ -324,7 +318,6 @@ export class PaymentSpecialist extends BaseSpecialist {
         id: sessionId,
         organizationId: payload.organizationId,
         workspaceId: payload.workspaceId,
-        tenantId: payload.tenantId,
         customer: payload.customer,
         lineItems,
         total,
@@ -387,7 +380,6 @@ export class PaymentSpecialist extends BaseSpecialist {
 
       const intentData = {
         id: paymentIntentId,
-        tenantId: payload.tenantId,
         organizationId: payload.organizationId,
         workspaceId: payload.workspaceId,
         amount: payload.amount,

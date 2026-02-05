@@ -40,6 +40,7 @@ import type {
   SiteArchitecture,
   PageDefinition,
 } from '../architect/manager';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this manager
@@ -121,7 +122,6 @@ For each page in the blueprint:
 \`\`\`json
 {
   "buildId": "string",
-  "tenantId": "string",
   "status": "PENDING_BLUEPRINT | ASSEMBLING | INJECTING_SCRIPTS | DEPLOYING | LIVE",
   "pages": [...],
   "assets": {...},
@@ -346,7 +346,6 @@ export interface AssetPackage {
 export interface DeploymentManifest {
   manifestId: string;
   buildId: string;
-  tenantId: string;
   createdAt: Date;
   pages: Array<{
     path: string;
@@ -391,7 +390,6 @@ export interface DelegationResult {
  * Build request payload
  */
 export interface BuildRequest {
-  tenantId: string;
   blueprintId?: string;
   analyticsConfig?: AnalyticsConfig;
   customScripts?: CustomScript[];
@@ -403,7 +401,6 @@ export interface BuildRequest {
  */
 export interface BuilderOutput {
   buildId: string;
-  tenantId: string;
   blueprintId: string;
   state: BuildState;
   stateHistory: StateTransition[];
@@ -624,23 +621,14 @@ export class BuilderManager extends BaseManager {
 
       const payload = message.payload as BuildRequest;
 
-      if (!payload?.tenantId) {
-        return this.createReport(
-          taskId,
-          'FAILED',
-          null,
-          ['tenantId is required in build request']
-        );
-      }
-
-      this.log('INFO', `Starting build execution for tenant: ${payload.tenantId}`);
+      this.log('INFO', `Starting build execution for organization: ${DEFAULT_ORG_ID}`);
 
       // Reset state machine
       this.resetStateMachine();
 
       // Phase 1: Load blueprint from TenantMemoryVault
       this.transitionState('PENDING_BLUEPRINT', 'build_requested');
-      const blueprint = await this.loadBlueprintFromVault(payload.tenantId, payload.blueprintId);
+      const blueprint = await this.loadBlueprintFromVault(payload.blueprintId);
 
       if (!blueprint) {
         return this.createReport(
@@ -653,7 +641,7 @@ export class BuilderManager extends BaseManager {
 
       // Phase 2: Assemble pages from blueprint
       this.transitionState('ASSEMBLING', 'blueprint_loaded');
-      const assemblyResult = await this.assembleFromBlueprint(blueprint, payload.tenantId, taskId);
+      const assemblyResult = await this.assembleFromBlueprint(blueprint, taskId);
 
       // Phase 3: Inject tracking pixels and scripts
       this.transitionState('INJECTING_SCRIPTS', 'assembly_complete');
@@ -666,7 +654,6 @@ export class BuilderManager extends BaseManager {
       // Phase 4: Generate deployment manifest
       this.transitionState('DEPLOYING', 'scripts_injected');
       const manifest = this.generateDeploymentManifest(
-        payload.tenantId,
         blueprint.blueprintId,
         assemblyResult.pages,
         assemblyResult.assets
@@ -709,7 +696,6 @@ export class BuilderManager extends BaseManager {
 
       const output: BuilderOutput = {
         buildId: manifest.buildId,
-        tenantId: payload.tenantId,
         blueprintId: blueprint.blueprintId,
         state: this.currentBuildState,
         stateHistory: this.stateHistory,
@@ -752,14 +738,12 @@ export class BuilderManager extends BaseManager {
     if (payload.type === 'COMMAND' && this.isSignalBlueprintReady(payload.payload)) {
       this.log('INFO', 'Received site.blueprint_ready signal - initiating build');
 
-      // Extract tenant and blueprint info from signal
+      // Extract blueprint info from signal
       const signalPayload = payload.payload as Record<string, unknown>;
-      const tenantId = signalPayload.tenantId as string;
       const blueprintId = signalPayload.blueprintId as string;
 
       // Create build request from signal
       const buildRequest: BuildRequest = {
-        tenantId,
         blueprintId,
         analyticsConfig: signalPayload.analyticsConfig as AnalyticsConfig | undefined,
       };
@@ -796,7 +780,7 @@ export class BuilderManager extends BaseManager {
       return false;
     }
     const p = payload as Record<string, unknown>;
-    return 'tenantId' in p && 'blueprintId' in p;
+    return 'blueprintId' in p;
   }
 
   // ==========================================================================
@@ -807,10 +791,9 @@ export class BuilderManager extends BaseManager {
    * Load site blueprint from TenantMemoryVault
    */
   private async loadBlueprintFromVault(
-    tenantId: string,
     blueprintId?: string
   ): Promise<SiteArchitecture | null> {
-    this.log('INFO', `Loading blueprint from TenantMemoryVault for tenant: ${tenantId}`);
+    this.log('INFO', `Loading blueprint from TenantMemoryVault for organization: ${DEFAULT_ORG_ID}`);
 
     try {
       // Read insights from ARCHITECT_MANAGER
@@ -838,7 +821,7 @@ export class BuilderManager extends BaseManager {
       }
 
       // Fallback: Generate a minimal blueprint from insight data
-      return this.generateMinimalBlueprint(tenantId, blueprintInsight);
+      return this.generateMinimalBlueprint(blueprintInsight);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       this.log('ERROR', `Failed to load blueprint: ${errorMsg}`);
@@ -882,14 +865,12 @@ export class BuilderManager extends BaseManager {
    * Generate minimal blueprint when full architecture not available
    */
   private generateMinimalBlueprint(
-    tenantId: string,
     insight: InsightEntry
   ): SiteArchitecture {
     const now = new Date();
 
     return {
       blueprintId: `bp_${Date.now()}`,
-      tenantId,
       createdAt: now,
       brandContext: {
         industry: 'saas',
@@ -968,7 +949,6 @@ export class BuilderManager extends BaseManager {
    */
   async assembleFromBlueprint(
     blueprint: SiteArchitecture,
-    tenantId: string,
     taskId: string
   ): Promise<{
     pages: AssembledPage[];
@@ -984,7 +964,7 @@ export class BuilderManager extends BaseManager {
     let overallConfidence = 1.0;
 
     // Execute specialists in parallel
-    const specialistResults = await this.executeSpecialistsParallel(blueprint, tenantId, taskId);
+    const specialistResults = await this.executeSpecialistsParallel(blueprint, taskId);
 
     // Process specialist results
     for (const result of specialistResults) {
@@ -1049,7 +1029,6 @@ export class BuilderManager extends BaseManager {
    */
   private async executeSpecialistsParallel(
     blueprint: SiteArchitecture,
-    tenantId: string,
     taskId: string
   ): Promise<SpecialistResult[]> {
     const results: SpecialistResult[] = [];
@@ -1083,7 +1062,7 @@ export class BuilderManager extends BaseManager {
         message: this.createSpecialistMessage(taskId, 'ASSET_GENERATOR', {
           method: 'generate_asset_package',
           assetType: 'asset_package',
-          brandName: tenantId, // Would be actual brand name
+          brandName: DEFAULT_ORG_ID,
           brandStyle: this.mapBrandStyle(blueprint.designDirection),
           industry: blueprint.brandContext.industry,
         }),
@@ -1466,7 +1445,6 @@ export class BuilderManager extends BaseManager {
    * Generate deployment manifest for Vercel/hosting
    */
   generateDeploymentManifest(
-    tenantId: string,
     blueprintId: string,
     pages: AssembledPage[],
     assets: AssetPackage
@@ -1476,7 +1454,6 @@ export class BuilderManager extends BaseManager {
     const manifest: DeploymentManifest = {
       manifestId: `manifest_${buildId}`,
       buildId,
-      tenantId,
       createdAt: new Date(),
       pages: pages.map((page, index) => ({
         path: page.path,
@@ -1510,7 +1487,7 @@ export class BuilderManager extends BaseManager {
         },
       ],
       environment: {
-        NEXT_PUBLIC_TENANT_ID: tenantId,
+        NEXT_PUBLIC_ORG_ID: DEFAULT_ORG_ID,
         NEXT_PUBLIC_BLUEPRINT_ID: blueprintId,
       },
       buildConfig: {

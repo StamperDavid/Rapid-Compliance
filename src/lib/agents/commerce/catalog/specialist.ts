@@ -82,7 +82,6 @@ export interface ProductVariant {
 
 export interface Product {
   id: string;
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   name: string;
@@ -128,7 +127,6 @@ export interface CatalogSummary {
 
 interface FetchProductsPayload {
   action: 'fetch_products';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   filters?: {
@@ -149,7 +147,6 @@ interface FetchProductsPayload {
 
 interface GetProductPayload {
   action: 'get_product';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   productId: string;
@@ -157,24 +154,21 @@ interface GetProductPayload {
 
 interface CreateProductPayload {
   action: 'create_product';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
-  product: Omit<Product, 'id' | 'tenantId' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt'>;
+  product: Omit<Product, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt'>;
 }
 
 interface UpdateProductPayload {
   action: 'update_product';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   productId: string;
-  updates: Partial<Omit<Product, 'id' | 'tenantId' | 'organizationId' | 'workspaceId' | 'createdAt'>>;
+  updates: Partial<Omit<Product, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>>;
 }
 
 interface ArchiveProductPayload {
   action: 'archive_product';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   productId: string;
@@ -182,7 +176,6 @@ interface ArchiveProductPayload {
 
 interface SearchCatalogPayload {
   action: 'search_catalog';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   query: string;
@@ -191,14 +184,12 @@ interface SearchCatalogPayload {
 
 interface GetCatalogSummaryPayload {
   action: 'get_catalog_summary';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
 }
 
 interface SyncCatalogPayload {
   action: 'sync_catalog';
-  tenantId: string;
   organizationId: string;
   workspaceId: string;
   source: 'stripe' | 'shopify' | 'woocommerce' | 'manual';
@@ -488,7 +479,6 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
 
       const product: Product = {
         id: productId,
-        tenantId: payload.tenantId,
         organizationId: payload.organizationId,
         workspaceId: payload.workspaceId,
         ...payload.product,
@@ -594,7 +584,6 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
   private async handleSearchCatalog(payload: SearchCatalogPayload): Promise<CatalogResult> {
     return this.handleFetchProducts({
       action: 'fetch_products',
-      tenantId: payload.tenantId,
       organizationId: payload.organizationId,
       workspaceId: payload.workspaceId,
       filters: {
@@ -722,14 +711,13 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
   private mapRecordToProduct(
     record: Record<string, unknown>,
     mappings: Record<string, string>,
-    payload: { tenantId: string; organizationId: string; workspaceId: string }
+    payload: { organizationId: string; workspaceId: string }
   ): Product {
     const getValue = (field: string, fallback: string): unknown =>
       this.getMappedValue(record, mappings, field, fallback);
 
     return {
       id: String(record.id ?? record._id ?? ''),
-      tenantId: payload.tenantId,
       organizationId: payload.organizationId,
       workspaceId: payload.workspaceId,
       name: String(getValue('name', 'name') ?? 'Unnamed Product'),

@@ -24,6 +24,7 @@ import {
   readAgentInsights,
   type ContentData,
 } from '../../shared/tenant-memory-vault';
+// DEFAULT_ORG_ID available from '@/lib/constants/platform' if needed
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -35,7 +36,6 @@ interface ScriptToStoryboardPayload {
   platform: 'youtube' | 'tiktok' | 'reels' | 'shorts' | 'generic';
   style?: 'talking_head' | 'documentary' | 'tutorial' | 'vlog' | 'cinematic';
   targetDuration?: number;
-  organizationId: string;
 }
 
 interface AudioCuePayload {
@@ -44,7 +44,6 @@ interface AudioCuePayload {
   mood?: 'energetic' | 'calm' | 'dramatic' | 'inspiring' | 'educational';
   includeSFX?: boolean;
   includeMusic?: boolean;
-  organizationId: string;
 }
 
 interface SceneBreakdownPayload {
@@ -52,7 +51,6 @@ interface SceneBreakdownPayload {
   script: string;
   platform: 'youtube' | 'tiktok' | 'reels' | 'shorts';
   includeTimings?: boolean;
-  organizationId: string;
 }
 
 interface ThumbnailStrategyPayload {
@@ -61,7 +59,6 @@ interface ThumbnailStrategyPayload {
   videoTopic: string;
   targetAudience: string;
   variants?: number;
-  organizationId: string;
 }
 
 interface VideoSEOPayload {
@@ -70,7 +67,6 @@ interface VideoSEOPayload {
   videoDescription: string;
   targetKeywords: string[];
   platform: 'youtube' | 'tiktok';
-  organizationId: string;
 }
 
 interface BRollSuggestionPayload {
@@ -78,7 +74,6 @@ interface BRollSuggestionPayload {
   script: string;
   style: 'stock' | 'custom' | 'mixed';
   budget?: 'free' | 'paid' | 'premium';
-  organizationId: string;
 }
 
 type VideoPayload =
@@ -376,9 +371,9 @@ export class VideoSpecialist extends BaseSpecialist {
   // ==========================================================================
 
   private handleScriptToStoryboard(payload: ScriptToStoryboardPayload): StoryboardResult {
-    const { script, platform, style = 'talking_head', targetDuration, organizationId } = payload;
+    const { script, platform, style = 'talking_head', targetDuration } = payload;
 
-    this.log('INFO', `Converting script to storyboard for ${platform} (Tenant: ${organizationId})`);
+    this.log('INFO', `Converting script to storyboard for ${platform}`);
 
     const _platformSpec = PLATFORM_SPECS[platform];
     const scriptSections = this.parseScriptSections(script);
@@ -692,9 +687,9 @@ export class VideoSpecialist extends BaseSpecialist {
   // ==========================================================================
 
   private handleAudioCues(payload: AudioCuePayload): AudioCueResult {
-    const { script, mood = 'educational', includeSFX = true, includeMusic = true, organizationId } = payload;
+    const { script, mood = 'educational', includeSFX = true, includeMusic = true } = payload;
 
-    this.log('INFO', `Generating audio cues with ${mood} mood (Tenant: ${organizationId})`);
+    this.log('INFO', `Generating audio cues with ${mood} mood`);
 
     const sections = this.parseScriptSections(script);
     const cues: AudioCue[] = [];
@@ -956,9 +951,9 @@ export class VideoSpecialist extends BaseSpecialist {
   // ==========================================================================
 
   private handleSceneBreakdown(payload: SceneBreakdownPayload): SceneBreakdownResult {
-    const { script, platform, includeTimings = true, organizationId } = payload;
+    const { script, platform, includeTimings = true } = payload;
 
-    this.log('INFO', `Breaking down scenes for ${platform} (Tenant: ${organizationId})`);
+    this.log('INFO', `Breaking down scenes for ${platform}`);
 
     const sections = this.parseScriptSections(script);
     const totalDuration = this.estimateDuration(script, platform);
@@ -1062,9 +1057,9 @@ export class VideoSpecialist extends BaseSpecialist {
   // ==========================================================================
 
   private handleThumbnailStrategy(payload: ThumbnailStrategyPayload): ThumbnailStrategyResult {
-    const { videoTitle, videoTopic, targetAudience, variants = 3, organizationId } = payload;
+    const { videoTitle, videoTopic, targetAudience, variants = 3 } = payload;
 
-    this.log('INFO', `Generating thumbnail strategy for "${videoTitle}" (Tenant: ${organizationId})`);
+    this.log('INFO', `Generating thumbnail strategy for "${videoTitle}"`);
 
     const concepts: ThumbnailConcept[] = [];
 
@@ -1221,9 +1216,9 @@ export class VideoSpecialist extends BaseSpecialist {
   // ==========================================================================
 
   private handleVideoSEO(payload: VideoSEOPayload): VideoSEOResult {
-    const { videoTitle, videoDescription, targetKeywords, platform, organizationId } = payload;
+    const { videoTitle, videoDescription, targetKeywords, platform } = payload;
 
-    this.log('INFO', `Optimizing video SEO for ${platform} (Tenant: ${organizationId})`);
+    this.log('INFO', `Optimizing video SEO for ${platform}`);
 
     const optimizedTitle = this.optimizeTitle(videoTitle, targetKeywords, platform);
     const optimizedDescription = this.optimizeDescription(videoDescription, targetKeywords, platform);
@@ -1447,9 +1442,9 @@ export class VideoSpecialist extends BaseSpecialist {
   // ==========================================================================
 
   private handleBRollSuggestions(payload: BRollSuggestionPayload): BRollResult {
-    const { script, style, budget = 'mixed', organizationId } = payload;
+    const { script, style, budget = 'mixed' } = payload;
 
-    this.log('INFO', `Generating B-roll suggestions (${style}, ${budget}) for Tenant: ${organizationId}`);
+    this.log('INFO', `Generating B-roll suggestions (${style}, ${budget})`);
 
     const sections = this.parseScriptSections(script);
     const suggestions: BRollSuggestion[] = [];
@@ -1593,7 +1588,6 @@ export class VideoSpecialist extends BaseSpecialist {
    * Write storyboard content to the shared memory vault
    */
   private async shareStoryboardToVault(
-    tenantId: string,
     storyboard: Record<string, unknown>
   ): Promise<void> {
     const vault = getMemoryVault();
@@ -1665,7 +1659,6 @@ export class VideoSpecialist extends BaseSpecialist {
    * Broadcast a signal when video content needs optimization
    */
   private async broadcastVideoOptimizationSignal(
-    tenantId: string,
     videoId: string,
     issue: string
   ): Promise<void> {
@@ -1686,7 +1679,6 @@ export class VideoSpecialist extends BaseSpecialist {
    * Get content from other agents for video inspiration
    */
   private async getRelatedContentFromVault(
-    tenantId: string,
     platform: string
   ): Promise<ContentData[]> {
     const vault = getMemoryVault();

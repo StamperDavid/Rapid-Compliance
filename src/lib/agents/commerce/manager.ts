@@ -37,6 +37,7 @@ import {
   type InsightData,
 } from '../shared/tenant-memory-vault';
 import { logger as _logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // SYSTEM PROMPT - Transactional Commerce Orchestration
@@ -378,11 +379,6 @@ export class CommerceManager extends BaseManager {
 
     try {
       const payload = message.payload as Record<string, unknown> | null;
-      const tenantId = (payload?.tenantId as string) ?? (payload?.organizationId as string);
-
-      if (!tenantId) {
-        return this.createReport(taskId, 'FAILED', null, ['tenantId is required']);
-      }
 
       // Detect intent
       const intent = this.detectIntent(payload, message);
@@ -391,34 +387,34 @@ export class CommerceManager extends BaseManager {
       // Route based on intent
       switch (intent) {
         case 'CHECKOUT_INIT':
-          return await this.initializeCheckout(taskId, tenantId, payload, startTime);
+          return await this.initializeCheckout(taskId, payload, startTime);
 
         case 'CHECKOUT_COMPLETE':
-          return await this.handleCheckoutComplete(taskId, tenantId, payload, startTime);
+          return await this.handleCheckoutComplete(taskId, payload, startTime);
 
         case 'SUBSCRIPTION_START':
-          return await this.startSubscription(taskId, tenantId, payload, startTime);
+          return await this.startSubscription(taskId, payload, startTime);
 
         case 'SUBSCRIPTION_BILLING':
-          return await this.processBilling(taskId, tenantId, payload, startTime);
+          return await this.processBilling(taskId, payload, startTime);
 
         case 'SUBSCRIPTION_CANCEL':
-          return await this.cancelSubscription(taskId, tenantId, payload, startTime);
+          return await this.cancelSubscription(taskId, payload, startTime);
 
         case 'CATALOG_FETCH':
-          return await this.fetchCatalog(taskId, tenantId, payload, startTime);
+          return await this.fetchCatalog(taskId, payload, startTime);
 
         case 'CATALOG_UPDATE':
-          return await this.updateCatalog(taskId, tenantId, payload, startTime);
+          return await this.updateCatalog(taskId, payload, startTime);
 
         case 'REVENUE_REPORT':
-          return await this.generateRevenueBrief(taskId, tenantId, payload, startTime);
+          return await this.generateRevenueBrief(taskId, payload, startTime);
 
         case 'INVENTORY_CHECK':
-          return await this.checkInventory(taskId, tenantId, payload, startTime);
+          return await this.checkInventory(taskId, payload, startTime);
 
         case 'PRICE_VALIDATION':
-          return await this.validatePricing(taskId, tenantId, payload, startTime);
+          return await this.validatePricing(taskId, payload, startTime);
 
         case 'SINGLE_SPECIALIST':
         default: {
@@ -485,7 +481,6 @@ export class CommerceManager extends BaseManager {
    */
   async initializeCheckout(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -493,7 +488,7 @@ export class CommerceManager extends BaseManager {
     const errors: string[] = [];
 
     try {
-      const organizationId = (payload?.organizationId as string) ?? tenantId;
+      const organizationId = (payload?.organizationId as string) ?? DEFAULT_ORG_ID;
       const workspaceId = (payload?.workspaceId as string) ?? 'default';
       const items = payload?.items as CheckoutItem[] | undefined;
       const customer = payload?.customer as Record<string, unknown> | undefined;
@@ -507,7 +502,7 @@ export class CommerceManager extends BaseManager {
       }
 
       // Step 1: Fetch tenant commerce settings from vault
-      const settings = await this.fetchTenantSettings(tenantId);
+      const settings = await this.fetchTenantSettings();
 
       // Step 2: Validate products exist and prices are correct via CATALOG_MANAGER
       const catalogResult = await this.executeSpecialist(
@@ -515,7 +510,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'fetch_products',
-          tenantId,
+          tenantId: DEFAULT_ORG_ID,
           organizationId,
           workspaceId,
           filters: { status: 'active' },
@@ -561,7 +556,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'initialize_checkout',
-          tenantId,
+          tenantId: DEFAULT_ORG_ID,
           organizationId,
           workspaceId,
           items,
@@ -633,7 +628,6 @@ export class CommerceManager extends BaseManager {
    */
   private async handleCheckoutComplete(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -641,7 +635,7 @@ export class CommerceManager extends BaseManager {
 
     try {
       const sessionId = payload?.sessionId as string;
-      const organizationId = (payload?.organizationId as string) ?? tenantId;
+      const organizationId = (payload?.organizationId as string) ?? DEFAULT_ORG_ID;
       const workspaceId = (payload?.workspaceId as string) ?? 'default';
 
       // Validate payment completion
@@ -650,7 +644,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'validate_payment',
-          tenantId,
+          tenantId: DEFAULT_ORG_ID,
           sessionId,
         },
         specialistResults
@@ -700,7 +694,6 @@ export class CommerceManager extends BaseManager {
    */
   private async startSubscription(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -712,8 +705,8 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'start_trial',
-          tenantId,
-          organizationId: (payload?.organizationId as string) ?? tenantId,
+          tenantId: DEFAULT_ORG_ID,
+          organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           customerId: payload?.customerId as string,
           customerEmail: payload?.customerEmail as string,
           planId: (payload?.planId as string) ?? 'default',
@@ -740,7 +733,6 @@ export class CommerceManager extends BaseManager {
    */
   private async processBilling(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -755,7 +747,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'process_billing',
-          tenantId,
+          tenantId: DEFAULT_ORG_ID,
           subscriptionId,
           paymentSucceeded,
           amount: payload?.amount as number,
@@ -807,7 +799,6 @@ export class CommerceManager extends BaseManager {
    */
   private async cancelSubscription(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -819,7 +810,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'transition_state',
-          tenantId,
+          tenantId: DEFAULT_ORG_ID,
           subscriptionId: payload?.subscriptionId as string,
           targetState: 'CANCELLED',
           reason: (payload?.reason as string) ?? 'Customer requested cancellation',
@@ -860,7 +851,6 @@ export class CommerceManager extends BaseManager {
    */
   private async fetchCatalog(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -872,8 +862,8 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'fetch_products',
-          tenantId,
-          organizationId: (payload?.organizationId as string) ?? tenantId,
+          tenantId: DEFAULT_ORG_ID,
+          organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           workspaceId: (payload?.workspaceId as string) ?? 'default',
           filters: payload?.filters,
           pagination: payload?.pagination,
@@ -899,7 +889,6 @@ export class CommerceManager extends BaseManager {
    */
   private async updateCatalog(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -913,8 +902,8 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action,
-          tenantId,
-          organizationId: (payload?.organizationId as string) ?? tenantId,
+          tenantId: DEFAULT_ORG_ID,
+          organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           workspaceId: (payload?.workspaceId as string) ?? 'default',
           product: payload?.product,
           productId: payload?.productId,
@@ -943,7 +932,6 @@ export class CommerceManager extends BaseManager {
    */
   async generateRevenueBrief(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -952,7 +940,7 @@ export class CommerceManager extends BaseManager {
     const recommendations: string[] = [];
 
     try {
-      const organizationId = (payload?.organizationId as string) ?? tenantId;
+      const organizationId = (payload?.organizationId as string) ?? DEFAULT_ORG_ID;
       const workspaceId = (payload?.workspaceId as string) ?? 'default';
 
       // Parallel execution for efficiency
@@ -962,7 +950,7 @@ export class CommerceManager extends BaseManager {
           taskId,
           {
             action: 'calculate_mrr',
-            tenantId,
+            tenantId: DEFAULT_ORG_ID,
             organizationId,
           },
           specialistResults
@@ -972,7 +960,7 @@ export class CommerceManager extends BaseManager {
           taskId,
           {
             action: 'get_catalog_summary',
-            tenantId,
+            tenantId: DEFAULT_ORG_ID,
             organizationId,
             workspaceId,
           },
@@ -1068,7 +1056,7 @@ export class CommerceManager extends BaseManager {
       // Build CommerceBrief
       const brief: CommerceBrief = {
         taskId,
-        tenantId,
+        tenantId: DEFAULT_ORG_ID,
         generatedAt: new Date().toISOString(),
         executionTimeMs: Date.now() - startTime,
         revenue: {
@@ -1133,7 +1121,6 @@ export class CommerceManager extends BaseManager {
    */
   private async checkInventory(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -1168,7 +1155,6 @@ export class CommerceManager extends BaseManager {
    */
   private async validatePricing(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -1180,7 +1166,7 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'validate_pricing',
-          organizationId: (payload?.organizationId as string) ?? tenantId,
+          organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           items: payload?.items,
           discountCode: payload?.discountCode,
         },
@@ -1281,7 +1267,7 @@ export class CommerceManager extends BaseManager {
   /**
    * Fetch tenant commerce settings from TenantMemoryVault
    */
-  private async fetchTenantSettings(tenantId: string): Promise<TenantCommerceSettings> {
+  private async fetchTenantSettings(): Promise<TenantCommerceSettings> {
     try {
       // Try to read from vault first
       const cachedSettings = this.memoryVault.read(
@@ -1299,7 +1285,7 @@ export class CommerceManager extends BaseManager {
 
       const orgData = await FirestoreService.get(
         COLLECTIONS.ORGANIZATIONS,
-        tenantId
+        DEFAULT_ORG_ID
       );
 
       const settings: TenantCommerceSettings = {
@@ -1340,13 +1326,10 @@ export class CommerceManager extends BaseManager {
 
     this.log('INFO', `Received signal: ${signalType} (signalId: ${signal.id})`);
 
-    const tenantId = (payload?.tenantId as string) ?? (payload?.organizationId as string) ?? '';
-
     // Handle payment-related signals
     if (signalType === 'payment.completed' || signalType === 'checkout.session.completed') {
       return this.handleCheckoutComplete(
         signal.id,
-        tenantId,
         payload ?? {},
         Date.now()
       );
@@ -1355,7 +1338,6 @@ export class CommerceManager extends BaseManager {
     if (signalType === 'invoice.payment_failed') {
       return this.processBilling(
         signal.id,
-        tenantId,
         {
           subscriptionId: payload?.subscriptionId,
           paymentSucceeded: false,

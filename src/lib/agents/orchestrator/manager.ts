@@ -44,6 +44,7 @@ import {
   readAgentInsights,
   type InsightEntry,
 } from '../shared/tenant-memory-vault';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // COMMAND PATTERN - Task Dispatching
@@ -964,7 +965,7 @@ export class MasterOrchestrator extends BaseManager {
   /**
    * Execute a saga - run all steps with dependency management
    */
-  async executeSaga(saga: Saga, tenantId: string): Promise<{
+  async executeSaga(saga: Saga): Promise<{
     sagaId: string;
     status: SagaStatus;
     results: CommandResult[];
@@ -1004,7 +1005,7 @@ export class MasterOrchestrator extends BaseManager {
 
         // Execute ready steps in parallel
         const stepResults = await Promise.allSettled(
-          readySteps.map(step => this.executeCommand(step.command, tenantId))
+          readySteps.map(step => this.executeCommand(step.command))
         );
 
         // Process results
@@ -1136,7 +1137,7 @@ export class MasterOrchestrator extends BaseManager {
   /**
    * Execute a command by dispatching to the target manager
    */
-  async executeCommand(command: Command, tenantId: string): Promise<CommandResult> {
+  async executeCommand(command: Command): Promise<CommandResult> {
     const startTime = Date.now();
     this.metricsCollector.totalCommands++;
 
@@ -1167,7 +1168,7 @@ export class MasterOrchestrator extends BaseManager {
         priority: command.priority,
         payload: {
           ...command.payload,
-          tenantId,
+          tenantId: DEFAULT_ORG_ID,
           commandId: command.id,
         },
         requiresResponse: true,
@@ -1226,7 +1227,7 @@ export class MasterOrchestrator extends BaseManager {
   /**
    * Get aggregated status from all domain managers
    */
-  async getSwarmStatus(_tenantId?: string): Promise<SwarmStatus> {
+  async getSwarmStatus(): Promise<SwarmStatus> {
     const managerBriefs: ManagerBrief[] = [];
 
     // Collect briefs from all managers
@@ -1367,7 +1368,7 @@ export class MasterOrchestrator extends BaseManager {
 
     // If saga was created, execute it
     if (result.saga) {
-      const sagaResult = await this.executeSaga(result.saga, tenantId);
+      const sagaResult = await this.executeSaga(result.saga);
       return this.createReport(taskId, 'COMPLETED', {
         goalProcessingResult: result,
         sagaExecution: sagaResult,
@@ -1389,7 +1390,7 @@ export class MasterOrchestrator extends BaseManager {
     tenantId: string,
     startTime: number
   ): Promise<AgentReport> {
-    const status = await this.getSwarmStatus(tenantId);
+    const status = await this.getSwarmStatus();
 
     return this.createReport(taskId, 'COMPLETED', {
       swarmStatus: status,
@@ -1422,7 +1423,7 @@ export class MasterOrchestrator extends BaseManager {
     const saga = this.createSagaFromTemplate(`goal_${Date.now()}`, tenantId, template, userGoal);
     this.activeSagas.set(saga.id, saga);
 
-    const result = await this.executeSaga(saga, tenantId);
+    const result = await this.executeSaga(saga);
 
     return this.createReport(taskId, 'COMPLETED', {
       sagaExecution: result,
@@ -1448,7 +1449,7 @@ export class MasterOrchestrator extends BaseManager {
       dependencies: [],
     };
 
-    const result = await this.executeCommand(command, tenantId);
+    const result = await this.executeCommand(command);
 
     return this.createReport(taskId, 'COMPLETED', {
       commandResult: result,

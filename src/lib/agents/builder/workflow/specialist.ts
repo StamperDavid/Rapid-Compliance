@@ -205,7 +205,6 @@ export interface WorkflowEdge {
 
 export interface Workflow {
   id: string;
-  tenantId: string;
   name: string;
   description: string;
   goal: string;
@@ -258,7 +257,6 @@ export interface WorkflowAnalytics {
 }
 
 export interface ComposeWorkflowRequest {
-  tenantId: string;
   goal: string;
   constraints?: {
     maxDurationMs?: number;
@@ -270,7 +268,6 @@ export interface ComposeWorkflowRequest {
 }
 
 export interface OptimizeChainRequest {
-  tenantId: string;
   workflowId: string;
   optimizationGoal: 'SPEED' | 'RELIABILITY' | 'COST' | 'BALANCED';
   constraints?: {
@@ -280,7 +277,6 @@ export interface OptimizeChainRequest {
 }
 
 export interface ExecuteWorkflowRequest {
-  tenantId: string;
   workflowId: string;
   inputs?: Record<string, unknown>;
   dryRun?: boolean;
@@ -288,7 +284,6 @@ export interface ExecuteWorkflowRequest {
 }
 
 export interface AnalyzePerformanceRequest {
-  tenantId: string;
   workflowId: string;
   executionIds?: string[];
   timeRange?: { start: string; end: string };
@@ -443,7 +438,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
           return this.handleAnalyzePerformance(taskId, payload as AnalyzePerformanceRequest);
 
         case 'list_workflows':
-          return this.handleListWorkflows(taskId, (payload as ComposeWorkflowRequest).tenantId);
+          return this.handleListWorkflows(taskId);
 
         case 'get_workflow':
           return this.handleGetWorkflow(taskId, (payload as OptimizeChainRequest).workflowId);
@@ -463,11 +458,10 @@ export class WorkflowOptimizer extends BaseSpecialist {
    */
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
-    const signalPayload = signal.payload as { type?: string; tenantId?: string; workflowId?: string; inputs?: Record<string, unknown> };
+    const signalPayload = signal.payload as { type?: string; workflowId?: string; inputs?: Record<string, unknown> };
 
     if (signalPayload.type === 'WORKFLOW_TRIGGER') {
       const result = await this.handleExecuteWorkflow(taskId, {
-        tenantId: signalPayload.tenantId ?? '',
         workflowId: signalPayload.workflowId ?? '',
         inputs: signalPayload.inputs,
       });
@@ -509,7 +503,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
     taskId: string,
     request: ComposeWorkflowRequest
   ): AgentReport {
-    const { tenantId, goal, constraints, inputs } = request;
+    const { goal, constraints, inputs } = request;
 
     this.log('INFO', `Composing workflow for goal: "${goal}"`);
 
@@ -529,11 +523,10 @@ export class WorkflowOptimizer extends BaseSpecialist {
     const estimatedTotalDurationMs = this.estimateTotalDuration(nodes, criticalPath);
 
     // Create workflow
-    const workflowId = `wf-${tenantId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const workflowId = `wf-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
     const workflow: Workflow = {
       id: workflowId,
-      tenantId,
       name: this.generateWorkflowName(goal),
       description: `Auto-composed workflow to achieve: ${goal}`,
       goal,
@@ -1138,7 +1131,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
     taskId: string,
     request: ExecuteWorkflowRequest
   ): Promise<AgentReport> {
-    const { tenantId: _tenantId, workflowId, inputs, dryRun } = request;
+    const { workflowId, inputs, dryRun } = request;
 
     const workflow = this.workflows.get(workflowId);
     if (!workflow) {
@@ -1268,7 +1261,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
     taskId: string,
     request: AnalyzePerformanceRequest
   ): AgentReport {
-    const { tenantId, workflowId } = request;
+    const { workflowId } = request;
 
     const workflow = this.workflows.get(workflowId);
     if (!workflow) {
@@ -1279,7 +1272,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
 
     if (executions.length === 0) {
       return this.createReport(taskId, 'COMPLETED', {
-        tenantId,
         workflowId,
         message: 'No execution history available',
         analytics: null,
@@ -1342,7 +1334,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
     };
 
     return this.createReport(taskId, 'COMPLETED', {
-      tenantId,
       analytics,
     });
   }
@@ -1389,14 +1380,11 @@ export class WorkflowOptimizer extends BaseSpecialist {
   /**
    * Handle list workflows request
    */
-  private handleListWorkflows(taskId: string, tenantId: string): AgentReport {
-    const tenantWorkflows = Array.from(this.workflows.values()).filter(
-      w => w.tenantId === tenantId
-    );
+  private handleListWorkflows(taskId: string): AgentReport {
+    const allWorkflows = Array.from(this.workflows.values());
 
     return this.createReport(taskId, 'COMPLETED', {
-      tenantId,
-      workflows: tenantWorkflows.map(w => ({
+      workflows: allWorkflows.map(w => ({
         id: w.id,
         name: w.name,
         status: w.status,
@@ -1404,7 +1392,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
         estimatedDurationMs: w.estimatedTotalDurationMs,
         createdAt: w.createdAt,
       })),
-      count: tenantWorkflows.length,
+      count: allWorkflows.length,
     });
   }
 
@@ -1450,10 +1438,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
   /**
    * Share workflow composition to the memory vault
    */
-  private async shareWorkflowToVault(
-    tenantId: string,
-    workflow: Workflow
-  ): Promise<void> {
+  private async shareWorkflowToVault(workflow: Workflow): Promise<void> {
     await Promise.resolve();
     const vault = getMemoryVault();
 
@@ -1495,7 +1480,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
    * Broadcast workflow execution status to relevant agents
    */
   private async broadcastWorkflowStatus(
-    tenantId: string,
     workflow: Workflow,
     executionResult: WorkflowExecutionResult
   ): Promise<void> {
@@ -1541,10 +1525,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
   /**
    * Share workflow analytics to the vault for performance tracking
    */
-  private async shareWorkflowAnalyticsToVault(
-    tenantId: string,
-    analytics: WorkflowAnalytics
-  ): Promise<void> {
+  private async shareWorkflowAnalyticsToVault(analytics: WorkflowAnalytics): Promise<void> {
     await Promise.resolve();
     const vault = getMemoryVault();
 
@@ -1585,7 +1566,6 @@ export class WorkflowOptimizer extends BaseSpecialist {
    * Read agent availability from the vault before composing workflows
    */
   private async getAgentStatusFromVault(
-    tenantId: string,
     agentIds: string[]
   ): Promise<Map<string, { available: boolean; load: number }>> {
     await Promise.resolve();

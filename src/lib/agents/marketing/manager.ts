@@ -499,8 +499,7 @@ export class MarketingManager extends BaseManager {
     try {
       const payload = message.payload as CampaignGoal;
 
-      // Single-tenant system: always use DEFAULT_ORG_ID
-      const tenantId = DEFAULT_ORG_ID;
+      // Single-tenant system: uses DEFAULT_ORG_ID internally where needed
 
       if (!payload?.message && !payload?.objective) {
         return this.createReport(
@@ -517,8 +516,7 @@ export class MarketingManager extends BaseManager {
       const campaignBrief = await this.orchestrateCampaign(payload, taskId, startTime);
 
       // Store insights in TenantMemoryVault for cross-agent learning
-      // tenantId is validated above, so we can safely use it here
-      await this.storeCampaignInsights(tenantId, campaignBrief);
+      await this.storeCampaignInsights(campaignBrief);
 
       return this.createReport(taskId, 'COMPLETED', campaignBrief);
     } catch (error) {
@@ -570,23 +568,23 @@ export class MarketingManager extends BaseManager {
   /**
    * Load Brand DNA from TenantMemoryVault for industry-agnostic customization
    */
-  private async loadBrandContext(tenantId: string): Promise<BrandContext> {
+  private async loadBrandContext(): Promise<BrandContext> {
     // Check cache first
-    if (this.brandContextCache.has(tenantId)) {
-      const cached = this.brandContextCache.get(tenantId);
+    if (this.brandContextCache.has(DEFAULT_ORG_ID)) {
+      const cached = this.brandContextCache.get(DEFAULT_ORG_ID);
       if (cached) {return cached;}
     }
 
     try {
-      const brandDNA = await getBrandDNA(tenantId);
+      const brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
 
       if (!brandDNA) {
-        this.log('WARN', `No Brand DNA found for tenant ${tenantId}, using defaults`);
-        return this.createDefaultBrandContext(tenantId);
+        this.log('WARN', `No Brand DNA found for organization ${DEFAULT_ORG_ID}, using defaults`);
+        return this.createDefaultBrandContext();
       }
 
       const brandContext: BrandContext = {
-        tenantId,
+        tenantId: DEFAULT_ORG_ID,
         companyDescription: brandDNA.companyDescription ?? '',
         uniqueValue: brandDNA.uniqueValue ?? '',
         targetAudience: brandDNA.targetAudience ?? '',
@@ -600,22 +598,22 @@ export class MarketingManager extends BaseManager {
       };
 
       // Cache for performance
-      this.brandContextCache.set(tenantId, brandContext);
-      this.log('INFO', `Loaded Brand DNA for tenant ${tenantId} (Industry: ${brandContext.industry})`);
+      this.brandContextCache.set(DEFAULT_ORG_ID, brandContext);
+      this.log('INFO', `Loaded Brand DNA for organization ${DEFAULT_ORG_ID} (Industry: ${brandContext.industry})`);
 
       return brandContext;
     } catch (error) {
       this.log('ERROR', `Failed to load Brand DNA: ${error instanceof Error ? error.message : String(error)}`);
-      return this.createDefaultBrandContext(tenantId);
+      return this.createDefaultBrandContext();
     }
   }
 
   /**
    * Create default brand context when no Brand DNA exists
    */
-  private createDefaultBrandContext(tenantId: string): BrandContext {
+  private createDefaultBrandContext(): BrandContext {
     return {
-      tenantId,
+      tenantId: DEFAULT_ORG_ID,
       companyDescription: '',
       uniqueValue: '',
       targetAudience: '',
@@ -732,8 +730,7 @@ export class MarketingManager extends BaseManager {
     };
 
     // Step 1: Load Brand DNA for industry-agnostic customization
-    const tenantId = goal.tenantId ?? 'default';
-    const brandContext = await this.loadBrandContext(tenantId);
+    const brandContext = await this.loadBrandContext();
     this.log('INFO', `Brand context loaded (Industry: ${brandContext.industry})`);
 
     // Step 2: Detect campaign intent
@@ -1905,7 +1902,6 @@ Budget: ${budget}`;
    * Store campaign insights in TenantMemoryVault for cross-agent learning
    */
   private async storeCampaignInsights(
-    tenantId: string,
     campaignBrief: CampaignBrief
   ): Promise<void> {
     try {
@@ -1949,7 +1945,7 @@ Budget: ${budget}`;
         }
       );
 
-      this.log('INFO', `Campaign insights stored for tenant ${tenantId}`);
+      this.log('INFO', `Campaign insights stored for organization ${DEFAULT_ORG_ID}`);
     } catch (error) {
       this.log('ERROR', `Failed to store campaign insights: ${error instanceof Error ? error.message : String(error)}`);
       // Non-fatal - don't throw

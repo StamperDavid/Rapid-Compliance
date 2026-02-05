@@ -726,7 +726,7 @@ export async function GET(
     await orchestrator.initialize();
 
     // Fetch live swarm status
-    const swarmStatus = await orchestrator.getSwarmStatus(tenantId);
+    const swarmStatus = await orchestrator.getSwarmStatus();
 
     // Transform to frontend-compatible response
     const response = transformSwarmStatus(swarmStatus);

@@ -9,6 +9,7 @@ import type {
   SpecialistConfig,
   Signal,
 } from '../../types';
+// DEFAULT_ORG_ID available from '@/lib/constants/platform' if needed
 
 // ============================================================================
 // DOMAIN TYPES
@@ -152,7 +153,6 @@ interface ScheduledTask {
 
 interface ThirtyDayPostCalendar {
   businessId: string;
-  tenantId: string;
   generatedDate: string;
   posts: Array<{
     dayNumber: number;
@@ -194,7 +194,6 @@ interface QADatabaseEntry {
 
 interface QADatabase {
   businessId: string;
-  tenantId: string;
   generatedDate: string;
   serviceArea: string;
   businessHours: Record<string, { open: string; close: string }> | null;
@@ -213,7 +212,6 @@ interface QADatabase {
 
 interface OptimizedBusinessDescription {
   businessId: string;
-  tenantId: string;
   shortDescription: string;
   fullDescription: string;
   characterCount: number;
@@ -1982,13 +1980,11 @@ export class GMBSpecialist extends BaseSpecialist {
   private async handleGenerate30DayPosts(
     taskId: string,
     business: Business,
-    options?: Record<string, unknown>
+    _options?: Record<string, unknown>
   ): Promise<AgentReport> {
-    const tenantId = (options?.tenantId as string) || business.id;
+    this.log('INFO', `Generating 30-day post calendar for ${business.name}`);
 
-    this.log('INFO', `Generating 30-day post calendar for ${business.name} (Tenant: ${tenantId})`);
-
-    const calendar = this.generate30DayPostCalendar(business, tenantId);
+    const calendar = this.generate30DayPostCalendar(business);
 
     return Promise.resolve(this.createReport(taskId, 'COMPLETED', {
       calendar,
@@ -1996,7 +1992,7 @@ export class GMBSpecialist extends BaseSpecialist {
     }));
   }
 
-  private generate30DayPostCalendar(business: Business, tenantId: string): ThirtyDayPostCalendar {
+  private generate30DayPostCalendar(business: Business): ThirtyDayPostCalendar {
     const posts: ThirtyDayPostCalendar['posts'] = [];
     const startDate = new Date();
 
@@ -2056,7 +2052,6 @@ export class GMBSpecialist extends BaseSpecialist {
 
     return {
       businessId: business.id,
-      tenantId,
       generatedDate: new Date().toISOString(),
       posts,
       weeklyThemes,
@@ -2253,13 +2248,11 @@ export class GMBSpecialist extends BaseSpecialist {
   private async handleGenerateQADatabase(
     taskId: string,
     business: Business,
-    options?: Record<string, unknown>
+    _options?: Record<string, unknown>
   ): Promise<AgentReport> {
-    const tenantId = (options?.tenantId as string) || business.id;
+    this.log('INFO', `Generating Q&A database for ${business.name}`);
 
-    this.log('INFO', `Generating Q&A database for ${business.name} (Tenant: ${tenantId})`);
-
-    const qaDatabase = this.generateQADatabase(business, tenantId);
+    const qaDatabase = this.generateQADatabase(business);
 
     return Promise.resolve(this.createReport(taskId, 'COMPLETED', {
       qaDatabase,
@@ -2267,7 +2260,7 @@ export class GMBSpecialist extends BaseSpecialist {
     }));
   }
 
-  private generateQADatabase(business: Business, tenantId: string): QADatabase {
+  private generateQADatabase(business: Business): QADatabase {
     const categories = [
       { name: 'Location & Hours', priority: 'high' },
       { name: 'Services & Products', priority: 'high' },
@@ -2421,7 +2414,6 @@ export class GMBSpecialist extends BaseSpecialist {
 
     return {
       businessId: business.id,
-      tenantId,
       generatedDate: new Date().toISOString(),
       serviceArea: `${business.location.city}, ${business.location.state}${business.location.neighborhood ? ` (${business.location.neighborhood})` : ''}`,
       businessHours: business.hours ?? null,
@@ -2482,18 +2474,16 @@ export class GMBSpecialist extends BaseSpecialist {
   private async handleGenerateBusinessDescription(
     taskId: string,
     business: Business,
-    options?: Record<string, unknown>
+    _options?: Record<string, unknown>
   ): Promise<AgentReport> {
-    const tenantId = (options?.tenantId as string) || business.id;
+    this.log('INFO', `Generating optimized business description for ${business.name}`);
 
-    this.log('INFO', `Generating optimized business description for ${business.name} (Tenant: ${tenantId})`);
-
-    const description = this.generateOptimizedDescription(business, tenantId);
+    const description = this.generateOptimizedDescription(business);
 
     return Promise.resolve(this.createReport(taskId, 'COMPLETED', description));
   }
 
-  private generateOptimizedDescription(business: Business, tenantId: string): OptimizedBusinessDescription {
+  private generateOptimizedDescription(business: Business): OptimizedBusinessDescription {
     const localKeywords = this.generateLocalKeywords(business);
     const { category, location, phone, website, attributes } = business;
 
@@ -2523,7 +2513,6 @@ export class GMBSpecialist extends BaseSpecialist {
 
     return {
       businessId: business.id,
-      tenantId,
       shortDescription,
       fullDescription,
       characterCount: fullDescription.length,

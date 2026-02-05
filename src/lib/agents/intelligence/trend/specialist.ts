@@ -208,7 +208,6 @@ export interface CompetitorMovement {
 }
 
 export interface SignalScanRequest {
-  tenantId: string;
   industry?: string;
   competitors?: string[];
   keywords?: string[];
@@ -219,7 +218,6 @@ export interface SignalScanRequest {
 }
 
 export interface TrendAnalysisRequest {
-  tenantId: string;
   trendKeyword: string;
   industry?: string;
   timeHorizon?: '1_WEEK' | '1_MONTH' | '3_MONTHS' | '6_MONTHS' | '1_YEAR';
@@ -227,7 +225,6 @@ export interface TrendAnalysisRequest {
 }
 
 export interface PivotTriggerRequest {
-  tenantId: string;
   signalId: string;
   targetAgents?: string[];
   priority?: 'IMMEDIATE' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -235,7 +232,6 @@ export interface PivotTriggerRequest {
 }
 
 export interface SignalScanResult {
-  tenantId: string;
   scanId: string;
   scannedAt: string;
   signals: MarketSignal[];
@@ -255,7 +251,6 @@ export interface SignalScanResult {
 }
 
 export interface TrendAnalysisResult {
-  tenantId: string;
   analysisId: string;
   analyzedAt: string;
   forecast: TrendForecast;
@@ -332,14 +327,11 @@ export class TrendScout extends BaseSpecialist {
    */
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
-    const signalPayload = signal.payload as { type?: string; tenantId?: string; data?: Record<string, unknown> };
+    const signalPayload = signal.payload as { type?: string; data?: Record<string, unknown> };
 
     if (signalPayload.type === 'MARKET_DATA_UPDATE') {
       // Process new market data and detect signals
-      const scanResult = await this.processMarketDataUpdate(
-        signalPayload.tenantId ?? '',
-        signalPayload.data ?? {}
-      );
+      const scanResult = await this.processMarketDataUpdate(signalPayload.data ?? {});
       return this.createReport(taskId, 'COMPLETED', scanResult);
     }
 
@@ -384,20 +376,20 @@ export class TrendScout extends BaseSpecialist {
     taskId: string,
     request: SignalScanRequest
   ): Promise<AgentReport> {
-    const { tenantId, industry, competitors, keywords, timeframe } = request;
+    const { industry, competitors, keywords, timeframe } = request;
     const minConfidence = request.minConfidence ?? 0.5;
 
-    this.log('INFO', `Scanning signals for tenant ${tenantId}, industry: ${industry ?? 'all'}`);
+    this.log('INFO', `Scanning signals for industry: ${industry ?? 'all'}`);
 
     // Generate scan ID
     const scanId = `scan-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     // Detect signals from various sources
-    const signals = await this.detectSignals(tenantId, industry, keywords ?? [], timeframe ?? '7D');
+    const signals = await this.detectSignals(industry, keywords ?? [], timeframe ?? '7D');
 
     // Track competitor movements if competitors specified
     const competitorMovements = competitors?.length
-      ? await this.trackCompetitorMovements(tenantId, competitors)
+      ? await this.trackCompetitorMovements(competitors)
       : [];
 
     // Filter by confidence threshold
@@ -415,7 +407,6 @@ export class TrendScout extends BaseSpecialist {
       .forEach(s => this.signalCache.set(s.id, s));
 
     const result: SignalScanResult = {
-      tenantId,
       scanId,
       scannedAt: new Date().toISOString(),
       signals: filteredSignals,
@@ -431,7 +422,6 @@ export class TrendScout extends BaseSpecialist {
    * Detect market signals from multiple sources
    */
   private async detectSignals(
-    tenantId: string,
     industry: string | undefined,
     keywords: string[],
     timeframe: string
@@ -445,18 +435,18 @@ export class TrendScout extends BaseSpecialist {
 
     // Detect industry-specific trends
     if (industry) {
-      const industrySignals = this.detectIndustrySignals(tenantId, industry, now);
+      const industrySignals = this.detectIndustrySignals(industry, now);
       signals.push(...industrySignals);
     }
 
     // Detect keyword-based signals
     if (keywords.length > 0) {
-      const keywordSignals = this.detectKeywordSignals(tenantId, keywords, now);
+      const keywordSignals = this.detectKeywordSignals(keywords, now);
       signals.push(...keywordSignals);
     }
 
     // Detect general market signals
-    const marketSignals = this.detectGeneralMarketSignals(tenantId, timeframe, now);
+    const marketSignals = this.detectGeneralMarketSignals(timeframe, now);
     signals.push(...marketSignals);
 
     // Clean expired signals from cache
@@ -469,7 +459,6 @@ export class TrendScout extends BaseSpecialist {
    * Detect industry-specific signals
    */
   private detectIndustrySignals(
-    tenantId: string,
     industry: string,
     timestamp: Date
   ): MarketSignal[] {
@@ -547,7 +536,7 @@ export class TrendScout extends BaseSpecialist {
     const patterns = industryPatterns[industryLower] ?? [];
 
     for (const pattern of patterns) {
-      const signalId = `sig-${tenantId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const signalId = `sig-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const expiresAt = new Date(timestamp.getTime() + this.getSignalTTL(pattern.urgency));
 
       signals.push({
@@ -573,7 +562,6 @@ export class TrendScout extends BaseSpecialist {
    * Detect keyword-based signals
    */
   private detectKeywordSignals(
-    tenantId: string,
     keywords: string[],
     timestamp: Date
   ): MarketSignal[] {
@@ -583,7 +571,7 @@ export class TrendScout extends BaseSpecialist {
     const trendingKeywords = this.analyzeTrendingKeywords(keywords);
 
     for (const { keyword, trendDirection, strength } of trendingKeywords) {
-      const signalId = `sig-kw-${tenantId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const signalId = `sig-kw-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const type: SignalType = trendDirection === 'up' ? 'TREND_EMERGING' : 'TREND_DECLINING';
       const urgency: SignalUrgency = strength > 0.8 ? 'HIGH' : strength > 0.5 ? 'MEDIUM' : 'LOW';
 
@@ -612,7 +600,6 @@ export class TrendScout extends BaseSpecialist {
    * Detect general market signals
    */
   private detectGeneralMarketSignals(
-    tenantId: string,
     _timeframe: string,
     timestamp: Date
   ): MarketSignal[] {
@@ -622,7 +609,7 @@ export class TrendScout extends BaseSpecialist {
     const economicSignals = this.analyzeEconomicIndicators();
 
     for (const indicator of economicSignals) {
-      const signalId = `sig-econ-${tenantId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const signalId = `sig-econ-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
       signals.push({
         id: signalId,
@@ -695,13 +682,12 @@ export class TrendScout extends BaseSpecialist {
    * Track competitor movements
    */
   private async trackCompetitorMovements(
-    tenantId: string,
     competitors: string[]
   ): Promise<CompetitorMovement[]> {
     const movements: CompetitorMovement[] = [];
 
     for (const competitor of competitors) {
-      const competitorMovements = await this.analyzeCompetitor(tenantId, competitor);
+      const competitorMovements = await this.analyzeCompetitor(competitor);
       movements.push(...competitorMovements);
     }
 
@@ -712,7 +698,6 @@ export class TrendScout extends BaseSpecialist {
    * Analyze individual competitor
    */
   private async analyzeCompetitor(
-    _tenantId: string,
     competitorName: string
   ): Promise<CompetitorMovement[]> {
     await Promise.resolve(); // Placeholder for async competitor analysis
@@ -785,9 +770,9 @@ export class TrendScout extends BaseSpecialist {
     taskId: string,
     request: TrendAnalysisRequest
   ): AgentReport {
-    const { tenantId, trendKeyword, industry, timeHorizon } = request;
+    const { trendKeyword, industry, timeHorizon } = request;
 
-    this.log('INFO', `Analyzing trend: "${trendKeyword}" for tenant ${tenantId}`);
+    this.log('INFO', `Analyzing trend: "${trendKeyword}"`);
 
     const analysisId = `trend-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const horizon = timeHorizon ?? '3_MONTHS';
@@ -810,7 +795,6 @@ export class TrendScout extends BaseSpecialist {
     const actionPlan = this.generateTrendActionPlan(forecast);
 
     const result: TrendAnalysisResult = {
-      tenantId,
       analysisId,
       analyzedAt: new Date().toISOString(),
       forecast,
@@ -966,9 +950,9 @@ export class TrendScout extends BaseSpecialist {
     request: PivotTriggerRequest
   ): Promise<AgentReport> {
     await Promise.resolve();
-    const { tenantId, signalId, targetAgents, priority, dryRun } = request;
+    const { signalId, targetAgents, priority, dryRun } = request;
 
-    this.log('INFO', `Triggering pivot for signal ${signalId}, tenant ${tenantId}`);
+    this.log('INFO', `Triggering pivot for signal ${signalId}`);
 
     // Retrieve signal from cache
     const signal = this.signalCache.get(signalId);
@@ -998,7 +982,6 @@ export class TrendScout extends BaseSpecialist {
     }
 
     return this.createReport(taskId, 'COMPLETED', {
-      tenantId,
       signalId,
       triggeredAt: new Date().toISOString(),
       dryRun: dryRun ?? false,
@@ -1186,7 +1169,7 @@ export class TrendScout extends BaseSpecialist {
     taskId: string,
     request: SignalScanRequest
   ): AgentReport {
-    const { tenantId, signalTypes, minConfidence } = request;
+    const { signalTypes, minConfidence } = request;
     const confidence = minConfidence ?? 0;
 
     let signals = Array.from(this.signalCache.values());
@@ -1204,7 +1187,6 @@ export class TrendScout extends BaseSpecialist {
     signals = signals.filter(s => new Date(s.expiresAt) > now);
 
     return this.createReport(taskId, 'COMPLETED', {
-      tenantId,
       cachedSignals: signals,
       count: signals.length,
     });
@@ -1217,16 +1199,15 @@ export class TrendScout extends BaseSpecialist {
     taskId: string,
     request: SignalScanRequest
   ): Promise<AgentReport> {
-    const { tenantId, competitors } = request;
+    const { competitors } = request;
 
     if (!competitors?.length) {
       return this.createReport(taskId, 'FAILED', null, ['No competitors specified']);
     }
 
-    const movements = await this.trackCompetitorMovements(tenantId, competitors);
+    const movements = await this.trackCompetitorMovements(competitors);
 
     return this.createReport(taskId, 'COMPLETED', {
-      tenantId,
       trackedAt: new Date().toISOString(),
       competitors,
       movements,
@@ -1244,18 +1225,16 @@ export class TrendScout extends BaseSpecialist {
    * Process market data update from signal bus
    */
   private async processMarketDataUpdate(
-    tenantId: string,
     data: Record<string, unknown>
   ): Promise<SignalScanResult> {
     const keywords = Array.isArray(data.keywords) ? data.keywords as string[] : [];
     const industry = typeof data.industry === 'string' ? data.industry : undefined;
 
-    const signals = await this.detectSignals(tenantId, industry, keywords, '7D');
+    const signals = await this.detectSignals(industry, keywords, '7D');
     const pivotRecommendations = this.generatePivotRecommendations(signals);
     const summary = this.buildScanSummary(signals, []);
 
     return {
-      tenantId,
       scanId: `auto-${Date.now()}`,
       scannedAt: new Date().toISOString(),
       signals,
@@ -1428,7 +1407,6 @@ export class TrendScout extends BaseSpecialist {
    * Share detected market signals with the agent swarm via the memory vault
    */
   private async shareSignalsToVault(
-    tenantId: string,
     signals: MarketSignal[]
   ): Promise<void> {
     const vault = getMemoryVault();
@@ -1490,7 +1468,6 @@ export class TrendScout extends BaseSpecialist {
    * Broadcast pivot recommendations to affected agents
    */
   private async broadcastPivotSignals(
-    tenantId: string,
     pivots: PivotRecommendation[]
   ): Promise<void> {
     for (const pivot of pivots) {

@@ -16,6 +16,7 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // SYSTEM PROMPT
@@ -86,7 +87,6 @@ interface OptimizePostPayload {
   content: string;
   targetAudience?: string;
   goal?: 'engagement' | 'leads' | 'awareness' | 'thought_leadership';
-  organizationId: string;
 }
 
 interface GenerateContentPayload {
@@ -95,7 +95,6 @@ interface GenerateContentPayload {
   contentType: 'post' | 'article' | 'carousel' | 'poll';
   targetAudience?: string;
   tone?: 'professional' | 'conversational' | 'authoritative' | 'inspirational';
-  organizationId: string;
 }
 
 interface AnalyzeAudiencePayload {
@@ -103,7 +102,6 @@ interface AnalyzeAudiencePayload {
   industry: string;
   targetRole?: string;
   companySize?: string;
-  organizationId: string;
 }
 
 interface SuggestHashtagsPayload {
@@ -111,14 +109,12 @@ interface SuggestHashtagsPayload {
   content: string;
   industry?: string;
   maxTags?: number;
-  organizationId: string;
 }
 
 interface ContentCalendarPayload {
   action: 'content_calendar';
   themes: string[];
   postsPerWeek: number;
-  organizationId: string;
 }
 
 // ============================================================================
@@ -138,7 +134,6 @@ interface ConnectionRequestPayload {
     sharedGroups?: string[];
     recentActivity?: string[];
   };
-  organizationId: string;
 }
 
 interface FollowUpSequencePayload {
@@ -154,7 +149,6 @@ interface FollowUpSequencePayload {
   };
   sequenceLength: number;
   objective: 'meeting' | 'demo' | 'partnership' | 'referral';
-  organizationId: string;
 }
 
 interface HighValueOfferPayload {
@@ -170,7 +164,6 @@ interface HighValueOfferPayload {
     budget?: string;
   };
   offerType: 'consultation' | 'demo' | 'audit' | 'trial' | 'case_study';
-  organizationId: string;
 }
 
 interface AutomationBridgePayload {
@@ -186,7 +179,6 @@ interface AutomationBridgePayload {
     messageTemplates: string[];
     sequenceType: 'connection' | 'followup' | 'high_value';
   };
-  organizationId: string;
 }
 
 type LinkedInPayload =
@@ -302,7 +294,6 @@ interface AutomationPayloadOutput {
       delay?: number;
     }>;
     metadata: {
-      tenantId: string;
       campaignId: string;
       createdAt: string;
       tier: string;
@@ -964,12 +955,12 @@ export class LinkedInExpert extends BaseSpecialist {
    * TIER 1: Connection Request - Initial outreach with personalization
    */
   private async handleConnectionRequest(payload: ConnectionRequestPayload): Promise<ConnectionRequestResult> {
-    const { targetProfile, organizationId } = payload;
+    const { targetProfile } = payload;
 
-    this.log('INFO', `Generating Tier-1 connection request for ${targetProfile.name} (Tenant: ${organizationId})`);
+    this.log('INFO', `Generating Tier-1 connection request for ${targetProfile.name}`);
 
     // Fetch tenant playbook for voice matching
-    const playbook = await this.fetchTenantPlaybook(organizationId);
+    const playbook = await this.fetchTenantPlaybook();
 
     // Generate personalized hooks based on target profile
     const hooks = this.generateConnectionHooks(targetProfile, playbook);
@@ -987,7 +978,6 @@ export class LinkedInExpert extends BaseSpecialist {
 
     // Build automation payload for webhook/API bridge
     const automationPayload = this.buildAutomationPayload(
-      organizationId,
       'connection',
       [{ profileIdentifier: targetProfile.name, ...targetProfile }],
       [{ sequence: 1, content: primaryMessage }]
@@ -1008,11 +998,11 @@ export class LinkedInExpert extends BaseSpecialist {
    * TIER 2: Follow-Up Sequence - Multi-touch nurture campaign
    */
   private async handleFollowUpSequence(payload: FollowUpSequencePayload): Promise<FollowUpSequenceResult> {
-    const { targetProfile, sequenceLength, objective, organizationId } = payload;
+    const { targetProfile, sequenceLength, objective } = payload;
 
     this.log('INFO', `Generating Tier-2 follow-up sequence (${sequenceLength} messages) for ${targetProfile.name}`);
 
-    const playbook = await this.fetchTenantPlaybook(organizationId);
+    const playbook = await this.fetchTenantPlaybook();
 
     const sequence: FollowUpSequenceResult['sequence'] = [];
     const delays = [0, 3, 5, 7, 14]; // Days between messages
@@ -1032,7 +1022,6 @@ export class LinkedInExpert extends BaseSpecialist {
 
     // Build automation payload with full sequence
     const automationPayload = this.buildAutomationPayload(
-      organizationId,
       'followup',
       [{ profileIdentifier: targetProfile.name, ...targetProfile }],
       sequence.map((s, idx) => ({ sequence: idx + 1, content: s.message, delay: s.day * 24 * 60 }))
@@ -1051,11 +1040,11 @@ export class LinkedInExpert extends BaseSpecialist {
    * TIER 3: High-Value Offer - Premium personalized outreach
    */
   private async handleHighValueOffer(payload: HighValueOfferPayload): Promise<HighValueOfferResult> {
-    const { targetProfile, offerType, organizationId } = payload;
+    const { targetProfile, offerType } = payload;
 
     this.log('INFO', `Generating Tier-3 high-value offer (${offerType}) for ${targetProfile.name}`);
 
-    const playbook = await this.fetchTenantPlaybook(organizationId);
+    const playbook = await this.fetchTenantPlaybook();
 
     // Build personalized offer components
     const headline = this.generateOfferHeadline(targetProfile, offerType, playbook);
@@ -1079,7 +1068,6 @@ export class LinkedInExpert extends BaseSpecialist {
 
     // Build automation payload
     const automationPayload = this.buildAutomationPayload(
-      organizationId,
       'high_value',
       [{ profileIdentifier: targetProfile.name, ...targetProfile }],
       [{ sequence: 1, content: fullMessage }]
@@ -1103,12 +1091,11 @@ export class LinkedInExpert extends BaseSpecialist {
     payload: AutomationPayloadOutput;
     integrationInstructions: string[];
   } {
-    const { bridgeType, campaignData, organizationId } = payload;
+    const { bridgeType, campaignData } = payload;
 
     this.log('INFO', `Building automation bridge for ${bridgeType} (${campaignData.targets.length} targets)`);
 
     const automationPayload = this.buildAutomationPayload(
-      organizationId,
       campaignData.sequenceType,
       campaignData.targets.map(t => ({
         profileIdentifier: t.profileUrl ?? t.name,
@@ -1136,9 +1123,9 @@ export class LinkedInExpert extends BaseSpecialist {
   // 3-TIER PERSONALIZATION HELPER METHODS
   // ==========================================================================
 
-  private async fetchTenantPlaybook(organizationId: string): Promise<TenantPlaybook> {
-    // In production, this would fetch from Firestore: organizations/${organizationId}/playbook
-    this.log('INFO', `Fetching playbook for tenant: ${organizationId}`);
+  private async fetchTenantPlaybook(): Promise<TenantPlaybook> {
+    // In production, this would fetch from Firestore: organizations/${DEFAULT_ORG_ID}/playbook
+    this.log('INFO', `Fetching playbook for organization: ${DEFAULT_ORG_ID}`);
 
     // Default playbook structure - would be overridden by tenant-specific data
     return Promise.resolve({
@@ -1423,7 +1410,6 @@ Best regards`;
   }
 
   private buildAutomationPayload(
-    tenantId: string,
     tier: string,
     targets: Array<{ profileIdentifier: string; name: string; company: string; role: string }>,
     messages: Array<{ sequence: number; content: string; delay?: number }>
@@ -1432,7 +1418,6 @@ Best regards`;
       format: 'json',
       headers: {
         'Content-Type': 'application/json',
-        'X-Tenant-ID': tenantId,
         'X-Campaign-Type': `linkedin-${tier}`,
       },
       body: {
@@ -1440,7 +1425,6 @@ Best regards`;
         targets,
         messages,
         metadata: {
-          tenantId,
           campaignId: `li_${tier}_${Date.now()}`,
           createdAt: new Date().toISOString(),
           tier,
@@ -1453,7 +1437,6 @@ Best regards`;
     const instructions: Record<string, string[]> = {
       webhook: [
         'Configure your webhook endpoint to accept POST requests',
-        'Set the X-Tenant-ID header for multi-tenant routing',
         'Parse the body.messages array for sequence execution',
         'Use body.metadata.campaignId for tracking',
       ],

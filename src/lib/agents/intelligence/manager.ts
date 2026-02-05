@@ -43,7 +43,6 @@ export interface IntelligenceRequest {
   companyUrl?: string;
   brandName?: string;
   keywords?: string[];
-  tenantId?: string;
   includeDeepAnalysis?: boolean;
   limit?: number;
 }
@@ -399,9 +398,7 @@ export class IntelligenceManager extends BaseManager {
       );
 
       // Store insights in TenantMemoryVault for cross-agent access
-      if (request.tenantId) {
-        await this.storeInsightsInVault(request.tenantId, brief);
-      }
+      await this.storeInsightsInVault(brief);
 
       // Return success even with partial results (graceful degradation)
       const hasAnySuccess = specialistResults.some(r => r.status === 'SUCCESS');
@@ -439,7 +436,6 @@ export class IntelligenceManager extends BaseManager {
       companyUrl: (payload?.companyUrl as string) ?? (payload?.url as string) ?? undefined,
       brandName: (payload?.brandName as string) ?? (payload?.brand as string) ?? undefined,
       keywords: (payload?.keywords as string[]) ?? undefined,
-      tenantId: (payload?.tenantId as string) ?? undefined,
       includeDeepAnalysis: (payload?.includeDeepAnalysis as boolean) ?? false,
       limit: (payload?.limit as number) ?? 10,
     };
@@ -1020,7 +1016,7 @@ export class IntelligenceManager extends BaseManager {
   /**
    * Store synthesized insights in the TenantMemoryVault
    */
-  private async storeInsightsInVault(tenantId: string, brief: IntelligenceBrief): Promise<void> {
+  private async storeInsightsInVault(brief: IntelligenceBrief): Promise<void> {
     try {
       // Store the full brief as a STRATEGY entry
       const vault = getMemoryVault();

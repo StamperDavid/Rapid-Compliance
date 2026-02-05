@@ -35,6 +35,7 @@ import {
 } from '../shared/tenant-memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // SYSTEM PROMPT - Omni-Channel Communication Orchestration
@@ -136,7 +137,6 @@ export interface SequenceStep {
  */
 export interface OutreachSequence {
   sequenceId: string;
-  tenantId: string;
   name: string;
   description?: string;
   targetAudience?: {
@@ -163,7 +163,6 @@ export interface OutreachSequence {
  */
 export interface LeadProfile {
   leadId: string;
-  tenantId: string;
   email?: string;
   phone?: string;
   firstName: string;
@@ -257,7 +256,6 @@ interface SpecialistResult {
  */
 export interface OutreachBrief {
   briefId: string;
-  tenantId: string;
   requestedAt: Date;
   completedAt: Date;
 
@@ -495,11 +493,6 @@ export class OutreachManager extends BaseManager {
 
     try {
       const payload = message.payload as Record<string, unknown> | null;
-      const tenantId = (payload?.tenantId as string) ?? (payload?.organizationId as string);
-
-      if (!tenantId) {
-        return this.createReport(taskId, 'FAILED', null, ['tenantId is required']);
-      }
 
       // Detect intent
       const intent = this.detectIntent(payload, message);
@@ -508,22 +501,22 @@ export class OutreachManager extends BaseManager {
       // Route based on intent
       switch (intent) {
         case 'EXECUTE_SEQUENCE':
-          return await this.executeSequence(taskId, tenantId, payload, startTime);
+          return await this.executeSequence(taskId, payload, startTime);
 
         case 'SEND_EMAIL':
-          return await this.executeSingleChannel(taskId, tenantId, 'EMAIL', payload, startTime);
+          return await this.executeSingleChannel(taskId, 'EMAIL', payload, startTime);
 
         case 'SEND_SMS':
-          return await this.executeSingleChannel(taskId, tenantId, 'SMS', payload, startTime);
+          return await this.executeSingleChannel(taskId, 'SMS', payload, startTime);
 
         case 'CHECK_COMPLIANCE':
-          return this.checkCompliance(taskId, tenantId, payload, startTime);
+          return this.checkCompliance(taskId, payload, startTime);
 
         case 'CHECK_SENTIMENT':
-          return await this.checkSentiment(taskId, tenantId, payload, startTime);
+          return await this.checkSentiment(taskId, payload, startTime);
 
         case 'MANAGE_DNC':
-          return this.manageDNC(taskId, tenantId, payload, startTime);
+          return this.manageDNC(taskId, payload, startTime);
 
         case 'SINGLE_SPECIALIST':
         default: {
@@ -581,7 +574,6 @@ export class OutreachManager extends BaseManager {
    */
   private async executeSequence(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     startTime: number
   ): Promise<AgentReport> {
@@ -591,22 +583,21 @@ export class OutreachManager extends BaseManager {
 
     try {
       // Extract lead and sequence info
-      const lead = this.extractLeadProfile(tenantId, payload);
+      const lead = this.extractLeadProfile(payload);
       if (!lead) {
         return this.createReport(taskId, 'FAILED', null, ['Lead profile is required for sequence execution']);
       }
 
       // Step 1: Check sentiment before any outreach
-      const { sentiment, confidence } = await this.querySentiment(tenantId, lead);
+      const { sentiment, confidence } = await this.querySentiment(lead);
       lead.sentiment = sentiment;
 
       // Block if hostile sentiment
       if (sentiment === 'HOSTILE') {
-        await this.flagForHumanReview(tenantId, lead, 'HOSTILE sentiment detected');
+        await this.flagForHumanReview(lead, 'HOSTILE sentiment detected');
 
         const brief: OutreachBrief = this.createOutreachBrief(
           taskId,
-          tenantId,
           lead,
           sentiment,
           confidence,
@@ -623,12 +614,11 @@ export class OutreachManager extends BaseManager {
       }
 
       // Step 2: Check compliance (DNC, frequency, quiet hours)
-      const compliance = this.performComplianceCheck(tenantId, lead);
+      const compliance = this.performComplianceCheck(lead);
 
       if (!compliance.canContact) {
         const brief: OutreachBrief = this.createOutreachBrief(
           taskId,
-          tenantId,
           lead,
           sentiment,
           confidence,
@@ -645,14 +635,13 @@ export class OutreachManager extends BaseManager {
       }
 
       // Step 3: Build or load sequence
-      const sequence = await this.buildSequence(tenantId, payload, lead);
+      const sequence = await this.buildSequence(payload, lead);
 
       // Step 4: Fetch templates from CONTENT_MANAGER (if available)
       const templates = await this.fetchContentTemplates(sequence);
 
       // Step 5: Execute sequence steps
       const executionStatus = await this.executeSequenceSteps(
-        tenantId,
         lead,
         sequence,
         templates,
@@ -661,7 +650,7 @@ export class OutreachManager extends BaseManager {
       );
 
       // Step 6: Store insights in vault
-      await this.storeOutreachInsights(tenantId, lead, executionStatus);
+      await this.storeOutreachInsights(lead, executionStatus);
 
       // Generate recommendations
       if (executionStatus.status === 'COMPLETED') {
@@ -676,7 +665,6 @@ export class OutreachManager extends BaseManager {
 
       const brief: OutreachBrief = this.createOutreachBrief(
         taskId,
-        tenantId,
         lead,
         sentiment,
         confidence,
@@ -690,7 +678,7 @@ export class OutreachManager extends BaseManager {
       );
 
       // Broadcast completion signal
-      await this.broadcastSequenceSignal(tenantId, 'outreach.sequence_executed', executionStatus);
+      await this.broadcastSequenceSignal('outreach.sequence_executed', executionStatus);
 
       return this.createReport(taskId, 'COMPLETED', brief, errors.length > 0 ? errors : undefined);
 
@@ -705,7 +693,6 @@ export class OutreachManager extends BaseManager {
    * Execute individual sequence steps with channel escalation
    */
   private async executeSequenceSteps(
-    tenantId: string,
     lead: LeadProfile,
     sequence: OutreachSequence,
     templates: Map<string, ContentTemplate>,
@@ -743,7 +730,6 @@ export class OutreachManager extends BaseManager {
 
       // Execute via appropriate specialist
       const result = await this.executeChannelOutreach(
-        tenantId,
         lead,
         step.channel,
         {
@@ -762,7 +748,6 @@ export class OutreachManager extends BaseManager {
         this.log('INFO', `Primary channel ${step.channel} failed, trying fallback: ${step.fallbackChannel}`);
 
         const fallbackResult = await this.executeChannelOutreach(
-          tenantId,
           lead,
           step.fallbackChannel,
           {
@@ -797,7 +782,6 @@ export class OutreachManager extends BaseManager {
    * Execute outreach via a specific channel
    */
   private async executeChannelOutreach(
-    tenantId: string,
     lead: LeadProfile,
     channel: OutreachChannel,
     content: { subject?: string; message: string; sentiment: LeadSentiment },
@@ -826,7 +810,7 @@ export class OutreachManager extends BaseManager {
             subject: content.subject ?? `Message for ${lead.firstName}`,
             html: this.formatEmailHtml(content.message, content.sentiment),
             text: content.message,
-            organizationId: tenantId,
+            organizationId: DEFAULT_ORG_ID,
             trackOpens: true,
             trackClicks: true,
             metadata: {
@@ -850,7 +834,7 @@ export class OutreachManager extends BaseManager {
             action: 'send_sms',
             to: lead.phone,
             message: content.message.slice(0, 1600), // SMS character limit
-            organizationId: tenantId,
+            organizationId: DEFAULT_ORG_ID,
             metadata: {
               leadId: lead.leadId,
               sentiment: content.sentiment,
@@ -947,7 +931,6 @@ export class OutreachManager extends BaseManager {
    */
   private async executeSingleChannel(
     taskId: string,
-    tenantId: string,
     channel: 'EMAIL' | 'SMS',
     payload: Record<string, unknown> | null,
     _startTime: number
@@ -960,11 +943,11 @@ export class OutreachManager extends BaseManager {
     }
 
     // Extract lead if provided for compliance check
-    const lead = this.extractLeadProfile(tenantId, payload);
+    const lead = this.extractLeadProfile(payload);
 
     if (lead) {
       // Check compliance
-      const compliance = this.performComplianceCheck(tenantId, lead);
+      const compliance = this.performComplianceCheck(lead);
       if (!compliance.canContact) {
         return this.createReport(taskId, 'BLOCKED', { compliance }, compliance.blockReasons);
       }
@@ -978,7 +961,7 @@ export class OutreachManager extends BaseManager {
       to: specialistId,
       type: 'COMMAND',
       priority: 'NORMAL',
-      payload: { ...payload, organizationId: tenantId },
+      payload: { ...payload, organizationId: DEFAULT_ORG_ID },
       requiresResponse: true,
       traceId: taskId,
     };
@@ -994,7 +977,6 @@ export class OutreachManager extends BaseManager {
    * Perform comprehensive compliance check
    */
   private performComplianceCheck(
-    tenantId: string,
     lead: LeadProfile
   ): {
     dncChecked: boolean;
@@ -1009,7 +991,7 @@ export class OutreachManager extends BaseManager {
     const blockReasons: string[] = [];
 
     // 1. Check DNC list
-    const isOnDNC = this.checkDNCList(tenantId, lead);
+    const isOnDNC = this.checkDNCList(lead);
     if (isOnDNC) {
       blockReasons.push('Lead is on Do Not Contact list');
     }
@@ -1021,7 +1003,7 @@ export class OutreachManager extends BaseManager {
 
     // 3. Check contact frequency limits
     const settings = this.getCommunicationSettings();
-    const withinLimits = this.checkFrequencyLimits(tenantId, lead, settings);
+    const withinLimits = this.checkFrequencyLimits(lead, settings);
     if (!withinLimits) {
       blockReasons.push('Contact frequency limit exceeded');
     }
@@ -1047,7 +1029,7 @@ export class OutreachManager extends BaseManager {
   /**
    * Check if lead is on DNC list
    */
-  private checkDNCList(tenantId: string, lead: LeadProfile): boolean {
+  private checkDNCList(lead: LeadProfile): boolean {
     try {
       const vault = getMemoryVault();
 
@@ -1078,7 +1060,6 @@ export class OutreachManager extends BaseManager {
    * Check contact frequency limits
    */
   private checkFrequencyLimits(
-    tenantId: string,
     lead: LeadProfile,
     settings: CommunicationSettings
   ): boolean {
@@ -1159,16 +1140,15 @@ export class OutreachManager extends BaseManager {
    */
   private checkCompliance(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     _startTime: number
   ): AgentReport {
-    const lead = this.extractLeadProfile(tenantId, payload);
+    const lead = this.extractLeadProfile(payload);
     if (!lead) {
       return this.createReport(taskId, 'FAILED', null, ['Lead profile required for compliance check']);
     }
 
-    const compliance = this.performComplianceCheck(tenantId, lead);
+    const compliance = this.performComplianceCheck(lead);
 
     return this.createReport(taskId, 'COMPLETED', {
       lead,
@@ -1185,7 +1165,6 @@ export class OutreachManager extends BaseManager {
    * Query sentiment from INTELLIGENCE_MANAGER via TenantMemoryVault
    */
   private async querySentiment(
-    tenantId: string,
     lead: LeadProfile
   ): Promise<{ sentiment: LeadSentiment; confidence: number }> {
     try {
@@ -1248,16 +1227,15 @@ export class OutreachManager extends BaseManager {
    */
   private async checkSentiment(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     _startTime: number
   ): Promise<AgentReport> {
-    const lead = this.extractLeadProfile(tenantId, payload);
+    const lead = this.extractLeadProfile(payload);
     if (!lead) {
       return this.createReport(taskId, 'FAILED', null, ['Lead profile required for sentiment check']);
     }
 
-    const { sentiment, confidence } = await this.querySentiment(tenantId, lead);
+    const { sentiment, confidence } = await this.querySentiment(lead);
 
     return this.createReport(taskId, 'COMPLETED', {
       lead,
@@ -1294,7 +1272,6 @@ export class OutreachManager extends BaseManager {
    */
   private manageDNC(
     taskId: string,
-    tenantId: string,
     payload: Record<string, unknown> | null,
     _startTime: number
   ): AgentReport {
@@ -1354,12 +1331,11 @@ export class OutreachManager extends BaseManager {
         case 'check': {
           const lead: LeadProfile = {
             leadId: leadId ?? 'check',
-            tenantId,
             email,
             phone,
             firstName: 'Check',
           };
-          const isOnDNC = this.checkDNCList(tenantId, lead);
+          const isOnDNC = this.checkDNCList(lead);
           return this.createReport(taskId, 'COMPLETED', {
             isOnDNC,
             email,
@@ -1385,7 +1361,6 @@ export class OutreachManager extends BaseManager {
    * Extract lead profile from payload
    */
   private extractLeadProfile(
-    tenantId: string,
     payload: Record<string, unknown> | null
   ): LeadProfile | null {
     if (!payload) {return null;}
@@ -1395,7 +1370,6 @@ export class OutreachManager extends BaseManager {
       const leadData = payload.lead as Record<string, unknown>;
       return {
         leadId: (leadData.leadId as string) ?? (leadData.id as string) ?? `lead_${Date.now()}`,
-        tenantId,
         email: leadData.email as string | undefined,
         phone: leadData.phone as string | undefined,
         firstName: (leadData.firstName as string) ?? (leadData.name as string) ?? 'Unknown',
@@ -1413,7 +1387,6 @@ export class OutreachManager extends BaseManager {
     if (payload.email || payload.phone || payload.leadId) {
       return {
         leadId: (payload.leadId as string) ?? `lead_${Date.now()}`,
-        tenantId,
         email: payload.email as string | undefined,
         phone: payload.phone as string | undefined,
         firstName: (payload.firstName as string) ?? 'Unknown',
@@ -1430,7 +1403,6 @@ export class OutreachManager extends BaseManager {
    * Build outreach sequence from payload or defaults
    */
   private async buildSequence(
-    tenantId: string,
     payload: Record<string, unknown> | null,
     lead: LeadProfile
   ): Promise<OutreachSequence> {
@@ -1442,7 +1414,7 @@ export class OutreachManager extends BaseManager {
     // Load brand DNA for personalization context
     let brandContext = '';
     try {
-      const brandDNA = await getBrandDNA(tenantId);
+      const brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
       if (brandDNA) {
         brandContext = brandDNA.companyDescription ?? '';
       }
@@ -1453,7 +1425,6 @@ export class OutreachManager extends BaseManager {
     // Build default 3-step sequence
     return {
       sequenceId: `seq_${Date.now()}`,
-      tenantId,
       name: 'Default Outreach Sequence',
       description: 'Automated 3-step outreach with email → SMS escalation',
       targetAudience: {
@@ -1612,7 +1583,6 @@ Best regards`;
    * Flag lead for human review
    */
   private async flagForHumanReview(
-    tenantId: string,
     lead: LeadProfile,
     reason: string
   ): Promise<void> {
@@ -1649,7 +1619,6 @@ Best regards`;
    * Store outreach insights in vault
    */
   private async storeOutreachInsights(
-    tenantId: string,
     lead: LeadProfile,
     status: SequenceExecutionStatus
   ): Promise<void> {
@@ -1700,7 +1669,6 @@ Best regards`;
    * Broadcast sequence signal
    */
   private async broadcastSequenceSignal(
-    tenantId: string,
     signalType: string,
     status: SequenceExecutionStatus
   ): Promise<void> {
@@ -1756,7 +1724,6 @@ Best regards`;
    */
   private createOutreachBrief(
     taskId: string,
-    tenantId: string,
     lead: LeadProfile,
     sentiment: LeadSentiment,
     sentimentConfidence: number,
@@ -1779,7 +1746,6 @@ Best regards`;
   ): OutreachBrief {
     return {
       briefId: `outreach_brief_${taskId}_${Date.now()}`,
-      tenantId,
       requestedAt: new Date(startTime),
       completedAt: new Date(),
       lead,
