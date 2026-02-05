@@ -35,8 +35,6 @@ export interface UseSystemStatusOptions {
   pollingInterval?: number;
   /** Whether to enable polling (default: true) */
   enabled?: boolean;
-  /** Tenant ID to fetch status for */
-  tenantId?: string;
 }
 
 export interface UseSystemStatusReturn {
@@ -117,7 +115,6 @@ export function useSystemStatus(
   const {
     pollingInterval = DEFAULT_POLLING_INTERVAL,
     enabled = true,
-    tenantId,
   } = options;
 
   // State
@@ -174,11 +171,8 @@ export function useSystemStatus(
         throw new Error('Failed to retrieve authentication token');
       }
 
-      const url = tenantId
-        ? `/api/system/status?tenantId=${encodeURIComponent(tenantId)}`
-        : '/api/system/status';
-
-      const response = await fetch(url, {
+      // SINGLE-TENANT: No tenantId needed in URL
+      const response = await fetch('/api/system/status', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -244,7 +238,7 @@ export function useSystemStatus(
         setIsRefreshing(false);
       }
     }
-  }, [tenantId]);
+  }, []);
 
   /**
    * Manual refresh function exposed to consumers

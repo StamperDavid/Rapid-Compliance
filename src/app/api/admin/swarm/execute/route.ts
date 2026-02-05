@@ -1,21 +1,21 @@
 /**
  * Admin Swarm Agent Execution API
- * STATUS: PRODUCTION-READY (Full 47-Agent Support)
+ * STATUS: PRODUCTION-READY (Full 47-Agent Support) - SINGLE-TENANT
  *
  * POST to execute any functional agent from the Swarm Control Center
- * Implements circuit breaker pattern, multi-tenant isolation, and error reporting
+ * Implements circuit breaker pattern and error reporting
  *
  * KEY FEATURES:
  * - Dynamic agent instantiation via AgentFactory registry
  * - Supports all 47 agents (1 orchestrator + 9 managers + 37 specialists)
  * - Per-agent circuit breakers with automatic cooldown
- * - Tenant-scoped execution for multi-tenant safety
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Agent Factory and Registry
 import {
@@ -36,7 +36,6 @@ import type { AgentMessage, AgentReport } from '@/lib/agents/types';
 export interface AgentCommand {
   agentId: AgentId;
   taskId: string;
-  tenantId: string;
   payload: Record<string, unknown>;
   priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL';
   traceId?: string;
@@ -76,7 +75,6 @@ const executeSchema = z.object({
     { message: 'Invalid agent ID. Must be one of the 47 registered agents.' }
   ),
   taskId: z.string().min(1, 'taskId is required'),
-  tenantId: z.string().min(1, 'tenantId is required for multi-tenant isolation'),
   payload: z.record(z.unknown()),
   priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'CRITICAL']).optional().default('NORMAL'),
   traceId: z.string().optional(),
@@ -185,7 +183,6 @@ function getCircuitBreakerStatus(agentId: string): {
  * Execute any valid agent from the 47-agent swarm
  *
  * @requires Admin authentication
- * @requires tenantId for multi-tenant isolation
  */
 export async function POST(request: NextRequest): Promise<NextResponse<AgentExecutionResponse>> {
   const startTime = Date.now();
@@ -231,7 +228,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
       );
     }
 
-    const { agentId, taskId, tenantId, payload, priority, traceId } = validation.data;
+    const { agentId, taskId, payload, priority, traceId } = validation.data;
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const tenantId = DEFAULT_ORG_ID;
 
     // ========================================================================
     // CIRCUIT BREAKER CHECK
@@ -290,7 +289,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
 
     logger.info(`[SwarmExecute] Executing agent ${agentId}`, {
       taskId,
-      tenantId,
       adminId: authResult.user.uid,
       priority,
       file: 'admin/swarm/execute/route.ts',
@@ -313,7 +311,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
       priority: priority ?? 'NORMAL',
       payload: {
         ...payload,
-        tenantId, // Inject tenantId for multi-tenant scoping
+        // SINGLE-TENANT: tenantId included for internal consistency
+        tenantId,
       },
       requiresResponse: true,
       traceId: traceId ?? taskId,
@@ -331,7 +330,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
 
       logger.info(`[SwarmExecute] Agent ${agentId} completed successfully`, {
         taskId,
-        tenantId,
         duration,
         file: 'admin/swarm/execute/route.ts',
       });
@@ -356,7 +354,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
       new Error(report.errors?.join('; ') ?? 'Unknown error'),
       {
         taskId,
-        tenantId,
         status: report.status,
         errors: report.errors,
         duration,

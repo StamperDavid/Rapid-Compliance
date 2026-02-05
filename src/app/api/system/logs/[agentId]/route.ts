@@ -1,13 +1,12 @@
 /**
  * Agent Telemetry Logs API
- * STATUS: PRODUCTION-READY
+ * STATUS: PRODUCTION-READY (SINGLE-TENANT)
  *
  * GET /api/system/logs/[agentId]
  * Fetches real-time telemetry from SignalBus history for a specific agent
  *
  * SECURITY:
  * - Requires admin authentication
- * - Strictly enforces tenantId for multi-tenant isolation
  * - Validates agentId against AGENT_IDS registry
  *
  * FEATURES:
@@ -24,6 +23,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // SignalBus and Agent Registry
 import { getSignalBus, type SignalHistoryEntry, type SignalHistoryOptions } from '@/lib/orchestrator/signal-bus';
@@ -54,7 +54,6 @@ interface LogEntry {
 interface AgentLogsResponse {
   success: true;
   agentId: string;
-  tenantId: string;
   logs: LogEntry[];
   pagination: {
     total: number;
@@ -84,7 +83,6 @@ interface AgentLogsError {
 // ============================================================================
 
 const querySchema = z.object({
-  tenantId: z.string().min(1, 'tenantId is required'),
   limit: z.coerce.number().int().min(1).max(500).optional().default(100),
   offset: z.coerce.number().int().min(0).optional().default(0),
   since: z.string().datetime().optional(),
@@ -134,7 +132,6 @@ interface RouteParams {
  * Fetch telemetry logs for a specific agent
  *
  * @requires Admin authentication
- * @requires tenantId query parameter
  */
 export async function GET(
   request: NextRequest,
@@ -179,7 +176,6 @@ export async function GET(
     // ========================================================================
     const { searchParams } = new URL(request.url);
     const queryResult = querySchema.safeParse({
-      tenantId: searchParams.get('tenantId'),
       limit: searchParams.get('limit'),
       offset: searchParams.get('offset'),
       since: searchParams.get('since'),
@@ -200,10 +196,11 @@ export async function GET(
       );
     }
 
-    const { tenantId, limit, offset, since, until, status, signalType, includePayload } = queryResult.data;
+    const { limit, offset, since, until, status, signalType, includePayload } = queryResult.data;
+    // SINGLE-TENANT: Always use DEFAULT_ORG_ID
+    const tenantId = DEFAULT_ORG_ID;
 
     logger.info(`[AgentLogs] Fetching logs for agent ${agentId}`, {
-      tenantId,
       limit,
       offset,
       adminId: authResult.user.uid,
@@ -243,7 +240,6 @@ export async function GET(
     const duration = Date.now() - startTime;
 
     logger.info(`[AgentLogs] Retrieved ${logs.length} logs for agent ${agentId}`, {
-      tenantId,
       total: historyResult.total,
       duration,
       file: 'api/system/logs/[agentId]/route.ts',
@@ -256,7 +252,6 @@ export async function GET(
       {
         success: true,
         agentId,
-        tenantId,
         logs,
         pagination: {
           total: historyResult.total,

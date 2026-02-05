@@ -10,8 +10,6 @@ import { useSystemStatus, type SystemAgentStatus } from '@/hooks/useSystemStatus
 interface SwarmMonitorWidgetProps {
   /** Compact mode for smaller displays */
   compact?: boolean;
-  /** Optional tenant ID for multi-tenant contexts */
-  tenantId?: string;
   /** Polling interval in ms (default: 30000) */
   pollingInterval?: number;
 }
@@ -42,7 +40,6 @@ const TOTAL_MANAGERS = 9;
  */
 export function SwarmMonitorWidget({
   compact = false,
-  tenantId,
   pollingInterval = 30000,
 }: SwarmMonitorWidgetProps) {
   const {
@@ -55,7 +52,6 @@ export function SwarmMonitorWidget({
     refresh,
     isRefreshing,
   } = useSystemStatus({
-    tenantId,
     pollingInterval,
     enabled: true,
   });
