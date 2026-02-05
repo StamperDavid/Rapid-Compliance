@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
       
       logger.info('✅ Firebase Auth successful', { email: user.email, file: 'page.tsx' });
       
-      // Verify user is a superadmin by checking their Firestore document
+      // Verify user is an admin by checking their Firestore document
       const token = await user.getIdToken();
       
       // Call API to verify admin status and get user data
@@ -73,25 +73,25 @@ export default function AdminLoginPage() {
       }
       
       const userData = await response.json() as { name?: string; role: string };
-      
-      // Create admin user session
+
+      // Create admin user session - binary RBAC, all admin panel users are 'admin'
       const adminUserData = {
         id: user.uid,
         email: user.email ?? email,
         displayName: userData.name ?? user.displayName ?? 'Admin User',
-        role: userData.role as 'superadmin' | 'admin',
+        role: 'admin' as const,
         permissions: {
           canViewUsers: true,
           canCreateUsers: true,
           canEditUsers: true,
           canSuspendUsers: true,
-          canDeleteUsers: userData.role === 'superadmin',
+          canDeleteUsers: true,
           canViewSettings: true,
-          canManageSettings: userData.role === 'superadmin',
+          canManageSettings: true,
           canManageIntegrations: true,
           canManageAPIKeys: true,
           canViewSystemHealth: true,
-          canManageFeatureFlags: userData.role === 'superadmin',
+          canManageFeatureFlags: true,
           canViewAuditLogs: true,
           canExportData: true,
           canImportData: true,
@@ -259,7 +259,7 @@ export default function AdminLoginPage() {
 
         <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', lineHeight: '1.5' }}>
-            <strong>Super Admin Access:</strong> This login requires a superadmin account.
+            <strong>Admin Access:</strong> This login requires an admin account.
             Contact your system administrator if you need access.
           </div>
         </div>

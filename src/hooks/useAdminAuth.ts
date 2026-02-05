@@ -98,18 +98,8 @@ export function useAdminAuth() {
     return adminUser.permissions[permission];
   };
 
-  /**
-   * Check if user has superadmin role (highest authority)
-   */
-  const isSuperAdmin = (): boolean => {
-    return adminUser?.role === 'superadmin';
-  };
-
-  /**
-   * @deprecated Use isSuperAdmin() instead
-   */
-  const isPlatformAdmin = (): boolean => {
-    return adminUser?.role === 'superadmin';
+  const isAdminUser = (): boolean => {
+    return adminUser?.role === 'admin';
   };
 
   return {
@@ -117,8 +107,7 @@ export function useAdminAuth() {
     setAdminUser,
     loading,
     hasPermission,
-    isSuperAdmin,
-    isPlatformAdmin,
+    isAdminUser,
   };
 }
 

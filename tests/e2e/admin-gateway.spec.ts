@@ -3,7 +3,7 @@
  *
  * Production Readiness Audit for Admin Command Center
  * Tests the /login -> /admin flow including:
- * - Smart Role-Based Redirect (platform_admin -> /admin)
+ * - Smart Role-Based Redirect (admin -> /admin)
  * - UnifiedSidebar System Section Visibility (hard-gated)
  * - Admin Theme CSS Variable Isolation (no bleeding from tenant themes)
  *
@@ -107,9 +107,9 @@ test.describe('Admin Gateway E2E - Production Readiness Audit', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Test 2: Smart Redirect - Platform Admin to /admin
+  // Test 2: Smart Redirect - Admin to /admin
   // ---------------------------------------------------------------------------
-  test('should redirect platform_admin to /admin after login', async ({ page }) => {
+  test('should redirect admin to /admin after login', async ({ page }) => {
     // Skip if no test credentials configured
     test.skip(
       TEST_ADMIN_EMAIL === 'admin@platform.test',
@@ -143,7 +143,7 @@ test.describe('Admin Gateway E2E - Production Readiness Audit', () => {
   // ---------------------------------------------------------------------------
   // Test 3: UnifiedSidebar - System Section Visibility (Hard-Gated)
   // ---------------------------------------------------------------------------
-  test('should render UnifiedSidebar with System section for platform_admin', async ({ page }) => {
+  test('should render UnifiedSidebar with System section for admin', async ({ page }) => {
     // Skip if no test credentials configured
     test.skip(
       TEST_ADMIN_EMAIL === 'admin@platform.test',
@@ -159,7 +159,7 @@ test.describe('Admin Gateway E2E - Production Readiness Audit', () => {
     await expect(sidebar).toBeVisible({ timeout: 10000 });
 
     // ASSERTION 2: System section must be visible
-    // The System section has label "System" and is hard-gated to platform_admin only
+    // The System section has label "System" and is hard-gated to admin only
     // If sidebar sections are collapsed, we need to find the section header
     // System section items include: System Overview, Organizations, All Users, Feature Flags, Audit Logs
     const systemSectionVisible = await isElementVisible(page, 'button:has-text("System")') ||

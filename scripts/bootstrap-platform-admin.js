@@ -1,13 +1,13 @@
 /**
- * Bootstrap Platform Admin Account
- * 
- * One-time utility script to set up the platform admin account.
+ * Bootstrap Admin Account
+ *
+ * One-time utility script to set up the admin account.
  * Target User: dstamper@rapidcompliance.us (UID: Op7waMzL6IdY6cFLTNVXqyQVOy92)
- * 
+ *
  * This script:
  * 1. Looks up the user by email in Firebase Auth
- * 2. Sets custom claims: { role: "platform_admin", admin: true }
- * 3. Updates the Firestore users document with role: "platform_admin"
+ * 2. Sets custom claims: { role: "admin", admin: true }
+ * 3. Updates the Firestore users document with role: "admin"
  * 4. Verifies the claims were applied correctly
  * 
  * Safe to run multiple times (idempotent).
@@ -48,7 +48,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const auth = admin.auth();
 
-async function bootstrapPlatformAdmin() {
+async function bootstrapAdmin() {
   console.log('\n========================================');
   console.log('   BOOTSTRAP PLATFORM ADMIN ACCOUNT');
   console.log('========================================\n');
@@ -91,7 +91,7 @@ async function bootstrapPlatformAdmin() {
     // Step 3: Set custom claims
     console.log('\n[3/5] Setting custom claims...');
     const newClaims = {
-      role: 'platform_admin',
+      role: 'admin',
       admin: true
     };
     
@@ -113,13 +113,12 @@ async function bootstrapPlatformAdmin() {
       console.log('   No existing Firestore document found. Creating new document...');
     }
     
-    // Update/create document with platform_admin role
+    // Update/create document with admin role
     await userDocRef.set({
       email: TARGET_EMAIL,
-      role: 'platform_admin',  // Standardized role name (NOT super_admin)
+      role: 'admin',  // Binary RBAC: admin | user
       organizationId: 'platform',
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      isPlatformAdmin: true,
       status: 'active'
     }, { merge: true });
     
@@ -142,32 +141,32 @@ async function bootstrapPlatformAdmin() {
     console.log('   Verified organizationId: ' + verifiedData.organizationId);
     
     // Check if verification passed
-    const claimsValid = verifiedClaims.role === 'platform_admin' && verifiedClaims.admin === true;
-    const firestoreValid = verifiedData.role === 'platform_admin';
+    const claimsValid = verifiedClaims.role === 'admin' && verifiedClaims.admin === true;
+    const firestoreValid = verifiedData.role === 'admin';
     
     console.log('\n========================================');
     console.log('             RESULTS');
     console.log('========================================');
     
     if (claimsValid && firestoreValid) {
-      console.log('\nSUCCESS: Platform admin bootstrap complete!');
+      console.log('\nSUCCESS: Admin bootstrap complete!');
       console.log('\nUser Details:');
       console.log('   Email: ' + TARGET_EMAIL);
       console.log('   UID: ' + uid);
       console.log('   Custom Claims: ' + JSON.stringify(verifiedClaims));
       console.log('   Firestore Role: ' + verifiedData.role);
-      console.log('\nThe user now has platform_admin privileges.');
+      console.log('\nThe user now has admin privileges.');
       console.log('Note: User must log out and log back in for claims to take effect.');
     } else {
       console.error('\nWARNING: Verification issues detected!');
       if (!claimsValid) {
         console.error('   - Custom claims verification failed');
-        console.error('     Expected: { role: "platform_admin", admin: true }');
+        console.error('     Expected: { role: "admin", admin: true }');
         console.error('     Got: ' + JSON.stringify(verifiedClaims));
       }
       if (!firestoreValid) {
         console.error('   - Firestore role verification failed');
-        console.error('     Expected: platform_admin');
+        console.error('     Expected: admin');
         console.error('     Got: ' + verifiedData.role);
       }
       process.exit(1);
@@ -182,7 +181,7 @@ async function bootstrapPlatformAdmin() {
 }
 
 // Run the bootstrap
-bootstrapPlatformAdmin()
+bootstrapAdmin()
   .then(() => {
     console.log('\n');
     process.exit(0);

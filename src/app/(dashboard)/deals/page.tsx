@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -42,7 +40,6 @@ interface Deal {
 
 export default function DealsPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const [view, setView] = useState<'pipeline' | 'list'>('pipeline');
 
   const fetchDeals = useCallback(async (lastDoc?: unknown) => {
@@ -55,14 +52,14 @@ export default function DealsPage() {
       searchParams.set('lastDoc', String(lastDoc));
     }
 
-    const response = await fetch(`/api/workspace/${orgId}/deals?${searchParams}`);
+    const response = await fetch(`/api/deals?${searchParams}`);
 
     if (!response.ok) {
       throw new Error('Failed to fetch deals');
     }
 
     return response.json() as Promise<{ data: Deal[]; lastDoc: unknown; hasMore: boolean }>;
-  }, [orgId]);
+  }, []);
 
   const {
     data: deals,

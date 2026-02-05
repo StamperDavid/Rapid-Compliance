@@ -1,813 +1,627 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check if user is authenticated
+
+    // ========================================
+    // HELPER FUNCTIONS - BINARY RBAC
+    // ========================================
+
+    // Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    // Helper function to check if user is a superadmin
-    function isSuperAdmin() {
+
+    // Check if user is an admin (binary role check)
+    function isAdmin() {
       return isAuthenticated()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin';
-    }
-    
-    // Helper function to get user's organization ID
-    function getUserOrgId() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
-    }
-    
-    // Helper function to check if user belongs to organization
-    function belongsToOrg(orgId) {
-      return isAuthenticated() && getUserOrgId() == orgId;
-    }
-    
-    // Helper function to check user role
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-    
-    // Helper function to check if user is admin or superadmin
-    function isAdminOrAbove() {
-      return getUserRole() in ['admin', 'superadmin'];
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Helper function to check if user is manager or above
-    function isManagerOrAbove() {
-      return getUserRole() in ['manager', 'admin', 'superadmin'];
-    }
-    
-    // Users collection
+    // ========================================
+    // USERS COLLECTION
+    // ========================================
+
     match /users/{userId} {
-      // CRITICAL: Users can ALWAYS read their own profile (MUST BE FIRST to avoid circular dependency)
-      // This prevents the isSuperAdmin() function from creating a circular reference
-      allow read: if request.auth != null && request.auth.uid == userId;
-      
-      // Users can update their own profile (except role and organizationId)
-      allow update: if request.auth != null 
+      // CRITICAL: Users can ALWAYS read their own profile (prevents circular dependency)
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+
+      // Users can update their own profile (except role field)
+      allow update: if isAuthenticated()
         && request.auth.uid == userId
-        && !('role' in request.resource.data.diff(resource.data).affectedKeys())
-        && !('organizationId' in request.resource.data.diff(resource.data).affectedKeys());
-      
-      // Platform admins have FULL access to ALL users (IT support)
-      allow read, write: if isSuperAdmin();
-      
-      // Only admins can create/delete users
-      allow create, delete: if isAuthenticated() && isAdminOrAbove();
-      
-      // Admins can read all users in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
+        && !('role' in request.resource.data.diff(resource.data).affectedKeys());
+
+      // Admins have full access to all users
+      allow read, write: if isAdmin();
+
+      // Admins can create/delete users
+      allow create, delete: if isAdmin();
     }
-    
-    // Organizations collection
+
+    // ========================================
+    // ORGANIZATIONS COLLECTION
+    // ========================================
+
     match /organizations/{orgId} {
-      // Platform admins have FULL access to ALL organizations
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read their own organization
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      
-      // Only owners can update their own organization
-      allow update: if isAuthenticated() 
-        && belongsToOrg(orgId)
-        && getUserRole() == 'superadmin';
-      
-      // Only platform admins can create organizations
-      allow create: if isAuthenticated() && isAdminOrAbove();
-      allow delete: if false; // Never allow deletion via client (use isPlatformAdmin write rule above)
+      // All authenticated users can read organization config
+      allow read: if isAuthenticated();
+
+      // Only admins can write organization config
+      allow write: if isAdmin();
     }
-    
+
+    // ========================================
+    // TOP-LEVEL COLLECTIONS
+    // ========================================
+
     // Schemas collection
     match /schemas/{schemaId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read schemas in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
-      
-      // Managers and above can create/update schemas
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId()
-        && isManagerOrAbove();
-      
-      // Only owners can delete schemas
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && getUserRole() == 'superadmin';
+      // All authenticated users can read schemas
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update schemas
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete schemas
+      allow delete: if isAdmin();
     }
-    
+
     // Records collection (entity records)
     match /records/{recordId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read records in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
-      
-      // All authenticated users can create/update records in their organization
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId();
-      
-      // Managers and above can delete records
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && isManagerOrAbove();
+      // All authenticated users can read records
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update records
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete records
+      allow delete: if isAdmin();
     }
-    
+
     // Workflows collection
     match /workflows/{workflowId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read workflows in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
-      
-      // Managers and above can create/update workflows
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId()
-        && isManagerOrAbove();
-      
-      // Only owners can delete workflows
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && getUserRole() == 'superadmin';
+      // All authenticated users can read workflows
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update workflows
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete workflows
+      allow delete: if isAdmin();
     }
-    
+
     // Email campaigns collection
     match /emailCampaigns/{campaignId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read campaigns in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
-      
-      // Managers and above can create/update campaigns
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId()
-        && isManagerOrAbove();
-      
-      // Only owners can delete campaigns
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && getUserRole() == 'superadmin';
+      // All authenticated users can read campaigns
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update campaigns
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete campaigns
+      allow delete: if isAdmin();
     }
-    
+
     // Nurture sequences collection
     match /nurtureSequences/{sequenceId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read sequences in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
-      
-      // Managers and above can create/update sequences
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId()
-        && isManagerOrAbove();
-      
-      // Only owners can delete sequences
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && getUserRole() == 'superadmin';
+      // All authenticated users can read sequences
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update sequences
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete sequences
+      allow delete: if isAdmin();
     }
-    
-    // API keys collection (client-specific)
+
+    // API keys collection
     match /apiKeys/{keyId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can only read their own organization's API keys
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && isManagerOrAbove();
-      
-      // Only owners can create/update/delete API keys
-      allow create, update, delete: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId()
-        && getUserRole() == 'superadmin';
+      // Only admins can read/manage API keys
+      allow read, write: if isAdmin();
     }
-    
-    // Platform API keys (admin-only)
+
+    // Admin collections
     match /admin/{document=**} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-
-      // Platform admins can also access (any admin role can read)
-      allow read, write: if isAuthenticated() && isAdminOrAbove();
+      // Only admins have full access
+      allow read, write: if isAdmin();
     }
 
-    // System collections (admin-only)
+    // System collections
     match /system/{collection}/{document=**} {
-      // Public read for some system data
+      // Public read for system data
       allow read: if true;
 
       // Only admins can write
-      allow write: if isAuthenticated() && isAdminOrAbove();
+      allow write: if isAdmin();
     }
 
-    // Platform collections (admin-only)
+    // Platform collections
     match /platform/{collection}/{document=**} {
       // Public read for platform config
       allow read: if true;
 
       // Only admins can write
-      allow write: if isAuthenticated() && isAdminOrAbove();
+      allow write: if isAdmin();
     }
-    
+
     // Base Models collection (training models)
     match /baseModels/{modelId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read base models for their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.orgId);
-      
-      // Managers and above can create/update
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.orgId == getUserOrgId()
-        && isManagerOrAbove();
-      
-      // Only owners can delete
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.orgId)
-        && getUserRole() == 'superadmin';
+      // All authenticated users can read base models
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete
+      allow delete: if isAdmin();
     }
-    
+
     // Golden Masters collection (AI agent configs)
     match /goldenMasters/{masterId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read Golden Masters in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
-      
-      // Managers and above can create/update
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId()
-        && isManagerOrAbove();
-      
-      // Only owners can delete
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && getUserRole() == 'superadmin';
+      // All authenticated users can read Golden Masters
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete
+      allow delete: if isAdmin();
     }
-    
+
     // Customer Memories collection (AI agent memories)
     match /customerMemories/{memoryId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read memories in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
-      
+      // All authenticated users can read memories
+      allow read: if isAuthenticated();
+
       // All authenticated users can create/update (for AI agent use)
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId();
-      
-      // Managers and above can delete
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && isManagerOrAbove();
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete
+      allow delete: if isAdmin();
     }
-    
+
     // Themes collection
     match /themes/{themeId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read themes in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
-      
-      // Managers and above can create/update
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId()
-        && isManagerOrAbove();
-      
-      // Only owners can delete
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && getUserRole() == 'superadmin';
+      // All authenticated users can read themes
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete
+      allow delete: if isAdmin();
     }
-    
+
     // Integrations collection
     match /integrations/{integrationId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read integrations in their organization
-      allow read: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId);
-      
-      // Managers and above can create/update
-      allow create, update: if isAuthenticated() 
-        && request.resource.data.organizationId == getUserOrgId()
-        && isManagerOrAbove();
-      
-      // Only owners can delete
-      allow delete: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && getUserRole() == 'superadmin';
+      // All authenticated users can read integrations
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update
+      allow create, update: if isAuthenticated();
+
+      // Only admins can delete
+      allow delete: if isAdmin();
     }
-    
-    // Sensitive subcollections requiring elevated permissions
-    
+
+    // ========================================
+    // ORGANIZATION SUBCOLLECTIONS
+    // ========================================
+
     // OAuth states (temporary OAuth flow data)
     match /organizations/{orgId}/oauthStates/{stateId} {
-      allow read, write: if isSuperAdmin();
-      allow create, read: if isAuthenticated() && belongsToOrg(orgId);
-      allow delete: if isAuthenticated() && belongsToOrg(orgId);
+      allow read, write: if isAuthenticated();
     }
-    
-    // Enrichment costs (billing data - read-only for regular users)
+
+    // Enrichment costs (billing data)
     match /organizations/{orgId}/enrichment-costs/{costId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      // All authenticated users can read enrichment costs
+      allow read: if isAuthenticated();
+
+      // Admins can create/update
+      allow create, update: if isAdmin();
     }
-    
-    // Enrichment cache (read-only for regular users, system writes)
+
+    // Enrichment cache (read-only for users, system writes)
     match /organizations/{orgId}/enrichment-cache/{cacheId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      // Only system/backend should write (via admin SDK)
+      // All authenticated users can read cache
+      allow read: if isAuthenticated();
+
+      // Only admins can write (backend via admin SDK)
+      allow write: if isAdmin();
     }
-    
-    // Integration status (OAuth token metadata - manager+ only)
+
+    // Integration status (OAuth token metadata)
     match /organizations/{orgId}/integrationStatus/{statusId} {
-      allow read, write: if isSuperAdmin();
-      allow read, write: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      // All authenticated users can read/write integration status
+      allow read, write: if isAuthenticated();
     }
-    
-    // A/B Tests (manager+ only)
+
+    // A/B Tests
     match /organizations/{orgId}/abTests/{testId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      // All authenticated users can read tests
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
     }
-    
-    // Agent persona & knowledge base (manager+ can edit)
+
+    // Agent persona & knowledge base
     match /organizations/{orgId}/agentPersona/{docId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
     }
-    
+
     match /organizations/{orgId}/knowledgeBase/{docId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
     }
-    
-    // Active/archived agent instances (system managed, read-only for users)
+
+    // Active/archived agent instances (system managed)
     match /organizations/{orgId}/activeInstances/{instanceId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      // All authenticated users can read instances
+      allow read: if isAuthenticated();
+
+      // Only admins can write
+      allow write: if isAdmin();
     }
-    
+
     match /organizations/{orgId}/archivedInstances/{instanceId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      // All authenticated users can read instances
+      allow read: if isAuthenticated();
+
+      // Only admins can write
+      allow write: if isAdmin();
     }
-    
-    // Email sync data (all authenticated users in org)
+
+    // Email sync data
     match /organizations/{orgId}/emails/{emailId} {
-      allow read, write: if isSuperAdmin();
-      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+      allow read, write: if isAuthenticated();
     }
-    
-    // SMS messages (all authenticated users in org)
+
+    // SMS messages
     match /organizations/{orgId}/smsMessages/{messageId} {
-      allow read, write: if isSuperAdmin();
-      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+      allow read, write: if isAuthenticated();
     }
-    
-    // SMS templates (manager+ can edit)
+
+    // SMS templates
     match /organizations/{orgId}/smsTemplates/{templateId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      // All authenticated users can read templates
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
     }
-    
-    // Sequences & enrollments (all authenticated users)
+
+    // Sequences & enrollments
     match /organizations/{orgId}/sequences/{sequenceId} {
-      allow read, write: if isSuperAdmin();
-      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+      allow read, write: if isAuthenticated();
     }
-    
+
     match /organizations/{orgId}/enrollments/{enrollmentId} {
-      allow read, write: if isSuperAdmin();
-      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+      allow read, write: if isAuthenticated();
     }
-    
+
     match /organizations/{orgId}/sequenceAnalytics/{analyticsId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
-    
+
     match /organizations/{orgId}/sequenceStepStats/{statsId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
-    
-    // Schema Adaptability System Collections (Server-side managed)
-    
-    // Schema change events (system-managed, read-only for users)
+
+    // Schema change events (system-managed)
     match /organizations/{orgId}/schemaChangeEvents/{eventId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      // No client writes - only server via admin SDK
+      // All authenticated users can read events
+      allow read: if isAuthenticated();
+
+      // Only admins can write (system via admin SDK)
+      allow write: if isAdmin();
     }
-    
-    // Schema issues dashboard (system-managed, read-only for users)
+
+    // Schema issues dashboard
     match /organizations/{orgId}/schemaIssues/{issueId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove(); // Can mark as resolved
-      // No client creates/deletes - only server
+      // All authenticated users can read issues
+      allow read: if isAuthenticated();
+
+      // All authenticated users can update (mark as resolved)
+      allow update: if isAuthenticated();
+
+      // Only admins can create/delete (system via admin SDK)
+      allow create, delete: if isAdmin();
     }
-    
-    // Notifications (read by users, created by system)
+
+    // Notifications
     match /organizations/{orgId}/notifications/{notificationId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow update: if isAuthenticated() && belongsToOrg(orgId); // Can mark as read
-      // No client creates/deletes - only server
+      // All authenticated users can read/update notifications
+      allow read, update: if isAuthenticated();
+
+      // Only admins can create/delete (system via admin SDK)
+      allow create, delete: if isAdmin();
     }
-    
-    // Integration field mappings (manager+ can configure)
+
+    // Integration field mappings
     match /organizations/{orgId}/integrationFieldMappings/{mappingId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      // All authenticated users can read mappings
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
     }
-    
+
     // ========================================
-    // WEBSITE BUILDER - MULTI-TENANT ISOLATION
+    // WEBSITE BUILDER
     // ========================================
-    
-    // Website configuration (manager+ only)
+
+    // Website configuration
     match /organizations/{orgId}/website/settings {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      allow delete: if false; // Never delete site config
+      // All authenticated users can read settings
+      allow read: if isAuthenticated();
+
+      // Admins can create/update
+      allow create, update: if isAdmin();
+
+      // Never delete site config
+      allow delete: if false;
     }
-    
-    // Website pages (manager+ can edit)
+
+    // Website pages
     match /organizations/{orgId}/website/pages/{pageId} {
-      allow read, write: if isSuperAdmin();
-      
-      // Published pages can be read publicly (for public site viewing)
-      allow read: if resource.data.status == 'published';
-      
-      // Org members can read all pages (including drafts)
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      
-      // Managers and above can create/update/delete pages
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // CRITICAL: Prevent cross-org data leaks
-      // Validate organizationId matches on create/update
-      allow create: if request.resource.data.organizationId == orgId;
-      allow update: if resource.data.organizationId == orgId 
-                    && request.resource.data.organizationId == orgId;
-    }
-    
-    // Blog posts (manager+ can edit)
-    match /organizations/{orgId}/website/posts/{postId} {
-      allow read, write: if isSuperAdmin();
-      
-      // Published posts can be read publicly
-      allow read: if resource.data.status == 'published';
-      
-      // Org members can read all posts
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      
-      // Managers and above can create/update/delete
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // CRITICAL: Validate organizationId
-      allow create: if request.resource.data.organizationId == orgId;
-      allow update: if resource.data.organizationId == orgId 
-                    && request.resource.data.organizationId == orgId;
-    }
-    
-    // Website theme (manager+ can edit)
-    match /organizations/{orgId}/website/theme {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      allow delete: if false; // Never delete theme
-    }
-    
-    // Navigation (manager+ can edit)
-    match /organizations/{orgId}/website/navigation {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      allow delete: if false; // Never delete navigation
-    }
-    
-    // Custom templates (manager+ can create/edit their org's templates)
-    match /organizations/{orgId}/website/templates/{templateId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // CRITICAL: Validate organizationId
-      allow create: if request.resource.data.organizationId == orgId;
-      allow update: if resource.data.organizationId == orgId 
-                    && request.resource.data.organizationId == orgId;
-    }
-    
-    // Website media/assets (all org members can upload)
-    match /organizations/{orgId}/website/media/{mediaId} {
-      allow read, write: if isSuperAdmin();
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      allow create: if isAuthenticated() && belongsToOrg(orgId);
-      allow update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // CRITICAL: Validate organizationId
-      allow create: if request.resource.data.organizationId == orgId;
-    }
-    
-    // ========================================
-    // WEBSITE BUILDER - NEW SPRINT 5-8 COLLECTIONS
-    // ========================================
-    
-    // Preview tokens (manager+ can create, anyone with token can read)
-    match /organizations/{orgId}/website/preview-tokens/tokens/{tokenId} {
-      allow read, write: if isSuperAdmin();
-      
-      // Anyone can read with the token (for preview links)
-      allow read: if true;
-      
-      // Managers and above can create/delete tokens
-      allow create, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // CRITICAL: Validate organizationId
-      allow create: if request.resource.data.organizationId == orgId;
-    }
-    
-    // Audit log entries (manager+ can read, system creates)
-    match /organizations/{orgId}/website/audit-log/entries/{entryId} {
-      allow read, write: if isSuperAdmin();
-      
-      // Managers and above can read audit log
-      allow read: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // System creates entries (via Admin SDK)
-      // No client creates allowed
-    }
-    
-    // Page version history (manager+ can read/restore)
-    match /organizations/{orgId}/website/pages/items/{pageId}/versions/{versionId} {
-      allow read, write: if isSuperAdmin();
-      
-      // Managers and above can read versions
-      allow read: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // System creates versions (via Admin SDK)
-      // No client creates/updates allowed
-    }
-    
-    // Blog posts in config subcollection (manager+ can edit)
-    match /organizations/{orgId}/website/config/blog-posts/{postId} {
-      allow read, write: if isSuperAdmin();
-      
-      // Published posts can be read publicly
-      allow read: if resource.data.status == 'published';
-      
-      // Org members can read all posts
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      
-      // Managers and above can create/update/delete
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // CRITICAL: Validate organizationId
-      allow create: if request.resource.data.organizationId == orgId;
-      allow update: if resource.data.organizationId == orgId 
-                    && request.resource.data.organizationId == orgId;
-    }
-    
-    // Blog categories (manager+ can edit)
-    match /organizations/{orgId}/website/config/blog-categories/{categoryId} {
-      allow read, write: if isSuperAdmin();
-      
-      // Anyone can read categories (for blog navigation)
-      allow read: if true;
-      
-      // Managers and above can create/update/delete
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // CRITICAL: Validate organizationId
-      allow create: if request.resource.data.organizationId == orgId;
-    }
-    
-    // Custom domains in config subcollection (manager+ can edit)
-    match /organizations/{orgId}/website/config/custom-domains/{domainId} {
-      allow read, write: if isSuperAdmin();
-      
-      // Org members can read their domains
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      
-      // Managers and above can create/update/delete
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // CRITICAL: Validate organizationId
-      allow create: if request.resource.data.organizationId == orgId;
-      allow update: if resource.data.organizationId == orgId 
-                    && request.resource.data.organizationId == orgId;
-    }
-    
-    // Pages in items subcollection (manager+ can edit)
-    match /organizations/{orgId}/website/pages/items/{pageId} {
-      allow read, write: if isSuperAdmin();
-      
       // Published pages can be read publicly
       allow read: if resource.data.status == 'published';
-      
-      // Org members can read all pages
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      
-      // Managers and above can create/update/delete
-      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
-      
-      // CRITICAL: Validate organizationId
-      allow create: if request.resource.data.organizationId == orgId;
-      allow update: if resource.data.organizationId == orgId 
-                    && request.resource.data.organizationId == orgId;
+
+      // Authenticated users can read all pages (including drafts)
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete pages
+      allow create, update, delete: if isAdmin();
     }
-    
+
+    // Blog posts
+    match /organizations/{orgId}/website/posts/{postId} {
+      // Published posts can be read publicly
+      allow read: if resource.data.status == 'published';
+
+      // Authenticated users can read all posts
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Website theme
+    match /organizations/{orgId}/website/theme {
+      // All authenticated users can read theme
+      allow read: if isAuthenticated();
+
+      // Admins can create/update
+      allow create, update: if isAdmin();
+
+      // Never delete theme
+      allow delete: if false;
+    }
+
+    // Navigation
+    match /organizations/{orgId}/website/navigation {
+      // All authenticated users can read navigation
+      allow read: if isAuthenticated();
+
+      // Admins can create/update
+      allow create, update: if isAdmin();
+
+      // Never delete navigation
+      allow delete: if false;
+    }
+
+    // Custom templates
+    match /organizations/{orgId}/website/templates/{templateId} {
+      // All authenticated users can read templates
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Website media/assets
+    match /organizations/{orgId}/website/media/{mediaId} {
+      // All authenticated users can read media
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create media
+      allow create: if isAuthenticated();
+
+      // Admins can update/delete
+      allow update, delete: if isAdmin();
+    }
+
+    // Preview tokens
+    match /organizations/{orgId}/website/preview-tokens/tokens/{tokenId} {
+      // Anyone can read with the token (for preview links)
+      allow read: if true;
+
+      // Admins can create/delete tokens
+      allow create, delete: if isAdmin();
+    }
+
+    // Audit log entries
+    match /organizations/{orgId}/website/audit-log/entries/{entryId} {
+      // Admins can read audit log
+      allow read: if isAdmin();
+
+      // System creates entries (via Admin SDK)
+      allow write: if isAdmin();
+    }
+
+    // Page version history
+    match /organizations/{orgId}/website/pages/items/{pageId}/versions/{versionId} {
+      // Admins can read versions
+      allow read: if isAdmin();
+
+      // System creates versions (via Admin SDK)
+      allow write: if isAdmin();
+    }
+
+    // Blog posts in config subcollection
+    match /organizations/{orgId}/website/config/blog-posts/{postId} {
+      // Published posts can be read publicly
+      allow read: if resource.data.status == 'published';
+
+      // Authenticated users can read all posts
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Blog categories
+    match /organizations/{orgId}/website/config/blog-categories/{categoryId} {
+      // Anyone can read categories (for blog navigation)
+      allow read: if true;
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Custom domains in config subcollection
+    match /organizations/{orgId}/website/config/custom-domains/{domainId} {
+      // All authenticated users can read domains
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Pages in items subcollection
+    match /organizations/{orgId}/website/pages/items/{pageId} {
+      // Published pages can be read publicly
+      allow read: if resource.data.status == 'published';
+
+      // Authenticated users can read all pages
+      allow read: if isAuthenticated();
+
+      // Admins can create/update/delete
+      allow create, update, delete: if isAdmin();
+    }
+
     // ========================================
-    // CUSTOM DOMAIN REGISTRY - CRITICAL ISOLATION
+    // CUSTOM DOMAIN REGISTRY
     // ========================================
-    
-    // Custom domains - GLOBAL collection (not under organizations)
-    // This is critical for subdomain/domain lookup performance
+
+    // Custom domains - GLOBAL collection
     match /customDomains/{domain} {
-      allow read, write: if isSuperAdmin();
-      
       // Anyone can read domain status (for DNS verification UI)
       allow read: if true;
-      
-      // CRITICAL: Only the org that owns this domain can write
-      allow create: if isAuthenticated() 
-                    && request.resource.data.organizationId == getUserOrgId()
-                    && isManagerOrAbove();
-      
-      allow update, delete: if isAuthenticated() 
-                          && resource.data.organizationId == getUserOrgId()
-                          && isManagerOrAbove();
-      
-      // PREVENT domain hijacking: Cannot change organizationId after creation
-      allow update: if request.resource.data.organizationId == resource.data.organizationId;
+
+      // Admins can create/update/delete domains
+      allow create, update, delete: if isAdmin();
     }
-    
-    // Subdomain registry - GLOBAL collection (for fast lookup)
+
+    // Subdomain registry - GLOBAL collection
     match /subdomains/{subdomain} {
-      allow read, write: if isSuperAdmin();
-      
       // Anyone can read (for subdomain availability check)
       allow read: if true;
-      
-      // CRITICAL: Only create if user owns the org
-      allow create: if isAuthenticated() 
-                    && request.resource.data.organizationId == getUserOrgId()
-                    && isManagerOrAbove();
-      
-      // CRITICAL: Cannot update or delete (subdomain is permanent)
+
+      // Admins can create subdomains
+      allow create: if isAdmin();
+
+      // Cannot update or delete subdomains
       allow update, delete: if false;
     }
-    
-    // Generic organization subcollections (leads, deals, prospects, tasks, etc.)
-    // More restrictive than before - read for all, write for authenticated
+
+    // ========================================
+    // GENERIC ORGANIZATION SUBCOLLECTIONS
+    // ========================================
+
+    // Generic subcollections (leads, deals, prospects, tasks, etc.)
     match /organizations/{orgId}/{subcollection}/{docId} {
-      // Platform admins have FULL access (IT support)
-      allow read, write: if isSuperAdmin();
-      
-      // All authenticated org users can read
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
-      
-      // Only authenticated org users can write (not just any user)
-      allow create, update: if isAuthenticated() && belongsToOrg(orgId);
-      
-      // Managers and above can delete
-      allow delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+
+      // All authenticated users can create/update
+      allow create, update: if isAuthenticated();
+
+      // Admins can delete
+      allow delete: if isAdmin();
     }
-    
+
     // Base Models subcollection (within organizations)
     match /organizations/{orgId}/baseModels/{modelId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Admins can create/update base models
-      allow read, write: if isAuthenticated() && isAdminOrAbove();
-      
-      // Users in org can read
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+
+      // Admins can write
+      allow write: if isAdmin();
     }
-    
+
     // Golden Masters subcollection (within organizations)
     match /organizations/{orgId}/goldenMasters/{masterId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Admins can create/update golden masters
-      allow read, write: if isAuthenticated() && isAdminOrAbove();
-      
-      // Users in org can read
-      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      // All authenticated users can read
+      allow read: if isAuthenticated();
+
+      // Admins can write
+      allow write: if isAdmin();
     }
-    
+
+    // ========================================
+    // CHAT SESSIONS
+    // ========================================
+
     // Chat sessions
     match /chatSessions/{sessionId} {
-      // Platform admins have FULL access (IT support)
-      allow read, write: if isSuperAdmin();
-      
-      // Allow authenticated users to read/write their org's sessions
-      allow read, write: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      // All authenticated users can read/write sessions
+      allow read, write: if isAuthenticated();
     }
-    
+
     // Chat messages within sessions
     match /chatSessions/{sessionId}/messages/{messageId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Allow if user belongs to the session's org
-      allow read, write: if isAuthenticated() 
-        && belongsToOrg(get(/databases/$(database)/documents/chatSessions/$(sessionId)).data.organizationId);
+      // All authenticated users can read/write messages
+      allow read, write: if isAuthenticated();
     }
-    
-    // Subscription plans (read-only for users, super admin manages)
+
+    // ========================================
+    // SUBSCRIPTIONS
+    // ========================================
+
+    // Subscription plans (read-only for users)
     match /subscriptionPlans/{planId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
       // All authenticated users can read plans
       allow read: if isAuthenticated();
+
+      // Only admins can write
+      allow write: if isAdmin();
     }
-    
-    // Customer subscriptions (tied to organizations)
+
+    // Customer subscriptions
     match /customerSubscriptions/{subscriptionId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Users can read their org's subscription
-      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
-      
-      // Only owners can modify subscription
-      allow update: if isAuthenticated() 
-        && belongsToOrg(resource.data.organizationId)
-        && getUserRole() == 'superadmin';
-      
-      // Only super admins can create/delete subscriptions
-      allow create, delete: if isSuperAdmin();
+      // All authenticated users can read subscription
+      allow read: if isAuthenticated();
+
+      // Only admins can modify subscription
+      allow write: if isAdmin();
     }
-    
+
     // ========================================
-    // SCRAPER INTELLIGENCE - DISCOVERY ARCHIVE
+    // DISCOVERY ARCHIVE
     // ========================================
-    
+
     // Discovery Archive (auto-deleted after 30 days via TTL)
-    // This is our proprietary "moat" - replaces third-party data APIs
     match /discoveryArchive/{scrapeId} {
-      // Platform admins have FULL access
-      allow read, write: if isSuperAdmin();
-      
-      // Only the owning organization can read their scrapes
-      allow read: if isAuthenticated() 
-                 && resource.data.organizationId == getUserOrgId();
-      
-      // Only the owning organization can create scrapes
-      // Validate organizationId matches on create
-      allow create: if isAuthenticated() 
-                   && request.resource.data.organizationId == getUserOrgId();
-      
-      // Only the owning organization can update (for flagging)
-      // Cannot change organizationId after creation
-      allow update: if isAuthenticated() 
-                   && resource.data.organizationId == getUserOrgId()
-                   && request.resource.data.organizationId == resource.data.organizationId;
-      
-      // Only the owning organization can delete
-      // (Manual deletion is rare - TTL handles most deletions)
-      allow delete: if isAuthenticated() 
-                   && resource.data.organizationId == getUserOrgId();
+      // All authenticated users can read/write scrapes
+      allow read, write: if isAuthenticated();
     }
-    
+
+    // ========================================
+    // DEFAULT DENY
+    // ========================================
+
     // Default: Deny all other access
     match /{document=**} {
       allow read, write: if false;

@@ -67,114 +67,114 @@ export interface NavItem {
 // NAVIGATION STRUCTURE (Full Definition)
 // ============================================================================
 
-export function buildNavigationStructure(orgId: string): NavSection[] {
+export function buildNavigationStructure(): NavSection[] {
   return [
     {
       id: 'command_center',
       title: 'Command Center',
       items: [
-        { id: 'workforce', href: `/workspace/${orgId}/workforce`, icon: '🎛️', label: 'Workforce HQ', featureId: 'workforce_hq' },
-        { id: 'dashboard', href: `/workspace/${orgId}/dashboard`, icon: '📊', label: 'Dashboard', featureId: 'dashboard' },
-        { id: 'conversations', href: `/workspace/${orgId}/conversations`, icon: '💬', label: 'Conversations', featureId: 'conversations' },
+        { id: 'workforce', href: '/workforce', icon: '🎛️', label: 'Workforce HQ', featureId: 'workforce_hq' },
+        { id: 'dashboard', href: '/dashboard', icon: '📊', label: 'Dashboard', featureId: 'dashboard' },
+        { id: 'conversations', href: '/conversations', icon: '💬', label: 'Conversations', featureId: 'conversations' },
       ],
     },
     {
       id: 'crm',
       title: 'CRM',
       items: [
-        { id: 'leads', href: `/workspace/${orgId}/leads`, icon: '🎯', label: 'Leads', featureId: 'leads' },
-        { id: 'deals', href: `/workspace/${orgId}/deals`, icon: '💼', label: 'Deals', featureId: 'deals' },
-        { id: 'contacts', href: `/workspace/${orgId}/contacts`, icon: '👤', label: 'Contacts', featureId: 'contacts' },
-        { id: 'living_ledger', href: `/workspace/${orgId}/living-ledger`, icon: '📒', label: 'Living Ledger', featureId: 'living_ledger' },
+        { id: 'leads', href: '/leads', icon: '🎯', label: 'Leads', featureId: 'leads' },
+        { id: 'deals', href: '/deals', icon: '💼', label: 'Deals', featureId: 'deals' },
+        { id: 'contacts', href: '/contacts', icon: '👤', label: 'Contacts', featureId: 'contacts' },
+        { id: 'living_ledger', href: '/living-ledger', icon: '📒', label: 'Living Ledger', featureId: 'living_ledger' },
       ],
     },
     {
       id: 'lead_gen',
       title: 'Lead Gen',
       items: [
-        { id: 'forms', href: `/workspace/${orgId}/forms`, icon: '📋', label: 'Forms', featureId: 'forms' },
-        { id: 'lead_research', href: `/workspace/${orgId}/leads/research`, icon: '🔬', label: 'Lead Research', featureId: 'lead_research' },
-        { id: 'lead_scoring', href: `/workspace/${orgId}/lead-scoring`, icon: '⭐', label: 'Lead Scoring', featureId: 'lead_scoring' },
+        { id: 'forms', href: '/forms', icon: '📋', label: 'Forms', featureId: 'forms' },
+        { id: 'lead_research', href: '/leads/research', icon: '🔬', label: 'Lead Research', featureId: 'lead_research' },
+        { id: 'lead_scoring', href: '/lead-scoring', icon: '⭐', label: 'Lead Scoring', featureId: 'lead_scoring' },
       ],
     },
     {
       id: 'outbound',
       title: 'Outbound',
       items: [
-        { id: 'sequences', href: `/workspace/${orgId}/outbound/sequences`, icon: '📧', label: 'Sequences', featureId: 'email_sequences' },
-        { id: 'campaigns', href: `/workspace/${orgId}/email/campaigns`, icon: '📮', label: 'Campaigns', featureId: 'email_campaigns' },
-        { id: 'email_writer', href: `/workspace/${orgId}/email-writer`, icon: '✍️', label: 'Email Writer', featureId: 'email_writer' },
-        { id: 'nurture', href: `/workspace/${orgId}/nurture`, icon: '🌱', label: 'Nurture', featureId: 'nurture' },
-        { id: 'calls', href: `/workspace/${orgId}/calls`, icon: '📞', label: 'Calls', featureId: 'calls' },
+        { id: 'sequences', href: '/outbound/sequences', icon: '📧', label: 'Sequences', featureId: 'email_sequences' },
+        { id: 'campaigns', href: '/email/campaigns', icon: '📮', label: 'Campaigns', featureId: 'email_campaigns' },
+        { id: 'email_writer', href: '/email-writer', icon: '✍️', label: 'Email Writer', featureId: 'email_writer' },
+        { id: 'nurture', href: '/nurture', icon: '🌱', label: 'Nurture', featureId: 'nurture' },
+        { id: 'calls', href: '/calls', icon: '📞', label: 'Calls', featureId: 'calls' },
       ],
     },
     {
       id: 'automation',
       title: 'Automation',
       items: [
-        { id: 'workflows', href: `/workspace/${orgId}/workflows`, icon: '⚡', label: 'Workflows', featureId: 'workflows' },
-        { id: 'ab_tests', href: `/workspace/${orgId}/ab-tests`, icon: '🧪', label: 'A/B Tests', featureId: 'ab_tests' },
+        { id: 'workflows', href: '/workflows', icon: '⚡', label: 'Workflows', featureId: 'workflows' },
+        { id: 'ab_tests', href: '/ab-tests', icon: '🧪', label: 'A/B Tests', featureId: 'ab_tests' },
       ],
     },
     {
       id: 'content_factory',
       title: 'Content Factory',
       items: [
-        { id: 'video_studio', href: `/workspace/${orgId}/content/video`, icon: '🎬', label: 'Video Studio', featureId: 'video_studio' },
-        { id: 'social_media', href: `/workspace/${orgId}/social/campaigns`, icon: '📱', label: 'Social Media', featureId: 'social_media' },
-        { id: 'proposals', href: `/workspace/${orgId}/proposals/builder`, icon: '📄', label: 'Proposals', featureId: 'proposals' },
-        { id: 'battlecards', href: `/workspace/${orgId}/battlecards`, icon: '🃏', label: 'Battlecards', featureId: 'battlecards' },
+        { id: 'video_studio', href: '/content/video', icon: '🎬', label: 'Video Studio', featureId: 'video_studio' },
+        { id: 'social_media', href: '/social/campaigns', icon: '📱', label: 'Social Media', featureId: 'social_media' },
+        { id: 'proposals', href: '/proposals/builder', icon: '📄', label: 'Proposals', featureId: 'proposals' },
+        { id: 'battlecards', href: '/battlecards', icon: '🃏', label: 'Battlecards', featureId: 'battlecards' },
       ],
     },
     {
       id: 'ai_workforce',
       title: 'AI Workforce',
       items: [
-        { id: 'agent_training', href: `/workspace/${orgId}/settings/ai-agents/training`, icon: '🤖', label: 'Agent Training', featureId: 'agent_training' },
-        { id: 'voice_ai', href: `/workspace/${orgId}/voice/training`, icon: '🎙️', label: 'Voice AI Lab', featureId: 'voice_ai' },
-        { id: 'social_ai', href: `/workspace/${orgId}/social/training`, icon: '📢', label: 'Social AI Lab', featureId: 'social_ai' },
-        { id: 'seo_ai', href: `/workspace/${orgId}/seo/training`, icon: '🔍', label: 'SEO AI Lab', featureId: 'seo_ai' },
-        { id: 'datasets', href: `/workspace/${orgId}/ai/datasets`, icon: '📚', label: 'Datasets', featureId: 'datasets' },
-        { id: 'fine_tuning', href: `/workspace/${orgId}/ai/fine-tuning`, icon: '🎯', label: 'Fine-Tuning', featureId: 'fine_tuning' },
+        { id: 'agent_training', href: '/settings/ai-agents/training', icon: '🤖', label: 'Agent Training', featureId: 'agent_training' },
+        { id: 'voice_ai', href: '/voice/training', icon: '🎙️', label: 'Voice AI Lab', featureId: 'voice_ai' },
+        { id: 'social_ai', href: '/social/training', icon: '📢', label: 'Social AI Lab', featureId: 'social_ai' },
+        { id: 'seo_ai', href: '/seo/training', icon: '🔍', label: 'SEO AI Lab', featureId: 'seo_ai' },
+        { id: 'datasets', href: '/ai/datasets', icon: '📚', label: 'Datasets', featureId: 'datasets' },
+        { id: 'fine_tuning', href: '/ai/fine-tuning', icon: '🎯', label: 'Fine-Tuning', featureId: 'fine_tuning' },
       ],
     },
     {
       id: 'ecommerce',
       title: 'E-Commerce',
       items: [
-        { id: 'products', href: `/workspace/${orgId}/products`, icon: '📦', label: 'Products', featureId: 'products' },
-        { id: 'orders', href: `/workspace/${orgId}/analytics/ecommerce`, icon: '💰', label: 'Orders', featureId: 'orders' },
-        { id: 'storefront', href: `/workspace/${orgId}/settings/storefront`, icon: '🏪', label: 'Storefront', featureId: 'storefront' },
+        { id: 'products', href: '/products', icon: '📦', label: 'Products', featureId: 'products' },
+        { id: 'orders', href: '/analytics/ecommerce', icon: '💰', label: 'Orders', featureId: 'orders' },
+        { id: 'storefront', href: '/settings/storefront', icon: '🏪', label: 'Storefront', featureId: 'storefront' },
       ],
     },
     {
       id: 'analytics',
       title: 'Analytics',
       items: [
-        { id: 'analytics_overview', href: `/workspace/${orgId}/analytics`, icon: '📈', label: 'Overview', featureId: 'analytics_overview' },
-        { id: 'revenue', href: `/workspace/${orgId}/analytics/revenue`, icon: '💵', label: 'Revenue', featureId: 'revenue_analytics' },
-        { id: 'pipeline', href: `/workspace/${orgId}/analytics/pipeline`, icon: '🔄', label: 'Pipeline', featureId: 'pipeline_analytics' },
-        { id: 'sequence_analytics', href: `/workspace/${orgId}/sequences/analytics`, icon: '📊', label: 'Sequences', featureId: 'sequence_analytics' },
+        { id: 'analytics_overview', href: '/analytics', icon: '📈', label: 'Overview', featureId: 'analytics_overview' },
+        { id: 'revenue', href: '/analytics/revenue', icon: '💵', label: 'Revenue', featureId: 'revenue_analytics' },
+        { id: 'pipeline', href: '/analytics/pipeline', icon: '🔄', label: 'Pipeline', featureId: 'pipeline_analytics' },
+        { id: 'sequence_analytics', href: '/sequences/analytics', icon: '📊', label: 'Sequences', featureId: 'sequence_analytics' },
       ],
     },
     {
       id: 'website',
       title: 'Website',
       items: [
-        { id: 'pages', href: `/workspace/${orgId}/website/pages`, icon: '🌐', label: 'Pages', featureId: 'website_pages' },
-        { id: 'blog', href: `/workspace/${orgId}/website/blog`, icon: '📝', label: 'Blog', featureId: 'website_blog' },
-        { id: 'domains', href: `/workspace/${orgId}/website/domains`, icon: '🔗', label: 'Domains', featureId: 'website_domains' },
-        { id: 'seo', href: `/workspace/${orgId}/website/seo`, icon: '🔎', label: 'SEO', featureId: 'website_seo' },
-        { id: 'site_settings', href: `/workspace/${orgId}/website/settings`, icon: '🎨', label: 'Site Settings', featureId: 'website_settings' },
+        { id: 'pages', href: '/website/pages', icon: '🌐', label: 'Pages', featureId: 'website_pages' },
+        { id: 'blog', href: '/website/blog', icon: '📝', label: 'Blog', featureId: 'website_blog' },
+        { id: 'domains', href: '/website/domains', icon: '🔗', label: 'Domains', featureId: 'website_domains' },
+        { id: 'seo', href: '/website/seo', icon: '🔎', label: 'SEO', featureId: 'website_seo' },
+        { id: 'site_settings', href: '/website/settings', icon: '🎨', label: 'Site Settings', featureId: 'website_settings' },
       ],
     },
     {
       id: 'settings',
       title: 'Settings',
       items: [
-        { id: 'settings', href: `/workspace/${orgId}/settings`, icon: '⚙️', label: 'Settings', featureId: 'settings' },
-        { id: 'integrations', href: `/workspace/${orgId}/integrations`, icon: '🔌', label: 'Integrations', featureId: 'integrations' },
-        { id: 'api_keys', href: `/workspace/${orgId}/settings/api-keys`, icon: '🔑', label: 'API Keys', featureId: 'api_keys' },
+        { id: 'settings', href: '/settings', icon: '⚙️', label: 'Settings', featureId: 'settings' },
+        { id: 'integrations', href: '/integrations', icon: '🔌', label: 'Integrations', featureId: 'integrations' },
+        { id: 'api_keys', href: '/settings/api-keys', icon: '🔑', label: 'API Keys', featureId: 'api_keys' },
       ],
     },
   ];
@@ -333,7 +333,7 @@ export class FeatureToggleService {
    */
   static async getFilteredNavigation(organizationId: string): Promise<NavSection[]> {
     const settings = await this.getVisibilitySettings(organizationId);
-    const fullNav = buildNavigationStructure(organizationId);
+    const fullNav = buildNavigationStructure();
 
     if (!settings) {
       return fullNav; // No settings = show everything

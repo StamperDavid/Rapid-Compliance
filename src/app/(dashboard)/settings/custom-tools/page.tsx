@@ -283,7 +283,7 @@ export default function CustomToolsSettingsPage() {
   useEffect(() => {
     const fetchTools = async () => {
       try {
-        const response = await fetch(`/api/workspace/${orgId}/custom-tools`);
+        const response = await fetch(`/api/custom-tools`);
         if (response.ok) {
           const data = (await response.json()) as ToolsListResponse;
           setTools(data.tools ?? []);
@@ -314,7 +314,7 @@ export default function CustomToolsSettingsPage() {
       ? { ...formData, id: editingTool.id }
       : { ...formData, order: tools.length };
 
-    const response = await fetch(`/api/workspace/${orgId}/custom-tools`, {
+    const response = await fetch(`/api/custom-tools`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -335,7 +335,7 @@ export default function CustomToolsSettingsPage() {
 
   const handleDeleteTool = async (toolId: string) => {
     try {
-      const response = await fetch(`/api/workspace/${orgId}/custom-tools`, {
+      const response = await fetch(`/api/custom-tools`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: toolId }),
@@ -352,7 +352,7 @@ export default function CustomToolsSettingsPage() {
 
   const handleToggleEnabled = async (tool: CustomTool) => {
     try {
-      const response = await fetch(`/api/workspace/${orgId}/custom-tools`, {
+      const response = await fetch(`/api/custom-tools`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -33,7 +31,6 @@ type TabType = 'active' | 'all' | 'analytics';
 
 export default function PromotionsPage() {
   const { user: _user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
   const canManageOrganization = usePermission('canManageOrganization');
 
@@ -58,14 +55,14 @@ export default function PromotionsPage() {
     setLoading(true);
     try {
       // Load coupons
-      const couponsRes = await fetch(`/api/workspace/${orgId}/coupons`);
+      const couponsRes = await fetch(`/api/coupons`);
       if (couponsRes.ok) {
         const data = await couponsRes.json() as CouponsResponse;
         setCoupons(data.coupons ?? []);
       }
 
       // Load analytics
-      const analyticsRes = await fetch(`/api/workspace/${orgId}/coupons/analytics`);
+      const analyticsRes = await fetch(`/api/coupons/analytics`);
       if (analyticsRes.ok) {
         const data = await analyticsRes.json() as AnalyticsResponse;
         setAnalytics(data.analytics ?? null);
@@ -75,7 +72,7 @@ export default function PromotionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadData();
@@ -103,7 +100,7 @@ export default function PromotionsPage() {
     setSaving(true);
     setMessage({ type: '', text: '' });
     try {
-      const response = await fetch(`/api/workspace/${orgId}/coupons`, {
+      const response = await fetch(`/api/coupons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingCoupon),
@@ -135,7 +132,7 @@ export default function PromotionsPage() {
 
   const handleToggleStatus = async (couponId: string, newStatus: CouponStatus) => {
     try {
-      const response = await fetch(`/api/workspace/${orgId}/coupons/${couponId}/status`, {
+      const response = await fetch(`/api/coupons/${couponId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),

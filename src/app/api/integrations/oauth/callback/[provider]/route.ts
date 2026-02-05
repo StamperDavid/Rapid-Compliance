@@ -27,13 +27,13 @@ export async function GET(
     if (errorParam) {
       // User denied authorization
       return NextResponse.redirect(
-        `${getAppUrl()}/workspace/*/settings/integrations?error=${encodeURIComponent(errorParam)}`
+        `${getAppUrl()}/settings/integrations?error=${encodeURIComponent(errorParam)}`
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        `${getAppUrl()}/workspace/*/settings/integrations?error=missing_code_or_state`
+        `${getAppUrl()}/settings/integrations?error=missing_code_or_state`
       );
     }
 
@@ -42,13 +42,13 @@ export async function GET(
 
     // Redirect to integrations page with success
     return NextResponse.redirect(
-      `${getAppUrl()}/workspace/*/settings/integrations?success=connected`
+      `${getAppUrl()}/settings/integrations?success=connected`
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'OAuth failed';
     logger.error('OAuth callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/oauth/callback' });
     return NextResponse.redirect(
-      `${getAppUrl()}/workspace/*/settings/integrations?error=${encodeURIComponent(errorMessage)}`
+      `${getAppUrl()}/settings/integrations?error=${encodeURIComponent(errorMessage)}`
     );
   }
 }

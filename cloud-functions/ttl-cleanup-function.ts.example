@@ -139,7 +139,7 @@ export const cleanupExpiredScrapesManual = functions.https.onCall(
     }
 
     // Verify admin privileges
-    if (!context.auth.token.admin && !context.auth.token.superAdmin) {
+    if (!context.auth.token.admin) {
       throw new functions.https.HttpsError(
         'permission-denied',
         'Must be admin to run cleanup'

@@ -98,7 +98,7 @@ export function useAuth() {
                   id: authUser.uid,
                   email: authUser.email ?? '',
                   displayName: (authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
-                  role: 'employee', // Minimal access role in production
+                  role: 'user', // Minimal access role in production
                   organizationId: DEFAULT_ORG_ID,
                 });
               }

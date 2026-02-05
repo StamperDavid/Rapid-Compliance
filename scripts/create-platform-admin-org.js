@@ -1,5 +1,5 @@
 /**
- * Create platform-admin organization
+ * Create admin organization
  * Quick script to create the org document that the landing page needs
  */
 
@@ -17,7 +17,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-async function createPlatformAdminOrg() {
+async function createAdminOrg() {
   console.log('\n🔧 Creating platform-admin organization...\n');
   
   try {
@@ -82,7 +82,7 @@ async function createPlatformAdminOrg() {
   }
 }
 
-createPlatformAdminOrg()
+createAdminOrg()
   .then(() => process.exit(0))
   .catch((error) => {
     console.error('Failed:', error);

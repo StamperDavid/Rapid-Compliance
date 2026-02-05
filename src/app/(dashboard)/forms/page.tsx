@@ -1,14 +1,12 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 /**
  * Forms Management Page
  *
  * Lists all forms for the organization with status, analytics,
  * and quick actions. Includes create form modal with templates.
  *
- * @route /workspace/[orgId]/forms
+ * @route /forms
  * @version 2.0.0
  */
 
@@ -145,7 +143,6 @@ function FormCardSkeleton() {
 
 export default function FormsPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
 
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,7 +159,7 @@ export default function FormsPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/workspace/${orgId}/forms?workspaceId=default`);
+      const response = await fetch(`/api/forms?workspaceId=default`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch forms');
@@ -176,7 +173,7 @@ export default function FormsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void fetchForms();
@@ -199,7 +196,7 @@ export default function FormsPage() {
     try {
       setCreating(true);
 
-      const response = await fetch(`/api/workspace/${orgId}/forms`, {
+      const response = await fetch(`/api/forms`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

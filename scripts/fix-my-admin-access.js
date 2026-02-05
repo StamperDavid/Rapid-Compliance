@@ -40,18 +40,17 @@ async function fixAdminAccess() {
       console.log(`\n⚠️ No Firestore document found - creating one...`);
     }
     
-    // Update to platform_admin
-    console.log(`\n🔧 Updating to platform_admin...`);
-    
+    // Update to admin
+    console.log(`\n🔧 Updating to admin...`);
+
     await db.collection('users').doc(userRecord.uid).set({
       email: email,
       name: 'David Stamper',
       displayName: 'David Stamper',
-      role: 'platform_admin',
+      role: 'admin',
       organizationId: 'platform',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      isPlatformAdmin: true,
       status: 'active',
     }, { merge: true });
     
@@ -64,23 +63,22 @@ async function fixAdminAccess() {
     console.log(`   Email: ${updatedData.email}`);
     console.log(`   Role: ${updatedData.role}`);
     console.log(`   Org ID: ${updatedData.organizationId}`);
-    console.log(`   Is Platform Admin: ${updatedData.isPlatformAdmin}`);
-    
-    // Check for other super admins
-    console.log(`\n🔍 Checking for other platform_admin accounts...`);
-    const superAdminsSnapshot = await db.collection('users')
-      .where('role', '==', 'platform_admin')
+
+    // Check for other admins
+    console.log(`\n🔍 Checking for other admin accounts...`);
+    const adminsSnapshot = await db.collection('users')
+      .where('role', '==', 'admin')
       .get();
-    
-    console.log(`\nFound ${superAdminsSnapshot.size} platform_admin account(s):`);
-    superAdminsSnapshot.forEach(doc => {
+
+    console.log(`\nFound ${adminsSnapshot.size} admin account(s):`);
+    adminsSnapshot.forEach(doc => {
       const data = doc.data();
       console.log(`   - ${data.email} (${doc.id})`);
     });
-    
-    if (superAdminsSnapshot.size > 1) {
-      console.log(`\n⚠️ WARNING: Multiple platform_admin accounts exist!`);
-      console.log(`   Only you should have platform_admin access.`);
+
+    if (adminsSnapshot.size > 1) {
+      console.log(`\n⚠️ WARNING: Multiple admin accounts exist!`);
+      console.log(`   Only you should have admin access.`);
     }
     
     console.log(`\n✅ You can now login at http://localhost:3000/admin/login`);

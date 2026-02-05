@@ -770,7 +770,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           role: {
             type: 'string',
             description: 'Filter by role',
-            enum: ['all', 'superadmin', 'admin', 'manager', 'employee'],
+            enum: ['all', 'admin', 'user'],
           },
         },
         required: [],

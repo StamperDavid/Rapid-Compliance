@@ -136,7 +136,7 @@ export default function AgentPersonaPage() {
     const loadPersona = async () => {
       try {
         // Load persona from Firestore (or auto-generate from onboarding if first time)
-        const response = await fetch(`/api/workspace/${orgId}/agent/persona`);
+        const response = await fetch(`/api/agent/persona`);
         if (response.ok) {
           const data = (await response.json()) as PersonaApiResponse;
           if (data.persona) {
@@ -160,7 +160,7 @@ export default function AgentPersonaPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/workspace/${orgId}/agent/persona`, {
+      const response = await fetch(`/api/agent/persona`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(persona)

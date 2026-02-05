@@ -55,7 +55,7 @@ export default function TeamMembersPage() {
 
   const [_inviteData, _setInviteData] = useState({
     email: '',
-    role: 'employee' as UserRole,
+    role: 'user' as UserRole,
     title: '',
     department: ''
   });
@@ -104,7 +104,7 @@ export default function TeamMembersPage() {
         id: index + 1,
         name: userName,
         email: u.email ?? '',
-        role: u.role ?? 'employee',
+        role: u.role ?? 'user',
         title: u.title ?? '',
         department: u.department ?? '',
         status: u.status ?? 'active',
@@ -126,10 +126,8 @@ export default function TeamMembersPage() {
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
   const roles: { value: UserRole; label: string; description: string }[] = [
-    { value: 'superadmin', label: 'Super Admin', description: 'Full system access and billing control' },
-    { value: 'admin', label: 'Admin', description: 'Full access except billing and org deletion' },
-    { value: 'manager', label: 'Manager', description: 'Can manage team and view all records' },
-    { value: 'employee', label: 'Employee', description: 'Can only view and edit assigned records' }
+    { value: 'admin', label: 'Admin', description: 'Full system access, user management, all features' },
+    { value: 'user', label: 'User', description: 'Standard contributor - CRM, marketing, sales' },
   ];
 
   const _permissionGroups = [

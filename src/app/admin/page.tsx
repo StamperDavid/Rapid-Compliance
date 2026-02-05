@@ -65,7 +65,7 @@ const QUICK_ACTIONS = [
 // -------------------------------------------------------------------
 
 export default function AdminDashboardPage() {
-  const { adminUser, isSuperAdmin } = useAdminAuth();
+  const { adminUser, isAdminUser } = useAdminAuth();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [statsUser, setStatsUser] = useState<StatsUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -285,7 +285,7 @@ export default function AdminDashboardPage() {
               <InfoRow label="Role" value={statsUser?.role ?? adminUser?.role ?? '-'} />
               <InfoRow
                 label="Global Admin"
-                value={statsUser?.isGlobalAdmin ? 'Yes' : isSuperAdmin() ? 'Yes' : 'No'}
+                value={statsUser?.isGlobalAdmin ? 'Yes' : isAdminUser() ? 'Yes' : 'No'}
               />
               <InfoRow label="Stats Scope" value={stats?.scope ?? '-'} />
               <InfoRow
@@ -321,7 +321,7 @@ export default function AdminDashboardPage() {
             <OverviewItem label="Conversations" value={loading ? '...' : (stats?.totalConversations ?? 0).toLocaleString()} />
             <OverviewItem label="Playbooks" value={loading ? '...' : (stats?.totalPlaybooks ?? 0).toLocaleString()} />
             <OverviewItem label="Organizations" value={loading ? '...' : (stats?.totalOrgs ?? 1).toString()} />
-            <OverviewItem label="RBAC Roles" value="4" />
+            <OverviewItem label="RBAC Roles" value="2" />
           </div>
         </div>
       </div>

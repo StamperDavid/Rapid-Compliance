@@ -256,7 +256,6 @@ const createDefaultForm = (
 export default function FormEditorPage() {
   const params = useParams();
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const formId = params.formId as string;
 
   const [form, setForm] = useState<FormDefinition | null>(null);
@@ -282,7 +281,7 @@ export default function FormEditorPage() {
       if (formId === 'new') {
         const newForm = createDefaultForm(
           `form_${Date.now()}`,
-          orgId,
+          DEFAULT_ORG_ID,
           'default',
           'Untitled Form'
         );
@@ -293,7 +292,7 @@ export default function FormEditorPage() {
       }
 
       const response = await fetch(
-        `/api/workspace/${orgId}/forms/${formId}?workspaceId=default`
+        `/api/forms/${formId}?workspaceId=default`
       );
 
       if (!response.ok) {
@@ -324,7 +323,7 @@ export default function FormEditorPage() {
       setError(err instanceof Error ? err.message : 'Failed to load form');
       setLoadingState('error');
     }
-  }, [orgId, formId]);
+  }, [formId]);
 
   useEffect(() => {
     void fetchForm();
@@ -352,7 +351,7 @@ export default function FormEditorPage() {
       setLoadingState('saving');
       setSaveMessage(null);
 
-      const response = await fetch(`/api/workspace/${orgId}/forms/${form.id}`, {
+      const response = await fetch(`/api/forms/${form.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -376,7 +375,7 @@ export default function FormEditorPage() {
       setError(err instanceof Error ? err.message : 'Failed to save form');
       setLoadingState('loaded');
     }
-  }, [orgId, form, fields]);
+  }, [form, fields]);
 
   // Publish form
   const handlePublish = useCallback(async () => {
@@ -388,7 +387,7 @@ export default function FormEditorPage() {
       setLoadingState('saving');
 
       const response = await fetch(
-        `/api/workspace/${orgId}/forms/${form.id}/publish`,
+        `/api/forms/${form.id}/publish`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -410,7 +409,7 @@ export default function FormEditorPage() {
       setError(err instanceof Error ? err.message : 'Failed to publish form');
       setLoadingState('loaded');
     }
-  }, [orgId, form]);
+  }, [form]);
 
   // Preview form
   const handlePreview = useCallback(() => {

@@ -78,13 +78,13 @@ export async function GET(
 
     if (errorParam) {
       return NextResponse.redirect(
-        `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(errorParam)}`
+        `${request.nextUrl.origin}/settings/integrations?error=${encodeURIComponent(errorParam)}`
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=missing_code_or_state`
+        `${request.nextUrl.origin}/settings/integrations?error=missing_code_or_state`
       );
     }
 
@@ -131,14 +131,14 @@ export async function GET(
 
       // Redirect back to integrations page with success
       return NextResponse.redirect(
-        `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?success=${encodeURIComponent(provider)}`
+        `${request.nextUrl.origin}/settings/integrations?success=${encodeURIComponent(provider)}`
       );
     } catch (innerError) {
       const innerErrorMsg = innerError instanceof Error ? innerError.message : 'Unknown error';
       const resolvedParams = await params;
       logger.error('OAuth callback inner error', innerError instanceof Error ? innerError : undefined, { route: '/api/integrations/oauth/callback', provider: resolvedParams.provider });
       return NextResponse.redirect(
-        `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(innerErrorMsg)}`
+        `${request.nextUrl.origin}/settings/integrations?error=${encodeURIComponent(innerErrorMsg)}`
       );
     }
   } catch (error) {
@@ -146,7 +146,7 @@ export async function GET(
     const resolvedParams = await params;
     logger.error('OAuth callback error', error instanceof Error ? error : undefined, { route: '/api/integrations/oauth/callback', provider: resolvedParams.provider });
     return NextResponse.redirect(
-      `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(errorMsg)}`
+      `${request.nextUrl.origin}/settings/integrations?error=${encodeURIComponent(errorMsg)}`
     );
   }
 }
