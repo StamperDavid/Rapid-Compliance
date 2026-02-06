@@ -18,7 +18,7 @@ import { OrchestratorBase, type OrchestratorConfig } from './OrchestratorBase';
 import { FeedbackModal } from './FeedbackModal';
 import { useOrchestratorStore } from '@/lib/stores/orchestrator-store';
 import { ADMIN_ORCHESTRATOR_PROMPT } from '@/lib/orchestrator/feature-manifest';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { useAuth } from '@/hooks/useAuth';
 import {
   getAdminPersona,
   buildPersonaSystemPrompt,
@@ -74,7 +74,7 @@ function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
 }
 
 export function AdminOrchestrator() {
-  const { adminUser } = useAdminAuth();
+  const { user: adminUser } = useAuth();
   const { setContext } = useOrchestratorStore();
   const [stats, setStats] = useState<AdminStats>({
     totalOrgs: 0,

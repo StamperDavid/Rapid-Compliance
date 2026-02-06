@@ -86,7 +86,7 @@ export default function LoginPage() {
         });
         // Set redirecting state to show clean loading UI (prevents FOUC)
         setRedirecting(true);
-        router.push('/admin');
+        router.push('/dashboard');
         return;
       }
 

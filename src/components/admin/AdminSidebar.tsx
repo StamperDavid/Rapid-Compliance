@@ -99,8 +99,8 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'command-center',
     label: 'Command Center',
     items: [
-      { id: 'dashboard', label: 'Dashboard', href: '/admin', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
-      { id: 'workforce-hq', label: 'Workforce HQ', href: '/admin/workforce', icon: Monitor, iconColor: 'var(--color-secondary)' },
+      { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
+      { id: 'workforce-hq', label: 'Workforce HQ', href: '/workforce', icon: Monitor, iconColor: 'var(--color-secondary)' },
     ],
   },
   // ── CRM ─────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
       { id: 'deals', label: 'Deals / Pipeline', href: '/deals', icon: Handshake, iconColor: 'var(--color-secondary)' },
       { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Contact, iconColor: 'var(--color-cyan)' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)' },
-      { id: 'living-ledger', label: 'Living Ledger', href: '/admin/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)' },
+      { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── Lead Gen ────────────────────────────────────────────────────────
@@ -123,6 +123,7 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-primary)' },
       { id: 'lead-research', label: 'Lead Research', href: '/leads/research', icon: Microscope, iconColor: 'var(--color-secondary)' },
       { id: 'lead-scoring', label: 'Lead Scoring', href: '/lead-scoring', icon: Target, iconColor: 'var(--color-success)' },
+      { id: 'marketing-scraper', label: 'Marketing Scraper', href: '/scraper', icon: SearchCode, iconColor: 'var(--color-cyan)' },
     ],
   },
   // ── Outbound / Sales ────────────────────────────────────────────────
@@ -154,7 +155,7 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'ai-workforce',
     label: 'AI Workforce',
     items: [
-      { id: 'agent-registry', label: 'Agent Registry', href: '/admin/ai-agents', icon: Bot, iconColor: 'var(--color-cyan)' },
+      { id: 'agent-registry', label: 'Agent Registry', href: '/ai-agents', icon: Bot, iconColor: 'var(--color-cyan)' },
       { id: 'training-center', label: 'Training Center', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)' },
       { id: 'agent-persona', label: 'Agent Persona', href: '/settings/ai-agents/persona', icon: UserCog, iconColor: 'var(--color-secondary)' },
       { id: 'voice-ai', label: 'Voice AI Lab', href: '/voice/training', icon: Phone, iconColor: 'var(--color-warning)' },
@@ -189,7 +190,7 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     id: 'compliance',
     label: 'Compliance',
     items: [
-      { id: 'compliance-reports', label: 'Compliance Reports', href: '/admin/compliance-reports', icon: ShieldCheck, iconColor: 'var(--color-success)' },
+      { id: 'compliance-reports', label: 'Compliance Reports', href: '/compliance-reports', icon: ShieldCheck, iconColor: 'var(--color-success)' },
       { id: 'audit-log', label: 'Audit Log', href: '/website/audit-log', icon: ScrollText, iconColor: 'var(--color-warning)' },
     ],
   },
@@ -266,8 +267,8 @@ export default function AdminSidebar() {
   }, []);
 
   const isActive = (href: string): boolean => {
-    if (href === '/admin') {
-      return pathname === '/admin';
+    if (href === '/dashboard') {
+      return pathname === '/dashboard';
     }
     return pathname?.startsWith(href) ?? false;
   };
@@ -345,7 +346,7 @@ export default function AdminSidebar() {
                     letterSpacing: '0.05em',
                   }}
                 >
-                  Admin Panel
+                  Command Center
                 </div>
               </div>
             </div>
