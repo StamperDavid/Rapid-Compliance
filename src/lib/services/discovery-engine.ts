@@ -231,7 +231,7 @@ export async function discoverCompany(
     });
 
     // Step 1: Check discoveryArchive (30-day cache)
-    const cached = await checkDiscoveryArchive(domain, organizationId);
+    const cached = await checkDiscoveryArchive(domain);
     if (cached) {
       logger.info('Discovery archive HIT - serving from cache', {
         domain,
@@ -305,15 +305,14 @@ export async function discoverCompany(
  * Check if company data exists in discoveryArchive (30-day cache)
  */
 async function checkDiscoveryArchive(
-  domain: string,
-  organizationId: string
+  domain: string
 ): Promise<{ scrape: TemporaryScrape } | null> {
   try {
     // We'll use URL as the cache key
     const url = domain.startsWith('http') ? domain : `https://${domain}`;
     const contentHash = calculateContentHash(url);
 
-    const cached = await getFromDiscoveryArchiveByHash(organizationId, contentHash);
+    const cached = await getFromDiscoveryArchiveByHash(contentHash);
     
     if (!cached) {
       return null;
@@ -865,7 +864,6 @@ async function saveToArchive(
     const url = domain.startsWith('http') ? domain : `https://${domain}`;
 
     const result = await saveToDiscoveryArchive({
-      organizationId,
       url,
       rawHtml: JSON.stringify(rawData),
       cleanedContent: JSON.stringify(company),
@@ -1002,7 +1000,7 @@ export async function discoverPerson(
     // Step 1: Check discoveryArchive (30-day cache)
     const cacheKey = `person:${email}`;
     const contentHash = calculateContentHash(cacheKey);
-    const cached = await getFromDiscoveryArchiveByHash(organizationId, contentHash);
+    const cached = await getFromDiscoveryArchiveByHash(contentHash);
     
     if (cached && cached.expiresAt > new Date()) {
       logger.info('Person discovery archive HIT', {
@@ -1033,7 +1031,6 @@ export async function discoverPerson(
 
     // Step 3: Save to discoveryArchive (30-day TTL)
     const scrapeResult = await saveToDiscoveryArchive({
-      organizationId,
       url: cacheKey,
       rawHtml: JSON.stringify({ email, discoveredAt: new Date() }),
       cleanedContent: JSON.stringify(person),

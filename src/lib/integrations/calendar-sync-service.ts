@@ -68,7 +68,6 @@ function getCalendarClient(accessToken: string): calendar_v3.Calendar {
  * Sync Google Calendar events to CRM
  */
 export async function syncCalendarEvents(
-  organizationId: string,
   accessToken: string,
   calendarId: string = 'primary'
 ): Promise<CalendarSyncStatus> {
@@ -80,11 +79,11 @@ export async function syncCalendarEvents(
 
     // If we have a sync token, use incremental sync
     if (lastSync?.syncToken) {
-      return await incrementalSync(calendar, organizationId, calendarId, lastSync.syncToken);
+      return await incrementalSync(calendar, calendarId, lastSync.syncToken);
     }
 
     // Full sync (first time)
-    return await fullSync(calendar, organizationId, calendarId);
+    return await fullSync(calendar, calendarId);
   } catch (error) {
     logger.error('[Calendar Sync] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'calendar-sync-service.ts' });
     throw error;
@@ -96,7 +95,6 @@ export async function syncCalendarEvents(
  */
 async function fullSync(
   calendar: calendar_v3.Calendar,
-  organizationId: string,
   calendarId: string
 ): Promise<CalendarSyncStatus> {
   let eventsSynced = 0;
@@ -164,7 +162,6 @@ async function fullSync(
  */
 async function incrementalSync(
   calendar: calendar_v3.Calendar,
-  organizationId: string,
   calendarId: string,
   startSyncToken: string
 ): Promise<CalendarSyncStatus> {
@@ -225,7 +222,7 @@ async function incrementalSync(
     // If sync token is invalid, fall back to full sync
     if (error && typeof error === 'object' && 'code' in error && error.code === 410) {
       logger.info('[Calendar Sync] Sync token invalid, performing full sync', { file: 'calendar-sync-service.ts' });
-      return fullSync(calendar, organizationId, calendarId);
+      return fullSync(calendar, calendarId);
     }
     throw error;
   }

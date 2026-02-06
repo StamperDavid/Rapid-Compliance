@@ -11,7 +11,6 @@ import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,7 +58,7 @@ export async function GET(request: NextRequest) {
     const sessionId = (sessionIdParam !== '' && sessionIdParam != null) ? sessionIdParam :
       ((sessionIdHeader !== '' && sessionIdHeader != null) ? sessionIdHeader : 'anonymous');
 
-    const cart = await getOrCreateCart(sessionId, 'default', DEFAULT_ORG_ID, authResult.user?.uid);
+    const cart = await getOrCreateCart(sessionId, 'default', authResult.user?.uid);
 
     return NextResponse.json({
       success: true,
@@ -109,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     const { sessionId, productId, quantity, variantId, variantOptions } = validation.data;
 
-    const cart = await addToCart(sessionId, 'default', DEFAULT_ORG_ID, productId, quantity, variantId, variantOptions);
+    const cart = await addToCart(sessionId, 'default', productId, quantity, variantId, variantOptions);
 
     return NextResponse.json({
       success: true,
@@ -155,7 +154,7 @@ export async function PATCH(request: NextRequest) {
 
     const { sessionId, itemId, quantity } = validation.data;
 
-    const cart = await updateCartItemQuantity(sessionId, 'default', DEFAULT_ORG_ID, itemId, quantity);
+    const cart = await updateCartItemQuantity(sessionId, 'default', itemId, quantity);
 
     return NextResponse.json({
       success: true,
@@ -190,7 +189,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const cart = await removeFromCart(sessionId, 'default', DEFAULT_ORG_ID, itemId);
+    const cart = await removeFromCart(sessionId, 'default', itemId);
 
     return NextResponse.json({
       success: true,

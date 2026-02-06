@@ -11,6 +11,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { FeatureStatus } from './system-health-service';
 
 // Re-export FeatureStatus for consumers
@@ -189,10 +190,10 @@ export class FeatureToggleService {
   /**
    * Get feature visibility settings for an organization
    */
-  static async getVisibilitySettings(organizationId: string): Promise<FeatureVisibilitySettings | null> {
+  static async getVisibilitySettings(): Promise<FeatureVisibilitySettings | null> {
     try {
       const settings = await FirestoreService.get<FeatureVisibilitySettings>(
-        `organizations/${organizationId}/settings`,
+        `organizations/${DEFAULT_ORG_ID}/settings`,
         'featureVisibility'
       );
       return settings;
@@ -210,20 +211,19 @@ export class FeatureToggleService {
    * @param reason - Optional reason (e.g., "client said not needed")
    */
   static async toggleFeature(
-    organizationId: string,
     featureId: string,
     status: FeatureStatus,
     userId: string,
     reason?: string
   ): Promise<void> {
-    const path = `organizations/${organizationId}/settings`;
+    const path = `organizations/${DEFAULT_ORG_ID}/settings`;
     const docId = 'featureVisibility';
 
     // Get existing settings
-    let settings = await this.getVisibilitySettings(organizationId);
+    let settings = await this.getVisibilitySettings();
 
     settings ??= {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       features: {},
       hiddenCategories: [],
       updatedAt: new Date(),
@@ -250,18 +250,17 @@ export class FeatureToggleService {
    * Toggle an entire category's visibility
    */
   static async toggleCategory(
-    organizationId: string,
     category: FeatureCategory,
     hidden: boolean,
     userId: string
   ): Promise<void> {
-    const path = `organizations/${organizationId}/settings`;
+    const path = `organizations/${DEFAULT_ORG_ID}/settings`;
     const docId = 'featureVisibility';
 
-    let settings = await this.getVisibilitySettings(organizationId);
+    let settings = await this.getVisibilitySettings();
 
     settings ??= {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       features: {},
       hiddenCategories: [],
       updatedAt: new Date(),
@@ -286,13 +285,12 @@ export class FeatureToggleService {
    * Hide multiple features at once (batch operation)
    */
   static async hideFeatures(
-    organizationId: string,
     featureIds: string[],
     userId: string,
     reason?: string
   ): Promise<void> {
     for (const featureId of featureIds) {
-      await this.toggleFeature(organizationId, featureId, 'hidden', userId, reason);
+      await this.toggleFeature(featureId, 'hidden', userId, reason);
     }
   }
 
@@ -300,24 +298,23 @@ export class FeatureToggleService {
    * Show multiple features at once (batch operation)
    */
   static async showFeatures(
-    organizationId: string,
     featureIds: string[],
     userId: string
   ): Promise<void> {
     for (const featureId of featureIds) {
-      await this.toggleFeature(organizationId, featureId, 'unconfigured', userId);
+      await this.toggleFeature(featureId, 'unconfigured', userId);
     }
   }
 
   /**
    * Reset all visibility settings to default (show everything)
    */
-  static async resetToDefault(organizationId: string, userId: string): Promise<void> {
-    const path = `organizations/${organizationId}/settings`;
+  static async resetToDefault(userId: string): Promise<void> {
+    const path = `organizations/${DEFAULT_ORG_ID}/settings`;
     const docId = 'featureVisibility';
 
     const settings: FeatureVisibilitySettings = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       features: {},
       hiddenCategories: [],
       updatedAt: new Date(),
@@ -330,8 +327,8 @@ export class FeatureToggleService {
   /**
    * Get filtered navigation based on visibility settings
    */
-  static async getFilteredNavigation(organizationId: string): Promise<NavSection[]> {
-    const settings = await this.getVisibilitySettings(organizationId);
+  static async getFilteredNavigation(): Promise<NavSection[]> {
+    const settings = await this.getVisibilitySettings();
     const fullNav = buildNavigationStructure();
 
     if (!settings) {
@@ -359,8 +356,8 @@ export class FeatureToggleService {
   /**
    * Get hidden features count (for UI display)
    */
-  static async getHiddenCount(organizationId: string): Promise<number> {
-    const settings = await this.getVisibilitySettings(organizationId);
+  static async getHiddenCount(): Promise<number> {
+    const settings = await this.getVisibilitySettings();
     if (!settings) {
       return 0;
     }
@@ -374,8 +371,8 @@ export class FeatureToggleService {
   /**
    * Check if a specific feature is hidden
    */
-  static async isFeatureHidden(organizationId: string, featureId: string): Promise<boolean> {
-    const settings = await this.getVisibilitySettings(organizationId);
+  static async isFeatureHidden(featureId: string): Promise<boolean> {
+    const settings = await this.getVisibilitySettings();
     if (!settings) {
       return false;
     }

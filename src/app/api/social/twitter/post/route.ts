@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create Twitter service for organization
-    const twitterService = await createTwitterService(data.organizationId);
+    const twitterService = await createTwitterService();
 
     if (!twitterService) {
       logger.warn('Twitter Post API: Service not configured', {
@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check Twitter service status
-    const twitterService = await createTwitterService(organizationId);
+    const twitterService = await createTwitterService();
 
     if (!twitterService) {
       return NextResponse.json({

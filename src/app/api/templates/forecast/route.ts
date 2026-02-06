@@ -64,7 +64,6 @@ export async function POST(request: NextRequest) {
     });
 
     const forecast = generateRevenueForecast({
-      organizationId,
       workspaceId,
       period: period as ForecastPeriod,
       quota,
@@ -75,7 +74,6 @@ export async function POST(request: NextRequest) {
     let quotaPerformance = null;
     if (includeQuotaPerformance && quota) {
       quotaPerformance = calculateQuotaPerformance(
-        organizationId,
         workspaceId,
         period as ForecastPeriod,
         quota,

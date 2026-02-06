@@ -197,7 +197,6 @@ export function generateVideo(
 
   // Route shots to providers
   const generationQueue = picker.routeStoryboard(
-    request.organizationId,
     directorResponse.storyboard.id,
     allShots,
     request.constraints.aspectRatio,

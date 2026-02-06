@@ -72,7 +72,6 @@ export async function POST(request: NextRequest) {
     const service = getWorkflowService(dal);
 
     const result = await service.executeWorkflow(
-      validData.organizationId,
       validData.workflowId,
       {
         workspaceId: validData.workspaceId,

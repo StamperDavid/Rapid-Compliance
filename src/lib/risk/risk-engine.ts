@@ -88,8 +88,7 @@ export async function predictDealRisk(
     });
 
     const dealHealth = await calculateDealHealth(
-      request.organizationId,
-(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
+      (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       request.dealId
     );
     

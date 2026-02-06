@@ -26,7 +26,6 @@ import {
 } from '@/lib/scraper-intelligence/discovery-archive-service';
 
 describe('Training Manager Integration Tests', () => {
-  const testOrgId = `test_org_${Date.now()}`;
   const testUserId = `test_user_${Date.now()}`;
   const createdIds: { collection: string; id: string }[] = [];
 
@@ -54,7 +53,6 @@ describe('Training Manager Integration Tests', () => {
     it('should submit feedback and create training data', async () => {
       // Create a temporary scrape first
       const scrapeResult = await saveTemporaryScrape({
-        organizationId: testOrgId,
         url: 'https://example.com',
         rawHtml: '<html><body>We are hiring 5 software engineers</body></html>',
         cleanedContent: 'We are hiring 5 software engineers',
@@ -65,7 +63,6 @@ describe('Training Manager Integration Tests', () => {
 
       // Submit feedback
       const feedback = await submitFeedback({
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'correct',
         signalId: 'hiring_signal',
@@ -104,7 +101,7 @@ describe('Training Manager Integration Tests', () => {
       expect(scrape?.verified).toBe(true);
 
       // Check that training data was created
-      const trainingData = await getTrainingData(testOrgId, 'hiring_signal');
+      const trainingData = await getTrainingData('hiring_signal');
       expect(trainingData.length).toBeGreaterThan(0);
       
       const pattern = trainingData.find(
@@ -122,7 +119,6 @@ describe('Training Manager Integration Tests', () => {
     it('should handle negative feedback correctly', async () => {
       // Create a temporary scrape
       const scrapeResult = await saveTemporaryScrape({
-        organizationId: testOrgId,
         url: 'https://example.com',
         rawHtml: '<html><body>Test content</body></html>',
         cleanedContent: 'Test content',
@@ -133,7 +129,6 @@ describe('Training Manager Integration Tests', () => {
 
       // Submit negative feedback
       const feedback = await submitFeedback({
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'incorrect',
         signalId: 'test_signal',
@@ -155,7 +150,7 @@ describe('Training Manager Integration Tests', () => {
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       // Training data should have negative count
-      const trainingData = await getTrainingData(testOrgId, 'test_signal');
+      const trainingData = await getTrainingData('test_signal');
       const pattern = trainingData.find((td) =>
         td.pattern.toLowerCase().includes('false positive')
       );
@@ -170,7 +165,6 @@ describe('Training Manager Integration Tests', () => {
     it('should update existing training data on duplicate pattern', async () => {
       // Create scrape
       const scrapeResult = await saveTemporaryScrape({
-        organizationId: testOrgId,
         url: 'https://example.com',
         rawHtml: '<html><body>Expanding team</body></html>',
         cleanedContent: 'Expanding team',
@@ -181,7 +175,6 @@ describe('Training Manager Integration Tests', () => {
 
       // Submit first feedback
       const feedback1 = await submitFeedback({
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'correct',
         signalId: 'growth_signal',
@@ -195,7 +188,7 @@ describe('Training Manager Integration Tests', () => {
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       // Get initial training data
-      const trainingData1 = await getTrainingData(testOrgId, 'growth_signal');
+      const trainingData1 = await getTrainingData('growth_signal');
       const pattern1 = trainingData1.find((td) =>
         td.pattern.includes('expanding team')
       );
@@ -208,8 +201,7 @@ describe('Training Manager Integration Tests', () => {
 
         // Submit second feedback with same pattern
         const feedback2 = await submitFeedback({
-          organizationId: testOrgId,
-          userId: testUserId,
+            userId: testUserId,
           feedbackType: 'correct',
           signalId: 'growth_signal',
           sourceScrapeId: scrapeResult.scrape.id,
@@ -222,7 +214,7 @@ describe('Training Manager Integration Tests', () => {
         await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
         // Get updated training data
-        const trainingData2 = await getTrainingData(testOrgId, 'growth_signal');
+        const trainingData2 = await getTrainingData('growth_signal');
         const pattern2 = trainingData2.find((td) => td.id === pattern1.id);
 
         expect(pattern2).toBeDefined();
@@ -237,7 +229,6 @@ describe('Training Manager Integration Tests', () => {
     it('should enforce rate limiting', async () => {
       // Create scrape
       const scrapeResult = await saveTemporaryScrape({
-        organizationId: testOrgId,
         url: 'https://example.com',
         rawHtml: '<html><body>Test</body></html>',
         cleanedContent: 'Test',
@@ -247,7 +238,6 @@ describe('Training Manager Integration Tests', () => {
       trackForCleanup('temporary_scrapes', scrapeResult.scrape.id);
 
       const params = {
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'correct' as const,
         signalId: 'test_signal',
@@ -279,7 +269,6 @@ describe('Training Manager Integration Tests', () => {
     it('should deactivate and reactivate training data', async () => {
       // Create scrape and feedback
       const scrapeResult = await saveTemporaryScrape({
-        organizationId: testOrgId,
         url: 'https://example.com',
         rawHtml: '<html><body>Test pattern</body></html>',
         cleanedContent: 'Test pattern',
@@ -289,7 +278,6 @@ describe('Training Manager Integration Tests', () => {
       trackForCleanup('temporary_scrapes', scrapeResult.scrape.id);
 
       const feedback = await submitFeedback({
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'correct',
         signalId: 'test_signal',
@@ -303,7 +291,7 @@ describe('Training Manager Integration Tests', () => {
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       // Get training data
-      const trainingData = await getTrainingData(testOrgId, 'test_signal');
+      const trainingData = await getTrainingData('test_signal');
       expect(trainingData.length).toBeGreaterThan(0);
       
       const pattern = trainingData[0];
@@ -314,36 +302,34 @@ describe('Training Manager Integration Tests', () => {
       // Deactivate
       await deactivateTrainingData(
         pattern.id,
-        testOrgId,
         testUserId,
         'Testing deactivation'
       );
 
       // Verify deactivated
-      const deactivatedData = await getAllTrainingData(testOrgId, false);
+      const deactivatedData = await getAllTrainingData(false);
       const deactivatedPattern = deactivatedData.find((td) => td.id === pattern.id);
       expect(deactivatedPattern?.active).toBe(false);
 
       // Should not appear in active-only query
-      const activeData = await getTrainingData(testOrgId, 'test_signal', true);
+      const activeData = await getTrainingData('test_signal', true);
       const stillActive = activeData.find((td) => td.id === pattern.id);
       expect(stillActive).toBeUndefined();
 
       // Reactivate
       await activateTrainingData(
         pattern.id,
-        testOrgId,
         testUserId,
         'Testing reactivation'
       );
 
       // Verify reactivated
-      const reactivatedData = await getTrainingData(testOrgId, 'test_signal');
+      const reactivatedData = await getTrainingData('test_signal');
       const reactivatedPattern = reactivatedData.find((td) => td.id === pattern.id);
       expect(reactivatedPattern?.active).toBe(true);
 
       // Check history
-      const history = await getTrainingHistory(pattern.id, testOrgId);
+      const history = await getTrainingHistory(pattern.id);
       expect(history.length).toBeGreaterThanOrEqual(2); // At least created + deactivated + activated
 
       const deactivationEntry = history.find((h) => h.changeType === 'deactivated');
@@ -358,7 +344,6 @@ describe('Training Manager Integration Tests', () => {
     it('should rollback training data to previous version', async () => {
       // Create scrape and submit multiple feedbacks to create version history
       const scrapeResult = await saveTemporaryScrape({
-        organizationId: testOrgId,
         url: 'https://example.com',
         rawHtml: '<html><body>Rollback test</body></html>',
         cleanedContent: 'Rollback test',
@@ -369,7 +354,6 @@ describe('Training Manager Integration Tests', () => {
 
       // First feedback
       const feedback1 = await submitFeedback({
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'correct',
         signalId: 'rollback_signal',
@@ -382,7 +366,7 @@ describe('Training Manager Integration Tests', () => {
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
       // Get initial training data
-      const initialData = await getTrainingData(testOrgId, 'rollback_signal');
+      const initialData = await getTrainingData('rollback_signal');
       const pattern = initialData[0];
       trackForCleanup('training_data', pattern.id);
       
@@ -392,7 +376,6 @@ describe('Training Manager Integration Tests', () => {
       // Deactivate (creates version 2)
       await deactivateTrainingData(
         pattern.id,
-        testOrgId,
         testUserId,
         'Create version 2'
       );
@@ -402,7 +385,6 @@ describe('Training Manager Integration Tests', () => {
       // Reactivate (creates version 3)
       await activateTrainingData(
         pattern.id,
-        testOrgId,
         testUserId,
         'Create version 3'
       );
@@ -410,7 +392,7 @@ describe('Training Manager Integration Tests', () => {
       await new Promise((resolve) => { setTimeout(resolve, 500); });
 
       // Get current version
-      const currentData = await getAllTrainingData(testOrgId, false);
+      const currentData = await getAllTrainingData(false);
       const currentPattern = currentData.find((td) => td.id === pattern.id);
       expect(currentPattern?.version).toBeGreaterThan(initialVersion);
 
@@ -418,7 +400,6 @@ describe('Training Manager Integration Tests', () => {
       await rollbackTrainingData(
         pattern.id,
         initialVersion,
-        testOrgId,
         testUserId,
         'Testing rollback'
       );
@@ -426,7 +407,7 @@ describe('Training Manager Integration Tests', () => {
       await new Promise((resolve) => { setTimeout(resolve, 500); });
 
       // Verify rollback
-      const rolledBackData = await getAllTrainingData(testOrgId, false);
+      const rolledBackData = await getAllTrainingData(false);
       const rolledBackPattern = rolledBackData.find((td) => td.id === pattern.id);
       
       expect(rolledBackPattern).toBeDefined();
@@ -434,7 +415,7 @@ describe('Training Manager Integration Tests', () => {
       expect(rolledBackPattern?.confidence).toBe(initialConfidence);
 
       // Check history includes rollback
-      const history = await getTrainingHistory(pattern.id, testOrgId);
+      const history = await getTrainingHistory(pattern.id);
       const rollbackEntry = history.find((h) =>
         h.reason?.includes('Rollback to version')
       );
@@ -447,15 +428,13 @@ describe('Training Manager Integration Tests', () => {
       // Create multiple scrapes and feedbacks
       const scrapeResults = await Promise.all([
         saveTemporaryScrape({
-          organizationId: testOrgId,
-          url: 'https://example.com/1',
+            url: 'https://example.com/1',
           rawHtml: '<html><body>Test 1</body></html>',
           cleanedContent: 'Test 1',
           metadata: {},
         }),
         saveTemporaryScrape({
-          organizationId: testOrgId,
-          url: 'https://example.com/2',
+            url: 'https://example.com/2',
           rawHtml: '<html><body>Test 2</body></html>',
           cleanedContent: 'Test 2',
           metadata: {},
@@ -469,24 +448,21 @@ describe('Training Manager Integration Tests', () => {
       // Submit various types of feedback
       const feedbacks = await Promise.all([
         submitFeedback({
-          organizationId: testOrgId,
-          userId: testUserId,
+            userId: testUserId,
           feedbackType: 'correct',
           signalId: 'signal_1',
           sourceScrapeId: scrapeResults[0].scrape.id,
           sourceText: 'correct extraction',
         }),
         submitFeedback({
-          organizationId: testOrgId,
-          userId: testUserId,
+            userId: testUserId,
           feedbackType: 'incorrect',
           signalId: 'signal_2',
           sourceScrapeId: scrapeResults[1].scrape.id,
           sourceText: 'wrong extraction',
         }),
         submitFeedback({
-          organizationId: testOrgId,
-          userId: testUserId,
+            userId: testUserId,
           feedbackType: 'missing',
           signalId: 'signal_3',
           sourceScrapeId: scrapeResults[0].scrape.id,
@@ -502,7 +478,7 @@ describe('Training Manager Integration Tests', () => {
       await new Promise((resolve) => { setTimeout(resolve, 1500); });
 
       // Get analytics
-      const analytics = await getTrainingAnalytics(testOrgId);
+      const analytics = await getTrainingAnalytics();
 
       expect(analytics.totalFeedback).toBeGreaterThanOrEqual(3);
       expect(analytics.processedFeedback).toBeGreaterThanOrEqual(3);
@@ -514,7 +490,7 @@ describe('Training Manager Integration Tests', () => {
       expect(analytics.averageConfidence).toBeGreaterThan(0);
 
       // Clean up training data
-      const allTraining = await getAllTrainingData(testOrgId, false);
+      const allTraining = await getAllTrainingData(false);
       allTraining.forEach((td) => {
         trackForCleanup('training_data', td.id);
       });
@@ -524,7 +500,6 @@ describe('Training Manager Integration Tests', () => {
   describe('Feedback Queries', () => {
     it('should retrieve feedback for a specific scrape', async () => {
       const scrapeResult = await saveTemporaryScrape({
-        organizationId: testOrgId,
         url: 'https://example.com',
         rawHtml: '<html><body>Query test</body></html>',
         cleanedContent: 'Query test',
@@ -534,7 +509,6 @@ describe('Training Manager Integration Tests', () => {
       trackForCleanup('temporary_scrapes', scrapeResult.scrape.id);
 
       const feedback1 = await submitFeedback({
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'correct',
         signalId: 'query_signal',
@@ -545,7 +519,6 @@ describe('Training Manager Integration Tests', () => {
       trackForCleanup('training_feedback', feedback1.id);
 
       const feedback2 = await submitFeedback({
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'incorrect',
         signalId: 'query_signal',
@@ -557,8 +530,7 @@ describe('Training Manager Integration Tests', () => {
 
       // Query feedback for scrape
       const feedbacks = await getFeedbackForScrape(
-        scrapeResult.scrape.id,
-        testOrgId
+        scrapeResult.scrape.id
       );
 
       expect(feedbacks.length).toBeGreaterThanOrEqual(2);
@@ -567,7 +539,7 @@ describe('Training Manager Integration Tests', () => {
 
       // Clean up training data
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
-      const allTraining = await getAllTrainingData(testOrgId, false);
+      const allTraining = await getAllTrainingData(false);
       allTraining.forEach((td) => {
         trackForCleanup('training_data', td.id);
       });
@@ -575,7 +547,6 @@ describe('Training Manager Integration Tests', () => {
 
     it('should retrieve unprocessed feedback', async () => {
       const scrapeResult = await saveTemporaryScrape({
-        organizationId: testOrgId,
         url: 'https://example.com',
         rawHtml: '<html><body>Unprocessed test</body></html>',
         cleanedContent: 'Unprocessed test',
@@ -586,7 +557,6 @@ describe('Training Manager Integration Tests', () => {
 
       // Submit feedback
       const feedback = await submitFeedback({
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'correct',
         signalId: 'unprocessed_signal',
@@ -597,7 +567,7 @@ describe('Training Manager Integration Tests', () => {
       trackForCleanup('training_feedback', feedback.id);
 
       // Immediately query unprocessed (before async processing completes)
-      const unprocessed = await getUnprocessedFeedback(testOrgId);
+      const unprocessed = await getUnprocessedFeedback();
       
       // Should find the feedback if queried quickly enough
       // (It may or may not be processed yet depending on timing)
@@ -605,7 +575,7 @@ describe('Training Manager Integration Tests', () => {
 
       // Clean up training data
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
-      const allTraining = await getAllTrainingData(testOrgId, false);
+      const allTraining = await getAllTrainingData(false);
       allTraining.forEach((td) => {
         trackForCleanup('training_data', td.id);
       });
@@ -616,7 +586,6 @@ describe('Training Manager Integration Tests', () => {
     it('should reject feedback for non-existent scrape', async () => {
       try {
         await submitFeedback({
-          organizationId: testOrgId,
           userId: testUserId,
           feedbackType: 'correct',
           signalId: 'test_signal',
@@ -637,7 +606,6 @@ describe('Training Manager Integration Tests', () => {
       try {
         await deactivateTrainingData(
           'non_existent_training',
-          testOrgId,
           testUserId
         );
         throw new Error('Should have thrown error');
@@ -653,7 +621,6 @@ describe('Training Manager Integration Tests', () => {
     it('should reject rollback to non-existent version', async () => {
       // Create a pattern first
       const scrapeResult = await saveTemporaryScrape({
-        organizationId: testOrgId,
         url: 'https://example.com',
         rawHtml: '<html><body>Rollback error test</body></html>',
         cleanedContent: 'Rollback error test',
@@ -663,7 +630,6 @@ describe('Training Manager Integration Tests', () => {
       trackForCleanup('temporary_scrapes', scrapeResult.scrape.id);
 
       const feedback = await submitFeedback({
-        organizationId: testOrgId,
         userId: testUserId,
         feedbackType: 'correct',
         signalId: 'error_signal',
@@ -675,7 +641,7 @@ describe('Training Manager Integration Tests', () => {
 
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
 
-      const trainingData = await getTrainingData(testOrgId, 'error_signal');
+      const trainingData = await getTrainingData('error_signal');
       const pattern = trainingData[0];
       trackForCleanup('training_data', pattern.id);
 
@@ -683,7 +649,6 @@ describe('Training Manager Integration Tests', () => {
         await rollbackTrainingData(
           pattern.id,
           999, // Non-existent version
-          testOrgId,
           testUserId
         );
         throw new Error('Should have thrown error');

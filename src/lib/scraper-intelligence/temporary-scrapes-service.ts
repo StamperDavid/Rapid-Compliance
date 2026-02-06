@@ -15,6 +15,7 @@ import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
 import crypto from 'crypto';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS
@@ -87,7 +88,6 @@ export function calculateExpirationDate(): Date {
  * ```
  */
 export async function saveTemporaryScrape(params: {
-  organizationId: string;
   workspaceId?: string;
   url: string;
   rawHtml: string;
@@ -96,7 +96,7 @@ export async function saveTemporaryScrape(params: {
   relatedRecordId?: string;
 }): Promise<{ scrape: TemporaryScrape; isNew: boolean }> {
   try {
-    const { organizationId, workspaceId, url, rawHtml, cleanedContent, metadata, relatedRecordId } = params;
+    const { workspaceId, url, rawHtml, cleanedContent, metadata, relatedRecordId } = params;
 
     // Calculate content hash for duplicate detection
     const contentHash = calculateContentHash(rawHtml);
@@ -124,7 +124,7 @@ export async function saveTemporaryScrape(params: {
         url,
         contentHash,
         scrapeCount: existingData.scrapeCount + 1,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
 
       return {
@@ -165,13 +165,13 @@ export async function saveTemporaryScrape(params: {
       url,
       sizeBytes: newScrape.sizeBytes,
       expiresAt: newScrape.expiresAt.toISOString(),
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     return { scrape: newScrape, isNew: true };
   } catch (error) {
     logger.error('Failed to save temporary scrape', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: params.organizationId,
+      organizationId: DEFAULT_ORG_ID,
       url: params.url,
     });
     
@@ -231,7 +231,7 @@ export async function flagScrapeForDeletion(scrapeId: string): Promise<void> {
  * console.log(`Deleted ${deleted} flagged scrapes`);
  * ```
  */
-export async function deleteFlaggedScrapes(organizationId: string): Promise<number> {
+export async function deleteFlaggedScrapes(): Promise<number> {
   try {
     const flagged = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
@@ -253,14 +253,14 @@ export async function deleteFlaggedScrapes(organizationId: string): Promise<numb
     if (deletedCount > 0) {
       logger.info('Deleted flagged temporary scrapes', {
         deletedCount,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
     }
 
     return deletedCount;
   } catch (error) {
     logger.error('Failed to delete flagged scrapes', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -277,7 +277,7 @@ export async function deleteFlaggedScrapes(organizationId: string): Promise<numb
  * @returns Number of scrapes deleted
  * @throws Error if Firestore operation fails
  */
-export async function deleteExpiredScrapes(organizationId: string): Promise<number> {
+export async function deleteExpiredScrapes(): Promise<number> {
   try {
     const now = new Date();
 
@@ -300,14 +300,14 @@ export async function deleteExpiredScrapes(organizationId: string): Promise<numb
     if (deletedCount > 0) {
       logger.info('Deleted expired temporary scrapes', {
         deletedCount,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
     }
 
     return deletedCount;
   } catch (error) {
     logger.error('Failed to delete expired scrapes', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -360,7 +360,6 @@ export async function getTemporaryScrape(scrapeId: string): Promise<TemporaryScr
  * @throws Error if Firestore operation fails
  */
 export async function getTemporaryScrapeByHash(
-  organizationId: string,
   contentHash: string
 ): Promise<TemporaryScrape | null> {
   try {
@@ -385,7 +384,7 @@ export async function getTemporaryScrapeByHash(
     } as TemporaryScrape;
   } catch (error) {
     logger.error('Failed to get temporary scrape by hash', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       contentHash: contentHash.substring(0, 16),
     });
     
@@ -404,7 +403,6 @@ export async function getTemporaryScrapeByHash(
  * @throws Error if Firestore operation fails
  */
 export async function getTemporaryScrapesByUrl(
-  organizationId: string,
   url: string
 ): Promise<TemporaryScrape[]> {
   try {
@@ -427,7 +425,7 @@ export async function getTemporaryScrapesByUrl(
     });
   } catch (error) {
     logger.error('Failed to get temporary scrapes by URL', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       url,
     });
     
@@ -456,7 +454,7 @@ export async function getTemporaryScrapesByUrl(
  * console.log(`Savings with TTL: $${cost.projectedSavingsWithTTL}`);
  * ```
  */
-export async function calculateStorageCost(organizationId: string): Promise<{
+export async function calculateStorageCost(): Promise<{
   totalScrapes: number;
   totalBytes: number;
   estimatedMonthlyCostUSD: number;
@@ -491,7 +489,7 @@ export async function calculateStorageCost(organizationId: string): Promise<{
     };
   } catch (error) {
     logger.error('Failed to calculate storage cost', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -530,7 +528,7 @@ function toDate(timestamp: Date | FirestoreTimestamp | { seconds: number } | str
  *
  * @returns Statistics object
  */
-export async function getStorageStats(organizationId: string): Promise<{
+export async function getStorageStats(): Promise<{
   totalScrapes: number;
   verifiedScrapes: number;
   flaggedForDeletion: number;
@@ -574,7 +572,7 @@ export async function getStorageStats(organizationId: string): Promise<{
     };
   } catch (error) {
     logger.error('Failed to get storage stats', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

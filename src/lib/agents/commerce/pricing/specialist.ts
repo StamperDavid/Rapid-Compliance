@@ -247,7 +247,6 @@ export class PricingStrategist extends BaseSpecialist {
     }
 
     const request: PaymentRequest = {
-      organizationId: payload.organizationId,
       workspaceId: payload.workspaceId,
       amount: Math.round(payload.amount * 100), // Convert to cents
       currency: payload.currency ?? 'usd',
@@ -479,7 +478,6 @@ export class PricingStrategist extends BaseSpecialist {
 
     const refundResult = await refundPayment(
       payload.workspaceId,
-      payload.organizationId,
       payload.transactionId,
       payload.amount
     );

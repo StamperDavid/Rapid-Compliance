@@ -24,13 +24,13 @@ import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { Deal } from '@/lib/crm/deal-service';
 import { getTemplateById, type SalesIndustryTemplate } from './industry-templates';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export interface RevenueForecast {
-  organizationId: string;
   workspaceId: string;
   period: ForecastPeriod;
   
@@ -76,7 +76,6 @@ export interface StageRevenue {
 export type ForecastPeriod = '30-day' | '60-day' | '90-day' | 'quarter' | 'annual';
 
 export interface ForecastOptions {
-  organizationId: string;
   workspaceId: string;
   period: ForecastPeriod;
   templateId?: string;
@@ -137,7 +136,7 @@ export function generateRevenueForecast(
   
   try {
     logger.info('Generating revenue forecast', {
-      orgId: options.organizationId,
+      orgId: DEFAULT_ORG_ID,
       period: options.period,
       templateId: options.templateId
     });
@@ -149,7 +148,7 @@ export function generateRevenueForecast(
     }
     
     // 2. Fetch deals in pipeline (mock for now)
-    const deals = fetchPipelineDeals(options.organizationId, options.workspaceId, options.period);
+    const deals = fetchPipelineDeals(options.workspaceId, options.period);
     
     // 3. Calculate stage-weighted revenue
     const byStage = calculateRevenueByStage(deals, template);
@@ -170,7 +169,7 @@ export function generateRevenueForecast(
     const confidence = calculateForecastConfidence(deals, template);
     
     // 8. Analyze trends
-    const trend = analyzeTrend(options.organizationId, options.workspaceId, mostLikely);
+    const trend = analyzeTrend(options.workspaceId, mostLikely);
     
     // 9. Calculate quota metrics
     let quotaAttainment = 0;
@@ -187,7 +186,6 @@ export function generateRevenueForecast(
     const forecastDate = calculateForecastDate(options.period);
     
     const forecast: RevenueForecast = {
-      organizationId: options.organizationId,
       workspaceId: options.workspaceId,
       period: options.period,
       forecast: Math.round(mostLikely),
@@ -213,7 +211,7 @@ export function generateRevenueForecast(
       const coordinator = getServerSignalCoordinator();
       void coordinator.emitSignal({
         type: 'forecast.updated',
-        orgId: options.organizationId,
+        orgId: DEFAULT_ORG_ID,
         workspaceId: options.workspaceId,
         confidence: confidence / 100,
         priority: quotaAttainment < 70 ? 'High' : 'Medium',
@@ -231,9 +229,9 @@ export function generateRevenueForecast(
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.info('Signal emitted: forecast.updated', {
-        orgId: options.organizationId,
+        orgId: DEFAULT_ORG_ID,
         forecast: forecast.forecast
       });
     } catch (signalError) {
@@ -242,7 +240,7 @@ export function generateRevenueForecast(
     
     const duration = Date.now() - startTime;
     logger.info('Revenue forecast generated', {
-      orgId: options.organizationId,
+      orgId: DEFAULT_ORG_ID,
       period: options.period,
       forecast: forecast.forecast,
       quota: options.quota,
@@ -254,7 +252,7 @@ export function generateRevenueForecast(
     
   } catch (error) {
     logger.error('Revenue forecasting failed', error as Error, {
-      orgId: options.organizationId,
+      orgId: DEFAULT_ORG_ID,
       period: options.period
     });
     throw new Error(`Revenue forecasting failed: ${(error as Error).message}`);
@@ -380,7 +378,6 @@ function calculateForecastConfidence(
  * Analyze trend compared to previous period
  */
 function analyzeTrend(
-  _orgId: string,
   _workspaceId: string,
   currentForecast: number
 ): ForecastTrend {
@@ -439,30 +436,29 @@ function calculateForecastDate(period: ForecastPeriod): Date {
  * Mock function to fetch pipeline deals
  */
 function fetchPipelineDeals(
-  orgId: string,
   _workspaceId: string,
   _period: ForecastPeriod
 ): Deal[] {
   // Mock: generate sample deals
   const dealCount = Math.floor(Math.random() * 20) + 10; // 10-30 deals
   const deals: Deal[] = [];
-  
+
   const stages = ['discovery', 'demo', 'proposal', 'negotiation'];
-  
+
   for (let i = 0; i < dealCount; i++) {
     const stage = stages[Math.floor(Math.random() * stages.length)];
     const value = Math.floor(Math.random() * 100000) + 10000; // $10K-$110K
-    
+
     deals.push({
       id: `deal_${i}`,
-      organizationId: orgId,
+      organizationId: DEFAULT_ORG_ID,
       value,
       createdAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000),
       updatedAt: new Date(),
       stage
     } as Deal);
   }
-  
+
   return deals;
 }
 
@@ -474,7 +470,6 @@ function fetchPipelineDeals(
  * Calculate quota performance
  */
 export function calculateQuotaPerformance(
-  organizationId: string,
   workspaceId: string,
   period: ForecastPeriod,
   quota: number,
@@ -483,7 +478,6 @@ export function calculateQuotaPerformance(
   try {
     // Generate forecast
     const forecast = generateRevenueForecast({
-      organizationId,
       workspaceId,
       period,
       quota,
@@ -515,17 +509,17 @@ export function calculateQuotaPerformance(
     };
     
     logger.info('Quota performance calculated', {
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       quota,
       attainment: performance.attainment,
       onTrack: performance.onTrack
     });
-    
+
     return performance;
-    
+
   } catch (error) {
     logger.error('Quota performance calculation failed', error as Error, {
-      orgId: organizationId
+      orgId: DEFAULT_ORG_ID
     });
     throw new Error(`Quota performance calculation failed: ${(error as Error).message}`);
   }
@@ -539,17 +533,15 @@ export function calculateQuotaPerformance(
  * Compare forecasts across multiple periods
  */
 export function compareForecastPeriods(
-  organizationId: string,
   workspaceId: string,
   periods: ForecastPeriod[],
   templateId?: string
 ): Map<ForecastPeriod, RevenueForecast> {
   const forecasts = new Map<ForecastPeriod, RevenueForecast>();
-  
+
   for (const period of periods) {
     try {
       const forecast = generateRevenueForecast({
-        organizationId,
         workspaceId,
         period,
         templateId
@@ -559,7 +551,7 @@ export function compareForecastPeriods(
       logger.warn('Failed to generate forecast for period', { period, error: error instanceof Error ? error.message : String(error) });
     }
   }
-  
+
   return forecasts;
 }
 
@@ -567,7 +559,6 @@ export function compareForecastPeriods(
  * Get forecast history for trend analysis
  */
 export function getForecastHistory(
-  _organizationId: string,
   _workspaceId: string,
   _period: ForecastPeriod,
   months: number = 6

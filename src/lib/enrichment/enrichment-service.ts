@@ -182,7 +182,7 @@ export async function enrichCompany(
       contentHash = calculateContentHash(scrapedContent.rawHtml);
       
       // Check if we've already processed this exact content
-      const existingScrape = await getTemporaryScrapeByHash(organizationId, contentHash);
+      const existingScrape = await getTemporaryScrapeByHash(contentHash);
       
       if (existingScrape) {
         isDuplicate = true;
@@ -216,7 +216,6 @@ export async function enrichCompany(
           if (!isDuplicate && scrapedContent.rawHtml) {
             try {
               const { scrape, isNew } = await saveTemporaryScrape({
-                organizationId,
                 url: website,
                 rawHtml: scrapedContent.rawHtml,
                 cleanedContent: scrapedContent.cleanedText,

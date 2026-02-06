@@ -117,12 +117,11 @@ interface TimestampLike {
  * Fetch new emails from Gmail
  */
 export async function fetchGmailInbox(
-  organizationId: string,
   since?: Date
 ): Promise<EmailMessage[]> {
   try {
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'gmail');
+    const credentials = await getIntegrationCredentials('gmail');
     
     if (!credentials?.accessToken) {
       throw new Error('Gmail not connected');
@@ -178,13 +177,13 @@ export async function fetchGmailInbox(
       }
     }
 
-    logger.info('Gmail inbox fetched', { organizationId, count: messages.length });
+    logger.info('Gmail inbox fetched', { organizationId: DEFAULT_ORG_ID, count: messages.length });
 
     return messages;
 
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to fetch Gmail inbox', errorToLog, { organizationId });
+    logger.error('Failed to fetch Gmail inbox', errorToLog, { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }
@@ -243,12 +242,11 @@ function parseGmailMessage(data: GmailMessageData): EmailMessage {
  * Fetch Outlook inbox
  */
 export async function fetchOutlookInbox(
-  organizationId: string,
   since?: Date
 ): Promise<EmailMessage[]> {
   try {
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'outlook');
+    const credentials = await getIntegrationCredentials('outlook');
     
     if (!credentials?.accessToken) {
       throw new Error('Outlook not connected');
@@ -286,13 +284,13 @@ export async function fetchOutlookInbox(
       inReplyTo: msg.inReplyTo,
     }));
 
-    logger.info('Outlook inbox fetched', { organizationId, count: messages.length });
+    logger.info('Outlook inbox fetched', { organizationId: DEFAULT_ORG_ID, count: messages.length });
 
     return messages;
 
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to fetch Outlook inbox', errorToLog, { organizationId });
+    logger.error('Failed to fetch Outlook inbox', errorToLog, { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }
@@ -301,19 +299,18 @@ export async function fetchOutlookInbox(
  * Match email reply to sent email and log activity
  */
 export async function processEmailReply(
-  organizationId: string,
   workspaceId: string,
   reply: EmailMessage
 ): Promise<void> {
   try {
     // Try to find the original sent email this is replying to
-    const originalEmail = await findOriginalEmail(organizationId, reply.inReplyTo, reply.threadId);
+    const originalEmail = await findOriginalEmail(reply.inReplyTo, reply.threadId);
 
     if (originalEmail) {
       // Found match - log as reply activity
       const { createActivity } = await import('@/lib/crm/activity-service');
 
-      await createActivity(organizationId, workspaceId, {
+      await createActivity(workspaceId, {
         type: 'email_received',
         direction: 'inbound',
         subject: reply.subject,
@@ -344,7 +341,7 @@ export async function processEmailReply(
         receivedAt: reply.receivedAt.toISOString(),
       });
 
-      logger.info('Email reply processed', { organizationId, replyId: reply.id });
+      logger.info('Email reply processed', { organizationId: DEFAULT_ORG_ID, replyId: reply.id });
 
     } else {
       // No match - might be a new inbound email
@@ -361,7 +358,6 @@ export async function processEmailReply(
  * Find original sent email
  */
 async function findOriginalEmail(
-  organizationId: string,
   inReplyTo?: string,
   threadId?: string
 ): Promise<ActivityType | null> {
@@ -370,7 +366,6 @@ async function findOriginalEmail(
     const { getActivities } = await import('@/lib/crm/activity-service');
 
     const activities = await getActivities(
-      organizationId,
       'default',
       { types: ['email_sent'] },
       { pageSize: 100 }
@@ -401,7 +396,6 @@ async function findOriginalEmail(
  * Sync inbox (run periodically via cron)
  */
 export async function syncInbox(
-  organizationId: string,
   workspaceId: string,
   provider: 'gmail' | 'outlook'
 ): Promise<number> {
@@ -412,19 +406,19 @@ export async function syncInbox(
 
     // Fetch new emails
     const messages = provider === 'gmail'
-      ? await fetchGmailInbox(organizationId, since)
-      : await fetchOutlookInbox(organizationId, since);
+      ? await fetchGmailInbox(since)
+      : await fetchOutlookInbox(since);
 
     // Process each message
     for (const message of messages) {
-      await processEmailReply(organizationId, workspaceId, message);
+      await processEmailReply(workspaceId, message);
     }
 
     // Update last sync time
     await setLastSyncTime(provider, new Date());
 
     logger.info('Inbox sync completed', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       provider,
       messagesProcessed: messages.length,
     });
@@ -433,7 +427,7 @@ export async function syncInbox(
 
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? error : new Error(String(error));
-    logger.error('Inbox sync failed', errorToLog, { organizationId, provider });
+    logger.error('Inbox sync failed', errorToLog, { organizationId: DEFAULT_ORG_ID, provider });
     throw error;
   }
 }

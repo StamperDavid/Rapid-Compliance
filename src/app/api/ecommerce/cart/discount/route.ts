@@ -8,7 +8,6 @@ import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const discountSchema = z.object({
   sessionId: z.string(),
@@ -60,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const { sessionId, code } = validation.data;
 
-    const cart = await applyDiscountCode(sessionId, 'default', DEFAULT_ORG_ID, code);
+    const cart = await applyDiscountCode(sessionId, 'default', code);
 
     return NextResponse.json({
       success: true,
@@ -97,7 +96,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const cart = await removeDiscountCode(sessionId, 'default', DEFAULT_ORG_ID, code);
+    const cart = await removeDiscountCode(sessionId, 'default', code);
 
     return NextResponse.json({
       success: true,

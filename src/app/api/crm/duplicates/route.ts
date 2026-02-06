@@ -11,7 +11,6 @@ import {
 } from '@/lib/crm/duplicate-detection';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface RequestPayload {
   entityType: 'lead' | 'contact' | 'company';
@@ -27,7 +26,6 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as RequestPayload;
-    const organizationId = DEFAULT_ORG_ID;
 
     const { entityType, record, workspaceId = 'default' } = body;
 
@@ -42,13 +40,13 @@ export async function POST(request: NextRequest) {
 
     switch (entityType) {
       case 'lead':
-        result = await detectLeadDuplicates(organizationId, workspaceId, record);
+        result = await detectLeadDuplicates(workspaceId, record);
         break;
       case 'contact':
-        result = await detectContactDuplicates(organizationId, workspaceId, record);
+        result = await detectContactDuplicates(workspaceId, record);
         break;
       case 'company':
-        result = await detectCompanyDuplicates(organizationId, workspaceId, record);
+        result = await detectCompanyDuplicates(workspaceId, record);
         break;
       default:
         return NextResponse.json(

@@ -6,6 +6,7 @@
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import {
   TTS_PROVIDER_INFO,
   DEFAULT_TTS_CONFIGS,
@@ -37,15 +38,15 @@ export class VoiceEngineFactory {
    * Get audio from text using organization's configured TTS engine
    */
   static async getAudio(request: TTSSynthesizeRequest): Promise<TTSSynthesizeResponse> {
-    const { text, organizationId, engine: engineOverride, voiceId, settings } = request;
+    const { text, engine: engineOverride, voiceId, settings } = request;
 
     // Get organization's TTS config
-    const config = await this.getOrgConfig(organizationId);
+    const config = await this.getOrgConfig();
     const effectiveEngine = engineOverride ?? config.engine;
     const effectiveVoiceId = voiceId ?? config.voiceId ?? this.getDefaultVoiceId(effectiveEngine);
 
     // Get the provider instance
-    const provider = await this.getProvider(organizationId, effectiveEngine, config);
+    const provider = await this.getProvider(effectiveEngine, config);
 
     // Merge settings
     const effectiveSettings = {
@@ -61,13 +62,12 @@ export class VoiceEngineFactory {
    * Get or create provider instance for an organization
    */
   static async getProvider(
-    organizationId: string,
     engine?: TTSEngineType,
     config?: TTSEngineConfig
   ): Promise<TTSProvider> {
-    const orgConfig = config ?? await this.getOrgConfig(organizationId);
+    const orgConfig = config ?? await this.getOrgConfig();
     const effectiveEngine = engine ?? orgConfig.engine;
-    const cacheKey = `${organizationId}-${effectiveEngine}-${orgConfig.keyMode}`;
+    const cacheKey = `${DEFAULT_ORG_ID}-${effectiveEngine}-${orgConfig.keyMode}`;
 
     // Check cache
     const cached = providerCache.get(cacheKey);
@@ -76,7 +76,7 @@ export class VoiceEngineFactory {
     }
 
     // Create provider with appropriate API key
-    const apiKey = this.getApiKey(organizationId, effectiveEngine, orgConfig);
+    const apiKey = this.getApiKey(effectiveEngine, orgConfig);
     const provider = this.createProvider(effectiveEngine, apiKey);
 
     // Cache it
@@ -105,7 +105,6 @@ export class VoiceEngineFactory {
    * Get API key for provider based on org settings
    */
   private static getApiKey(
-    organizationId: string,
     engine: TTSEngineType,
     config: TTSEngineConfig
   ): string | undefined {
@@ -130,9 +129,9 @@ export class VoiceEngineFactory {
   /**
    * Get organization's TTS configuration
    */
-  static async getOrgConfig(organizationId: string): Promise<TTSEngineConfig> {
+  static async getOrgConfig(): Promise<TTSEngineConfig> {
     // Check cache
-    const cached = configCache.get(organizationId);
+    const cached = configCache.get(DEFAULT_ORG_ID);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return cached.config;
     }
@@ -142,12 +141,12 @@ export class VoiceEngineFactory {
         console.warn('Firestore not initialized, using default TTS config');
         return DEFAULT_TTS_CONFIGS.native as TTSEngineConfig;
       }
-      const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, organizationId, 'settings', 'ttsEngine');
+      const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID, 'settings', 'ttsEngine');
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const config = docSnap.data() as TTSEngineConfig;
-        configCache.set(organizationId, { config, timestamp: Date.now() });
+        configCache.set(DEFAULT_ORG_ID, { config, timestamp: Date.now() });
         return config;
       }
     } catch (error) {
@@ -173,11 +172,10 @@ export class VoiceEngineFactory {
    * Save organization's TTS configuration
    */
   static async saveOrgConfig(
-    organizationId: string,
     config: Partial<TTSEngineConfig>,
     userId: string
   ): Promise<void> {
-    const currentConfig = await this.getOrgConfig(organizationId);
+    const currentConfig = await this.getOrgConfig();
     const updatedConfig = {
       ...currentConfig,
       ...config,
@@ -188,14 +186,14 @@ export class VoiceEngineFactory {
     if (!db) {
       throw new Error('Firestore not initialized');
     }
-    const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, organizationId, 'settings', 'ttsEngine');
+    const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID, 'settings', 'ttsEngine');
     await setDoc(docRef, updatedConfig, { merge: true });
 
     // Clear cache
-    configCache.delete(organizationId);
+    configCache.delete(DEFAULT_ORG_ID);
     // Clear provider cache for this org
     for (const key of providerCache.keys()) {
-      if (key.startsWith(organizationId)) {
+      if (key.startsWith(DEFAULT_ORG_ID)) {
         providerCache.delete(key);
       }
     }
@@ -221,10 +219,9 @@ export class VoiceEngineFactory {
    * List all available voices for an engine
    */
   static async listVoices(
-    organizationId: string,
     engine?: TTSEngineType
   ): Promise<TTSVoice[]> {
-    const provider = await this.getProvider(organizationId, engine);
+    const provider = await this.getProvider(engine);
     return provider.listVoices();
   }
 

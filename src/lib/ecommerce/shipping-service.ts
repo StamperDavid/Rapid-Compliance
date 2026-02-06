@@ -31,14 +31,16 @@ interface FreeShippingConfig {
  */
 export async function calculateShipping(
   workspaceId: string,
-  organizationId: string,
   cart: Cart,
   address: Address,
   methodId?: string
 ): Promise<ShippingCalculation> {
+  // Import DEFAULT_ORG_ID
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+
   // Get e-commerce config
   const rawConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
 

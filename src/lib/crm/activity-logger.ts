@@ -32,7 +32,6 @@ function toMetadataString(value: unknown): string {
  * Log AI chat conversation
  */
 export async function logAIChat(params: {
-  organizationId: string;
   workspaceId?: string;
   conversationId: string;
   relatedEntityType: RelatedEntityType;
@@ -70,7 +69,6 @@ export async function logAIChat(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );
@@ -86,7 +84,6 @@ export async function logAIChat(params: {
  * Log email sent
  */
 export async function logEmailSent(params: {
-  organizationId: string;
   workspaceId?: string;
   emailId: string;
   relatedEntityType: RelatedEntityType;
@@ -132,7 +129,6 @@ export async function logEmailSent(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );
@@ -148,7 +144,6 @@ export async function logEmailSent(params: {
  * Log email opened
  */
 export async function logEmailOpened(params: {
-  organizationId: string;
   workspaceId?: string;
   emailId: string;
   relatedEntityType: RelatedEntityType;
@@ -172,7 +167,6 @@ export async function logEmailOpened(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );
@@ -188,7 +182,6 @@ export async function logEmailOpened(params: {
  * Log call made/received
  */
 export async function logCall(params: {
-  organizationId: string;
   workspaceId?: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
@@ -224,7 +217,6 @@ export async function logCall(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );
@@ -240,7 +232,6 @@ export async function logCall(params: {
  * Log meeting
  */
 export async function logMeeting(params: {
-  organizationId: string;
   workspaceId?: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
@@ -282,7 +273,6 @@ export async function logMeeting(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );
@@ -298,7 +288,6 @@ export async function logMeeting(params: {
  * Log status/stage change
  */
 export async function logStatusChange(params: {
-  organizationId: string;
   workspaceId?: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
@@ -339,7 +328,6 @@ export async function logStatusChange(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );
@@ -355,7 +343,6 @@ export async function logStatusChange(params: {
  * Log workflow execution
  */
 export async function logWorkflow(params: {
-  organizationId: string;
   workspaceId?: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
@@ -384,7 +371,6 @@ export async function logWorkflow(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );
@@ -400,7 +386,6 @@ export async function logWorkflow(params: {
  * Log sequence enrollment/unenrollment
  */
 export async function logSequenceChange(params: {
-  organizationId: string;
   workspaceId?: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
@@ -431,7 +416,6 @@ export async function logSequenceChange(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );
@@ -447,7 +431,6 @@ export async function logSequenceChange(params: {
  * Log note added
  */
 export async function logNote(params: {
-  organizationId: string;
   workspaceId?: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
@@ -475,7 +458,6 @@ export async function logNote(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );
@@ -491,7 +473,6 @@ export async function logNote(params: {
  * Log enrichment completed
  */
 export async function logEnrichment(params: {
-  organizationId: string;
   workspaceId?: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
@@ -514,7 +495,6 @@ export async function logEnrichment(params: {
     };
 
     await createActivity(
-      params.organizationId,
       params.workspaceId ?? 'default',
       activityData
     );

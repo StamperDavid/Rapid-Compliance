@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Get org config
     if (action === 'config') {
-      const config = await VoiceEngineFactory.getOrgConfig(DEFAULT_ORG_ID);
+      const config = await VoiceEngineFactory.getOrgConfig();
       return NextResponse.json({ success: true, config });
     }
 
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get voices for an engine
-    const voices = await VoiceEngineFactory.listVoices(DEFAULT_ORG_ID, engine ?? undefined);
+    const voices = await VoiceEngineFactory.listVoices(engine ?? undefined);
     return NextResponse.json({ success: true, voices, engine: engine ?? 'native' });
   } catch (error) {
     console.error('TTS GET error:', error);
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      await VoiceEngineFactory.saveOrgConfig(DEFAULT_ORG_ID, config, userId);
+      await VoiceEngineFactory.saveOrgConfig(config, userId);
       return NextResponse.json({ success: true });
     }
 

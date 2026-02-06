@@ -102,7 +102,6 @@ export async function POST(request: NextRequest) {
 
     // Create new test
     const test = await createABTest({
-      DEFAULT_ORG_ID: organizationId,
       controlModel,
       treatmentModel,
       trafficSplit,
@@ -151,7 +150,7 @@ export async function PUT(request: NextRequest) {
         );
       }
 
-      const results = await evaluateABTest(organizationId, test.id);
+      const results = await evaluateABTest(test.id);
       return NextResponse.json({
         success: true,
         results,
@@ -170,7 +169,6 @@ export async function PUT(request: NextRequest) {
     if (action === 'deploy' && testId) {
       // Force deployment
       const result = await completeABTestAndDeploy(
-        organizationId,
         testId,
         autoDeploy ?? true
       );

@@ -205,7 +205,6 @@ export async function createLead(
     try {
       const { logStatusChange } = await import('./activity-logger');
       await logStatusChange({
-        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         relatedEntityType: 'lead',
         relatedEntityId: leadId,
@@ -222,7 +221,7 @@ export async function createLead(
     // Fire CRM event for workflow triggers
     try {
       const { fireLeadCreated } = await import('./event-triggers');
-      await fireLeadCreated(DEFAULT_ORG_ID, workspaceId, leadId, { ...lead } as Record<string, unknown>);
+      await fireLeadCreated(workspaceId, leadId, { ...lead } as Record<string, unknown>);
     } catch (triggerError) {
       logger.warn('Failed to fire lead created event', { error: triggerError instanceof Error ? triggerError.message : String(triggerError) });
     }
@@ -284,10 +283,9 @@ export async function updateLead(
     // Fire events for significant changes
     try {
       const { fireLeadStatusChanged, fireLeadScoreChanged } = await import('./event-triggers');
-      
+
       if (updates.status && updates.status !== currentLead.status) {
         await fireLeadStatusChanged(
-          DEFAULT_ORG_ID,
           workspaceId,
           leadId,
           currentLead.status,
@@ -298,7 +296,6 @@ export async function updateLead(
 
       if (updates.score && updates.score !== currentLead.score) {
         await fireLeadScoreChanged(
-          DEFAULT_ORG_ID,
           workspaceId,
           leadId,
           currentLead.score ?? 0,

@@ -18,8 +18,6 @@ export async function executeZoomFunction(
   parameters: Record<string, unknown>,
   integration: ConnectedIntegration
 ): Promise<unknown> {
-  // Import DEFAULT_ORG_ID for penthouse
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
 
   if (!accessToken) {
@@ -39,7 +37,7 @@ export async function executeZoomFunction(
         throw new Error('duration (number) is required for createMeeting');
       }
 
-      return createZoomMeeting(DEFAULT_ORG_ID, {
+      return createZoomMeeting({
         topic: parameters.topic,
         startTime: new Date(parameters.startTime),
         duration: parameters.duration,
@@ -75,7 +73,7 @@ export async function executeZoomFunction(
         throw new Error('meetingId (string) is required for cancelMeeting');
       }
 
-      return cancelZoomMeeting(DEFAULT_ORG_ID, parameters.meetingId);
+      return cancelZoomMeeting(parameters.meetingId);
 
     default:
       throw new Error(`Unknown Zoom function: ${functionName}`);

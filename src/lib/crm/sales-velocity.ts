@@ -5,6 +5,7 @@
 
 import { getDeals, type Deal } from './deal-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface SalesVelocityMetrics {
   // Overall velocity
@@ -54,7 +55,6 @@ export interface PipelineInsight {
  * Calculate comprehensive sales velocity metrics
  */
 export async function calculateSalesVelocity(
-  organizationId: string,
   workspaceId: string,
   dateRange?: { start: Date; end: Date }
 ): Promise<SalesVelocityMetrics> {
@@ -131,7 +131,7 @@ export async function calculateSalesVelocity(
     const velocity = daysInPeriod > 0 ? totalRevenue / daysInPeriod : 0;
 
     // Calculate stage metrics
-    const stageMetrics = calculateStageMetrics(organizationId, workspaceId, deals);
+    const stageMetrics = calculateStageMetrics(deals);
 
     // Calculate conversion rates
     const conversionRates = calculateConversionRates(deals);
@@ -140,7 +140,7 @@ export async function calculateSalesVelocity(
     const { forecastedRevenue, confidenceLevel } = calculateForecast(activeDeals, avgDealSize, winRate);
 
     // Calculate trends
-    const trends = await calculateTrends(organizationId, workspaceId);
+    const trends = await calculateTrends(workspaceId);
 
     const metrics: SalesVelocityMetrics = {
       velocity,
@@ -155,7 +155,7 @@ export async function calculateSalesVelocity(
     };
 
     logger.info('Sales velocity calculated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       velocity,
       avgSalesCycle,
       winRate,
@@ -165,7 +165,7 @@ export async function calculateSalesVelocity(
 
   } catch (error: unknown) {
     const errorInstance = error instanceof Error ? error : new Error(String(error));
-    logger.error('Sales velocity calculation failed', errorInstance, { organizationId });
+    logger.error('Sales velocity calculation failed', errorInstance, { organizationId: DEFAULT_ORG_ID });
     throw new Error(`Sales velocity calculation failed: ${errorInstance.message}`);
   }
 }
@@ -174,8 +174,6 @@ export async function calculateSalesVelocity(
  * Calculate metrics for each stage
  */
 function calculateStageMetrics(
-  _organizationId: string,
-  _workspaceId: string,
   deals: Deal[]
 ): Map<Deal['stage'], StageMetrics> {
   const stages: Deal['stage'][] = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
@@ -297,15 +295,14 @@ function calculateForecast(
  * Calculate trends over time
  */
 async function calculateTrends(
-  organizationId: string,
   workspaceId: string
 ): Promise<SalesVelocityMetrics['trends']> {
   const now = new Date();
-  
+
   // 30 days
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const metrics30 = await calculateSalesVelocity(organizationId, workspaceId, {
+  const metrics30 = await calculateSalesVelocity(workspaceId, {
     start: thirtyDaysAgo,
     end: now,
   });
@@ -313,7 +310,7 @@ async function calculateTrends(
   // 90 days
   const ninetyDaysAgo = new Date(now);
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  const metrics90 = await calculateSalesVelocity(organizationId, workspaceId, {
+  const metrics90 = await calculateSalesVelocity(workspaceId, {
     start: ninetyDaysAgo,
     end: now,
   });
@@ -330,11 +327,10 @@ async function calculateTrends(
  * Get pipeline insights and warnings
  */
 export async function getPipelineInsights(
-  organizationId: string,
   workspaceId: string
 ): Promise<PipelineInsight[]> {
   try {
-    const metrics = await calculateSalesVelocity(organizationId, workspaceId);
+    const metrics = await calculateSalesVelocity(workspaceId);
     const insights: PipelineInsight[] = [];
 
     // Check for bottlenecks
@@ -387,7 +383,7 @@ export async function getPipelineInsights(
     }
 
     logger.info('Pipeline insights generated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       insightCount: insights.length,
     });
 
@@ -395,7 +391,7 @@ export async function getPipelineInsights(
 
   } catch (error: unknown) {
     const errorInstance = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to generate pipeline insights', errorInstance, { organizationId });
+    logger.error('Failed to generate pipeline insights', errorInstance, { organizationId: DEFAULT_ORG_ID });
     return [];
   }
 }

@@ -72,27 +72,24 @@ export class SchemaChangeDetector {
    */
   static detectChanges(
     oldSchema: Schema,
-    newSchema: Schema,
-    organizationId: string
+    newSchema: Schema
   ): SchemaChangeEvent[] {
     const events: SchemaChangeEvent[] = [];
-    
+
     // Check for schema-level changes
     if (oldSchema.name !== newSchema.name) {
       events.push(
         this.createSchemaRenameEvent(
           oldSchema,
-          newSchema,
-          organizationId
+          newSchema
         )
       );
     }
-    
+
     // Check for field changes
     const fieldChanges = this.detectFieldChanges(
       oldSchema.fields,
       newSchema.fields,
-      organizationId,
       newSchema.workspaceId,
       newSchema.id
     );
@@ -108,7 +105,6 @@ export class SchemaChangeDetector {
   private static detectFieldChanges(
     oldFields: SchemaField[],
     newFields: SchemaField[],
-    organizationId: string,
     workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent[] {
@@ -124,64 +120,59 @@ export class SchemaChangeDetector {
         events.push(
           this.createFieldDeletedEvent(
             oldField,
-            organizationId,
             workspaceId,
             schemaId
           )
         );
       }
     }
-    
+
     // Check for added or modified fields
     for (const newField of newFields) {
       const oldField = oldFieldsMap.get(newField.id);
-      
+
       if (!oldField) {
         // New field added
         events.push(
           this.createFieldAddedEvent(
             newField,
-            organizationId,
             workspaceId,
             schemaId
           )
         );
       } else {
         // Check for modifications
-        
+
         // Field renamed (label changed)
         if (oldField.label !== newField.label) {
           events.push(
             this.createFieldRenamedEvent(
               oldField,
               newField,
-              organizationId,
               workspaceId,
               schemaId
             )
           );
         }
-        
+
         // Field key changed (more critical than label)
         if (oldField.key !== newField.key) {
           events.push(
             this.createFieldKeyChangedEvent(
               oldField,
               newField,
-              organizationId,
               workspaceId,
               schemaId
             )
           );
         }
-        
+
         // Field type changed
         if (oldField.type !== newField.type) {
           events.push(
             this.createFieldTypeChangedEvent(
               oldField,
               newField,
-              organizationId,
               workspaceId,
               schemaId
             )
@@ -198,14 +189,13 @@ export class SchemaChangeDetector {
    */
   private static createSchemaRenameEvent(
     oldSchema: Schema,
-    newSchema: Schema,
-    organizationId: string
+    newSchema: Schema
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     return {
       id: eventId,
-      organizationId,
+      organizationId: 'rapid-compliance-root',
       workspaceId: newSchema.workspaceId,
       schemaId: newSchema.id,
       timestamp: Timestamp.now(),
@@ -223,15 +213,14 @@ export class SchemaChangeDetector {
    */
   private static createFieldAddedEvent(
     field: SchemaField,
-    organizationId: string,
     workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     return {
       id: eventId,
-      organizationId,
+      organizationId: 'rapid-compliance-root',
       workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
@@ -252,15 +241,14 @@ export class SchemaChangeDetector {
   private static createFieldRenamedEvent(
     oldField: SchemaField,
     newField: SchemaField,
-    organizationId: string,
     workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     return {
       id: eventId,
-      organizationId,
+      organizationId: 'rapid-compliance-root',
       workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
@@ -282,15 +270,14 @@ export class SchemaChangeDetector {
   private static createFieldKeyChangedEvent(
     oldField: SchemaField,
     newField: SchemaField,
-    organizationId: string,
     workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     return {
       id: eventId,
-      organizationId,
+      organizationId: 'rapid-compliance-root',
       workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
@@ -311,15 +298,14 @@ export class SchemaChangeDetector {
    */
   private static createFieldDeletedEvent(
     field: SchemaField,
-    organizationId: string,
     workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     return {
       id: eventId,
-      organizationId,
+      organizationId: 'rapid-compliance-root',
       workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
@@ -340,15 +326,14 @@ export class SchemaChangeDetector {
   private static createFieldTypeChangedEvent(
     oldField: SchemaField,
     newField: SchemaField,
-    organizationId: string,
     workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     return {
       id: eventId,
-      organizationId,
+      organizationId: 'rapid-compliance-root',
       workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
@@ -600,13 +585,13 @@ export class SchemaChangeEventPublisher {
    * Mark event as processed
    */
   static async markEventProcessed(
-    organizationId: string,
     eventId: string
   ): Promise<void> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
-      const eventPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
+      const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+
+      const eventPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/schemaChangeEvents`;
       
       const existing = await FirestoreService.get(eventPath, eventId);
       

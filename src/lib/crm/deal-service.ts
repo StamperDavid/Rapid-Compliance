@@ -164,7 +164,6 @@ export async function createDeal(
     // Emit deal.created signal
     await emitDealSignal({
       type: 'deal.created',
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       deal,
     });
@@ -248,7 +247,7 @@ export async function moveDealToStage(
     // Fire CRM event
     try {
       const { fireDealStageChanged } = await import('./event-triggers');
-      await fireDealStageChanged(DEFAULT_ORG_ID, workspaceId, dealId, oldStage, newStage, deal as unknown as Record<string, unknown>);
+      await fireDealStageChanged(workspaceId, dealId, oldStage, newStage, deal as unknown as Record<string, unknown>);
     } catch (triggerError) {
       logger.warn('Failed to fire deal stage changed event', { error: triggerError instanceof Error ? triggerError.message : String(triggerError) });
     }
@@ -264,7 +263,6 @@ export async function moveDealToStage(
     // Emit signals based on stage change
     await emitDealSignal({
       type: 'deal.stage.changed',
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       deal,
       metadata: { oldStage, newStage },
@@ -274,7 +272,6 @@ export async function moveDealToStage(
     if (newStage === 'closed_won') {
       await emitDealSignal({
         type: 'deal.won',
-        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         deal,
         metadata: { oldStage },
@@ -282,7 +279,6 @@ export async function moveDealToStage(
     } else if (newStage === 'closed_lost') {
       await emitDealSignal({
         type: 'deal.lost',
-        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         deal,
         metadata: { oldStage, lostReason: deal.lostReason },
@@ -357,13 +353,12 @@ export async function getPipelineSummary(
  */
 async function emitDealSignal(params: {
   type: 'deal.created' | 'deal.stage.changed' | 'deal.won' | 'deal.lost';
-  organizationId: string;
   workspaceId: string;
   deal: Deal;
   metadata?: Record<string, unknown>;
 }): Promise<void> {
   try {
-    const { type, organizationId, workspaceId, deal, metadata = {} } = params;
+    const { type, workspaceId, deal, metadata = {} } = params;
     const coordinator = getClientSignalCoordinator();
 
     // Determine signal priority based on deal value and type
@@ -381,7 +376,7 @@ async function emitDealSignal(params: {
     await coordinator.emitSignal({
       type,
       leadId: deal.contactId, // Link to contact if available
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       workspaceId,
       confidence: 1.0, // CRM events are always certain
       priority,

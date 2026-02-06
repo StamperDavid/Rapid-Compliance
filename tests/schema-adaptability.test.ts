@@ -64,7 +64,7 @@ describe('Schema Adaptability System', () => {
         version: 2,
       };
 
-      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema, 'org_1');
+      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema);
 
       expect(events.length).toBeGreaterThan(0);
       const renameEvent = events.find(e => e.changeType === 'field_key_changed');
@@ -130,7 +130,7 @@ describe('Schema Adaptability System', () => {
         version: 2,
       };
 
-      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema, 'org_1');
+      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema);
 
       const deletionEvent = events.find(e => e.changeType === 'field_deleted');
       expect(deletionEvent).toBeDefined();
@@ -167,7 +167,7 @@ describe('Schema Adaptability System', () => {
         version: 2,
       };
 
-      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema, 'org_1');
+      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema);
 
       const renameEvent = events.find(e => e.changeType === 'schema_renamed');
       expect(renameEvent).toBeDefined();
@@ -423,7 +423,7 @@ describe('Schema Adaptability System', () => {
       };
 
       // 3. Detect changes
-      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema, 'org_1');
+      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema);
       expect(events.length).toBeGreaterThan(0);
 
       // 4. Verify field resolver can still find the field

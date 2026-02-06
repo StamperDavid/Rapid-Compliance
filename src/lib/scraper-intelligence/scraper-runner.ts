@@ -555,7 +555,7 @@ export class ProductionScraperRunner implements ScraperRunner {
       reductionPercent: number;
     };
   }> {
-    const { url, organizationId, workspaceId, industryId, relatedRecordId, platform } = config;
+    const { url, workspaceId, industryId, relatedRecordId, platform } = config;
 
     // Get industry template
     const template = await getIndustryTemplate(industryId);
@@ -588,7 +588,6 @@ export class ProductionScraperRunner implements ScraperRunner {
 
     // Process and store the scrape
     const result = await processAndStoreScrape({
-      organizationId,
       workspaceId,
       industryId,
       recordId:(relatedRecordId !== '' && relatedRecordId != null) ? relatedRecordId : `temp_${Date.now()}`,

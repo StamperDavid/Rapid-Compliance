@@ -7,6 +7,7 @@
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface EmailCampaign {
   id: string;
@@ -59,7 +60,6 @@ export interface PaginatedResult<T> {
  * Get campaigns with pagination
  */
 export async function getCampaigns(
-  organizationId: string,
   filters?: CampaignFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<EmailCampaign>> {
@@ -77,14 +77,14 @@ export async function getCampaigns(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<EmailCampaign>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailCampaigns`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailCampaigns`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
     );
 
     logger.info('Email campaigns retrieved', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       count: result.data.length,
       status: filters?.status,
       createdBy: filters?.createdBy,
@@ -93,7 +93,7 @@ export async function getCampaigns(
     return result;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to get campaigns', err, { organizationId, status: filters?.status, createdBy: filters?.createdBy });
+    logger.error('Failed to get campaigns', err, { organizationId: DEFAULT_ORG_ID, status: filters?.status, createdBy: filters?.createdBy });
     throw new Error(`Failed to retrieve campaigns: ${err.message}`);
   }
 }
@@ -102,25 +102,24 @@ export async function getCampaigns(
  * Get a single campaign
  */
 export async function getCampaign(
-  organizationId: string,
   campaignId: string
 ): Promise<EmailCampaign | null> {
   try {
     const campaign = await FirestoreService.get<EmailCampaign>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailCampaigns`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailCampaigns`,
       campaignId
     );
 
     if (!campaign) {
-      logger.warn('Campaign not found', { organizationId, campaignId });
+      logger.warn('Campaign not found', { organizationId: DEFAULT_ORG_ID, campaignId });
       return null;
     }
 
-    logger.info('Campaign retrieved', { organizationId, campaignId });
+    logger.info('Campaign retrieved', { organizationId: DEFAULT_ORG_ID, campaignId });
     return campaign;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to get campaign', err, { organizationId, campaignId });
+    logger.error('Failed to get campaign', err, { organizationId: DEFAULT_ORG_ID, campaignId });
     throw new Error(`Failed to retrieve campaign: ${err.message}`);
   }
 }
@@ -129,7 +128,6 @@ export async function getCampaign(
  * Create campaign
  */
 export async function createCampaign(
-  organizationId: string,
   data: Omit<EmailCampaign, 'id' | 'organizationId' | 'createdAt' | 'stats'>,
   createdBy: string
 ): Promise<EmailCampaign> {
@@ -140,7 +138,7 @@ export async function createCampaign(
     const campaign: EmailCampaign = {
       ...data,
       id: campaignId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       status: data.status || 'draft',
       stats: {
         sent: 0,
@@ -158,14 +156,14 @@ export async function createCampaign(
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailCampaigns`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailCampaigns`,
       campaignId,
       campaign,
       false
     );
 
     logger.info('Campaign created', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       campaignId,
       name: campaign.name,
     });
@@ -173,7 +171,7 @@ export async function createCampaign(
     return campaign;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to create campaign', err, { organizationId, campaignName: data.name });
+    logger.error('Failed to create campaign', err, { organizationId: DEFAULT_ORG_ID, campaignName: data.name });
     throw new Error(`Failed to create campaign: ${err.message}`);
   }
 }
@@ -182,7 +180,6 @@ export async function createCampaign(
  * Update campaign
  */
 export async function updateCampaign(
-  organizationId: string,
   campaignId: string,
   updates: Partial<Omit<EmailCampaign, 'id' | 'organizationId' | 'createdAt' | 'stats'>>
 ): Promise<EmailCampaign> {
@@ -193,18 +190,18 @@ export async function updateCampaign(
     };
 
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailCampaigns`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailCampaigns`,
       campaignId,
       updatedData
     );
 
     logger.info('Campaign updated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       campaignId,
       updatedFields: Object.keys(updates),
     });
 
-    const campaign = await getCampaign(organizationId, campaignId);
+    const campaign = await getCampaign(campaignId);
     if (!campaign) {
       throw new Error('Campaign not found after update');
     }
@@ -212,7 +209,7 @@ export async function updateCampaign(
     return campaign;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to update campaign', err, { organizationId, campaignId });
+    logger.error('Failed to update campaign', err, { organizationId: DEFAULT_ORG_ID, campaignId });
     throw new Error(`Failed to update campaign: ${err.message}`);
   }
 }
@@ -221,19 +218,18 @@ export async function updateCampaign(
  * Delete campaign
  */
 export async function deleteCampaign(
-  organizationId: string,
   campaignId: string
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailCampaigns`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailCampaigns`,
       campaignId
     );
 
-    logger.info('Campaign deleted', { organizationId, campaignId });
+    logger.info('Campaign deleted', { organizationId: DEFAULT_ORG_ID, campaignId });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to delete campaign', err, { organizationId, campaignId });
+    logger.error('Failed to delete campaign', err, { organizationId: DEFAULT_ORG_ID, campaignId });
     throw new Error(`Failed to delete campaign: ${err.message}`);
   }
 }
@@ -243,11 +239,10 @@ export async function deleteCampaign(
  * Returns the number of emails sent
  */
 export async function sendCampaign(
-  organizationId: string,
   campaignId: string
 ): Promise<{ success: boolean; sent: number; error?: string }> {
   try {
-    const campaign = await getCampaign(organizationId, campaignId);
+    const campaign = await getCampaign(campaignId);
     if (!campaign) {
       throw new Error('Campaign not found');
     }
@@ -266,11 +261,11 @@ export async function sendCampaign(
     }
 
     // Get updated campaign to retrieve sent count
-    const updatedCampaign = await getCampaign(organizationId, campaignId);
+    const updatedCampaign = await getCampaign(campaignId);
     const sentCount = updatedCampaign?.stats?.sent ?? 0;
 
     logger.info('Campaign sent', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       campaignId,
       sent: sentCount,
     });
@@ -278,7 +273,7 @@ export async function sendCampaign(
     return { success: true, sent: sentCount };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to send campaign', err, { organizationId, campaignId });
+    logger.error('Failed to send campaign', err, { organizationId: DEFAULT_ORG_ID, campaignId });
     throw new Error(`Failed to send campaign: ${err.message}`);
   }
 }

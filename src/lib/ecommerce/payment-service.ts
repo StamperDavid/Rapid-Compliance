@@ -74,7 +74,6 @@ interface OrderRecord {
 
 export interface PaymentRequest {
   workspaceId: string;
-  organizationId: string;
   amount: number; // In cents
   currency: string;
   paymentMethod: string;
@@ -105,7 +104,7 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
   // Get e-commerce config to determine payment provider
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${request.organizationId}/workspaces/${request.workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${request.workspaceId}/ecommerce`,
     'config'
   );
   
@@ -519,17 +518,16 @@ export function calculateRazorpayFee(amount: number): number {
  */
 export async function refundPayment(
   workspaceId: string,
-  organizationId: string,
   transactionId: string,
   amount?: number
 ): Promise<PaymentResult> {
   // Get provider from transaction
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+
   // Find order with this transaction ID
   const { where } = await import('firebase/firestore');
   const orders = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/orders`,
     [where('payment.transactionId', '==', transactionId)]
   );
   

@@ -8,7 +8,7 @@ import { getActivityInsights, getNextBestAction } from '@/lib/crm/activity-servi
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import type { RelatedEntityType } from '@/types/activity';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = DEFAULT_ORG_ID;
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId: string = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     const entityTypeParam = searchParams.get('entityType');
@@ -36,8 +35,8 @@ export async function GET(request: NextRequest) {
     }
 
     const [insights, nextAction] = await Promise.all([
-      getActivityInsights(organizationId, workspaceId, entityType, entityId),
-      getNextBestAction(organizationId, workspaceId, entityType, entityId),
+      getActivityInsights(workspaceId, entityType, entityId),
+      getNextBestAction(workspaceId, entityType, entityId),
     ]);
 
     return NextResponse.json({

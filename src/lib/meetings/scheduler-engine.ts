@@ -105,7 +105,7 @@ export async function scheduleMeeting(
     
     if (schedulerConfig.autoCreateZoom) {
       try {
-        const zoomMeeting = await createZoomMeeting(organizationId, {
+        const zoomMeeting = await createZoomMeeting({
           topic: config.title,
           startTime: config.startTime,
           duration: schedulerConfig.duration,
@@ -161,7 +161,6 @@ export async function scheduleMeeting(
     const { logMeeting } = await import('@/lib/crm/activity-logger');
     if (config.relatedEntityType && config.relatedEntityId) {
       await logMeeting({
-        organizationId,
         workspaceId,
         relatedEntityType: config.relatedEntityType,
         relatedEntityId: config.relatedEntityId,

@@ -69,7 +69,7 @@ export default function ProductDetailPage() {
       const sessionId = localStorage.getItem('cartSessionId') ?? `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
 
-      await addToCart(sessionId, 'default', DEFAULT_ORG_ID, productId, quantity);
+      await addToCart(sessionId, 'default', productId, quantity);
 
       // Show success and redirect to cart
       toast.success('Added to cart!');

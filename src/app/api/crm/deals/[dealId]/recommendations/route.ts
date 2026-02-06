@@ -32,7 +32,6 @@ export async function GET(
 
     // Generate recommendations
     const recommendations = await generateNextBestActions(
-      DEFAULT_ORG_ID,
       workspaceId,
       dealId
     );

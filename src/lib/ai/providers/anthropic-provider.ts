@@ -49,10 +49,8 @@ export class AnthropicProvider implements ModelProvider {
   private apiKey: string;
   private baseURL = 'https://api.anthropic.com/v1';
   private apiVersion = '2023-06-01';
-  private organizationId: string;
 
-  constructor(organizationId: string = 'demo') {
-    this.organizationId = organizationId;
+  constructor() {
     // Extract API key - empty string means key not configured (Explicit Ternary for STRING)
     const envApiKey = process.env.ANTHROPIC_API_KEY;
     this.apiKey = (envApiKey !== '' && envApiKey != null) ? envApiKey : ''; // Fallback to env

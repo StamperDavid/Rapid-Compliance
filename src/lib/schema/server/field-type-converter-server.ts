@@ -47,7 +47,6 @@ export class FieldTypeConverterServer {
    * Generate conversion preview (SERVER SIDE)
    */
   static async generateConversionPreview(
-    organizationId: string,
     schemaId: string,
     fieldKey: string,
     oldType: FieldType,

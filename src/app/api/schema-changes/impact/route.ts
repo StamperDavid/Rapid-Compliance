@@ -5,7 +5,6 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { getSchemaChangeImpactSummary } from '@/lib/schema/schema-change-handler';
 import { getWorkflowValidationSummary } from '@/lib/schema/workflow-validator';
 
@@ -28,14 +27,12 @@ export async function GET(request: NextRequest) {
 
     // Get impact summary
     const impactSummary = await getSchemaChangeImpactSummary(
-      DEFAULT_ORG_ID,
       workspaceId,
       schemaId
     );
 
     // Get workflow validation summary
     const workflowSummary = await getWorkflowValidationSummary(
-      DEFAULT_ORG_ID,
       workspaceId
     );
     

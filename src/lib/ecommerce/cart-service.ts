@@ -73,7 +73,6 @@ function serializeTimestamp(value: unknown): string {
 export async function getOrCreateCart(
   sessionId: string,
   workspaceId: string,
-  organizationId: string,
   userId?: string
 ): Promise<Cart> {
   // Try to get existing cart
@@ -81,20 +80,20 @@ export async function getOrCreateCart(
     `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/carts`,
     sessionId
   );
-  
+
   if (existingCart) {
     // Check if cart is expired
     const expiresAt = existingCart.expiresAt;
     const expiresDate = toDateOrString(expiresAt);
     if (expiresAt && expiresDate < new Date()) {
       // Cart expired, create new one
-      return createCart(sessionId, workspaceId, organizationId, userId);
+      return createCart(sessionId, workspaceId, userId);
     }
     return existingCart;
   }
-  
+
   // Create new cart
-  return createCart(sessionId, workspaceId, organizationId, userId);
+  return createCart(sessionId, workspaceId, userId);
 }
 
 /**
@@ -103,7 +102,6 @@ export async function getOrCreateCart(
 async function createCart(
   sessionId: string,
   workspaceId: string,
-  organizationId: string,
   userId?: string
 ): Promise<Cart> {
   const now = Timestamp.now();
@@ -149,16 +147,15 @@ async function createCart(
 export async function addToCart(
   sessionId: string,
   workspaceId: string,
-  organizationId: string,
   productId: string,
   quantity: number = 1,
   variantId?: string,
   variantOptions?: Record<string, string>
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
-  
+  const cart = await getOrCreateCart(sessionId, workspaceId);
+
   // Get product details (from CRM entity)
-  const product = await getProduct(workspaceId, productId, organizationId);
+  const product = await getProduct(workspaceId, productId);
   if (!product) {
     throw new Error('Product not found');
   }
@@ -210,10 +207,9 @@ export async function addToCart(
 export async function removeFromCart(
   sessionId: string,
   workspaceId: string,
-  organizationId: string,
   itemId: string
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
+  const cart = await getOrCreateCart(sessionId, workspaceId);
   
   cart.items = cart.items.filter(item => item.id !== itemId);
   
@@ -232,15 +228,14 @@ export async function removeFromCart(
 export async function updateCartItemQuantity(
   sessionId: string,
   workspaceId: string,
-  organizationId: string,
   itemId: string,
   quantity: number
 ): Promise<Cart> {
   if (quantity <= 0) {
-    return removeFromCart(sessionId, workspaceId, organizationId, itemId);
+    return removeFromCart(sessionId, workspaceId, itemId);
   }
-  
-  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
+
+  const cart = await getOrCreateCart(sessionId, workspaceId);
   
   const item = cart.items.find(i => i.id === itemId);
   if (!item) {
@@ -265,13 +260,12 @@ export async function updateCartItemQuantity(
 export async function applyDiscountCode(
   sessionId: string,
   workspaceId: string,
-  organizationId: string,
   code: string
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
-  
+  const cart = await getOrCreateCart(sessionId, workspaceId);
+
   // Get discount code
-  const discount = await getDiscountCode(workspaceId, organizationId, code);
+  const discount = await getDiscountCode(workspaceId, code);
   if (!discount) {
     throw new Error('Invalid discount code');
   }
@@ -313,10 +307,9 @@ export async function applyDiscountCode(
 export async function removeDiscountCode(
   sessionId: string,
   workspaceId: string,
-  organizationId: string,
   code: string
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
+  const cart = await getOrCreateCart(sessionId, workspaceId);
   
   cart.discountCodes = cart.discountCodes.filter(dc => dc.code !== code);
   
@@ -431,7 +424,7 @@ async function getProduct(workspaceId: string, productId: string, _organizationI
 /**
  * Get discount code
  */
-async function getDiscountCode(workspaceId: string, organizationId: string, code: string): Promise<DiscountData | null> {
+async function getDiscountCode(workspaceId: string, code: string): Promise<DiscountData | null> {
   const { where } = await import('firebase/firestore');
   const discounts = await FirestoreService.getAll(
     `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/discountCodes`,
@@ -517,8 +510,7 @@ function calculateDiscountAmount(discount: DiscountData, cart: Cart): number {
  */
 export async function clearCart(
   sessionId: string,
-  workspaceId: string,
-  _organizationId: string
+  workspaceId: string
 ): Promise<void> {
   await FirestoreService.delete(
     `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/carts`,

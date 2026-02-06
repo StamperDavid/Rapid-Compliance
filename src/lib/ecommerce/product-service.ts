@@ -6,6 +6,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface Product {
   id: string;
@@ -66,7 +67,6 @@ export interface PaginatedResult<T> {
  * Get products with pagination and filtering
  */
 export async function getProducts(
-  organizationId: string,
   workspaceId: string = 'default',
   filters?: ProductFilters,
   options?: PaginationOptions
@@ -87,7 +87,7 @@ export async function getProducts(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Product>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -103,7 +103,6 @@ export async function getProducts(
     }
 
     logger.info('Products retrieved', {
-      organizationId,
       count: filtered.length,
       category: filters?.category,
       inStock: filters?.inStock,
@@ -118,7 +117,6 @@ export async function getProducts(
   } catch (error: unknown) {
     const err = error as Error;
     logger.error('Failed to get products', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
       category: filters?.category,
       inStock: filters?.inStock,
       minPrice: filters?.minPrice,
@@ -132,26 +130,25 @@ export async function getProducts(
  * Get a single product
  */
 export async function getProduct(
-  organizationId: string,
   productId: string,
   workspaceId: string = 'default'
 ): Promise<Product | null> {
   try {
     const product = await FirestoreService.get<Product>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
       productId
     );
 
     if (!product) {
-      logger.warn('Product not found', { organizationId, productId });
+      logger.warn('Product not found', { productId });
       return null;
     }
 
-    logger.info('Product retrieved', { organizationId, productId });
+    logger.info('Product retrieved', { productId });
     return product;
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to get product', error instanceof Error ? error : new Error(String(error)), { organizationId, productId });
+    logger.error('Failed to get product', error instanceof Error ? error : new Error(String(error)), { productId });
     throw new Error(`Failed to retrieve product: ${err.message}`);
   }
 }
@@ -160,7 +157,6 @@ export async function getProduct(
  * Create a new product
  */
 export async function createProduct(
-  organizationId: string,
   data: Omit<Product, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>,
   workspaceId: string = 'default'
 ): Promise<Product> {
@@ -171,7 +167,7 @@ export async function createProduct(
     const product: Product = {
       ...data,
       id: productId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       currency:(data.currency !== '' && data.currency != null) ? data.currency : 'USD',
       inStock: data.inStock ?? true,
@@ -184,14 +180,13 @@ export async function createProduct(
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
       productId,
       product,
       false
     );
 
     logger.info('Product created', {
-      organizationId,
       productId,
       name: product.name,
       price: product.price,
@@ -201,7 +196,6 @@ export async function createProduct(
   } catch (error: unknown) {
     const err = error as Error;
     logger.error('Failed to create product', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
       productName: data.name,
       price: data.price,
     });
@@ -213,7 +207,6 @@ export async function createProduct(
  * Update product
  */
 export async function updateProduct(
-  organizationId: string,
   productId: string,
   updates: Partial<Omit<Product, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>>,
   workspaceId: string = 'default'
@@ -225,18 +218,17 @@ export async function updateProduct(
     };
 
     await FirestoreService.update(
-      `organizations/${organizationId}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
       productId,
       updatedData
     );
 
     logger.info('Product updated', {
-      organizationId,
       productId,
       updatedFields: Object.keys(updates),
     });
 
-    const product = await getProduct(organizationId, productId, workspaceId);
+    const product = await getProduct(productId, workspaceId);
     if (!product) {
       throw new Error('Product not found after update');
     }
@@ -244,7 +236,7 @@ export async function updateProduct(
     return product;
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to update product', error instanceof Error ? error : new Error(String(error)), { organizationId, productId });
+    logger.error('Failed to update product', error instanceof Error ? error : new Error(String(error)), { productId });
     throw new Error(`Failed to update product: ${err.message}`);
   }
 }
@@ -253,20 +245,19 @@ export async function updateProduct(
  * Delete product
  */
 export async function deleteProduct(
-  organizationId: string,
   productId: string,
   workspaceId: string = 'default'
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${organizationId}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
       productId
     );
 
-    logger.info('Product deleted', { organizationId, productId });
+    logger.info('Product deleted', { productId });
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to delete product', error instanceof Error ? error : new Error(String(error)), { organizationId, productId });
+    logger.error('Failed to delete product', error instanceof Error ? error : new Error(String(error)), { productId });
     throw new Error(`Failed to delete product: ${err.message}`);
   }
 }
@@ -275,13 +266,12 @@ export async function deleteProduct(
  * Update product inventory
  */
 export async function updateInventory(
-  organizationId: string,
   productId: string,
   quantityChange: number,
   workspaceId: string = 'default'
 ): Promise<Product> {
   try {
-    const product = await getProduct(organizationId, productId, workspaceId);
+    const product = await getProduct(productId, workspaceId);
     if (!product) {
       throw new Error('Product not found');
     }
@@ -294,13 +284,12 @@ export async function updateInventory(
     const currentQuantity = product.stockQuantity ?? 0;
     const newQuantity = currentQuantity + quantityChange;
 
-    const updated = await updateProduct(organizationId, productId, {
+    const updated = await updateProduct(productId, {
       stockQuantity: newQuantity,
       inStock: newQuantity > 0,
     }, workspaceId);
 
     logger.info('Inventory updated', {
-      organizationId,
       productId,
       previousQuantity: currentQuantity,
       newQuantity,
@@ -310,7 +299,7 @@ export async function updateInventory(
     return updated;
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to update inventory', error instanceof Error ? error : new Error(String(error)), { organizationId, productId, quantityChange });
+    logger.error('Failed to update inventory', error instanceof Error ? error : new Error(String(error)), { productId, quantityChange });
     throw new Error(`Failed to update inventory: ${err.message}`);
   }
 }
@@ -319,25 +308,23 @@ export async function updateInventory(
  * Get products by category
  */
 export async function getProductsByCategory(
-  organizationId: string,
   category: string,
   workspaceId: string = 'default',
   options?: PaginationOptions
 ): Promise<PaginatedResult<Product>> {
-  return getProducts(organizationId, workspaceId, { category }, options);
+  return getProducts(workspaceId, { category }, options);
 }
 
 /**
  * Search products
  */
 export async function searchProducts(
-  organizationId: string,
   searchTerm: string,
   workspaceId: string = 'default',
   options?: PaginationOptions
 ): Promise<PaginatedResult<Product>> {
   try {
-    const result = await getProducts(organizationId, workspaceId, undefined, options);
+    const result = await getProducts(workspaceId, undefined, options);
 
     const searchLower = searchTerm.toLowerCase();
     const filtered = result.data.filter(product =>
@@ -348,7 +335,6 @@ export async function searchProducts(
     );
 
     logger.info('Products searched', {
-      organizationId,
       searchTerm,
       resultsCount: filtered.length,
     });
@@ -360,7 +346,7 @@ export async function searchProducts(
     };
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Product search failed', error instanceof Error ? error : new Error(String(error)), { organizationId, searchTerm });
+    logger.error('Product search failed', error instanceof Error ? error : new Error(String(error)), { searchTerm });
     throw new Error(`Search failed: ${err.message}`);
   }
 }
@@ -369,7 +355,6 @@ export async function searchProducts(
  * Bulk update product status
  */
 export async function bulkUpdateProducts(
-  organizationId: string,
   productIds: string[],
   updates: Partial<Product>,
   workspaceId: string = 'default'
@@ -379,7 +364,7 @@ export async function bulkUpdateProducts(
 
     for (const productId of productIds) {
       try {
-        await updateProduct(organizationId, productId, updates, workspaceId);
+        await updateProduct(productId, updates, workspaceId);
         successCount++;
       } catch (error) {
         logger.warn('Failed to update product in bulk operation', {
@@ -390,7 +375,6 @@ export async function bulkUpdateProducts(
     }
 
     logger.info('Bulk product update completed', {
-      organizationId,
       total: productIds.length,
       successful: successCount,
       failed: productIds.length - successCount,
@@ -399,7 +383,7 @@ export async function bulkUpdateProducts(
     return successCount;
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Bulk product update failed', error instanceof Error ? error : new Error(String(error)), { organizationId, productIds });
+    logger.error('Bulk product update failed', error instanceof Error ? error : new Error(String(error)), { productIds });
     throw new Error(`Bulk update failed: ${err.message}`);
   }
 }

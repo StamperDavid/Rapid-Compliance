@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Execute automatic routing using the CRM lead-routing engine
       // This evaluates: round-robin, territory, skill-based, load-balance rules
-      routingResult = await executeRouting(organizationId, workspaceId, crmLead);
+      routingResult = await executeRouting(workspaceId, crmLead);
 
       logger.info('Lead automatically routed', {
         leadId,
@@ -262,7 +262,6 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     try {
       await logStatusChange({
-        organizationId,
         workspaceId,
         relatedEntityType: 'lead',
         relatedEntityId: leadId,

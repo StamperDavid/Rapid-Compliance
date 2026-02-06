@@ -7,6 +7,7 @@
 import type { VoiceProvider, VoiceProviderType, VoiceProviderConfig, VoiceProviderCosts } from './types';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Type definitions for provider-specific API key structures
 interface TwilioKeys {
@@ -86,17 +87,16 @@ export class VoiceProviderFactory {
    * Uses cached instance if available and not expired
    */
   static async getProvider(
-    organizationId: string,
     preferredProvider?: VoiceProviderType
   ): Promise<VoiceProvider> {
-    const cacheKey = `${organizationId}:${preferredProvider ?? 'default'}`;
+    const cacheKey = `${DEFAULT_ORG_ID}:${preferredProvider ?? 'default'}`;
     const cached = providerCache.get(cacheKey);
 
     if (cached && Date.now() - cached.createdAt.getTime() < CACHE_TTL_MS) {
       return cached.provider;
     }
 
-    const provider = await this.createProvider(organizationId, preferredProvider);
+    const provider = await this.createProvider(preferredProvider);
     providerCache.set(cacheKey, { provider, createdAt: new Date() });
 
     return provider;
@@ -106,7 +106,6 @@ export class VoiceProviderFactory {
    * Create a new provider instance
    */
   private static async createProvider(
-    organizationId: string,
     preferredProvider?: VoiceProviderType
   ): Promise<VoiceProvider> {
     // Try providers in order of preference/cost
@@ -116,15 +115,15 @@ export class VoiceProviderFactory {
 
     for (const providerType of providerOrder) {
       try {
-        const config = await this.getProviderConfig(organizationId, providerType);
+        const config = await this.getProviderConfig(providerType);
         if (!config) {continue;}
 
-        const provider = await this.instantiateProvider(providerType, config, organizationId);
+        const provider = await this.instantiateProvider(providerType, config);
 
         // Validate the provider works
         const isValid = await provider.validateConfig();
         if (isValid) {
-          logger.info(`[VoiceFactory] Using ${providerType} for org ${organizationId}`, { file: 'voice-factory.ts' });
+          logger.info(`[VoiceFactory] Using ${providerType} for org ${DEFAULT_ORG_ID}`, { file: 'voice-factory.ts' });
           return provider;
         }
       } catch (error) {
@@ -139,11 +138,10 @@ export class VoiceProviderFactory {
    * Get provider configuration from organization settings
    */
   private static async getProviderConfig(
-    organizationId: string,
     providerType: VoiceProviderType
   ): Promise<VoiceProviderConfig | null> {
     try {
-      const keysRaw: unknown = await apiKeyService.getServiceKey(organizationId, providerType);
+      const keysRaw: unknown = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, providerType);
       if (!keysRaw) {return null;}
 
       // Map provider-specific key names to standard config
@@ -201,18 +199,17 @@ export class VoiceProviderFactory {
    */
   private static async instantiateProvider(
     providerType: VoiceProviderType,
-    config: VoiceProviderConfig,
-    organizationId: string
+    config: VoiceProviderConfig
   ): Promise<VoiceProvider> {
     switch (providerType) {
       case 'twilio': {
         const { TwilioProvider } = await import('./providers/twilio-provider');
-        return new TwilioProvider(config, organizationId);
+        return new TwilioProvider(config);
       }
 
       case 'telnyx': {
         const { TelnyxProvider } = await import('./providers/telnyx-provider');
-        return new TelnyxProvider(config, organizationId);
+        return new TelnyxProvider(config);
       }
 
       case 'bandwidth': {
@@ -233,7 +230,7 @@ export class VoiceProviderFactory {
   /**
    * Get cost comparison for all configured providers
    */
-  static async getCostComparison(organizationId: string): Promise<
+  static async getCostComparison(): Promise<
     Array<{
       provider: VoiceProviderType;
       configured: boolean;
@@ -250,7 +247,7 @@ export class VoiceProviderFactory {
 
     for (const [provider, costs] of Object.entries(PROVIDER_COSTS)) {
       const providerType = provider as VoiceProviderType;
-      const config = await this.getProviderConfig(organizationId, providerType);
+      const config = await this.getProviderConfig(providerType);
 
       results.push({
         provider: providerType,
@@ -270,16 +267,8 @@ export class VoiceProviderFactory {
   /**
    * Clear provider cache for an organization
    */
-  static clearCache(organizationId?: string): void {
-    if (organizationId) {
-      for (const key of providerCache.keys()) {
-        if (key.startsWith(organizationId)) {
-          providerCache.delete(key);
-        }
-      }
-    } else {
-      providerCache.clear();
-    }
+  static clearCache(): void {
+    providerCache.clear();
   }
 
   /**

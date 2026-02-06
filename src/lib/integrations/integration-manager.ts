@@ -6,6 +6,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface IntegrationCredentials {
   integrationId: string; // 'zoom', 'quickbooks', 'shopify', etc.
@@ -21,13 +22,12 @@ export interface IntegrationCredentials {
  * Save integration credentials
  */
 export async function saveIntegrationCredentials(
-  organizationId: string,
   integrationId: string,
   credentials: Omit<IntegrationCredentials, 'integrationId' | 'createdAt' | 'updatedAt'>
 ): Promise<void> {
   try {
     const now = new Date();
-    
+
     const credentialsDoc: IntegrationCredentials = {
       ...credentials,
       integrationId,
@@ -36,16 +36,16 @@ export async function saveIntegrationCredentials(
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/integrations`,
+      `organizations/${DEFAULT_ORG_ID}/integrations`,
       integrationId,
       credentialsDoc,
       true // Merge to preserve metadata
     );
 
-    logger.info('Integration credentials saved', { organizationId, integrationId });
+    logger.info('Integration credentials saved', { organizationId: DEFAULT_ORG_ID, integrationId });
 
   } catch (error) {
-    logger.error('Failed to save integration credentials', error instanceof Error ? error : undefined, { organizationId, integrationId });
+    logger.error('Failed to save integration credentials', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
     throw error;
   }
 }
@@ -54,12 +54,11 @@ export async function saveIntegrationCredentials(
  * Get integration credentials
  */
 export async function getIntegrationCredentials(
-  organizationId: string,
   integrationId: string
 ): Promise<IntegrationCredentials | null> {
   try {
     const credentials = await FirestoreService.get<IntegrationCredentials>(
-      `organizations/${organizationId}/integrations`,
+      `organizations/${DEFAULT_ORG_ID}/integrations`,
       integrationId
     );
 
@@ -69,15 +68,15 @@ export async function getIntegrationCredentials(
 
     // Check if token is expired
     if (credentials.expiresAt) {
-      const expiresAt = credentials.expiresAt instanceof Date 
-        ? credentials.expiresAt 
+      const expiresAt = credentials.expiresAt instanceof Date
+        ? credentials.expiresAt
         : new Date(credentials.expiresAt);
 
       if (expiresAt < new Date()) {
         // Token expired, try to refresh
         if (credentials.refreshToken) {
           logger.info('Token expired, refreshing', { integrationId });
-          const refreshed = await refreshIntegrationToken(organizationId, integrationId, credentials.refreshToken);
+          const refreshed = await refreshIntegrationToken(integrationId, credentials.refreshToken);
           if (refreshed) {
             return refreshed;
           }
@@ -91,7 +90,7 @@ export async function getIntegrationCredentials(
     return credentials;
 
   } catch (error) {
-    logger.error('Failed to get integration credentials', error instanceof Error ? error : undefined, { organizationId, integrationId });
+    logger.error('Failed to get integration credentials', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
     return null;
   }
 }
@@ -100,7 +99,6 @@ export async function getIntegrationCredentials(
  * Refresh integration token
  */
 async function refreshIntegrationToken(
-  organizationId: string,
   integrationId: string,
   refreshToken: string
 ): Promise<IntegrationCredentials | null> {
@@ -130,14 +128,14 @@ async function refreshIntegrationToken(
     expiresAt.setSeconds(expiresAt.getSeconds() + newTokenData.expiresIn);
 
     const newRefreshToken = (newTokenData.refreshToken !== '' && newTokenData.refreshToken != null) ? newTokenData.refreshToken : refreshToken;
-    await saveIntegrationCredentials(organizationId, integrationId, {
+    await saveIntegrationCredentials(integrationId, {
       accessToken: newTokenData.accessToken,
       refreshToken: newRefreshToken,
       expiresAt,
     });
 
     // Return updated credentials
-    return await getIntegrationCredentials(organizationId, integrationId);
+    return await getIntegrationCredentials(integrationId);
 
   } catch (error) {
     logger.error('Token refresh failed', error instanceof Error ? error : undefined, { integrationId });
@@ -213,19 +211,18 @@ async function refreshQuickBooksToken(refreshToken: string): Promise<{ accessTok
  * Disconnect integration
  */
 export async function disconnectIntegration(
-  organizationId: string,
   integrationId: string
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${organizationId}/integrations`,
+      `organizations/${DEFAULT_ORG_ID}/integrations`,
       integrationId
     );
 
-    logger.info('Integration disconnected', { organizationId, integrationId });
+    logger.info('Integration disconnected', { organizationId: DEFAULT_ORG_ID, integrationId });
 
   } catch (error) {
-    logger.error('Failed to disconnect integration', error instanceof Error ? error : undefined, { organizationId, integrationId });
+    logger.error('Failed to disconnect integration', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
     throw error;
   }
 }
@@ -233,18 +230,16 @@ export async function disconnectIntegration(
 /**
  * List all connected integrations for an organization
  */
-export async function listConnectedIntegrations(
-  organizationId: string
-): Promise<IntegrationCredentials[]> {
+export async function listConnectedIntegrations(): Promise<IntegrationCredentials[]> {
   try {
     const result = await FirestoreService.getAll<IntegrationCredentials>(
-      `organizations/${organizationId}/integrations`
+      `organizations/${DEFAULT_ORG_ID}/integrations`
     );
 
     return result;
 
   } catch (error) {
-    logger.error('Failed to list integrations', error instanceof Error ? error : undefined, { organizationId });
+    logger.error('Failed to list integrations', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID });
     return [];
   }
 }
@@ -253,23 +248,21 @@ export async function listConnectedIntegrations(
  * Get a single integration by ID
  */
 export async function getIntegration(
-  organizationId: string,
   integrationId: string
 ): Promise<IntegrationCredentials | null> {
-  return getIntegrationCredentials(organizationId, integrationId);
+  return getIntegrationCredentials(integrationId);
 }
 
 /**
  * Update integration settings
  */
 export async function updateIntegration(
-  organizationId: string,
   integrationId: string,
   updates: Partial<IntegrationCredentials>
 ): Promise<void> {
   try {
     await FirestoreService.update(
-      `organizations/${organizationId}/integrations`,
+      `organizations/${DEFAULT_ORG_ID}/integrations`,
       integrationId,
       {
         ...updates,
@@ -277,10 +270,10 @@ export async function updateIntegration(
       }
     );
 
-    logger.info('Integration updated', { organizationId, integrationId });
+    logger.info('Integration updated', { organizationId: DEFAULT_ORG_ID, integrationId });
 
   } catch (error) {
-    logger.error('Failed to update integration', error instanceof Error ? error : undefined, { organizationId, integrationId });
+    logger.error('Failed to update integration', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
     throw error;
   }
 }
@@ -289,21 +282,19 @@ export async function updateIntegration(
  * Delete an integration
  */
 export async function deleteIntegration(
-  organizationId: string,
   integrationId: string
 ): Promise<void> {
-  return disconnectIntegration(organizationId, integrationId);
+  return disconnectIntegration(integrationId);
 }
 
 /**
  * Sync integration data
  */
 export function syncIntegration(
-  organizationId: string,
   integrationId: string
 ): { success: boolean; synced?: number; error?: string } {
   try {
-    logger.info('Syncing integration', { organizationId, integrationId });
+    logger.info('Syncing integration', { organizationId: DEFAULT_ORG_ID, integrationId });
 
     // Implementation would depend on the integration type
     // For now, return success
@@ -313,7 +304,7 @@ export function syncIntegration(
     };
 
   } catch (error) {
-    logger.error('Failed to sync integration', error instanceof Error ? error : undefined, { organizationId, integrationId });
+    logger.error('Failed to sync integration', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
     const syncErrorMsg = error instanceof Error && error.message ? error.message : 'Sync failed';
     return {
       success: false,
@@ -326,12 +317,11 @@ export function syncIntegration(
  * Test integration connection
  */
 export async function testIntegration(
-  organizationId: string,
   integrationId: string
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const credentials = await getIntegrationCredentials(organizationId, integrationId);
-    
+    const credentials = await getIntegrationCredentials(integrationId);
+
     if (!credentials) {
       return {
         success: false,
@@ -354,7 +344,7 @@ export async function testIntegration(
     };
 
   } catch (error) {
-    logger.error('Failed to test integration', error instanceof Error ? error : undefined, { organizationId, integrationId });
+    logger.error('Failed to test integration', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
     const testErrorMsg = error instanceof Error && error.message ? error.message : 'Test failed';
     return {
       success: false,

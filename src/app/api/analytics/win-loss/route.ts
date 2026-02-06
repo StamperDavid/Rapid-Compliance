@@ -72,7 +72,6 @@ export async function GET(request: NextRequest) {
 
     // Use caching for analytics queries (TTL: 10 minutes)
     const analytics = await withCache(
-      DEFAULT_ORG_ID,
       'win-loss',
       async () => calculateWinLossAnalytics(DEFAULT_ORG_ID, period),
       { period }

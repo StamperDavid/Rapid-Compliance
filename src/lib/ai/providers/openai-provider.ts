@@ -63,10 +63,8 @@ export class OpenAIProvider implements ModelProvider {
   provider = 'openai' as const;
   private apiKey: string;
   private baseURL = 'https://api.openai.com/v1';
-  private organizationId: string;
 
-  constructor(organizationId: string = 'demo') {
-    this.organizationId = organizationId;
+  constructor() {
     // Extract API key - empty string means unconfigured (Explicit Ternary for STRING)
     const envApiKey = process.env.OPENAI_API_KEY;
     this.apiKey = (envApiKey !== '' && envApiKey != null) ? envApiKey : ''; // Fallback to env

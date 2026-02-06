@@ -22,7 +22,6 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface VideoJob {
   id: string;
-  organizationId: string;
   storyboardId: string;
   createdBy: string;
 
@@ -61,7 +60,6 @@ export interface VideoJob {
 }
 
 export interface CreateVideoJobRequest {
-  organizationId: string;
   storyboardId: string;
   createdBy: string;
   provider?: VideoProvider;
@@ -97,29 +95,22 @@ const VIDEO_JOBS_COLLECTION = 'videoJobs';
  * Manages video rendering jobs in Firestore
  */
 export class VideoJobService {
-  private organizationId: string;
-
-  constructor(organizationId: string) {
-    this.organizationId = organizationId;
-  }
-
   /**
    * Get the collection path for video jobs
    */
   private getCollectionPath(): string {
-    return `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${VIDEO_JOBS_COLLECTION}`;
+    return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${VIDEO_JOBS_COLLECTION}`;
   }
 
   /**
    * Create a new video rendering job
    */
-  async createJob(request: Omit<CreateVideoJobRequest, 'organizationId'>): Promise<VideoJob> {
+  async createJob(request: CreateVideoJobRequest): Promise<VideoJob> {
     const jobId = `job_${uuidv4()}`;
     const now = new Date();
 
     const job: VideoJob = {
       id: jobId,
-      organizationId: this.organizationId,
       storyboardId: request.storyboardId,
       createdBy: request.createdBy,
 
@@ -158,7 +149,7 @@ export class VideoJobService {
 
       logger.info('VideoJobService: Created video job', {
         jobId,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
         storyboardId: request.storyboardId,
         file: 'video-job-service.ts',
       });
@@ -169,7 +160,7 @@ export class VideoJobService {
         'VideoJobService: Failed to create job',
         error instanceof Error ? error : new Error(String(error)),
         {
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
           storyboardId: request.storyboardId,
           file: 'video-job-service.ts',
         }
@@ -194,7 +185,7 @@ export class VideoJobService {
         error instanceof Error ? error : new Error(String(error)),
         {
           jobId,
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
           file: 'video-job-service.ts',
         }
       );
@@ -222,7 +213,7 @@ export class VideoJobService {
 
       logger.info('VideoJobService: Updated video job', {
         jobId,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
         status: updates.status,
         file: 'video-job-service.ts',
       });
@@ -232,7 +223,7 @@ export class VideoJobService {
         error instanceof Error ? error : new Error(String(error)),
         {
           jobId,
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
           file: 'video-job-service.ts',
         }
       );
@@ -254,7 +245,7 @@ export class VideoJobService {
         'VideoJobService: Failed to get all jobs',
         error instanceof Error ? error : new Error(String(error)),
         {
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
           file: 'video-job-service.ts',
         }
       );
@@ -278,7 +269,7 @@ export class VideoJobService {
         'VideoJobService: Failed to get pending jobs',
         error instanceof Error ? error : new Error(String(error)),
         {
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
           file: 'video-job-service.ts',
         }
       );
@@ -355,8 +346,8 @@ export class VideoJobService {
 }
 
 /**
- * Create a VideoJobService instance for an organization
+ * Create a VideoJobService instance
  */
 export function createVideoJobService(): VideoJobService {
-  return new VideoJobService(DEFAULT_ORG_ID);
+  return new VideoJobService();
 }

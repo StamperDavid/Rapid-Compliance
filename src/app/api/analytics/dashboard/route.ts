@@ -153,7 +153,6 @@ export async function GET(request: NextRequest) {
 
     // Get analytics data
     const data = await getDashboardAnalytics(
-      validatedRequest.organizationId,
       validatedRequest.period,
       validatedRequest.startDate,
       validatedRequest.endDate

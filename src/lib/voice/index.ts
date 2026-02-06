@@ -77,7 +77,6 @@ import type { VoiceCall, SMSMessage } from './types';
  * Legacy function for backwards compatibility
  */
 export async function initiateCall(
-  organizationId: string,
   to: string,
   agentId: string,
   options?: {
@@ -85,7 +84,7 @@ export async function initiateCall(
     timeout?: number;
   }
 ): Promise<VoiceCall> {
-  const provider = await VoiceProviderFactory.getProvider(organizationId);
+  const provider = await VoiceProviderFactory.getProvider();
   return provider.initiateCall(to, agentId, options);
 }
 
@@ -94,11 +93,10 @@ export async function initiateCall(
  * Legacy function for backwards compatibility
  */
 export async function sendSMS(
-  organizationId: string,
   to: string,
   message: string
 ): Promise<SMSMessage> {
-  const provider = await VoiceProviderFactory.getProvider(organizationId);
+  const provider = await VoiceProviderFactory.getProvider();
   return provider.sendSMS(to, message);
 }
 

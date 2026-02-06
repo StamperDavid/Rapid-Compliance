@@ -10,7 +10,6 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { FeatureToggleService, type FeatureCategory } from '@/lib/orchestrator/feature-toggle-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface ToggleFeatureRequest {
   organizationId?: string;
@@ -51,7 +50,6 @@ export async function POST(request: NextRequest) {
           );
         }
         await FeatureToggleService.toggleFeature(
-          organizationId,
           featureId,
           'hidden',
           userId,
@@ -71,7 +69,6 @@ export async function POST(request: NextRequest) {
           );
         }
         await FeatureToggleService.toggleFeature(
-          organizationId,
           featureId,
           'unconfigured',
           userId
@@ -89,7 +86,7 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        await FeatureToggleService.toggleCategory(organizationId, category, true, userId);
+        await FeatureToggleService.toggleCategory(category, true, userId);
         return NextResponse.json({
           success: true,
           message: `Hidden category: ${category}`,
@@ -103,7 +100,7 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        await FeatureToggleService.toggleCategory(organizationId, category, false, userId);
+        await FeatureToggleService.toggleCategory(category, false, userId);
         return NextResponse.json({
           success: true,
           message: `Restored category: ${category}`,
@@ -111,7 +108,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'reset': {
-        await FeatureToggleService.resetToDefault(organizationId, userId);
+        await FeatureToggleService.resetToDefault(userId);
         return NextResponse.json({
           success: true,
           message: 'Reset all feature visibility to default',
@@ -135,9 +132,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(_request: NextRequest) {
   try {
-    const settings = await FeatureToggleService.getVisibilitySettings(DEFAULT_ORG_ID);
-    const navigation = await FeatureToggleService.getFilteredNavigation(DEFAULT_ORG_ID);
-    const hiddenCount = await FeatureToggleService.getHiddenCount(DEFAULT_ORG_ID);
+    const settings = await FeatureToggleService.getVisibilitySettings();
+    const navigation = await FeatureToggleService.getFilteredNavigation();
+    const hiddenCount = await FeatureToggleService.getHiddenCount();
 
     return NextResponse.json({
       settings,

@@ -54,15 +54,14 @@ export default function ConversationsPage() {
 
     // Subscribe to active sessions
     const unsubscribe = ChatSessionService.subscribeToActiveSessions(
-      DEFAULT_ORG_ID,
-      (sessions) => {
+      (sessions: ChatSession[]) => {
         setLiveConversations(sessions);
         setLoading(false);
       }
     );
 
     // Load history
-    ChatSessionService.getSessionHistory(DEFAULT_ORG_ID, 50)
+    ChatSessionService.getSessionHistory(50)
       .then(setCompletedConversations)
       .catch((err: unknown) => {
         const error = err instanceof Error ? err : new Error(String(err));
@@ -80,9 +79,8 @@ export default function ConversationsPage() {
     }
 
     const unsubscribe = ChatSessionService.subscribeToSessionMessages(
-      DEFAULT_ORG_ID,
       selectedConversation,
-      setSelectedMessages
+      (messages: ChatMessage[]) => setSelectedMessages(messages)
     );
 
     return () => unsubscribe();
@@ -113,7 +111,7 @@ export default function ConversationsPage() {
         window.alert('You must be logged in to take over a conversation.');
         return;
       }
-      await ChatSessionService.requestTakeover(DEFAULT_ORG_ID, conversationId, user.id, 'Manual takeover');
+      await ChatSessionService.requestTakeover(conversationId, user.id, 'Manual takeover');
       // eslint-disable-next-line no-alert
       window.alert('Taking over conversation. You are now connected to the customer chat.');
     } catch (err: unknown) {
@@ -126,7 +124,7 @@ export default function ConversationsPage() {
 
   const handleSendToTraining = async (conversationId: string, issue: string) => {
     try {
-      await ChatSessionService.flagForTraining(DEFAULT_ORG_ID, conversationId, issue);
+      await ChatSessionService.flagForTraining(conversationId, issue);
 
       // Update local state
       setCompletedConversations(prev =>
@@ -588,7 +586,7 @@ export default function ConversationsPage() {
                                 <button
                                   onClick={() => {
                                     setSelectedConversation(conv.id);
-                                    void ChatSessionService.getSessionMessages(DEFAULT_ORG_ID, conv.id).then(setSelectedMessages);
+                                    void ChatSessionService.getSessionMessages(conv.id).then(setSelectedMessages);
                                   }}
                                   className="flex-1 px-3 py-2 bg-black/60 hover:bg-black/80 text-white border border-white/10 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1"
                                 >

@@ -58,7 +58,7 @@ export default function DealDetailPage() {
     setLoadingHealth(true);
     try {
       const { calculateDealHealth } = await import('@/lib/crm/deal-health');
-      const health = await calculateDealHealth(DEFAULT_ORG_ID, 'default', dealId);
+      const health = await calculateDealHealth('default', dealId);
       setHealthScore(health);
     } catch (error: unknown) {
       logger.error('Error loading deal health:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

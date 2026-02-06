@@ -10,7 +10,6 @@ import type { FunctionCallRequest } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface RequestPayload {
   integrationId: string;
@@ -64,7 +63,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Execute the function
-    const result = await executeFunctionCall(functionCallRequest, DEFAULT_ORG_ID);
+    const result = await executeFunctionCall(functionCallRequest);
 
     return NextResponse.json(result);
   } catch (error: unknown) {

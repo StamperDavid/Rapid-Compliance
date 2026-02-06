@@ -51,13 +51,12 @@ interface ZoomOAuthTokenResponse {
  * Create a Zoom meeting
  */
 export async function createZoomMeeting(
-  organizationId: string,
   options: ZoomMeetingOptions
 ): Promise<ZoomMeeting> {
   try {
     // Get Zoom OAuth token for this organization
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'zoom');
+    const credentials = await getIntegrationCredentials('zoom');
     
     if (!credentials?.accessToken) {
       throw new Error('Zoom not connected. Please connect Zoom in Integrations settings.');
@@ -96,8 +95,9 @@ export async function createZoomMeeting(
 
     const data = await response.json() as ZoomApiMeetingResponse;
 
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     logger.info('Zoom meeting created', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       meetingId: data.id,
       topic: options.topic,
     });
@@ -114,7 +114,8 @@ export async function createZoomMeeting(
     };
 
   } catch (error) {
-    logger.error('Failed to create Zoom meeting', error instanceof Error ? error : undefined, { organizationId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to create Zoom meeting', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }
@@ -123,12 +124,11 @@ export async function createZoomMeeting(
  * Delete/cancel a Zoom meeting
  */
 export async function cancelZoomMeeting(
-  organizationId: string,
   meetingId: string
 ): Promise<void> {
   try {
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'zoom');
+    const credentials = await getIntegrationCredentials('zoom');
     
     if (!credentials?.accessToken) {
       throw new Error('Zoom not connected');
@@ -145,10 +145,12 @@ export async function cancelZoomMeeting(
       throw new Error('Failed to cancel Zoom meeting');
     }
 
-    logger.info('Zoom meeting cancelled', { organizationId, meetingId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.info('Zoom meeting cancelled', { organizationId: DEFAULT_ORG_ID, meetingId });
 
   } catch (error) {
-    logger.error('Failed to cancel Zoom meeting', error instanceof Error ? error : undefined, { organizationId, meetingId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to cancel Zoom meeting', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, meetingId });
     throw error;
   }
 }

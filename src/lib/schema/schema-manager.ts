@@ -21,12 +21,10 @@ import type { Schema, SchemaField, SchemaRelation, FieldType } from '@/types/sch
 
 export class SchemaManager {
   private db: Firestore;
-  private organizationId: string;
   private workspaceId: string;
 
-  constructor(db: Firestore, organizationId: string, workspaceId: string) {
+  constructor(db: Firestore, workspaceId: string) {
     this.db = db;
-    this.organizationId = organizationId;
     this.workspaceId = workspaceId;
   }
 
@@ -37,7 +35,7 @@ export class SchemaManager {
     return collection(
       this.db,
       'organizations',
-      this.organizationId,
+      'rapid-compliance-root',
       'workspaces',
       this.workspaceId,
       'schemas'
@@ -51,7 +49,7 @@ export class SchemaManager {
     return doc(
       this.db,
       'organizations',
-      this.organizationId,
+      'rapid-compliance-root',
       'workspaces',
       this.workspaceId,
       'schemas',
@@ -198,10 +196,7 @@ export class SchemaManager {
     }
 
     // Detect schema changes before updating
-    const organizationId = await this.getOrganizationId();
-    if (organizationId) {
-      await this.detectAndPublishChanges(schema, updates, organizationId);
-    }
+    await this.detectAndPublishChanges(schema, updates);
 
     // Increment version if fields changed
     const version = updates.fields ? schema.version + 1 : schema.version;
@@ -219,8 +214,7 @@ export class SchemaManager {
    */
   private async detectAndPublishChanges(
     oldSchema: Schema,
-    updates: Partial<Schema>,
-    organizationId: string
+    updates: Partial<Schema>
   ): Promise<void> {
     try {
       // Create a new schema object with updates applied
@@ -231,7 +225,7 @@ export class SchemaManager {
 
       // Detect changes
       const { SchemaChangeDetector } = await import('./schema-change-tracker');
-      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema, organizationId);
+      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema);
 
       // Add events to debouncer (batches rapid changes)
       if (events.length > 0) {
@@ -248,22 +242,6 @@ export class SchemaManager {
     }
   }
 
-  /**
-   * Get organization ID from workspace
-   */
-  private async getOrganizationId(): Promise<string | null> {
-    try {
-      const workspaceDoc = await getDoc(doc(this.db, 'workspaces', this.workspaceId));
-      if (workspaceDoc.exists()) {
-        const data = workspaceDoc.data() as { organizationId?: string };
-        return data.organizationId ?? null;
-      }
-      return null;
-    } catch (error) {
-      console.error('[Schema Manager] Failed to get organization ID:', error);
-      return null;
-    }
-  }
 
   /**
    * Delete schema (soft delete)

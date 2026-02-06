@@ -29,7 +29,6 @@ export interface ScoringFactor {
  * NOTE: This is rule-based for MVP. In production, replace with ML model.
  */
 export async function calculatePredictiveLeadScore(
-  organizationId: string,
   workspaceId: string,
   lead: Lead
 ): Promise<PredictiveScore> {
@@ -57,7 +56,7 @@ export async function calculatePredictiveLeadScore(
     });
 
     // Factor 3: Engagement (30% weight)
-    const activityStats = await getActivityStats(organizationId, workspaceId, 'lead', lead.id);
+    const activityStats = await getActivityStats(workspaceId, 'lead', lead.id);
     const engagementScore = activityStats.engagementScore ?? 0;
     factors.push({
       name: 'Engagement',
@@ -324,7 +323,6 @@ function calculateConfidence(lead: Lead, activityStats: ConfidenceActivityStats)
  * Batch score leads (for leaderboards, prioritization)
  */
 export async function batchScoreLeads(
-  organizationId: string,
   workspaceId: string,
   leads: Lead[]
 ): Promise<Map<string, PredictiveScore>> {
@@ -332,7 +330,7 @@ export async function batchScoreLeads(
 
   for (const lead of leads) {
     try {
-      const score = await calculatePredictiveLeadScore(organizationId, workspaceId, lead);
+      const score = await calculatePredictiveLeadScore(workspaceId, lead);
       scores.set(lead.id, score);
     } catch (error) {
       logger.warn('Failed to score lead in batch', { leadId: lead.id, error: error instanceof Error ? error.message : String(error) });

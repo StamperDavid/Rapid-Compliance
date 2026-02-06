@@ -44,6 +44,7 @@ import {
   LLMReasoningOutputSchema,
   parseOpenAIResponse,
 } from './validation';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RESULT HELPERS
@@ -80,7 +81,6 @@ function failure(
  * Create initial agent state
  */
 function createInitialAgentState(
-  organizationId: string,
   workspaceId: string,
   role: AgentRole,
   task: TaskContext,
@@ -91,7 +91,7 @@ function createInitialAgentState(
 
   return {
     id: `agent_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     workspaceId,
     role,
     name: `${role}_agent`,
@@ -656,7 +656,6 @@ export class IntelligenceOrchestrator {
 
     // Create orchestrator agent
     let agentState = createInitialAgentState(
-      validatedRequest.organizationId,
       validatedRequest.workspaceId,
       'orchestrator',
       validatedRequest.task,

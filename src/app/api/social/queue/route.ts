@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create posting agent
-    const agent = await createPostingAgent(data.organizationId);
+    const agent = await createPostingAgent();
 
     // Add to queue
     const result = await agent.addToQueue(
@@ -169,7 +169,7 @@ async function processQueue(body: unknown) {
   });
 
   // Create posting agent
-  const agent = await createPostingAgent(data.organizationId);
+  const agent = await createPostingAgent();
 
   // Process queue
   const result = await agent.processQueue(data.maxPosts ?? 1);
@@ -233,7 +233,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Create posting agent
-    const agent = await createPostingAgent(data.organizationId);
+    const agent = await createPostingAgent();
 
     // Get queue
     const queue = await agent.getQueue(data.platform);
@@ -313,7 +313,7 @@ export async function PUT(request: NextRequest) {
     });
 
     // Create posting agent
-    const agent = await createPostingAgent(data.organizationId);
+    const agent = await createPostingAgent();
 
     // Post immediately
     const result = await agent.postNow(
@@ -397,7 +397,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     // Create posting agent
-    const agent = await createPostingAgent(data.organizationId);
+    const agent = await createPostingAgent();
 
     // Remove from queue
     const result = await agent.cancelPost(data.postId);

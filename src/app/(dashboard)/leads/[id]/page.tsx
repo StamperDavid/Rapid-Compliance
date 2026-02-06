@@ -81,7 +81,7 @@ export default function LeadDetailPage() {
         updatedAt: leadData.updatedAt,
         name: leadData.name
       };
-      const score = await calculatePredictiveLeadScore(DEFAULT_ORG_ID, 'default', leadForScoring);
+      const score = await calculatePredictiveLeadScore('default', leadForScoring);
       setPredictiveScore(score);
 
       // Calculate data quality

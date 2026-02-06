@@ -53,7 +53,7 @@ export default function ShoppingCartPage() {
         toast.error('Session not found');
         return;
       }
-      await updateCartItemQuantity(sessionId, 'default', DEFAULT_ORG_ID, itemId, newQuantity);
+      await updateCartItemQuantity(sessionId, 'default', itemId, newQuantity);
       await loadCart();
     } catch (error) {
       logger.error('Error updating quantity:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -73,7 +73,7 @@ export default function ShoppingCartPage() {
         toast.error('Session not found');
         return;
       }
-      await removeFromCart(sessionId, 'default', DEFAULT_ORG_ID, itemId);
+      await removeFromCart(sessionId, 'default', itemId);
       await loadCart();
     } catch (error) {
       logger.error('Error removing item:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

@@ -26,6 +26,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getOrgSubCollection } from '@/lib/firebase/collections';
 import { retryWithBackoff } from '@/lib/utils/retry';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Ensure adminDb is initialized, throw if not
@@ -368,7 +369,6 @@ async function saveDeliveryRecord(record: EmailDeliveryRecord): Promise<void> {
  * Update delivery status
  */
 export async function updateDeliveryStatus(
-  organizationId: string,
   deliveryId: string,
   status: EmailDeliveryStatus,
   metadata?: {
@@ -412,49 +412,46 @@ export async function updateDeliveryStatus(
  * Increment open count
  */
 export async function incrementOpenCount(
-  organizationId: string,
   deliveryId: string
 ): Promise<void> {
   const deliveriesRef = ensureAdminDb()
     .collection(getOrgSubCollection('email_deliveries'))
     .doc(deliveryId);
-  
+
   await deliveriesRef.update({
     opens: FieldValue.increment(1),
     status: 'opened',
     updatedAt: Timestamp.now(),
   });
-  
+
   // Emit signal
-  await emitEmailOpenedSignal(organizationId, deliveryId);
+  await emitEmailOpenedSignal(DEFAULT_ORG_ID, deliveryId);
 }
 
 /**
  * Increment click count
  */
 export async function incrementClickCount(
-  organizationId: string,
   deliveryId: string
 ): Promise<void> {
   const deliveriesRef = ensureAdminDb()
     .collection(getOrgSubCollection('email_deliveries'))
     .doc(deliveryId);
-  
+
   await deliveriesRef.update({
     clicks: FieldValue.increment(1),
     status: 'clicked',
     updatedAt: Timestamp.now(),
   });
-  
+
   // Emit signal
-  await emitEmailClickedSignal(organizationId, deliveryId);
+  await emitEmailClickedSignal(DEFAULT_ORG_ID, deliveryId);
 }
 
 /**
  * Get delivery record
  */
 export async function getDeliveryRecord(
-  organizationId: string,
   deliveryId: string
 ): Promise<EmailDeliveryRecord | null> {
   const deliveriesRef = ensureAdminDb()
@@ -474,7 +471,6 @@ export async function getDeliveryRecord(
  * Get delivery records for a deal
  */
 export async function getDeliveryRecordsForDeal(
-  organizationId: string,
   dealId: string
 ): Promise<EmailDeliveryRecord[]> {
   const deliveriesRef = ensureAdminDb()
@@ -492,7 +488,6 @@ export async function getDeliveryRecordsForDeal(
  * Get delivery stats for a user
  */
 export async function getDeliveryStatsForUser(
-  organizationId: string,
   userId: string,
   startDate?: Date,
   endDate?: Date

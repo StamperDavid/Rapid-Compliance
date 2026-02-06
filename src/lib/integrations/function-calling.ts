@@ -34,17 +34,15 @@ function _toIntegrationParams<T extends Record<string, unknown>>(params: Record<
  * Execute a function call from the AI agent
  */
 export async function executeFunctionCall(
-  request: FunctionCallRequest,
-  organizationId: string
+  request: FunctionCallRequest
 ): Promise<FunctionCallResponse> {
   const startTime = Date.now();
 
-  logger.info(`Function Calling Executing ${request.functionName} for org ${organizationId}`, { file: 'function-calling.ts' });
+  logger.info(`Function Calling Executing ${request.functionName}`, { file: 'function-calling.ts' });
 
   try {
     // Get the integration
     const integration = await getConnectedIntegration(
-      organizationId,
       request.integrationId
     );
     
@@ -247,14 +245,14 @@ interface IntegrationLog {
  * Get a connected integration
  */
 async function getConnectedIntegration(
-  organizationId: string,
   integrationId: string
 ): Promise<ConnectedIntegration | null> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
 
     const integration = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
       integrationId
     );
 
@@ -478,9 +476,8 @@ export async function getAvailableFunctions(): Promise<AIFunction[]> {
 
   try {
     // Get connected integrations for this org
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const { listConnectedIntegrations } = await import('./integration-manager');
-    const connectedIntegrations = await listConnectedIntegrations(DEFAULT_ORG_ID);
+    const connectedIntegrations = await listConnectedIntegrations();
 
     // Only return functions for connected integrations (credentials exist = active)
     const activeProviderIds = connectedIntegrations

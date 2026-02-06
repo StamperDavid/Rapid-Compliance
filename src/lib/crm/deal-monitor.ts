@@ -18,6 +18,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { calculateDealHealth, type DealHealthScore } from './deal-health';
 import { generateNextBestActions, type ActionRecommendations } from './next-best-action-engine';
@@ -148,7 +149,6 @@ async function handleDealSignal(
     if (autoRecalculateHealth && signal.type !== 'deal.created') {
       try {
         healthScore = await calculateDealHealth(
-          organizationId,
           workspaceId,
           dealId
         );
@@ -161,7 +161,6 @@ async function handleDealSignal(
 
         // Emit health score update signal
         await emitHealthScoreSignal(
-          organizationId,
           workspaceId,
           dealId,
           healthScore,
@@ -176,7 +175,6 @@ async function handleDealSignal(
     if (autoGenerateRecommendations) {
       try {
         const recommendations = await generateNextBestActions(
-          organizationId,
           workspaceId,
           dealId
         );
@@ -190,7 +188,6 @@ async function handleDealSignal(
 
         // Emit recommendations signal
         await emitRecommendationsSignal(
-          organizationId,
           workspaceId,
           dealId,
           recommendations,
@@ -204,7 +201,6 @@ async function handleDealSignal(
     // Step 3: Handle specific signal types
     await handleSpecificSignalType(
       signal,
-      organizationId,
       workspaceId,
       dealId,
       signalPriority
@@ -221,7 +217,6 @@ async function handleDealSignal(
  */
 async function handleSpecificSignalType(
   signal: SalesSignal,
-  organizationId: string,
   workspaceId: string,
   dealId: string,
   signalPriority: 'High' | 'Medium' | 'Low'
@@ -234,7 +229,7 @@ async function handleSpecificSignalType(
       await coordinator.emitSignal({
         type: 'deal.action.recommended',
         leadId: signal.metadata?.contactId as string,
-        orgId: organizationId,
+        orgId: DEFAULT_ORG_ID,
         workspaceId,
         confidence: 0.9,
         priority: signalPriority,
@@ -263,7 +258,7 @@ async function handleSpecificSignalType(
       if (newStage === 'negotiation') {
         await coordinator.emitSignal({
           type: 'deal.action.recommended',
-          orgId: organizationId,
+          orgId: DEFAULT_ORG_ID,
           workspaceId,
           confidence: 0.95,
           priority: 'High',
@@ -283,7 +278,7 @@ async function handleSpecificSignalType(
       // Deal won - emit onboarding signal
       await coordinator.emitSignal({
         type: 'deal.action.recommended',
-        orgId: organizationId,
+        orgId: DEFAULT_ORG_ID,
         workspaceId,
         confidence: 1.0,
         priority: 'High',
@@ -301,7 +296,7 @@ async function handleSpecificSignalType(
       // Deal lost - emit post-mortem signal
       await coordinator.emitSignal({
         type: 'deal.action.recommended',
-        orgId: organizationId,
+        orgId: DEFAULT_ORG_ID,
         workspaceId,
         confidence: 0.7,
         priority: 'Low',
@@ -322,7 +317,6 @@ async function handleSpecificSignalType(
  * Emit health score update signal
  */
 async function emitHealthScoreSignal(
-  organizationId: string,
   workspaceId: string,
   dealId: string,
   healthScore: DealHealthScore,
@@ -333,7 +327,7 @@ async function emitHealthScoreSignal(
 
     await coordinator.emitSignal({
       type: 'deal.health.updated',
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       workspaceId,
       confidence: 0.8, // Health score is deterministic
       priority:
@@ -371,7 +365,6 @@ async function emitHealthScoreSignal(
  * Emit recommendations signal
  */
 async function emitRecommendationsSignal(
-  organizationId: string,
   workspaceId: string,
   dealId: string,
   recommendations: ActionRecommendations,
@@ -382,7 +375,7 @@ async function emitRecommendationsSignal(
 
     await coordinator.emitSignal({
       type: 'deal.recommendations.generated',
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       workspaceId,
       confidence: recommendations.confidence,
       priority:
@@ -440,7 +433,6 @@ async function emitRecommendationsSignal(
  * @returns Summary of monitored deals
  */
 export async function runDealHealthCheck(
-  organizationId: string,
   workspaceId: string = 'default'
 ): Promise<{
   total: number;
@@ -451,7 +443,7 @@ export async function runDealHealthCheck(
 }> {
   try {
     logger.info('Running deal health check', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
     });
 
@@ -475,7 +467,6 @@ export async function runDealHealthCheck(
       try {
         // Calculate health
         const healthScore = await calculateDealHealth(
-          organizationId,
           workspaceId,
           deal.id
         );
@@ -491,7 +482,6 @@ export async function runDealHealthCheck(
           healthScore.status === 'critical'
         ) {
           await generateNextBestActions(
-            organizationId,
             workspaceId,
             deal.id,
             deal
@@ -518,7 +508,7 @@ export async function runDealHealthCheck(
     return summary;
   } catch (error) {
     logger.error('Failed to run deal health check', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
     });
     throw error;

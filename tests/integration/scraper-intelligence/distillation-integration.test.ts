@@ -398,7 +398,7 @@ describe('Distillation Engine Integration Tests', () => {
         });
 
       // Run cleanup
-      const deletedCount = await deleteFlaggedScrapes(TEST_ORG_ID);
+      const deletedCount = await deleteFlaggedScrapes();
       expect(deletedCount).toBeGreaterThan(0);
 
       // Verify scrape deleted
@@ -429,7 +429,7 @@ describe('Distillation Engine Integration Tests', () => {
         });
 
       // Run cleanup
-      const deletedCount = await deleteExpiredScrapes(TEST_ORG_ID);
+      const deletedCount = await deleteExpiredScrapes();
       expect(deletedCount).toBeGreaterThan(0);
 
       // Verify scrape deleted

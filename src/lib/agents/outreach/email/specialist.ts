@@ -584,7 +584,7 @@ export class EmailSpecialist extends BaseSpecialist {
       };
     }
 
-    await recordEmailOpen(payload.messageId, payload.organizationId, payload.ipAddress, payload.userAgent);
+    await recordEmailOpen(payload.messageId, payload.ipAddress, payload.userAgent);
 
     this.log('INFO', `Email open recorded: ${payload.messageId}`);
 
@@ -609,7 +609,6 @@ export class EmailSpecialist extends BaseSpecialist {
 
     await recordEmailClick(
       payload.messageId,
-      payload.organizationId,
       payload.url,
       payload.ipAddress,
       payload.userAgent

@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Process all unprocessed events
-      const result = await processUnprocessedEvents(DEFAULT_ORG_ID);
+      const result = await processUnprocessedEvents();
 
       return NextResponse.json({
         success: true,

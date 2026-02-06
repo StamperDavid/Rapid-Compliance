@@ -23,6 +23,7 @@ import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import { type WorkflowExecutionContext, type WorkflowExecutionResult } from './workflow-engine';
 import { WorkflowCoordinator } from './workflow-coordinator';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type {
   Workflow,
   WorkflowStatus,
@@ -112,20 +113,19 @@ export class WorkflowService {
    * Get workflow by ID
    */
   async getWorkflow(
-    organizationId: string,
     workflowId: string
   ): Promise<Workflow | null> {
-    const workflowsPath = `${this.dal.getColPath('organizations')}/${organizationId}/${this.dal.getSubColPath('workflows')}`;
-    
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${DEFAULT_ORG_ID}/${this.dal.getSubColPath('workflows')}`;
+
     const docSnap = await this.dal.safeGetDoc<Workflow>(
       workflowsPath,
       workflowId
     );
-    
+
     if (!docSnap.exists()) {
       return null;
     }
-    
+
     return { ...docSnap.data(), id: workflowId } as Workflow;
   }
   
@@ -134,12 +134,12 @@ export class WorkflowService {
    * Note: Returns Promise for API consistency - will use await when Firestore queries are implemented
    */
   getWorkflows(
-    filters: WorkflowFilterInput
+    filters: Omit<WorkflowFilterInput, 'organizationId'>
   ): Promise<{ workflows: Workflow[]; total: number }> {
     logger.debug('Querying workflows', filters);
 
     const _workflowsCollection = this.dal.getOrgSubCollection(
-      filters.organizationId,
+      DEFAULT_ORG_ID,
       'workflows'
     );
 
@@ -157,23 +157,22 @@ export class WorkflowService {
    * Update workflow
    */
   async updateWorkflow(
-    organizationId: string,
     workflowId: string,
     updates: UpdateWorkflowInput
   ): Promise<Workflow> {
     logger.info('Updating workflow', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
       updateFields: Object.keys(updates).join(', '),
     });
-    
-    const workflow = await this.getWorkflow(organizationId, workflowId);
-    
+
+    const workflow = await this.getWorkflow(workflowId);
+
     if (!workflow) {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
-    
-    const workflowsPath = `${this.dal.getColPath('organizations')}/${organizationId}/${this.dal.getSubColPath('workflows')}`;
+
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${DEFAULT_ORG_ID}/${this.dal.getSubColPath('workflows')}`;
 
     const updatedData = {
       ...updates,
@@ -187,14 +186,14 @@ export class WorkflowService {
       workflowId,
       updatedData as UpdateData<DocumentData>
     );
-    
+
     const updatedWorkflow = { ...workflow, ...updatedData } as Workflow;
-    
+
     logger.info('Workflow updated successfully', {
       workflowId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
-    
+
     return updatedWorkflow;
   }
   
@@ -202,38 +201,36 @@ export class WorkflowService {
    * Update workflow status (activate/pause/archive)
    */
   async setWorkflowStatus(
-    organizationId: string,
     workflowId: string,
     status: WorkflowStatus
   ): Promise<Workflow> {
     logger.info('Updating workflow status', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
       status,
     });
-    
-    return this.updateWorkflow(organizationId, workflowId, { status });
+
+    return this.updateWorkflow(workflowId, { status });
   }
   
   /**
    * Delete workflow
    */
   async deleteWorkflow(
-    organizationId: string,
     workflowId: string
   ): Promise<void> {
     logger.info('Deleting workflow', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
     });
-    
-    const workflowsPath = `${this.dal.getColPath('organizations')}/${organizationId}/${this.dal.getSubColPath('workflows')}`;
-    
+
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${DEFAULT_ORG_ID}/${this.dal.getSubColPath('workflows')}`;
+
     await this.dal.safeDeleteDoc(workflowsPath, workflowId);
-    
+
     logger.info('Workflow deleted successfully', {
       workflowId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
   
@@ -241,22 +238,21 @@ export class WorkflowService {
    * Execute workflow manually
    */
   async executeWorkflow(
-    organizationId: string,
     workflowId: string,
     context: Omit<WorkflowExecutionContext, 'organizationId'>
   ): Promise<WorkflowExecutionResult> {
     logger.info('Manually executing workflow', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
       dealId: context.dealId,
     });
-    
+
     const fullContext: WorkflowExecutionContext = {
       ...context,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       triggeredBy: 'manual',
     };
-    
+
     return this.coordinator.executeWorkflowManually(workflowId, fullContext);
   }
   
@@ -265,18 +261,17 @@ export class WorkflowService {
    * Note: Returns Promise for API consistency - will use await when Firestore queries are implemented
    */
   getWorkflowExecutions(
-    organizationId: string,
     workflowId?: string,
     limit = 50
   ): Promise<WorkflowExecution[]> {
     logger.debug('Getting workflow executions', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
       limit,
     });
 
     const _executionsCollection = this.dal.getOrgSubCollection(
-      organizationId,
+      DEFAULT_ORG_ID,
       'workflow_executions'
     );
 
@@ -291,20 +286,19 @@ export class WorkflowService {
    * Get workflow execution by ID
    */
   async getWorkflowExecution(
-    organizationId: string,
     executionId: string
   ): Promise<WorkflowExecution | null> {
-    const executionsPath = `${this.dal.getColPath('organizations')}/${organizationId}/${this.dal.getSubColPath('workflow_executions')}`;
-    
+    const executionsPath = `${this.dal.getColPath('organizations')}/${DEFAULT_ORG_ID}/${this.dal.getSubColPath('workflow_executions')}`;
+
     const docSnap = await this.dal.safeGetDoc<WorkflowExecution>(
       executionsPath,
       executionId
     );
-    
+
     if (!docSnap.exists()) {
       return null;
     }
-    
+
     return { ...docSnap.data(), id: executionId } as WorkflowExecution;
   }
   
@@ -312,15 +306,14 @@ export class WorkflowService {
    * Get workflow statistics
    */
   async getWorkflowStats(
-    organizationId: string,
     workflowId: string
   ): Promise<WorkflowStats> {
-    const workflow = await this.getWorkflow(organizationId, workflowId);
-    
+    const workflow = await this.getWorkflow(workflowId);
+
     if (!workflow) {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
-    
+
     return workflow.stats;
   }
   
@@ -390,21 +383,20 @@ export function getWorkflowService(dal?: BaseAgentDAL): WorkflowService {
  * Create workflow
  */
 export async function createWorkflow(
-  organizationId: string,
-  workflowData: CreateWorkflowInput,
+  workflowData: Omit<CreateWorkflowInput, 'organizationId'>,
   userId: string,
   workspaceId?: string
 ): Promise<Workflow> {
   // Cast admin Firestore to client Firestore type - they share same API at runtime
   const dal = new BaseAgentDAL(db as unknown as Firestore);
   const service = getWorkflowService(dal);
-  
+
   const input: CreateWorkflowInput = {
     ...workflowData,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     workspaceId:workspaceId ?? workflowData.workspaceId,
   };
-  
+
   return service.createWorkflow(input, userId);
 }
 
@@ -412,20 +404,18 @@ export async function createWorkflow(
  * Get workflows
  */
 export async function getWorkflows(
-  organizationId: string,
   workspaceId: string,
   filters?: Record<string, unknown>
 ): Promise<{ data: Workflow[]; hasMore: boolean }> {
   // Cast admin Firestore to client Firestore type - they share same API at runtime
   const dal = new BaseAgentDAL(db as unknown as Firestore);
   const service = getWorkflowService(dal);
-  
+
   const result = await service.getWorkflows({
-    organizationId,
     workspaceId,
     ...filters,
-  } as WorkflowFilterInput);
-  
+  } as Omit<WorkflowFilterInput, 'organizationId'>);
+
   return {
     data: result.workflows,
     hasMore: false, // TODO: Implement pagination
@@ -436,7 +426,6 @@ export async function getWorkflows(
  * Get workflow
  */
 export async function getWorkflow(
-  organizationId: string,
   workflowId: string,
   _workspaceId?: string
 ): Promise<Workflow | null> {
@@ -444,14 +433,13 @@ export async function getWorkflow(
   const dal = new BaseAgentDAL(db as unknown as Firestore);
   const service = getWorkflowService(dal);
 
-  return service.getWorkflow(organizationId, workflowId);
+  return service.getWorkflow(workflowId);
 }
 
 /**
  * Update workflow
  */
 export async function updateWorkflow(
-  organizationId: string,
   workflowId: string,
   updates: UpdateWorkflowInput,
   _workspaceId?: string
@@ -460,14 +448,13 @@ export async function updateWorkflow(
   const dal = new BaseAgentDAL(db as unknown as Firestore);
   const service = getWorkflowService(dal);
 
-  return service.updateWorkflow(organizationId, workflowId, updates);
+  return service.updateWorkflow(workflowId, updates);
 }
 
 /**
  * Set workflow status
  */
 export async function setWorkflowStatus(
-  organizationId: string,
   workflowId: string,
   status: WorkflowStatus,
   _workspaceId?: string
@@ -476,14 +463,13 @@ export async function setWorkflowStatus(
   const dal = new BaseAgentDAL(db as unknown as Firestore);
   const service = getWorkflowService(dal);
 
-  return service.setWorkflowStatus(organizationId, workflowId, status);
+  return service.setWorkflowStatus(workflowId, status);
 }
 
 /**
  * Delete workflow
  */
 export async function deleteWorkflow(
-  organizationId: string,
   workflowId: string,
   _workspaceId?: string
 ): Promise<void> {
@@ -491,5 +477,5 @@ export async function deleteWorkflow(
   const dal = new BaseAgentDAL(db as unknown as Firestore);
   const service = getWorkflowService(dal);
 
-  return service.deleteWorkflow(organizationId, workflowId);
+  return service.deleteWorkflow(workflowId);
 }

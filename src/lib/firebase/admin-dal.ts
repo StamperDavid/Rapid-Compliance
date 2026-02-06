@@ -32,7 +32,7 @@ interface WriteOptions {
   audit?: boolean;
   /** User ID performing the operation (for audit trail) */
   userId?: string;
-  /** Organization ID context (for access control) */
+  /** @deprecated Organization ID no longer needed in single-tenant model */
   organizationId?: string;
 }
 
@@ -473,14 +473,10 @@ export class FirestoreAdminDAL {
    * This will be implemented as part of the security enhancement
    */
   private verifyOrgAccess(
-    _userId: string | undefined,
-    _organizationId: string
+    _userId: string | undefined
   ): void {
-    // TODO: Implement organization-scoped access control
-    // For now, just log the check
     logger.debug('🔒 Verifying org access (Admin)', {
       userId: _userId,
-      organizationId: _organizationId,
       file: 'admin-dal.ts'
     });
   }
@@ -492,7 +488,7 @@ export class FirestoreAdminDAL {
   /**
    * Get all workflows
    */
-  async getAllWorkflows(_organizationId?: string): Promise<Array<Record<string, unknown>>> {
+  async getAllWorkflows(): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getOrgCollection('workflows');
     const snapshot = await colRef.get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -502,7 +498,6 @@ export class FirestoreAdminDAL {
    * Get workflow executions in a date range
    */
   async getWorkflowExecutions(
-    _organizationId: string | undefined,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
@@ -518,7 +513,6 @@ export class FirestoreAdminDAL {
    * Get email generations in a date range
    */
   getEmailGenerations(
-    _organizationId: string | undefined,
     _startDate: Date,
     _endDate: Date
   ): Array<Record<string, unknown>> {
@@ -530,7 +524,7 @@ export class FirestoreAdminDAL {
   /**
    * Get all active deals
    */
-  async getActiveDeals(_organizationId?: string): Promise<Array<Record<string, unknown>>> {
+  async getActiveDeals(): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getOrgCollection('deals');
     const snapshot = await colRef
       .where('status', 'in', ['active', 'open', 'in_progress'])
@@ -542,7 +536,6 @@ export class FirestoreAdminDAL {
    * Get deals snapshot at a specific date (for trend comparison)
    */
   async getDealsSnapshot(
-    _organizationId: string | undefined,
     _snapshotDate: Date
   ): Promise<Array<Record<string, unknown>>> {
     // This would require historical snapshots
@@ -554,7 +547,6 @@ export class FirestoreAdminDAL {
    * Get closed deals in a date range
    */
   async getClosedDeals(
-    _organizationId: string | undefined,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
@@ -571,7 +563,6 @@ export class FirestoreAdminDAL {
    * Get won deals in a date range
    */
   async getWonDeals(
-    _organizationId: string | undefined,
     startDate: Date,
     endDate: Date
   ): Promise<Array<Record<string, unknown>>> {
@@ -587,7 +578,7 @@ export class FirestoreAdminDAL {
   /**
    * Get revenue forecast
    */
-  async getRevenueForecast(_organizationId?: string): Promise<Record<string, unknown> | null> {
+  async getRevenueForecast(): Promise<Record<string, unknown> | null> {
     const docRef = this.getOrgCollection('forecasts').doc('current');
     const snapshot = await docRef.get();
     return snapshot.exists ? (snapshot.data() as Record<string, unknown>) : null;
@@ -596,7 +587,7 @@ export class FirestoreAdminDAL {
   /**
    * Get sales reps
    */
-  async getSalesReps(_organizationId?: string): Promise<Array<Record<string, unknown>>> {
+  async getSalesReps(): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getOrgCollection('users');
     const snapshot = await colRef
       .where('role', '==', 'sales')
@@ -608,7 +599,6 @@ export class FirestoreAdminDAL {
    * Get deals for a specific rep in a date range
    */
   async getRepDeals(
-    _organizationId: string | undefined,
     repId: string,
     startDate: Date,
     endDate: Date

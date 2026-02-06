@@ -105,8 +105,8 @@ describe('Scraper Intelligence Service - Unit Tests', () => {
     });
 
     it('should invalidate organization caches', () => {
-      invalidateOrganizationCaches('test-org');
-      
+      invalidateOrganizationCaches();
+
       // Should not throw
       expect(true).toBe(true);
     });
@@ -191,7 +191,7 @@ describe('Scraper Intelligence Service - Unit Tests', () => {
       expect(TTL_MS).toBe(300000);
     });
 
-    it('should expire cache entries after TTL', async () => {
+    it('should expire cache entries after TTL', () => {
       // Cache expiration is tested in integration tests
       // This verifies the concept exists
       const now = Date.now();

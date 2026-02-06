@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { RelatedEntityType } from '@/types/activity';
 
 export type CRMEventType = 
@@ -178,9 +179,9 @@ async function executeTriggeredWorkflow(
     // Import workflow execution service and get workflow
     const { executeWorkflow } = await import('@/lib/workflows/workflow-executor');
     const { getWorkflow } = await import('@/lib/workflows/workflow-service');
-    
+
     // Load the workflow
-    const workflow = await getWorkflow(event.organizationId, rule.workflowId);
+    const workflow = await getWorkflow(DEFAULT_ORG_ID, rule.workflowId);
 
     if (!workflow) {
       logger.error('Workflow not found for trigger', undefined, { workflowId: rule.workflowId });
@@ -216,7 +217,6 @@ async function executeTriggeredWorkflow(
  */
 
 export async function fireLeadCreated(
-  organizationId: string,
   workspaceId: string,
   leadId: string,
   leadData: Record<string, unknown>
@@ -225,7 +225,7 @@ export async function fireLeadCreated(
     eventType: 'lead_created',
     entityType: 'lead',
     entityId: leadId,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     workspaceId,
     entityData: leadData,
     triggeredAt: new Date(),
@@ -233,7 +233,6 @@ export async function fireLeadCreated(
 }
 
 export async function fireLeadStatusChanged(
-  organizationId: string,
   workspaceId: string,
   leadId: string,
   oldStatus: string,
@@ -244,7 +243,7 @@ export async function fireLeadStatusChanged(
     eventType: 'lead_status_changed',
     entityType: 'lead',
     entityId: leadId,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     workspaceId,
     changes: [{
       field: 'status',
@@ -257,7 +256,6 @@ export async function fireLeadStatusChanged(
 }
 
 export async function fireDealStageChanged(
-  organizationId: string,
   workspaceId: string,
   dealId: string,
   oldStage: string,
@@ -276,7 +274,7 @@ export async function fireDealStageChanged(
     eventType,
     entityType: 'deal',
     entityId: dealId,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     workspaceId,
     changes: [{
       field: 'stage',
@@ -289,7 +287,6 @@ export async function fireDealStageChanged(
 }
 
 export async function fireDealValueChanged(
-  organizationId: string,
   workspaceId: string,
   dealId: string,
   oldValue: number,
@@ -303,7 +300,7 @@ export async function fireDealValueChanged(
       eventType: 'deal_value_changed',
       entityType: 'deal',
       entityId: dealId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       changes: [{
         field: 'value',
@@ -317,7 +314,6 @@ export async function fireDealValueChanged(
 }
 
 export async function fireLeadScoreChanged(
-  organizationId: string,
   workspaceId: string,
   leadId: string,
   oldScore: number,
@@ -330,7 +326,7 @@ export async function fireLeadScoreChanged(
       eventType: 'lead_score_changed',
       entityType: 'lead',
       entityId: leadId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       changes: [{
         field: 'score',

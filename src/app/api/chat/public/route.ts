@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
 
     // Generate response using AI
     const { AIProviderFactory } = await import('@/lib/ai/provider-factory');
-    const provider = AIProviderFactory.createProvider(selectedModel, orgId);
+    const provider = AIProviderFactory.createProvider(selectedModel);
     
     const startTime = Date.now();
     // Filter to only valid AI provider roles (messages are already user/assistant, this narrows the type)

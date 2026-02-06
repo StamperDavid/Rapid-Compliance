@@ -94,7 +94,6 @@ export default function CheckoutPage() {
 
       const order = await processCheckout({
         cartId,
-        organizationId: DEFAULT_ORG_ID,
         workspaceId: 'default',
         customer: {
           email: formData.email,

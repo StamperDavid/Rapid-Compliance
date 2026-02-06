@@ -1,6 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Workflow List Page
@@ -56,7 +55,6 @@ export default function WorkflowsPage() {
   // Fetch function with pagination using service layer
   const fetchWorkflows = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getWorkflows(
-      DEFAULT_ORG_ID,
       'default',
       undefined,
       { pageSize: 50, lastDoc }
@@ -84,7 +82,7 @@ export default function WorkflowsPage() {
     }
 
     try {
-      await deleteWorkflow(DEFAULT_ORG_ID, workflowId, 'default');
+      await deleteWorkflow(workflowId, 'default');
       await refresh();
     } catch (err) {
       logger.error('Error deleting workflow:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
@@ -97,7 +95,7 @@ export default function WorkflowsPage() {
     const newStatus: 'active' | 'paused' = currentStatus === 'active' ? 'paused' : 'active';
 
     try {
-      await setWorkflowStatus(DEFAULT_ORG_ID, workflowId, newStatus, 'default');
+      await setWorkflowStatus(workflowId, newStatus, 'default');
       await refresh();
     } catch (err) {
       logger.error('Error updating workflow:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });

@@ -40,7 +40,6 @@ export async function GET(request: NextRequest) {
 
     // Use caching for analytics queries
     const analytics = await withCache(
-      DEFAULT_ORG_ID,
       'revenue',
       async () => calculateRevenueAnalytics(DEFAULT_ORG_ID, period),
       { period }

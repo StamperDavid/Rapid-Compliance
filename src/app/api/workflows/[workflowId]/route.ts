@@ -5,7 +5,6 @@ import { getAuth } from 'firebase-admin/auth';
 import { z } from 'zod';
 import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { getWorkflow, updateWorkflow, deleteWorkflow, setWorkflowStatus } from '@/lib/workflows/workflow-service';
 
 const paramsSchema = z.object({
@@ -71,7 +70,7 @@ export async function GET(
     }
 
     const { workspaceId } = queryResult.data;
-    const workflow = await getWorkflow(DEFAULT_ORG_ID, workflowId, workspaceId);
+    const workflow = await getWorkflow(workflowId, workspaceId);
 
     if (!workflow) {
       return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
@@ -132,7 +131,6 @@ export async function PUT(
     const { workspaceId, workflow } = bodyResult.data;
 
     const updatedWorkflow = await updateWorkflow(
-      DEFAULT_ORG_ID,
       workflowId,
       workflow,
       workspaceId
@@ -193,7 +191,6 @@ export async function PATCH(
     const { workspaceId, status } = bodyResult.data;
 
     const updatedWorkflow = await setWorkflowStatus(
-      DEFAULT_ORG_ID,
       workflowId,
       status,
       workspaceId
@@ -251,7 +248,7 @@ export async function DELETE(
     }
 
     const { workspaceId } = queryResult.data;
-    await deleteWorkflow(DEFAULT_ORG_ID, workflowId, workspaceId);
+    await deleteWorkflow(workflowId, workspaceId);
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

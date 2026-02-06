@@ -21,14 +21,16 @@ export interface TaxCalculation {
  */
 export async function calculateTax(
   workspaceId: string,
-  organizationId: string,
   cart: Cart,
   billingAddress: Address,
   shippingAddress: Address
 ): Promise<TaxCalculation> {
+  // Import DEFAULT_ORG_ID
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+
   // Get e-commerce config
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
   

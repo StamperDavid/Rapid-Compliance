@@ -8,6 +8,7 @@ import type { Workflow, ScheduleTrigger, WorkflowTriggerData } from '@/types/wor
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
 import { CronExpressionParser } from 'cron-parser';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Register schedule trigger
@@ -15,30 +16,29 @@ import { CronExpressionParser } from 'cron-parser';
  */
 export async function registerScheduleTrigger(
   workflow: Workflow,
-  organizationId: string,
   workspaceId: string
 ): Promise<void> {
   const trigger = workflow.trigger as ScheduleTrigger;
-  
+
   if (trigger?.type !== 'schedule') {
     return;
   }
-  
+
   // Store schedule configuration
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
     workflow.id,
     {
       workflowId: workflow.id,
       schedule: trigger.schedule,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       registeredAt: new Date().toISOString(),
       nextRun: calculateNextRun(trigger.schedule),
     },
     false
   );
-  
+
   logger.info('Schedule Trigger Registered schedule for workflow workflow.id}', { file: 'schedule-trigger.ts' });
 }
 
@@ -222,14 +222,13 @@ export async function executeScheduledWorkflows(): Promise<void> {
  */
 export async function unregisterScheduleTrigger(
   workflowId: string,
-  organizationId: string,
   workspaceId: string
 ): Promise<void> {
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
     workflowId
   );
-  
+
   logger.info('Schedule Trigger Unregistered schedule for workflow workflowId}', { file: 'schedule-trigger.ts' });
 }
 

@@ -5,7 +5,6 @@ import { getAuth } from 'firebase-admin/auth';
 import { z } from 'zod';
 import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { getWorkflows, createWorkflow, type WorkflowFilters } from '@/lib/workflows/workflow-service';
 import type { Workflow } from '@/types/workflow';
 
@@ -75,7 +74,7 @@ export async function GET(request: NextRequest) {
       filters.status = status;
     }
 
-    const result = await getWorkflows(DEFAULT_ORG_ID, workspaceId, filters);
+    const result = await getWorkflows(workspaceId, filters);
 
     return NextResponse.json({
       workflows: result.data,
@@ -128,7 +127,6 @@ export async function POST(request: NextRequest) {
     const workflowData = workflow as unknown as Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>;
 
     const newWorkflow = await createWorkflow(
-      DEFAULT_ORG_ID,
       workflowData,
       decodedToken.uid,
       workspaceId

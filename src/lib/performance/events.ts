@@ -21,6 +21,7 @@
 import type { SalesSignal } from '@/lib/orchestration';
 import type { CoachingCategory } from '@/lib/conversation/types';
 import type { PerformanceTier } from './types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // EVENT INTERFACES
@@ -174,7 +175,6 @@ export interface PerformanceAlertTriggeredEvent extends SalesSignal {
  * Create performance analyzed event
  */
 export function createPerformanceAnalyzedEvent(
-  organizationId: string,
   workspaceId: string,
   repsAnalyzed: number,
   conversationsAnalyzed: number,
@@ -187,7 +187,7 @@ export function createPerformanceAnalyzedEvent(
 ): Omit<PerformanceAnalyzedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.analyzed' as const,
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.95,
     priority: 'Medium',
@@ -212,7 +212,6 @@ export function createPerformanceAnalyzedEvent(
  * Create top performer identified event
  */
 export function createTopPerformerIdentifiedEvent(
-  organizationId: string,
   workspaceId: string,
   repId: string,
   rank: number,
@@ -223,7 +222,7 @@ export function createTopPerformerIdentifiedEvent(
 ): Omit<TopPerformerIdentifiedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.top_performer_identified' as const,
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.9,
     priority: 'High',
@@ -247,7 +246,6 @@ export function createTopPerformerIdentifiedEvent(
  * Create improvement opportunity detected event
  */
 export function createImprovementOpportunityDetectedEvent(
-  organizationId: string,
   workspaceId: string,
   repId: string,
   currentScore: number,
@@ -257,10 +255,10 @@ export function createImprovementOpportunityDetectedEvent(
   potentialImpact: 'high' | 'medium' | 'low'
 ): Omit<ImprovementOpportunityDetectedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   const hasCriticalGap = topGaps.some(g => g.priority === 'critical');
-  
+
   return {
     type: 'performance.improvement_opportunity' as const,
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.85,
     priority: hasCriticalGap ? 'High' : 'Medium',
@@ -284,7 +282,6 @@ export function createImprovementOpportunityDetectedEvent(
  * Create coaching priority created event
  */
 export function createCoachingPriorityCreatedEvent(
-  organizationId: string,
   workspaceId: string,
   category: CoachingCategory,
   priority: 'critical' | 'high' | 'medium' | 'low',
@@ -294,7 +291,7 @@ export function createCoachingPriorityCreatedEvent(
 ): Omit<CoachingPriorityCreatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.coaching_priority_created' as const,
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.9,
     priority: priority === 'critical' ? 'High' : 'Medium',
@@ -316,7 +313,6 @@ export function createCoachingPriorityCreatedEvent(
  * Create best practice extracted event
  */
 export function createBestPracticeExtractedEvent(
-  organizationId: string,
   workspaceId: string,
   practiceId: string,
   title: string,
@@ -328,7 +324,7 @@ export function createBestPracticeExtractedEvent(
 ): Omit<BestPracticeExtractedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.best_practice_extracted' as const,
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.85,
     priority: 'Medium',
@@ -353,7 +349,6 @@ export function createBestPracticeExtractedEvent(
  * Create trend detected event
  */
 export function createTrendDetectedEvent(
-  organizationId: string,
   workspaceId: string,
   trendType: 'overall_score' | 'sentiment' | 'quality',
   direction: 'improving' | 'declining' | 'stable',
@@ -362,10 +357,10 @@ export function createTrendDetectedEvent(
   affectedReps: number
 ): Omit<TrendDetectedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   const isNegative = direction === 'declining' && (significance === 'major' || significance === 'moderate');
-  
+
   return {
     type: 'performance.trend_detected' as const,
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.8,
     priority: isNegative ? 'High' : 'Medium',
@@ -387,7 +382,6 @@ export function createTrendDetectedEvent(
  * Create leaderboard updated event
  */
 export function createLeaderboardUpdatedEvent(
-  organizationId: string,
   workspaceId: string,
   category: string,
   topReps: Array<{ repId: string; rank: number; score: number }>,
@@ -396,7 +390,7 @@ export function createLeaderboardUpdatedEvent(
 ): Omit<LeaderboardUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.leaderboard_updated' as const,
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 1.0,
     priority: 'Low',
@@ -417,7 +411,6 @@ export function createLeaderboardUpdatedEvent(
  * Create benchmark changed event
  */
 export function createBenchmarkChangedEvent(
-  organizationId: string,
   workspaceId: string,
   benchmarkType: string,
   previousValue: number,
@@ -425,10 +418,10 @@ export function createBenchmarkChangedEvent(
 ): Omit<BenchmarkChangedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   const changePercentage = previousValue > 0 ? ((newValue - previousValue) / previousValue) * 100 : 0;
   const direction = newValue > previousValue ? 'up' : 'down';
-  
+
   return {
     type: 'performance.benchmark_changed' as const,
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 1.0,
     priority: 'Low',
@@ -450,7 +443,6 @@ export function createBenchmarkChangedEvent(
  * Create performance alert triggered event
  */
 export function createPerformanceAlertTriggeredEvent(
-  organizationId: string,
   workspaceId: string,
   alertType: 'critical_gap' | 'declining_trend' | 'low_performance' | 'high_achievement',
   severity: 'critical' | 'high' | 'medium' | 'low',
@@ -460,7 +452,7 @@ export function createPerformanceAlertTriggeredEvent(
 ): Omit<PerformanceAlertTriggeredEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.alert_triggered' as const,
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.9,
     priority: severity === 'critical' || severity === 'high' ? 'High' : 'Medium',

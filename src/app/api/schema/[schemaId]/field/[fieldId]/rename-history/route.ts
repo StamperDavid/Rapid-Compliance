@@ -117,7 +117,6 @@ export async function POST(
 
     // Rollback field
     await FieldRenameManager.rollbackField(
-      DEFAULT_ORG_ID,
       workspaceId,
       params.schemaId,
       params.fieldId,
