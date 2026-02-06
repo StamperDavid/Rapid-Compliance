@@ -12,6 +12,7 @@ import type { TrainingSession } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const CreateUpdateRequestSchema = z.object({
   sessionIds: z.array(z.string().min(1)).min(1, 'At least one session ID is required'),
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+    const { user: _user } = authResult;
 
     // Parse and validate request
     const body: unknown = await request.json();
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     const { sessionIds, organizationId, goldenMasterId, minConfidence } = parseResult.data;
 
     // Verify access
-    if (user.organizationId !== organizationId) {
+    if (DEFAULT_ORG_ID !== organizationId) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }

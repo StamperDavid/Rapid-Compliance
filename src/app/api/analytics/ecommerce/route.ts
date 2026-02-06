@@ -53,7 +53,6 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
     const period =(searchParams.get('period') !== '' && searchParams.get('period') != null) ? searchParams.get('period') : '30d';
 
     // Calculate date range based on period
@@ -95,13 +94,13 @@ export async function GET(request: NextRequest) {
     }
     
     // Get orders from Firestore
-    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/orders`;
+    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/orders`;
     let allOrders: OrderRecord[] = [];
     
     try {
       allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
     } catch (_e) {
-      logger.debug('No orders collection yet', { orgId });
+      logger.debug('No orders collection yet', { DEFAULT_ORG_ID });
     }
 
     // Filter by date
@@ -121,13 +120,13 @@ export async function GET(request: NextRequest) {
     );
 
     // Cart data (abandoned carts)
-    const cartsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/carts`;
+    const cartsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/carts`;
     let allCarts: CartRecord[] = [];
     
     try {
       allCarts = await FirestoreService.getAll<CartRecord>(cartsPath, []);
     } catch (_e) {
-      logger.debug('No carts collection yet', { orgId });
+      logger.debug('No carts collection yet', { DEFAULT_ORG_ID });
     }
 
     const abandonedCarts = allCarts.filter(cart => {

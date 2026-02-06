@@ -26,7 +26,6 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 type Tab = 'templates' | 'scoring' | 'forecasting';
 
 export default function TemplatesDashboard() {
-  const organizationId = DEFAULT_ORG_ID;
   const workspaceId = 'default';
 
   const [activeTab, setActiveTab] = useState<Tab>('templates');
@@ -54,7 +53,7 @@ export default function TemplatesDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
+          DEFAULT_ORG_ID,
           workspaceId,
           templateId: selectedTemplateId,
           merge: false,
@@ -90,7 +89,7 @@ export default function TemplatesDashboard() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            organizationId,
+            DEFAULT_ORG_ID,
             workspaceId,
             templateId: selectedTemplateId
           })
@@ -119,7 +118,7 @@ export default function TemplatesDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
+          DEFAULT_ORG_ID,
           workspaceId,
           period: forecastPeriod,
           quota,
@@ -231,7 +230,7 @@ export default function TemplatesDashboard() {
               </div>
 
               <TemplateSelector
-                organizationId={organizationId}
+                organizationId={DEFAULT_ORG_ID}
                 selectedTemplateId={selectedTemplateId}
                 onTemplateSelect={setSelectedTemplateId}
               />

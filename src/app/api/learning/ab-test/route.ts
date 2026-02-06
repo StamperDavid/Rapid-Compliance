@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     // Create new test
     const test = await createABTest({
-      organizationId,
+      DEFAULT_ORG_ID: organizationId,
       controlModel,
       treatmentModel,
       trafficSplit,

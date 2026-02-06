@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Penthouse: use default organization ID
-    const organizationId = DEFAULT_ORG_ID;
 
     // Parse request
     const body = await request.json() as RequestPayload;
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Execute the function
-    const result = await executeFunctionCall(functionCallRequest, organizationId);
+    const result = await executeFunctionCall(functionCallRequest, DEFAULT_ORG_ID);
 
     return NextResponse.json(result);
   } catch (error: unknown) {

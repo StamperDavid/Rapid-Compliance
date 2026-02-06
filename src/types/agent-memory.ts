@@ -11,7 +11,6 @@
 export interface CustomerMemory {
   // Identity
   customerId: string;
-  orgId: string;
   email?: string;
   phone?: string;
   name?: string;
@@ -200,8 +199,7 @@ export interface AgentInstance {
   instanceId: string;
   sessionId: string;
   customerId: string;
-  orgId: string;
-  
+
   // Configuration
   goldenMasterId: string;
   goldenMasterVersion: string;
@@ -235,7 +233,6 @@ export interface AgentInstance {
  */
 export interface BaseModel {
   id: string;
-  orgId: string;
   status: 'draft' | 'training' | 'ready';
   
   // Core Configuration (editable - from onboarding + persona)
@@ -275,7 +272,6 @@ export interface BaseModel {
 export interface GoldenMaster {
   id: string;
   version: string; // "v1", "v2", "v3", etc.
-  orgId: string;
   baseModelId: string; // Reference to the Base Model this was created from
   
   // Core Configuration (snapshot from Base Model at time of saving)
@@ -715,7 +711,7 @@ export interface BehaviorConfig {
  */
 export interface InstanceLifecycleService {
   // Spawn new instance
-  spawnInstance(customerId: string, orgId: string): Promise<AgentInstance>;
+  spawnInstance(customerId: string): Promise<AgentInstance>;
   
   // Load customer memory into instance
   loadCustomerMemory(instanceId: string, customerId: string): Promise<void>;

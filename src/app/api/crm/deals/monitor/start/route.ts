@@ -38,7 +38,6 @@ function parseBody(rawBody: unknown): StartDealMonitorRequestBody {
 export async function POST(request: NextRequest) {
   try {
     // Penthouse: orgId is always DEFAULT_ORG_ID
-    const organizationId = DEFAULT_ORG_ID;
     const workspaceId = 'default';
 
     // Get config from request body
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest) {
       : 'Medium';
 
     const config = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       autoGenerateRecommendations: body.autoGenerateRecommendations ?? true,
       autoRecalculateHealth: body.autoRecalculateHealth ?? true,

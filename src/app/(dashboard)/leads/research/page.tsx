@@ -57,7 +57,6 @@ interface ApiLeadResearchResponse {
 
 export default function LeadResearchPage() {
   const { user: _user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -100,7 +99,7 @@ export default function LeadResearchPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: input,
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
         }),
       });
 
@@ -174,7 +173,7 @@ export default function LeadResearchPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           leadDomain,
           isGoodLead: isGood,
           timestamp: new Date().toISOString(),

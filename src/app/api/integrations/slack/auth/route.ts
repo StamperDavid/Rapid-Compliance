@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
-  const orgId = DEFAULT_ORG_ID;
 
   if (!userId) {
     return NextResponse.json(
@@ -28,7 +27,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const state = Buffer.from(JSON.stringify({ userId, orgId })).toString('base64');
+  const state = Buffer.from(JSON.stringify({ userId, DEFAULT_ORG_ID })).toString('base64');
   const authUrl = `${getSlackAuthUrl()}&state=${state}`;
 
   return NextResponse.redirect(authUrl);

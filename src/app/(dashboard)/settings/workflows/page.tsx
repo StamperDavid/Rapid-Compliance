@@ -1,6 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 /* eslint-disable no-alert -- Admin UI uses native dialogs */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -29,7 +28,6 @@ interface WorkflowWithId extends Partial<Workflow> {
 
 export default function WorkflowsPage() {
   const { user: _user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<Partial<Workflow> | null>(null);
@@ -54,7 +52,7 @@ export default function WorkflowsPage() {
 
       const token = await currentUser.getIdToken();
 
-      const response = await fetch(`/api/workflows?organizationId=${orgId}&workspaceId=default`, {
+      const response = await fetch('/api/workflows', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -73,7 +71,7 @@ export default function WorkflowsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadWorkflows();
@@ -96,8 +94,6 @@ export default function WorkflowsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          organizationId: orgId,
-          workspaceId: 'default',
           status: newStatus,
         }),
       });
@@ -257,8 +253,6 @@ export default function WorkflowsPage() {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  organizationId: orgId,
-                  workspaceId: 'default',
                   workflow,
                 }),
               });

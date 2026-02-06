@@ -358,6 +358,5 @@ export class VideoJobService {
  * Create a VideoJobService instance for an organization
  */
 export function createVideoJobService(): VideoJobService {
-  const organizationId = DEFAULT_ORG_ID;
-  return new VideoJobService(organizationId);
+  return new VideoJobService(DEFAULT_ORG_ID);
 }

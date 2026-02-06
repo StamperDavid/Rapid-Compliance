@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/useToast';
 
 export default function NewCampaignPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const toast = useToast();
 
   const [campaign, setCampaign] = useState({
@@ -31,7 +30,7 @@ export default function NewCampaignPage() {
       await createCampaign({
         ...campaign,
         scheduledFor: campaign.scheduledFor ? new Date(campaign.scheduledFor) : new Date(),
-        organizationId: orgId,
+        organizationId: DEFAULT_ORG_ID,
         createdBy: 'current-user', // TODO: Get from auth
       });
       

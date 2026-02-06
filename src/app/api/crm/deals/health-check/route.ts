@@ -18,16 +18,15 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 export async function POST(_request: NextRequest) {
   try {
     // Penthouse: orgId is always DEFAULT_ORG_ID
-    const organizationId = DEFAULT_ORG_ID;
     const workspaceId = 'default';
 
     logger.info('Running deal health check', {
-      organizationId,
+      DEFAULT_ORG_ID,
       workspaceId,
     });
 
     // Run health check
-    const summary = await runDealHealthCheck(organizationId, workspaceId);
+    const summary = await runDealHealthCheck(DEFAULT_ORG_ID, workspaceId);
 
     return NextResponse.json({
       success: true,

@@ -43,7 +43,6 @@ export default function DealDetailPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
   const dealId = params.id as string;
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,18 +58,18 @@ export default function DealDetailPage() {
     setLoadingHealth(true);
     try {
       const { calculateDealHealth } = await import('@/lib/crm/deal-health');
-      const health = await calculateDealHealth(orgId, 'default', dealId);
+      const health = await calculateDealHealth(DEFAULT_ORG_ID, 'default', dealId);
       setHealthScore(health);
     } catch (error: unknown) {
       logger.error('Error loading deal health:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoadingHealth(false);
     }
-  }, [orgId, dealId]);
+  }, [dealId]);
 
   const loadDeal = useCallback(async () => {
     try {
-      const data = await FirestoreService.get<Deal>(`organizations/${orgId}/workspaces/default/entities/deals/records`, dealId);
+      const data = await FirestoreService.get<Deal>(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`, dealId);
       setDeal(data);
       void loadDealHealth();
     } catch (error: unknown) {
@@ -78,7 +77,7 @@ export default function DealDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, dealId, loadDealHealth]);
+  }, [dealId, loadDealHealth]);
 
   useEffect(() => {
     void loadDeal();
@@ -87,7 +86,7 @@ export default function DealDetailPage() {
   const handleMarkWon = useCallback(async () => {
     try {
       await FirestoreService.update(
-        `organizations/${orgId}/workspaces/default/entities/deals/records`,
+        `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`,
         dealId,
         { stage: 'closed_won', closedAt: Timestamp.now(), actualCloseDate: Timestamp.now(), status: 'won' }
       );
@@ -98,7 +97,7 @@ export default function DealDetailPage() {
       logger.error('Error updating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       toast.error('Failed to update deal');
     }
-  }, [orgId, dealId, loadDeal, toast]);
+  }, [dealId, loadDeal, toast]);
 
   const handleMarkLost = useCallback(async () => {
     if (!lostReason.trim()) {
@@ -107,7 +106,7 @@ export default function DealDetailPage() {
     }
     try {
       await FirestoreService.update(
-        `organizations/${orgId}/workspaces/default/entities/deals/records`,
+        `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`,
         dealId,
         { stage: 'closed_lost', closedAt: Timestamp.now(), actualCloseDate: Timestamp.now(), status: 'lost', lostReason }
       );
@@ -119,7 +118,7 @@ export default function DealDetailPage() {
       logger.error('Error updating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       toast.error('Failed to update deal');
     }
-  }, [orgId, dealId, lostReason, loadDeal, toast]);
+  }, [dealId, lostReason, loadDeal, toast]);
 
   if (loading || !deal) {
     return <div className="p-8">Loading...</div>;

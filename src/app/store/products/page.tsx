@@ -27,7 +27,6 @@ interface Product {
 export default function ProductCatalogPage() {
   const router = useRouter();
   const { theme } = useTheme();
-  const orgId = DEFAULT_ORG_ID;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +40,7 @@ export default function ProductCatalogPage() {
 
       // Load products from Firestore (org-level collection)
       const productsData = await FirestoreService.getAll(
-        `organizations/${orgId}/products`,
+        `organizations/${DEFAULT_ORG_ID}/products`,
         []
       );
 
@@ -61,7 +60,7 @@ export default function ProductCatalogPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadProducts();

@@ -40,7 +40,6 @@ interface TwilioWebhookPayload {
 export function GET(request: NextRequest): NextResponse {
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') ?? 'ai'; // 'ai' or 'basic'
-  const organizationId = searchParams.get('organizationId') ?? DEFAULT_ORG_ID;
 
   if (mode === 'basic') {
     // Return simple static TwiML for testing
@@ -62,7 +61,7 @@ export function GET(request: NextRequest): NextResponse {
   // Redirect to AI agent
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Redirect method="POST">/api/voice/ai-agent?organizationId=${encodeURIComponent(organizationId)}&amp;mode=prospector</Redirect>
+  <Redirect method="POST">/api/voice/ai-agent?mode=prospector</Redirect>
 </Response>`;
 
   return new NextResponse(twiml, {

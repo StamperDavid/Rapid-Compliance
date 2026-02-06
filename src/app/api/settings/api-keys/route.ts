@@ -39,11 +39,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
 
     // Load keys from Firestore
     const apiKeys = await FirestoreService.get<ApiKeysDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
       'apiKeys'
     );
 
@@ -93,7 +92,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const body: unknown = await request.json();
 
-    // Validate required fields - orgId no longer required (penthouse)
+    // Validate required fields - DEFAULT_ORG_ID no longer required (penthouse)
     const validation = validateRequired(body as Record<string, unknown>, ['service', 'key']);
     if (!validation.valid) {
       return handleAPIError(
@@ -102,12 +101,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
     const { service, key } = body as SaveApiKeyBody;
 
     // Load existing keys
     const existingKeys: ApiKeysDocument = await FirestoreService.get<ApiKeysDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
       'apiKeys'
     ) ?? {};
 
@@ -117,13 +115,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Save to Firestore
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
       'apiKeys',
       existingKeys,
       false
     );
 
-    logger.info('API key saved', { route: '/api/settings/api-keys', service, orgId });
+    logger.info('API key saved', { route: '/api/settings/api-keys', service, DEFAULT_ORG_ID });
 
     return NextResponse.json({
       success: true,

@@ -30,8 +30,6 @@ interface GeneratedEmail {
 // ============================================================================
 
 export default function EmailWriterPage() {
-  const orgId = DEFAULT_ORG_ID;
-
   const { theme } = useOrgTheme();
   const toast = useToast();
   const [prospect, setProspect] = useState({
@@ -70,7 +68,7 @@ export default function EmailWriterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orgId,
+          DEFAULT_ORG_ID,
           prospect,
           template,
           tone,

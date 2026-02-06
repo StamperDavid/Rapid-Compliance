@@ -36,21 +36,20 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
     const periodParam = searchParams.get('period');
     const period = (periodParam !== '' && periodParam != null) ? periodParam : '30d';
 
     // Use caching for analytics queries
     const analytics = await withCache(
-      orgId,
+      DEFAULT_ORG_ID,
       'revenue',
-      async () => calculateRevenueAnalytics(orgId, period),
+      async () => calculateRevenueAnalytics(DEFAULT_ORG_ID, period),
       { period }
     );
 
     logger.info('Revenue analytics retrieved', { 
       route: '/api/analytics/revenue',
-      orgId, 
+      DEFAULT_ORG_ID, 
       period,
       totalRevenue: analytics.totalRevenue,
     });
@@ -122,7 +121,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     }
     
     // Get deals from Firestore with date filtering for better performance
-    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
+    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/default/entities/deals`;
     let allDeals: DealRecord[] = [];
     
     try {
@@ -131,7 +130,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       // If org has 10,000+ deals, consider implementing background jobs for analytics
       allDeals = await FirestoreService.getAll<DealRecord>(dealsPath, []);
     } catch (_e) {
-      logger.debug('No deals collection yet', { orgId });
+      logger.debug('No deals collection yet', { DEFAULT_ORG_ID });
     }
 
     // Filter by date and status
@@ -144,13 +143,13 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     });
 
     // Get orders (e-commerce)
-    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/orders`;
+    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/orders`;
     let allOrders: OrderRecord[] = [];
     
     try {
       allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
     } catch (_e) {
-      logger.debug('No orders collection yet', { orgId });
+      logger.debug('No orders collection yet', { DEFAULT_ORG_ID });
     }
 
     const completedOrders = allOrders.filter(order => {

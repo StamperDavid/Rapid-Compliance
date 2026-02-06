@@ -17,19 +17,18 @@ import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function ProductManagementPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const toast = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Fetch function with pagination using service layer
   const fetchProducts = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getProducts(
-      orgId,
+      DEFAULT_ORG_ID,
       'default',
       undefined,
       { pageSize: 50, lastDoc }
     );
-  }, [orgId]);
+  }, []);
 
   const {
     data: products,
@@ -56,7 +55,7 @@ export default function ProductManagementPage() {
 
     void (async () => {
       try {
-        await deleteProduct(orgId, deletingId, 'default');
+        await deleteProduct(DEFAULT_ORG_ID, deletingId, 'default');
         toast.success('Product deleted successfully');
         await refresh(); // Refresh pagination after delete
       } catch (error) {

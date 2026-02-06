@@ -9,6 +9,7 @@ import { generateAuthUrl } from '@/lib/integrations/oauth-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,11 +34,10 @@ export async function GET(request: NextRequest) {
       return errors.badRequest('integrationId and provider required');
     }
 
-    const { user } = authResult;
-    const organizationId = user.organizationId;
+    const { user: _user } = authResult;
 
     const workspaceIdForAuth = (workspaceId !== '' && workspaceId != null) ? workspaceId : undefined;
-    const authUrl = await generateAuthUrl(organizationId, workspaceIdForAuth, integrationId, provider);
+    const authUrl = await generateAuthUrl(DEFAULT_ORG_ID, workspaceIdForAuth, integrationId, provider);
 
     return NextResponse.json({
       success: true,

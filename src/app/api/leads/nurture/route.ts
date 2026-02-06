@@ -5,6 +5,7 @@ import { leadNurtureSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface ZodIssue {
   path: (string | number)[];
@@ -53,8 +54,8 @@ export async function POST(request: NextRequest) {
 
     const { action, data, organizationId } = validation.data;
 
-    // Verify user has access to this organization
-    if (user.organizationId !== organizationId) {
+    // Verify user has access to this organization (penthouse model - verify against DEFAULT_ORG_ID)
+    if (DEFAULT_ORG_ID !== organizationId) {
       return NextResponse.json(
         { success: false, error: 'Access denied to this organization' },
         { status: 403 }

@@ -126,29 +126,13 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
   // Store campaign in Firestore (remove undefined values)
   // In test mode, use AdminFirestoreService to bypass security rules
   const isTest = process.env.NODE_ENV === 'test';
-  let saveCampaign;
-  
-  if (isTest) {
-    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
-    saveCampaign = (orgId: string, id: string, data: Record<string, unknown>) => 
-      AdminFirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
-        id,
-        data,
-        false
-      );
-  } else {
-    const { EmailCampaignService } = await import('@/lib/db/firestore-service');
-    saveCampaign = EmailCampaignService.set.bind(EmailCampaignService);
-  }
-  
+
   const campaignData: Record<string, unknown> = {
     ...fullCampaign,
     createdAt: fullCampaign.createdAt.toISOString(),
     updatedAt: fullCampaign.updatedAt.toISOString(),
   };
-  
+
   // Only add optional date fields if they exist
   if (fullCampaign.scheduledFor) {
     campaignData.scheduledFor = fullCampaign.scheduledFor.toISOString();
@@ -156,8 +140,20 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
   if (fullCampaign.sentAt) {
     campaignData.sentAt = fullCampaign.sentAt.toISOString();
   }
-  
-  await saveCampaign(fullCampaign.organizationId, campaignId, campaignData);
+
+  if (isTest) {
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+    await AdminFirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${fullCampaign.organizationId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
+      campaignId,
+      campaignData,
+      false
+    );
+  } else {
+    const { EmailCampaignService } = await import('@/lib/db/firestore-service');
+    await EmailCampaignService.set(campaignId, campaignData);
+  }
 
   return fullCampaign;
 }
@@ -166,12 +162,9 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
  * Send email campaign
  */
 export async function sendCampaign(campaignId: string): Promise<{ success: boolean; error?: string }> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-  const organizationId = DEFAULT_ORG_ID;
-
   // Load campaign from Firestore
   const { EmailCampaignService } = await import('@/lib/db/firestore-service');
-  const campaignData = await EmailCampaignService.get(organizationId, campaignId);
+  const campaignData = await EmailCampaignService.get(campaignId);
   
   if (!campaignData) {
     return { success: false, error: 'Campaign not found' };
@@ -317,7 +310,7 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
     campaign.updatedAt = new Date();
 
     // Save updated campaign to Firestore
-    await EmailCampaignService.set(campaign.organizationId, campaignId, {
+    await EmailCampaignService.set(campaignId, {
       ...campaign,
       createdAt: campaign.createdAt.toISOString(),
       updatedAt: campaign.updatedAt.toISOString(),
@@ -351,12 +344,9 @@ function determineABTestWinner(
  * Get campaign statistics
  */
 export async function getCampaignStats(campaignId: string): Promise<CampaignStats | null> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-  const organizationId = DEFAULT_ORG_ID;
-
   // Load campaign from Firestore
   const { EmailCampaignService } = await import('@/lib/db/firestore-service');
-  const campaignData = await EmailCampaignService.get(organizationId, campaignId);
+  const campaignData = await EmailCampaignService.get(campaignId);
   
   if (!campaignData) {
     return null;
@@ -402,7 +392,6 @@ export async function listCampaigns(
   const { EmailCampaignService } = await import('@/lib/db/firestore-service');
   const { orderBy } = await import('firebase/firestore');
   const result = await EmailCampaignService.getAllPaginated(
-    organizationId,
     [orderBy('createdAt', 'desc')],
     Math.min(pageSize, 100) // Max 100 per page
   );

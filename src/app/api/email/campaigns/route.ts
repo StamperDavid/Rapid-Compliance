@@ -5,6 +5,7 @@ import { campaignActionSchema, validateInput, organizationIdSchema } from '@/lib
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+    const { user: _user } = authResult;
 
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user has access to this organization
-    if (user.organizationId !== organizationId) {
+    if (DEFAULT_ORG_ID !== organizationId) {
       return errors.forbidden('Access denied to this organization');
     }
 
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
     const { action, campaign, campaignId, organizationId } = validation.data;
 
     // Verify user has access to this organization
-    if (user.organizationId !== organizationId) {
+    if (DEFAULT_ORG_ID !== organizationId) {
       return errors.forbidden('Access denied to this organization');
     }
 

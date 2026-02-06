@@ -30,13 +30,12 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    * 5. Return ready-to-use instance
    */
   async spawnInstance(customerId: string): Promise<AgentInstance> {
-    const orgId = DEFAULT_ORG_ID;
-    logger.info('Spawning agent instance', { customerId, orgId });
+    logger.info('Spawning agent instance', { customerId, orgId: DEFAULT_ORG_ID });
 
     // 1. Get active Golden Master
     const goldenMaster = await this.getActiveGoldenMaster();
     if (!goldenMaster) {
-      logger.error('No active Golden Master found', new Error('No active Golden Master found'), { orgId });
+      logger.error('No active Golden Master found', new Error('No active Golden Master found'), { orgId: DEFAULT_ORG_ID });
       throw new Error('No active Golden Master found. Please deploy a Golden Master first.');
     }
 
@@ -44,7 +43,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     // 2. Load or create customer memory
     let customerMemory = await this.getCustomerMemory(customerId);
     if (!customerMemory) {
-      logger.info('New customer detected, creating memory record', { customerId, orgId });
+      logger.info('New customer detected, creating memory record', { customerId, orgId: DEFAULT_ORG_ID });
       customerMemory = await this.createCustomerMemory(customerId);
     }
     
@@ -70,13 +69,12 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     
     // 4. Compile system prompt with customer context
     const systemPrompt = this.compileSystemPrompt(goldenMaster, customerMemory);
-    
+
     // 5. Create instance
     const instance: AgentInstance = {
       instanceId: this.generateInstanceId(),
       sessionId,
       customerId,
-      orgId,
       goldenMasterId: goldenMaster.id,
       goldenMasterVersion: goldenMaster.version,
       systemPrompt,
@@ -592,10 +590,9 @@ ${this.summarizeRecentConversations(customerMemory)}
   // ===== Database/Storage Methods =====
 
   private async getActiveGoldenMaster(): Promise<GoldenMaster | null> {
-    const orgId = DEFAULT_ORG_ID;
     try {
-      logger.info(`Instance Manager Fetching Golden Masters for org: ${orgId}`, { file: 'instance-manager.ts' });
-      
+      logger.info(`Instance Manager Fetching Golden Masters for org: ${DEFAULT_ORG_ID}`, { file: 'instance-manager.ts' });
+
       // Prefer admin SDK to bypass security rules
       try {
         const { adminDb } = await import('@/lib/firebase/admin');
@@ -605,17 +602,17 @@ ${this.summarizeRecentConversations(customerMemory)}
           const snap = await adminDb
             .collection(goldenMastersPath)
             .get();
-          
+
           const goldenMasters = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as GoldenMaster[];
-          logger.info('Instance Manager Found Golden Masters (admin SDK)', { 
-            count: goldenMasters.length, 
-            file: 'instance-manager.ts' 
+          logger.info('Instance Manager Found Golden Masters (admin SDK)', {
+            count: goldenMasters.length,
+            file: 'instance-manager.ts'
           });
-          
+
           const active = goldenMasters.find((gm) => gm.isActive === true);
-          logger.info('Instance Manager Active Golden Master', { 
+          logger.info('Instance Manager Active Golden Master', {
             activeId: active ? active.id : 'NONE',
-            file: 'instance-manager.ts' 
+            file: 'instance-manager.ts'
           });
           return active ?? null;
         }
@@ -625,11 +622,11 @@ ${this.summarizeRecentConversations(customerMemory)}
           file: 'instance-manager.ts'
         });
       }
-      
+
       // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
         []
       );
       logger.info(`Instance Manager Found ${goldenMasters.length} Golden Masters (client SDK)`, { file: 'instance-manager.ts' });
@@ -643,7 +640,6 @@ ${this.summarizeRecentConversations(customerMemory)}
 
 
   private async getCustomerMemory(customerId: string): Promise<CustomerMemory | null> {
-    const orgId = DEFAULT_ORG_ID;
     try {
       // Prefer admin SDK
       try {
@@ -655,7 +651,7 @@ ${this.summarizeRecentConversations(customerMemory)}
             .collection(customerMemoriesPath)
             .doc(customerId)
             .get();
-          
+
           if (doc.exists) {
             return { id: doc.id, ...doc.data() } as unknown as CustomerMemory;
           }
@@ -664,11 +660,11 @@ ${this.summarizeRecentConversations(customerMemory)}
       } catch (_adminError) {
         logger.warn('[Instance Manager] Admin SDK failed for customer memory, using client SDK', { file: 'instance-manager.ts' });
       }
-      
+
       // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       return await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
         customerId
       );
     } catch (error) {
@@ -679,10 +675,8 @@ ${this.summarizeRecentConversations(customerMemory)}
 
 
   private async createCustomerMemory(customerId: string): Promise<CustomerMemory> {
-    const orgId = DEFAULT_ORG_ID;
     const memory: CustomerMemory = {
       customerId,
-      orgId,
       sessions: [],
       conversationHistory: [],
       preferences: {
@@ -747,11 +741,11 @@ ${this.summarizeRecentConversations(customerMemory)}
       } catch (_adminError) {
         logger.warn('[Instance Manager] Admin SDK failed for saving memory, using client SDK', { file: 'instance-manager.ts' });
       }
-      
+
       // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${memory.orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
         memory.customerId,
         memory,
         true
@@ -767,7 +761,7 @@ ${this.summarizeRecentConversations(customerMemory)}
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${instance.orgId}/activeInstances`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/activeInstances`,
         instance.instanceId,
         {
           ...instance,
@@ -810,7 +804,7 @@ ${this.summarizeRecentConversations(customerMemory)}
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${instance.orgId}/archivedInstances`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/archivedInstances`,
         instance.instanceId,
         {
           ...instance,
@@ -857,10 +851,9 @@ ${this.summarizeRecentConversations(customerMemory)}
    * Get available tools for an agent instance
    */
   getAvailableTools(userId?: string): ToolDefinition[] {
-    const orgId = DEFAULT_ORG_ID;
     const pluginManager = getPluginManager();
     const context: ToolContext = {
-      organizationId: orgId,
+      organizationId: DEFAULT_ORG_ID,
       userId,
       permissions: ['*'], // In production, fetch actual permissions
     };
@@ -875,10 +868,9 @@ ${this.summarizeRecentConversations(customerMemory)}
     input: unknown,
     userId?: string
   ): Promise<{ success: boolean; data?: unknown; error?: string }> {
-    const orgId = DEFAULT_ORG_ID;
     const pluginManager = getPluginManager();
     const context: ToolContext = {
-      organizationId: orgId,
+      organizationId: DEFAULT_ORG_ID,
       userId,
       permissions: ['*'], // In production, fetch actual permissions
     };
@@ -900,10 +892,9 @@ ${this.summarizeRecentConversations(customerMemory)}
     description: string;
     parameters: Record<string, unknown>;
   }> {
-    const orgId = DEFAULT_ORG_ID;
     const pluginManager = getPluginManager();
     const context: ToolContext = {
-      organizationId: orgId,
+      organizationId: DEFAULT_ORG_ID,
       userId,
       permissions: ['*'],
     };

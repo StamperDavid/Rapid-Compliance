@@ -10,7 +10,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface TTSPostBody {
   text?: string;
-  organizationId?: string;
+  DEFAULT_ORG_ID?: string;
   engine?: TTSEngineType;
   voiceId?: string;
   settings?: Record<string, unknown>;
@@ -28,7 +28,6 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
     const engine = searchParams.get('engine') as TTSEngineType | null;
     const action = searchParams.get('action');
 
@@ -40,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     // Get org config
     if (action === 'config') {
-      const config = await VoiceEngineFactory.getOrgConfig(orgId);
+      const config = await VoiceEngineFactory.getOrgConfig(DEFAULT_ORG_ID);
       return NextResponse.json({ success: true, config });
     }
 
@@ -52,7 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get voices for an engine
-    const voices = await VoiceEngineFactory.listVoices(orgId, engine ?? undefined);
+    const voices = await VoiceEngineFactory.listVoices(DEFAULT_ORG_ID, engine ?? undefined);
     return NextResponse.json({ success: true, voices, engine: engine ?? 'native' });
   } catch (error) {
     console.error('TTS GET error:', error);
@@ -72,7 +71,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as TTSPostBody;
     const { text, engine, voiceId, settings, action, apiKey, config, userId } = body;
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const organizationId = DEFAULT_ORG_ID;
 
     // Validate API key
     if (action === 'validate-key') {
@@ -94,7 +92,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      await VoiceEngineFactory.saveOrgConfig(organizationId, config, userId);
+      await VoiceEngineFactory.saveOrgConfig(DEFAULT_ORG_ID, config, userId);
       return NextResponse.json({ success: true });
     }
 
@@ -116,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     const synthesizeRequest: TTSSynthesizeRequest = {
       text,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       engine,
       voiceId,
       settings,

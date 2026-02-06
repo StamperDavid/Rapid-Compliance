@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = request.nextUrl;
-    const organizationId = DEFAULT_ORG_ID;
     const type = searchParams.get('type'); // Filter by event type
     const pageId = searchParams.get('pageId'); // Filter by page
     const postId = searchParams.get('postId'); // Filter by blog post
@@ -43,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     const auditRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/audit-log/entries',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
     let query: Query<DocumentData> = auditRef.orderBy('performedAt', 'desc');
 
@@ -68,11 +67,11 @@ export async function GET(request: NextRequest) {
       const data = doc.data() as AuditEntry;
 
       // CRITICAL: Double-check organizationId matches
-      if (data.organizationId && data.organizationId !== organizationId) {
+      if (data.organizationId && data.organizationId !== DEFAULT_ORG_ID) {
         logger.error('[SECURITY] Audit log organizationId mismatch', new Error('Audit log cross-org access'), {
           route: '/api/website/audit-log',
           method: 'GET',
-          requested: organizationId,
+          requested: DEFAULT_ORG_ID,
           actual: data.organizationId,
           entryId: doc.id,
         });

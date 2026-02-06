@@ -10,6 +10,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { Timestamp } from 'firebase-admin/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -97,8 +98,7 @@ export async function GET(request: NextRequest) {
       return authResult;
     }
 
-    const { user } = authResult;
-    const organizationId = user.organizationId;
+    const { user: _user } = authResult;
     const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get('limit');
     const limit = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
@@ -106,13 +106,12 @@ export async function GET(request: NextRequest) {
     const sequenceIdForLog = (sequenceId !== '' && sequenceId != null) ? sequenceId : 'all';
 
     logger.info('[Executions API] Fetching recent executions', {
-      organizationId,
       limit,
       sequenceId: sequenceIdForLog,
     });
 
     const sequenceIdFilter = (sequenceId !== '' && sequenceId != null) ? sequenceId : undefined;
-    const executions = await getRecentExecutions(organizationId, limit, sequenceIdFilter);
+    const executions = await getRecentExecutions(DEFAULT_ORG_ID, limit, sequenceIdFilter);
 
     return NextResponse.json({ executions });
 

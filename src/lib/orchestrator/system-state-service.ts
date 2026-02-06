@@ -232,7 +232,6 @@ export async function validateClaim(
  * This ensures Jasper has accurate data BEFORE generating a response.
  */
 export async function generateStateContext(): Promise<string> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     const state = await executeGetSystemState();
 
@@ -256,8 +255,8 @@ PROVISIONER STATUS:
 - Recent Errors: ${state.provisioner.recentErrors.length}
 - Last Success: ${state.provisioner.lastSuccessfulProvision ?? 'N/A'}
 
-${organizationId ? `
-FEATURE CONFIGURATION (${organizationId}):
+${DEFAULT_ORG_ID ? `
+FEATURE CONFIGURATION (${DEFAULT_ORG_ID}):
 - Configured: ${state.features.configured.join(', ') || 'None'}
 - Unconfigured: ${state.features.unconfigured.join(', ') || 'None'}
 ` : ''}

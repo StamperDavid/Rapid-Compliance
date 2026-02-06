@@ -44,11 +44,9 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const organizationId = DEFAULT_ORG_ID;
-
     const domainsRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/config/custom-domains',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
     const snapshot = await domainsRef.get();
 
@@ -87,7 +85,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json() as RequestBody;
     const { domain } = body;
-    const organizationId = DEFAULT_ORG_ID;
 
     if (!domain) {
       return NextResponse.json(
@@ -127,7 +124,7 @@ export async function POST(request: NextRequest) {
     const dnsRecords = generateDNSRecords(domain, verificationMethod);
 
     const domainData: DomainData = {
-      organizationId, // CRITICAL: Set ownership
+      organizationId: DEFAULT_ORG_ID, // CRITICAL: Set ownership
       verified: false,
       verificationMethod,
       verificationValue: generateVerificationToken(),
@@ -142,7 +139,7 @@ export async function POST(request: NextRequest) {
     // Save domain using domain name as document ID
     const domainsRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/config/custom-domains',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
     const domainRef = domainsRef.doc(domain);
     await domainRef.set(domainData);
@@ -150,7 +147,7 @@ export async function POST(request: NextRequest) {
     // Also save to global domains collection for quick lookup
     const globalDomainsRef = adminDal.getNestedCollection('custom-domains');
     await globalDomainsRef.doc(domain).set({
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       createdAt: FieldValue.serverTimestamp(),
     });
 

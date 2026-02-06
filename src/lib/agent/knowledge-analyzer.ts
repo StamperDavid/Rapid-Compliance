@@ -79,7 +79,6 @@ export async function analyzeCompanyKnowledge(
   faqPageUrl?: string,
   socialMediaUrls?: string[]
 ): Promise<KnowledgeAnalysisResult> {
-  const organizationId = DEFAULT_ORG_ID;
   const workspaceId = 'default';
   // REAL: Perform actual analysis
   logger.info('Starting knowledge analysis...', { file: 'knowledge-analyzer.ts' });
@@ -171,12 +170,12 @@ export async function analyzeCompanyKnowledge(
     socialMediaUrls,
     result: mockResult,
     analyzedAt: new Date().toISOString(),
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     workspaceId,
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeAnalyses`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeAnalyses`,
     analysisId,
     analysisResult,
     false
@@ -435,7 +434,6 @@ interface CRMProductRecord {
  * Queries the CRM that's already part of the platform
  */
 async function scanCRMForProducts(): Promise<KnowledgeAnalysisResult['crmProducts']> {
-  const organizationId = DEFAULT_ORG_ID;
   const workspaceId = 'default';
   // Query CRM products:
   // 1. Query built-in CRM using organizationId/workspaceId
@@ -447,7 +445,7 @@ async function scanCRMForProducts(): Promise<KnowledgeAnalysisResult['crmProduct
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const products = await FirestoreService.getAll<CRMProductRecord>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/products`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/products`,
       []
     );
 
@@ -490,7 +488,6 @@ interface CRMServiceRecord {
  * Queries the CRM that's already part of the platform
  */
 async function scanCRMForServices(): Promise<KnowledgeAnalysisResult['crmServices']> {
-  const organizationId = DEFAULT_ORG_ID;
   const workspaceId = 'default';
   // Query CRM services:
   // 1. Query built-in CRM using organizationId/workspaceId
@@ -502,7 +499,7 @@ async function scanCRMForServices(): Promise<KnowledgeAnalysisResult['crmService
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const services = await FirestoreService.getAll<CRMServiceRecord>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/services`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/services`,
       []
     );
 
@@ -532,7 +529,6 @@ async function scanCRMForServices(): Promise<KnowledgeAnalysisResult['crmService
 export async function buildKnowledgeBase(
   analysisResult: KnowledgeAnalysisResult
 ): Promise<string> {
-  const organizationId = DEFAULT_ORG_ID;
   // Structure all knowledge into searchable format
   const knowledgeBaseId = `kb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
@@ -623,11 +619,11 @@ export async function buildKnowledgeBase(
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBases`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBases`,
       knowledgeBaseId,
       {
         id: knowledgeBaseId,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         documents,
         createdAt: new Date().toISOString(),
         documentCount: documents.length

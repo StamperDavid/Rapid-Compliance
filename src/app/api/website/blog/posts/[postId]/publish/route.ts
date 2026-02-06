@@ -69,11 +69,10 @@ export async function POST(
     }
 
     const { scheduledFor } = bodyResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId }
+      { orgId: DEFAULT_ORG_ID, postId }
     );
 
     const doc = await postRef.get();
@@ -129,7 +128,7 @@ export async function POST(
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/audit-log/entries',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     await auditRef.add({
@@ -139,7 +138,7 @@ export async function POST(
       scheduledFor: scheduledFor ?? null,
       performedBy,
       performedAt: now,
-      organizationId,
+      DEFAULT_ORG_ID,
     });
 
     return NextResponse.json({
@@ -183,11 +182,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
     }
     const { postId } = paramsResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId }
+      { orgId: DEFAULT_ORG_ID, postId }
     );
 
     const doc = await postRef.get();
@@ -215,7 +213,7 @@ export async function DELETE(
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/audit-log/entries',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     await auditRef.add({
@@ -224,7 +222,7 @@ export async function DELETE(
       postTitle: postData?.title ?? '',
       performedBy,
       performedAt: now,
-      organizationId,
+      DEFAULT_ORG_ID,
     });
 
     return NextResponse.json({

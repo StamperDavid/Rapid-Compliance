@@ -32,11 +32,9 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const organizationId = DEFAULT_ORG_ID;
-
     const settingsRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/settings',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
     const doc = await settingsRef.get();
 
@@ -102,17 +100,16 @@ export async function POST(request: NextRequest) {
     }
 
     const { settings } = bodyResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     const settingsRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/settings',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     // CRITICAL: Ensure organizationId is in the data
     const settingsData: Record<string, unknown> = {
       ...settings,
-      organizationId, // Force correct organizationId
+      organizationId: DEFAULT_ORG_ID, // Force correct organizationId
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -162,17 +159,16 @@ export async function PUT(request: NextRequest) {
     }
 
     const { settings } = bodyResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     const settingsRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/settings',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     // CRITICAL: Ensure organizationId is in the data
     const settingsData: Record<string, unknown> = {
       ...settings,
-      organizationId, // Force correct organizationId
+      organizationId: DEFAULT_ORG_ID, // Force correct organizationId
       updatedAt: FieldValue.serverTimestamp(),
     };
 

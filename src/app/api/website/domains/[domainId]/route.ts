@@ -24,12 +24,11 @@ export async function DELETE(
     }
 
     const params = await context.params;
-    const organizationId = DEFAULT_ORG_ID;
     const domainId = decodeURIComponent(params.domainId);
 
     const domainRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/custom-domains/{domainId}',
-      { orgId: organizationId, domainId }
+      { orgId: DEFAULT_ORG_ID, domainId }
     );
 
     const doc = await domainRef.get();
@@ -49,7 +48,7 @@ export async function DELETE(
       logger.error('Vercel integration error during domain deletion', vercelError instanceof Error ? vercelError : new Error(String(vercelError)), {
         route: '/api/website/domains/[domainId]',
         domainId,
-        organizationId
+        DEFAULT_ORG_ID
       });
       // Continue even if Vercel API fails
     }
@@ -66,7 +65,7 @@ export async function DELETE(
 
     const auditRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/audit-log/entries',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     await auditRef.add({
@@ -74,7 +73,7 @@ export async function DELETE(
       domainId,
       performedBy,
       performedAt: new Date().toISOString(),
-      organizationId,
+      DEFAULT_ORG_ID,
     });
 
     return NextResponse.json({

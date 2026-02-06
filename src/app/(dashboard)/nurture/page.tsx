@@ -21,16 +21,15 @@ import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function NurtureCampaignsPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
 
   // Fetch function with pagination using service layer
   const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getNurtureCampaigns(
-      orgId,
+      DEFAULT_ORG_ID,
       undefined,
       { pageSize: 50, lastDoc }
     );
-  }, [orgId]);
+  }, []);
 
   const {
     data: campaigns,

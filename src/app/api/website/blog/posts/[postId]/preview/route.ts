@@ -71,11 +71,10 @@ export async function POST(
     }
 
     const { expiresIn } = bodyResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId }
+      { orgId: DEFAULT_ORG_ID, postId }
     );
 
     const doc = await postRef.get();
@@ -97,13 +96,13 @@ export async function POST(
 
     const tokenRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/preview-tokens/tokens/{token}',
-      { orgId: organizationId, token: previewToken }
+      { orgId: DEFAULT_ORG_ID, token: previewToken }
     );
 
     await tokenRef.set({
       postId,
       type: 'blog-post',
-      organizationId,
+      DEFAULT_ORG_ID,
       createdAt: new Date().toISOString(),
       expiresAt: expiresAt.toISOString(),
       createdBy: performedBy,
@@ -165,12 +164,11 @@ export async function GET(
     }
 
     const { token } = queryResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Verify preview token
     const tokenRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/preview-tokens/tokens/{token}',
-      { orgId: organizationId, token }
+      { orgId: DEFAULT_ORG_ID, token }
     );
 
     const tokenDoc = await tokenRef.get();
@@ -206,7 +204,7 @@ export async function GET(
     // Get the post data
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId }
+      { orgId: DEFAULT_ORG_ID, postId }
     );
 
     const doc = await postRef.get();

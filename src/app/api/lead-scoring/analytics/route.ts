@@ -76,7 +76,6 @@ export async function GET(req: NextRequest) {
     await getAuth(adminApp).verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
-    const organizationId = DEFAULT_ORG_ID;
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
 
@@ -87,7 +86,7 @@ export async function GET(req: NextRequest) {
       : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     logger.info('Generating lead scoring analytics', {
-      organizationId,
+      DEFAULT_ORG_ID,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     });
@@ -95,7 +94,7 @@ export async function GET(req: NextRequest) {
     // Get all lead scores in date range
     const scoresRef = adminDal.getNestedCollection(
       'organizations/{orgId}/leadScores',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
     const snapshot = await scoresRef.get();
 

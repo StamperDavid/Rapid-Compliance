@@ -129,7 +129,6 @@ export async function researchProspect(
  */
 async function getCompanyInfo(companyName: string): Promise<CompanyInfo> {
   const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-  const orgId = DEFAULT_ORG_ID;
   const { enrichCompany } = await import('../enrichment/enrichment-service');
 
   try {
@@ -140,9 +139,7 @@ async function getCompanyInfo(companyName: string): Promise<CompanyInfo> {
         includeNews: false, // We get news separately
         includeJobs: false, // We get hiring signals separately
         includeSocial: false, // We get social separately
-      },
-      orgId
-    );
+      }, DEFAULT_ORG_ID);
     
     if (result.success && result.data) {
       const data = result.data;

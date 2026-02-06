@@ -6,8 +6,6 @@
 
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/useToast';
@@ -19,7 +17,6 @@ interface PagesResponse {
 
 export default function PagesManagementPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const toast = useToast();
 
   const [pages, setPages] = useState<Page[]>([]);
@@ -30,8 +27,8 @@ export default function PagesManagementPage() {
     try {
       setLoading(true);
       const url = filter === 'all'
-        ? `/api/website/pages?organizationId=${orgId}`
-        : `/api/website/pages?organizationId=${orgId}&status=${filter}`;
+        ? '/api/website/pages'
+        : `/api/website/pages?status=${filter}`;
 
       const response = await fetch(url);
 
@@ -47,7 +44,7 @@ export default function PagesManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, filter, toast]);
+  }, [filter, toast]);
 
   useEffect(() => {
     void loadPages();
@@ -59,7 +56,7 @@ export default function PagesManagementPage() {
     void (async () => {
       try {
         const response = await fetch(
-          `/api/website/pages/${pageId}?organizationId=${orgId}`,
+          `/api/website/pages/${pageId}`,
           { method: 'DELETE' }
         );
 
@@ -90,7 +87,6 @@ export default function PagesManagementPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
           page: duplicatedPage,
         }),
       });

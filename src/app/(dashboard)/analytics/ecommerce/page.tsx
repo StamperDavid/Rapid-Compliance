@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -37,8 +35,6 @@ function isEcommerceAnalytics(data: unknown): data is EcommerceAnalytics {
 }
 
 export default function EcommerceAnalyticsPage() {
-  const orgId = DEFAULT_ORG_ID;
-
   const { theme } = useOrgTheme();
   const [analytics, setAnalytics] = useState<EcommerceAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +42,7 @@ export default function EcommerceAnalyticsPage() {
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/analytics/ecommerce?orgId=${orgId}`);
+      const response = await fetch('/api/analytics/ecommerce');
       const data = await response.json() as { success?: boolean; analytics?: unknown };
       if (data.success && isEcommerceAnalytics(data.analytics)) {
         setAnalytics(data.analytics);
@@ -56,7 +52,7 @@ export default function EcommerceAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadAnalytics();

@@ -109,11 +109,10 @@ export function collectWebVitals(callback: (metrics: PerformanceMetrics) => void
  * Report performance metrics to analytics
  */
 export function reportPerformance(metrics: PerformanceMetrics): void {
-  const organizationId = DEFAULT_ORG_ID;
   // Send to analytics endpoint
   if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
     const data = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       metrics,
       timestamp: Date.now(),
       url: window.location.href,

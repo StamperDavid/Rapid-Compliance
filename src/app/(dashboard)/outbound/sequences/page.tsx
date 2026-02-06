@@ -13,7 +13,6 @@ import { logger } from '@/lib/logger/logger';
 export default function EmailSequencesPage() {
   const { user } = useAuth();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
 
   const [sequences, setSequences] = useState<OutboundSequence[]>([]);
   const [enrollments, setEnrollments] = useState<ProspectEnrollment[]>([]);
@@ -23,7 +22,7 @@ export default function EmailSequencesPage() {
 
   // Load sequences from Firestore
   useEffect(() => {
-    if (!orgId) {return;}
+    if (!DEFAULT_ORG_ID) {return;}
 
     const loadData = async () => {
       try {
@@ -31,14 +30,14 @@ export default function EmailSequencesPage() {
         
         // Load sequences
         const seqs = await FirestoreService.getAll<OutboundSequence>(
-          `${COLLECTIONS.ORGANIZATIONS}/${orgId}/sequences`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
           []
         );
         setSequences(seqs);
 
         // Load enrollments
         const enr = await FirestoreService.getAll<ProspectEnrollment>(
-          `${COLLECTIONS.ORGANIZATIONS}/${orgId}/sequenceEnrollments`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequenceEnrollments`,
           []
         );
         setEnrollments(enr);
@@ -50,10 +49,10 @@ export default function EmailSequencesPage() {
     };
 
     void loadData();
-  }, [orgId]);
+  }, []);
 
   const handleCreateSequence = async (name: string, description: string) => {
-    if (!orgId || !user) {return;}
+    if (!DEFAULT_ORG_ID || !user) {return;}
 
     try {
       const sequenceId = `seq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -102,7 +101,7 @@ export default function EmailSequencesPage() {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/sequences`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
         sequenceId,
         newSequence,
         false
@@ -119,7 +118,7 @@ export default function EmailSequencesPage() {
   const handleActivateSequence = async (sequenceId: string) => {
     try {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/sequences`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
         sequenceId,
         { status: 'active' }
       );
@@ -136,7 +135,7 @@ export default function EmailSequencesPage() {
   const handlePauseSequence = async (sequenceId: string) => {
     try {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/sequences`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
         sequenceId,
         { status: 'paused' }
       );

@@ -19,7 +19,6 @@ export default function EditNurtureCampaignPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
   const campaignId = params.id as string;
   const [campaign, setCampaign] = useState<NurtureCampaignData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,14 +26,14 @@ export default function EditNurtureCampaignPage() {
 
   const loadCampaign = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${orgId}/nurtureSequences`, campaignId);
+      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/nurtureSequences`, campaignId);
       setCampaign(data as NurtureCampaignData);
     } catch (error) {
       logger.error('Error loading campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [orgId, campaignId]);
+  }, [campaignId]);
 
   useEffect(() => {
     void loadCampaign();
@@ -47,7 +46,7 @@ export default function EditNurtureCampaignPage() {
 
     try {
       setSaving(true);
-      await FirestoreService.update(`organizations/${orgId}/nurtureSequences`, campaignId, { ...campaign, updatedAt: Timestamp.now() });
+      await FirestoreService.update(`organizations/${DEFAULT_ORG_ID}/nurtureSequences`, campaignId, { ...campaign, updatedAt: Timestamp.now() });
       router.push(`/nurture`);
     } catch (error) {
       logger.error('Error saving campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

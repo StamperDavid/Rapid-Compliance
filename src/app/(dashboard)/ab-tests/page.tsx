@@ -19,7 +19,6 @@ interface ABTest {
 
 export default function ABTestsPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
 
   // Fetch function with pagination
   const fetchTests = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
@@ -32,7 +31,7 @@ export default function ABTestsPage() {
     ];
 
     const result = await FirestoreService.getAllPaginated(
-      `organizations/${orgId}/abTests`,
+      `organizations/${DEFAULT_ORG_ID}/abTests`,
       constraints,
       50,
       lastDoc
@@ -42,7 +41,7 @@ export default function ABTestsPage() {
       lastDoc: result.lastDoc,
       hasMore: result.hasMore,
     };
-  }, [orgId]);
+  }, []);
 
   const {
     data: tests,

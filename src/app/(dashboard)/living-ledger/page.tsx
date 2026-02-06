@@ -62,12 +62,10 @@ export default function LivingLedgerPage() {
       try {
         // For demo purposes, using mock data
         // In production, this would fetch from Firestore
-        const userOrgId = user?.organizationId;
-        const defaultOrgId = (userOrgId ?? DEFAULT_ORG_ID);
         const mockDeals: Deal[] = [
           {
             id: 'deal-1',
-            organizationId: defaultOrgId,
+            organizationId: DEFAULT_ORG_ID,
             workspaceId: 'default',
             name: 'Q1 2024 Enterprise Contract - Acme Corp',
             companyName: 'Acme Corp',
@@ -79,7 +77,7 @@ export default function LivingLedgerPage() {
           },
           {
             id: 'deal-2',
-            organizationId: defaultOrgId,
+            organizationId: DEFAULT_ORG_ID,
             workspaceId: 'default',
             name: 'Startup Package - TechFlow',
             companyName: 'TechFlow Inc',
@@ -91,7 +89,7 @@ export default function LivingLedgerPage() {
           },
           {
             id: 'deal-3',
-            organizationId: defaultOrgId,
+            organizationId: DEFAULT_ORG_ID,
             workspaceId: 'default',
             name: 'Consulting Services - Global Industries',
             companyName: 'Global Industries',
@@ -123,14 +121,14 @@ export default function LivingLedgerPage() {
   // Load health score for selected deal
   useEffect(() => {
     const loadHealthScore = async () => {
-      if (!selectedDealId || !user?.organizationId) {return;}
+      if (!selectedDealId || !user) {return;}
 
       try {
         const response = await fetch(
           `/api/crm/deals/${selectedDealId}/health`,
           {
             headers: {
-              'x-organization-id': user.organizationId,
+              'x-organization-id': DEFAULT_ORG_ID,
               'x-workspace-id': 'default',
             },
           }
@@ -151,14 +149,14 @@ export default function LivingLedgerPage() {
   // Load recommendations for selected deal
   useEffect(() => {
     const loadRecommendations = async () => {
-      if (!selectedDealId || !user?.organizationId) {return;}
+      if (!selectedDealId || !user) {return;}
 
       try {
         const response = await fetch(
           `/api/crm/deals/${selectedDealId}/recommendations`,
           {
             headers: {
-              'x-organization-id': user.organizationId,
+              'x-organization-id': DEFAULT_ORG_ID,
               'x-workspace-id': 'default',
             },
           }
@@ -183,7 +181,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': (() => { const v = user?.organizationId; return (v !== '' && v != null) ? v : DEFAULT_ORG_ID; })(),
+          'x-organization-id': DEFAULT_ORG_ID,
           'x-workspace-id': 'default',
         },
         body: JSON.stringify({
@@ -209,7 +207,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': (() => { const v = user?.organizationId; return (v !== '' && v != null) ? v : DEFAULT_ORG_ID; })(),
+          'x-organization-id': DEFAULT_ORG_ID,
           'x-workspace-id': 'default',
         },
       });

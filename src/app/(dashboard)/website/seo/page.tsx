@@ -32,7 +32,6 @@ interface SettingsResponse {
 }
 
 export default function SEOManagementPage() {
-  const orgId = DEFAULT_ORG_ID;
 
   const [settings, setSettings] = useState<Partial<SiteConfig> | null>(null);
   const [robotsTxt, setRobotsTxt] = useState('');
@@ -44,7 +43,7 @@ export default function SEOManagementPage() {
     try {
       setLoading(true);
 
-      const response = await fetch(`/api/website/settings?organizationId=${orgId}`);
+      const response = await fetch('/api/website/settings');
       if (response.ok) {
         const data = await response.json() as SettingsResponse;
         setSettings(data.settings ?? {});
@@ -70,7 +69,7 @@ export default function SEOManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadSettings();
@@ -95,7 +94,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           settings: {
             ...settings,
             robotsTxt,

@@ -233,7 +233,6 @@ async function incrementalSync(
  * Save message to CRM
  */
 async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     const fromEmail = message.from.emailAddress.address;
 
@@ -243,7 +242,7 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
     // Save email record
     const emailData = {
       id: message.id,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       conversationId: message.conversationId,
       contactId: contact?.id,
       from: `${message.from.emailAddress.name} <${message.from.emailAddress.address}>`,
@@ -268,7 +267,7 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
     };
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
       message.id,
       emailData
     );
@@ -276,7 +275,7 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
     // Update contact with last interaction
     if (contact) {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`,
         contact.id,
         {
           lastContactDate: new Date(message.receivedDateTime),
@@ -295,10 +294,9 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
  * Delete message from CRM
  */
 async function deleteMessageFromCRM(messageId: string): Promise<void> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
       messageId
     );
   } catch (error) {
@@ -361,10 +359,9 @@ export async function sendOutlookEmail(
  * Find contact by email
  */
 async function findContactByEmail(email: string): Promise<OutlookContact | null> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     const contacts = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`
     );
     const contactsFiltered = contacts.filter((c: unknown) => {
       const contact = c as OutlookContact;
@@ -382,10 +379,9 @@ async function findContactByEmail(email: string): Promise<OutlookContact | null>
  * Get last sync status
  */
 async function getLastSyncStatus(): Promise<OutlookSyncStatus | null> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     const status = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
       'outlook-sync'
     );
     return status as OutlookSyncStatus | null;

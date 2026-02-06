@@ -11,6 +11,7 @@ import type { GoldenMasterUpdateRequest } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const ApplyUpdateSchema = z.object({
   updateRequestId: z.string().min(1, 'Update request ID is required'),
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
 
 
     // Verify access
-    if (user.organizationId !== organizationId) {
+    if (DEFAULT_ORG_ID !== organizationId) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }

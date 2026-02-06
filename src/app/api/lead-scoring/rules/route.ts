@@ -76,12 +76,11 @@ export async function GET(req: NextRequest) {
     const token = authHeader.substring(7);
     await getAuth(adminApp).verifyIdToken(token);
 
-    const organizationId = DEFAULT_ORG_ID;
 
     // Get all scoring rules for organization
     const rulesRef = adminDal.getNestedCollection(
       'organizations/{orgId}/scoringRules',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
     const snapshot = await rulesRef.orderBy('createdAt', 'desc').get();
 
@@ -159,7 +158,7 @@ export async function POST(req: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'organizationId and name are required', details: validation.error.issues },
+        { success: false, error: 'DEFAULT_ORG_ID and name are required', details: validation.error.issues },
         { status: 400 }
       );
     }
@@ -202,7 +201,7 @@ export async function POST(req: NextRequest) {
 
     const rulesDocRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/scoringRules/{rulesId}',
-      { orgId: organizationId, rulesId }
+      { orgId: DEFAULT_ORG_ID, rulesId }
     );
 
     await rulesDocRef.set({
@@ -213,7 +212,7 @@ export async function POST(req: NextRequest) {
 
     logger.info('Created scoring rules', {
       rulesId,
-      organizationId,
+      DEFAULT_ORG_ID,
       userId,
     });
 
@@ -269,7 +268,7 @@ export async function PUT(req: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'organizationId and rulesId are required', details: validation.error.issues },
+        { success: false, error: 'DEFAULT_ORG_ID and rulesId are required', details: validation.error.issues },
         { status: 400 }
       );
     }
@@ -295,7 +294,7 @@ export async function PUT(req: NextRequest) {
 
     const rulesDocRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/scoringRules/{rulesId}',
-      { orgId: organizationId, rulesId }
+      { orgId: DEFAULT_ORG_ID, rulesId }
     );
 
     const updateData: Record<string, unknown> = {
@@ -307,7 +306,7 @@ export async function PUT(req: NextRequest) {
 
     await rulesDocRef.update(updateData);
 
-    logger.info('Updated scoring rules', { rulesId, organizationId });
+    logger.info('Updated scoring rules', { rulesId, DEFAULT_ORG_ID });
 
     return NextResponse.json({
       success: true,
@@ -356,7 +355,6 @@ export async function DELETE(req: NextRequest) {
     await getAuth(adminApp).verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
-    const organizationId = DEFAULT_ORG_ID;
     const rulesId = searchParams.get('rulesId');
 
     if (!rulesId) {
@@ -368,12 +366,12 @@ export async function DELETE(req: NextRequest) {
 
     const rulesDocRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/scoringRules/{rulesId}',
-      { orgId: organizationId, rulesId }
+      { orgId: DEFAULT_ORG_ID, rulesId }
     );
 
     await rulesDocRef.delete();
 
-    logger.info('Deleted scoring rules', { rulesId, organizationId });
+    logger.info('Deleted scoring rules', { rulesId, DEFAULT_ORG_ID });
 
     return NextResponse.json({
       success: true,

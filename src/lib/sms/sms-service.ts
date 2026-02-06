@@ -6,6 +6,7 @@
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface SMSOptions {
   to: string | string[];
@@ -423,7 +424,7 @@ export async function getSMSDeliveryStatus(
   // Load from Firestore
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const smsData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/smsMessages`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
     messageId
   );
 

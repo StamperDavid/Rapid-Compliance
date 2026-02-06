@@ -22,7 +22,6 @@ interface Call {
 
 export default function CallLogPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
 
   // Fetch function with pagination
   const fetchCalls = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
@@ -35,7 +34,7 @@ export default function CallLogPage() {
     ];
 
     const result = await FirestoreService.getAllPaginated(
-      `organizations/${orgId}/workspaces/default/calls`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/default/calls`,
       constraints,
       50,
       lastDoc
@@ -45,7 +44,7 @@ export default function CallLogPage() {
       lastDoc: result.lastDoc,
       hasMore: result.hasMore,
     };
-  }, [orgId]);
+  }, []);
 
   const {
     data: calls,

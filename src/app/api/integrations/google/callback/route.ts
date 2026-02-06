@@ -55,7 +55,6 @@ export async function GET(request: NextRequest) {
 
     const { userId } = stateValidation.data;
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
 
     // Exchange code for tokens
     const tokens = await getTokensFromCode(code);
@@ -86,7 +85,7 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date().toISOString(),
       });
 
-    logger.info('Gmail integration saved', { route: '/api/integrations/google/callback', orgId });
+    logger.info('Gmail integration saved', { route: '/api/integrations/google/callback', DEFAULT_ORG_ID });
 
     return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?success=gmail'));
   } catch (error: unknown) {

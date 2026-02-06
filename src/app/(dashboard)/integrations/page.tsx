@@ -41,7 +41,6 @@ const categoryIcons = {
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const toast = useToast();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -61,12 +60,12 @@ export default function IntegrationsPage() {
     ];
 
     return FirestoreService.getAllPaginated(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/integrations`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
       constraints,
       50,
       lastDoc
     );
-  }, [orgId]);
+  }, []);
 
   const {
     data: connectedIntegrations,
@@ -122,7 +121,7 @@ export default function IntegrationsPage() {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/integrations`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
         integration.id,
         integration,
         false
@@ -149,7 +148,7 @@ export default function IntegrationsPage() {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.delete(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/integrations`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
         pendingDisconnectId
       );
       await refresh(); // Refresh pagination

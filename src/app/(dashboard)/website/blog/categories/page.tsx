@@ -15,7 +15,6 @@ import { useToast } from '@/hooks/useToast';
 export default function CategoriesManagementPage() {
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
 
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
@@ -26,7 +25,7 @@ export default function CategoriesManagementPage() {
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/website/blog/categories?organizationId=${orgId}`);
+      const response = await fetch('/api/website/blog/categories');
 
       if (response.ok) {
         const data = await response.json() as { categories?: string[] };
@@ -37,7 +36,7 @@ export default function CategoriesManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadCategories();
@@ -51,7 +50,7 @@ export default function CategoriesManagementPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           categories,
         }),
       });

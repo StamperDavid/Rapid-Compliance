@@ -69,8 +69,6 @@ const item = {
 };
 
 export default function AnalyticsDashboard() {
-  const orgId = DEFAULT_ORG_ID;
-
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
@@ -81,10 +79,10 @@ export default function AnalyticsDashboard() {
       try {
         // Load all analytics in parallel
         const [revenue, pipeline, ecommerce, workflows] = await Promise.all([
-          fetch(`/api/analytics/revenue?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<RevenueAnalytics>>,
-          fetch(`/api/analytics/pipeline?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<PipelineAnalytics>>,
-          fetch(`/api/analytics/ecommerce?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<EcommerceAnalytics>>,
-          fetch(`/api/analytics/workflows?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<WorkflowsAnalytics>>,
+          fetch(`/api/analytics/revenue?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<RevenueAnalytics>>,
+          fetch(`/api/analytics/pipeline?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<PipelineAnalytics>>,
+          fetch(`/api/analytics/ecommerce?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<EcommerceAnalytics>>,
+          fetch(`/api/analytics/workflows?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<WorkflowsAnalytics>>,
         ]);
 
         setAnalytics({
@@ -101,7 +99,7 @@ export default function AnalyticsDashboard() {
     };
 
     void loadAnalytics();
-  }, [orgId, selectedPeriod]);
+  }, [selectedPeriod]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

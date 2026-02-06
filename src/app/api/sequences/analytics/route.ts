@@ -12,6 +12,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -194,39 +195,37 @@ export async function GET(request: NextRequest) {
       return authResult;
     }
 
-    const { user } = authResult;
-    const organizationId = user.organizationId;
+    const { user: _user } = authResult;
     const { searchParams } = new URL(request.url);
     const sequenceId = searchParams.get('sequenceId');
-    
+
     // Date range filtering
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const dateRange = parseDateRange(startDate, endDate);
 
     logger.info('[Analytics API] Fetching analytics', {
-      organizationId,
       sequenceId: (sequenceId !== '' && sequenceId != null) ? sequenceId : 'all',
       dateRange: dateRange ? `${dateRange.start.toISOString()} - ${dateRange.end.toISOString()}` : 'all-time',
     });
 
     // If specific sequence requested, return detailed analytics
     if (sequenceId) {
-      const performance = await getSequencePerformance(organizationId, sequenceId, dateRange);
+      const performance = await getSequencePerformance(DEFAULT_ORG_ID, sequenceId, dateRange);
       if (!performance) {
         return NextResponse.json(
           { error: 'Sequence not found' },
           { status: 404 }
         );
       }
-      
+
       return NextResponse.json({ performance });
     }
 
     // Otherwise, return summary analytics for all sequences
     const [performances, summary] = await Promise.all([
-      getAllSequencePerformances(organizationId, dateRange),
-      getAnalyticsSummary(organizationId, dateRange),
+      getAllSequencePerformances(DEFAULT_ORG_ID, dateRange),
+      getAnalyticsSummary(DEFAULT_ORG_ID, dateRange),
     ]);
 
     return NextResponse.json({

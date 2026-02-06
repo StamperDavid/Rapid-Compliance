@@ -9,8 +9,9 @@ import FilterBuilder from '@/components/FilterBuilder';
 import { FilterEngine } from '@/lib/filters/filter-engine';
 import type { ViewFilter } from '@/types/filters';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrgTheme } from '@/hooks/useOrgTheme'
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
 
@@ -177,16 +178,17 @@ function CRMContent() {
 
   // Load configuration from Firestore
   useEffect(() => {
-    if (!user?.organizationId) {return;}
-    
+    if (!user) {return;}
+
     const loadConfig = async () => {
       try {
+        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         const configData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/crmConfig`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/crmConfig`,
           'default'
         );
-        
+
         if (configData) {
           setConfig(configData as CRMConfig);
         }
@@ -197,7 +199,7 @@ function CRMContent() {
     };
 
     void loadConfig();
-  }, [user?.organizationId]);
+  }, [user]);
 
   // Sample data with setters
   const [leads, setLeads] = useState<Lead[]>([
@@ -391,7 +393,7 @@ function CRMContent() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            organizationId: user?.organizationId,
+            organizationId: DEFAULT_ORG_ID,
             additionalRecords: totalRows,
           }),
         });
@@ -512,7 +514,7 @@ function CRMContent() {
       }}>
         {/* Brand */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid #1a1a1a' }}>
-          <Link href={user?.organizationId ? `/dashboard` : '/login'} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', cursor: 'pointer' }}>
+          <Link href={user ? `/dashboard` : '/login'} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', cursor: 'pointer' }}>
             {logoUrl ? (
               <Image src={logoUrl} alt={brandName} width={sidebarOpen ? 150 : 32} height={sidebarOpen ? 40 : 32} style={{ maxHeight: sidebarOpen ? '40px' : '32px', maxWidth: sidebarOpen ? '150px' : '32px', objectFit: 'contain' }} />
             ) : (
@@ -537,7 +539,7 @@ function CRMContent() {
         <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
           {/* Dashboard Link */}
           <Link
-            href={user?.organizationId ? `/dashboard` : '/login'}
+            href={user ? `/dashboard` : '/login'}
             style={{
               width: '100%',
               padding: '0.875rem 1.25rem',

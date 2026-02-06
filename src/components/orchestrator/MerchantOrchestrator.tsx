@@ -24,10 +24,7 @@ import {
 } from '@/lib/ai/persona-mapper';
 import { ImplementationGuide, type ImplementationContext } from '@/lib/orchestrator/implementation-guide';
 import { SystemHealthService, type SystemHealthReport } from '@/lib/orchestrator/system-health-service';
-
-interface MerchantOrchestratorProps {
-  orgId: string;
-}
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface MerchantProfile {
   industry?: string;
@@ -39,7 +36,8 @@ interface MerchantProfile {
   hasSeenWelcome?: boolean;
 }
 
-export function MerchantOrchestrator({ orgId }: MerchantOrchestratorProps) {
+export function MerchantOrchestrator() {
+  const orgId = DEFAULT_ORG_ID;
   const { user } = useAuth();
   const { setContext, hasSeenWelcome } = useOrchestratorStore();
   const [profile, setProfile] = useState<MerchantProfile | null>(null);

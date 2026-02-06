@@ -53,12 +53,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = request.nextUrl;
-    const organizationId = DEFAULT_ORG_ID;
     const status = searchParams.get('status'); // Filter by status
 
     const pagesRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/pages/items',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     // Build query with optional status filter
@@ -105,7 +104,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json() as RequestBody;
     const { page } = body;
-    const organizationId = DEFAULT_ORG_ID;
 
     if (!page) {
       return NextResponse.json(
@@ -131,7 +129,7 @@ export async function POST(request: NextRequest) {
       id: pageId,
       title: page.title,
       slug: page.slug,
-      organizationId, // ← Force correct organizationId
+      organizationId: DEFAULT_ORG_ID, // ← Force correct organizationId
       status: (page.status !== '' && page.status != null) ? page.status : 'draft',
       content: page.content ?? [],
       seo: page.seo ?? {},
@@ -145,7 +143,7 @@ export async function POST(request: NextRequest) {
     // Check if slug already exists for this org
     const pagesRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/pages/items',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
     const existingPageQuery = await pagesRef
       .where('slug', '==', page.slug)

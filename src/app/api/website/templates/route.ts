@@ -39,12 +39,10 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const organizationId = DEFAULT_ORG_ID;
-
     // Get custom templates for this org
     const templatesRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/config/templates',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     const snapshot = await templatesRef.get();
@@ -92,7 +90,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { template } = bodyResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Create template document
     const templateData: PageTemplate = {
@@ -112,7 +109,7 @@ export async function POST(request: NextRequest) {
     // Save to Firestore
     const templateRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/templates/{templateId}',
-      { orgId: organizationId, templateId: templateData.id }
+      { orgId: DEFAULT_ORG_ID, templateId: templateData.id }
     );
 
     await templateRef.set(templateData);
@@ -153,12 +150,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { templateId } = queryResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Delete template
     const templateRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/templates/{templateId}',
-      { orgId: organizationId, templateId }
+      { orgId: DEFAULT_ORG_ID, templateId }
     );
 
     // Verify template belongs to this org

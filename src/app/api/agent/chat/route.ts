@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+    const { user: _user } = authResult;
 
     // Parse and validate input
     const body: unknown = await request.json();
@@ -245,8 +245,9 @@ export async function POST(request: NextRequest) {
 
     const { customerId, orgId, message } = validation.data;
 
-    // Verify user has access to this organization
-    if (user.organizationId !== orgId) {
+    // Verify user has access to this organization (penthouse model - verify against DEFAULT_ORG_ID)
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    if (DEFAULT_ORG_ID !== orgId) {
       return NextResponse.json(
         { success: false, error: 'Access denied to this organization' },
         { status: 403 }

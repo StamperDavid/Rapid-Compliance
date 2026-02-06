@@ -101,16 +101,16 @@ export default function StorefrontSettingsPage() {
 
   // Load saved config from Firestore
   useEffect(() => {
-    if (!user?.organizationId) {return;}
-    
+    if (!user) {return;}
+
     const loadConfig = async () => {
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         const configData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/storefrontConfig`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/storefrontConfig`,
           'default'
         );
-        
+
         if (configData) {
           setConfig(configData as StorefrontConfig);
         }
@@ -118,18 +118,18 @@ export default function StorefrontSettingsPage() {
         logger.error('Failed to load storefront config', error instanceof Error ? error : new Error(String(error)), {});
       }
     };
-    
+
     void loadConfig();
-  }, [user?.organizationId]);
+  }, [user]);
 
   const handleSave = async () => {
-    if (!user?.organizationId) {return;}
-    
+    if (!user) {return;}
+
     setIsSaving(true);
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/storefrontConfig`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/storefrontConfig`,
         'default',
         {
           ...config,

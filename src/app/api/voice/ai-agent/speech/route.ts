@@ -231,12 +231,10 @@ async function logSpeechTurn(
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-    // Extract organizationId from call context if available
-    const organizationId = DEFAULT_ORG_ID; // Penthouse model
-
+    // Penthouse model - use DEFAULT_ORG_ID directly
     const logId = `${callId}-turn-${Date.now()}`;
     await FirestoreService.set(
-      `organizations/${organizationId}/conversationLogs`,
+      `organizations/${DEFAULT_ORG_ID}/conversationLogs`,
       logId,
       {
         callId,

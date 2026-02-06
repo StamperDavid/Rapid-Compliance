@@ -23,10 +23,9 @@ const KEY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
  * Get API key from organization settings or fallback to platform admin settings
  */
 async function getApiKey(): Promise<string> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     // Check cache first (invalidate if different org)
-    if (cachedGenAI && cachedOrgId === organizationId && Date.now() - lastKeyFetch < KEY_CACHE_TTL) {
+    if (cachedGenAI && cachedOrgId === DEFAULT_ORG_ID && Date.now() - lastKeyFetch < KEY_CACHE_TTL) {
       return 'cached';
     }
 
@@ -37,18 +36,18 @@ async function getApiKey(): Promise<string> {
       const apiKeyModule = await import('@/lib/api-keys/api-key-service') as {
         apiKeyService: { getServiceKey: (orgId: string, service: string) => Promise<string | null> }
       };
-      const fetchedKey = await apiKeyModule.apiKeyService.getServiceKey(organizationId, 'gemini');
+      const fetchedKey = await apiKeyModule.apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'gemini');
       apiKey = fetchedKey ?? null;
 
       if (apiKey) {
         logger.info('[Gemini] Using organization-specific API key', {
-          organizationId,
+          DEFAULT_ORG_ID,
           file: 'gemini-service.ts'
         });
       }
     } catch (error) {
       logger.warn('[Gemini] Could not fetch org-specific key, falling back to platform key', {
-        organizationId,
+        DEFAULT_ORG_ID,
         errorMessage: error instanceof Error ? error.message : String(error),
         file: 'gemini-service.ts'
       });
@@ -76,7 +75,7 @@ async function getApiKey(): Promise<string> {
     // Update cache - intentional race condition acceptable for caching
     /* eslint-disable require-atomic-updates */
     cachedGenAI = new GoogleGenerativeAI(apiKey);
-    cachedOrgId = organizationId;
+    cachedOrgId = DEFAULT_ORG_ID;
     lastKeyFetch = Date.now();
     /* eslint-enable require-atomic-updates */
 

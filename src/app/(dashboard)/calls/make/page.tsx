@@ -9,7 +9,6 @@ import { showErrorToast, showSuccessToast } from '@/components/ErrorToast';
 
 export default function MakeCallPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const [phoneNumber, setPhoneNumber] = useState('');
   const [calling, setCalling] = useState(false);
 
@@ -23,7 +22,7 @@ export default function MakeCallPage() {
       const response = await fetch('/api/voice/call', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: phoneNumber, organizationId: orgId }),
+        body: JSON.stringify({ to: phoneNumber, organizationId: DEFAULT_ORG_ID }),
       });
       if (!response.ok) {
         throw new Error('Call failed');

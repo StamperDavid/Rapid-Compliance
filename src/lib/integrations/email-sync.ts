@@ -444,10 +444,9 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
  * Get last sync timestamp
  */
 async function getLastSyncTime(provider: string): Promise<Date | null> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     const doc = await FirestoreService.get<EmailSyncDoc>(
-      `organizations/${organizationId}/emailSync`,
+      `organizations/${DEFAULT_ORG_ID}/emailSync`,
       provider
     );
 
@@ -472,9 +471,8 @@ async function getLastSyncTime(provider: string): Promise<Date | null> {
  * Set last sync timestamp
  */
 async function setLastSyncTime(provider: string, time: Date): Promise<void> {
-  const organizationId = DEFAULT_ORG_ID;
   await FirestoreService.set(
-    `organizations/${organizationId}/emailSync`,
+    `organizations/${DEFAULT_ORG_ID}/emailSync`,
     provider,
     { lastSyncAt: time },
     true

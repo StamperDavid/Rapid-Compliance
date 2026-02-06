@@ -63,12 +63,11 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
     }
     const { postId } = paramsResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Get post document
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId }
+      { orgId: DEFAULT_ORG_ID, postId }
     );
 
     const postDoc = await postRef.get();
@@ -131,12 +130,11 @@ export async function PUT(
     }
 
     const { post } = bodyResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Get existing post
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId }
+      { orgId: DEFAULT_ORG_ID, postId }
     );
 
     const existingPost = await postRef.get();
@@ -213,12 +211,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
     }
     const { postId } = paramsResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Get post to verify ownership
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId }
+      { orgId: DEFAULT_ORG_ID, postId }
     );
 
     const postDoc = await postRef.get();

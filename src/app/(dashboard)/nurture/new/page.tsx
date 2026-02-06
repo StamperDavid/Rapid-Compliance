@@ -25,7 +25,6 @@ interface NurtureCampaign {
 export default function NewNurtureCampaignPage() {
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
   const [campaign, setCampaign] = useState<NurtureCampaign>({ name: '', description: '', steps: [] });
   const [saving, setSaving] = useState(false);
 
@@ -40,7 +39,7 @@ export default function NewNurtureCampaignPage() {
     try {
       setSaving(true);
       const campaignId = `nurture-${Date.now()}`;
-      await FirestoreService.set(`organizations/${orgId}/nurtureSequences`, campaignId, {
+      await FirestoreService.set(`organizations/${DEFAULT_ORG_ID}/nurtureSequences`, campaignId, {
         ...campaign,
         id: campaignId,
         status: 'draft',

@@ -4,6 +4,7 @@ import { syncIntegration } from '@/lib/integrations/integration-manager';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * POST /api/integrations/[integrationId]/sync - Sync integration data
@@ -21,9 +22,9 @@ export async function POST(
       return authResult;
     }
 
-    const { user } = authResult;
+    const { user: _user } = authResult;
 
-    const result = syncIntegration(user.organizationId, params.integrationId);
+    const result = syncIntegration(DEFAULT_ORG_ID, params.integrationId);
 
     return NextResponse.json({
       success: result.success,

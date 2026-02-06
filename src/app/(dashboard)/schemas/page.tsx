@@ -4,7 +4,6 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 interface Field {
@@ -59,9 +58,6 @@ const FIELD_TYPES = [
 ];
 
 export default function SchemaBuilderPage() {
-  const searchParams = useSearchParams();
-  const orgId = DEFAULT_ORG_ID;
-  const workspaceId = (searchParams?.get('workspaceId') as string) || 'default';
 
   // Convert STANDARD_SCHEMAS to the format we need
   const standardSchemasArray: Schema[] = useMemo(() => Object.values(STANDARD_SCHEMAS).map(schema => ({
@@ -96,11 +92,11 @@ export default function SchemaBuilderPage() {
   });
 
   const loadSchemas = useCallback(async () => {
-    if (!orgId || !workspaceId) {return;}
+    if (!DEFAULT_ORG_ID) {return;}
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/schemas?organizationId=${orgId}&workspaceId=${workspaceId}`);
+      const res = await fetch('/api/schemas');
       if (!res.ok) {
         throw new Error(`Failed to load schemas (${res.status})`);
       }
@@ -118,7 +114,7 @@ export default function SchemaBuilderPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, workspaceId, standardSchemasArray]);
+  }, [standardSchemasArray]);
 
   useEffect(() => {
     void loadSchemas();
@@ -135,8 +131,6 @@ export default function SchemaBuilderPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
-          workspaceId,
           schema: newSchema,
           userId: 'ui-schema-builder'
         })
@@ -203,7 +197,7 @@ export default function SchemaBuilderPage() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/schemas/${id}?organizationId=${orgId}&workspaceId=${workspaceId}`, {
+      const res = await fetch(`/api/schemas/${id}`, {
         method: 'DELETE'
       });
       if (!res.ok) {
@@ -228,8 +222,6 @@ export default function SchemaBuilderPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
-          workspaceId,
           updates: editingSchema,
           userId: 'ui-schema-builder'
         })
@@ -335,7 +327,7 @@ export default function SchemaBuilderPage() {
 
               <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--color-border-main)', display: 'flex', gap: '0.5rem' }}>
                 <Link
-                  href={`/entities/${(schema.id || schema.name).toLowerCase()}?workspaceId=${workspaceId}`}
+                  href={`/entities/${(schema.id || schema.name).toLowerCase()}`}
                   style={{ flex: 1, textAlign: 'center', padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-primary)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', textDecoration: 'none', border: '1px solid var(--color-border-main)', fontWeight: '500' }}
                 >
                   View Data

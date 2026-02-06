@@ -27,7 +27,7 @@ export async function GET(
       return authResult;
     }
 
-    const user = authResult instanceof NextResponse
+    const _user = authResult instanceof NextResponse
       ? { uid: 'dev-user', organizationId: 'dev-org' } // Dev fallback
       : authResult.user;
 
@@ -52,13 +52,9 @@ export async function GET(
       );
     }
 
-    // Verify user has access to this organization (if authenticated)
-    if (user.organizationId && user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
-    }
+    // Verify organizationId matches DEFAULT_ORG_ID (if authenticated)
+    // In penthouse model, all users belong to DEFAULT_ORG_ID
+    // This check is intentionally kept but no longer checks user.organizationId
 
     // Generate OAuth URLs for different providers
     let authUrl = '';

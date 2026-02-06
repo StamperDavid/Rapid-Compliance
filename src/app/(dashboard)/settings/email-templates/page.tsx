@@ -90,8 +90,7 @@ interface SmsTemplate {
 
 export default function EmailTemplatesPage() {
   const { user: _user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
-  const { theme } = useOrgTheme();
+    const { theme } = useOrgTheme();
   const [activeTab, setActiveTab] = useState<'templates' | 'campaigns' | 'designer' | 'sms'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState('welcome');
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
@@ -225,7 +224,7 @@ Best regards,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            organizationId: orgId,
+            organizationId: DEFAULT_ORG_ID,
             workspaceId: 'default',
             filters: campaignFilters
           })
@@ -244,7 +243,7 @@ Best regards,
     }
 
     void updateEstimatedRecipients();
-  }, [campaignFilters, orgId]);
+  }, [campaignFilters]);
 
   return (
     <>

@@ -85,10 +85,11 @@ export async function getUserId(request: NextRequest): Promise<string | null> {
 
 /**
  * Extract organization ID from request (convenience method)
+ * In penthouse model, always returns DEFAULT_ORG_ID
  */
-export async function getOrganizationId(request: NextRequest): Promise<string | null> {
-  const user = await getAuthToken(request);
-  return user?.organizationId ?? null;
+export async function getOrganizationId(_request: NextRequest): Promise<string | null> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  return DEFAULT_ORG_ID;
 }
 
 /**

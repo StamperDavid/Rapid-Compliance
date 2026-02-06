@@ -19,21 +19,20 @@ interface NurtureCampaignStats {
 export default function NurtureCampaignStatsPage() {
   const params = useParams();
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const campaignId = params.id as string;
   const [campaign, setCampaign] = useState<NurtureCampaignStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadCampaign = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${orgId}/nurtureSequences`, campaignId);
+      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/nurtureSequences`, campaignId);
       setCampaign(data as NurtureCampaignStats);
     } catch (error) {
       logger.error('Error loading campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [orgId, campaignId]);
+  }, [campaignId]);
 
   useEffect(() => {
     void loadCampaign();

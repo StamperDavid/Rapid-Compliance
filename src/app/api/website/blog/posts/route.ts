@@ -70,12 +70,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { status, category } = queryResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Get posts collection
     const postsRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/config/blog-posts',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     // Get all posts and filter
@@ -137,7 +136,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { post } = bodyResult.data;
-    const organizationId = DEFAULT_ORG_ID;
     const now = new Date().toISOString();
 
     // Create post document matching BlogPost interface
@@ -168,7 +166,7 @@ export async function POST(request: NextRequest) {
     // Save to Firestore
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId: postData.id }
+      { orgId: DEFAULT_ORG_ID, postId: postData.id }
     );
 
     await postRef.set(postData);

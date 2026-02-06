@@ -193,7 +193,7 @@ export async function createNurtureSequence(sequence: Partial<LeadNurtureSequenc
   // Store sequence in Firestore
   try {
     const { LeadNurturingService } = await import('@/lib/db/firestore-service');
-    await LeadNurturingService.setSequence(fullSequence.organizationId, sequenceId, {
+    await LeadNurturingService.setSequence(sequenceId, {
       ...fullSequence,
       createdAt: fullSequence.createdAt.toISOString(),
       updatedAt: fullSequence.updatedAt.toISOString(),
@@ -211,11 +211,11 @@ export async function createNurtureSequence(sequence: Partial<LeadNurtureSequenc
 export async function enrollLeadInSequence(
   leadId: string,
   sequenceId: string,
-  organizationId: string
+  _organizationId: string
 ): Promise<{ success: boolean; error?: string }> {
   // Load sequence from Firestore
   const { LeadNurturingService } = await import('@/lib/db/firestore-service');
-  const sequenceData = await LeadNurturingService.getSequence(organizationId, sequenceId);
+  const sequenceData = await LeadNurturingService.getSequence(sequenceId);
   
   if (!sequenceData) {
     return { success: false, error: 'Sequence not found' };
@@ -296,7 +296,7 @@ export async function enrichLead(
   // Store enrichment in Firestore
   try {
     const { LeadNurturingService } = await import('@/lib/db/firestore-service');
-    await LeadNurturingService.setEnrichment(enrichment.organizationId, leadId, {
+    await LeadNurturingService.setEnrichment(leadId, {
       ...enrichment,
       enrichedAt: enrichment.enrichedAt.toISOString(),
     });

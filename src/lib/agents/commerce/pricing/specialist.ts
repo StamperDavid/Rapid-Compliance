@@ -512,7 +512,6 @@ export class PricingStrategist extends BaseSpecialist {
 
     // Find order with this transaction ID
     const orders = await RecordService.getAll(
-      payload.organizationId,
       payload.workspaceId,
       'orders',
       [where('payment.transactionId', '==', payload.transactionId)]

@@ -61,21 +61,20 @@ export interface SEOTrainingSettings {
  * Get Brand DNA for an organization
  */
 export async function getBrandDNA(): Promise<BrandDNA | null> {
-  const orgId = DEFAULT_ORG_ID;
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
-    const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+    const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
 
     if (!org?.brandDNA) {
-      logger.info('[BrandDNA] No brand DNA found for org', { orgId, file: FILE });
+      logger.info('[BrandDNA] No brand DNA found for org', { orgId: DEFAULT_ORG_ID, file: FILE });
       return null;
     }
 
     return org.brandDNA as BrandDNA;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('[BrandDNA] Failed to get brand DNA', err, { orgId, file: FILE });
+    logger.error('[BrandDNA] Failed to get brand DNA', err, { orgId: DEFAULT_ORG_ID, file: FILE });
     return null;
   }
 }
@@ -102,7 +101,7 @@ export async function updateBrandDNA(
       brandDNA: updatedBrandDNA,
     });
 
-    logger.info('[BrandDNA] Brand DNA updated', { orgId, userId, file: FILE });
+    logger.info('[BrandDNA] Brand DNA updated', { orgId: DEFAULT_ORG_ID, userId, file: FILE });
 
     // Sync to all tools that inherit from brand DNA
     await syncBrandDNA();
@@ -110,7 +109,7 @@ export async function updateBrandDNA(
     return true;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('[BrandDNA] Failed to update brand DNA', err, { orgId, file: FILE });
+    logger.error('[BrandDNA] Failed to update brand DNA', err, { orgId: DEFAULT_ORG_ID, file: FILE });
     return false;
   }
 }
@@ -120,21 +119,20 @@ export async function updateBrandDNA(
  * This ensures that Voice, Social, and SEO tools inherit updated brand settings
  */
 export async function syncBrandDNA(): Promise<void> {
-  const orgId = DEFAULT_ORG_ID;
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     const brandDNA = await getBrandDNA();
 
     if (!brandDNA) {
-      logger.warn('[BrandDNA] No brand DNA to sync', { orgId, file: FILE });
+      logger.warn('[BrandDNA] No brand DNA to sync', { orgId: DEFAULT_ORG_ID, file: FILE });
       return;
     }
 
     const tools: Array<'voice' | 'social' | 'seo'> = ['voice', 'social', 'seo'];
 
     for (const toolType of tools) {
-      const toolPath = `organizations/${orgId}/toolTraining`;
+      const toolPath = `organizations/${DEFAULT_ORG_ID}/toolTraining`;
       const toolDoc = await FirestoreService.get(toolPath, toolType);
 
       // Only sync if tool inherits from brand DNA (not overridden)
@@ -145,14 +143,14 @@ export async function syncBrandDNA(): Promise<void> {
           lastSyncedAt: new Date().toISOString(),
         });
 
-        logger.info(`[BrandDNA] Synced to ${toolType} training`, { orgId, file: FILE });
+        logger.info(`[BrandDNA] Synced to ${toolType} training`, { orgId: DEFAULT_ORG_ID, file: FILE });
       }
     }
 
-    logger.info('[BrandDNA] Sync complete', { orgId, tools, file: FILE });
+    logger.info('[BrandDNA] Sync complete', { orgId: DEFAULT_ORG_ID, tools, file: FILE });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('[BrandDNA] Sync failed', err, { orgId, file: FILE });
+    logger.error('[BrandDNA] Sync failed', err, { orgId: DEFAULT_ORG_ID, file: FILE });
   }
 }
 
@@ -166,7 +164,7 @@ export async function getToolTrainingContext(
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-    const toolPath = `organizations/${orgId}/toolTraining`;
+    const toolPath = `organizations/${DEFAULT_ORG_ID}/toolTraining`;
     const toolDoc = await FirestoreService.get(toolPath, toolType);
 
     if (!toolDoc) {
@@ -198,7 +196,7 @@ export async function getToolTrainingContext(
     return typedToolDoc;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('[BrandDNA] Failed to get tool context', err, { orgId, toolType, file: FILE });
+    logger.error('[BrandDNA] Failed to get tool context', err, { orgId: DEFAULT_ORG_ID, toolType, file: FILE });
     return null;
   }
 }
@@ -209,9 +207,8 @@ export async function getToolTrainingContext(
 export async function buildToolSystemPrompt(
   toolType: 'voice' | 'social' | 'seo'
 ): Promise<string> {
-  const organizationId = DEFAULT_ORG_ID;
   const brandDNA = await getBrandDNA();
-  const toolContext = await getToolTrainingContext(organizationId, toolType);
+  const toolContext = await getToolTrainingContext(DEFAULT_ORG_ID, toolType);
 
   let systemPrompt = '';
 
@@ -307,9 +304,8 @@ export async function buildToolSystemPrompt(
 export async function getEffectiveBrandValues(
   toolType: 'voice' | 'social' | 'seo'
 ): Promise<Partial<BrandDNA>> {
-  const organizationId = DEFAULT_ORG_ID;
   const brandDNA = await getBrandDNA();
-  const toolContext = await getToolTrainingContext(organizationId, toolType);
+  const toolContext = await getToolTrainingContext(DEFAULT_ORG_ID, toolType);
 
   if (!brandDNA) {
     return {};
@@ -356,7 +352,7 @@ export async function initializeBrandDNAFromOnboarding(
     return await updateBrandDNA(orgId, brandDNA, userId);
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('[BrandDNA] Failed to initialize from onboarding', err, { orgId, file: FILE });
+    logger.error('[BrandDNA] Failed to initialize from onboarding', err, { orgId: DEFAULT_ORG_ID, file: FILE });
     return false;
   }
 }

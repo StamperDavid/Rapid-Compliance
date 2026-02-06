@@ -605,16 +605,14 @@ export class PluginManager {
 const pluginManagerInstances: Map<string, PluginManager> = new Map();
 
 export function getPluginManager(config: Record<string, unknown> = {}): PluginManager {
-  const organizationId = DEFAULT_ORG_ID;
-  let instance = pluginManagerInstances.get(organizationId);
+  let instance = pluginManagerInstances.get(DEFAULT_ORG_ID);
   if (!instance) {
-    instance = new PluginManager(organizationId, config);
-    pluginManagerInstances.set(organizationId, instance);
+    instance = new PluginManager(DEFAULT_ORG_ID, config);
+    pluginManagerInstances.set(DEFAULT_ORG_ID, instance);
   }
   return instance;
 }
 
 export function clearPluginManager(): void {
-  const organizationId = DEFAULT_ORG_ID;
-  pluginManagerInstances.delete(organizationId);
+  pluginManagerInstances.delete(DEFAULT_ORG_ID);
 }

@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
     // Get parameters
     const searchParams = request.nextUrl.searchParams;
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
     const userId = searchParams.get('userId');
     const redirectUrl = searchParams.get('redirectUrl');
 
@@ -49,7 +48,7 @@ export async function GET(request: NextRequest) {
     // Store state in Firestore (expires in 10 minutes)
     const oauthState: SlackOAuthState = {
       state,
-      organizationId: orgId,
+      organizationId: DEFAULT_ORG_ID,
       userId,
       redirectUrl:(redirectUrl !== '' && redirectUrl != null) ? redirectUrl : `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations`,
       createdAt: Timestamp.now(),
@@ -64,7 +63,7 @@ export async function GET(request: NextRequest) {
     const authUrl = slackService.getAuthorizationUrl(state, callbackUrl);
     
     logger.info('Slack OAuth flow initiated', {
-      orgId,
+      DEFAULT_ORG_ID,
       userId,
       state,
     });

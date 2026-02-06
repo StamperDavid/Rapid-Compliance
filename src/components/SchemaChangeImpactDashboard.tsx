@@ -11,8 +11,6 @@ import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 type FirestoreTimestamp = Date | string | { toDate: () => Date } | null | undefined;
 
 interface SchemaChangeImpactDashboardProps {
-  organizationId: string;
-  workspaceId: string;
   schemaId: string;
 }
 
@@ -49,8 +47,6 @@ interface ImpactApiResponse {
 }
 
 export default function SchemaChangeImpactDashboard({
-  organizationId,
-  workspaceId,
   schemaId,
 }: SchemaChangeImpactDashboardProps) {
   const [loading, setLoading] = useState(true);
@@ -62,7 +58,7 @@ export default function SchemaChangeImpactDashboard({
     try {
       setLoading(true);
       const response = await fetch(
-        `/api/schema-changes/impact?organizationId=${organizationId}&workspaceId=${workspaceId}&schemaId=${schemaId}`
+        `/api/schema-changes/impact?schemaId=${schemaId}`
       );
 
       if (!response.ok) {
@@ -79,7 +75,7 @@ export default function SchemaChangeImpactDashboard({
     } finally {
       setLoading(false);
     }
-  }, [organizationId, workspaceId, schemaId]);
+  }, [schemaId]);
 
   useEffect(() => {
     void loadImpactData();
@@ -90,7 +86,7 @@ export default function SchemaChangeImpactDashboard({
       const response = await fetch('/api/schema-changes/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId }),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {

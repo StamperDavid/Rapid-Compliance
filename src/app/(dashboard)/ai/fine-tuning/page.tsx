@@ -18,7 +18,6 @@ interface FineTuningJob {
 
 export default function FineTuningPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
 
   // Fetch function with pagination
   const fetchJobs = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
@@ -31,7 +30,7 @@ export default function FineTuningPage() {
     ];
 
     const result = await FirestoreService.getAllPaginated(
-      `organizations/${orgId}/fineTuningJobs`,
+      `organizations/${DEFAULT_ORG_ID}/fineTuningJobs`,
       constraints,
       50,
       lastDoc
@@ -41,7 +40,7 @@ export default function FineTuningPage() {
       lastDoc: result.lastDoc,
       hasMore: result.hasMore,
     };
-  }, [orgId]);
+  }, []);
 
   const {
     data: jobs,

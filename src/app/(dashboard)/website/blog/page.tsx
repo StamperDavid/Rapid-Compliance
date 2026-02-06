@@ -17,7 +17,6 @@ import type { BlogPost } from '@/types/website';
 export default function BlogManagementPage() {
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
 
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,14 +28,19 @@ export default function BlogManagementPage() {
   const loadPosts = useCallback(async () => {
     try {
       setLoading(true);
-      let url = `/api/website/blog/posts?organizationId=${orgId}`;
+      let url = '/api/website/blog/posts';
+      const params: string[] = [];
 
       if (filter !== 'all') {
-        url += `&status=${filter}`;
+        params.push(`status=${filter}`);
       }
 
       if (categoryFilter !== 'all') {
-        url += `&category=${encodeURIComponent(categoryFilter)}`;
+        params.push(`category=${encodeURIComponent(categoryFilter)}`);
+      }
+
+      if (params.length > 0) {
+        url += `?${params.join('&')}`;
       }
 
       const response = await fetch(url);
@@ -51,11 +55,11 @@ export default function BlogManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, filter, categoryFilter, toast]);
+  }, [filter, categoryFilter, toast]);
 
   const loadCategories = useCallback(async () => {
     try {
-      const response = await fetch(`/api/website/blog/categories?organizationId=${orgId}`);
+      const response = await fetch('/api/website/blog/categories');
 
       if (response.ok) {
         const data = await response.json() as { categories?: string[] };
@@ -64,7 +68,7 @@ export default function BlogManagementPage() {
     } catch (error) {
       console.error('[Blog] Load categories error:', error);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadPosts();
@@ -74,7 +78,7 @@ export default function BlogManagementPage() {
   async function handleDeletePost(postId: string) {
     try {
       const response = await fetch(
-        `/api/website/blog/posts/${postId}?organizationId=${orgId}`,
+        `/api/website/blog/posts/${postId}`,
         { method: 'DELETE' }
       );
 
@@ -96,7 +100,7 @@ export default function BlogManagementPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           post: {
             ...post,
             featured: !post.featured,

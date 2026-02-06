@@ -53,18 +53,17 @@ export async function createGoldenMasterFromBase(
   logger.info('[Golden Master Builder] Next version', { version: nextVersion, file: 'golden-master-builder.ts' });
   
   // Get previous version for changelog
-  const { orderBy, limit } = await import('firebase/firestore');
+    const { orderBy, limit } = await import('firebase/firestore');
   const previousGMs = await FirestoreService.getAll<GoldenMaster>(
-    `${COLLECTIONS.ORGANIZATIONS}/${baseModel.orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
     [orderBy('createdAt', 'desc'), limit(1)]
   );
   const previousVersion = previousGMs.length > 0 ? previousGMs[0].version : undefined;
-  
+
   // Create Golden Master as snapshot of Base Model
   const goldenMaster: GoldenMaster = {
     id: `gm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     version: nextVersion,
-    orgId: baseModel.orgId,
     baseModelId: baseModel.id,
     
     // Snapshot all configuration from Base Model
@@ -105,11 +104,10 @@ export async function createGoldenMasterFromBase(
  * Get next Golden Master version number
  */
 async function getNextGoldenMasterVersion(): Promise<string> {
-  const organizationId = DEFAULT_ORG_ID;
-  const { orderBy, limit } = await import('firebase/firestore');
+    const { orderBy, limit } = await import('firebase/firestore');
 
   const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
     [orderBy('createdAt', 'desc'), limit(1)]
   );
   
@@ -135,7 +133,7 @@ export async function buildGoldenMaster(
   logger.warn('[Golden Master Builder] Use createGoldenMasterFromBase() instead.', { file: 'golden-master-builder.ts' });
   logger.warn('[Golden Master Builder] Golden Masters should only be created from trained Base Models.', { file: 'golden-master-builder.ts' });
   
-  const { onboardingData, knowledgeBase, organizationId, userId } = options;
+  const { onboardingData, knowledgeBase, organizationId: _organizationId, userId } = options;
   
   // Build persona from onboarding
   const agentPersona = buildPersonaFromOnboarding(onboardingData);
@@ -161,7 +159,6 @@ export async function buildGoldenMaster(
   const goldenMaster: GoldenMaster = {
     id: `gm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     version: nextVersion,
-    orgId: organizationId,
     baseModelId: 'legacy', // No base model for legacy creation
     businessContext: onboardingData,
     agentPersona,
@@ -184,10 +181,10 @@ export async function buildGoldenMaster(
  * Save Golden Master to Firestore
  */
 export async function saveGoldenMaster(goldenMaster: GoldenMaster): Promise<void> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${goldenMaster.orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
     goldenMaster.id,
     {
       ...goldenMaster,
@@ -244,12 +241,11 @@ export async function createGoldenMaster(
  * Get all Golden Masters for organization
  */
 export async function getAllGoldenMasters(): Promise<GoldenMaster[]> {
-  const organizationId = DEFAULT_ORG_ID;
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const { orderBy } = await import('firebase/firestore');
 
   const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
     [orderBy('createdAt', 'desc')]
   );
 
@@ -260,8 +256,7 @@ export async function getAllGoldenMasters(): Promise<GoldenMaster[]> {
  * Deploy Golden Master (make it active)
  */
 export async function deployGoldenMaster(goldenMasterId: string): Promise<void> {
-  const organizationId = DEFAULT_ORG_ID;
-  const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
   const { writeBatch, doc } = await import('firebase/firestore');
   const { db } = await import('@/lib/firebase/config');
 
@@ -284,12 +279,12 @@ export async function deployGoldenMaster(goldenMasterId: string): Promise<void> 
   
   // Deactivate all Golden Masters
   for (const gm of allGMs) {
-    const gmRef = doc(db, `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}/${gm.id}`);
+    const gmRef = doc(db, `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}/${gm.id}`);
     batch.update(gmRef, { isActive: false });
   }
-  
+
   // Activate the selected one
-  const activeGMRef = doc(db, `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}/${goldenMasterId}`);
+  const activeGMRef = doc(db, `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}/${goldenMasterId}`);
   batch.update(activeGMRef, { 
     isActive: true,
     deployedAt: new Date().toISOString(),
@@ -308,13 +303,12 @@ export async function deployGoldenMaster(goldenMasterId: string): Promise<void> 
  * Get active Golden Master for organization
  */
 export async function getActiveGoldenMaster(): Promise<GoldenMaster | null> {
-  const organizationId = DEFAULT_ORG_ID;
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
   // Query for active Golden Master
   const { where } = await import('firebase/firestore');
   const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
     [where('isActive', '==', true)]
   );
   
@@ -325,7 +319,7 @@ export async function getActiveGoldenMaster(): Promise<GoldenMaster | null> {
   // If no active, get the latest one
   const { orderBy, limit } = await import('firebase/firestore');
   const latest = await FirestoreService.getAll<GoldenMaster>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
     [orderBy('createdAt', 'desc'), limit(1)]
   );
   

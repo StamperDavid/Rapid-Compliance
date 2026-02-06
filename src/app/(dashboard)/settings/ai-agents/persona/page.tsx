@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -81,7 +79,6 @@ interface PersonaApiResponse {
 
 export default function AgentPersonaPage() {
   const { user: _user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
   const [activeSection, setActiveSection] = useState<'core' | 'cognitive' | 'knowledge' | 'learning' | 'execution' | 'training'>('core');
   const [loading, setLoading] = useState(true);
@@ -155,7 +152,7 @@ export default function AgentPersonaPage() {
     };
 
     void loadPersona();
-  }, [orgId]);
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);

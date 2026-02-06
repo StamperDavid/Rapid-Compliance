@@ -20,7 +20,6 @@ export default function WorkflowEditPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
   const workflowId = params.workflowId as string;
 
   const [workflow, setWorkflow] = useState<WorkflowData | null>(null);
@@ -29,7 +28,7 @@ export default function WorkflowEditPage() {
 
   const loadWorkflow = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/workflows`, workflowId);
+      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`, workflowId);
       setWorkflow(data as WorkflowData);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -37,7 +36,7 @@ export default function WorkflowEditPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, workflowId]);
+  }, [workflowId]);
 
   useEffect(() => {
     void loadWorkflow();
@@ -50,7 +49,7 @@ export default function WorkflowEditPage() {
 
     try {
       setSaving(true);
-      await FirestoreService.update(`organizations/${orgId}/workspaces/default/workflows`, workflowId, {
+      await FirestoreService.update(`organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`, workflowId, {
         ...workflow,
         updatedAt: Timestamp.now(),
       });

@@ -22,18 +22,17 @@ export async function GET(
     const dealId = params.dealId;
 
     // Penthouse: orgId is always DEFAULT_ORG_ID
-    const organizationId = DEFAULT_ORG_ID;
     const workspaceId = 'default';
 
     logger.info('Generating deal recommendations', {
       dealId,
-      organizationId,
+      DEFAULT_ORG_ID,
       workspaceId,
     });
 
     // Generate recommendations
     const recommendations = await generateNextBestActions(
-      organizationId,
+      DEFAULT_ORG_ID,
       workspaceId,
       dealId
     );

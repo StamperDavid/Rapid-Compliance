@@ -25,7 +25,6 @@ interface Deal {
 export default function EditDealPage() {
   const params = useParams();
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const dealId = params.id as string;
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,14 +33,14 @@ export default function EditDealPage() {
 
   const loadDeal = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/deals/records`, dealId);
+      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`, dealId);
       setDeal(data as Deal | null);
     } catch (error: unknown) {
       logger.error('Error loading deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [orgId, dealId]);
+  }, [dealId]);
 
   useEffect(() => {
     void loadDeal();
@@ -55,7 +54,7 @@ export default function EditDealPage() {
     setErrorMessage(null);
     try {
       setSaving(true);
-      await FirestoreService.update(`organizations/${orgId}/workspaces/default/entities/deals/records`, dealId, { ...deal, updatedAt: Timestamp.now() });
+      await FirestoreService.update(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`, dealId, { ...deal, updatedAt: Timestamp.now() });
       router.push(`/deals/${dealId}`);
     } catch (error: unknown) {
       logger.error('Error updating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

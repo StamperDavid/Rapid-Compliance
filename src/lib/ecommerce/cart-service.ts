@@ -78,7 +78,7 @@ export async function getOrCreateCart(
 ): Promise<Cart> {
   // Try to get existing cart
   const existingCart = await FirestoreService.get<Cart>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/carts`,
     sessionId
   );
   
@@ -129,7 +129,7 @@ async function createCart(
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/carts`,
     sessionId,
     {
       ...cart,
@@ -358,9 +358,8 @@ function recalculateCartTotals(cart: Cart): void {
 async function saveCart(cart: Cart): Promise<void> {
   // Use organizationId from function parameter context (passed separately)
   // Cart itself doesn't have organizationId property in penthouse model
-  const organizationId = DEFAULT_ORG_ID;
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${cart.workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${cart.workspaceId}/carts`,
     cart.id,
     {
       ...cart,
@@ -409,7 +408,7 @@ async function getProduct(workspaceId: string, productId: string, organizationId
   }
   
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
   
@@ -422,7 +421,7 @@ async function getProduct(workspaceId: string, productId: string, organizationId
   
   // Get product entity from records collection
   const product = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/${workspaceId}/entities/${productSchema}/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
     productId
   );
   
@@ -450,7 +449,7 @@ async function getProduct(workspaceId: string, productId: string, organizationId
 async function getDiscountCode(workspaceId: string, organizationId: string, code: string): Promise<DiscountData | null> {
   const { where } = await import('firebase/firestore');
   const discounts = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/discountCodes`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/discountCodes`,
     [where('code', '==', code.toUpperCase())]
   );
   
@@ -534,10 +533,10 @@ function calculateDiscountAmount(discount: DiscountData, cart: Cart): number {
 export async function clearCart(
   sessionId: string,
   workspaceId: string,
-  organizationId: string
+  _organizationId: string
 ): Promise<void> {
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/carts`,
     sessionId
   );
 }

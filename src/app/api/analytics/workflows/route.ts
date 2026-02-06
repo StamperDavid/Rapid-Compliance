@@ -57,7 +57,6 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
     const period = (searchParams.get('period') !== '' && searchParams.get('period') != null)
       ? searchParams.get('period')
       : '30d';
@@ -84,23 +83,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Get workflows from Firestore
-    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workflows`;
+    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workflows`;
     let allWorkflows: WorkflowRecord[] = [];
     
     try {
       allWorkflows = await FirestoreService.getAll(workflowsPath, []);
     } catch (_e) {
-      logger.debug('No workflows collection yet', { orgId });
+      logger.debug('No workflows collection yet', { DEFAULT_ORG_ID });
     }
 
     // Get workflow executions
-    const executionsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workflowExecutions`;
+    const executionsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workflowExecutions`;
     let allExecutions: WorkflowExecutionRecord[] = [];
     
     try {
       allExecutions = await FirestoreService.getAll(executionsPath, []);
     } catch (_e) {
-      logger.debug('No workflow executions collection yet', { orgId });
+      logger.debug('No workflow executions collection yet', { DEFAULT_ORG_ID });
     }
 
     // Filter executions by date

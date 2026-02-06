@@ -23,7 +23,6 @@ interface ExtendedLead extends Lead {
 export default function LeadDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const leadId = params.id as string;
   const [lead, setLead] = useState<ExtendedLead | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +36,7 @@ export default function LeadDetailPage() {
 
   const loadLead = async (): Promise<void> => {
     try {
-      const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/leads/records`, leadId);
+      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/leads/records`, leadId);
 
       // Type guard for lead data
       if (!data || typeof data !== 'object') {
@@ -82,7 +81,7 @@ export default function LeadDetailPage() {
         updatedAt: leadData.updatedAt,
         name: leadData.name
       };
-      const score = await calculatePredictiveLeadScore(orgId, 'default', leadForScoring);
+      const score = await calculatePredictiveLeadScore(DEFAULT_ORG_ID, 'default', leadForScoring);
       setPredictiveScore(score);
 
       // Calculate data quality
@@ -374,7 +373,7 @@ export default function LeadDetailPage() {
                       const displayName = getDisplayName();
 
                       await FirestoreService.set(
-                        `organizations/${orgId}/workspaces/default/entities/deals/records`,
+                        `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`,
                         dealId,
                         {
                           id: dealId,

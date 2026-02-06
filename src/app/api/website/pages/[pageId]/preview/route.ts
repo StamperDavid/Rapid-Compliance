@@ -40,11 +40,10 @@ export async function POST(
     const params = await context.params;
     const body = await request.json() as RequestBody;
     const { expiresIn } = body; // expiresIn in hours, default 24
-    const organizationId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: organizationId, pageId: params.pageId }
+      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
     );
 
     const doc = await pageRef.get();
@@ -67,12 +66,12 @@ export async function POST(
 
     const previewRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/preview-tokens/tokens/{token}',
-      { orgId: organizationId, token: previewToken }
+      { orgId: DEFAULT_ORG_ID, token: previewToken }
     );
 
     await previewRef.set({
       pageId: params.pageId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       createdAt: new Date().toISOString(),
       expiresAt: expiresAt.toISOString(),
       createdBy,
@@ -116,7 +115,6 @@ export async function GET(
 
     const params = await context.params;
     const { searchParams } = request.nextUrl;
-    const organizationId = DEFAULT_ORG_ID;
     const token = searchParams.get('token');
 
     if (!token) {
@@ -129,7 +127,7 @@ export async function GET(
     // Verify preview token
     const tokenRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/preview-tokens/tokens/{token}',
-      { orgId: organizationId, token }
+      { orgId: DEFAULT_ORG_ID, token }
     );
 
     const tokenDoc = await tokenRef.get();
@@ -164,7 +162,7 @@ export async function GET(
     // Get the page data
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: organizationId, pageId: params.pageId }
+      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
     );
 
     const doc = await pageRef.get();

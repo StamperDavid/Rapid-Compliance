@@ -37,7 +37,6 @@ export default function WorkflowBuilderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
   const workflowId = searchParams.get('id');
 
   // Workflow state
@@ -61,7 +60,7 @@ export default function WorkflowBuilderPage() {
     try {
       setIsLoading(true);
       const data = await FirestoreService.get(
-        `organizations/${orgId}/workspaces/default/workflows`,
+        `organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`,
         id
       );
 
@@ -109,7 +108,7 @@ export default function WorkflowBuilderPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   // Load existing workflow if editing
   useEffect(() => {
@@ -232,7 +231,7 @@ export default function WorkflowBuilderPage() {
 
       const workflowData = {
         id,
-        organizationId: orgId,
+        organizationId: DEFAULT_ORG_ID,
         workspaceId: 'default',
         name: workflow.name,
         description: workflow.description,
@@ -276,13 +275,13 @@ export default function WorkflowBuilderPage() {
 
       if (workflowId) {
         await FirestoreService.update(
-          `organizations/${orgId}/workspaces/default/workflows`,
+          `organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`,
           id,
           workflowData
         );
       } else {
         await FirestoreService.set(
-          `organizations/${orgId}/workspaces/default/workflows`,
+          `organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`,
           id,
           workflowData,
           false

@@ -29,7 +29,6 @@ interface SettingsResponse {
 
 export default function NavigationManagementPage() {
   const { user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const toast = useToast();
 
   const [navigation, setNavigation] = useState<Navigation | null>(null);
@@ -43,7 +42,7 @@ export default function NavigationManagementPage() {
       setLoading(true);
 
       // Load navigation
-      const navResponse = await fetch(`/api/website/navigation?organizationId=${orgId}`);
+      const navResponse = await fetch('/api/website/navigation');
       if (navResponse.ok) {
         const navData = await navResponse.json() as NavigationResponse;
         setNavigation(navData.navigation);
@@ -64,14 +63,14 @@ export default function NavigationManagementPage() {
       }
 
       // Load pages
-      const pagesResponse = await fetch(`/api/website/pages?organizationId=${orgId}`);
+      const pagesResponse = await fetch('/api/website/pages');
       if (pagesResponse.ok) {
         const pagesData = await pagesResponse.json() as PagesResponse;
         setPages(pagesData.pages ?? []);
       }
 
       // Load site settings to get homepage
-      const settingsResponse = await fetch(`/api/website/settings?organizationId=${orgId}`);
+      const settingsResponse = await fetch('/api/website/settings');
       if (settingsResponse.ok) {
         const settingsData = await settingsResponse.json() as SettingsResponse;
         setHomepage(settingsData.settings?.homepage ?? '');
@@ -81,7 +80,7 @@ export default function NavigationManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadData();
@@ -99,7 +98,7 @@ export default function NavigationManagementPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           navigation: {
             ...navigation,
             updatedAt: new Date().toISOString(),
@@ -127,7 +126,7 @@ export default function NavigationManagementPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           settings: {
             homepage,
           },

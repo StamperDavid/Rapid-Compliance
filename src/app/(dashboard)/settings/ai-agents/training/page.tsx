@@ -10,7 +10,7 @@ import { logger } from '@/lib/logger/logger';;
 // Type definitions
 interface BaseModel {
   id: string;
-  orgId: string;
+  DEFAULT_ORG_ID: string;
   name: string;
   businessName: string;
   industry: string;
@@ -58,7 +58,7 @@ interface ChatMessage {
 
 interface TrainingMaterial {
   id?: string;
-  orgId: string;
+  DEFAULT_ORG_ID: string;
   filename: string;
   name?: string;
   type: string;
@@ -72,7 +72,7 @@ interface TrainingMaterial {
 
 interface TrainingSession {
   id: string;
-  orgId?: string;
+  DEFAULT_ORG_ID?: string;
   baseModelId?: string;
   topic: string;
   messagesCount?: number;
@@ -95,7 +95,6 @@ interface AIResponse {
 
 export default function AgentTrainingPage() {
   const { user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
 
   const [loading, setLoading] = useState(true);
   const { theme } = useOrgTheme();
@@ -244,7 +243,7 @@ export default function AgentTrainingPage() {
       const { orderBy } = await import('firebase/firestore');
 
       const materialsResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingMaterials`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingMaterials`,
         [orderBy('uploadedAt', 'desc')],
         100 // Load more materials at once for training
       );
@@ -252,7 +251,7 @@ export default function AgentTrainingPage() {
 
       // Load training history (paginated - first 50 sessions)
       const historyResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingSessions`,
         [orderBy('timestamp', 'desc')],
         50
       );
@@ -268,8 +267,8 @@ export default function AgentTrainingPage() {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDemoData is stable and only depends on orgId
-  }, [orgId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDemoData is stable and only depends on DEFAULT_ORG_ID
+  }, [DEFAULT_ORG_ID]);
 
   useEffect(() => {
     void loadTrainingData();
@@ -372,7 +371,7 @@ export default function AgentTrainingPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       const feedbackData = {
-        orgId,
+        DEFAULT_ORG_ID,
         baseModelId: baseModel?.id ?? '',
         messageId: selectedMessageId,
         topic: trainingTopic,
@@ -383,7 +382,7 @@ export default function AgentTrainingPage() {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingFeedback`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingFeedback`,
         `feedback_${Date.now()}`,
         feedbackData,
         false
@@ -471,7 +470,7 @@ export default function AgentTrainingPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       const sessionRecord = {
-        orgId,
+        DEFAULT_ORG_ID,
         baseModelId: baseModel?.id ?? '',
         topic: trainingTopic,
         messagesCount: chatMessages.length,
@@ -483,7 +482,7 @@ export default function AgentTrainingPage() {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingSessions`,
         `session_${Date.now()}`,
         sessionRecord,
         false
@@ -542,7 +541,7 @@ export default function AgentTrainingPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       const sessionData = {
-        orgId,
+        DEFAULT_ORG_ID,
         baseModelId: baseModel?.id ?? '',
         topic: trainingTopic || 'General',
         messages: chatMessages,
@@ -551,7 +550,7 @@ export default function AgentTrainingPage() {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingSessions`,
         `session_${Date.now()}`,
         sessionData,
         false
@@ -583,7 +582,7 @@ export default function AgentTrainingPage() {
 
         // Save training material
         const materialData: TrainingMaterial = {
-          orgId,
+          DEFAULT_ORG_ID,
           filename: file.name,
           type: file.type,
           size: file.size,
@@ -593,7 +592,7 @@ export default function AgentTrainingPage() {
         };
 
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingMaterials`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingMaterials`,
           `material_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
           materialData,
           false
@@ -673,7 +672,7 @@ export default function AgentTrainingPage() {
     // Create demo Base Model
     setBaseModel({
       id: 'demo-base-model',
-      orgId: orgId,
+      DEFAULT_ORG_ID: DEFAULT_ORG_ID,
       name: 'Demo Sales Agent',
       businessName: 'Demo Company',
       industry: 'General Business',
@@ -736,7 +735,7 @@ export default function AgentTrainingPage() {
     setUploadedMaterials([
       {
         id: 'mat-1',
-        orgId: orgId,
+        DEFAULT_ORG_ID: DEFAULT_ORG_ID,
         filename: 'Platform Features Overview.pdf',
         name: 'Platform Features Overview.pdf',
         type: 'document',
@@ -753,7 +752,7 @@ export default function AgentTrainingPage() {
       },
       {
         id: 'mat-2',
-        orgId: orgId,
+        DEFAULT_ORG_ID: DEFAULT_ORG_ID,
         filename: 'Pricing & ROI Calculator',
         name: 'Pricing & ROI Calculator',
         type: 'spreadsheet',
@@ -769,7 +768,7 @@ export default function AgentTrainingPage() {
       },
       {
         id: 'mat-3',
-        orgId: orgId,
+        DEFAULT_ORG_ID: DEFAULT_ORG_ID,
         filename: 'Case Studies - TechStart & GrowthCo',
         name: 'Case Studies - TechStart & GrowthCo',
         type: 'document',
@@ -784,7 +783,7 @@ export default function AgentTrainingPage() {
       },
       {
         id: 'mat-4',
-        orgId: orgId,
+        DEFAULT_ORG_ID: DEFAULT_ORG_ID,
         filename: 'Competitor Battle Cards',
         name: 'Competitor Battle Cards',
         type: 'document',
@@ -854,7 +853,7 @@ export default function AgentTrainingPage() {
     setOverallScore(85.8);
 
     logger.info('✅ Demo data loaded for platform sales agent', { file: 'page.tsx' });
-  }, [orgId]);
+  }, []);
 
   const handleDeployGoldenMaster = async (gmId: string, version: string | number) => {
     // eslint-disable-next-line no-alert -- User feedback

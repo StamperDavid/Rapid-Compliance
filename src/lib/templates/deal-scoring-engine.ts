@@ -837,11 +837,10 @@ function predictFinalValue(deal: Deal, factors: ScoringFactor[]): number {
  * In real implementation, this would fetch from Firestore
  */
 function fetchDeal(dealId: string): Deal {
-  const orgId = DEFAULT_ORG_ID;
   // Mock deal
   return {
     id: dealId,
-    organizationId: orgId,
+    organizationId: DEFAULT_ORG_ID,
     value: 50000,
     createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
     updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago

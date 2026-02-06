@@ -147,7 +147,7 @@ async function triggerFineTuning(
   
   // Get approved examples
   const examples = await FirestoreService.getAll<TrainingExample>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingExamples`,
     [where('status', '==', 'approved')]
   );
   
@@ -190,11 +190,11 @@ async function triggerFineTuning(
  * Get learning configuration
  */
 async function getLearningConfig(
-  organizationId: string
+  _organizationId: string
 ): Promise<ContinuousLearningConfig | null> {
   try {
     const config = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/config`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/config`,
       'continuousLearning'
     );
     return config as ContinuousLearningConfig;
@@ -222,9 +222,8 @@ async function getLearningConfig(
  * Get last fine-tuning job
  */
 async function getLastFineTuningJob(): Promise<FineTuningJob | null> {
-  const organizationId = DEFAULT_ORG_ID;
   const jobs = await FirestoreService.getAll<FineTuningJob>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
     []
   );
 
@@ -242,9 +241,8 @@ async function getLastFineTuningJob(): Promise<FineTuningJob | null> {
  * Get monthly training spend
  */
 async function getMonthlyTrainingSpend(): Promise<number> {
-  const organizationId = DEFAULT_ORG_ID;
   const jobs = await FirestoreService.getAll<FineTuningJob>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
     []
   );
 
@@ -315,7 +313,7 @@ export async function evaluateAndDeployModel(
   
   // Start A/B test
   const test = await createABTest({
-    organizationId,
+    DEFAULT_ORG_ID: organizationId,
     controlModel: currentModel,
     treatmentModel: fineTunedModelId,
     trafficSplit: 50, // 50/50 split
@@ -346,7 +344,7 @@ export async function processCompletedFineTuningJob(
 }> {
   // Get the job
   const job = await FirestoreService.get<FineTuningJob>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
     jobId
   );
 
@@ -363,7 +361,7 @@ export async function processCompletedFineTuningJob(
   
   // Update job with test info
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
     jobId,
     {
       abTestId: result.testId,

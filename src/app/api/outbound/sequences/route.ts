@@ -31,7 +31,7 @@ function isValidStepType(value: string): value is StepType {
 }
 
 interface SequenceCreateRequestBody {
-  orgId?: string;
+  DEFAULT_ORG_ID?: string;
   name?: string;
   description?: string;
   steps?: SequenceStepInput[];
@@ -43,7 +43,7 @@ function isSequenceCreateRequestBody(value: unknown): value is SequenceCreateReq
 }
 
 /**
- * GET /api/outbound/sequences?orgId=xxx&page=1&limit=50
+ * GET /api/outbound/sequences?DEFAULT_ORG_ID=xxx&page=1&limit=50
  * List sequences for an organization with pagination
  */
 export async function GET(request: NextRequest) {
@@ -61,19 +61,18 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
     const limitParam = searchParams.get('limit');
     const pageSize = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
 
     // NEW PRICING MODEL: All features available to all active subscriptions
     // Feature check no longer needed - everyone gets email sequences!
-    // const featureCheck = await requireFeature(request, orgId, 'emailSequences');
+    // const featureCheck = await requireFeature(request, DEFAULT_ORG_ID, 'emailSequences');
     // if (featureCheck) return featureCheck;
 
     // Get sequences with pagination
     const { orderBy } = await import('firebase/firestore');
     const result = await FirestoreService.getAllPaginated(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/sequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
       [orderBy('createdAt', 'desc')],
       Math.min(pageSize, 100) // Max 100 per page
     );
@@ -110,7 +109,6 @@ export async function POST(request: NextRequest) {
 
     const { name, description, steps, autoEnroll = false } = body;
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
 
     if (!name) {
       return errors.badRequest('Sequence name is required');
@@ -122,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     // NEW PRICING MODEL: All features available to all active subscriptions
     // Feature check no longer needed - everyone gets email sequences!
-    // const featureCheck = await requireFeature(request, orgId, 'emailSequences');
+    // const featureCheck = await requireFeature(request, DEFAULT_ORG_ID, 'emailSequences');
     // if (featureCheck) return featureCheck;
 
     // Create sequence
@@ -191,7 +189,7 @@ export async function POST(request: NextRequest) {
 
     // Save sequence
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/sequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
       sequenceId,
       sequence,
       false

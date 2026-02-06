@@ -82,7 +82,7 @@ export async function processOnboarding(
     
     // Save persona
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentPersona`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentPersona`,
       'current',
       {
         ...persona,
@@ -95,7 +95,7 @@ export async function processOnboarding(
     
     // Save knowledge base
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBase`,
       'current',
       {
         ...knowledgeBase,
@@ -160,23 +160,22 @@ export async function getProcessingStatus(): Promise<{
   hasGoldenMaster: boolean;
   goldenMasterVersion?: string;
 }> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     const personaResult: unknown = await AdminFirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentPersona`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentPersona`,
       'current'
     );
 
     const knowledgeBaseResult: unknown = await AdminFirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBase`,
       'current'
     );
 
     // Check for Base Model
     const baseModelsResult: unknown = await AdminFirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.BASE_MODELS}`
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.BASE_MODELS}`
     );
 
     // Type guard for base models array
@@ -191,7 +190,7 @@ export async function getProcessingStatus(): Promise<{
 
     // Check for Golden Master
     const goldenMastersResult: unknown = await AdminFirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`
     );
 
     // Type guard for golden masters array

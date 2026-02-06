@@ -73,7 +73,6 @@ interface TaskData {
 }
 
 export default function WorkspaceDashboardPage() {
-  const orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
   
   const [stats, setStats] = useState<DashboardStats>({
@@ -93,7 +92,7 @@ export default function WorkspaceDashboardPage() {
 
   useEffect(() => {
     async function fetchDashboardData() {
-      if (!db || !orgId) {
+      if (!db || !DEFAULT_ORG_ID) {
         setLoading(false);
         return;
       }
@@ -101,14 +100,14 @@ export default function WorkspaceDashboardPage() {
       try {
         // Fetch leads
         const leadsQuery = query(
-          collection(db, 'organizations', orgId, 'records'),
+          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
           where('entityType', '==', 'leads')
         );
         const leadsSnapshot = await getDocs(leadsQuery);
 
         // Fetch deals
         const dealsQuery = query(
-          collection(db, 'organizations', orgId, 'records'),
+          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
           where('entityType', '==', 'deals')
         );
         const dealsSnapshot = await getDocs(dealsQuery);
@@ -160,14 +159,14 @@ export default function WorkspaceDashboardPage() {
 
         // Fetch conversations
         const convoQuery = query(
-          collection(db, 'organizations', orgId, 'conversations'),
+          collection(db, 'organizations', DEFAULT_ORG_ID, 'conversations'),
           limit(100)
         );
         const convoSnapshot = await getDocs(convoQuery);
 
         // Fetch tasks
         const tasksQuery = query(
-          collection(db, 'organizations', orgId, 'records'),
+          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
           where('entityType', '==', 'tasks'),
           where('completed', '==', false),
           limit(10)
@@ -197,7 +196,7 @@ export default function WorkspaceDashboardPage() {
 
         // Get recent deals
         const recentDealsQuery = query(
-          collection(db, 'organizations', orgId, 'records'),
+          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
           where('entityType', '==', 'deals'),
           orderBy('createdAt', 'desc'),
           limit(3)
@@ -223,7 +222,7 @@ export default function WorkspaceDashboardPage() {
 
         // Get recent leads
         const recentLeadsQuery = query(
-          collection(db, 'organizations', orgId, 'records'),
+          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
           where('entityType', '==', 'leads'),
           orderBy('createdAt', 'desc'),
           limit(2)
@@ -272,7 +271,7 @@ export default function WorkspaceDashboardPage() {
     }
 
     void fetchDashboardData();
-  }, [orgId]);
+  }, []);
 
   function getTimeAgo(date: Date): string {
     const now = new Date();

@@ -10,8 +10,6 @@ import { type QueryConstraint } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 
 export interface UseRecordsOptions {
-  organizationId: string;
-  workspaceId: string;
   entityName: string;
   filters?: QueryConstraint[];
   realTime?: boolean;
@@ -40,8 +38,6 @@ export interface UseRecordsReturn<T = Record<string, unknown>> {
  * Hook for managing records with Firestore
  * @example
  * const { records, loading, create, update, remove } = useRecords({
- *   organizationId: 'org-123',
- *   workspaceId: 'workspace-456',
  *   entityName: 'leads',
  *   realTime: true
  * });
@@ -50,8 +46,6 @@ export function useRecords<T = Record<string, unknown>>(
   options: UseRecordsOptions
 ): UseRecordsReturn<T> {
   const {
-    organizationId,
-    workspaceId,
     entityName,
     filters = [],
     realTime = false,
@@ -94,7 +88,9 @@ export function useRecords<T = Record<string, unknown>>(
 
   // Load records from Firestore
   const loadRecords = useCallback(async () => {
-    if (!organizationId || !workspaceId || !entityName) {
+    const workspaceId = 'default';
+
+    if (!entityName) {
       setLoading(false);
       return;
     }
@@ -107,7 +103,6 @@ export function useRecords<T = Record<string, unknown>>(
       setError(null);
 
       const data = await RecordService.getAll(
-        organizationId,
         workspaceId,
         entityName,
         currentFilters
@@ -121,7 +116,7 @@ export function useRecords<T = Record<string, unknown>>(
     } finally {
       setLoading(false);
     }
-  }, [organizationId, workspaceId, entityName, filtersKey, paginateRecords]);
+  }, [entityName, filtersKey, paginateRecords]);
 
   // Initial load
   useEffect(() => {
@@ -130,7 +125,9 @@ export function useRecords<T = Record<string, unknown>>(
 
   // Real-time subscription (optional)
   useEffect(() => {
-    if (!realTime || !organizationId || !workspaceId || !entityName) {
+    const workspaceId = 'default';
+
+    if (!realTime || !entityName) {
       return;
     }
 
@@ -138,7 +135,6 @@ export function useRecords<T = Record<string, unknown>>(
     const currentFilters: QueryConstraint[] = filtersKey ? filtersRef.current : [];
 
     const unsubscribe = RecordService.subscribe(
-      organizationId,
       workspaceId,
       entityName,
       currentFilters,
@@ -152,16 +148,17 @@ export function useRecords<T = Record<string, unknown>>(
     return () => {
       unsubscribe();
     };
-  }, [realTime, organizationId, workspaceId, entityName, filtersKey, paginateRecords]);
+  }, [realTime, entityName, filtersKey, paginateRecords]);
 
   // Create new record
   const create = useCallback(
     async (data: Partial<T>) => {
+        const workspaceId = 'default';
+
       try {
         const id = `${entityName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         await RecordService.set(
-          organizationId,
           workspaceId,
           entityName,
           id,
@@ -179,15 +176,16 @@ export function useRecords<T = Record<string, unknown>>(
         throw err;
       }
     },
-    [organizationId, workspaceId, entityName, loadRecords]
+    [entityName, loadRecords]
   );
 
   // Update existing record
   const update = useCallback(
     async (id: string, data: Partial<T>) => {
+        const workspaceId = 'default';
+
       try {
         await RecordService.update(
-          organizationId,
           workspaceId,
           entityName,
           id,
@@ -201,15 +199,16 @@ export function useRecords<T = Record<string, unknown>>(
         throw err;
       }
     },
-    [organizationId, workspaceId, entityName, loadRecords]
+    [entityName, loadRecords]
   );
 
   // Delete record
   const remove = useCallback(
     async (id: string) => {
+        const workspaceId = 'default';
+
       try {
         await RecordService.delete(
-          organizationId,
           workspaceId,
           entityName,
           id
@@ -222,7 +221,7 @@ export function useRecords<T = Record<string, unknown>>(
         throw err;
       }
     },
-    [organizationId, workspaceId, entityName, loadRecords]
+    [entityName, loadRecords]
   );
 
   // Manual refresh

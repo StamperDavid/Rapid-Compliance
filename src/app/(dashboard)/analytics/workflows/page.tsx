@@ -27,8 +27,6 @@ interface WorkflowAnalyticsApiResponse {
 }
 
 export default function WorkflowAnalyticsPage() {
-  const orgId = DEFAULT_ORG_ID;
-
   const { theme } = useOrgTheme();
   const [analytics, setAnalytics] = useState<WorkflowAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +34,7 @@ export default function WorkflowAnalyticsPage() {
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/analytics/workflows?orgId=${orgId}`);
+      const response = await fetch(`/api/analytics/workflows?orgId=${DEFAULT_ORG_ID}`);
       const data = await response.json() as WorkflowAnalyticsApiResponse;
       if (data.success) {
         setAnalytics(data.analytics);
@@ -46,7 +44,7 @@ export default function WorkflowAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadAnalytics();

@@ -28,7 +28,6 @@ interface CreatePageResponse {
 export default function TemplateBrowserPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const toast = useToast();
 
   const [templates, setTemplates] = useState<PageTemplate[]>([]);
@@ -58,7 +57,7 @@ export default function TemplateBrowserPage() {
       setTemplates(allTemplates);
 
       // Load custom templates for this org
-      const response = await fetch(`/api/website/templates?organizationId=${orgId}`);
+      const response = await fetch('/api/website/templates');
       if (response.ok) {
         const data = await response.json() as TemplatesResponse;
         setCustomTemplates(data.templates ?? []);
@@ -68,7 +67,7 @@ export default function TemplateBrowserPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadTemplates();
@@ -93,7 +92,7 @@ export default function TemplateBrowserPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           page: {
             slug: `${template.id}-${Date.now()}`,
             title: template.name,

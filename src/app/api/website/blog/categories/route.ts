@@ -29,12 +29,10 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const organizationId = DEFAULT_ORG_ID;
-
     // Get categories document
     const categoriesRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/blog-categories',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     const categoriesDoc = await categoriesRef.get();
@@ -80,16 +78,15 @@ export async function POST(request: NextRequest) {
     }
 
     const { categories } = bodyResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Save categories
     const categoriesRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/blog-categories',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     const categoriesData = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       categories,
       updatedAt: new Date().toISOString(),
     };

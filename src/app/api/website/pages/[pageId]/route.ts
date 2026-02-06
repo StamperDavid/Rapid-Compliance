@@ -33,11 +33,10 @@ export async function GET(
     }
 
     const params = await context.params;
-    const organizationId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: organizationId, pageId: params.pageId }
+      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
     );
 
     const doc = await pageRef.get();
@@ -84,11 +83,10 @@ export async function PUT(
     const params = await context.params;
     const body = await request.json() as RequestBody;
     const { page } = body;
-    const organizationId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: organizationId, pageId: params.pageId }
+      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
     );
 
     const existingDoc = await pageRef.get();
@@ -154,11 +152,10 @@ export async function DELETE(
     }
 
     const params = await context.params;
-    const organizationId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: organizationId, pageId: params.pageId }
+      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
     );
 
     const doc = await pageRef.get();

@@ -11,21 +11,20 @@ import { getLastActivityDate, type Contact } from '@/types/contact';
 export default function ContactDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const contactId = params.id as string;
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadContact = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/contacts/records`, contactId);
+      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/contacts/records`, contactId);
       setContact(data as Contact);
     } catch (error: unknown) {
       logger.error('Error loading contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [orgId, contactId]);
+  }, [contactId]);
 
   useEffect(() => {
     void loadContact();

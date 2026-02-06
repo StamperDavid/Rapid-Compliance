@@ -24,12 +24,10 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const organizationId = DEFAULT_ORG_ID;
-
     // Get navigation document
     const navRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/navigation',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     const navDoc = await navRef.get();
@@ -68,7 +66,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json() as RequestBody;
     const { navigation } = body;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Validate navigation data
     if (!navigation) {
@@ -82,14 +79,14 @@ export async function POST(request: NextRequest) {
     const navigationData: Navigation = {
       ...navigation,
       id: 'navigation',
-      organizationId, // CRITICAL: Set org ownership
+      organizationId: DEFAULT_ORG_ID, // CRITICAL: Set org ownership
       updatedAt: new Date().toISOString(),
     } as Navigation;
 
     // Save to Firestore
     const navRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/navigation',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     await navRef.set(navigationData);

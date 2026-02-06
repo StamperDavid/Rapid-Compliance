@@ -43,12 +43,11 @@ export async function POST(
     }
 
     const params = await context.params;
-    const organizationId = DEFAULT_ORG_ID;
     const domainId = decodeURIComponent(params.domainId);
 
     const domainRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/custom-domains/{domainId}',
-      { orgId: organizationId, domainId }
+      { orgId: DEFAULT_ORG_ID, domainId }
     );
 
     const doc = await domainRef.get();
@@ -82,7 +81,7 @@ export async function POST(
       // Create audit log
       const auditRef = adminDal.getNestedCollection(
         'organizations/{orgId}/website/audit-log/entries',
-        { orgId: organizationId }
+        { orgId: DEFAULT_ORG_ID }
       );
 
       await auditRef.add({
@@ -90,7 +89,7 @@ export async function POST(
         domainId,
         performedBy: 'system',
         performedAt: now,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
 
       // Add domain to Vercel and provision SSL
@@ -115,7 +114,7 @@ export async function POST(
         logger.error('Vercel integration error during domain verification', vercelError instanceof Error ? vercelError : new Error(String(vercelError)), {
           route: '/api/website/domains/[domainId]/verify',
           domainId,
-          organizationId
+          organizationId: DEFAULT_ORG_ID
         });
         // Continue even if Vercel API fails
       }
