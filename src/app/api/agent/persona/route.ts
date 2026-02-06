@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
+import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
@@ -17,9 +18,14 @@ const PersonaDataSchema = z.object({
 }).passthrough();
 
 export async function GET(
-  _req: NextRequest
+  req: NextRequest
 ) {
   try {
+    const authResult = await requireRole(req, ['owner', 'admin', 'manager']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     if (!adminDal) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
@@ -64,6 +70,11 @@ export async function POST(
   req: NextRequest
 ) {
   try {
+    const authResult = await requireRole(req, ['owner', 'admin', 'manager']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     if (!adminDal) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }

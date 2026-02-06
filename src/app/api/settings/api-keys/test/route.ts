@@ -4,7 +4,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/settings/api-keys/test');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

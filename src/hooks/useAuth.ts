@@ -13,7 +13,6 @@ import { hasPermission, type UserRole, type RolePermissions } from '@/types/perm
 import { onAuthStateChange, type AuthUser } from '@/lib/auth/auth-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface UserProfile {
   displayName?: string;
@@ -26,7 +25,29 @@ export interface AppUser {
   email: string;
   displayName: string;
   role: UserRole;
-  organizationId: string;
+}
+
+/**
+ * Map legacy/stored role strings to the 4-role AccountRole.
+ */
+function toAccountRole(role: string | undefined | null): UserRole {
+  if (!role) {
+    return 'member';
+  }
+  switch (role.toLowerCase()) {
+    case 'owner':
+      return 'owner';
+    case 'superadmin':
+    case 'super_admin':
+    case 'admin':
+    case 'platform_admin':
+      return 'admin';
+    case 'manager':
+    case 'team_lead':
+      return 'manager';
+    default:
+      return 'member';
+  }
 }
 
 /**
@@ -48,10 +69,9 @@ export function useAuth() {
         if (isDemoModeAllowed()) {
           setUser({
             id: 'demo-user',
-            email: 'admin@demo.com',
-            displayName: 'Demo Admin',
-            role: 'admin',
-            organizationId: DEFAULT_ORG_ID,
+            email: 'demo@salesvelocity.ai',
+            displayName: 'Demo User',
+            role: 'member',
           });
         } else {
           // In production, no Firebase config means unauthenticated
@@ -78,8 +98,7 @@ export function useAuth() {
                 id: authUser.uid,
                 email: authUser.email ?? '',
                 displayName: authUser.displayName ?? userProfileDisplayName ?? (userProfileName ?? 'User'),
-                role: (typeof roleValue === 'string' ? roleValue as UserRole : 'admin'),
-                organizationId: DEFAULT_ORG_ID,
+                role: toAccountRole(roleValue),
               });
             } catch (error) {
               logger.error('Error loading user profile:', error instanceof Error ? error : new Error(String(error)), { file: 'useAuth.ts' });
@@ -89,17 +108,15 @@ export function useAuth() {
                   id: authUser.uid,
                   email: authUser.email ?? '',
                   displayName: (authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
-                  role: 'admin',
-                  organizationId: DEFAULT_ORG_ID,
+                  role: 'member',
                 });
               } else {
-                // In production, profile load failure means limited access
+                // In production, profile load failure means least privilege
                 setUser({
                   id: authUser.uid,
                   email: authUser.email ?? '',
                   displayName: (authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
-                  role: 'user', // Minimal access role in production
-                  organizationId: DEFAULT_ORG_ID,
+                  role: 'member',
                 });
               }
             }
@@ -108,10 +125,9 @@ export function useAuth() {
             if (isDemoModeAllowed()) {
               setUser({
                 id: 'demo-user',
-                email: 'admin@demo.com',
-                displayName: 'Demo Admin',
-                role: 'admin',
-                organizationId: DEFAULT_ORG_ID,
+                email: 'demo@salesvelocity.ai',
+                displayName: 'Demo User',
+                role: 'member',
               });
             } else {
               // In production, no auth = unauthenticated
@@ -129,10 +145,9 @@ export function useAuth() {
       if (isDemoModeAllowed()) {
         setUser({
           id: 'demo-user',
-          email: 'admin@demo.com',
-          displayName: 'Demo Admin',
-          role: 'admin',
-          organizationId: DEFAULT_ORG_ID,
+          email: 'demo@salesvelocity.ai',
+          displayName: 'Demo User',
+          role: 'member',
         });
       } else {
         // In production, config error means unauthenticated
@@ -147,7 +162,9 @@ export function useAuth() {
 
 export function usePermission(permission: keyof RolePermissions): boolean {
   const { user } = useAuth();
-  if (!user) {return false;}
+  if (!user) {
+    return false;
+  }
   return hasPermission(user.role, permission);
 }
 

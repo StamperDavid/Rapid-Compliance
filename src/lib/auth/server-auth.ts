@@ -6,7 +6,7 @@
 import type { NextRequest } from 'next/server';
 import { requireAuth, requireRole, type AuthenticatedUser } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import type { AccountRole } from '@/types/unified-rbac';
+import { type AccountRole, isAdmin as isAdminRole } from '@/types/unified-rbac';
 
 /**
  * Get authenticated user token from request
@@ -15,12 +15,12 @@ import type { AccountRole } from '@/types/unified-rbac';
 export async function getAuthToken(request: NextRequest): Promise<AuthenticatedUser | null> {
   try {
     const result = await requireAuth(request);
-    
+
     // If result is a NextResponse, authentication failed
     if ('status' in result) {
       return null;
     }
-    
+
     return result.user;
   } catch (error: unknown) {
     logger.error('Error getting auth token', error instanceof Error ? error : new Error(String(error)));
@@ -34,11 +34,11 @@ export async function getAuthToken(request: NextRequest): Promise<AuthenticatedU
  */
 export async function requireAuthToken(request: NextRequest): Promise<AuthenticatedUser> {
   const user = await getAuthToken(request);
-  
+
   if (!user) {
     throw new Error('Authentication required');
   }
-  
+
   return user;
 }
 
@@ -50,26 +50,9 @@ export async function requireUserRole(
   allowedRoles: AccountRole[]
 ): Promise<AuthenticatedUser> {
   const result = await requireRole(request, allowedRoles);
-  
+
   if ('status' in result) {
     throw new Error('Insufficient permissions');
-  }
-  
-  return result.user;
-}
-
-/**
- * Require organization membership for an API route
- * In penthouse model, this is equivalent to requireAuthToken
- */
-export async function requireUserOrganization(
-  request: NextRequest,
-  _organizationId?: string
-): Promise<AuthenticatedUser> {
-  const result = await requireAuth(request);
-
-  if ('status' in result) {
-    throw new Error('Organization access denied');
   }
 
   return result.user;
@@ -84,15 +67,6 @@ export async function getUserId(request: NextRequest): Promise<string | null> {
 }
 
 /**
- * Extract organization ID from request (convenience method)
- * In penthouse model, always returns DEFAULT_ORG_ID
- */
-export async function getOrganizationId(_request: NextRequest): Promise<string | null> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-  return DEFAULT_ORG_ID;
-}
-
-/**
  * Check if user has specific role
  */
 export async function hasRole(request: NextRequest, role: string): Promise<boolean> {
@@ -101,13 +75,9 @@ export async function hasRole(request: NextRequest, role: string): Promise<boole
 }
 
 /**
- * Check if user is admin
+ * Check if user is admin-level (owner or admin)
  */
 export async function isAdmin(request: NextRequest): Promise<boolean> {
   const user = await getAuthToken(request);
-  return user?.role === 'admin';
+  return isAdminRole(user?.role);
 }
-
-
-
-

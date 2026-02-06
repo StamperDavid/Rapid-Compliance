@@ -9,7 +9,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
 import type { Auth } from 'firebase-admin/auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { AccountRole } from '@/types/unified-rbac';
 
 // Firebase Admin SDK (optional - only if configured)
@@ -91,9 +90,7 @@ export interface AuthenticatedUser {
   uid: string;
   email: string | null;
   emailVerified: boolean;
-  /** Always DEFAULT_ORG_ID in penthouse model */
-  organizationId: string;
-  /** User's role using binary RBAC */
+  /** User's role: owner | admin | manager | member */
   role?: AccountRole;
 }
 
@@ -179,12 +176,10 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
 
     logger.debug('[API Auth] Final auth result', { file: 'api-auth.ts', uid: decodedToken.uid, email: decodedToken.email, role });
 
-    // Penthouse model: always use DEFAULT_ORG_ID
     return {
       uid: decodedToken.uid,
       email: decodedToken.email ?? null,
       emailVerified: decodedToken.email_verified ?? false,
-      organizationId: DEFAULT_ORG_ID,
       role: role as AccountRole | undefined,
     };
   } catch (error: unknown) {
@@ -227,8 +222,8 @@ export async function optionalAuth(
 }
 
 /**
- * Require specific role
- * Uses binary RBAC: admin | user
+ * Require specific role(s).
+ * Uses 4-role RBAC: owner | admin | manager | member
  */
 export async function requireRole(
   request: NextRequest,
@@ -252,4 +247,3 @@ export async function requireRole(
 
   return { user };
 }
-

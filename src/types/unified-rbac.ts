@@ -2,9 +2,11 @@
  * Unified Role-Based Access Control (RBAC) System
  * Single source of truth for penthouse deployment
  *
- * Binary Roles:
- * - admin: Full system access, user management, billing, all features
- * - user: Standard contributor - CRM, marketing, sales, limited management
+ * Roles (highest to lowest privilege):
+ * - owner: Master key — full system access, can delete org, impersonate users
+ * - admin: Full system access minus destructive org ops and impersonation
+ * - manager: Team lead — CRM, marketing, sales, limited user/data management
+ * - member: Individual contributor — own records, limited read access
  */
 
 import type { LucideIcon } from 'lucide-react';
@@ -15,11 +17,13 @@ import type { Timestamp } from 'firebase/firestore';
 // =============================================================================
 
 /**
- * Binary account roles:
- * - admin: Full system access, user management, billing, all features
- * - user: Standard contributor - create/edit records, limited management
+ * Account roles (highest to lowest privilege):
+ * - owner: Master key — full system access
+ * - admin: Full access minus destructive org ops and impersonation
+ * - manager: Team lead — CRM, marketing, sales, limited management
+ * - member: Individual contributor — own records, limited read access
  */
-export type AccountRole = 'admin' | 'user';
+export type AccountRole = 'owner' | 'admin' | 'manager' | 'member';
 
 // =============================================================================
 // UNIFIED USER - Single user interface for the Command Center
@@ -129,10 +133,21 @@ export interface UnifiedPermissions {
 }
 
 /**
+ * Role hierarchy for privilege comparison
+ */
+export const ROLE_HIERARCHY: Record<AccountRole, number> = {
+  member: 0,
+  manager: 1,
+  admin: 2,
+  owner: 3,
+};
+
+/**
  * Complete permission set for each role
  */
 export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> = {
-  admin: {
+  // ── OWNER: Master key — all permissions ────────────────────────────
+  owner: {
     // Platform Administration - FULL ACCESS
     canAccessPlatformAdmin: true,
     canManageAllOrganizations: true,
@@ -211,24 +226,24 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
     canManageProducts: true,
   },
 
-  user: {
-    // Penthouse model: all permissions granted for single-tenant deployment
-    // Platform Administration - FULL ACCESS
+  // ── ADMIN: Full access minus destructive org ops and impersonation ─
+  admin: {
+    // Platform Administration
     canAccessPlatformAdmin: true,
     canManageAllOrganizations: true,
     canViewSystemHealth: true,
     canManageFeatureFlags: true,
     canViewAuditLogs: true,
     canManageSystemSettings: true,
-    canImpersonateUsers: true,
+    canImpersonateUsers: false,
     canAccessSupportTools: true,
 
-    // Organization Management - FULL ACCESS
+    // Organization Management
     canManageOrganization: true,
     canManageBilling: true,
     canManageAPIKeys: true,
     canManageTheme: true,
-    canDeleteOrganization: true,
+    canDeleteOrganization: false,
 
     // User Management - FULL ACCESS
     canInviteUsers: true,
@@ -289,6 +304,166 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
     canManageEcommerce: true,
     canProcessOrders: true,
     canManageProducts: true,
+  },
+
+  // ── MANAGER: Team lead — CRM, marketing, sales, limited management ─
+  manager: {
+    // Platform Administration - NO ACCESS
+    canAccessPlatformAdmin: false,
+    canManageAllOrganizations: false,
+    canViewSystemHealth: false,
+    canManageFeatureFlags: false,
+    canViewAuditLogs: false,
+    canManageSystemSettings: false,
+    canImpersonateUsers: false,
+    canAccessSupportTools: false,
+
+    // Organization Management - theme only
+    canManageOrganization: false,
+    canManageBilling: false,
+    canManageAPIKeys: false,
+    canManageTheme: true,
+    canDeleteOrganization: false,
+
+    // User Management - invite and view only
+    canInviteUsers: true,
+    canRemoveUsers: false,
+    canChangeUserRoles: false,
+    canViewAllUsers: true,
+
+    // Data Management - edit/export/import, no create/delete schemas
+    canCreateSchemas: false,
+    canEditSchemas: true,
+    canDeleteSchemas: false,
+    canExportData: true,
+    canImportData: true,
+    canDeleteData: false,
+    canViewAllRecords: true,
+
+    // CRM Operations - FULL ACCESS
+    canCreateRecords: true,
+    canEditRecords: true,
+    canDeleteRecords: true,
+    canViewOwnRecordsOnly: false,
+    canAssignRecords: true,
+
+    // Workflows & Automation - create/edit, no delete
+    canCreateWorkflows: true,
+    canEditWorkflows: true,
+    canDeleteWorkflows: false,
+
+    // AI Agents & Swarm - use but not manage
+    canTrainAIAgents: true,
+    canDeployAIAgents: true,
+    canManageAIAgents: false,
+    canAccessSwarmPanel: true,
+
+    // Marketing - FULL ACCESS
+    canManageSocialMedia: true,
+    canManageEmailCampaigns: true,
+    canManageWebsite: true,
+
+    // Sales - FULL ACCESS
+    canViewLeads: true,
+    canManageLeads: true,
+    canViewDeals: true,
+    canManageDeals: true,
+    canAccessVoiceAgents: true,
+
+    // Reports & Analytics - FULL ACCESS
+    canViewReports: true,
+    canCreateReports: true,
+    canExportReports: true,
+    canViewPlatformAnalytics: true,
+
+    // Settings - access but no integrations
+    canAccessSettings: true,
+    canManageIntegrations: false,
+
+    // E-Commerce - FULL ACCESS
+    canManageEcommerce: true,
+    canProcessOrders: true,
+    canManageProducts: true,
+  },
+
+  // ── MEMBER: Individual contributor — own records, limited read ──────
+  member: {
+    // Platform Administration - NO ACCESS
+    canAccessPlatformAdmin: false,
+    canManageAllOrganizations: false,
+    canViewSystemHealth: false,
+    canManageFeatureFlags: false,
+    canViewAuditLogs: false,
+    canManageSystemSettings: false,
+    canImpersonateUsers: false,
+    canAccessSupportTools: false,
+
+    // Organization Management - NO ACCESS
+    canManageOrganization: false,
+    canManageBilling: false,
+    canManageAPIKeys: false,
+    canManageTheme: false,
+    canDeleteOrganization: false,
+
+    // User Management - NO ACCESS
+    canInviteUsers: false,
+    canRemoveUsers: false,
+    canChangeUserRoles: false,
+    canViewAllUsers: false,
+
+    // Data Management - export only
+    canCreateSchemas: false,
+    canEditSchemas: false,
+    canDeleteSchemas: false,
+    canExportData: true,
+    canImportData: false,
+    canDeleteData: false,
+    canViewAllRecords: false,
+
+    // CRM Operations - create/edit own records
+    canCreateRecords: true,
+    canEditRecords: true,
+    canDeleteRecords: false,
+    canViewOwnRecordsOnly: true,
+    canAssignRecords: false,
+
+    // Workflows & Automation - NO ACCESS
+    canCreateWorkflows: false,
+    canEditWorkflows: false,
+    canDeleteWorkflows: false,
+
+    // AI Agents & Swarm - NO ACCESS
+    canTrainAIAgents: false,
+    canDeployAIAgents: false,
+    canManageAIAgents: false,
+    canAccessSwarmPanel: false,
+
+    // Marketing - NO ACCESS
+    canManageSocialMedia: false,
+    canManageEmailCampaigns: false,
+    canManageWebsite: false,
+
+    // Sales - view only
+    canViewLeads: true,
+    canManageLeads: false,
+    canViewDeals: true,
+    canManageDeals: false,
+    canAccessVoiceAgents: false,
+
+    // Reports & Analytics - view only
+    canViewReports: true,
+    canCreateReports: false,
+    canExportReports: false,
+    canViewPlatformAnalytics: false,
+
+    // Settings - NO ACCESS
+    canAccessSettings: false,
+    canManageIntegrations: false,
+
+    // E-Commerce - process orders only
+    canManageEcommerce: false,
+    canProcessOrders: true,
+    canManageProducts: false,
   },
 };
 
@@ -374,7 +549,8 @@ export interface NavigationStructure {
 // =============================================================================
 
 /**
- * Check if a role has a specific permission
+ * Check if a role has a specific permission.
+ * Owner role is a master key — always returns true.
  */
 export function hasUnifiedPermission(
   role: AccountRole | null | undefined,
@@ -383,11 +559,10 @@ export function hasUnifiedPermission(
   if (!role) {
     return false;
   }
-  const permissions = UNIFIED_ROLE_PERMISSIONS[role];
-  if (!permissions) {
-    return false;
+  if (role === 'owner') {
+    return true;
   }
-  return permissions[permission];
+  return UNIFIED_ROLE_PERMISSIONS[role]?.[permission] ?? false;
 }
 
 /**
@@ -398,14 +573,14 @@ export function getUnifiedPermissions(role: AccountRole): UnifiedPermissions {
 }
 
 /**
- * Check if user is admin (has full system access)
+ * Check if user is admin-level (owner or admin)
  */
 export function isAdmin(role: AccountRole | null | undefined): boolean {
-  return role === 'admin';
+  return role === 'owner' || role === 'admin';
 }
 
 /**
- * Check if role is at or above a certain level
+ * Check if role is at or above a certain level using the role hierarchy
  */
 export function isRoleAtLeast(
   role: AccountRole | null | undefined,
@@ -414,10 +589,7 @@ export function isRoleAtLeast(
   if (!role) {
     return false;
   }
-  if (minimumRole === 'user') {
-    return true;
-  }
-  return role === 'admin';
+  return ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[minimumRole];
 }
 
 /**

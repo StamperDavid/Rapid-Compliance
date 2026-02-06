@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
 interface PricingTier {
@@ -22,18 +22,9 @@ interface TiersRequestBody {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Require admin auth
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
-    }
-
-    const { user } = authResult;
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized - Admin access required' },
-        { status: 403 }
-      );
     }
 
     // Get pricing tiers from Firestore
@@ -59,19 +50,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Require admin auth
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
     const { user } = authResult;
-    if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized - Admin access required' },
-        { status: 403 }
-      );
-    }
 
     const body = (await request.json()) as TiersRequestBody;
     const { tiers } = body;

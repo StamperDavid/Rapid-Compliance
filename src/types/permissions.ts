@@ -1,13 +1,19 @@
 /**
  * Role-Based Access Control (RBAC) System
- * SalesVelocity Penthouse Model - Binary RBAC
+ * SalesVelocity Penthouse Model
  *
- * Roles:
- * - admin: Full system access, user management, billing, all features
- * - user: Standard contributor - CRM, marketing, sales, limited management
+ * This is a THIN RE-EXPORT LAYER. The single source of truth is unified-rbac.ts.
+ * This file exists for backward compatibility with 46+ pages that import from it.
+ *
+ * Roles: owner | admin | manager | member
  */
 
-import type { AccountRole } from './unified-rbac';
+import {
+  type AccountRole,
+  type UnifiedPermissions,
+  UNIFIED_ROLE_PERMISSIONS,
+  hasUnifiedPermission,
+} from './unified-rbac';
 
 export type UserRole = AccountRole;
 
@@ -65,131 +71,64 @@ export interface RolePermissions {
   canManageProducts: boolean;
 }
 
+/**
+ * Extract the legacy 31-field RolePermissions subset from a UnifiedPermissions object.
+ */
+function toRolePermissions(unified: UnifiedPermissions): RolePermissions {
+  return {
+    canManageOrganization: unified.canManageOrganization,
+    canManageBilling: unified.canManageBilling,
+    canManageAPIKeys: unified.canManageAPIKeys,
+    canManageTheme: unified.canManageTheme,
+    canInviteUsers: unified.canInviteUsers,
+    canRemoveUsers: unified.canRemoveUsers,
+    canChangeUserRoles: unified.canChangeUserRoles,
+    canViewAllUsers: unified.canViewAllUsers,
+    canCreateSchemas: unified.canCreateSchemas,
+    canEditSchemas: unified.canEditSchemas,
+    canDeleteSchemas: unified.canDeleteSchemas,
+    canExportData: unified.canExportData,
+    canImportData: unified.canImportData,
+    canDeleteData: unified.canDeleteData,
+    canViewAllRecords: unified.canViewAllRecords,
+    canCreateRecords: unified.canCreateRecords,
+    canEditRecords: unified.canEditRecords,
+    canDeleteRecords: unified.canDeleteRecords,
+    canViewOwnRecordsOnly: unified.canViewOwnRecordsOnly,
+    canAssignRecords: unified.canAssignRecords,
+    canCreateWorkflows: unified.canCreateWorkflows,
+    canEditWorkflows: unified.canEditWorkflows,
+    canDeleteWorkflows: unified.canDeleteWorkflows,
+    canTrainAIAgents: unified.canTrainAIAgents,
+    canDeployAIAgents: unified.canDeployAIAgents,
+    canManageAIAgents: unified.canManageAIAgents,
+    canViewReports: unified.canViewReports,
+    canCreateReports: unified.canCreateReports,
+    canExportReports: unified.canExportReports,
+    canAccessSettings: unified.canAccessSettings,
+    canManageIntegrations: unified.canManageIntegrations,
+    canManageEcommerce: unified.canManageEcommerce,
+    canProcessOrders: unified.canProcessOrders,
+    canManageProducts: unified.canManageProducts,
+  };
+}
+
+/**
+ * Derived from UNIFIED_ROLE_PERMISSIONS — single source of truth.
+ */
 export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
-  admin: {
-    // Company Management - FULL ACCESS
-    canManageOrganization: true,
-    canManageBilling: true,
-    canManageAPIKeys: true,
-    canManageTheme: true,
-
-    // User Management - FULL ACCESS
-    canInviteUsers: true,
-    canRemoveUsers: true,
-    canChangeUserRoles: true,
-    canViewAllUsers: true,
-
-    // Data Management - FULL ACCESS
-    canCreateSchemas: true,
-    canEditSchemas: true,
-    canDeleteSchemas: true,
-    canExportData: true,
-    canImportData: true,
-    canDeleteData: true,
-    canViewAllRecords: true,
-
-    // CRM Operations - FULL ACCESS
-    canCreateRecords: true,
-    canEditRecords: true,
-    canDeleteRecords: true,
-    canViewOwnRecordsOnly: false,
-    canAssignRecords: true,
-
-    // Workflows & Automation - FULL ACCESS
-    canCreateWorkflows: true,
-    canEditWorkflows: true,
-    canDeleteWorkflows: true,
-
-    // AI Agents - FULL ACCESS
-    canTrainAIAgents: true,
-    canDeployAIAgents: true,
-    canManageAIAgents: true,
-
-    // Reports & Analytics - FULL ACCESS
-    canViewReports: true,
-    canCreateReports: true,
-    canExportReports: true,
-
-    // Settings - FULL ACCESS
-    canAccessSettings: true,
-    canManageIntegrations: true,
-
-    // E-Commerce - FULL ACCESS
-    canManageEcommerce: true,
-    canProcessOrders: true,
-    canManageProducts: true,
-  },
-
-  user: {
-    // Penthouse model: all permissions granted for single-tenant deployment
-    // Company Management - FULL ACCESS
-    canManageOrganization: true,
-    canManageBilling: true,
-    canManageAPIKeys: true,
-    canManageTheme: true,
-
-    // User Management - FULL ACCESS
-    canInviteUsers: true,
-    canRemoveUsers: true,
-    canChangeUserRoles: true,
-    canViewAllUsers: true,
-
-    // Data Management - FULL ACCESS
-    canCreateSchemas: true,
-    canEditSchemas: true,
-    canDeleteSchemas: true,
-    canExportData: true,
-    canImportData: true,
-    canDeleteData: true,
-    canViewAllRecords: true,
-
-    // CRM Operations - FULL ACCESS
-    canCreateRecords: true,
-    canEditRecords: true,
-    canDeleteRecords: true,
-    canViewOwnRecordsOnly: false,
-    canAssignRecords: true,
-
-    // Workflows & Automation - FULL ACCESS
-    canCreateWorkflows: true,
-    canEditWorkflows: true,
-    canDeleteWorkflows: true,
-
-    // AI Agents - FULL ACCESS
-    canTrainAIAgents: true,
-    canDeployAIAgents: true,
-    canManageAIAgents: true,
-
-    // Reports & Analytics - FULL ACCESS
-    canViewReports: true,
-    canCreateReports: true,
-    canExportReports: true,
-
-    // Settings - FULL ACCESS
-    canAccessSettings: true,
-    canManageIntegrations: true,
-
-    // E-Commerce - FULL ACCESS
-    canManageEcommerce: true,
-    canProcessOrders: true,
-    canManageProducts: true,
-  },
+  owner: toRolePermissions(UNIFIED_ROLE_PERMISSIONS.owner),
+  admin: toRolePermissions(UNIFIED_ROLE_PERMISSIONS.admin),
+  manager: toRolePermissions(UNIFIED_ROLE_PERMISSIONS.manager),
+  member: toRolePermissions(UNIFIED_ROLE_PERMISSIONS.member),
 };
 
 /**
- * Check if user has specific permission
+ * Check if user has specific permission.
+ * Delegates to unified-rbac hasUnifiedPermission (owner = master key).
  */
 export function hasPermission(role: string | null | undefined, permission: keyof RolePermissions): boolean {
-  if (!role) {
-    return false;
-  }
-
-  const roleKey = role as UserRole;
-  if (!ROLE_PERMISSIONS[roleKey]) {
-    return false;
-  }
-
-  return ROLE_PERMISSIONS[roleKey][permission];
+  return hasUnifiedPermission(role as AccountRole | null | undefined, permission as keyof UnifiedPermissions);
 }
 
 /**
@@ -207,8 +146,8 @@ export function canPerformAction(userRole: UserRole, requiredPermission: keyof R
 }
 
 /**
- * Get all permissions (admin-level)
+ * Get all permissions (owner-level)
  */
 export function getAllPermissions(): RolePermissions {
-  return ROLE_PERMISSIONS.admin;
+  return ROLE_PERMISSIONS.owner;
 }

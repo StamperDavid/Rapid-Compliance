@@ -8,6 +8,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { backupService, type BackupConfig } from '@/lib/backup/backup-service';
+import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
@@ -34,22 +35,9 @@ const DEFAULT_COLLECTIONS = [
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    // Get authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Verify admin token (in production, verify Firebase token and check admin role)
-    const token = authHeader.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
+    const authResult = await requireRole(request, ['owner', 'admin']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     // Parse request body
@@ -113,13 +101,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    // Get authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authResult = await requireRole(request, ['owner', 'admin']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     // Get query parameters
@@ -168,13 +152,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  */
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
   try {
-    // Get authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const authResult = await requireRole(request, ['owner', 'admin']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     // Get query parameters

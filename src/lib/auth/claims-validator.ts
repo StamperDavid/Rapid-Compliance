@@ -3,7 +3,7 @@
  *
  * Penthouse authorization using Firebase ID Token claims.
  * Claims structure:
- * - role: User's role (admin | user)
+ * - role: User's role (owner | admin | manager | member)
  *
  * @module claims-validator
  */
@@ -20,7 +20,7 @@ import { type AccountRole } from '@/types/unified-rbac';
 export interface AuthClaims {
   /** Legacy admin flag - kept for backwards compatibility with Firebase */
   admin: boolean;
-  /** User's role using binary RBAC: admin | user */
+  /** User's role: owner | admin | manager | member */
   role: AccountRole | null;
   /** User's email */
   email: string | null;
@@ -44,7 +44,7 @@ export interface AccessResult {
 // ============================================================================
 
 /** Roles that grant admin-level access */
-const ADMIN_ROLES = ['admin'] as const;
+const ADMIN_ROLES: readonly AccountRole[] = ['owner', 'admin'] as const;
 
 // ============================================================================
 // CLAIMS EXTRACTION
@@ -101,31 +101,33 @@ export function extractAuthClaims(decodedToken: DecodedIdToken): ClaimsValidatio
 }
 
 /**
- * Validate and normalize role string to binary RBAC.
- * Maps legacy roles (superadmin, platform_admin, owner) to admin.
- * Maps everything else to user.
+ * Validate and normalize role string to 4-role RBAC.
+ * Maps legacy role strings to the canonical AccountRole values.
  */
 function validateRole(role: string | null): AccountRole | null {
-  if (!role) {return null;}
+  if (!role) {
+    return null;
+  }
 
-  const normalizedRole = role.toLowerCase();
-
-  switch (normalizedRole) {
+  switch (role.toLowerCase()) {
+    case 'owner':
+      return 'owner';
     case 'superadmin':
     case 'super_admin':
     case 'admin':
-    case 'owner':
     case 'platform_admin':
       return 'admin';
     case 'manager':
+    case 'team_lead':
+      return 'manager';
     case 'employee':
     case 'member':
     case 'viewer':
     case 'user':
-      return 'user';
+      return 'member';
+    default:
+      return null;
   }
-
-  return null;
 }
 
 // ============================================================================
@@ -134,50 +136,58 @@ function validateRole(role: string | null): AccountRole | null {
 
 /**
  * Check if user has access.
- * Penthouse model: All authenticated users have access.
+ * Requires both authentication (uid) and a valid role assignment.
  *
  * @param claims - User's auth claims
  * @returns AccessResult with access determination
  */
 export function checkAccess(claims: AuthClaims): AccessResult {
-  if (claims.uid) {
+  if (!claims.uid) {
     return {
-      allowed: true,
-      reason: 'Penthouse model: authenticated user has access',
+      allowed: false,
+      reason: 'No authenticated user',
     };
   }
 
-  logger.warn('Unauthenticated access attempt', {
-    uid: claims.uid,
-    email: claims.email,
-    file: 'claims-validator.ts',
-  });
+  if (!claims.role) {
+    logger.warn('Authenticated user has no role assigned', {
+      uid: claims.uid,
+      email: claims.email,
+      file: 'claims-validator.ts',
+    });
+    return {
+      allowed: false,
+      reason: 'No role assigned',
+    };
+  }
 
   return {
-    allowed: false,
-    reason: 'User is not authenticated',
+    allowed: true,
+    reason: `Authenticated as ${claims.role}`,
   };
 }
 
 /**
- * Check if user has admin-level role.
+ * Check if user has admin-level role (owner or admin).
  *
  * @param claims - User's auth claims
- * @returns true if user has admin role
+ * @returns true if user has admin-level role
  */
 export function hasAdminRole(claims: AuthClaims): boolean {
-  if (!claims.role) {return false;}
-  return (ADMIN_ROLES as readonly string[]).includes(claims.role);
+  if (!claims.role) {
+    return false;
+  }
+  return ADMIN_ROLES.includes(claims.role);
 }
 
 /**
  * Check if user is admin (full system access).
  *
  * @param claims - User's auth claims
- * @returns true if user is admin
+ * @returns true if user is owner or admin
  */
 export function isAdminClaims(claims: AuthClaims): boolean {
-  return claims.role === 'admin';
+  return claims.role === 'owner' || claims.role === 'admin';
 }
 
 /**
@@ -199,21 +209,18 @@ export function getEffectiveOrgId(): string {
 export interface FirebaseCustomClaims {
   admin?: boolean;
   role?: string;
-  organizationId?: string;
 }
 
 /**
  * Build custom claims object for a user.
- * Penthouse model: Always uses DEFAULT_ORG_ID.
  *
- * @param role - User's role (admin | user)
+ * @param role - User's role (owner | admin | manager | member)
  * @returns Claims object to set on the user
  */
 export function buildCustomClaims(role: AccountRole): FirebaseCustomClaims {
   return {
-    organizationId: DEFAULT_ORG_ID,
     role,
-    admin: role === 'admin',
+    admin: role === 'owner' || role === 'admin',
   };
 }
 
