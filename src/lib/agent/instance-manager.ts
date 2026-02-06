@@ -70,13 +70,12 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     
     // 4. Compile system prompt with customer context
     const systemPrompt = this.compileSystemPrompt(goldenMaster, customerMemory);
-    
+
     // 5. Create instance
     const instance: AgentInstance = {
       instanceId: this.generateInstanceId(),
       sessionId,
       customerId,
-      orgId,
       goldenMasterId: goldenMaster.id,
       goldenMasterVersion: goldenMaster.version,
       systemPrompt,
@@ -679,10 +678,8 @@ ${this.summarizeRecentConversations(customerMemory)}
 
 
   private async createCustomerMemory(customerId: string): Promise<CustomerMemory> {
-    const orgId = DEFAULT_ORG_ID;
     const memory: CustomerMemory = {
       customerId,
-      orgId,
       sessions: [],
       conversationHistory: [],
       preferences: {
@@ -749,9 +746,10 @@ ${this.summarizeRecentConversations(customerMemory)}
       }
       
       // Fallback to client SDK
+      const orgId = DEFAULT_ORG_ID;
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${memory.orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
         memory.customerId,
         memory,
         true
@@ -764,10 +762,11 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   private async storeActiveInstance(instance: AgentInstance): Promise<void> {
     // Store in Firestore for persistence (in production, also use Redis for fast access)
+    const orgId = DEFAULT_ORG_ID;
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${instance.orgId}/activeInstances`,
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/activeInstances`,
         instance.instanceId,
         {
           ...instance,
@@ -807,10 +806,11 @@ ${this.summarizeRecentConversations(customerMemory)}
   }
   
   private async archiveInstance(instance: AgentInstance): Promise<void> {
+    const orgId = DEFAULT_ORG_ID;
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${instance.orgId}/archivedInstances`,
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/archivedInstances`,
         instance.instanceId,
         {
           ...instance,

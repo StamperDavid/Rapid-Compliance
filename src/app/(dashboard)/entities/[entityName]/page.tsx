@@ -57,8 +57,6 @@ export default function EntityTablePage() {
     update: updateRecord,
     remove: deleteRecord,
   } = useRecords({
-    organizationId: orgId,
-    workspaceId,
     entityName,
     realTime: true,
   });

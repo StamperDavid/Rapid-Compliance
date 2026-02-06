@@ -61,7 +61,7 @@ export async function searchWorkspace(
 
     // Get all schemas to know what entities exist
     const { SchemaService } = await import('@/lib/db/firestore-service');
-    const schemas = await SchemaService.getAll(orgId, workspaceId) as Array<{
+    const schemas = await SchemaService.getAll(workspaceId) as Array<{
       id: string;
       name: string;
       fields?: SchemaField[];

@@ -11,11 +11,9 @@ import { onAuthStateChange } from '@/lib/auth/auth-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 
 interface UserProfile {
-  organizationId?: string;
   displayName?: string;
   name?: string;
   role?: string;
-  currentWorkspaceId?: string;
 }
 
 interface AuthContextType {
@@ -24,8 +22,6 @@ interface AuthContextType {
     email: string;
     displayName: string;
     role: UserRole;
-    organizationId: string;
-    workspaceId?: string;
   } | null;
   loading: boolean;
 }
@@ -63,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: 'admin@demo.com',
         displayName: 'Demo User',
         role: 'admin',
-        organizationId: 'demo',
       });
       setLoading(false);
       return;
@@ -78,9 +73,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const rawProfile: unknown = await FirestoreService.get(COLLECTIONS.USERS, authUser.uid);
               const userProfile = rawProfile as UserProfile | null;
 
-              // Use organizationId from user profile (set during account creation)
-              const organizationId = userProfile?.organizationId ?? 'demo';
-
               // Extract display name with fallback chain
               const displayName = authUser.displayName ?? userProfile?.displayName ?? userProfile?.name ?? 'User';
 
@@ -90,17 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: authUser.email ?? '',
                 displayName,
                 role: (typeof roleValue === 'string' ? roleValue as UserRole : 'admin'),
-                organizationId,
-                workspaceId: userProfile?.currentWorkspaceId,
               });
-            } catch (error) {
-              logger.error('Error loading user profile:', error instanceof Error ? error : new Error(String(error)), { file: 'AuthProvider.tsx' });
+            } catch (_error) {
+              // Error loading profile - use defaults from auth
+              logger.error('Error loading user profile:', _error instanceof Error ? _error : new Error(String(_error)), { file: 'AuthProvider.tsx' });
               setUser({
                 id: authUser.uid,
                 email: authUser.email ?? '',
                 displayName: authUser.displayName ?? 'User',
                 role: 'admin',
-                organizationId: 'demo',
               });
             }
           } else {
@@ -119,7 +109,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: 'admin@demo.com',
         displayName: 'Demo User',
         role: 'admin',
-        organizationId: 'demo',
       });
       setLoading(false);
     }

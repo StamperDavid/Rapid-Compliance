@@ -31,7 +31,7 @@ export async function buildBaseModel(params: {
   workspaceId?: string;
   industryTemplateId?: string; // NEW: Optional industry template for intelligent defaults
 }): Promise<BaseModel> {
-  const { onboardingData, knowledgeBase, organizationId, userId, industryTemplateId } = params;
+  const { onboardingData, knowledgeBase, organizationId: _organizationId, userId, industryTemplateId } = params;
 
   // NEW: Load and mutate industry template if provided
   let mutatedTemplate: IndustryTemplate | null = null;
@@ -116,7 +116,6 @@ export async function buildBaseModel(params: {
 
   const baseModel: BaseModel = {
     id: `bm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    orgId: organizationId,
     status: 'draft', // Not 'deployed' - that's only for Golden Master
 
     // Configuration (all editable)
@@ -156,10 +155,9 @@ export async function buildBaseModel(params: {
  * Uses Admin SDK on server, Client SDK on client
  */
 export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
-  logger.info('[saveBaseModel] Saving base model', { 
-    baseModelId: baseModel.id, 
-    orgId: baseModel.orgId,
-    file: 'base-model-builder.ts' 
+  logger.info('[saveBaseModel] Saving base model', {
+    baseModelId: baseModel.id,
+    file: 'base-model-builder.ts'
   });
   
   if (isServer) {
@@ -182,7 +180,7 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
     }, {
       audit: true,
       userId: baseModel.createdBy,
-      organizationId: baseModel.orgId,
+      organizationId: DEFAULT_ORG_ID,
     });
     logger.info('[saveBaseModel] Successfully saved to baseModels collection (client)', { file: 'base-model-builder.ts' });
   }
@@ -326,7 +324,7 @@ export async function addTrainingScenario(
     }, {
       audit: true,
       userId: 'system-training', // No userId available in this context
-      organizationId: current.orgId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 }

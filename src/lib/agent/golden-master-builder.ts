@@ -53,18 +53,18 @@ export async function createGoldenMasterFromBase(
   logger.info('[Golden Master Builder] Next version', { version: nextVersion, file: 'golden-master-builder.ts' });
   
   // Get previous version for changelog
+  const orgId = DEFAULT_ORG_ID;
   const { orderBy, limit } = await import('firebase/firestore');
   const previousGMs = await FirestoreService.getAll<GoldenMaster>(
-    `${COLLECTIONS.ORGANIZATIONS}/${baseModel.orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
     [orderBy('createdAt', 'desc'), limit(1)]
   );
   const previousVersion = previousGMs.length > 0 ? previousGMs[0].version : undefined;
-  
+
   // Create Golden Master as snapshot of Base Model
   const goldenMaster: GoldenMaster = {
     id: `gm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     version: nextVersion,
-    orgId: baseModel.orgId,
     baseModelId: baseModel.id,
     
     // Snapshot all configuration from Base Model
@@ -135,7 +135,7 @@ export async function buildGoldenMaster(
   logger.warn('[Golden Master Builder] Use createGoldenMasterFromBase() instead.', { file: 'golden-master-builder.ts' });
   logger.warn('[Golden Master Builder] Golden Masters should only be created from trained Base Models.', { file: 'golden-master-builder.ts' });
   
-  const { onboardingData, knowledgeBase, organizationId, userId } = options;
+  const { onboardingData, knowledgeBase, organizationId: _organizationId, userId } = options;
   
   // Build persona from onboarding
   const agentPersona = buildPersonaFromOnboarding(onboardingData);
@@ -161,7 +161,6 @@ export async function buildGoldenMaster(
   const goldenMaster: GoldenMaster = {
     id: `gm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     version: nextVersion,
-    orgId: organizationId,
     baseModelId: 'legacy', // No base model for legacy creation
     businessContext: onboardingData,
     agentPersona,
@@ -184,10 +183,11 @@ export async function buildGoldenMaster(
  * Save Golden Master to Firestore
  */
 export async function saveGoldenMaster(goldenMaster: GoldenMaster): Promise<void> {
+  const orgId = DEFAULT_ORG_ID;
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${goldenMaster.orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
     goldenMaster.id,
     {
       ...goldenMaster,

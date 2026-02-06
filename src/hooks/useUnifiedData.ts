@@ -98,7 +98,7 @@ export function useCollectionData<T>(
         const org = await OrganizationService.get(DEFAULT_ORG_ID);
         setData(org ? [org as T] : []);
       } else if (collectionName === COLLECTIONS.WORKSPACES) {
-        const workspaces = await WorkspaceService.getAll(DEFAULT_ORG_ID);
+        const workspaces = await WorkspaceService.getAll();
         setData(workspaces as T[]);
       } else {
         // Default: fetch from collection directly
@@ -198,7 +198,7 @@ export function useDocData<T>(
         const org = await OrganizationService.get(docId);
         setData(org as T | null);
       } else if (collectionName === COLLECTIONS.WORKSPACES) {
-        const workspace = await WorkspaceService.get(DEFAULT_ORG_ID, docId);
+        const workspace = await WorkspaceService.get(docId);
         setData(workspace as T | null);
       } else {
         const result = await FirestoreService.get<T>(collectionName, docId);
@@ -235,7 +235,7 @@ export function useDocData<T>(
     }
 
     if (collectionName === COLLECTIONS.WORKSPACES) {
-      const unsubscribe = WorkspaceService.subscribe(DEFAULT_ORG_ID, docId, (workspace) => {
+      const unsubscribe = WorkspaceService.subscribe(docId, (workspace) => {
         setData(workspace as T | null);
       });
       return unsubscribe;
@@ -295,7 +295,6 @@ export function useRecords<T>(
       setError(null);
 
       const records = await RecordService.getAll(
-        DEFAULT_ORG_ID,
         workspaceId,
         entityName,
         constraints
@@ -329,7 +328,6 @@ export function useRecords<T>(
     const workspaceId = 'default';
 
     const unsubscribe = RecordService.subscribe(
-      DEFAULT_ORG_ID,
       workspaceId,
       entityName,
       constraints,
@@ -371,7 +369,7 @@ export function useWorkspaces(): UseDataReturn<Record<string, unknown>> {
       setLoading(true);
       setError(null);
 
-      const workspaces = await WorkspaceService.getAll(DEFAULT_ORG_ID);
+      const workspaces = await WorkspaceService.getAll();
       setData(workspaces);
       setLoading(false);
     } catch (err) {
