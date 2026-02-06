@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
 
     if (unprocessedOnly) {
       events = await SchemaChangeEventPublisher.getUnprocessedEvents(
-        DEFAULT_ORG_ID,
         schemaId ?? undefined
       );
     } else {

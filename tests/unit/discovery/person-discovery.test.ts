@@ -7,9 +7,6 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { discoverPerson, discoverPeopleBatch } from '@/lib/services/discovery-engine';
 import { deleteFlaggedArchiveEntries, deleteExpiredArchiveEntries } from '@/lib/scraper-intelligence/discovery-archive-service';
 
-// Test organization ID
-const TEST_ORG_ID = 'test-org-person-discovery';
-
 describe('Person Discovery Tests', () => {
   beforeAll(async () => {
     // Clean up any existing test data
@@ -25,7 +22,7 @@ describe('Person Discovery Tests', () => {
   describe('Single Person Discovery', () => {
     it('should discover person from email address', async () => {
       // Use a test email format
-      const result = await discoverPerson('john.doe@example.com', TEST_ORG_ID);
+      const result = await discoverPerson('john.doe@example.com');
 
       // Verify result structure
       expect(result).toBeDefined();
@@ -50,7 +47,7 @@ describe('Person Discovery Tests', () => {
     }, 60000);
 
     it('should extract name from email local part', async () => {
-      const result = await discoverPerson('jane.smith@example.com', TEST_ORG_ID);
+      const result = await discoverPerson('jane.smith@example.com');
 
       // Should extract first and last name
       expect(result.person.firstName).toBeDefined();
@@ -67,11 +64,11 @@ describe('Person Discovery Tests', () => {
       const email = 'test.user@example.com';
       
       // First discovery
-      const result1 = await discoverPerson(email, TEST_ORG_ID);
+      const result1 = await discoverPerson(email);
       expect(result1.fromCache).toBe(false);
 
       // Second discovery (should hit cache)
-      const result2 = await discoverPerson(email, TEST_ORG_ID);
+      const result2 = await discoverPerson(email);
       expect(result2.fromCache).toBe(true);
       expect(result2.scrapeId).toBe(result1.scrapeId);
 
@@ -82,13 +79,13 @@ describe('Person Discovery Tests', () => {
 
     it('should handle invalid email gracefully', async () => {
       await expect(
-        discoverPerson('invalid-email', TEST_ORG_ID)
+        discoverPerson('invalid-email')
       ).rejects.toThrow('Invalid email address');
     });
 
     it('should handle empty email', async () => {
       await expect(
-        discoverPerson('', TEST_ORG_ID)
+        discoverPerson('')
       ).rejects.toThrow();
     });
   });
@@ -100,7 +97,7 @@ describe('Person Discovery Tests', () => {
         'person2@example.org',
       ];
       
-      const results = await discoverPeopleBatch(emails, TEST_ORG_ID, {
+      const results = await discoverPeopleBatch(emails, {
         concurrency: 2,
         delayMs: 1000,
       });
@@ -121,7 +118,7 @@ describe('Person Discovery Tests', () => {
         'another.valid@example.org',
       ];
 
-      const results = await discoverPeopleBatch(emails, TEST_ORG_ID, {
+      const results = await discoverPeopleBatch(emails, {
         concurrency: 1,
         delayMs: 500,
       });
@@ -134,7 +131,7 @@ describe('Person Discovery Tests', () => {
 
   describe('Discovery Methods', () => {
     it('should track discovery methods used', async () => {
-      const result = await discoverPerson('engineer@example.com', TEST_ORG_ID);
+      const result = await discoverPerson('engineer@example.com');
 
       expect(result.person.metadata.methods).toBeDefined();
       expect(Array.isArray(result.person.metadata.methods)).toBe(true);
@@ -145,7 +142,7 @@ describe('Person Discovery Tests', () => {
     }, 60000);
 
     it('should calculate confidence based on data found', async () => {
-      const result = await discoverPerson('ceo@example.com', TEST_ORG_ID);
+      const result = await discoverPerson('ceo@example.com');
 
       expect(result.person.metadata.confidence).toBeDefined();
       expect(typeof result.person.metadata.confidence).toBe('number');
@@ -156,7 +153,7 @@ describe('Person Discovery Tests', () => {
 
   describe('Data Enrichment', () => {
     it('should enrich person data with available information', async () => {
-      const result = await discoverPerson('contact@example.com', TEST_ORG_ID);
+      const result = await discoverPerson('contact@example.com');
 
       // Should at minimum have email and basic name extraction
       expect(result.person.email).toBeDefined();
@@ -168,14 +165,14 @@ describe('Person Discovery Tests', () => {
 
     it('should save to discovery archive with 30-day TTL', async () => {
       const email = 'archive-test@example.com';
-      const result = await discoverPerson(email, TEST_ORG_ID);
+      const result = await discoverPerson(email);
 
       // First discovery should not be from cache
       expect(result.fromCache).toBe(false);
       expect(result.scrapeId).toBeDefined();
 
       // Second discovery should hit cache
-      const cached = await discoverPerson(email, TEST_ORG_ID);
+      const cached = await discoverPerson(email);
       expect(cached.fromCache).toBe(true);
       expect(cached.scrapeId).toBe(result.scrapeId);
     }, 90000);
@@ -184,7 +181,7 @@ describe('Person Discovery Tests', () => {
   describe('Error Handling', () => {
     it('should handle network errors gracefully', async () => {
       // Email with non-existent domain that will fail DNS lookup
-      const result = await discoverPerson('user@nonexistentdomain12345.com', TEST_ORG_ID);
+      const result = await discoverPerson('user@nonexistentdomain12345.com');
 
       // Should still return a result with minimal data
       expect(result.person).toBeDefined();
@@ -194,20 +191,20 @@ describe('Person Discovery Tests', () => {
 
     it('should validate email format', async () => {
       await expect(
-        discoverPerson('not-an-email', TEST_ORG_ID)
+        discoverPerson('not-an-email')
       ).rejects.toThrow();
     });
 
-    it('should handle empty organization ID', async () => {
+    it('should handle invalid email', async () => {
       await expect(
-        discoverPerson('test@example.com', '')
+        discoverPerson('')
       ).rejects.toThrow();
     });
   });
 
   describe('Hunter-Closer Compliance', () => {
     it('should use zero third-party data APIs', async () => {
-      const result = await discoverPerson('native@example.com', TEST_ORG_ID);
+      const result = await discoverPerson('native@example.com');
 
       // All data should come from our discovery, not third-party APIs
       expect(result.person.metadata.source).toBe('person-discovery');
@@ -220,7 +217,7 @@ describe('Person Discovery Tests', () => {
     }, 60000);
 
     it('should build proprietary 30-day cache moat', async () => {
-      const result = await discoverPerson('cache-test@example.com', TEST_ORG_ID);
+      const result = await discoverPerson('cache-test@example.com');
 
       // Verify 30-day TTL
       const expiresAt = new Date(result.person.metadata.expiresAt);

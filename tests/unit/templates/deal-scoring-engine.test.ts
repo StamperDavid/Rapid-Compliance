@@ -11,7 +11,7 @@
  * - Historical Win Rate
  */
 
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, jest } from '@jest/globals';
 import { calculateDealScore, batchScoreDeals } from '@/lib/templates/deal-scoring-engine';
 import type { Deal } from '@/lib/crm/deal-service';
 
@@ -61,10 +61,10 @@ describe('Deal Scoring Engine', () => {
   
   describe('calculateDealScore', () => {
     
-    it('should calculate score for a typical deal', async () => {
+    it('should calculate score for a typical deal', () => {
       const deal = createMockDeal();
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
@@ -101,7 +101,7 @@ describe('Deal Scoring Engine', () => {
       expect(score.calculatedAt).toBeInstanceOf(Date);
     });
     
-    it('should score a hot deal (high value, recent, fast-moving)', async () => {
+    it('should score a hot deal (high value, recent, fast-moving)', () => {
       const deal = createMockDeal({
         value: 500000, // High value
         stage: 'proposal',
@@ -113,8 +113,8 @@ describe('Deal Scoring Engine', () => {
           contactTitle: 'CEO' // C-level
         }
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
@@ -127,7 +127,7 @@ describe('Deal Scoring Engine', () => {
       expect(score.closeProbability).toBeGreaterThan(50);
     });
     
-    it('should score an at-risk deal (old, stagnant, low engagement)', async () => {
+    it('should score an at-risk deal (old, stagnant, low engagement)', () => {
       const deal = createMockDeal({
         value: 10000, // Low value
         stage: 'qualification', // Early stage
@@ -138,8 +138,8 @@ describe('Deal Scoring Engine', () => {
           contactTitle: 'Coordinator' // Not decision maker
         }
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
@@ -155,12 +155,12 @@ describe('Deal Scoring Engine', () => {
       expect(score.riskFactors.length).toBeGreaterThan(0);
     });
     
-    it('should detect deal age risk factor for old deals', async () => {
+    it('should detect deal age risk factor for old deals', () => {
       const deal = createMockDeal({
         createdAt: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) // 1 year old
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
@@ -171,15 +171,15 @@ describe('Deal Scoring Engine', () => {
       expect(ageRisk).toBeDefined();
     });
     
-    it('should detect decision maker involvement factor', async () => {
+    it('should detect decision maker involvement factor', () => {
       const dealWithCEO = createMockDeal({
         customFields: {
           contactName: 'Jane Doe',
           contactTitle: 'CEO'
         }
       });
-      
-      const scoreWithCEO = await calculateDealScore({
+
+      const scoreWithCEO = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealWithCEO.id,
@@ -196,8 +196,8 @@ describe('Deal Scoring Engine', () => {
           contactTitle: 'Coordinator'
         }
       });
-      
-      const scoreWithCoordinator = await calculateDealScore({
+
+      const scoreWithCoordinator = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealWithCoordinator.id,
@@ -208,15 +208,15 @@ describe('Deal Scoring Engine', () => {
       expect(coordinatorFactor!.score).toBeLessThan(50); // Low score for non-decision maker
     });
     
-    it('should calculate budget alignment factor', async () => {
+    it('should calculate budget alignment factor', () => {
       const dealAtBudget = createMockDeal({
         value: 50000,
         customFields: {
           stated_budget: 50000 // Perfect alignment
         }
       });
-      
-      const scoreAtBudget = await calculateDealScore({
+
+      const scoreAtBudget = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealAtBudget.id,
@@ -233,8 +233,8 @@ describe('Deal Scoring Engine', () => {
           stated_budget: 50000 // 2x over budget
         }
       });
-      
-      const scoreOverBudget = await calculateDealScore({
+
+      const scoreOverBudget = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealOverBudget.id,
@@ -245,14 +245,14 @@ describe('Deal Scoring Engine', () => {
       expect(overBudgetFactor!.score).toBeLessThan(50); // Low score for misalignment
     });
     
-    it('should detect competition presence factor', async () => {
+    it('should detect competition presence factor', () => {
       const dealWithCompetitors = createMockDeal({
         customFields: {
           competitors: ['Salesforce', 'HubSpot']
         }
       });
-      
-      const scoreWithCompetitors = await calculateDealScore({
+
+      const scoreWithCompetitors = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealWithCompetitors.id,
@@ -266,8 +266,8 @@ describe('Deal Scoring Engine', () => {
       const dealNoCompetitors = createMockDeal({
         customFields: {}
       });
-      
-      const scoreNoCompetitors = await calculateDealScore({
+
+      const scoreNoCompetitors = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealNoCompetitors.id,
@@ -278,11 +278,11 @@ describe('Deal Scoring Engine', () => {
       expect(noCompetitionFactor!.score).toBeGreaterThan(competitionFactor!.score);
     });
     
-    it('should apply custom template scoring weights', async () => {
+    it('should apply custom template scoring weights', () => {
       const deal = createMockDeal();
-      
+
       // Score with SaaS template (emphasizes engagement)
-      const saasScore = await calculateDealScore({
+      const saasScore = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
@@ -291,7 +291,7 @@ describe('Deal Scoring Engine', () => {
       });
       
       // Score with Manufacturing template (emphasizes budget)
-      const mfgScore = await calculateDealScore({
+      const mfgScore = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
@@ -308,10 +308,10 @@ describe('Deal Scoring Engine', () => {
       expect(mfgScore.factors).toHaveLength(7);
     });
     
-    it('should generate actionable recommendations', async () => {
+    it('should generate actionable recommendations', () => {
       const deal = createMockDeal();
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
@@ -325,14 +325,14 @@ describe('Deal Scoring Engine', () => {
       });
     });
     
-    it('should predict close date and final value', async () => {
+    it('should predict close date and final value', () => {
       const deal = createMockDeal({
         value: 50000,
         stage: 'proposal',
         expectedCloseDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
@@ -346,7 +346,7 @@ describe('Deal Scoring Engine', () => {
   
   describe('Tier Classification', () => {
     
-    it('should classify deals into correct tiers', async () => {
+    it('should classify deals into correct tiers', () => {
       // Hot deal: high score, high probability
       const hotDeal = createMockDeal({
         value: 500000,
@@ -356,8 +356,8 @@ describe('Deal Scoring Engine', () => {
           contactTitle: 'CEO'
         }
       });
-      
-      const hotScore = await calculateDealScore({
+
+      const hotScore = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: hotDeal.id,
@@ -372,8 +372,8 @@ describe('Deal Scoring Engine', () => {
         createdAt: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000),
         expectedCloseDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       });
-      
-      const atRiskScore = await calculateDealScore({
+
+      const atRiskScore = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: atRiskDeal.id,
@@ -389,12 +389,12 @@ describe('Deal Scoring Engine', () => {
   
   describe('Risk Factor Detection', () => {
     
-    it('should detect timing risks for overdue deals', async () => {
+    it('should detect timing risks for overdue deals', () => {
       const overdueDeal = createMockDeal({
         expectedCloseDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) // 60 days overdue
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: overdueDeal.id,
@@ -406,15 +406,15 @@ describe('Deal Scoring Engine', () => {
       expect(['critical', 'high']).toContain(timingRisk!.severity);
     });
     
-    it('should detect budget risks for misaligned budgets', async () => {
+    it('should detect budget risks for misaligned budgets', () => {
       const budgetRiskDeal = createMockDeal({
         value: 200000,
         customFields: {
           stated_budget: 50000 // 4x over budget
         }
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: budgetRiskDeal.id,
@@ -425,14 +425,14 @@ describe('Deal Scoring Engine', () => {
       expect(budgetRisk).toBeDefined();
     });
     
-    it('should detect stakeholder risks when no decision maker', async () => {
+    it('should detect stakeholder risks when no decision maker', () => {
       const noDecisionMakerDeal = createMockDeal({
         customFields: {
           contactTitle: 'Intern'
         }
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: noDecisionMakerDeal.id,
@@ -443,15 +443,15 @@ describe('Deal Scoring Engine', () => {
       expect(stakeholderRisk).toBeDefined();
     });
     
-    it('should provide mitigation strategies for each risk', async () => {
+    it('should provide mitigation strategies for each risk', () => {
       const riskyDeal = createMockDeal({
         createdAt: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000),
         customFields: {
           contactTitle: 'Coordinator'
         }
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: riskyDeal.id,
@@ -467,15 +467,14 @@ describe('Deal Scoring Engine', () => {
   
   describe('Batch Scoring', () => {
     
-    it('should score multiple deals in batch', async () => {
+    it('should score multiple deals in batch', () => {
       const deals = [
         createMockDeal({ id: 'deal-1', value: 100000 }),
         createMockDeal({ id: 'deal-2', value: 50000 }),
         createMockDeal({ id: 'deal-3', value: 25000 })
       ];
-      
-      const result = await batchScoreDeals(
-        TEST_ORG_ID,
+
+      const result = batchScoreDeals(
         TEST_WORKSPACE_ID,
         deals.map(d => d.id)
       );
@@ -494,9 +493,8 @@ describe('Deal Scoring Engine', () => {
       expect(totalCategorized).toBe(3);
     });
     
-    it('should handle empty batch gracefully', async () => {
-      const result = await batchScoreDeals(
-        TEST_ORG_ID,
+    it('should handle empty batch gracefully', () => {
+      const result = batchScoreDeals(
         TEST_WORKSPACE_ID,
         []
       );
@@ -509,7 +507,7 @@ describe('Deal Scoring Engine', () => {
   
   describe('Confidence Scoring', () => {
     
-    it('should have high confidence for deals with complete data', async () => {
+    it('should have high confidence for deals with complete data', () => {
       const completeDeal = createMockDeal({
         name: 'Complete Deal',
         value: 100000,
@@ -523,8 +521,8 @@ describe('Deal Scoring Engine', () => {
           last_activity_date: new Date()
         }
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: completeDeal.id,
@@ -534,15 +532,15 @@ describe('Deal Scoring Engine', () => {
       expect(score.confidence).toBeGreaterThan(60);
     });
     
-    it('should have lower confidence for deals with missing data', async () => {
+    it('should have lower confidence for deals with missing data', () => {
       const incompleteDeal = createMockDeal({
         name: 'Incomplete Deal',
         value: 50000,
         stage: 'prospecting',
         // Missing: contact info, expected close date, custom fields
       });
-      
-      const score = await calculateDealScore({
+
+      const score = calculateDealScore({
         organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: incompleteDeal.id,

@@ -193,7 +193,7 @@ async function executeWorkflowActions(
       } else if (action.type === 'send_sms') {
         result = await executeSMSAction(action, triggerData, organizationId);
       } else if (action.type === 'create_entity' || action.type === 'update_entity' || action.type === 'delete_entity') {
-        result = await executeEntityAction(action, triggerData, organizationId);
+        result = await executeEntityAction(action, triggerData);
       } else if (action.type === 'http_request') {
         result = await executeHTTPAction(action, triggerData);
       } else if (action.type === 'delay') {

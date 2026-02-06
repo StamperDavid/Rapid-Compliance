@@ -1,9 +1,9 @@
 /**
  * Playbook Builder - Signal Bus Events
- * 
+ *
  * Event definitions for playbook operations to integrate with the
  * Signal Bus orchestration system.
- * 
+ *
  * EVENT TYPES:
  * - playbook.generated - New playbook created
  * - playbook.patterns_extracted - Patterns extracted from conversations
@@ -14,11 +14,12 @@
  * - playbook.effectiveness_measured - Effectiveness metrics measured
  * - playbook.archived - Playbook archived/deprecated
  * - playbook.pattern_identified - New pattern identified
- * 
+ *
  * @module lib/playbook/events
  */
 
 import type { SalesSignal } from '@/lib/orchestration';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // EVENT TYPES
@@ -217,14 +218,13 @@ export interface PatternIdentifiedEvent extends Omit<SalesSignal, 'ttl' | 'creat
  * Create playbook generated event
  */
 export function createPlaybookGeneratedEvent(
-  organizationId: string,
   workspaceId: string,
   metadata: PlaybookGeneratedEvent['metadata']
 ): Omit<PlaybookGeneratedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.generated',
     timestamp: new Date(),
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Medium',
     confidence: metadata.confidence / 100, // Convert 0-100 to 0-1
@@ -236,14 +236,13 @@ export function createPlaybookGeneratedEvent(
  * Create patterns extracted event
  */
 export function createPatternsExtractedEvent(
-  organizationId: string,
   workspaceId: string,
   metadata: PatternsExtractedEvent['metadata']
 ): Omit<PatternsExtractedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.patterns_extracted',
     timestamp: new Date(),
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Low',
     confidence: metadata.highConfidencePatterns > 0 ? 0.8 : 0.6,
@@ -255,14 +254,13 @@ export function createPatternsExtractedEvent(
  * Create playbook activated event
  */
 export function createPlaybookActivatedEvent(
-  organizationId: string,
   workspaceId: string,
   metadata: PlaybookActivatedEvent['metadata']
 ): Omit<PlaybookActivatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.activated',
     timestamp: new Date(),
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'High',
     confidence: metadata.confidence / 100,
@@ -274,14 +272,13 @@ export function createPlaybookActivatedEvent(
  * Create playbook used event
  */
 export function createPlaybookUsedEvent(
-  organizationId: string,
   workspaceId: string,
   metadata: PlaybookUsedEvent['metadata']
 ): Omit<PlaybookUsedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.used',
     timestamp: new Date(),
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Low',
     confidence: metadata.adherenceScore / 100,
@@ -293,14 +290,13 @@ export function createPlaybookUsedEvent(
  * Create playbook updated event
  */
 export function createPlaybookUpdatedEvent(
-  organizationId: string,
   workspaceId: string,
   metadata: PlaybookUpdatedEvent['metadata']
 ): Omit<PlaybookUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.updated',
     timestamp: new Date(),
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Medium',
     confidence: Math.abs(metadata.confidenceChange) > 10 ? 0.7 : 0.8,
@@ -312,14 +308,13 @@ export function createPlaybookUpdatedEvent(
  * Create adoption tracked event
  */
 export function createAdoptionTrackedEvent(
-  organizationId: string,
   workspaceId: string,
   metadata: AdoptionTrackedEvent['metadata']
 ): Omit<AdoptionTrackedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.adoption_tracked',
     timestamp: new Date(),
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Low',
     confidence: metadata.adoptionRate / 100,
@@ -331,14 +326,13 @@ export function createAdoptionTrackedEvent(
  * Create effectiveness measured event
  */
 export function createEffectivenessMeasuredEvent(
-  organizationId: string,
   workspaceId: string,
   metadata: EffectivenessMeasuredEvent['metadata']
 ): Omit<EffectivenessMeasuredEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.effectiveness_measured',
     timestamp: new Date(),
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: metadata.recommendation === 'retire' ? 'High' : 'Medium',
     confidence: metadata.confidence / 100,
@@ -350,14 +344,13 @@ export function createEffectivenessMeasuredEvent(
  * Create playbook archived event
  */
 export function createPlaybookArchivedEvent(
-  organizationId: string,
   workspaceId: string,
   metadata: PlaybookArchivedEvent['metadata']
 ): Omit<PlaybookArchivedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.archived',
     timestamp: new Date(),
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Medium',
     confidence: metadata.finalEffectiveness / 100,
@@ -369,14 +362,13 @@ export function createPlaybookArchivedEvent(
  * Create pattern identified event
  */
 export function createPatternIdentifiedEvent(
-  organizationId: string,
   workspaceId: string,
   metadata: PatternIdentifiedEvent['metadata']
 ): Omit<PatternIdentifiedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.pattern_identified',
     timestamp: new Date(),
-    orgId: organizationId,
+    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: metadata.shouldAddToPlaybook ? 'High' : 'Low',
     confidence: metadata.confidence / 100,

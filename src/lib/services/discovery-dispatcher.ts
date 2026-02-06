@@ -105,7 +105,7 @@ export async function processDiscoveryQueue(
 
   try {
     // Step 1: Find idle tasks
-    const tasks = await findIdleTasks(conf.batchSize, conf.organizationId);
+    const tasks = await findIdleTasks(conf.batchSize);
     
     if (tasks.length === 0) {
       logger.info('[DiscoveryDispatcher] No tasks in queue');
@@ -170,11 +170,11 @@ export async function processDiscoveryTask(
 
     // Execute discovery based on type
     if (task.type === 'company') {
-      const companyResult = await discoverCompany(task.target, '');
+      const companyResult = await discoverCompany(task.target);
       discoveryResult = companyResult.company;
       fromCache = companyResult.fromCache ?? false;
     } else {
-      const personResult = await discoverPerson(task.target, '');
+      const personResult = await discoverPerson(task.target);
       discoveryResult = personResult.person;
       fromCache = personResult.fromCache ?? false;
     }
@@ -260,8 +260,7 @@ export async function processDiscoveryTask(
  * Find tasks that are ready for discovery
  */
 async function findIdleTasks(
-  limit: number,
-  _organizationId?: string
+  limit: number
 ): Promise<DiscoveryTask[]> {
   try {
     // Query for entities with workflow.stage='discovery' and workflow.status='idle'
@@ -483,27 +482,26 @@ function isRetryableError(error: unknown): boolean {
 
 /**
  * Add a new discovery task to the queue
- * 
+ *
  * @param type - Type of discovery (company or person)
  * @param target - Domain or email to discover
- * @param organizationId - Organization ID
  * @param workspaceId - Workspace ID
  * @param priority - Optional priority (higher = process first)
  */
 export async function queueDiscoveryTask(
   type: 'company' | 'person',
   target: string,
-  organizationId: string,
   workspaceId: string,
   priority: number = 0
 ): Promise<string> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   try {
     const taskRef = db.collection('discoveryQueue').doc();
     
     const task: Omit<DiscoveryTask, 'id'> = {
       type,
       target,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       workflow: {
         stage: 'discovery',

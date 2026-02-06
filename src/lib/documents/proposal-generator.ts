@@ -7,6 +7,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface ProposalTemplate {
   id: string;
@@ -78,16 +79,15 @@ export interface GeneratedProposal {
  * Generate proposal from template
  */
 export async function generateProposal(
-  organizationId: string,
   workspaceId: string,
   data: ProposalData
 ): Promise<GeneratedProposal> {
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
-    
+
     // Get template
     const template = await FirestoreService.get<ProposalTemplate>(
-      `organizations/${organizationId}/proposalTemplates`,
+      `organizations/${DEFAULT_ORG_ID}/proposalTemplates`,
       data.templateId
     );
 
@@ -110,7 +110,7 @@ export async function generateProposal(
     // Generate PDF (using a PDF generation service)
     let pdfUrl: string | undefined;
     try {
-      pdfUrl = generatePDF(htmlContent, organizationId);
+      pdfUrl = generatePDF(htmlContent);
     } catch (pdfError) {
       logger.warn('PDF generation failed, continuing without PDF', { error: pdfError instanceof Error ? pdfError.message : String(pdfError) });
     }
@@ -120,7 +120,7 @@ export async function generateProposal(
 
     const proposal: GeneratedProposal = {
       id: proposalId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       templateId: data.templateId,
       dealId: data.dealId,
       contactId: data.contactId,
@@ -135,14 +135,14 @@ export async function generateProposal(
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/workspaces/${workspaceId}/proposals`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/proposals`,
       proposalId,
       proposal,
       false
     );
 
     logger.info('Proposal generated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       proposalId,
       totalAmount,
     });
@@ -150,7 +150,7 @@ export async function generateProposal(
     return proposal;
 
   } catch (error) {
-    logger.error('Proposal generation failed', error instanceof Error ? error : new Error(String(error)), { organizationId });
+    logger.error('Proposal generation failed', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }
@@ -313,7 +313,7 @@ function replaceVariables(content: string, variables: Record<string, string | nu
 /**
  * Generate PDF from HTML (using external service or library)
  */
-function generatePDF(_htmlContent: string, organizationId: string): string {
+function generatePDF(_htmlContent: string): string {
   // In production, use service like:
   // - PDFKit
   // - Puppeteer
@@ -328,7 +328,7 @@ function generatePDF(_htmlContent: string, organizationId: string): string {
   // TODO: Implement actual PDF generation
   // This would typically upload to cloud storage (S3, GCS, Firebase Storage)
 
-  logger.info('PDF generation placeholder', { organizationId, pdfId });
+  logger.info('PDF generation placeholder', { organizationId: DEFAULT_ORG_ID, pdfId });
 
   return `/api/proposals/pdf/${pdfId}`;
 }
@@ -337,7 +337,6 @@ function generatePDF(_htmlContent: string, organizationId: string): string {
  * Send proposal via email
  */
 export async function sendProposal(
-  organizationId: string,
   proposalId: string,
   recipientEmail: string,
   message?: string
@@ -345,7 +344,7 @@ export async function sendProposal(
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
     const proposal = await FirestoreService.get<GeneratedProposal>(
-      `organizations/${organizationId}/workspaces/default/proposals`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/default/proposals`,
       proposalId
     );
 
@@ -355,7 +354,7 @@ export async function sendProposal(
 
     // Send email with proposal
     const { sendEmail } = await import('@/lib/email/email-service');
-    
+
     const subject = `Proposal: ${proposal.title}`;
     const body = `
 ${(message !== '' && message != null) ? message : 'Please review the attached proposal.'}
@@ -372,12 +371,12 @@ Best regards
       subject,
       text: body,
       html: proposal.htmlContent,
-      metadata: { organizationId },
+      metadata: { organizationId: DEFAULT_ORG_ID },
     });
 
     // Update proposal status
     await FirestoreService.update(
-      `organizations/${organizationId}/workspaces/default/proposals`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/default/proposals`,
       proposalId,
       {
         status: 'sent',

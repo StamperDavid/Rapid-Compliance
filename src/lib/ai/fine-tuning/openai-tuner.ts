@@ -107,8 +107,8 @@ export async function createOpenAIFineTuningJob(params: {
   logger.info('OpenAI Fine-Tuning Job created: job.id}', { file: 'openai-tuner.ts' });
 
   // Start monitoring job (fire and forget)
-  void monitorFineTuningJob(organizationId, job.id, jobData.id);
-  
+  void monitorFineTuningJob(job.id, jobData.id);
+
   return job;
 }
 
@@ -148,7 +148,6 @@ async function uploadTrainingFile(data: string): Promise<string> {
  * Monitor fine-tuning job progress
  */
 function monitorFineTuningJob(
-  organizationId: string,
   jobId: string,
   providerJobId: string
 ): void {
@@ -189,8 +188,9 @@ function monitorFineTuningJob(
           updates.error = JSON.stringify(jobData.error);
         }
 
+        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
           jobId,
           updates
         );
@@ -250,24 +250,25 @@ function estimateFineTuningCost(exampleCount: number, model: string): number {
  * Cancel fine-tuning job
  */
 export async function cancelFineTuningJob(
-  organizationId: string,
   jobId: string
 ): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('OpenAI API key not configured');
   }
-  
+
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+
   // Get job to get provider job ID
   const job = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
     jobId
   ) as FineTuningJob;
-  
+
   if (!job.providerJobId) {
     throw new Error('Provider job ID not found');
   }
-  
+
   // Cancel on OpenAI
   await fetch(
     `https://api.openai.com/v1/fine_tuning/jobs/${job.providerJobId}/cancel`,
@@ -278,10 +279,10 @@ export async function cancelFineTuningJob(
       },
     }
   );
-  
+
   // Update in Firestore
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
     jobId,
     {
       status: 'cancelled',

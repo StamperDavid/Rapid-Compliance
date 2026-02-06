@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       organizationId: DEFAULT_ORG_ID,
     });
 
-    const profile: CompetitorProfile = await discoverCompetitor(domain, DEFAULT_ORG_ID);
+    const profile: CompetitorProfile = await discoverCompetitor(domain);
 
     return NextResponse.json({
       success: true,

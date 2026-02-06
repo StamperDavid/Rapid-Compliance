@@ -102,8 +102,7 @@ export async function POST(request: NextRequest) {
     // Schedule the meeting
     const meeting = await scheduleMeeting(
       meetingRequest,
-      authResult.user.uid,
-      orgId
+      authResult.user.uid
     );
 
     return NextResponse.json({

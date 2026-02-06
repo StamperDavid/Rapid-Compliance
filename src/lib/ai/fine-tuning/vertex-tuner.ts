@@ -37,7 +37,6 @@ export async function createVertexAIFineTuningJob(params: {
   // Upload to Cloud Storage
   const storageUri = uploadToCloudStorage(
     formattedData,
-    organizationId,
     'training_data.jsonl'
   );
   
@@ -106,7 +105,6 @@ export async function createVertexAIFineTuningJob(params: {
  */
 function uploadToCloudStorage(
   _data: string,
-  organizationId: string,
   filename: string
 ): string {
   // In production, use @google-cloud/storage
@@ -114,14 +112,15 @@ function uploadToCloudStorage(
   // Extract bucket name - empty string is invalid bucket (Explicit Ternary for STRING)
   const envBucket = process.env.GOOGLE_CLOUD_STORAGE_BUCKET;
   const bucketName = (envBucket !== '' && envBucket != null) ? envBucket : 'ai-training-data';
-  const path = `${organizationId}/fine-tuning/${Date.now()}/${filename}`;
-  
+  // Use constant org ID for storage path
+  const path = `rapid-compliance-root/fine-tuning/${Date.now()}/${filename}`;
+
   // Simulated upload
   // In production:
   // const { Storage } = require('@google-cloud/storage');
   // const storage = new Storage();
   // await storage.bucket(bucketName).file(path).save(data);
-  
+
   return `gs://${bucketName}/${path}`;
 }
 
@@ -138,16 +137,16 @@ function estimateVertexAICost(exampleCount: number): number {
  * Get fine-tuning job status
  */
 export async function getVertexAIJobStatus(
-  organizationId: string,
   jobId: string
 ): Promise<FineTuningJob> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   const job = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
     jobId
   ) as FineTuningJob;
-  
+
   // In production, would query Vertex AI API for actual status
-  
+
   return job;
 }
 

@@ -7,6 +7,7 @@ import type { TrainingExample } from '@/types/fine-tuning';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { where } from 'firebase/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Collect training example from a conversation
@@ -187,15 +188,14 @@ function evaluateQuality(params: {
  * Get training examples for an organization
  */
 export async function getTrainingExamples(
-  organizationId: string,
   status?: TrainingExample['status']
 ): Promise<TrainingExample[]> {
   const filters = status
     ? [where('status', '==', status)]
     : [];
-  
+
   const examples = await FirestoreService.getAll<TrainingExample>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingExamples`,
     filters
   );
 
@@ -206,12 +206,11 @@ export async function getTrainingExamples(
  * Approve training example
  */
 export async function approveTrainingExample(
-  organizationId: string,
   exampleId: string,
   approvedBy: string
 ): Promise<void> {
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingExamples`,
     exampleId,
     {
       status: 'approved',
@@ -219,7 +218,7 @@ export async function approveTrainingExample(
       updatedAt: new Date().toISOString(),
     }
   );
-  
+
   logger.info('Data Collector Approved example: exampleId}', { file: 'data-collector.ts' });
 }
 
@@ -227,11 +226,10 @@ export async function approveTrainingExample(
  * Reject training example
  */
 export async function rejectTrainingExample(
-  organizationId: string,
   exampleId: string
 ): Promise<void> {
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingExamples`,
     exampleId,
     {
       status: 'rejected',
@@ -243,9 +241,7 @@ export async function rejectTrainingExample(
 /**
  * Get statistics for training examples
  */
-export async function getTrainingDataStats(
-  organizationId: string
-): Promise<{
+export async function getTrainingDataStats(): Promise<{
   total: number;
   approved: number;
   pending: number;
@@ -254,7 +250,7 @@ export async function getTrainingDataStats(
   avgRating: number;
   conversionRate: number;
 }> {
-  const examples = await getTrainingExamples(organizationId);
+  const examples = await getTrainingExamples();
   
   const approved = examples.filter(e => e.status === 'approved');
   const pending = examples.filter(e => e.status === 'pending');

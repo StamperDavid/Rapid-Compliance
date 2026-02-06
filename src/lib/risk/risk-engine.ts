@@ -151,8 +151,7 @@ export async function predictDealRisk(
       historicalPattern = findHistoricalPattern(
         deal,
         riskFactors,
-        request.organizationId,
-(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
+        (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
       );
     }
     
@@ -984,7 +983,6 @@ function generateFallbackInterventions(riskFactors: RiskFactor[]): Intervention[
 function findHistoricalPattern(
   _deal: Deal,
   _riskFactors: RiskFactor[],
-  _organizationId: string,
   _workspaceId: string
 ): HistoricalPattern | null {
   // TODO: Implement actual historical pattern matching

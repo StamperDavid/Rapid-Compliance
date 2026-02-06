@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     switch (action) {
       case 'stats': {
-        const stats = await getTrainingDataStats(DEFAULT_ORG_ID);
+        const stats = await getTrainingDataStats();
 
         // Get fine-tuning jobs
         const jobs = await FirestoreService.getAll(
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
       case 'examples': {
         const statusParam = searchParams.get('status');
         const status = isValidTrainingExampleStatus(statusParam) ? statusParam : undefined;
-        const examples = await getTrainingExamples(DEFAULT_ORG_ID, status);
+        const examples = await getTrainingExamples(status);
         return NextResponse.json({ examples });
       }
 
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
         }
 
         const approver = (approvedBy !== '' && approvedBy != null) ? approvedBy : 'system';
-        await approveTrainingExample(DEFAULT_ORG_ID, exampleId, approver);
+        await approveTrainingExample(exampleId, approver);
         return NextResponse.json({
           success: true,
           message: `Example ${exampleId} approved`,
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        await rejectTrainingExample(DEFAULT_ORG_ID, exampleId);
+        await rejectTrainingExample(exampleId);
         return NextResponse.json({
           success: true,
           message: `Example ${exampleId} rejected`,
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
       case 'start_training': {
         // Manually trigger fine-tuning
         const { createOpenAIFineTuningJob } = await import('@/lib/ai/fine-tuning/openai-tuner');
-        const examples = await getTrainingExamples(DEFAULT_ORG_ID, 'approved');
+        const examples = await getTrainingExamples('approved');
 
         if (examples.length < 10) {
           return NextResponse.json(
@@ -247,13 +247,13 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const result = await processCompletedFineTuningJob(DEFAULT_ORG_ID, jobId);
+        const result = await processCompletedFineTuningJob(jobId);
         return NextResponse.json(result);
       }
 
       case 'check_and_deploy': {
         // Check A/B test results and deploy winner
-        const result = await checkAndDeployWinner(DEFAULT_ORG_ID);
+        const result = await checkAndDeployWinner();
         return NextResponse.json(result);
       }
 

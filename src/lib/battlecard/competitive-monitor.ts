@@ -268,7 +268,7 @@ export class CompetitiveMonitor {
 
     try {
       // Re-scrape competitor (will use cache if < 30 days)
-      const newProfile = await discoverCompetitor(config.domain, this.DEFAULT_ORG_ID);
+      const newProfile = await discoverCompetitor(config.domain);
 
       // TODO: Load previous profile from database for comparison
       // For now, just log that we checked

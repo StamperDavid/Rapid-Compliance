@@ -70,7 +70,6 @@ export function MerchantOrchestrator() {
       }
       try {
         const context = await ImplementationGuide.buildContext(
-          DEFAULT_ORG_ID,
           profile.assistantName ?? 'Assistant',
           profile.ownerName,
           profile.industry

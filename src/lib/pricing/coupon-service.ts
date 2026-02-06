@@ -215,7 +215,6 @@ export class CouponService {
    */
   static async redeemPlatformCoupon(
     code: string,
-    organizationId: string,
     planId: string,
     billingCycle: 'monthly' | 'yearly',
     originalAmount: number
@@ -245,7 +244,7 @@ export class CouponService {
       coupon_id: coupon.id,
       coupon_type: 'platform',
       coupon_code: coupon.code,
-      organization_id: organizationId,
+      organization_id: DEFAULT_ORG_ID,
       original_amount: originalAmount,
       discount_amount: validation.discount_amount ?? 0,
       final_amount: validation.final_amount ?? originalAmount,
@@ -265,7 +264,7 @@ export class CouponService {
 
     // Handle FREE FOREVER - Mark org as active_internal
     if (isFreeForever) {
-      await this.activateInternalOrganization(organizationId, coupon.code);
+      await this.activateInternalOrganization(coupon.code);
     }
 
     return {
@@ -280,10 +279,9 @@ export class CouponService {
    * Bypasses Stripe checkout completely
    */
   private static async activateInternalOrganization(
-    organizationId: string,
     couponCode: string
   ): Promise<void> {
-    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, organizationId);
+    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
     await updateDoc(orgRef, {
       status: 'active_internal',
       subscription_status: 'active',
@@ -416,7 +414,6 @@ export class CouponService {
    */
   static async redeemMerchantCoupon(
     code: string,
-    organizationId: string,
     customerId: string,
     purchaseAmount: number,
     orderId: string,
@@ -450,7 +447,7 @@ export class CouponService {
       coupon_id: coupon.id,
       coupon_type: 'merchant',
       coupon_code: coupon.code,
-      organization_id: organizationId,
+      organization_id: DEFAULT_ORG_ID,
       customer_id: customerId,
       original_amount: purchaseAmount,
       discount_amount: validation.discount_amount ?? 0,
@@ -633,7 +630,6 @@ export class CouponService {
    * Create a merchant coupon
    */
   static async createMerchantCoupon(
-    organizationId: string,
     couponData: Omit<MerchantCoupon, 'id' | 'organization_id' | 'created_at' | 'updated_at' | 'current_uses'>,
     createdBy: string
   ): Promise<MerchantCoupon> {
@@ -644,7 +640,7 @@ export class CouponService {
       ...couponData,
       id: couponId,
       code: couponData.code.toUpperCase().trim(),
-      organization_id: organizationId,
+      organization_id: DEFAULT_ORG_ID,
       current_uses: 0,
       created_at: now,
       updated_at: now,

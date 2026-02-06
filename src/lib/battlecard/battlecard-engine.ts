@@ -28,6 +28,7 @@ import { logger } from '@/lib/logger/logger';
 import { discoverCompany, type DiscoveredCompany } from '@/lib/services/discovery-engine';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -270,18 +271,17 @@ export interface BattlecardOptions {
  * ```
  */
 export async function discoverCompetitor(
-  domain: string,
-  organizationId: string
+  domain: string
 ): Promise<CompetitorProfile> {
   try {
     logger.info('Starting competitor discovery', {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       source: 'battlecard-engine',
     });
 
     // Step 1: Use Discovery Engine to scrape competitor (leverages 30-day cache)
-    const discoveryResult = await discoverCompany(domain, organizationId);
+    const discoveryResult = await discoverCompany(domain);
     const { company, fromCache } = discoveryResult;
 
     logger.info('Competitor website scraped', {
@@ -292,12 +292,12 @@ export async function discoverCompetitor(
     });
 
     // Step 2: Extract competitive intelligence with LLM
-    const competitiveIntel = await extractCompetitiveIntelligence(company, organizationId);
+    const competitiveIntel = await extractCompetitiveIntelligence(company);
 
     // Step 3: Combine into CompetitorProfile
     const profile: CompetitorProfile = {
       id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       
       domain: company.domain,
       companyName:company.companyName ?? domain,
@@ -361,7 +361,7 @@ export async function discoverCompetitor(
 
     logger.info('Competitor profile complete', {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       featuresFound: profile.productOffering.keyFeatures.length,
       strengthsFound: profile.analysis.strengths.length,
       weaknessesFound: profile.analysis.weaknesses.length,
@@ -369,14 +369,14 @@ export async function discoverCompetitor(
     });
 
     // Emit Signal Bus signal
-    await emitCompetitorDiscoverySignal(profile, organizationId, fromCache);
+    await emitCompetitorDiscoverySignal(profile, fromCache);
 
     return profile;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to discover competitor', err, {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = err.message;
@@ -398,13 +398,12 @@ export async function discoverCompetitor(
  * - Competitive differentiators
  */
 async function extractCompetitiveIntelligence(
-  company: DiscoveredCompany,
-  organizationId: string
+  company: DiscoveredCompany
 ): Promise<Partial<CompetitorProfile>> {
   try {
     logger.info('Extracting competitive intelligence with LLM', {
       domain: company.domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     const prompt = `You are a competitive intelligence analyst. Analyze this competitor data and extract strategic insights.
@@ -533,7 +532,7 @@ IMPORTANT:
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to extract competitive intelligence', err, {
       domain: company.domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     return {};
   }
@@ -661,21 +660,21 @@ export async function generateBattlecard(
 
     logger.info('Battlecard generated successfully', {
       competitor: competitorProfile.companyName,
-      organizationId: competitorProfile.organizationId,
+      organizationId: DEFAULT_ORG_ID,
       featureCategories: battlecard.featureComparison.length,
       objectionHandlers: battlecard.tactics.objectionHandling.length,
       competitiveTraps: battlecard.tactics.competitiveTraps.length,
     });
 
     // Emit Signal Bus signal
-    await emitBattlecardGeneratedSignal(battlecard, competitorProfile.organizationId);
+    await emitBattlecardGeneratedSignal(battlecard);
 
     return battlecard;
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to generate battlecard', err, {
       competitor: competitorProfile.companyName,
-      organizationId: competitorProfile.organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = err.message;
@@ -830,7 +829,6 @@ IMPORTANT:
  */
 async function emitCompetitorDiscoverySignal(
   profile: CompetitorProfile,
-  organizationId: string,
   fromCache: boolean
 ): Promise<void> {
   try {
@@ -838,7 +836,7 @@ async function emitCompetitorDiscoverySignal(
 
     await coordinator.emitSignal({
       type: 'competitor.discovered',
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: profile.metadata.confidence,
       priority: fromCache ? 'Low' : 'Medium',
       metadata: {
@@ -859,14 +857,14 @@ async function emitCompetitorDiscoverySignal(
 
     logger.info('Competitor discovery signal emitted', {
       competitorName: profile.companyName,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       fromCache,
     });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to emit competitor discovery signal', err, {
       competitorName: profile.companyName,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 }
@@ -875,15 +873,14 @@ async function emitCompetitorDiscoverySignal(
  * Emit battlecard generated signal
  */
 async function emitBattlecardGeneratedSignal(
-  battlecard: Battlecard,
-  organizationId: string
+  battlecard: Battlecard
 ): Promise<void> {
   try {
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
       type: 'battlecard.generated',
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: battlecard.metadata.confidence,
       priority: 'Medium',
       metadata: {
@@ -902,13 +899,13 @@ async function emitBattlecardGeneratedSignal(
     logger.info('Battlecard generated signal emitted', {
       battlecardId: battlecard.id,
       competitorName: battlecard.competitorName,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to emit battlecard generated signal', err, {
       battlecardId: battlecard.id,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 }
@@ -922,7 +919,6 @@ async function emitBattlecardGeneratedSignal(
  */
 export async function discoverCompetitorsBatch(
   domains: string[],
-  organizationId: string,
   options: {
     concurrency?: number;
     delayMs?: number;
@@ -933,16 +929,16 @@ export async function discoverCompetitorsBatch(
   logger.info('Starting batch competitor discovery', {
     domainsCount: domains.length,
     concurrency,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
   });
 
   const results: CompetitorProfile[] = [];
-  
+
   for (let i = 0; i < domains.length; i += concurrency) {
     const batch = domains.slice(i, i + concurrency);
-    
+
     const batchResults = await Promise.allSettled(
-      batch.map(domain => discoverCompetitor(domain, organizationId))
+      batch.map(domain => discoverCompetitor(domain))
     );
 
     for (const result of batchResults) {

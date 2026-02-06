@@ -48,7 +48,6 @@ interface EntityRecord {
  * AI generation parameters
  */
 interface AIGenerationParams {
-  organizationId: string;
   field: string;
   prompt: string;
   context: WorkflowTriggerData;
@@ -69,13 +68,13 @@ interface QueryEntitiesParams {
 export async function executeCreateEntityAction(
   action: CreateEntityAction,
   triggerData: WorkflowTriggerData,
-  organizationId: string,
   workspaceId: string
 ): Promise<unknown> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   // Get schema for field resolution
   const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
   const schemaData = await FS.get(
-    `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
+    `${COL.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
     action.schemaId
   );
   
@@ -130,7 +129,6 @@ export async function executeCreateEntityAction(
       case 'ai': {
         // Generate using AI
         value = await generateWithAI({
-          organizationId,
           field: resolvedTarget.fieldKey,
           prompt: mapping.aiPrompt ?? `Generate a value for field "${resolvedTarget.fieldLabel}"`,
           context: triggerData,
@@ -152,15 +150,15 @@ export async function executeCreateEntityAction(
   }
   
   const entityName = (schema as Schema & { name?: string }).name ?? action.schemaId;
-  const entityPath = `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
-  
+  const entityPath = `${COL.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
+
   const recordId = `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   await FS.set(entityPath, recordId, {
     ...entityData,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }, false);
-  
+
   return { recordId, success: true };
 }
 
@@ -170,13 +168,13 @@ export async function executeCreateEntityAction(
 export async function executeUpdateEntityAction(
   action: UpdateEntityAction,
   triggerData: WorkflowTriggerData,
-  organizationId: string,
   workspaceId: string
 ): Promise<unknown> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   // Get schema
   const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
   const schemaData = await FS.get(
-    `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
+    `${COL.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
     action.schemaId
   );
   
@@ -186,7 +184,7 @@ export async function executeUpdateEntityAction(
   
   const schema = schemaData as Schema;
   const entityName = (schema as Schema & { name?: string }).name ?? action.schemaId;
-  const entityPath = `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
+  const entityPath = `${COL.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
 
   // Determine which record(s) to update
   let recordIds: string[] = [];
@@ -278,13 +276,13 @@ export async function executeUpdateEntityAction(
 export async function executeDeleteEntityAction(
   action: DeleteEntityAction,
   triggerData: WorkflowTriggerData,
-  organizationId: string,
   workspaceId: string
 ): Promise<unknown> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   // Get schema
   const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
   const schemaData = await FS.get(
-    `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
+    `${COL.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
     action.schemaId
   );
   
@@ -294,7 +292,7 @@ export async function executeDeleteEntityAction(
   
   const schema = schemaData as Schema;
   const entityName = (schema as Schema & { name?: string }).name ?? action.schemaId;
-  const entityPath = `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
+  const entityPath = `${COL.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
 
   // Determine which record(s) to delete
   let recordIds: string[] = [];
@@ -348,8 +346,7 @@ export async function executeDeleteEntityAction(
  */
 export async function executeEntityAction(
   action: CreateEntityAction | UpdateEntityAction | DeleteEntityAction,
-  triggerData: WorkflowTriggerData,
-  organizationId: string
+  triggerData: WorkflowTriggerData
 ): Promise<unknown> {
   const workspaceId = triggerData?.workspaceId ?? (action as { workspaceId?: string }).workspaceId;
   if (!workspaceId || typeof workspaceId !== 'string') {
@@ -357,11 +354,11 @@ export async function executeEntityAction(
   }
 
   if (action.type === 'create_entity') {
-    return executeCreateEntityAction(action, triggerData, organizationId, workspaceId);
+    return executeCreateEntityAction(action, triggerData, workspaceId);
   } else if (action.type === 'update_entity') {
-    return executeUpdateEntityAction(action, triggerData, organizationId, workspaceId);
+    return executeUpdateEntityAction(action, triggerData, workspaceId);
   } else if (action.type === 'delete_entity') {
-    return executeDeleteEntityAction(action, triggerData, organizationId, workspaceId);
+    return executeDeleteEntityAction(action, triggerData, workspaceId);
   } else {
     const exhaustiveCheck: never = action;
     throw new Error(`Unknown entity action type: ${(exhaustiveCheck as { type: string }).type}`);

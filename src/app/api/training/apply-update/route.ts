@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Apply the updates to create a new Golden Master version
-    const newGoldenMaster = await applyUpdateRequest(organizationId, updateRequest);
+    const newGoldenMaster = await applyUpdateRequest(updateRequest);
 
     return NextResponse.json({
       success: true,

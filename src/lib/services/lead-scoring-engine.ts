@@ -110,7 +110,7 @@ export async function calculateLeadScore(
     }
 
     // Step 2: Get scoring rules
-    const rules = await getScoringRules(DEFAULT_ORG_ID, scoringRulesId);
+    const rules = await getScoringRules(scoringRulesId);
     if (!rules) {
       throw new Error('No active scoring rules found');
     }
@@ -118,7 +118,6 @@ export async function calculateLeadScore(
     // Step 3: Get discovery data
     const { company, person } = await getDiscoveryData(
       leadId,
-      DEFAULT_ORG_ID,
       discoveryData
     );
 
@@ -126,7 +125,7 @@ export async function calculateLeadScore(
     const companyFitScore = calculateCompanyFit(company, rules);
     const personFitScore = calculatePersonFit(person, rules);
     const intentSignalsScore = detectIntentSignals(company, person, rules);
-    const engagementScore = await calculateEngagement(leadId, DEFAULT_ORG_ID, rules);
+    const engagementScore = await calculateEngagement(leadId, rules);
 
     // Step 5: Calculate total score
     const totalScore = Math.min(
@@ -171,7 +170,7 @@ export async function calculateLeadScore(
     };
 
     // Step 9: Cache the score
-    await cacheScore(leadId, DEFAULT_ORG_ID, rules.id, score, company, person);
+    await cacheScore(leadId, rules.id, score, company, person);
 
     logger.info('Lead score calculated', {
       leadId,
@@ -181,7 +180,7 @@ export async function calculateLeadScore(
     });
 
     // Step 10: Emit Signal Bus signals based on score
-    await emitScoringSignals(leadId, DEFAULT_ORG_ID, score, company, person);
+    await emitScoringSignals(leadId, score, company, person);
 
     return score;
   } catch (error) {
@@ -851,7 +850,6 @@ function isRecentJobChange(person: DiscoveredPerson): boolean {
  */
 async function calculateEngagement(
   leadId: string,
-  organizationId: string,
   rules: ScoringRules
 ): Promise<ScoringResult> {
   const reasons: LeadScoreReason[] = [];
@@ -1006,7 +1004,6 @@ function calculateConfidence(
  */
 async function getDiscoveryData(
   leadId: string,
-  organizationId: string,
   providedData?: {
     company?: DiscoveredCompany;
     person?: DiscoveredPerson;
@@ -1021,7 +1018,7 @@ async function getDiscoveryData(
   }
 
   // Otherwise, fetch lead data and run discovery
-  const leadData = await getLeadData(leadId, organizationId);
+  const leadData = await getLeadData(leadId, DEFAULT_ORG_ID);
   if (!leadData) {
     return { company: null, person: null };
   }
@@ -1034,7 +1031,7 @@ async function getDiscoveryData(
     try {
       const domain = leadData.companyDomain ?? leadData.company;
       if (domain) {
-        const result = await discoverCompany(domain, organizationId);
+        const result = await discoverCompany(domain);
         company = result.company;
       }
     } catch (error) {
@@ -1046,7 +1043,7 @@ async function getDiscoveryData(
   // Discover person
   if (leadData.email) {
     try {
-      const result = await discoverPerson(leadData.email, organizationId);
+      const result = await discoverPerson(leadData.email);
       person = result.person;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1130,7 +1127,6 @@ async function getLeadData(leadId: string, organizationId: string): Promise<Lead
  * Get scoring rules for organization
  */
 async function getScoringRules(
-  organizationId: string,
   scoringRulesId?: string
 ): Promise<ScoringRules | null> {
   try {
@@ -1140,7 +1136,7 @@ async function getScoringRules(
 
     const scoringRulesRef = adminDal.getNestedCollection(
       'organizations/{orgId}/scoringRules',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     // If specific rules requested
@@ -1176,9 +1172,9 @@ async function getScoringRules(
     }
 
     // If no rules exist, create default
-    return await createDefaultScoringRules(organizationId);
+    return await createDefaultScoringRules(DEFAULT_ORG_ID);
   } catch (error) {
-    logger.error('Failed to get scoring rules', error instanceof Error ? error : new Error(String(error)), { organizationId });
+    logger.error('Failed to get scoring rules', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
     return null;
   }
 }
@@ -1276,7 +1272,6 @@ async function getCachedScore(
  */
 async function cacheScore(
   leadId: string,
-  organizationId: string,
   scoringRulesId: string,
   score: LeadScore,
   company: DiscoveredCompany | null,
@@ -1300,7 +1295,7 @@ async function cacheScore(
 
     const leadScoresRef = adminDal.getNestedCollection(
       'organizations/{orgId}/leadScores',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     await leadScoresRef.doc(leadId).set({
@@ -1334,7 +1329,6 @@ async function cacheScore(
  */
 async function emitScoringSignals(
   leadId: string,
-  organizationId: string,
   score: LeadScore,
   company: DiscoveredCompany | null,
   person: DiscoveredPerson | null
@@ -1347,7 +1341,7 @@ async function emitScoringSignals(
       await coordinator.emitSignal({
         type: 'lead.qualified',
         leadId,
-        orgId: organizationId,
+        orgId: DEFAULT_ORG_ID,
         confidence: score.metadata.confidence,
         priority: score.grade === 'A' ? 'High' : 'Medium',
         metadata: {
@@ -1378,7 +1372,7 @@ async function emitScoringSignals(
       await coordinator.emitSignal({
         type: 'lead.intent.high',
         leadId,
-        orgId: organizationId,
+        orgId: DEFAULT_ORG_ID,
         confidence: Math.max(...highIntentSignals.map(s => s.confidence)),
         priority: 'High',
         metadata: {
@@ -1404,7 +1398,7 @@ async function emitScoringSignals(
       await coordinator.emitSignal({
         type: 'lead.intent.low',
         leadId,
-        orgId: organizationId,
+        orgId: DEFAULT_ORG_ID,
         confidence: score.metadata.confidence,
         priority: 'Low',
         metadata: {
@@ -1422,7 +1416,7 @@ async function emitScoringSignals(
 
     logger.info('Lead scoring signals emitted', {
       leadId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       grade: score.grade,
       intentScore: score.breakdown.intentSignals,
       signalsEmitted: [
@@ -1435,7 +1429,7 @@ async function emitScoringSignals(
     // Don't fail scoring if signal emission fails
     logger.error('Failed to emit scoring signals', error instanceof Error ? error : new Error(String(error)), {
       leadId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 }

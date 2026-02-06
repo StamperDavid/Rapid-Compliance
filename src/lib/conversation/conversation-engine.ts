@@ -122,9 +122,8 @@ export async function analyzeConversation(
     
     // 1. Get conversation data
     const conversation = await getConversation(
-      request.organizationId,
       request.conversationId,
-(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
+      (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
     );
     
     if (!conversation) {
@@ -1304,7 +1303,6 @@ async function emitAnalysisSignal(
  * Get conversation data (placeholder - would query Firestore)
  */
 function getConversation(
-  _organizationId: string,
   _conversationId: string,
   _workspaceId: string
 ): Promise<Conversation | null> {

@@ -29,6 +29,7 @@ import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
 import { initiateCall } from '@/lib/voice/twilio-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { SalesSignal } from '@/lib/orchestration/types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -707,7 +708,8 @@ interface LeadData {
 /**
  * Get lead data from Firestore
  */
-async function getLeadData(leadId: string, organizationId: string): Promise<LeadData | null> {
+async function getLeadData(leadId: string): Promise<LeadData | null> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
@@ -716,17 +718,17 @@ async function getLeadData(leadId: string, organizationId: string): Promise<Lead
     // Get all workspaces for this organization
     const workspacesRef = adminDal.getNestedCollection(
       'organizations/{orgId}/workspaces',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
     const workspacesSnapshot = await workspacesRef.get();
-    
+
     for (const workspaceDoc of workspacesSnapshot.docs) {
       // Check leads collection
       const leadRef = adminDal.getNestedCollection(
         'organizations/{orgId}/workspaces/{wsId}/entities/leads/records',
-        { orgId: organizationId, wsId: workspaceDoc.id }
+        { orgId: DEFAULT_ORG_ID, wsId: workspaceDoc.id }
       ).doc(leadId);
-      
+
       const leadDoc = await leadRef.get();
       if (leadDoc.exists) {
         return { id: leadDoc.id, ...leadDoc.data() } as LeadData;
@@ -735,7 +737,7 @@ async function getLeadData(leadId: string, organizationId: string): Promise<Lead
       // Also check contacts collection
       const contactRef = adminDal.getNestedCollection(
         'organizations/{orgId}/workspaces/{wsId}/entities/contacts/records',
-        { orgId: organizationId, wsId: workspaceDoc.id }
+        { orgId: DEFAULT_ORG_ID, wsId: workspaceDoc.id }
       ).doc(leadId);
 
       const contactDoc = await contactRef.get();
@@ -746,7 +748,7 @@ async function getLeadData(leadId: string, organizationId: string): Promise<Lead
 
     return null;
   } catch (error) {
-    logger.error('Failed to get lead data', error as Error, { leadId, organizationId });
+    logger.error('Failed to get lead data', error as Error, { leadId });
     throw error;
   }
 }
@@ -759,7 +761,8 @@ interface TemplateData {
 /**
  * Load template from Firestore
  */
-async function loadTemplate(templateId: string, organizationId: string): Promise<TemplateData | null> {
+async function loadTemplate(templateId: string): Promise<TemplateData | null> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
@@ -767,7 +770,7 @@ async function loadTemplate(templateId: string, organizationId: string): Promise
 
     const templatesRef = adminDal.getNestedCollection(
       'organizations/{orgId}/templates',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     const templateDoc = await templatesRef.doc(templateId).get();
@@ -778,7 +781,7 @@ async function loadTemplate(templateId: string, organizationId: string): Promise
 
     return null;
   } catch (error) {
-    logger.error('Failed to load template', error as Error, { templateId, organizationId });
+    logger.error('Failed to load template', error as Error, { templateId });
     return null;
   }
 }
@@ -1013,7 +1016,7 @@ async function executeChannelAction(step: SequenceStep, enrollment: SequenceEnro
   });
 
   // Fetch lead data to get contact information
-  const leadData = await getLeadData(enrollment.leadId, enrollment.organizationId);
+  const leadData = await getLeadData(enrollment.leadId);
   
   if (!leadData) {
     // In test mode, create mock lead data
@@ -1030,9 +1033,9 @@ async function executeChannelAction(step: SequenceStep, enrollment: SequenceEnro
 
   // Load template and substitute variables
   let messageContent = step.action; // Default to action text
-  
+
   if (step.templateId) {
-    const template = await loadTemplate(step.templateId, enrollment.organizationId);
+    const template = await loadTemplate(step.templateId);
     if (template) {
       messageContent = substituteVariables(template.content, leadData);
     }
@@ -1203,7 +1206,6 @@ async function emitSequenceSignal(params: {
  * @param autoEnrollConfig - Configuration for auto-enrollment
  */
 export async function initializeSequencerSignalObservers(
-  organizationId: string,
   autoEnrollConfig: {
     /** Sequence to enroll qualified leads into */
     qualifiedLeadSequenceId?: string;
@@ -1219,7 +1221,7 @@ export async function initializeSequencerSignalObservers(
   const unsubscribers: Array<() => void> = [];
 
   logger.info('Initializing sequencer signal observers', {
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     autoEnrollConfig: JSON.stringify(autoEnrollConfig),
   });
 
@@ -1229,7 +1231,7 @@ export async function initializeSequencerSignalObservers(
     const observeResult = coordinator.observeSignals(
       {
         types: ['lead.qualified'],
-        orgId: organizationId,
+        orgId: DEFAULT_ORG_ID,
         minConfidence: 0.7,
         unprocessedOnly: true,
       },
@@ -1260,7 +1262,7 @@ export async function initializeSequencerSignalObservers(
             await enrollInSequence({
               sequenceId: qualifiedSequenceId,
               leadId: signal.leadId,
-              organizationId,
+              organizationId: DEFAULT_ORG_ID,
               metadata: {
                 source: 'signal-observer',
                 trigger: 'lead.qualified',
@@ -1273,7 +1275,7 @@ export async function initializeSequencerSignalObservers(
             // Mark signal as processed
             const signalId = signal.id;
             if (signalId) {
-              await coordinator.markSignalProcessed(organizationId, signalId, {
+              await coordinator.markSignalProcessed(DEFAULT_ORG_ID, signalId, {
                 success: true,
                 action: 'enrolled_in_sequence',
                 module: 'sequencer',
@@ -1290,7 +1292,7 @@ export async function initializeSequencerSignalObservers(
 
           // Mark signal processing as failed
           if (signal.id) {
-            await coordinator.markSignalProcessed(organizationId, signal.id, {
+            await coordinator.markSignalProcessed(DEFAULT_ORG_ID, signal.id, {
               success: false,
               action: 'enrollment_failed',
               module: 'sequencer',
@@ -1312,7 +1314,7 @@ export async function initializeSequencerSignalObservers(
     const observeResult = coordinator.observeSignals(
       {
         types: ['lead.intent.high'],
-        orgId: organizationId,
+        orgId: DEFAULT_ORG_ID,
         minConfidence: 0.8,
         unprocessedOnly: true,
       },
@@ -1343,7 +1345,7 @@ export async function initializeSequencerSignalObservers(
             await enrollInSequence({
               sequenceId: highIntentSequenceId,
               leadId: signal.leadId,
-              organizationId,
+              organizationId: DEFAULT_ORG_ID,
               metadata: {
                 source: 'signal-observer',
                 trigger: 'lead.intent.high',
@@ -1357,7 +1359,7 @@ export async function initializeSequencerSignalObservers(
             // Mark signal as processed
             const signalId = signal.id;
             if (signalId) {
-              await coordinator.markSignalProcessed(organizationId, signalId, {
+              await coordinator.markSignalProcessed(DEFAULT_ORG_ID, signalId, {
                 success: true,
                 action: 'enrolled_in_sequence',
                 module: 'sequencer',
@@ -1374,7 +1376,7 @@ export async function initializeSequencerSignalObservers(
 
           // Mark signal processing as failed
           if (signal.id) {
-            await coordinator.markSignalProcessed(organizationId, signal.id, {
+            await coordinator.markSignalProcessed(DEFAULT_ORG_ID, signal.id, {
               success: false,
               action: 'enrollment_failed',
               module: 'sequencer',
@@ -1391,13 +1393,13 @@ export async function initializeSequencerSignalObservers(
   }
 
   logger.info('Sequencer signal observers initialized', {
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     observersCount: unsubscribers.length,
   });
 
   // Return cleanup function
   return () => {
-    logger.info('Cleaning up sequencer signal observers', { organizationId });
+    logger.info('Cleaning up sequencer signal observers', { organizationId: DEFAULT_ORG_ID });
     unsubscribers.forEach(unsubscribe => unsubscribe());
   };
 }

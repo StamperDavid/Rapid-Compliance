@@ -41,10 +41,8 @@ export async function processConversationFeedback(params: {
   shouldTriggerTraining: boolean;
   trainingJobId?: string;
 }> {
-  const { organizationId } = params;
-  
   // Get learning config
-  const config = await getLearningConfig(organizationId);
+  const config = await getLearningConfig();
   
   if (!config?.autoCollectTrainingData) {
     return { collected: false, shouldTriggerTraining: false };
@@ -67,14 +65,14 @@ export async function processConversationFeedback(params: {
   }
   
   // Check if we should trigger training
-  const shouldTrigger = await shouldTriggerFineTuning(organizationId, config);
-  
+  const shouldTrigger = await shouldTriggerFineTuning(config);
+
   if (!shouldTrigger) {
     return { collected: true, shouldTriggerTraining: false };
   }
-  
+
   // Trigger fine-tuning
-  const trainingJobId = await triggerFineTuning(organizationId, config);
+  const trainingJobId = await triggerFineTuning(config);
   
   return {
     collected: true,
@@ -87,15 +85,14 @@ export async function processConversationFeedback(params: {
  * Check if should trigger fine-tuning
  */
 async function shouldTriggerFineTuning(
-  organizationId: string,
   config: ContinuousLearningConfig
 ): Promise<boolean> {
   if (!config.autoTriggerFineTuning) {
     return false;
   }
-  
+
   // Get training data stats
-  const stats = await getTrainingDataStats(organizationId);
+  const stats = await getTrainingDataStats();
   
   // Need minimum approved examples
   if (stats.approved < config.minExamplesForTraining) {
@@ -140,25 +137,24 @@ async function shouldTriggerFineTuning(
  * Trigger fine-tuning with approved examples
  */
 async function triggerFineTuning(
-  organizationId: string,
   _config: ContinuousLearningConfig
 ): Promise<string> {
   logger.info('Continuous Learning Triggering fine-tuning for organizationId}', { file: 'continuous-learning-engine.ts' });
-  
+
   // Get approved examples
   const examples = await FirestoreService.getAll<TrainingExample>(
     `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingExamples`,
     [where('status', '==', 'approved')]
   );
-  
+
   if (examples.length === 0) {
     throw new Error('No approved examples found');
   }
-  
+
   // Get organization's model preferences
   const orgConfig = await FirestoreService.get<OrganizationPreferences>(
     COLLECTIONS.ORGANIZATIONS,
-    organizationId
+    DEFAULT_ORG_ID
   );
 
   // Extract preferred model - empty string is invalid model name (Explicit Ternary for STRING)
@@ -169,29 +165,27 @@ async function triggerFineTuning(
   let job;
   if (preferredModel === 'gpt-4' || preferredModel === 'gpt-3.5-turbo') {
     job = await createOpenAIFineTuningJob({
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       baseModel: preferredModel,
       examples,
     });
   } else if (preferredModel === 'gemini-1.5-pro' || preferredModel === 'gemini-1.0-pro') {
     job = await createVertexAIFineTuningJob({
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       baseModel: preferredModel,
       examples,
     });
   } else {
     throw new Error(`Unsupported model for fine-tuning: ${preferredModel}`);
   }
-  
+
   return job.id;
 }
 
 /**
  * Get learning configuration
  */
-async function getLearningConfig(
-  _organizationId: string
-): Promise<ContinuousLearningConfig | null> {
+async function getLearningConfig(): Promise<ContinuousLearningConfig | null> {
   try {
     const config = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/config`,
@@ -275,14 +269,13 @@ function getDaysSinceDate(date: Date): number {
  * Auto-deploy fine-tuned model if it performs better
  */
 export async function evaluateAndDeployModel(
-  organizationId: string,
   fineTunedModelId: string
 ): Promise<{
   deployed: boolean;
   reason: string;
   testId?: string;
 }> {
-  const config = await getLearningConfig(organizationId);
+  const config = await getLearningConfig();
   
   if (!config?.autoDeployFineTunedModels) {
     return { deployed: false, reason: 'Auto-deployment disabled' };
@@ -304,7 +297,7 @@ export async function evaluateAndDeployModel(
   // Get organization's current model
   const orgConfig = await FirestoreService.get<OrganizationPreferences>(
     COLLECTIONS.ORGANIZATIONS,
-    organizationId
+    DEFAULT_ORG_ID
   );
 
   // Extract current model - empty string is invalid model name (Explicit Ternary for STRING)
@@ -334,7 +327,6 @@ export async function evaluateAndDeployModel(
  * Process completed fine-tuning job and start A/B testing
  */
 export async function processCompletedFineTuningJob(
-  organizationId: string,
   jobId: string
 ): Promise<{
   success: boolean;
@@ -354,9 +346,9 @@ export async function processCompletedFineTuningJob(
   if (job.status !== 'completed' || !job.fineTunedModelId) {
     return { success: false, message: `Job not ready: status=${job.status}` };
   }
-  
+
   // Start A/B testing
-  const result = await evaluateAndDeployModel(organizationId, job.fineTunedModelId);
+  const result = await evaluateAndDeployModel(job.fineTunedModelId);
   
   // Update job with test info
   await FirestoreService.update(
@@ -379,9 +371,7 @@ export async function processCompletedFineTuningJob(
 /**
  * Check A/B test results and auto-deploy if winner
  */
-export async function checkAndDeployWinner(
-  organizationId: string
-): Promise<{
+export async function checkAndDeployWinner(): Promise<{
   deployed: boolean;
   model?: string;
   reason: string;
@@ -393,25 +383,25 @@ export async function checkAndDeployWinner(
   if (!test) {
     return { deployed: false, reason: 'No active A/B test' };
   }
-  
+
   if (test.status === 'running') {
     const progress = Math.min(
       test.metrics.controlConversations / test.minSampleSize,
       test.metrics.treatmentConversations / test.minSampleSize
     ) * 100;
-    
+
     return {
       deployed: false,
       reason: `Test still running (${progress.toFixed(0)}% complete). Need ${test.minSampleSize} conversations each.`,
     };
   }
-  
+
   // Get config to check auto-deploy setting
-  const config = await getLearningConfig(organizationId);
+  const config = await getLearningConfig();
   const autoDeploy = config?.autoDeployFineTunedModels ?? false;
-  
+
   const result = await completeABTestAndDeploy(test.id, autoDeploy);
-  
+
   return {
     deployed: result.deployed,
     model: result.model,

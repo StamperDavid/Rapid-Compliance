@@ -4,8 +4,9 @@
  * Fallback to env vars if not found in Firestore
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Type definition for API keys stored in Firestore
@@ -25,13 +26,12 @@ interface APIKeysDocument {
  * Checks Firestore first, falls back to environment variables
  */
 export async function getAPIKey(
-  organizationId: string,
   service: 'openai' | 'sendgrid' | 'google_client_id' | 'google_client_secret' | 'stripe_publishable' | 'stripe_secret'
 ): Promise<string | null> {
   try {
     // Try Firestore first
     const apiKeys = await FirestoreService.get<APIKeysDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
       'apiKeys'
     );
 
@@ -69,22 +69,21 @@ export async function getAPIKey(
  * Check if a service is configured
  */
 export async function isServiceConfigured(
-  organizationId: string,
   service: 'openai' | 'sendgrid' | 'google_client_id' | 'google_client_secret' | 'stripe_publishable' | 'stripe_secret'
 ): Promise<boolean> {
-  const key = await getAPIKey(organizationId, service);
+  const key = await getAPIKey(service);
   return !!key;
 }
 
 /**
  * Get all configured services for an organization
  */
-export async function getConfiguredServices(organizationId: string): Promise<string[]> {
+export async function getConfiguredServices(): Promise<string[]> {
   const services = ['openai', 'sendgrid', 'google_client_id', 'google_client_secret', 'stripe_publishable', 'stripe_secret'] as const;
   const configured: string[] = [];
 
   for (const service of services) {
-    if (await isServiceConfigured(organizationId, service)) {
+    if (await isServiceConfigured(service)) {
       configured.push(service);
     }
   }

@@ -5,8 +5,9 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '../db/firestore-service';
-import type { CompanyEnrichmentData } from './types'
+import type { CompanyEnrichmentData } from './types';
 import { logger } from '../logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const CACHE_TTL_DAYS = 7; // Cache for 7 days
 
@@ -22,14 +23,13 @@ export interface CachedEnrichment {
  * Get cached enrichment data if it exists and is still fresh
  */
 export async function getCachedEnrichment(
-  domain: string,
-  organizationId: string
+  domain: string
 ): Promise<CompanyEnrichmentData | null> {
   try {
     // Query for cached data
     const { where, limit } = await import('firebase/firestore');
     const results = await FirestoreService.getAll<CachedEnrichment>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-cache`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-cache`,
       [
         where('domain', '==', domain),
         limit(1)
@@ -69,24 +69,23 @@ export async function getCachedEnrichment(
 export async function cacheEnrichment(
   domain: string,
   data: CompanyEnrichmentData,
-  organizationId: string,
   ttlDays: number = CACHE_TTL_DAYS
 ): Promise<void> {
   try {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
-    
+
     const cacheEntry: CachedEnrichment = {
       domain,
       data,
       cachedAt: now,
       expiresAt,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     };
-    
+
     // Use domain as document ID for easy lookup
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-cache`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-cache`,
       domain.replace(/[^a-zA-Z0-9-]/g, '-'), // Firestore-safe ID
       cacheEntry
     );
@@ -103,12 +102,11 @@ export async function cacheEnrichment(
  * Invalidate cache for a specific domain
  */
 export async function invalidateCache(
-  domain: string,
-  organizationId: string
+  domain: string
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-cache`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-cache`,
       domain.replace(/[^a-zA-Z0-9-]/g, '-')
     );
 
@@ -122,14 +120,14 @@ export async function invalidateCache(
 /**
  * Get cache statistics
  */
-export async function getCacheStats(organizationId: string): Promise<{
+export async function getCacheStats(): Promise<{
   totalCached: number;
   hitRate: number;
   avgAge: number;
 }> {
   try {
     const cached = await FirestoreService.getAll<CachedEnrichment>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-cache`
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-cache`
     );
     
     const now = new Date().getTime();
@@ -147,7 +145,7 @@ export async function getCacheStats(organizationId: string): Promise<{
     // Get total enrichment requests from logs
     const { where } = await import('firebase/firestore');
     const logs = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-costs`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-costs`,
       [
         where('timestamp', '>=', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
       ]
@@ -177,10 +175,10 @@ export async function getCacheStats(organizationId: string): Promise<{
  * Clean up expired cache entries
  * Run this periodically (e.g., daily cron job)
  */
-export async function purgeExpiredCache(organizationId: string): Promise<number> {
+export async function purgeExpiredCache(): Promise<number> {
   try {
     const allCached = await FirestoreService.getAll<CachedEnrichment>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-cache`
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-cache`
     );
     
     const now = new Date();
@@ -193,7 +191,7 @@ export async function purgeExpiredCache(organizationId: string): Promise<number>
       
       if (now > expiresAt) {
         await FirestoreService.delete(
-          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-cache`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-cache`,
           entry.domain.replace(/[^a-zA-Z0-9-]/g, '-')
         );
         purgedCount++;

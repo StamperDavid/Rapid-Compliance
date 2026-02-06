@@ -331,7 +331,7 @@ export class SequenceEngine {
       // Fallback to SendGrid if Gmail fails
       if (emailProvider === 'sendgrid') {
         const { getAPIKey } = await import('@/lib/config/api-keys');
-        const sendgridKey = await getAPIKey(DEFAULT_ORG_ID, 'sendgrid');
+        const sendgridKey = await getAPIKey('sendgrid');
         
         if (!sendgridKey) {
           throw new Error('Gmail failed and SendGrid not configured. Cannot send email.');

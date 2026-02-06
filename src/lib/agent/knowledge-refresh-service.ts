@@ -6,6 +6,7 @@
 import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
 import { where } from 'firebase/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Schema types that are relevant to AI agent knowledge
@@ -71,10 +72,10 @@ export async function handleSchemaChangeForAgent(
     const requiresRecompilation = shouldRecompileKnowledge(event);
     
     if (requiresRecompilation) {
-      await recompileAgentKnowledge(event.organizationId, event.workspaceId);
-      
+      await recompileAgentKnowledge(event.workspaceId);
+
       // Notify user of the update
-      await notifySchemaChange(event.organizationId, event.workspaceId, {
+      await notifySchemaChange(event.workspaceId, {
         title: 'AI Agent Updated',
         message: `Your AI agent's knowledge has been updated to reflect recent schema changes to ${schemaName}.`,
         type: 'info',
@@ -132,20 +133,19 @@ function shouldRecompileKnowledge(event: SchemaChangeEvent): boolean {
  * Recompile agent knowledge base
  */
 export async function recompileAgentKnowledge(
-  organizationId: string,
   workspaceId: string
 ): Promise<void> {
   try {
     logger.info('[AI Agent Refresh] Starting knowledge recompilation', {
       file: 'knowledge-refresh-service.ts',
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
     });
-    
+
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
+
     // Get current Golden Master
-    const goldenMastersPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/goldenMasters`;
+    const goldenMastersPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/goldenMasters`;
     const goldenMasters = await FirestoreService.getAll<GoldenMasterData>(goldenMastersPath, [
       where('status', '==', 'active'),
     ]);
@@ -153,27 +153,26 @@ export async function recompileAgentKnowledge(
     if (goldenMasters.length === 0) {
       logger.warn('[AI Agent Refresh] No active Golden Master found', {
         file: 'knowledge-refresh-service.ts',
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return;
     }
-    
+
     const goldenMaster = goldenMasters[0];
-    
+
     // Get all schemas for this workspace
-    const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
+    const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
     const schemas = await FirestoreService.getAll<SchemaRecord>(schemasPath, [
       where('status', '==', 'active'),
     ]);
-    
+
     // Recompile system prompt with updated schema information
     const updatedSystemPrompt = compileSystemPromptWithSchemas(
       goldenMaster.systemPrompt,
       schemas,
-      organizationId,
       workspaceId
     );
-    
+
     // Update Golden Master with new system prompt
     await FirestoreService.set(
       goldenMastersPath,
@@ -187,7 +186,7 @@ export async function recompileAgentKnowledge(
       },
       false
     );
-    
+
     logger.info('[AI Agent Refresh] Knowledge recompilation complete', {
       file: 'knowledge-refresh-service.ts',
       goldenMasterId: goldenMaster.id,
@@ -197,7 +196,7 @@ export async function recompileAgentKnowledge(
   } catch (error) {
     logger.error('[AI Agent Refresh] Failed to recompile knowledge', error instanceof Error ? error : new Error(String(error)), {
       file: 'knowledge-refresh-service.ts',
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
     });
     throw error;
@@ -227,7 +226,6 @@ interface SchemaRecord {
 function compileSystemPromptWithSchemas(
   basePrompt: string,
   schemas: SchemaRecord[],
-  _organizationId: string,
   _workspaceId: string
 ): string {
   // Build schema documentation
@@ -268,7 +266,6 @@ ${fields}
  * Notify user of schema change affecting AI agent
  */
 async function notifySchemaChange(
-  organizationId: string,
   workspaceId: string,
   notification: {
     title: string;
@@ -279,16 +276,16 @@ async function notifySchemaChange(
 ): Promise<void> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
-    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/notifications`;
+
+    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notifications`;
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     await FirestoreService.set(
       notificationPath,
       notificationId,
       {
         id: notificationId,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         title: notification.title,
         message: notification.message,
@@ -303,7 +300,7 @@ async function notifySchemaChange(
       },
       false
     );
-    
+
     logger.info('[AI Agent Refresh] Notification sent', {
       file: 'knowledge-refresh-service.ts',
       notificationId,
@@ -425,7 +422,6 @@ export async function getSchemaChangeImpactOnAgent(
  * Manually trigger AI agent knowledge refresh
  */
 export async function manuallyRefreshAgentKnowledge(
-  organizationId: string,
   workspaceId: string
 ): Promise<{
   success: boolean;
@@ -433,8 +429,8 @@ export async function manuallyRefreshAgentKnowledge(
   newVersion?: number;
 }> {
   try {
-    await recompileAgentKnowledge(organizationId, workspaceId);
-    
+    await recompileAgentKnowledge(workspaceId);
+
     return {
       success: true,
       message: 'AI agent knowledge refreshed successfully',
@@ -442,7 +438,7 @@ export async function manuallyRefreshAgentKnowledge(
   } catch (error) {
     logger.error('[AI Agent Refresh] Manual refresh failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'knowledge-refresh-service.ts',
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
     });
 

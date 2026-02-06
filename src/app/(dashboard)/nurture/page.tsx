@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -25,7 +23,6 @@ export default function NurtureCampaignsPage() {
   // Fetch function with pagination using service layer
   const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getNurtureCampaigns(
-      DEFAULT_ORG_ID,
       undefined,
       { pageSize: 50, lastDoc }
     );

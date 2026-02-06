@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Step 1: Discover competitor (uses cache if available)
-    const competitorProfile = await discoverCompetitor(competitorDomain, organizationId);
+    const competitorProfile = await discoverCompetitor(competitorDomain);
 
     // Step 2: Generate battlecard
     const battlecard = await generateBattlecard(competitorProfile, options);
