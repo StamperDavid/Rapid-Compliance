@@ -66,7 +66,6 @@ export async function GET(request: NextRequest) {
     for (const doc of snapshot.docs) {
       const data = doc.data() as AuditEntry;
 
-      // CRITICAL: Double-check organizationId matches
       if (data.organizationId && data.organizationId !== DEFAULT_ORG_ID) {
         logger.error('[SECURITY] Audit log organizationId mismatch', new Error('Audit log cross-org access'), {
           route: '/api/website/audit-log',

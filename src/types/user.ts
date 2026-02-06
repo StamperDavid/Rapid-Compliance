@@ -28,10 +28,7 @@ export interface User {
       slack: boolean;
     };
   };
-  
-  // Penthouse context (SalesVelocity.ai)
-  // organizationId removed - always 'rapid-compliance'
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -80,7 +77,6 @@ export interface UserSession {
  */
 export interface Invitation {
   id: string;
-  // organizationId removed - penthouse model
   workspaceId?: string;
   
   // Invitee

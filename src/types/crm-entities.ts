@@ -279,7 +279,6 @@ export function isValidDealStage(stage: unknown): stage is DealStage {
 export interface Deal {
   // Core identifiers
   id: string;
-  // organizationId removed - penthouse model (rapid-compliance)
   workspaceId: string;
 
   // Deal details
@@ -371,7 +370,6 @@ export function isValidLeadStatus(status: unknown): status is LeadStatus {
 export interface Lead {
   // Core identifiers
   id: string;
-  // organizationId removed - penthouse model (rapid-compliance)
   workspaceId: string;
 
   // Personal info
@@ -444,7 +442,6 @@ export interface ContactAddress {
 export interface Contact {
   // Core identifiers
   id: string;
-  // organizationId removed - penthouse model (rapid-compliance)
   workspaceId: string;
 
   // Personal info

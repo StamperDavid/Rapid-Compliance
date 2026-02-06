@@ -109,10 +109,9 @@ export async function PUT(
 
     const performedBy = await getUserIdentifier();
 
-    // CRITICAL: Cannot change organizationId
     const updatedData = {
       ...page,
-      organizationId: existingData.organizationId, // ← Keep original orgId
+      organizationId: existingData.organizationId,
       id: params.pageId,
       updatedAt: FieldValue.serverTimestamp(),
       lastEditedBy: performedBy,

@@ -369,8 +369,6 @@ async function getAllSequencePerformances(
   try {
     const performances: SequencePerformance[] = [];
 
-    // Fetch native Hunter-Closer sequences
-    // PENTHOUSE: organizationId filter removed (penthouse)
     const nativeSeqsRef = adminDal.getCollection('SEQUENCES');
     const nativeSeqsSnap = await nativeSeqsRef.get();
 

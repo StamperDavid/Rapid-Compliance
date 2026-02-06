@@ -67,8 +67,6 @@ export class FirestoreDAL {
   /**
    * Get an organization sub-collection reference
    * Usage: dal.getOrgCollection('records')
-   *
-   * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID
    */
   getOrgCollection(subCollection: string): CollectionReference {
     const path = getOrgSubCollection(subCollection);
@@ -107,11 +105,6 @@ export class FirestoreDAL {
       });
       return;
     }
-
-    // TODO: Add organization-scoped access check
-    // if (options?.organizationId) {
-    //   await this.verifyOrgAccess(options.userId, options.organizationId);
-    // }
 
     const docRef = doc(this.db, collectionRef, docId) as DocumentReference<T>;
 

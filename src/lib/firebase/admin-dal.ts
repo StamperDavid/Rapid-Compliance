@@ -62,8 +62,6 @@ export class FirestoreAdminDAL {
   /**
    * Get an organization sub-collection reference
    * Usage: adminDal.getOrgCollection('records')
-   *
-   * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID
    */
   getOrgCollection(subCollection: string): CollectionReference {
     const path = getOrgSubCollection(subCollection);
@@ -161,11 +159,6 @@ export class FirestoreAdminDAL {
       });
       return;
     }
-
-    // TODO: Add organization-scoped access check
-    // if (options?.organizationId) {
-    //   await this.verifyOrgAccess(options.userId, options.organizationId);
-    // }
 
     const docRef = this.db.collection(collectionRef).doc(docId);
 
@@ -498,9 +491,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get all workflows
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getAllWorkflows(_organizationId?: string): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getOrgCollection('workflows');
@@ -510,9 +500,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get workflow executions in a date range
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getWorkflowExecutions(
     _organizationId: string | undefined,
@@ -529,9 +516,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get email generations in a date range
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   getEmailGenerations(
     _organizationId: string | undefined,
@@ -545,9 +529,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get all active deals
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getActiveDeals(_organizationId?: string): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getOrgCollection('deals');
@@ -559,9 +540,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get deals snapshot at a specific date (for trend comparison)
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getDealsSnapshot(
     _organizationId: string | undefined,
@@ -574,9 +552,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get closed deals in a date range
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getClosedDeals(
     _organizationId: string | undefined,
@@ -594,9 +569,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get won deals in a date range
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getWonDeals(
     _organizationId: string | undefined,
@@ -614,9 +586,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get revenue forecast
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getRevenueForecast(_organizationId?: string): Promise<Record<string, unknown> | null> {
     const docRef = this.getOrgCollection('forecasts').doc('current');
@@ -626,9 +595,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get sales reps
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getSalesReps(_organizationId?: string): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getOrgCollection('users');
@@ -640,9 +606,6 @@ export class FirestoreAdminDAL {
 
   /**
    * Get deals for a specific rep in a date range
-   *
-   * PENTHOUSE MODEL: organizationId parameter retained for API compatibility
-   * but is ignored (uses DEFAULT_ORG_ID internally)
    */
   async getRepDeals(
     _organizationId: string | undefined,
