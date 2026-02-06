@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { generateProposal } from '@/lib/documents/proposal-generator';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface LineItem {
   description: string;
@@ -42,11 +43,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const organizationId = token.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     if (!body.templateId) {
       return NextResponse.json({ error: 'Template ID required' }, { status: 400 });

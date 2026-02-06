@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { scheduleMeeting } from '@/lib/meetings/scheduler-engine';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 type RelatedEntityType = 'lead' | 'contact' | 'deal';
 
@@ -47,11 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const organizationId = token.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     // Validate required fields
     if (!body.schedulerConfigId) {

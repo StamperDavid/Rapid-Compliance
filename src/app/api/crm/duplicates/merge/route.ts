@@ -9,6 +9,7 @@ import { mergeRecords } from '@/lib/crm/duplicate-detection';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import type { RelatedEntityType } from '@/types/activity';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,14 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const organizationId = token.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     // Parse and validate request body
     const body: unknown = await request.json();
