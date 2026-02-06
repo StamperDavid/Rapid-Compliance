@@ -925,7 +925,7 @@ export class ArchitectManager extends BaseManager {
     // Load Brand DNA
     let brandDNA: BrandDNA | null = null;
     try {
-      brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
+      brandDNA = await getBrandDNA();
       if (brandDNA) {
         this.log('INFO', `Loaded Brand DNA: ${brandDNA.industry} industry, ${brandDNA.toneOfVoice} tone`);
       }

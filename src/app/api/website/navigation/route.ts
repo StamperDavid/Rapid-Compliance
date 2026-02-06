@@ -1,16 +1,16 @@
 /**
  * Navigation API
  * Manage site navigation (header menu, footer)
- * CRITICAL: Organization-scoped - scoped to organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Navigation } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface RequestBody {
-  organizationId?: string;
   navigation?: Partial<Navigation>;
 }
 
@@ -18,22 +18,13 @@ interface RequestBody {
  * GET /api/website/navigation
  * Get navigation for an organization
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId required' },
-        { status: 400 }
-      );
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     // Get navigation document
     const navRef = adminDal.getNestedDocRef(
@@ -76,15 +67,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as RequestBody;
-    const { organizationId, navigation } = body;
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId required' },
-        { status: 400 }
-      );
-    }
+    const { navigation } = body;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Validate navigation data
     if (!navigation) {

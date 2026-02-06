@@ -23,8 +23,7 @@ export async function GET(
 
     // Penthouse: orgId is always DEFAULT_ORG_ID
     const organizationId = DEFAULT_ORG_ID;
-    const wsIdHeader = request.headers.get('x-workspace-id');
-    const workspaceId = (wsIdHeader !== '' && wsIdHeader != null) ? wsIdHeader : 'default';
+    const workspaceId = 'default';
 
     logger.info('Generating deal recommendations', {
       dealId,

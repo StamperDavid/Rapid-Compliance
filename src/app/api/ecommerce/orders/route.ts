@@ -6,6 +6,7 @@ import type { Order } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 type QueryConstraint = ReturnType<typeof where> | ReturnType<typeof orderBy>;
 
@@ -32,14 +33,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get('workspaceId');
     const customerEmail = searchParams.get('customerEmail');
     const status = searchParams.get('status');
     const pageSize = parseInt(searchParams.get('limit') ?? '50');
-
-    if (!workspaceId) {
-      return errors.badRequest('workspaceId required');
-    }
 
     const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
 
@@ -55,14 +51,13 @@ export async function GET(request: NextRequest) {
 
     logger.info('Fetching orders', {
       route: '/api/ecommerce/orders',
-      workspaceId,
       pageSize,
       filters: JSON.stringify({ customerEmail, status }),
     });
 
     // Use paginated query
     const result = await FirestoreService.getAllPaginated<Order>(
-      `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/orders`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/default/orders`,
       constraints,
       Math.min(pageSize, 100) // Max 100 per page
     );

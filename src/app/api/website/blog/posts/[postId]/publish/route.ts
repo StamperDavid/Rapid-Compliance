@@ -1,7 +1,7 @@
 /**
  * Blog Post Publishing API
  * Handle publish/unpublish actions for blog posts
- * CRITICAL: Organization isolation - validates organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,18 +9,14 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const paramsSchema = z.object({
   postId: z.string().min(1, 'postId is required'),
 });
 
 const postBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   scheduledFor: z.string().optional(),
-});
-
-const deleteQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
 });
 
 interface BlogPostData {
@@ -72,7 +68,8 @@ export async function POST(
       );
     }
 
-    const { organizationId, scheduledFor } = bodyResult.data;
+    const { scheduledFor } = bodyResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
@@ -94,21 +91,6 @@ export async function POST(
       return NextResponse.json(
         { error: 'Blog post data not found' },
         { status: 404 }
-      );
-    }
-
-    // CRITICAL: Verify organizationId matches
-    if (postData.organizationId !== organizationId) {
-      logger.error('[SECURITY] organizationId mismatch on blog publish', new Error('Cross-org blog publish attempt'), {
-        route: '/api/website/blog/posts/[postId]/publish',
-        method: 'POST',
-        requested: organizationId,
-        actual: postData.organizationId,
-        postId,
-      });
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       );
     }
 
@@ -201,20 +183,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
     }
     const { postId } = paramsResult.data;
-
-    const { searchParams } = request.nextUrl;
-    const queryResult = deleteQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId') ?? undefined,
-    });
-
-    if (!queryResult.success) {
-      return NextResponse.json(
-        { error: queryResult.error.errors[0]?.message ?? 'organizationId is required' },
-        { status: 400 }
-      );
-    }
-
-    const { organizationId } = queryResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
@@ -231,21 +200,6 @@ export async function DELETE(
     }
 
     const postData = doc.data() as BlogPostData | undefined;
-
-    // CRITICAL: Verify organizationId matches
-    if (postData?.organizationId !== organizationId) {
-      logger.error('[SECURITY] organizationId mismatch on blog unpublish', new Error('Cross-org blog unpublish attempt'), {
-        route: '/api/website/blog/posts/[postId]/publish',
-        method: 'DELETE',
-        requested: organizationId,
-        actual: postData?.organizationId,
-        postId,
-      });
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
 
     const now = new Date().toISOString();
     const performedBy = await getUserIdentifier();

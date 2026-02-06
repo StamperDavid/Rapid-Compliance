@@ -675,7 +675,7 @@ export async function createTwitterService(
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
 
     // Get organization's API keys config from proper APIKeysConfig structure
-    const apiKeys = await apiKeyService.getKeys(organizationId);
+    const apiKeys = await apiKeyService.getKeys();
 
     if (!apiKeys) {
       logger.debug('Twitter: No API keys configured for organization', {

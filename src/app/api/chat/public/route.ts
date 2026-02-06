@@ -94,10 +94,10 @@ export async function POST(request: NextRequest) {
 
     // Get or spawn agent instance
     const instanceManager = new AgentInstanceManager();
-    
+
     let instance;
     try {
-      instance = await instanceManager.spawnInstance(customerId, orgId);
+      instance = await instanceManager.spawnInstance(customerId);
     } catch (error: unknown) {
       // If no Golden Master exists, provide a helpful response
       if (error instanceof Error && error.message.includes('Golden Master')) {
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
         role: m.role === 'user' ? 'user' as const : 'model' as const,
         parts: [{ text: m.content }],
       }));
-      const ragResult = await enhanceChatWithRAG(ragMessages, orgId, instance.systemPrompt);
+      const ragResult = await enhanceChatWithRAG(ragMessages, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error: unknown) {
       logger.warn('RAG enhancement failed, using base prompt', {
@@ -199,7 +199,6 @@ export async function POST(request: NextRequest) {
     // Save conversation to customer memory
     await instanceManager.addMessageToMemory(
       customerId,
-      orgId,
       message,
       response.text
     );

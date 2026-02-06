@@ -5,19 +5,18 @@ import { getAuth } from 'firebase-admin/auth';
 import { z } from 'zod';
 import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { getWorkflows, createWorkflow, type WorkflowFilters } from '@/lib/workflows/workflow-service';
 import type { Workflow } from '@/types/workflow';
 
 const statusValues = ['draft', 'active', 'paused', 'archived'] as const;
 
 const getQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   workspaceId: z.string().optional().default('default'),
   status: z.enum(statusValues).optional(),
 });
 
 const postBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   workspaceId: z.string().optional().default('default'),
   workflow: z.object({
     name: z.string(),
@@ -61,23 +60,22 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const queryResult = getQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId'),
       workspaceId: searchParams.get('workspaceId') ?? undefined,
       status: searchParams.get('status') ?? undefined,
     });
 
     if (!queryResult.success) {
-      return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
     }
 
-    const { organizationId, workspaceId, status } = queryResult.data;
+    const { workspaceId, status } = queryResult.data;
 
     const filters: WorkflowFilters = {};
     if (status) {
       filters.status = status;
     }
 
-    const result = await getWorkflows(organizationId, workspaceId, filters);
+    const result = await getWorkflows(DEFAULT_ORG_ID, workspaceId, filters);
 
     return NextResponse.json({
       workflows: result.data,
@@ -124,13 +122,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { organizationId, workspaceId, workflow } = bodyResult.data;
+    const { workspaceId, workflow } = bodyResult.data;
 
     // Cast to the expected type - the service layer will perform full validation
     const workflowData = workflow as unknown as Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>;
 
     const newWorkflow = await createWorkflow(
-      organizationId,
+      DEFAULT_ORG_ID,
       workflowData,
       decodedToken.uid,
       workspaceId

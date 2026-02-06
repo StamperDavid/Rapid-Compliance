@@ -23,11 +23,10 @@ export const COMPANY_CONFIG = {
 /**
  * Checks if a given organization ID matches the default penthouse organization
  *
- * @param orgId - The organization ID to check
- * @returns True if the orgId matches the default org ID, false otherwise
+ * @returns Always true in single-tenant penthouse model
  */
-export function isDefaultOrg(orgId: string): boolean {
-  return orgId === DEFAULT_ORG_ID;
+export function isDefaultOrg(): boolean {
+  return true;
 }
 
 /**

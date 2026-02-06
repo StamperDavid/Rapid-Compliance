@@ -1,7 +1,7 @@
 /**
  * Page Version History API
  * Retrieve and restore previous versions of pages
- * CRITICAL: Organization isolation - validates organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,6 +9,7 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface PageData {
   organizationId: string;
@@ -26,7 +27,6 @@ interface VersionData {
 }
 
 interface RequestBody {
-  organizationId?: string;
   versionId?: string;
 }
 
@@ -44,16 +44,7 @@ export async function GET(
     }
 
     const params = await context.params;
-    const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     // Verify the page belongs to this org
     const pageRef = adminDal.getNestedDocRef(
@@ -71,14 +62,6 @@ export async function GET(
     }
 
     const pageData = pageDoc.data() as PageData | undefined;
-
-    // CRITICAL: Verify organizationId matches
-    if (pageData?.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
 
     // Get all versions (using environment-aware subcollection path)
     const { adminDb } = await import('@/lib/firebase/admin');
@@ -98,8 +81,8 @@ export async function GET(
     return NextResponse.json({
       success: true,
       versions,
-      currentVersion: pageData.version,
-      lastPublishedVersion: pageData.lastPublishedVersion,
+      currentVersion: pageData?.version,
+      lastPublishedVersion: pageData?.lastPublishedVersion,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -129,15 +112,8 @@ export async function POST(
 
     const params = await context.params;
     const body = await request.json() as RequestBody;
-    const { organizationId, versionId } = body;
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const { versionId } = body;
+    const organizationId = DEFAULT_ORG_ID;
 
     if (!versionId) {
       return NextResponse.json(
@@ -166,14 +142,6 @@ export async function POST(
       return NextResponse.json(
         { error: 'Page data not found' },
         { status: 404 }
-      );
-    }
-
-    // CRITICAL: Verify organizationId matches
-    if (pageData.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       );
     }
 

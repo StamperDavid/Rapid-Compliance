@@ -159,7 +159,6 @@ export class RecoveryEngine {
 
       // Use platform org ID and recovery agent for outbound calls
       await initiateCall(
-        'platform',
         merchant.phoneNumber,
         `recovery-${template}`,
         { record: true, timeout: 45 }

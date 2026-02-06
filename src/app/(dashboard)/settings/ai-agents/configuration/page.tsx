@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -15,7 +13,6 @@ type ExtendedBehaviorConfig = Record<string, string | number | boolean | undefin
 
 export default function AgentConfigurationPage() {
   const { user: _user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,7 +23,7 @@ export default function AgentConfigurationPage() {
   const loadBaseModel = useCallback(async () => {
     try {
       const { getBaseModel } = await import('@/lib/agent/base-model-builder');
-      const model = await getBaseModel(orgId);
+      const model = await getBaseModel();
 
       if (model) {
         setBaseModel(model);
@@ -40,7 +37,7 @@ export default function AgentConfigurationPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadBaseModel();
@@ -55,7 +52,7 @@ export default function AgentConfigurationPage() {
     try {
       const { updateBaseModel } = await import('@/lib/agent/base-model-builder');
 
-      await updateBaseModel(orgId, baseModel.id, {
+      await updateBaseModel(baseModel.id, {
         businessContext: baseModel.businessContext,
         agentPersona: baseModel.agentPersona,
         behaviorConfig: baseModel.behaviorConfig,

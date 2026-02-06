@@ -12,13 +12,13 @@ import { z } from 'zod';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { createVideoJobService } from '@/lib/video/video-job-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // =============================================================================
 // REQUEST VALIDATION SCHEMAS
 // =============================================================================
 
 const VideoRenderRequestSchema = z.object({
-  organizationId: z.string().min(1, 'Organization ID is required'),
   storyboardId: z.string().min(1, 'Storyboard ID is required'),
   provider: z.enum(['heygen', 'sora', 'runway', 'veo', 'kling', 'pika']).optional(),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).optional(),
@@ -29,7 +29,6 @@ const VideoRenderRequestSchema = z.object({
 
 const GetJobRequestSchema = z.object({
   jobId: z.string().min(1, 'Job ID is required'),
-  organizationId: z.string().min(1, 'Organization ID is required'),
 });
 
 // =============================================================================
@@ -64,7 +63,6 @@ export async function POST(request: NextRequest) {
     }
 
     const {
-      organizationId,
       storyboardId,
       provider,
       aspectRatio,
@@ -77,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Cross-org access checks removed
 
     logger.info('[AdminVideoRender] Starting video render job', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       storyboardId,
       provider,
       adminId: authResult.user.uid,
@@ -85,7 +83,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create video job service for the organization
-    const videoJobService = createVideoJobService(organizationId);
+    const videoJobService = createVideoJobService();
 
     // Create the video rendering job (persisted to Firestore)
     const job = await videoJobService.createJob({
@@ -104,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     logger.info('[AdminVideoRender] Video job created successfully', {
       jobId: job.id,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       storyboardId,
       file: 'admin/video/render/route.ts',
     });
@@ -155,10 +153,9 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
-    const organizationId = searchParams.get('organizationId');
 
     // Validate query params
-    const validation = GetJobRequestSchema.safeParse({ jobId, organizationId });
+    const validation = GetJobRequestSchema.safeParse({ jobId });
 
     if (!validation.success) {
       return NextResponse.json(
@@ -171,13 +168,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { jobId: validJobId, organizationId: validOrgId } = validation.data;
+    const { jobId: validJobId } = validation.data;
 
     // PENTHOUSE: Penthouse model - all admins have access to the organization
     // Cross-org access checks removed
 
     // Get job status from Firestore
-    const videoJobService = createVideoJobService(validOrgId);
+    const videoJobService = createVideoJobService();
     const job = await videoJobService.getJob(validJobId);
 
     if (!job) {

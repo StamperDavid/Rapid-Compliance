@@ -1,6 +1,6 @@
 /**
  * Single Page API
- * CRITICAL: Organization isolation - validates organizationId on every request
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -8,6 +8,7 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface PageData {
   organizationId: string;
@@ -15,7 +16,6 @@ interface PageData {
 }
 
 interface RequestBody {
-  organizationId?: string;
   page?: Record<string, unknown>;
 }
 
@@ -33,16 +33,7 @@ export async function GET(
     }
 
     const params = await context.params;
-    const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
@@ -59,21 +50,6 @@ export async function GET(
     }
 
     const pageData = doc.data() as PageData | undefined;
-
-    // CRITICAL: Double-check organizationId matches
-    if (pageData?.organizationId !== organizationId) {
-      logger.error('[SECURITY] organizationId mismatch', new Error('Cross-org page access attempt'), {
-        route: '/api/website/pages/[pageId]',
-        method: 'GET',
-        requested: organizationId,
-        actual: pageData?.organizationId,
-        pageId: params.pageId,
-      });
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
 
     return NextResponse.json({
       success: true,
@@ -107,15 +83,8 @@ export async function PUT(
 
     const params = await context.params;
     const body = await request.json() as RequestBody;
-    const { organizationId, page } = body;
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const { page } = body;
+    const organizationId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
@@ -137,21 +106,6 @@ export async function PUT(
       return NextResponse.json(
         { error: 'Page data not found' },
         { status: 404 }
-      );
-    }
-
-    // CRITICAL: Verify organizationId matches
-    if (existingData.organizationId !== organizationId) {
-      logger.error('[SECURITY] Attempted cross-org page update', new Error('Cross-org page update attempt'), {
-        route: '/api/website/pages/[pageId]',
-        method: 'PUT',
-        requested: organizationId,
-        actual: existingData.organizationId,
-        pageId: params.pageId,
-      });
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       );
     }
 
@@ -200,16 +154,7 @@ export async function DELETE(
     }
 
     const params = await context.params;
-    const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
@@ -222,23 +167,6 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Page not found' },
         { status: 404 }
-      );
-    }
-
-    const pageData = doc.data() as PageData | undefined;
-
-    // CRITICAL: Verify organizationId matches
-    if (pageData?.organizationId !== organizationId) {
-      logger.error('[SECURITY] Attempted cross-org page deletion', new Error('Cross-org page delete attempt'), {
-        route: '/api/website/pages/[pageId]',
-        method: 'DELETE',
-        requested: organizationId,
-        actual: pageData?.organizationId,
-        pageId: params.pageId,
-      });
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       );
     }
 

@@ -3,13 +3,13 @@ import type { NextRequest} from 'next/server';
 import { verifyAdminRequest, createErrorResponse, createSuccessResponse, isAuthError } from '@/lib/api/admin-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // Type Definitions
 // ============================================================================
 
 interface TestConnectionRequestBody {
-  orgId: string;
   service: string;
 }
 
@@ -56,9 +56,7 @@ function isTestConnectionRequestBody(body: unknown): body is TestConnectionReque
   return (
     typeof body === 'object' &&
     body !== null &&
-    'orgId' in body &&
     'service' in body &&
-    typeof (body as TestConnectionRequestBody).orgId === 'string' &&
     typeof (body as TestConnectionRequestBody).service === 'string'
   );
 }
@@ -107,13 +105,13 @@ export async function POST(request: NextRequest) {
     const body: unknown = await request.json();
 
     if (!isTestConnectionRequestBody(body)) {
-      return createErrorResponse('Missing or invalid orgId or service', 400);
+      return createErrorResponse('Missing or invalid service', 400);
     }
 
-    const { orgId, service } = body;
+    const { service } = body;
 
     // Get API key for the service
-    const keys = await apiKeyService.getKeys(orgId);
+    const keys = await apiKeyService.getKeys();
     if (!keys) {
       return createErrorResponse('No API keys configured for this organization', 404);
     }
@@ -147,7 +145,7 @@ export async function POST(request: NextRequest) {
         const apiKeysPath = getOrgSubCollection('apiKeys');
         await adminDb
           .collection(apiKeysPath)
-          .doc(orgId)
+          .doc(DEFAULT_ORG_ID)
           .update({
             [`ai.${service}LastChecked`]: new Date().toISOString(),
             [`ai.${service}LastError`]: testResult.success ? null : testResult.error,

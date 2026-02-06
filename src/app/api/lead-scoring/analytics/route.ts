@@ -13,6 +13,7 @@ import adminApp from '@/lib/firebase/admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { LeadScoreAnalytics, StoredLeadScore, IntentSignalType } from '@/types/lead-scoring';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Interface for Firestore timestamp conversion
 interface FirestoreLeadScore extends Omit<StoredLeadScore, 'metadata'> {
@@ -75,16 +76,9 @@ export async function GET(req: NextRequest) {
     await getAuth(adminApp).verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get('organizationId');
+    const organizationId = DEFAULT_ORG_ID;
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
 
     // Parse date range (default: last 30 days)
     const endDate = endDateParam ? new Date(endDateParam) : new Date();

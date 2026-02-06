@@ -12,13 +12,13 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { processDiscoveryQueue } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface RequestPayload {
   batchSize?: number;
   concurrency?: number;
   maxRetries?: number;
   delayMs?: number;
-  organizationId?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       concurrency: body.concurrency ?? 3,
       maxRetries: body.maxRetries ?? 3,
       delayMs: body.delayMs ?? 2000,
-      organizationId: body.organizationId,
+      organizationId: DEFAULT_ORG_ID,
     };
 
     // Process the queue

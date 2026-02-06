@@ -6,6 +6,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface PlatformApiKeys {
   gemini?: { apiKey?: string };
@@ -21,37 +22,36 @@ const KEY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 /**
  * Get API key from organization settings or fallback to platform admin settings
  */
-async function getApiKey(organizationId?: string): Promise<string> {
+async function getApiKey(): Promise<string> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Check cache first (invalidate if different org)
-    if (cachedGenAI && cachedOrgId === (organizationId ?? null) && Date.now() - lastKeyFetch < KEY_CACHE_TTL) {
+    if (cachedGenAI && cachedOrgId === organizationId && Date.now() - lastKeyFetch < KEY_CACHE_TTL) {
       return 'cached';
     }
 
     let apiKey: string | null = null;
 
-    // Try organization-specific keys first if organizationId provided
-    if (organizationId) {
-      try {
-        const apiKeyModule = await import('@/lib/api-keys/api-key-service') as {
-          apiKeyService: { getServiceKey: (orgId: string, service: string) => Promise<string | null> }
-        };
-        const fetchedKey = await apiKeyModule.apiKeyService.getServiceKey(organizationId, 'gemini');
-        apiKey = fetchedKey ?? null;
+    // Try organization-specific keys
+    try {
+      const apiKeyModule = await import('@/lib/api-keys/api-key-service') as {
+        apiKeyService: { getServiceKey: (orgId: string, service: string) => Promise<string | null> }
+      };
+      const fetchedKey = await apiKeyModule.apiKeyService.getServiceKey(organizationId, 'gemini');
+      apiKey = fetchedKey ?? null;
 
-        if (apiKey) {
-          logger.info('[Gemini] Using organization-specific API key', {
-            organizationId,
-            file: 'gemini-service.ts'
-          });
-        }
-      } catch (error) {
-        logger.warn('[Gemini] Could not fetch org-specific key, falling back to platform key', {
+      if (apiKey) {
+        logger.info('[Gemini] Using organization-specific API key', {
           organizationId,
-          errorMessage: error instanceof Error ? error.message : String(error),
           file: 'gemini-service.ts'
         });
       }
+    } catch (error) {
+      logger.warn('[Gemini] Could not fetch org-specific key, falling back to platform key', {
+        organizationId,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        file: 'gemini-service.ts'
+      });
     }
 
     // Fallback to platform admin keys if no org key found
@@ -76,7 +76,7 @@ async function getApiKey(organizationId?: string): Promise<string> {
     // Update cache - intentional race condition acceptable for caching
     /* eslint-disable require-atomic-updates */
     cachedGenAI = new GoogleGenerativeAI(apiKey);
-    cachedOrgId = organizationId ?? null;
+    cachedOrgId = organizationId;
     lastKeyFetch = Date.now();
     /* eslint-enable require-atomic-updates */
 
@@ -105,8 +105,8 @@ export interface ChatResponse {
 /**
  * Initialize a chat model
  */
-async function getModel(organizationId?: string, modelName: string = 'gemini-2.0-flash-exp') {
-  await getApiKey(organizationId); // Ensure key is loaded with org context
+async function getModel(modelName: string = 'gemini-2.0-flash-exp') {
+  await getApiKey(); // Ensure key is loaded
   if (!cachedGenAI) {
     throw new Error('Gemini API key not configured');
   }
@@ -118,11 +118,10 @@ async function getModel(organizationId?: string, modelName: string = 'gemini-2.0
  */
 export async function sendChatMessage(
   messages: ChatMessage[],
-  systemInstruction?: string,
-  organizationId?: string
+  systemInstruction?: string
 ): Promise<ChatResponse> {
   try {
-    const model = await getModel(organizationId);
+    const model = await getModel();
     
     // Convert messages to Gemini format
     const history = messages
@@ -167,11 +166,10 @@ export async function sendChatMessage(
  */
 export async function generateText(
   prompt: string,
-  systemInstruction?: string,
-  organizationId?: string
+  systemInstruction?: string
 ): Promise<ChatResponse> {
   try {
-    const model = await getModel(organizationId);
+    const model = await getModel();
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       systemInstruction: systemInstruction,
@@ -207,11 +205,10 @@ export async function generateText(
  */
 export async function* streamChatMessage(
   messages: ChatMessage[],
-  systemInstruction?: string,
-  organizationId?: string
+  systemInstruction?: string
 ): AsyncGenerator<string, void, unknown> {
   try {
-    const model = await getModel(organizationId);
+    const model = await getModel();
     
     const history = messages
       .filter(m => m.role !== 'system')

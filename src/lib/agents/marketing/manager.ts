@@ -576,7 +576,7 @@ export class MarketingManager extends BaseManager {
     }
 
     try {
-      const brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
+      const brandDNA = await getBrandDNA();
 
       if (!brandDNA) {
         this.log('WARN', `No Brand DNA found for organization ${DEFAULT_ORG_ID}, using defaults`);

@@ -1,7 +1,7 @@
 /**
  * Templates API
  * Manage custom page templates
- * CRITICAL: Organization-scoped - custom templates scoped to organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -10,15 +10,11 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import type { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-
-const getQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId required'),
-});
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const templateCategoryValues = ['business', 'saas', 'ecommerce', 'portfolio', 'agency', 'blog', 'other'] as const;
 
 const postBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId required'),
   template: z.object({
     name: z.string().min(1, 'Template name is required'),
     description: z.string().optional(),
@@ -30,7 +26,6 @@ const postBodySchema = z.object({
 });
 
 const deleteQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId required'),
   templateId: z.string().min(1, 'templateId required'),
 });
 
@@ -38,25 +33,13 @@ const deleteQuerySchema = z.object({
  * GET /api/website/templates
  * List custom templates for an organization
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const queryResult = getQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId'),
-    });
-
-    if (!queryResult.success) {
-      return NextResponse.json(
-        { error: queryResult.error.errors[0]?.message ?? 'Invalid query parameters' },
-        { status: 400 }
-      );
-    }
-
-    const { organizationId } = queryResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Get custom templates for this org
     const templatesRef = adminDal.getNestedCollection(
@@ -69,13 +52,10 @@ export async function GET(request: NextRequest) {
 
     snapshot.forEach((doc) => {
       const data = doc.data();
-      // CRITICAL: Double-check organizationId matches
-      if (data.organizationId === organizationId) {
-        templates.push({
-          id: doc.id,
-          ...data,
-        } as PageTemplate);
-      }
+      templates.push({
+        id: doc.id,
+        ...data,
+      } as PageTemplate);
     });
 
     return NextResponse.json({ templates });
@@ -111,7 +91,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { organizationId, template } = bodyResult.data;
+    const { template } = bodyResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Create template document
     const templateData: PageTemplate = {
@@ -161,7 +142,6 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const queryResult = deleteQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId'),
       templateId: searchParams.get('templateId'),
     });
 
@@ -172,7 +152,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { organizationId, templateId } = queryResult.data;
+    const { templateId } = queryResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Delete template
     const templateRef = adminDal.getNestedDocRef(
@@ -186,14 +167,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: 'Template not found' },
         { status: 404 }
-      );
-    }
-
-    const templateData = templateDoc.data();
-    if (templateData?.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       );
     }
 

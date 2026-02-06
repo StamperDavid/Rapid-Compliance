@@ -1,32 +1,23 @@
 /**
  * API Route: Get Monitoring Stats
- * 
- * GET /api/battlecard/monitor/stats?organizationId=xxx
- * 
+ *
+ * GET /api/battlecard/monitor/stats
+ *
  * Get competitive monitoring statistics
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getCompetitiveMonitor } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
-export function GET(request: NextRequest) {
+export function GET(_request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'Missing required parameter: organizationId' },
-        { status: 400 }
-      );
-    }
-
     logger.info('API: Get monitoring stats', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
-    const monitor = getCompetitiveMonitor(organizationId);
+    const monitor = getCompetitiveMonitor();
     const stats = monitor.getStats();
 
     return NextResponse.json({

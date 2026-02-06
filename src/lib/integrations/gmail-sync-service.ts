@@ -6,6 +6,7 @@
 import { google, type gmail_v1 } from 'googleapis';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Gmail OAuth scopes
 export const GMAIL_SCOPES = [
@@ -80,7 +81,7 @@ export async function syncGmailMessages(
 
   try {
     // Get last sync status
-    const lastSync = await getLastSyncStatus(organizationId);
+    const lastSync = await getLastSyncStatus();
 
     // If we have a history ID, use incremental sync
     if (lastSync?.historyId) {
@@ -147,8 +148,8 @@ async function fullSync(
             });
             
             const parsed = parseGmailMessage(fullMessage.data);
-            await saveMessageToCRM(organizationId, parsed);
-            
+            await saveMessageToCRM(parsed);
+
             messagesSynced++;
             
             // Update history ID
@@ -228,7 +229,7 @@ async function incrementalSync(
             });
             
             const parsed = parseGmailMessage(fullMessage.data);
-            await saveMessageToCRM(organizationId, parsed);
+            await saveMessageToCRM(parsed);
             messagesSynced++;
           } catch (err) {
             logger.error('[Gmail Sync] Error processing added message:', err as Error, { file: 'gmail-sync-service.ts' });
@@ -246,7 +247,7 @@ async function incrementalSync(
               continue;
             }
 
-            await deleteMessageFromCRM(organizationId, messageId);
+            await deleteMessageFromCRM(messageId);
           } catch (err) {
             logger.error('[Gmail Sync] Error deleting message:', err instanceof Error ? err : new Error(String(err)), { file: 'gmail-sync-service.ts' });
             errors++;
@@ -268,7 +269,7 @@ async function incrementalSync(
               metadataHeaders: ['From', 'To', 'Subject'],
             });
             
-            await updateMessageLabels(organizationId, messageId, fullMessage.data.labelIds ?? []);
+            await updateMessageLabels(messageId, fullMessage.data.labelIds ?? []);
           } catch (err) {
             logger.error('[Gmail Sync] Error updating labels:', err as Error, { file: 'gmail-sync-service.ts' });
             errors++;
@@ -368,18 +369,19 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
 /**
  * Save message to CRM
  */
-async function saveMessageToCRM(organizationId: string, message: GmailMessage): Promise<void> {
+async function saveMessageToCRM(message: GmailMessage): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Extract email address from "Name <email@example.com>" format
     const extractEmail = (str: string): string => {
       const match = str.match(/<([^>]+)>/);
       return match ? match[1] : str.trim();
     };
-    
+
     const fromEmail = extractEmail(message.from);
-    
+
     // Try to match to existing contact
-    const contact = await findContactByEmail(organizationId, fromEmail);
+    const contact = await findContactByEmail(fromEmail);
     
     // Save email record
     const emailData = {
@@ -433,7 +435,8 @@ async function saveMessageToCRM(organizationId: string, message: GmailMessage): 
 /**
  * Delete message from CRM
  */
-async function deleteMessageFromCRM(organizationId: string, messageId: string): Promise<void> {
+async function deleteMessageFromCRM(messageId: string): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.delete(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
@@ -447,7 +450,8 @@ async function deleteMessageFromCRM(organizationId: string, messageId: string): 
 /**
  * Update message labels in CRM
  */
-async function updateMessageLabels(organizationId: string, messageId: string, labels: string[]): Promise<void> {
+async function updateMessageLabels(messageId: string, labels: string[]): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.update(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
@@ -466,7 +470,8 @@ async function updateMessageLabels(organizationId: string, messageId: string, la
 /**
  * Find contact by email
  */
-async function findContactByEmail(organizationId: string, email: string): Promise<GmailContact | null> {
+async function findContactByEmail(email: string): Promise<GmailContact | null> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const contacts = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
@@ -486,7 +491,8 @@ async function findContactByEmail(organizationId: string, email: string): Promis
 /**
  * Get last sync status
  */
-async function getLastSyncStatus(organizationId: string): Promise<GmailSyncStatus | null> {
+async function getLastSyncStatus(): Promise<GmailSyncStatus | null> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const status = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,

@@ -130,21 +130,19 @@ export interface ClearbitPerson {
 
 /**
  * Get company information by domain
- * 
+ *
  * @deprecated Use discoverCompany() from @/lib/services/discovery-engine instead
  */
 export async function enrichCompanyByDomain(
-  domain: string,
-  organizationId: string
+  domain: string
 ): Promise<ClearbitCompany | null> {
   logger.warn('[DEPRECATED] enrichCompanyByDomain is deprecated. Use discovery-engine.ts instead.', {
     domain,
-    organizationId,
     migration: 'Import discoverCompany from @/lib/services/discovery-engine',
   });
-  
+
   try {
-    const apiKey = await getClearbitApiKey(organizationId);
+    const apiKey = await getClearbitApiKey();
     
     if (!apiKey) {
       logger.warn('[Clearbit] API key not configured', { file: 'clearbit-service.ts' });
@@ -183,20 +181,18 @@ export async function enrichCompanyByDomain(
 
 /**
  * Get company information by name (fuzzy search)
- * 
+ *
  * @deprecated Use discoverCompany() from @/lib/services/discovery-engine instead
  */
 export async function searchCompanyByName(
-  companyName: string,
-  organizationId: string
+  companyName: string
 ): Promise<ClearbitCompany | null> {
   logger.warn('[DEPRECATED] searchCompanyByName is deprecated. Use discovery-engine.ts instead.', {
     companyName,
-    organizationId,
   });
-  
+
   try {
-    const apiKey = await getClearbitApiKey(organizationId);
+    const apiKey = await getClearbitApiKey();
     
     if (!apiKey) {
       logger.warn('[Clearbit] API key not configured', { file: 'clearbit-service.ts' });
@@ -207,8 +203,8 @@ export async function searchCompanyByName(
     const domain = guessDomainFromCompanyName(companyName);
     
     // Try domain lookup
-    const company = await enrichCompanyByDomain(domain, organizationId);
-    
+    const company = await enrichCompanyByDomain(domain);
+
     if (company) {
       return company;
     }
@@ -237,7 +233,7 @@ export async function searchCompanyByName(
     
     if (suggestions && suggestions.length > 0) {
       // Use the first suggestion's domain
-      return await enrichCompanyByDomain(suggestions[0].domain, organizationId);
+      return await enrichCompanyByDomain(suggestions[0].domain);
     }
 
     return null;
@@ -249,20 +245,18 @@ export async function searchCompanyByName(
 
 /**
  * Enrich person by email
- * 
+ *
  * @deprecated Use discoverCompany() from @/lib/services/discovery-engine instead
  */
 export async function enrichPersonByEmail(
-  email: string,
-  organizationId: string
+  email: string
 ): Promise<ClearbitPerson | null> {
   logger.warn('[DEPRECATED] enrichPersonByEmail is deprecated. Use discovery-engine.ts instead.', {
     email,
-    organizationId,
   });
-  
+
   try {
-    const apiKey = await getClearbitApiKey(organizationId);
+    const apiKey = await getClearbitApiKey();
     
     if (!apiKey) {
       logger.warn('[Clearbit] API key not configured', { file: 'clearbit-service.ts' });
@@ -298,23 +292,21 @@ export async function enrichPersonByEmail(
 
 /**
  * Combined enrichment (person + company)
- * 
+ *
  * @deprecated Use discoverCompany() from @/lib/services/discovery-engine instead
  */
 export async function enrichProspect(
-  email: string,
-  organizationId: string
+  email: string
 ): Promise<{
   person: ClearbitPerson | null;
   company: ClearbitCompany | null;
 }> {
   logger.warn('[DEPRECATED] enrichProspect is deprecated. Use discovery-engine.ts instead.', {
     email,
-    organizationId,
   });
-  
+
   try {
-    const apiKey = await getClearbitApiKey(organizationId);
+    const apiKey = await getClearbitApiKey();
     
     if (!apiKey) {
       return { person: null, company: null };
@@ -353,7 +345,7 @@ export async function enrichProspect(
 /**
  * Get Clearbit API key from organization settings
  */
-async function getClearbitApiKey(organizationId: string): Promise<string | null> {
+async function getClearbitApiKey(): Promise<string | null> {
   try {
     // Try environment variable first
     if (process.env.CLEARBIT_API_KEY) {
@@ -361,7 +353,7 @@ async function getClearbitApiKey(organizationId: string): Promise<string | null>
     }
 
     // Try organization API keys
-    const keys = await apiKeyService.getKeys(organizationId);
+    const keys = await apiKeyService.getKeys();
     return keys?.enrichment?.clearbitApiKey ?? null;
   } catch (error) {
     logger.error('[Clearbit] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'clearbit-service.ts' });

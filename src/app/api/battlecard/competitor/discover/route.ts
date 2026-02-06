@@ -9,13 +9,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { discoverCompetitor, type CompetitorProfile } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Request body structure for competitor discovery
  */
 interface DiscoverCompetitorRequest {
   domain: string;
-  organizationId: string;
 }
 
 /**
@@ -26,9 +26,7 @@ function isValidDiscoverRequest(body: unknown): body is DiscoverCompetitorReques
     typeof body === 'object' &&
     body !== null &&
     'domain' in body &&
-    'organizationId' in body &&
-    typeof body.domain === 'string' &&
-    typeof body.organizationId === 'string'
+    typeof body.domain === 'string'
   );
 }
 
@@ -38,19 +36,19 @@ export async function POST(request: NextRequest) {
 
     if (!isValidDiscoverRequest(body)) {
       return NextResponse.json(
-        { error: 'Missing required fields: domain, organizationId' },
+        { error: 'Missing required field: domain' },
         { status: 400 }
       );
     }
 
-    const { domain, organizationId } = body;
+    const { domain } = body;
 
     logger.info('API: Discover competitor request', {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
-    const profile: CompetitorProfile = await discoverCompetitor(domain, organizationId);
+    const profile: CompetitorProfile = await discoverCompetitor(domain, DEFAULT_ORG_ID);
 
     return NextResponse.json({
       success: true,

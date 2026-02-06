@@ -325,7 +325,7 @@ export async function createQuickBooksInvoice(
 /**
  * Get QuickBooks OAuth URL
  */
-export function getQuickBooksAuthUrl(organizationId: string, redirectUri: string): string {
+export function getQuickBooksAuthUrl(redirectUri: string): string {
   const clientId = process.env.QUICKBOOKS_CLIENT_ID;
   if (!clientId) {
     throw new Error('QUICKBOOKS_CLIENT_ID not configured');
@@ -336,7 +336,7 @@ export function getQuickBooksAuthUrl(organizationId: string, redirectUri: string
     response_type: 'code',
     scope: 'com.intuit.quickbooks.accounting',
     redirect_uri: redirectUri,
-    state: organizationId,
+    state: 'rapid-compliance-root',
   });
 
   return `https://appcenter.intuit.com/connect/oauth2?${params.toString()}`;

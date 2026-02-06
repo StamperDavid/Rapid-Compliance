@@ -9,10 +9,10 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { SchemaChangeDetector } from '@/lib/schema/schema-change-tracker';
 import { SchemaChangeEventPublisherServer } from '@/lib/schema/server/schema-change-publisher-server';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { Schema } from '@/types/schema';
 
 interface SchemaUpdateRequestBody {
-  organizationId: string;
   updates: Partial<Schema>;
   userId: string;
 }
@@ -35,11 +35,11 @@ export async function POST(
 
     const params = await context.params;
     const body = (await request.json()) as SchemaUpdateRequestBody;
-    const { organizationId, updates, userId } = body;
+    const { updates, userId } = body;
 
-    if (!organizationId || !updates || !userId) {
+    if (!updates || !userId) {
       return NextResponse.json(
-        { error: 'organizationId, updates, and userId are required' },
+        { error: 'updates and userId are required' },
         { status: 400 }
       );
     }
@@ -47,14 +47,14 @@ export async function POST(
     // Get current schema using Admin DAL
     const schemasCollection = adminDal.getOrgCollection('schemas');
     const schemaDoc = await schemasCollection.doc(params.schemaId).get();
-    
+
     if (!schemaDoc.exists) {
       return NextResponse.json(
         { error: 'Schema not found' },
         { status: 404 }
       );
     }
-    
+
     const oldSchemaData = schemaDoc.data() as Schema | undefined;
 
     if (!oldSchemaData) {
@@ -71,7 +71,7 @@ export async function POST(
     const events = SchemaChangeDetector.detectChanges(
       oldSchemaData,
       newSchema,
-      organizationId
+      DEFAULT_ORG_ID
     );
 
     // Publish events (server-side)

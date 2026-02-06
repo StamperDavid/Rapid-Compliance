@@ -4,17 +4,18 @@
  * Golden Master is a versioned snapshot that client manually saves when satisfied
  */
 
-import type { 
+import type {
   GoldenMaster,
   BaseModel,
-  OnboardingData, 
+  OnboardingData,
   KnowledgeBase,
-  BehaviorConfig 
+  BehaviorConfig
 } from '@/types/agent-memory';
 import { buildPersonaFromOnboarding, buildBusinessContextFromOnboarding, buildBehaviorConfigFromOnboarding } from './persona-builder';
 import { compileSystemPrompt } from './prompt-compiler';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface GoldenMasterBuilderOptions {
   onboardingData: OnboardingData;
@@ -41,13 +42,13 @@ export async function createGoldenMasterFromBase(
 ): Promise<GoldenMaster> {
   const { baseModel, userId, trainingScore, trainedScenarios, notes } = options;
   
-  logger.info('[Golden Master Builder] Creating Golden Master from Base Model', { 
-    baseModelId: baseModel.id, 
-    file: 'golden-master-builder.ts' 
+  logger.info('[Golden Master Builder] Creating Golden Master from Base Model', {
+    baseModelId: baseModel.id,
+    file: 'golden-master-builder.ts'
   });
-  
+
   // Get next version number
-  const nextVersion = await getNextGoldenMasterVersion(baseModel.orgId);
+  const nextVersion = await getNextGoldenMasterVersion();
   
   logger.info('[Golden Master Builder] Next version', { version: nextVersion, file: 'golden-master-builder.ts' });
   
@@ -103,9 +104,10 @@ export async function createGoldenMasterFromBase(
 /**
  * Get next Golden Master version number
  */
-async function getNextGoldenMasterVersion(organizationId: string): Promise<string> {
+async function getNextGoldenMasterVersion(): Promise<string> {
+  const organizationId = DEFAULT_ORG_ID;
   const { orderBy, limit } = await import('firebase/firestore');
-  
+
   const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`,
     [orderBy('createdAt', 'desc'), limit(1)]
@@ -151,9 +153,9 @@ export async function buildGoldenMaster(
     behaviorConfig,
     knowledgeBase,
   });
-  
+
   // Get next version
-  const nextVersion = await getNextGoldenMasterVersion(organizationId);
+  const nextVersion = await getNextGoldenMasterVersion();
   
   // Create Golden Master
   const goldenMaster: GoldenMaster = {
@@ -202,14 +204,13 @@ export async function saveGoldenMaster(goldenMaster: GoldenMaster): Promise<void
  * Create Golden Master from Base Model (simplified version for UI)
  */
 export async function createGoldenMaster(
-  orgId: string,
   baseModelId: string,
   userId: string,
   notes?: string
 ): Promise<GoldenMaster> {
   // Get Base Model
   const { getBaseModel } = await import('./base-model-builder');
-  const baseModel = await getBaseModel(orgId);
+  const baseModel = await getBaseModel();
   
   if (!baseModel) {
     throw new Error('Base Model not found');
@@ -242,32 +243,34 @@ export async function createGoldenMaster(
 /**
  * Get all Golden Masters for organization
  */
-export async function getAllGoldenMasters(organizationId: string): Promise<GoldenMaster[]> {
+export async function getAllGoldenMasters(): Promise<GoldenMaster[]> {
+  const organizationId = DEFAULT_ORG_ID;
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const { orderBy } = await import('firebase/firestore');
-  
+
   const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`,
     [orderBy('createdAt', 'desc')]
   );
-  
+
   return goldenMasters;
 }
 
 /**
  * Deploy Golden Master (make it active)
  */
-export async function deployGoldenMaster(organizationId: string, goldenMasterId: string): Promise<void> {
+export async function deployGoldenMaster(goldenMasterId: string): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   const { COLLECTIONS } = await import('@/lib/db/firestore-service');
   const { writeBatch, doc } = await import('firebase/firestore');
   const { db } = await import('@/lib/firebase/config');
-  
+
   if (!db) {
     throw new Error('Firestore not initialized');
   }
-  
+
   // Get all Golden Masters
-  const allGMs = await getAllGoldenMasters(organizationId);
+  const allGMs = await getAllGoldenMasters();
   
   // Find the one to deploy
   const gmToActivate = allGMs.find(gm => gm.id === goldenMasterId);
@@ -304,9 +307,10 @@ export async function deployGoldenMaster(organizationId: string, goldenMasterId:
 /**
  * Get active Golden Master for organization
  */
-export async function getActiveGoldenMaster(organizationId: string): Promise<GoldenMaster | null> {
+export async function getActiveGoldenMaster(): Promise<GoldenMaster | null> {
+  const organizationId = DEFAULT_ORG_ID;
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+
   // Query for active Golden Master
   const { where } = await import('firebase/firestore');
   const goldenMasters = await FirestoreService.getAll<GoldenMaster>(

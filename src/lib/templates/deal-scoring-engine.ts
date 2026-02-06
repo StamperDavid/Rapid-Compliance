@@ -26,6 +26,7 @@ import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { Deal } from '@/lib/crm/deal-service';
 import { getTemplateById, type SalesIndustryTemplate } from './industry-templates';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -123,7 +124,7 @@ export function calculateDealScore(
     });
     
     // 1. Get deal data (mock for now)
-    const deal = options.deal ?? fetchDeal(options.organizationId, options.workspaceId, options.dealId);
+    const deal = options.deal ?? fetchDeal(options.dealId);
     
     // 2. Get industry template for custom weights
     let template: SalesIndustryTemplate | null = null;
@@ -835,7 +836,8 @@ function predictFinalValue(deal: Deal, factors: ScoringFactor[]): number {
  * Mock function to fetch deal
  * In real implementation, this would fetch from Firestore
  */
-function fetchDeal(orgId: string, _workspaceId: string, dealId: string): Deal {
+function fetchDeal(dealId: string): Deal {
+  const orgId = DEFAULT_ORG_ID;
   // Mock deal
   return {
     id: dealId,

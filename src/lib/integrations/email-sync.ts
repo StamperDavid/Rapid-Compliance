@@ -407,11 +407,11 @@ export async function syncInbox(
 ): Promise<number> {
   try {
     // Get last sync time
-    const lastSync = await getLastSyncTime(organizationId, provider);
+    const lastSync = await getLastSyncTime(provider);
     const since = lastSync ?? new Date(Date.now() - 24 * 60 * 60 * 1000); // Default: last 24h
 
     // Fetch new emails
-    const messages = provider === 'gmail' 
+    const messages = provider === 'gmail'
       ? await fetchGmailInbox(organizationId, since)
       : await fetchOutlookInbox(organizationId, since);
 
@@ -421,7 +421,7 @@ export async function syncInbox(
     }
 
     // Update last sync time
-    await setLastSyncTime(organizationId, provider, new Date());
+    await setLastSyncTime(provider, new Date());
 
     logger.info('Inbox sync completed', {
       organizationId,
@@ -438,10 +438,13 @@ export async function syncInbox(
   }
 }
 
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+
 /**
  * Get last sync timestamp
  */
-async function getLastSyncTime(organizationId: string, provider: string): Promise<Date | null> {
+async function getLastSyncTime(provider: string): Promise<Date | null> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const doc = await FirestoreService.get<EmailSyncDoc>(
       `organizations/${organizationId}/emailSync`,
@@ -468,7 +471,8 @@ async function getLastSyncTime(organizationId: string, provider: string): Promis
 /**
  * Set last sync timestamp
  */
-async function setLastSyncTime(organizationId: string, provider: string, time: Date): Promise<void> {
+async function setLastSyncTime(provider: string, time: Date): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   await FirestoreService.set(
     `organizations/${organizationId}/emailSync`,
     provider,

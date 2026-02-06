@@ -1,13 +1,14 @@
 /**
  * Custom Domains API
  * Manage custom domains for websites
- * CRITICAL: Organization isolation - validates organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface DomainData {
   organizationId: string;
@@ -30,7 +31,6 @@ interface DNSRecord {
 }
 
 interface RequestBody {
-  organizationId?: string;
   domain?: string;
 }
 
@@ -38,22 +38,13 @@ interface RequestBody {
  * GET /api/website/domains
  * List custom domains for an organization
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     const domainsRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/config/custom-domains',
@@ -63,17 +54,6 @@ export async function GET(request: NextRequest) {
 
     const domains = snapshot.docs.map(doc => {
       const data = doc.data() as DomainData;
-
-      // CRITICAL: Verify organizationId matches
-      if (data.organizationId !== organizationId) {
-        logger.error('[SECURITY] Domain organizationId mismatch!', new Error('Organization mismatch'), {
-          route: '/api/website/domains',
-          requested: organizationId,
-          actual: data.organizationId,
-          domainId: doc.id,
-        });
-        return null;
-      }
 
       return {
         id: doc.id,
@@ -106,15 +86,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as RequestBody;
-    const { organizationId, domain } = body;
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const { domain } = body;
+    const organizationId = DEFAULT_ORG_ID;
 
     if (!domain) {
       return NextResponse.json(

@@ -26,6 +26,7 @@ import { AnalyticsRequestSchema } from '@/lib/analytics/dashboard/validation';
 import type { AnalyticsResponse, AnalyticsErrorResponse, TimePeriod } from '@/lib/analytics/dashboard/types';
 import { emitDashboardViewed, emitAnalyticsError } from '@/lib/analytics/dashboard/events';
 import { ZodError } from 'zod';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
   try {
     // Extract query parameters
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
+    const organizationId = DEFAULT_ORG_ID;
     const period = searchParams.get('period') as TimePeriod;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');

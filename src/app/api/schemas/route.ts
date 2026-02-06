@@ -46,7 +46,6 @@ interface IncomingSchema {
 }
 
 interface RequestBody {
-  organizationId?: string;
   schema?: IncomingSchema;
   userId?: string;
 }
@@ -63,7 +62,6 @@ interface ProcessedSchemaField {
 
 interface NewSchema {
   id: string;
-  organizationId: string;
   name: string;
   pluralName: string;
   singularName: string;
@@ -119,22 +117,12 @@ function buildFieldId(key: string) {
   return slug ? `field_${slug}` : `field_${Date.now()}`;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     if (!adminDal) {
       return NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }
-      );
-    }
-
-    const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
       );
     }
 
@@ -167,11 +155,11 @@ export async function POST(request: NextRequest) {
 
     const rawBody: unknown = await request.json();
     const body = rawBody as RequestBody;
-    const { organizationId, schema, userId } = body ?? {};
+    const { schema, userId } = body ?? {};
 
-    if (!organizationId || !schema?.name) {
+    if (!schema?.name) {
       return NextResponse.json(
-        { error: 'organizationId and schema.name are required' },
+        { error: 'schema.name is required' },
         { status: 400 }
       );
     }
@@ -194,7 +182,6 @@ export async function POST(request: NextRequest) {
 
     const newSchema: NewSchema = {
       id: schemaId,
-      organizationId,
       name: schema.name,
       pluralName: (schema.pluralName !== '' && schema.pluralName != null) ? schema.pluralName : `${schema.name}s`,
       singularName: schema.singularName ?? schema.name,

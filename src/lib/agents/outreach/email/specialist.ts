@@ -562,7 +562,7 @@ export class EmailSpecialist extends BaseSpecialist {
       };
     }
 
-    const tracking = await getEmailTracking(payload.messageId, payload.organizationId);
+    const tracking = await getEmailTracking(payload.messageId);
 
     return {
       success: true,

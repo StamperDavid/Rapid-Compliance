@@ -5,6 +5,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface ABTest {
   id: string;
@@ -344,7 +345,8 @@ export async function evaluateABTest(
 /**
  * Get active A/B test for organization
  */
-export async function getActiveABTest(organizationId: string): Promise<ABTest | null> {
+export async function getActiveABTest(): Promise<ABTest | null> {
+  const organizationId = DEFAULT_ORG_ID;
   const org = await FirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, organizationId);
 
   if (!org?.activeABTest) {

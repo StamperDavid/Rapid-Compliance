@@ -1,10 +1,10 @@
 /**
  * Notification System
- * 
+ *
  * Production-ready notification delivery system for all AI features.
- * 
+ *
  * @module lib/notifications
- * 
+ *
  * Features:
  * - Multi-channel delivery (Slack, email, webhook, in-app, SMS)
  * - Template-based notifications with variable interpolation
@@ -14,18 +14,18 @@
  * - Retry logic with exponential backoff
  * - Delivery tracking and analytics
  * - Rate limiting per channel
- * 
+ *
  * @example Basic Usage
  * ```typescript
- * import { NotificationService } from '@/lib/notifications';
- * 
+ * import { NotificationService, DEFAULT_ORG_ID } from '@/lib/notifications';
+ *
  * // Send a notification
- * const service = new NotificationService('org_123');
+ * const service = new NotificationService(DEFAULT_ORG_ID);
  * const notification = await service.sendNotification(
  *   'user_456',
  *   'deal_risk_critical',
  *   {
- *     orgId: 'org_123',
+ *     orgId: DEFAULT_ORG_ID,
  *     dealId: 'deal_789',
  *     dealName: 'Acme Corp',
  *     riskLevel: 'critical',
@@ -33,23 +33,25 @@
  *   }
  * );
  * ```
- * 
+ *
  * @example Initialize Signal Handlers
  * ```typescript
  * import { initializeNotificationHandlers } from '@/lib/notifications';
- * 
+ *
  * // Start listening for signals
- * initializeNotificationHandlers('org_123');
+ * initializeNotificationHandlers();
  * ```
- * 
+ *
  * @example Seed Templates
  * ```typescript
  * import { seedNotificationTemplates } from '@/lib/notifications';
- * 
+ *
  * // Create all notification templates
- * await seedNotificationTemplates('org_123');
+ * await seedNotificationTemplates();
  * ```
  */
+
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Core Service
 export { NotificationService } from './notification-service';
@@ -132,19 +134,19 @@ export type {
 
 /**
  * Seed notification templates to Firestore
- * 
+ *
  * Call this once during organization setup to create all templates.
- * 
- * @param orgId - Organization ID
+ *
  * @returns Number of templates created
- * 
+ *
  * @example
  * ```typescript
- * const count = await seedNotificationTemplates('org_123');
+ * const count = await seedNotificationTemplates();
  * console.log(`Created ${count} notification templates`);
  * ```
  */
-export async function seedNotificationTemplates(orgId: string): Promise<number> {
+export async function seedNotificationTemplates(): Promise<number> {
+  const orgId = DEFAULT_ORG_ID;
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const { getAllTemplates } = await import('./templates');
   

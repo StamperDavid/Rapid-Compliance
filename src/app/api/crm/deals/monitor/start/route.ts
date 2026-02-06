@@ -17,7 +17,6 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /** Request body interface for starting deal monitor */
 interface StartDealMonitorRequestBody {
-  workspaceId?: string;
   autoGenerateRecommendations?: boolean;
   autoRecalculateHealth?: boolean;
   signalPriority?: string;
@@ -30,7 +29,6 @@ function parseBody(rawBody: unknown): StartDealMonitorRequestBody {
   }
   const b = rawBody as Record<string, unknown>;
   return {
-    workspaceId: typeof b.workspaceId === 'string' ? b.workspaceId : undefined,
     autoGenerateRecommendations: typeof b.autoGenerateRecommendations === 'boolean' ? b.autoGenerateRecommendations : undefined,
     autoRecalculateHealth: typeof b.autoRecalculateHealth === 'boolean' ? b.autoRecalculateHealth : undefined,
     signalPriority: typeof b.signalPriority === 'string' ? b.signalPriority : undefined,
@@ -41,14 +39,11 @@ export async function POST(request: NextRequest) {
   try {
     // Penthouse: orgId is always DEFAULT_ORG_ID
     const organizationId = DEFAULT_ORG_ID;
+    const workspaceId = 'default';
 
     // Get config from request body
     const rawBody = await request.json().catch(() => ({})) as unknown;
     const body = parseBody(rawBody);
-
-    const headerWorkspaceId = request.headers.get('x-workspace-id');
-    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId :
-      ((headerWorkspaceId !== '' && headerWorkspaceId != null) ? headerWorkspaceId : 'default');
 
     const signalPriorityValue = body.signalPriority;
     const validPriorities = ['Low', 'Medium', 'High'] as const;

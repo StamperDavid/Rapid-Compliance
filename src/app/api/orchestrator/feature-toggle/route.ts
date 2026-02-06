@@ -10,6 +10,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { FeatureToggleService, type FeatureCategory } from '@/lib/orchestrator/feature-toggle-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface ToggleFeatureRequest {
   organizationId?: string;
@@ -132,17 +133,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     const settings = await FeatureToggleService.getVisibilitySettings(organizationId);
     const navigation = await FeatureToggleService.getFilteredNavigation(organizationId);

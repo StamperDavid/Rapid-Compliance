@@ -5,6 +5,7 @@ import { getIndustryTemplate } from '@/lib/persona/industry-templates';
 import { getMutationRules } from '@/lib/persona/templates/mutation-rules';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
 import type { UpdateData } from 'firebase/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Check if running on server or client
 const isServer = typeof window === 'undefined';
@@ -190,7 +191,8 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
 /**
  * Get Base Model for an organization
  */
-export async function getBaseModel(orgId: string): Promise<BaseModel | null> {
+export async function getBaseModel(): Promise<BaseModel | null> {
+  const orgId = DEFAULT_ORG_ID;
   logger.info('[getBaseModel] Looking for base model', { orgId, file: 'base-model-builder.ts' });
   
   if (isServer) {
@@ -230,13 +232,13 @@ export async function getBaseModel(orgId: string): Promise<BaseModel | null> {
  * Update Base Model configuration
  */
 export async function updateBaseModel(
-  orgId: string,
   baseModelId: string,
   updates: Partial<BaseModel>
 ): Promise<void> {
+  const orgId = DEFAULT_ORG_ID;
   // Rebuild system prompt if config changed
   if (updates.businessContext || updates.agentPersona || updates.behaviorConfig) {
-    const current = await getBaseModel(orgId);
+    const current = await getBaseModel();
     if (!current) {
       throw new Error('Base model not found');
     }

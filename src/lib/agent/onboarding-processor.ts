@@ -13,6 +13,7 @@ import { processKnowledgeBase, type KnowledgeProcessorOptions } from './knowledg
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
 import { COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Dynamic import of AdminFirestoreService to prevent client-side bundling
 
@@ -108,7 +109,7 @@ export async function processOnboarding(
     // Index knowledge base (generate embeddings for vector search)
     try {
       const { indexKnowledgeBase } = await import('@/lib/agent/vector-search');
-      await indexKnowledgeBase(organizationId);
+      await indexKnowledgeBase();
     } catch (_error) {
       // Continue even if indexing fails - not critical for onboarding
     }
@@ -151,7 +152,7 @@ interface GoldenMasterRecord {
  * Get processing status for an organization
  * SERVER-SIDE ONLY - Uses Admin SDK
  */
-export async function getProcessingStatus(organizationId: string): Promise<{
+export async function getProcessingStatus(): Promise<{
   hasPersona: boolean;
   hasKnowledgeBase: boolean;
   hasBaseModel: boolean;
@@ -159,6 +160,7 @@ export async function getProcessingStatus(organizationId: string): Promise<{
   hasGoldenMaster: boolean;
   goldenMasterVersion?: string;
 }> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 

@@ -5,6 +5,7 @@
 
 import type { APIKeysConfig, APIKeyValidationResult, APIServiceName } from '../../types/api-keys'
 import { logger } from '../logger/logger';
+import { DEFAULT_ORG_ID } from '../constants/platform';
 
 // Type for Firestore document data (raw data before conversion)
 interface FirestoreKeysData {
@@ -83,14 +84,15 @@ class APIKeyService {
    * Get API keys for the organization
    * Uses cache to avoid repeated database calls
    */
-  async getKeys(organizationId: string): Promise<APIKeysConfig | null> {
+  async getKeys(): Promise<APIKeysConfig | null> {
+    const organizationId = DEFAULT_ORG_ID;
     const now = Date.now();
-    
+
     // In test mode, always bypass cache to ensure fresh data
     if (process.env.NODE_ENV === 'test') {
       return this.fetchKeysFromFirestore(organizationId);
     }
-    
+
     // Return cached keys if still valid
     if (this.keysCache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
       // In penthouse model, cache is org-agnostic
@@ -113,7 +115,7 @@ class APIKeyService {
    * OpenRouter is used as universal fallback for ALL AI services
    */
   async getServiceKey(organizationId: string, service: APIServiceName): Promise<ServiceKeyResult> {
-    const keys = await this.getKeys(organizationId);
+    const keys = await this.getKeys();
     if (!keys) {return null;}
 
     // Navigate to the specific service key
@@ -183,9 +185,10 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
   /**
    * Save API keys (encrypted)
    */
-  async saveKeys(organizationId: string, keys: Partial<APIKeysConfig>): Promise<void> {
+  async saveKeys(keys: Partial<APIKeysConfig>): Promise<void> {
+    const organizationId = DEFAULT_ORG_ID;
     // Save to Firestore
-    const existingKeys =await this.fetchKeysFromFirestore(organizationId) ?? this.getDefaultKeys(organizationId);
+    const existingKeys =await this.fetchKeysFromFirestore(organizationId) ?? this.getDefaultKeys();
     
     const updatedKeys: APIKeysConfig = {
       ...existingKeys,
@@ -236,7 +239,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
   /**
    * Check if a service is configured
    */
-  async isServiceConfigured(organizationId: string, service: APIServiceName): Promise<boolean> {
+  async isServiceConfigured(service: APIServiceName): Promise<boolean> {
+    const organizationId = DEFAULT_ORG_ID;
     const key = await this.getServiceKey(organizationId, service);
     return key !== null && key !== undefined;
   }
@@ -366,7 +370,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     }
   }
 
-  private getDefaultKeys(organizationId: string): APIKeysConfig {
+  private getDefaultKeys(): APIKeysConfig {
+    const organizationId = DEFAULT_ORG_ID;
     return {
       id: `keys-${organizationId}`,
       firebase: {

@@ -6,6 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { type QueryConstraint, where } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import {
   type SchemaChangeEvent,
   SchemaChangeEventPublisher
@@ -22,37 +23,27 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
     const schemaId = searchParams.get('schemaId');
-    const workspaceId = searchParams.get('workspaceId');
+    const workspaceId = 'default';
     const unprocessedOnly = searchParams.get('unprocessedOnly') === 'true';
-    
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
-    
+
     // Get events
     let events: SchemaChangeEvent[];
-    
+
     if (unprocessedOnly) {
       events = await SchemaChangeEventPublisher.getUnprocessedEvents(
-        organizationId,
+        DEFAULT_ORG_ID,
         schemaId ?? undefined
       );
     } else {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
-      
+      const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/schemaChangeEvents`;
+
       const filters: QueryConstraint[] = [];
       if (schemaId) {
         filters.push(where('schemaId', '==', schemaId));
       }
-      if (workspaceId) {
-        filters.push(where('workspaceId', '==', workspaceId));
-      }
+      filters.push(where('workspaceId', '==', workspaceId));
 
       events = await FirestoreService.getAll<SchemaChangeEvent>(eventsPath, filters);
     }
@@ -80,46 +71,38 @@ export async function GET(request: NextRequest) {
  * Manually process schema change events
  */
 interface ProcessRequestBody {
-  organizationId: string;
   eventId?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as ProcessRequestBody;
-    const { organizationId, eventId } = body;
-    
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
-    
+    const { eventId } = body;
+
     if (eventId) {
       // Process single event
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
-      
+      const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/schemaChangeEvents`;
+
       const event = await FirestoreService.get(eventsPath, eventId);
-      
+
       if (!event) {
         return NextResponse.json(
           { error: 'Event not found' },
           { status: 404 }
         );
       }
-      
+
       await processSchemaChangeEvent(event as SchemaChangeEvent);
-      
+
       return NextResponse.json({
         success: true,
         message: 'Event processed successfully',
       });
     } else {
       // Process all unprocessed events
-      const result = await processUnprocessedEvents(organizationId);
-      
+      const result = await processUnprocessedEvents(DEFAULT_ORG_ID);
+
       return NextResponse.json({
         success: true,
         message: 'Unprocessed events processed',

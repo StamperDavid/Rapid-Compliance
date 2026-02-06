@@ -254,7 +254,7 @@ export class AutonomousPostingAgent {
     try {
       // Get organization's API keys to check for RapidAPI and LinkedIn config
       const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-      const apiKeys = await apiKeyService.getKeys(this.organizationId);
+      const apiKeys = await apiKeyService.getKeys();
 
       // Check for RapidAPI key in org config first, then fallback to env
       const rapidApiKey = apiKeys?.enrichment?.rapidApiKey ?? process.env.RAPIDAPI_KEY;
@@ -930,7 +930,7 @@ Return ONLY a JSON object with:
 - content: The post text
 - hashtags: Array of hashtags (without # prefix)`;
 
-      const response = await generateText(prompt, undefined, this.organizationId);
+      const response = await generateText(prompt, undefined);
       const jsonMatch = response.text.match(/\{[\s\S]*\}/);
 
       if (jsonMatch) {

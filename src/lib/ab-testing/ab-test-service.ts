@@ -5,6 +5,7 @@
 
 import { cacheService, CacheTTL } from '../cache/redis-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface ABTest {
   id: string;
@@ -51,9 +52,9 @@ export interface ABAssignment {
  * Create new A/B test
  */
 export async function createABTest(
-  organizationId: string,
   test: Omit<ABTest, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<ABTest> {
+  const organizationId = DEFAULT_ORG_ID;
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   
   const testId = crypto.randomUUID();
@@ -411,8 +412,8 @@ export const ABTestTemplates = {
   /**
    * Checkout flow test
    */
-  checkoutFlow: (organizationId: string) =>
-    createABTest(organizationId, {
+  checkoutFlow: () =>
+    createABTest({
       name: 'Checkout Flow Optimization',
       description: 'Test one-page vs multi-step checkout',
       status: 'draft',
@@ -439,8 +440,8 @@ export const ABTestTemplates = {
   /**
    * Pricing test
    */
-  pricing: (organizationId: string) =>
-    createABTest(organizationId, {
+  pricing: () =>
+    createABTest({
       name: 'Tier Messaging Test',
       description: 'Test different tier messaging approaches',
       status: 'draft',
@@ -474,8 +475,8 @@ export const ABTestTemplates = {
   /**
    * CTA button test
    */
-  ctaButton: (organizationId: string) =>
-    createABTest(organizationId, {
+  ctaButton: () =>
+    createABTest({
       name: 'CTA Button Optimization',
       description: 'Test button copy and color',
       status: 'draft',

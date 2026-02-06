@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
 
     // Get or spawn agent instance
     const instanceManager = new AgentInstanceManager();
-    const instance = await instanceManager.spawnInstance(customerId, orgId);
+    const instance = await instanceManager.spawnInstance(customerId);
 
     // Get agent configuration
     const agentConfigRaw: unknown = await FirestoreService.get(
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
         role: m.role === 'user' ? 'user' as const : 'model' as const,
         parts: [{ text: m.content }],
       }));
-      const ragResult = await enhanceChatWithRAG(ragMessages, orgId, instance.systemPrompt);
+      const ragResult = await enhanceChatWithRAG(ragMessages, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error) {
       logger.warn('RAG enhancement failed, using base prompt', { error: error instanceof Error ? error.message : String(error), orgId, customerId });
@@ -324,7 +324,6 @@ export async function POST(request: NextRequest) {
     // Save conversation to customer memory
     await instanceManager.addMessageToMemory(
       customerId,
-      orgId,
       message,
       response.text
     );

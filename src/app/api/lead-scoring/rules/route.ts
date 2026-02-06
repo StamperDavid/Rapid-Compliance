@@ -15,6 +15,7 @@ import adminApp from '@/lib/firebase/admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import { type ScoringRules, DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Interface for Firestore scoring rules data
 interface FirestoreScoringRulesData {
@@ -75,15 +76,7 @@ export async function GET(req: NextRequest) {
     const token = authHeader.substring(7);
     await getAuth(adminApp).verifyIdToken(token);
 
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get('organizationId');
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     // Get all scoring rules for organization
     const rulesRef = adminDal.getNestedCollection(
@@ -363,12 +356,12 @@ export async function DELETE(req: NextRequest) {
     await getAuth(adminApp).verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get('organizationId');
+    const organizationId = DEFAULT_ORG_ID;
     const rulesId = searchParams.get('rulesId');
 
-    if (!organizationId || !rulesId) {
+    if (!rulesId) {
       return NextResponse.json(
-        { success: false, error: 'organizationId and rulesId are required' },
+        { success: false, error: 'rulesId is required' },
         { status: 400 }
       );
     }

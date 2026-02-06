@@ -5,6 +5,7 @@
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface VoiceConfig {
   accountSid: string;
@@ -25,7 +26,6 @@ export interface VoiceCall {
  * Initiate outbound voice call
  */
 export async function initiateCall(
-  organizationId: string,
   to: string,
   agentId: string,
   options?: {
@@ -34,7 +34,7 @@ export async function initiateCall(
   }
 ): Promise<VoiceCall> {
   try {
-    const config = await getTwilioConfig(organizationId);
+    const config = await getTwilioConfig();
     const twilio = await import('twilio');
     const client = twilio.default(config.accountSid, config.authToken);
     
@@ -136,12 +136,11 @@ export async function speechToText(
  * Send SMS message
  */
 export async function sendSMS(
-  organizationId: string,
   to: string,
   message: string
 ): Promise<{ messageSid: string; status: string }> {
   try {
-    const config = await getTwilioConfig(organizationId);
+    const config = await getTwilioConfig();
     const twilio = await import('twilio');
     const client = twilio.default(config.accountSid, config.authToken);
     
@@ -166,11 +165,10 @@ export async function sendSMS(
  * Get call details
  */
 export async function getCallDetails(
-  organizationId: string,
   callSid: string
 ): Promise<VoiceCall> {
   try {
-    const config = await getTwilioConfig(organizationId);
+    const config = await getTwilioConfig();
     const twilio = await import('twilio');
     const client = twilio.default(config.accountSid, config.authToken);
     
@@ -195,11 +193,10 @@ export async function getCallDetails(
  * Get call recording
  */
 export async function getCallRecording(
-  organizationId: string,
   callSid: string
 ): Promise<string | null> {
   try {
-    const config = await getTwilioConfig(organizationId);
+    const config = await getTwilioConfig();
     const twilio = await import('twilio');
     const client = twilio.default(config.accountSid, config.authToken);
     
@@ -219,7 +216,8 @@ export async function getCallRecording(
 /**
  * Get Twilio configuration
  */
-async function getTwilioConfig(organizationId: string): Promise<VoiceConfig> {
+async function getTwilioConfig(): Promise<VoiceConfig> {
+  const organizationId = DEFAULT_ORG_ID;
   const keys: unknown = await apiKeyService.getServiceKey(organizationId, 'twilio');
 
   if (!keys) {

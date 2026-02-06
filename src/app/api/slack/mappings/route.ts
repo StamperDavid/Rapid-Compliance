@@ -95,7 +95,6 @@ export async function GET(request: NextRequest) {
       .collection('organizations')
       .doc(workspace.organizationId)
       .collection('slack_channel_mappings')
-      .where('workspaceId', '==', workspaceId)
       .get();
     
     const mappings = snapshot.docs.map(doc => ({
@@ -173,7 +172,6 @@ export async function POST(request: NextRequest) {
       .collection('organizations')
       .doc(workspace.organizationId)
       .collection('slack_channel_mappings')
-      .where('workspaceId', '==', data.workspaceId)
       .where('category', '==', data.category)
       .limit(1)
       .get();

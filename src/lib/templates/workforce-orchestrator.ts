@@ -19,6 +19,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import type { SignalEmissionResult } from '@/lib/orchestration/types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import {
   type WorkforceTemplate,
   type WorkforcePlatform,
@@ -768,11 +769,12 @@ export function resetWorkforceOrchestrator(): void {
  * This retrieves the industry-specific visual configurations for
  * the Video Generator and Website Builder based on the selected template.
  */
-export function getVisualStyleSeeds(orgId: string): {
+export function getVisualStyleSeeds(): {
   videoSeeds: WorkforceTemplate['visualStyleSeeds']['videoSeeds'];
   webSeeds: WorkforceTemplate['visualStyleSeeds']['webSeeds'];
   brandDNA: WorkforceTemplate['visualStyleSeeds']['brandDNA'];
 } | null {
+  const orgId = DEFAULT_ORG_ID;
   const orchestrator = getWorkforceOrchestrator();
   const workforce = orchestrator.getWorkforce(orgId);
 
@@ -799,21 +801,21 @@ export function getVisualStyleSeeds(orgId: string): {
 /**
  * Seed the Video Generator with industry-specific styles
  */
-export function seedVideoGenerator(orgId: string): {
+export function seedVideoGenerator(): {
   colorGrading: WorkforceTemplate['visualStyleSeeds']['videoSeeds']['colorGrading'];
   transitions: WorkforceTemplate['visualStyleSeeds']['videoSeeds']['transitions'];
   textOverlays: WorkforceTemplate['visualStyleSeeds']['videoSeeds']['textOverlays'];
   audioProfile: WorkforceTemplate['visualStyleSeeds']['videoSeeds']['audioProfile'];
   pacing: WorkforceTemplate['visualStyleSeeds']['videoSeeds']['pacing'];
 } | null {
-  const seeds = getVisualStyleSeeds(orgId);
+  const seeds = getVisualStyleSeeds();
   return seeds?.videoSeeds ?? null;
 }
 
 /**
  * Seed the Website Builder with industry-specific styles
  */
-export function seedWebsiteBuilder(orgId: string): {
+export function seedWebsiteBuilder(): {
   designSystem: string;
   colorPalette: WorkforceTemplate['visualStyleSeeds']['webSeeds']['colorPalette'];
   typography: WorkforceTemplate['visualStyleSeeds']['webSeeds']['typography'];
@@ -821,7 +823,7 @@ export function seedWebsiteBuilder(orgId: string): {
   animations: WorkforceTemplate['visualStyleSeeds']['webSeeds']['animations'];
   components: WorkforceTemplate['visualStyleSeeds']['webSeeds']['components'];
 } | null {
-  const seeds = getVisualStyleSeeds(orgId);
+  const seeds = getVisualStyleSeeds();
   return seeds?.webSeeds ?? null;
 }
 

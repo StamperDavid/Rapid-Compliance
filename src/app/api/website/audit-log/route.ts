@@ -1,12 +1,13 @@
 /**
  * Audit Log API
  * View change history and publishing activity
- * CRITICAL: Organization isolation - validates organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { Query, DocumentData } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
@@ -33,20 +34,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
+    const organizationId = DEFAULT_ORG_ID;
     const type = searchParams.get('type'); // Filter by event type
     const pageId = searchParams.get('pageId'); // Filter by page
     const postId = searchParams.get('postId'); // Filter by blog post
     const limitParam = searchParams.get('limit');
     const limit = parseInt(limitParam ?? '50', 10);
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
 
     const auditRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/audit-log/entries',

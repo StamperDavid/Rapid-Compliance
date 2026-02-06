@@ -8,11 +8,10 @@ import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const discountSchema = z.object({
   sessionId: z.string(),
-  workspaceId: z.string(),
-  organizationId: z.string(),
   code: z.string(),
 });
 
@@ -59,9 +58,9 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { sessionId, workspaceId, organizationId, code } = validation.data;
+    const { sessionId, code } = validation.data;
 
-    const cart = await applyDiscountCode(sessionId, workspaceId, organizationId, code);
+    const cart = await applyDiscountCode(sessionId, 'default', DEFAULT_ORG_ID, code);
 
     return NextResponse.json({
       success: true,
@@ -89,18 +88,16 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId') ?? request.headers.get('x-session-id');
-    const workspaceId = searchParams.get('workspaceId');
-    const organizationId = searchParams.get('organizationId');
     const code = searchParams.get('code');
 
-    if (!sessionId || !workspaceId || !organizationId || !code) {
+    if (!sessionId || !code) {
       return NextResponse.json(
-        { success: false, error: 'sessionId, workspaceId, organizationId, and code required' },
+        { success: false, error: 'sessionId and code required' },
         { status: 400 }
       );
     }
 
-    const cart = await removeDiscountCode(sessionId, workspaceId, organizationId, code);
+    const cart = await removeDiscountCode(sessionId, 'default', DEFAULT_ORG_ID, code);
 
     return NextResponse.json({
       success: true,

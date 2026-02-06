@@ -351,7 +351,7 @@ class AIConversationService {
 
       let fullResponse = '';
 
-      for await (const chunk of streamChatMessage(messages, systemPrompt, config.organizationId)) {
+      for await (const chunk of streamChatMessage(messages, systemPrompt)) {
         fullResponse += chunk;
         yield chunk;
       }
@@ -395,8 +395,7 @@ class AIConversationService {
 
     const response = await generateText(
       this.buildConversationPrompt(context, config, customerSpeech),
-      systemPrompt,
-      config.organizationId
+      systemPrompt
     );
 
     // Clean up response for voice delivery

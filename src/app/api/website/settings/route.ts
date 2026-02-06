@@ -1,6 +1,6 @@
 /**
  * Website Settings API
- * CRITICAL: Organization isolation - validates organizationId on every request
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -8,20 +8,15 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
-
-const getQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
-});
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const postBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   settings: z.record(z.unknown()).refine((val) => Object.keys(val).length > 0, {
     message: 'settings object is required',
   }),
 });
 
 const putBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   settings: z.record(z.unknown()).refine((val) => Object.keys(val).length > 0, {
     message: 'settings object is required',
   }),
@@ -31,25 +26,13 @@ const putBodySchema = z.object({
  * GET /api/website/settings
  * Get website configuration for an organization
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const { searchParams } = request.nextUrl;
-    const queryResult = getQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId'),
-    });
-
-    if (!queryResult.success) {
-      return NextResponse.json(
-        { error: queryResult.error.errors[0]?.message ?? 'Invalid query parameters' },
-        { status: 400 }
-      );
-    }
-
-    const { organizationId } = queryResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     const settingsRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/settings',
@@ -118,7 +101,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { organizationId, settings } = bodyResult.data;
+    const { settings } = bodyResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     const settingsRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/settings',
@@ -177,7 +161,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { organizationId, settings } = bodyResult.data;
+    const { settings } = bodyResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     const settingsRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/settings',

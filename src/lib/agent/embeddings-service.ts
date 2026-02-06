@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface Embedding {
   values: number[];
@@ -20,9 +21,9 @@ export interface EmbeddingResult {
  * Generate embedding for a single text
  */
 export async function generateEmbedding(
-  text: string,
-  organizationId: string
+  text: string
 ): Promise<EmbeddingResult> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Get API key
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
@@ -126,17 +127,16 @@ function generateEmbeddingFallback(text: string): EmbeddingResult {
  * Generate embeddings for multiple texts (batch)
  */
 export async function generateEmbeddings(
-  texts: string[],
-  organizationId: string
+  texts: string[]
 ): Promise<EmbeddingResult[]> {
   // Process in batches to avoid rate limits
   const batchSize = 10;
   const results: EmbeddingResult[] = [];
-  
+
   for (let i = 0; i < texts.length; i += batchSize) {
     const batch = texts.slice(i, i + batchSize);
     const batchResults = await Promise.all(
-      batch.map(text => generateEmbedding(text, organizationId))
+      batch.map(text => generateEmbedding(text))
     );
     results.push(...batchResults);
     

@@ -22,11 +22,10 @@ export interface NewsArticle {
  */
 export async function getCompanyNews(
   companyName: string,
-  organizationId: string,
   maxResults: number = 5
 ): Promise<NewsArticle[]> {
   try {
-    const apiKey = await getNewsApiKey(organizationId);
+    const apiKey = await getNewsApiKey();
     
     if (apiKey) {
       // Use NewsAPI.org if available
@@ -181,7 +180,7 @@ function cleanHtmlEntities(text: string): string {
 /**
  * Get NewsAPI.org API key
  */
-async function getNewsApiKey(organizationId: string): Promise<string | null> {
+async function getNewsApiKey(): Promise<string | null> {
   try {
     // Try environment variable first
     if (process.env.NEWS_API_KEY) {
@@ -189,7 +188,7 @@ async function getNewsApiKey(organizationId: string): Promise<string | null> {
     }
 
     // Try organization API keys
-    const keys = await apiKeyService.getKeys(organizationId);
+    const keys = await apiKeyService.getKeys();
     return keys?.enrichment?.newsApiKey ?? null;
   } catch (error) {
     logger.error('[News] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'news-service.ts' });

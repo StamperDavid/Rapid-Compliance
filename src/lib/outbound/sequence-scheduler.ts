@@ -29,7 +29,7 @@ export async function processSequences(): Promise<{
     for (const orgId of organizations) {
       try {
         // Get all active enrollments for this org
-        const enrollments = await getActiveEnrollments(orgId);
+        const enrollments = await getActiveEnrollments();
 
         for (const enrollment of enrollments) {
           try {
@@ -91,10 +91,12 @@ async function getAllOrganizations(): Promise<string[]> {
 /**
  * Get all active enrollments for an organization
  */
-async function getActiveEnrollments(orgId: string): Promise<ProspectEnrollment[]> {
+async function getActiveEnrollments(): Promise<ProspectEnrollment[]> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const orgId = DEFAULT_ORG_ID;
   try {
     const { where } = await import('firebase/firestore');
-    
+
     // Query active enrollments
     const enrollments = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/enrollments`,
@@ -105,8 +107,7 @@ async function getActiveEnrollments(orgId: string): Promise<ProspectEnrollment[]
 
     return enrollments as ProspectEnrollment[];
   } catch (error) {
-    // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
-    logger.error('[Sequence Scheduler] Error getting enrollments for ${orgId}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
+    logger.error('[Sequence Scheduler] Error getting enrollments:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
     return [];
   }
 }

@@ -41,6 +41,7 @@ import {
   type QueryConstraint
 } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type {
   SalesSignal,
   SignalObserver,
@@ -207,7 +208,7 @@ export class SignalCoordinator {
       this.validateSignal(signalData);
       
       // Check circuit breaker
-      if (this.isCircuitBreakerOpen(signalData.orgId)) {
+      if (this.isCircuitBreakerOpen()) {
         logger.warn('🚨 Circuit breaker OPEN - signal emission blocked', {
           orgId: signalData.orgId,
           type: signalData.type,
@@ -222,7 +223,7 @@ export class SignalCoordinator {
       }
       
       // Check throttler
-      if (this.isThrottled(signalData.orgId)) {
+      if (this.isThrottled()) {
         logger.warn('⏱️ Throttler active - signal emission blocked', {
           orgId: signalData.orgId,
           type: signalData.type,
@@ -255,13 +256,13 @@ export class SignalCoordinator {
       const docRef = await addDoc(signalsCollection, enrichedSignal);
 
       // Update throttler
-      this.incrementThrottler(signalData.orgId);
-      
+      this.incrementThrottler();
+
       // Log to signal_logs sub-collection for audit trail
       await this.logSignal(signalData.orgId, docRef.id, enrichedSignal);
-      
+
       // Reset circuit breaker on success
-      this.resetCircuitBreaker(signalData.orgId);
+      this.resetCircuitBreaker();
       
       const duration = Date.now() - startTime;
       
@@ -283,7 +284,7 @@ export class SignalCoordinator {
       
     } catch (error) {
       // Record failure in circuit breaker
-      this.recordCircuitBreakerFailure(signalData.orgId);
+      this.recordCircuitBreakerFailure();
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorObj = error instanceof Error ? error : undefined;
@@ -513,7 +514,8 @@ export class SignalCoordinator {
   /**
    * Check if circuit breaker is open for an organization
    */
-  private isCircuitBreakerOpen(orgId: string): boolean {
+  private isCircuitBreakerOpen(): boolean {
+    const orgId = DEFAULT_ORG_ID;
     const breaker = this.circuitBreakers.get(orgId);
     
     if (!breaker?.isOpen) {
@@ -545,7 +547,8 @@ export class SignalCoordinator {
   /**
    * Record a failure in the circuit breaker
    */
-  private recordCircuitBreakerFailure(orgId: string): void {
+  private recordCircuitBreakerFailure(): void {
+    const orgId = DEFAULT_ORG_ID;
     let breaker = this.circuitBreakers.get(orgId);
     
     if (!breaker) {
@@ -581,7 +584,8 @@ export class SignalCoordinator {
   /**
    * Reset circuit breaker on successful emission
    */
-  private resetCircuitBreaker(orgId: string): void {
+  private resetCircuitBreaker(): void {
+    const orgId = DEFAULT_ORG_ID;
     const breaker = this.circuitBreakers.get(orgId);
     
     if (breaker && breaker.failureCount > 0) {
@@ -603,7 +607,8 @@ export class SignalCoordinator {
   /**
    * Check if organization is currently throttled
    */
-  private isThrottled(orgId: string): boolean {
+  private isThrottled(): boolean {
+    const orgId = DEFAULT_ORG_ID;
     const throttler = this.throttlers.get(orgId);
     
     if (!throttler) {
@@ -634,7 +639,8 @@ export class SignalCoordinator {
   /**
    * Increment throttler counter
    */
-  private incrementThrottler(orgId: string): void {
+  private incrementThrottler(): void {
+    const orgId = DEFAULT_ORG_ID;
     let throttler = this.throttlers.get(orgId);
     
     if (!throttler) {

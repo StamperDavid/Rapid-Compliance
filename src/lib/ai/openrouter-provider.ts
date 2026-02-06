@@ -378,7 +378,7 @@ export class OpenRouterProvider {
       throw new Error('OpenRouter API key not configured');
     }
     logger.debug(`[OpenRouter] Fetching API key for org: ${this.organizationId}`, { file: 'openrouter-provider.ts' });
-    const keys = await apiKeyService.getKeys(this.organizationId);
+    const keys = await apiKeyService.getKeys();
     const key = keys?.ai?.openrouterApiKey;
     if (!key) {
       logger.error('[OpenRouter] No openrouterApiKey found in keys', new Error('No API key'), {

@@ -68,7 +68,7 @@ export class AnthropicProvider implements ModelProvider {
     if (this.apiKey) { return this.apiKey; }
 
     try {
-      const keys = await apiKeyService.getKeys(this.organizationId);
+      const keys = await apiKeyService.getKeys();
       // Extract API key - empty string means unconfigured (Explicit Ternary for STRING)
       const dbApiKey = keys?.ai?.anthropicApiKey;
       this.apiKey = (dbApiKey !== '' && dbApiKey != null) ? dbApiKey : '';

@@ -32,7 +32,7 @@ export async function processAndIndexKnowledgeBase(
   
   // Index for vector search
   try {
-    await indexKnowledgeBase(options.organizationId);
+    await indexKnowledgeBase();
   } catch (error) {
     logger.warn('Failed to index knowledge base', {
       errorMessage: error instanceof Error ? error.message : String(error),

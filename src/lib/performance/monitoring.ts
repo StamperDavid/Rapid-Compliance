@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface PerformanceMetrics {
   fcp?: number; // First Contentful Paint
@@ -107,7 +108,8 @@ export function collectWebVitals(callback: (metrics: PerformanceMetrics) => void
 /**
  * Report performance metrics to analytics
  */
-export function reportPerformance(metrics: PerformanceMetrics, organizationId: string): void {
+export function reportPerformance(metrics: PerformanceMetrics): void {
+  const organizationId = DEFAULT_ORG_ID;
   // Send to analytics endpoint
   if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
     const data = {

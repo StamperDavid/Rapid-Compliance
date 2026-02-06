@@ -16,6 +16,7 @@ import type {
 } from '@/types/agent-memory';
 import { logger } from '@/lib/logger/logger';
 import { getPluginManager, type ToolContext, type ToolDefinition } from '@/lib/plugins/plugin-manager';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export class AgentInstanceManager implements InstanceLifecycleService {
   /**
@@ -28,21 +29,23 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    * 4. Spawn instance with Golden Master config + customer memory
    * 5. Return ready-to-use instance
    */
-  async spawnInstance(customerId: string, orgId: string): Promise<AgentInstance> {
+  async spawnInstance(customerId: string): Promise<AgentInstance> {
+    const orgId = DEFAULT_ORG_ID;
     logger.info('Spawning agent instance', { customerId, orgId });
-    
+
     // 1. Get active Golden Master
-    const goldenMaster = await this.getActiveGoldenMaster(orgId);
+    const goldenMaster = await this.getActiveGoldenMaster();
     if (!goldenMaster) {
       logger.error('No active Golden Master found', new Error('No active Golden Master found'), { orgId });
       throw new Error('No active Golden Master found. Please deploy a Golden Master first.');
     }
-    
+
+
     // 2. Load or create customer memory
-    let customerMemory = await this.getCustomerMemory(customerId, orgId);
+    let customerMemory = await this.getCustomerMemory(customerId);
     if (!customerMemory) {
       logger.info('New customer detected, creating memory record', { customerId, orgId });
-      customerMemory = await this.createCustomerMemory(customerId, orgId);
+      customerMemory = await this.createCustomerMemory(customerId);
     }
     
     // 3. Create new session
@@ -320,8 +323,8 @@ ${this.summarizeRecentConversations(customerMemory)}
   async loadCustomerMemory(instanceId: string, customerId: string): Promise<void> {
     const instance = await this.getActiveInstance(instanceId);
     if (!instance) {throw new Error('Instance not found');}
-    
-    const memory = await this.getCustomerMemory(customerId, instance.orgId);
+
+    const memory = await this.getCustomerMemory(customerId);
     if (!memory) {throw new Error('Customer memory not found');}
     
     instance.customerMemory = memory;
@@ -387,13 +390,12 @@ ${this.summarizeRecentConversations(customerMemory)}
    */
   async addMessageToMemory(
     customerId: string,
-    orgId: string,
     userMessage: string,
     assistantMessage: string
   ): Promise<void> {
     try {
       // Load customer memory
-      const memory = await this.getCustomerMemory(customerId, orgId);
+      const memory = await this.getCustomerMemory(customerId);
       if (!memory) {
         logger.error(`[Instance Manager] No memory found for customer ${customerId}`, new Error(`[Instance Manager] No memory found for customer ${customerId}`), { file: 'instance-manager.ts' });
         return;
@@ -588,8 +590,9 @@ ${this.summarizeRecentConversations(customerMemory)}
   }
   
   // ===== Database/Storage Methods =====
-  
-  private async getActiveGoldenMaster(orgId: string): Promise<GoldenMaster | null> {
+
+  private async getActiveGoldenMaster(): Promise<GoldenMaster | null> {
+    const orgId = DEFAULT_ORG_ID;
     try {
       logger.info(`Instance Manager Fetching Golden Masters for org: ${orgId}`, { file: 'instance-manager.ts' });
       
@@ -637,8 +640,10 @@ ${this.summarizeRecentConversations(customerMemory)}
       return null;
     }
   }
-  
-  private async getCustomerMemory(customerId: string, orgId: string): Promise<CustomerMemory | null> {
+
+
+  private async getCustomerMemory(customerId: string): Promise<CustomerMemory | null> {
+    const orgId = DEFAULT_ORG_ID;
     try {
       // Prefer admin SDK
       try {
@@ -671,8 +676,10 @@ ${this.summarizeRecentConversations(customerMemory)}
       return null;
     }
   }
-  
-  private async createCustomerMemory(customerId: string, orgId: string): Promise<CustomerMemory> {
+
+
+  private async createCustomerMemory(customerId: string): Promise<CustomerMemory> {
+    const orgId = DEFAULT_ORG_ID;
     const memory: CustomerMemory = {
       customerId,
       orgId,
@@ -849,8 +856,9 @@ ${this.summarizeRecentConversations(customerMemory)}
   /**
    * Get available tools for an agent instance
    */
-  getAvailableTools(orgId: string, userId?: string): ToolDefinition[] {
-    const pluginManager = getPluginManager(orgId);
+  getAvailableTools(userId?: string): ToolDefinition[] {
+    const orgId = DEFAULT_ORG_ID;
+    const pluginManager = getPluginManager();
     const context: ToolContext = {
       organizationId: orgId,
       userId,
@@ -863,12 +871,12 @@ ${this.summarizeRecentConversations(customerMemory)}
    * Execute a tool in the context of an agent instance
    */
   async executeTool(
-    orgId: string,
     toolName: string,
     input: unknown,
     userId?: string
   ): Promise<{ success: boolean; data?: unknown; error?: string }> {
-    const pluginManager = getPluginManager(orgId);
+    const orgId = DEFAULT_ORG_ID;
+    const pluginManager = getPluginManager();
     const context: ToolContext = {
       organizationId: orgId,
       userId,
@@ -887,12 +895,13 @@ ${this.summarizeRecentConversations(customerMemory)}
   /**
    * Get tools formatted for OpenAI function calling
    */
-  getToolsForAI(orgId: string, userId?: string): Array<{
+  getToolsForAI(userId?: string): Array<{
     name: string;
     description: string;
     parameters: Record<string, unknown>;
   }> {
-    const pluginManager = getPluginManager(orgId);
+    const orgId = DEFAULT_ORG_ID;
+    const pluginManager = getPluginManager();
     const context: ToolContext = {
       organizationId: orgId,
       userId,

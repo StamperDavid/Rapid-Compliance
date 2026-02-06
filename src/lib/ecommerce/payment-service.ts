@@ -571,7 +571,7 @@ async function refundStripePayment(
     }
     
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-    const apiKeys = await apiKeyService.getKeys(workspaceId);
+    const apiKeys = await apiKeyService.getKeys();
     
     if (!apiKeys?.payments?.stripe?.secretKey) {
       throw new Error('Stripe not configured. Please add your Stripe API key in Settings > API Keys');

@@ -65,11 +65,10 @@ export interface CrunchbaseOrganization {
  * Search for organization by name
  */
 export async function searchOrganization(
-  companyName: string,
-  organizationId: string
+  companyName: string
 ): Promise<CrunchbaseOrganization | null> {
   try {
-    const apiKey = await getCrunchbaseApiKey(organizationId);
+    const apiKey = await getCrunchbaseApiKey();
     
     if (!apiKey) {
       logger.warn('[Crunchbase] API key not configured', { file: 'crunchbase-service.ts' });
@@ -110,9 +109,9 @@ export async function searchOrganization(
 
     // Get the first match's permalink
     const permalink = searchData.entities[0].identifier.permalink;
-    
+
     // Fetch full organization data
-    return await getOrganizationByPermalink(permalink, organizationId);
+    return await getOrganizationByPermalink(permalink);
   } catch (error) {
     logger.error('[Crunchbase] Error searching organization:', error instanceof Error ? error : new Error(String(error)), { file: 'crunchbase-service.ts' });
     return null;
@@ -123,11 +122,10 @@ export async function searchOrganization(
  * Get organization by permalink
  */
 export async function getOrganizationByPermalink(
-  permalink: string,
-  organizationId: string
+  permalink: string
 ): Promise<CrunchbaseOrganization | null> {
   try {
-    const apiKey = await getCrunchbaseApiKey(organizationId);
+    const apiKey = await getCrunchbaseApiKey();
     
     if (!apiKey) {
       return null;
@@ -155,10 +153,10 @@ export async function getOrganizationByPermalink(
     }
 
     const data = await response.json() as CrunchbaseOrgResponse;
-    
+
     // Get funding rounds separately
-    const fundingRounds = await getFundingRounds(permalink, organizationId);
-    
+    const fundingRounds = await getFundingRounds(permalink);
+
     return {
       ...data.properties,
       uuid: data.uuid,
@@ -175,11 +173,10 @@ export async function getOrganizationByPermalink(
  * Get funding rounds for an organization
  */
 export async function getFundingRounds(
-  permalink: string,
-  organizationId: string
+  permalink: string
 ): Promise<CrunchbaseFundingRound[]> {
   try {
-    const apiKey = await getCrunchbaseApiKey(organizationId);
+    const apiKey = await getCrunchbaseApiKey();
     
     if (!apiKey) {
       return [];
@@ -219,7 +216,7 @@ export async function getFundingRounds(
 /**
  * Get Crunchbase API key
  */
-async function getCrunchbaseApiKey(organizationId: string): Promise<string | null> {
+async function getCrunchbaseApiKey(): Promise<string | null> {
   try {
     // Try environment variable first
     if (process.env.CRUNCHBASE_API_KEY) {
@@ -227,7 +224,7 @@ async function getCrunchbaseApiKey(organizationId: string): Promise<string | nul
     }
 
     // Try organization API keys
-    const keys = await apiKeyService.getKeys(organizationId);
+    const keys = await apiKeyService.getKeys();
     return keys?.enrichment?.crunchbaseApiKey ?? null;
   } catch (error) {
     logger.error('[Crunchbase] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'crunchbase-service.ts' });

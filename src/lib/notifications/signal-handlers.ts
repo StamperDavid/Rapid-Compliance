@@ -21,13 +21,15 @@
 import type { SalesSignal } from '@/lib/orchestration/types';
 import { NotificationService } from './notification-service';
 import type { NotificationVariables } from './types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Initialize notification signal handlers
- * 
+ *
  * Call this on server startup to begin listening for signals
  */
-export function initializeNotificationHandlers(orgId: string): void {
+export function initializeNotificationHandlers(): void {
+  const orgId = DEFAULT_ORG_ID;
   const service = new NotificationService(orgId);
 
   // Deal Risk Predictor signals

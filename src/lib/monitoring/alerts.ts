@@ -191,13 +191,7 @@ function sendCriticalAlert(alert: Alert): void {
 /**
  * Get active alerts
  */
-export function getActiveAlerts(orgId?: string): Alert[] {
-  if (orgId) {
-    return Array.from(activeAlerts.values()).filter(a => {
-      const alertOrgId = a.details.orgId;
-      return typeof alertOrgId === 'string' && alertOrgId === orgId;
-    });
-  }
+export function getActiveAlerts(): Alert[] {
   return Array.from(activeAlerts.values());
 }
 
