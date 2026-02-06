@@ -34,10 +34,6 @@ export default function XeroIntegration({
   const handleConnect = () => {
     setIsConnecting(true);
     try {
-      // Get current user and org from context or URL
-      const _userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
-      const _orgId = window.location.pathname.split('/')[2] || 'current-org';
-
       // Note: Xero OAuth implementation needs to be completed in backend
       // For now, show configuration needed message
       console.error('Xero integration requires additional backend configuration. Please contact support.');
