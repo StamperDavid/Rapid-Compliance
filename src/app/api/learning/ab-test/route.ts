@@ -159,7 +159,7 @@ export async function PUT(request: NextRequest) {
 
     if (action === 'complete') {
       // Complete test and optionally deploy winner
-      const result = await checkAndDeployWinner(organizationId);
+      const result = await checkAndDeployWinner();
       return NextResponse.json({
         success: true,
         ...result,

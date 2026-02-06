@@ -96,7 +96,6 @@ export function startDealMonitor(
       async (signal: SalesSignal) => {
         await handleDealSignal(
           signal,
-          organizationId,
           workspaceId,
           autoGenerateRecommendations,
           autoRecalculateHealth,
@@ -125,7 +124,6 @@ export function startDealMonitor(
  */
 async function handleDealSignal(
   signal: SalesSignal,
-  organizationId: string,
   workspaceId: string,
   autoGenerateRecommendations: boolean,
   autoRecalculateHealth: boolean,
@@ -141,7 +139,7 @@ async function handleDealSignal(
     logger.info('Processing deal signal', {
       signalType: signal.type,
       dealId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     // Step 1: Recalculate health score

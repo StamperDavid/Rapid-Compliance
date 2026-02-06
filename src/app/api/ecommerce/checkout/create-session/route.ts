@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Stripe API key
-    const stripeKey = await getAPIKey(orgId, 'stripe_secret');
+    const stripeKey = await getAPIKey('stripe_secret');
     if (!stripeKey) {
       return errors.badRequest('Stripe not configured');
     }

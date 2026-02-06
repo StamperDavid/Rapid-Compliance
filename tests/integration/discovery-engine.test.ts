@@ -7,9 +7,6 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { discoverCompany, discoverCompaniesBatch } from '@/lib/services/discovery-engine';
 import { deleteFlaggedArchiveEntries, deleteExpiredArchiveEntries } from '@/lib/scraper-intelligence/discovery-archive-service';
 
-// Test organization ID
-const TEST_ORG_ID = 'test-org-discovery-engine';
-
 describe('Discovery Engine Integration Tests', () => {
   beforeAll(async () => {
     // Clean up any existing test data
@@ -25,7 +22,7 @@ describe('Discovery Engine Integration Tests', () => {
   describe('Single Company Discovery', () => {
     it('should discover company from domain', async () => {
       // Use example.com as a stable test target
-      const result = await discoverCompany('example.com', TEST_ORG_ID);
+      const result = await discoverCompany('example.com');
 
       // Verify result structure
       expect(result).toBeDefined();
@@ -55,11 +52,11 @@ describe('Discovery Engine Integration Tests', () => {
 
     it('should use 30-day cache on second discovery', async () => {
       // First discovery
-      const result1 = await discoverCompany('example.com', TEST_ORG_ID);
+      const result1 = await discoverCompany('example.com');
       expect(result1.fromCache).toBe(false); // First time should scrape
 
       // Second discovery (should hit cache)
-      const result2 = await discoverCompany('example.com', TEST_ORG_ID);
+      const result2 = await discoverCompany('example.com');
       expect(result2.fromCache).toBe(true); // Should come from cache
       expect(result2.scrapeId).toBe(result1.scrapeId); // Same scrape ID
 
@@ -69,7 +66,7 @@ describe('Discovery Engine Integration Tests', () => {
 
     it('should handle invalid domains gracefully', async () => {
       await expect(
-        discoverCompany('invalid-domain-that-does-not-exist-12345.com', TEST_ORG_ID)
+        discoverCompany('invalid-domain-that-does-not-exist-12345.com')
       ).rejects.toThrow();
     }, 30000);
   });
@@ -78,7 +75,7 @@ describe('Discovery Engine Integration Tests', () => {
     it('should discover multiple companies', async () => {
       const domains = ['example.com', 'example.org'];
       
-      const results = await discoverCompaniesBatch(domains, TEST_ORG_ID, {
+      const results = await discoverCompaniesBatch(domains, {
         concurrency: 2,
         delayMs: 1000,
       });
@@ -99,7 +96,7 @@ describe('Discovery Engine Integration Tests', () => {
         'example.org',
       ];
 
-      const results = await discoverCompaniesBatch(domains, TEST_ORG_ID, {
+      const results = await discoverCompaniesBatch(domains, {
         concurrency: 1,
         delayMs: 500,
       });
@@ -112,7 +109,7 @@ describe('Discovery Engine Integration Tests', () => {
 
   describe('Data Quality', () => {
     it('should extract high-value areas', async () => {
-      const result = await discoverCompany('example.com', TEST_ORG_ID);
+      const result = await discoverCompany('example.com');
 
       expect(result.rawData).toBeDefined();
       expect(result.rawData.highValueAreas).toBeDefined();
@@ -128,7 +125,7 @@ describe('Discovery Engine Integration Tests', () => {
     }, 60000);
 
     it('should extract links', async () => {
-      const result = await discoverCompany('example.com', TEST_ORG_ID);
+      const result = await discoverCompany('example.com');
 
       expect(result.rawData.links).toBeDefined();
       expect(Array.isArray(result.rawData.links)).toBe(true);
@@ -140,7 +137,7 @@ describe('Discovery Engine Integration Tests', () => {
     }, 60000);
 
     it('should calculate confidence score', async () => {
-      const result = await discoverCompany('example.com', TEST_ORG_ID);
+      const result = await discoverCompany('example.com');
 
       expect(result.company.metadata.confidence).toBeDefined();
       expect(result.company.metadata.confidence).toBeGreaterThanOrEqual(0);
@@ -150,7 +147,7 @@ describe('Discovery Engine Integration Tests', () => {
 
   describe('Archive Integration', () => {
     it('should save to discovery archive with 30-day TTL', async () => {
-      const result = await discoverCompany('example.org', TEST_ORG_ID);
+      const result = await discoverCompany('example.org');
 
       // First discovery should not be from cache
       expect(result.fromCache).toBe(false);
@@ -160,7 +157,7 @@ describe('Discovery Engine Integration Tests', () => {
       expect(result.scrapeId.length).toBeGreaterThan(0);
 
       // Second discovery should hit cache
-      const cached = await discoverCompany('example.org', TEST_ORG_ID);
+      const cached = await discoverCompany('example.org');
       expect(cached.fromCache).toBe(true);
       expect(cached.scrapeId).toBe(result.scrapeId);
     }, 60000);
@@ -169,13 +166,13 @@ describe('Discovery Engine Integration Tests', () => {
   describe('Error Handling', () => {
     it('should throw error for empty domain', async () => {
       await expect(
-        discoverCompany('', TEST_ORG_ID)
+        discoverCompany('')
       ).rejects.toThrow();
     });
 
-    it('should throw error for missing organizationId', async () => {
+    it('should throw error for invalid domain', async () => {
       await expect(
-        discoverCompany('example.com', '')
+        discoverCompany('')
       ).rejects.toThrow();
     });
   });
@@ -183,7 +180,7 @@ describe('Discovery Engine Integration Tests', () => {
   describe('Hunter-Closer Compliance', () => {
     it('should use zero third-party data APIs', async () => {
       // This test verifies that discovery engine is 100% native
-      const result = await discoverCompany('example.com', TEST_ORG_ID);
+      const result = await discoverCompany('example.com');
 
       // All data should come from our scraping, not third-party APIs
       expect(result.company.metadata.source).toBe('discovery-engine');
@@ -196,7 +193,7 @@ describe('Discovery Engine Integration Tests', () => {
     }, 60000);
 
     it('should build proprietary 30-day cache moat', async () => {
-      const result = await discoverCompany('example.com', TEST_ORG_ID);
+      const result = await discoverCompany('example.com');
 
       // Verify 30-day TTL (approximately)
       const expiresAt = new Date(result.company.metadata.expiresAt);

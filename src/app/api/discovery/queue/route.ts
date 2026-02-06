@@ -9,7 +9,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { queueDiscoveryTask } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Discovery task request body schema
@@ -81,7 +80,6 @@ export async function POST(request: NextRequest) {
     const taskId = await queueDiscoveryTask(
       body.type,
       body.target,
-      DEFAULT_ORG_ID,
       'default',
       body.priority ?? 0
     );
@@ -133,7 +131,6 @@ export async function PUT(request: NextRequest) {
         queueDiscoveryTask(
           task.type,
           task.target,
-          DEFAULT_ORG_ID,
           'default',
           task.priority ?? 0
         )

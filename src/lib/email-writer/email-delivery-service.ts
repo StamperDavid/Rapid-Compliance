@@ -26,7 +26,6 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getOrgSubCollection } from '@/lib/firebase/collections';
 import { retryWithBackoff } from '@/lib/utils/retry';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Ensure adminDb is initialized, throw if not
@@ -282,7 +281,7 @@ export async function sendEmail(
     });
     
     // Emit signal
-    await emitEmailSentSignal(options.organizationId, deliveryId, {
+    await emitEmailSentSignal(deliveryId, {
       to: options.to,
       subject: options.subject,
       dealId: options.dealId,
@@ -339,7 +338,7 @@ export async function sendEmail(
       updatedAt: Timestamp.now(),
     });
     
-    await emitEmailFailedSignal(options.organizationId, deliveryId, {
+    await emitEmailFailedSignal(deliveryId, {
       to: options.to,
       error: error instanceof Error ? error.message : 'Unknown error',
       dealId: options.dealId,
@@ -425,7 +424,7 @@ export async function incrementOpenCount(
   });
 
   // Emit signal
-  await emitEmailOpenedSignal(DEFAULT_ORG_ID, deliveryId);
+  await emitEmailOpenedSignal(deliveryId);
 }
 
 /**
@@ -445,7 +444,7 @@ export async function incrementClickCount(
   });
 
   // Emit signal
-  await emitEmailClickedSignal(DEFAULT_ORG_ID, deliveryId);
+  await emitEmailClickedSignal(deliveryId);
 }
 
 /**
@@ -546,7 +545,6 @@ export async function getDeliveryStatsForUser(
  * Emit email sent signal
  */
 async function emitEmailSentSignal(
-  organizationId: string,
   deliveryId: string,
   metadata: {
     to: string;
@@ -556,10 +554,11 @@ async function emitEmailSentSignal(
   }
 ): Promise<void> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.sent',
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Medium',
       metadata: {
@@ -576,14 +575,14 @@ async function emitEmailSentSignal(
  * Emit email opened signal
  */
 async function emitEmailOpenedSignal(
-  organizationId: string,
   deliveryId: string
 ): Promise<void> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.opened',
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Low',
       metadata: {
@@ -599,14 +598,14 @@ async function emitEmailOpenedSignal(
  * Emit email clicked signal
  */
 async function emitEmailClickedSignal(
-  organizationId: string,
   deliveryId: string
 ): Promise<void> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.clicked',
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Medium',
       metadata: {
@@ -622,7 +621,6 @@ async function emitEmailClickedSignal(
  * Emit email failed signal
  */
 async function emitEmailFailedSignal(
-  organizationId: string,
   deliveryId: string,
   metadata: {
     to: string;
@@ -631,10 +629,11 @@ async function emitEmailFailedSignal(
   }
 ): Promise<void> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.delivery.failed',
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'High',
       metadata: {

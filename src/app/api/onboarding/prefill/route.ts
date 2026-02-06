@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Call prefill engine
-    const result = await prefillOnboardingData(websiteUrl, organizationId);
+    const result = await prefillOnboardingData(websiteUrl);
 
     logger.info('Prefill API request complete', {
       websiteUrl,

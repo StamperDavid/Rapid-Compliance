@@ -180,8 +180,7 @@ export async function generateSalesEmail(
       try {
         // First, discover the competitor to get their profile
         const competitorProfile = await discoverCompetitor(
-          options.competitorDomain,
-          options.organizationId
+          options.competitorDomain
         );
         
         // Then generate the battlecard using the profile

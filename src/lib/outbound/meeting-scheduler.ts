@@ -159,10 +159,9 @@ export async function findAvailableSlots(
  */
 export async function scheduleMeeting(
   request: MeetingRequest,
-  hostUserId: string,
-  organizationId: string
+  hostUserId: string
 ): Promise<ScheduledMeeting> {
-  
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
 
   try {
     // Find available slots
@@ -204,7 +203,7 @@ export async function scheduleMeeting(
 
     const meeting: ScheduledMeeting = {
       id: meetingId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       title: getMeetingTitle(request.meetingType, request.companyName),
       description: request.topic ?? getMeetingDescription(request.meetingType),
       duration: request.duration,
@@ -256,13 +255,10 @@ export async function scheduleMeeting(
  */
 export async function rescheduleMeeting(
   meetingId: string,
-  newStartTime: Date,
-  organizationId: string
+  newStartTime: Date
 ): Promise<ScheduledMeeting> {
-  
-
   // Get existing meeting
-  const meeting = await getMeetingById(meetingId, organizationId);
+  const meeting = await getMeetingById(meetingId);
   if (!meeting) {
     throw new Error('Meeting not found');
   }
@@ -291,12 +287,11 @@ export async function rescheduleMeeting(
  */
 export async function cancelMeeting(
   meetingId: string,
-  organizationId: string,
   reason?: string
 ): Promise<void> {
-  
 
-  const meeting = await getMeetingById(meetingId, organizationId);
+
+  const meeting = await getMeetingById(meetingId);
   if (!meeting) {
     throw new Error('Meeting not found');
   }
@@ -470,18 +465,17 @@ async function getUserMeetings(
 }
 
 async function getMeetingById(
-  meetingId: string,
-  _organizationId: string
+  meetingId: string
 ): Promise<ScheduledMeeting | null> {
   const { db } = await import('@/lib/firebase/config');
   if (!db) {throw new Error('Firestore not initialized');}
-  
+
   const { doc, getDoc } = await import('firebase/firestore');
   const { getOrgSubCollection } = await import('@/lib/firebase/collections');
 
   const meetingPath = getOrgSubCollection('meetings');
   const meetingDoc = await getDoc(doc(db, meetingPath, meetingId));
-  
+
   return meetingDoc.exists() ? (meetingDoc.data() as ScheduledMeeting) : null;
 }
 

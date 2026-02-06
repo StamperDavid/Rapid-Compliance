@@ -37,7 +37,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
         expect(result.data.website).toBeDefined();
         
         // Should NOT have distillation fields
-        expect(result.data.extractedSignals || []).toHaveLength(0);
+        expect(result.data.extractedSignals ?? []).toHaveLength(0);
         expect(result.data.leadScore).toBeUndefined();
       }
       
@@ -61,7 +61,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       
       // Should work but without distillation
       if (result.data) {
-        expect(result.data.extractedSignals || []).toHaveLength(0);
+        expect(result.data.extractedSignals ?? []).toHaveLength(0);
       }
       
       console.log('\n✅ Explicit enableDistillation=false works');
@@ -70,7 +70,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
 
   describe('Analytics Functions', () => {
     it('should return enrichment analytics', async () => {
-      const analytics = await getEnrichmentAnalytics(TEST_ORG_ID, 7);
+      const analytics = await getEnrichmentAnalytics(7);
       
       expect(analytics).toBeDefined();
       expect(typeof analytics.totalEnrichments).toBe('number');
@@ -87,7 +87,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
     });
 
     it('should return storage optimization analytics (NEW)', async () => {
-      const analytics = await getStorageOptimizationAnalytics(TEST_ORG_ID, 7);
+      const analytics = await getStorageOptimizationAnalytics(7);
       
       expect(analytics).toBeDefined();
       expect(typeof analytics.totalScrapes).toBe('number');
@@ -193,7 +193,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       const result = await enrichCompany(
         {
           // No companyName, domain, or website
-        } as any,
+        } as unknown as Parameters<typeof enrichCompany>[0],
         TEST_ORG_ID
       );
 
@@ -235,9 +235,9 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       const distillDuration = Date.now() - distillStart;
 
       console.log('\nPerformance Comparison:');
-      console.log('- Without distillation:', baselineDuration + 'ms');
-      console.log('- With distillation:', distillDuration + 'ms');
-      console.log('- Overhead:', ((distillDuration - baselineDuration) / baselineDuration * 100).toFixed(1) + '%');
+      console.log(`- Without distillation: ${baselineDuration}ms`);
+      console.log(`- With distillation: ${distillDuration}ms`);
+      console.log(`- Overhead: ${((distillDuration - baselineDuration) / baselineDuration * 100).toFixed(1)}%`);
       
       // Distillation overhead should be reasonable
       // Allow up to 50% overhead for additional processing (content hashing, signal detection, etc.)

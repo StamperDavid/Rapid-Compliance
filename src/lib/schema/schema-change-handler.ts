@@ -207,8 +207,7 @@ export async function processUnprocessedEvents(): Promise<{
   let failed = 0;
 
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    const events = await SchemaChangeEventPublisher.getUnprocessedEvents(DEFAULT_ORG_ID);
+    const events = await SchemaChangeEventPublisher.getUnprocessedEvents();
     
     logger.info('[Schema Change Handler] Processing unprocessed events', {
       file: 'schema-change-handler.ts',

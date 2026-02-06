@@ -29,6 +29,7 @@ import { validateEnrichmentData } from './validation-service';
 import { getAllBackupData, getTechStackFromDNS } from './backup-sources';
 import { FirestoreService, COLLECTIONS } from '../db/firestore-service';
 import { logger } from '../logger/logger';
+import { DEFAULT_ORG_ID } from '../constants/platform';
 
 // NEW: Import distillation engine and industry templates
 import { distillScrape, calculateLeadScore } from '../scraper-intelligence/distillation-engine';
@@ -120,7 +121,7 @@ export async function enrichCompany(
     }
     
     // Step 3: Check cache first (85% cost savings!)
-    const cached = await getCachedEnrichment(domain, organizationId);
+    const cached = await getCachedEnrichment(domain);
     
     if (cached) {
       logger.info(`Enrichment ✅ Cache HIT for ${domain} - returning cached data`, { file: 'enrichment-service.ts' });
@@ -167,7 +168,6 @@ export async function enrichCompany(
         companyIdentifier,
         domain,
         website,
-        organizationId,
         startTime,
         { searchCalls, scrapeCalls }
       );
@@ -358,7 +358,6 @@ export async function enrichCompany(
         companyIdentifier,
         domain,
         website,
-        organizationId,
         startTime,
         { searchCalls, scrapeCalls, aiTokens }
       );
@@ -376,7 +375,7 @@ export async function enrichCompany(
     const totalCost = calculateCost(searchCalls, scrapeCalls, aiTokens);
 
     // Step 13: Cache the results
-    await cacheEnrichment(domain, enrichmentData, organizationId, 7); // 7 day TTL
+    await cacheEnrichment(domain, enrichmentData, 7); // 7 day TTL
 
     // Calculate storage metrics
     const storageMetrics = distillationResult ? {
@@ -389,7 +388,7 @@ export async function enrichCompany(
     } : undefined;
 
     // Step 14: Log cost for analytics (including storage savings from distillation)
-    await logEnrichmentCost(organizationId, {
+    await logEnrichmentCost({
       organizationId,
       timestamp: new Date(),
       companyDomain: domain,
@@ -435,7 +434,7 @@ export async function enrichCompany(
     const errorMessage = enrichError.message;
     logger.error('[Enrichment] Unexpected error:', enrichError, { file: 'enrichment-service.ts' });
 
-    await logEnrichmentCost(organizationId, {
+    await logEnrichmentCost({
       organizationId,
       timestamp: new Date(),
       companyDomain: request.domain ?? 'unknown',
@@ -461,18 +460,18 @@ async function getBackupSources(
   companyName: string,
   domain: string,
   website: string,
-  organizationId: string,
   startTime: number,
   costs: { searchCalls: number; scrapeCalls: number; aiTokens?: number }
 ): Promise<EnrichmentResponse> {
   logger.info('[Enrichment] Using backup sources (WHOIS, DNS, Wikipedia, etc.)...', { file: 'enrichment-service.ts' });
-  
+
   try {
     // Get data from all free sources
     const backupData = await getAllBackupData(companyName, domain);
-    
+
     // If we got SOME data, return it with low confidence
     if (Object.keys(backupData).length > 0) {
+      const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
       const enrichmentData: CompanyEnrichmentData = {
         name: backupData.name ?? companyName,
         website: website,
@@ -497,14 +496,14 @@ async function getBackupSources(
         dataSource: 'web-scrape', // From backup sources
         confidence: 40, // Low confidence - backup data only
       };
-      
+
       // Cache it (even low confidence is better than re-trying)
-      await cacheEnrichment(domain, enrichmentData, organizationId, 3); // Shorter TTL
-      
+      await cacheEnrichment(domain, enrichmentData, 3); // Shorter TTL
+
       const totalCost = calculateCost(costs.searchCalls, costs.scrapeCalls, costs.aiTokens ?? 0);
-      
-      await logEnrichmentCost(organizationId, {
-        organizationId,
+
+      await logEnrichmentCost({
+        organizationId: DEFAULT_ORG_ID,
         timestamp: new Date(),
         companyDomain: domain,
         searchAPICost: costs.searchCalls * 0.001,
@@ -595,7 +594,6 @@ function createErrorResponse(
  */
 export async function enrichCompanies(
   companies: EnrichmentRequest[],
-  organizationId: string,
   options?: {
     parallel?: boolean;
     maxConcurrent?: number;
@@ -607,7 +605,7 @@ export async function enrichCompanies(
     // Sequential processing
     const results: EnrichmentResponse[] = [];
     for (const company of companies) {
-      const result = await enrichCompany(company, organizationId);
+      const result = await enrichCompany(company, DEFAULT_ORG_ID);
       results.push(result);
     }
     return results;
@@ -620,7 +618,7 @@ export async function enrichCompanies(
   for (let i = 0; i < companies.length; i += maxConcurrent) {
     const batch = companies.slice(i, i + maxConcurrent);
     const batchResults = await Promise.all(
-      batch.map(company => enrichCompany(company, organizationId))
+      batch.map(company => enrichCompany(company, DEFAULT_ORG_ID))
     );
     results.push(...batchResults);
 
@@ -633,7 +631,7 @@ export async function enrichCompanies(
   }
 
   logger.info(`Enrichment Batch complete: ${results.filter(r => r.success).length}/${companies.length} successful`, { file: 'enrichment-service.ts' });
-  
+
   return results;
 }
 
@@ -673,11 +671,12 @@ function countDataPoints(data: CompanyEnrichmentData): number {
 /**
  * Log enrichment cost for analytics
  */
-async function logEnrichmentCost(organizationId: string, log: EnrichmentCostLog): Promise<void> {
+async function logEnrichmentCost(log: EnrichmentCostLog): Promise<void> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const logId = `cost_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-costs`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-costs`,
       logId,
       log,
       false
@@ -692,7 +691,6 @@ async function logEnrichmentCost(organizationId: string, log: EnrichmentCostLog)
  * Get enrichment cost analytics
  */
 export async function getEnrichmentAnalytics(
-  organizationId: string,
   days: number = 30
 ): Promise<{
   totalEnrichments: number;
@@ -705,12 +703,13 @@ export async function getEnrichmentAnalytics(
   cacheHitRate: number;
 }> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
-    
+
     const { where } = await import('firebase/firestore');
     const logs = await FirestoreService.getAll<EnrichmentCostLog>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-costs`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-costs`,
       [
         where('timestamp', '>=', cutoffDate)
       ]
@@ -762,7 +761,6 @@ export async function getEnrichmentAnalytics(
  * @returns Storage metrics and cost savings
  */
 export async function getStorageOptimizationAnalytics(
-  organizationId: string,
   days: number = 30
 ): Promise<{
   totalScrapes: number;
@@ -775,40 +773,41 @@ export async function getStorageOptimizationAnalytics(
   duplicateRate: number; // percentage
 }> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
-    
+
     const { where } = await import('firebase/firestore');
     const logs = await FirestoreService.getAll<EnrichmentCostLog>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-costs`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrichment-costs`,
       [
         where('timestamp', '>=', cutoffDate)
       ]
     );
-    
+
     // Filter logs with storage metrics
     const logsWithMetrics = logs.filter(log => log.storageMetrics);
-    
+
     const totalScrapes = logs.length;
     const scrapesWithDistillation = logsWithMetrics.length;
     const duplicatesDetected = logsWithMetrics.filter(log => log.storageMetrics?.isDuplicate).length;
-    
+
     const totalRawBytes = logsWithMetrics.reduce(
-      (sum, log) => sum + (log.storageMetrics?.rawScrapeSize ?? 0), 
+      (sum, log) => sum + (log.storageMetrics?.rawScrapeSize ?? 0),
       0
     );
     const totalSignalsBytes = logsWithMetrics.reduce(
-      (sum, log) => sum + (log.storageMetrics?.signalsSize ?? 0), 
+      (sum, log) => sum + (log.storageMetrics?.signalsSize ?? 0),
       0
     );
-    
+
     const reductions = logsWithMetrics
       .map(log => log.storageMetrics?.reductionPercent ?? 0)
       .filter(r => r > 0);
     const averageReductionPercent = reductions.length > 0
       ? reductions.reduce((sum, r) => sum + r, 0) / reductions.length
       : 0;
-    
+
     // Estimate monthly storage cost savings
     // Without distillation: totalRawBytes stored permanently
     // With distillation: totalSignalsBytes stored permanently
@@ -816,11 +815,11 @@ export async function getStorageOptimizationAnalytics(
     const gbSaved = bytesSaved / (1024 * 1024 * 1024);
     const FIRESTORE_COST_PER_GB_MONTHLY = 0.18; // USD
     const estimatedStorageCostSavings = gbSaved * FIRESTORE_COST_PER_GB_MONTHLY * (30 / days); // Extrapolate to monthly
-    
+
     const duplicateRate = totalScrapes > 0 ? (duplicatesDetected / totalScrapes) * 100 : 0;
-    
+
     logger.info('Storage optimization analytics calculated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       days,
       scrapesWithDistillation,
       averageReductionPercent,

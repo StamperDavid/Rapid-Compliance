@@ -105,7 +105,6 @@ export async function getDashboardAnalytics(
       // Emit event for cached response
       const generationTime = Date.now() - startTime;
       await emitDashboardGenerated(
-        DEFAULT_ORG_ID,
         period,
         generationTime,
         true,
@@ -150,7 +149,6 @@ export async function getDashboardAnalytics(
   // Emit event for new generation
   const generationTime = Date.now() - startTime;
   await emitDashboardGenerated(
-    DEFAULT_ORG_ID,
     period,
     generationTime,
     false,

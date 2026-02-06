@@ -141,15 +141,15 @@ export interface ErrorOccurredPayload {
  * Emit dashboard viewed event
  */
 export async function emitDashboardViewed(
-  organizationId: string,
   period: TimePeriod,
   userId?: string
 ): Promise<void> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     const payload: DashboardViewedPayload = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       period,
       userId,
       timestamp: new Date(),
@@ -157,7 +157,7 @@ export async function emitDashboardViewed(
 
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.DASHBOARD_VIEWED as SignalType,
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Low',
       metadata: payload as unknown as Record<string, unknown>,
@@ -171,17 +171,17 @@ export async function emitDashboardViewed(
  * Emit dashboard generated event
  */
 export async function emitDashboardGenerated(
-  organizationId: string,
   period: TimePeriod,
   generationTime: number,
   cached: boolean,
   data: DashboardOverview
 ): Promise<void> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     const payload: DashboardGeneratedPayload = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       period,
       generationTime,
       cached,
@@ -196,7 +196,7 @@ export async function emitDashboardGenerated(
 
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.DASHBOARD_GENERATED as SignalType,
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Low',
       metadata: payload as unknown as Record<string, unknown>,
@@ -238,15 +238,15 @@ export async function emitCacheCleared(
  * Emit export requested event
  */
 export async function emitExportRequested(
-  organizationId: string,
   format: 'csv' | 'pdf' | 'excel',
   userId?: string
 ): Promise<void> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     const payload: ExportRequestedPayload = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       format,
       userId,
       timestamp: new Date(),
@@ -254,7 +254,7 @@ export async function emitExportRequested(
 
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.EXPORT_REQUESTED as SignalType,
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Low',
       metadata: payload as unknown as Record<string, unknown>,

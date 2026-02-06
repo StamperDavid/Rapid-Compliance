@@ -227,8 +227,7 @@ async function executeAction(
     case 'delete_entity':
       return executeEntityAction(
         action,
-        triggerData,
-        DEFAULT_ORG_ID
+        triggerData
       );
 
     case 'http_request':
@@ -269,7 +268,7 @@ async function executeAction(
           { targetField: 'priority', source: 'static', staticValue: taskAction.priority },
         ],
       };
-      return executeEntityAction(taskEntityAction, triggerData, DEFAULT_ORG_ID);
+      return executeEntityAction(taskEntityAction, triggerData);
     }
 
     default: {

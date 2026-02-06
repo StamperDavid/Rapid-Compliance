@@ -226,11 +226,9 @@ export class PluginManager {
   private plugins: Map<string, PluginState> = new Map();
   private toolIndex: Map<string, { pluginId: string; tool: ToolDefinition }> = new Map();
   private rateLimiter: RateLimiter = new RateLimiter();
-  private organizationId: string;
   private config: Record<string, unknown>;
 
-  constructor(organizationId: string, config: Record<string, unknown> = {}) {
-    this.organizationId = organizationId;
+  constructor(config: Record<string, unknown> = {}) {
     this.config = config;
   }
 
@@ -275,8 +273,9 @@ export class PluginManager {
 
     try {
       if (plugin.init) {
+        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
         await plugin.init({
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
           config: this.config,
           logger,
         });
@@ -509,8 +508,9 @@ export class PluginManager {
     if (enabled && !state.enabled) {
       // Re-initialize
       if (state.plugin.init) {
+        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
         await state.plugin.init({
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
           config: this.config,
           logger,
         });
@@ -607,7 +607,7 @@ const pluginManagerInstances: Map<string, PluginManager> = new Map();
 export function getPluginManager(config: Record<string, unknown> = {}): PluginManager {
   let instance = pluginManagerInstances.get(DEFAULT_ORG_ID);
   if (!instance) {
-    instance = new PluginManager(DEFAULT_ORG_ID, config);
+    instance = new PluginManager(config);
     pluginManagerInstances.set(DEFAULT_ORG_ID, instance);
   }
   return instance;

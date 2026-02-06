@@ -20,6 +20,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { createBrowserController } from './BrowserController';
 import {
   saveToDiscoveryArchive,
@@ -220,13 +221,12 @@ export interface RawScrapedData {
  * ```
  */
 export async function discoverCompany(
-  domain: string,
-  organizationId: string
+  domain: string
 ): Promise<DiscoveryResult> {
   try {
     logger.info('Starting company discovery', {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       source: 'native-discovery-engine',
     });
 
@@ -235,15 +235,15 @@ export async function discoverCompany(
     if (cached) {
       logger.info('Discovery archive HIT - serving from cache', {
         domain,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         cacheAge: Date.now() - cached.scrape.createdAt.getTime(),
         message: 'Cost savings achieved - no scraping needed',
       });
 
       const company = JSON.parse(cached.scrape.cleanedContent) as DiscoveredCompany;
-      
+
       // Emit Signal Bus signals even for cached data (lower priority)
-      await emitDiscoverySignals(company, organizationId, true);
+      await emitDiscoverySignals(company, true);
 
       return {
         company,
@@ -256,7 +256,7 @@ export async function discoverCompany(
     // Step 2: Cache MISS - perform native scraping
     logger.info('Discovery archive MISS - initiating scrape', {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       message: 'Building proprietary moat',
     });
 
@@ -266,18 +266,18 @@ export async function discoverCompany(
     const company = await synthesizeLeadObject(domain, rawData);
 
     // Step 4: Save to discoveryArchive (30-day TTL)
-    const scrapeResult = await saveToArchive(domain, organizationId, company, rawData);
+    const scrapeResult = await saveToArchive(domain, company, rawData);
 
     logger.info('Company discovery complete', {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       teamMembersFound: company.teamMembers.length,
       techStackFound: company.techStack.length,
       fromCache: false,
     });
 
     // Emit Signal Bus signals for newly discovered data
-    await emitDiscoverySignals(company, organizationId, false);
+    await emitDiscoverySignals(company, false);
 
     return {
       company,
@@ -289,7 +289,7 @@ export async function discoverCompany(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to discover company', errorObj, {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -856,7 +856,6 @@ function extractDomainName(domain: string): string {
  */
 async function saveToArchive(
   domain: string,
-  organizationId: string,
   company: DiscoveredCompany,
   rawData: RawScrapedData
 ): Promise<{ scrape: TemporaryScrape; isNew: boolean }> {
@@ -876,7 +875,7 @@ async function saveToArchive(
 
     logger.info('Saved to discovery archive', {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       scrapeId: result.scrape.id,
       isNew: result.isNew,
       expiresAt: result.scrape.expiresAt.toISOString(),
@@ -887,7 +886,7 @@ async function saveToArchive(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to save to discovery archive', errorObj, {
       domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     throw error;
   }
@@ -909,7 +908,6 @@ async function saveToArchive(
  */
 export async function discoverCompaniesBatch(
   domains: string[],
-  organizationId: string,
   options: {
     concurrency?: number;
     delayMs?: number;
@@ -920,17 +918,17 @@ export async function discoverCompaniesBatch(
   logger.info('Starting batch discovery', {
     domainsCount: domains.length,
     concurrency,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
   });
 
   const results: DiscoveryResult[] = [];
-  
+
   // Process in batches
   for (let i = 0; i < domains.length; i += concurrency) {
     const batch = domains.slice(i, i + concurrency);
-    
+
     const batchResults = await Promise.allSettled(
-      batch.map(domain => discoverCompany(domain, organizationId))
+      batch.map(domain => discoverCompany(domain))
     );
 
     for (const result of batchResults) {
@@ -982,13 +980,12 @@ export async function discoverCompaniesBatch(
  * ```
  */
 export async function discoverPerson(
-  email: string,
-  organizationId: string
+  email: string
 ): Promise<PersonDiscoveryResult> {
   try {
     logger.info('Starting person discovery', {
       email,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       source: 'person-discovery',
     });
 
@@ -1001,18 +998,18 @@ export async function discoverPerson(
     const cacheKey = `person:${email}`;
     const contentHash = calculateContentHash(cacheKey);
     const cached = await getFromDiscoveryArchiveByHash(contentHash);
-    
+
     if (cached && cached.expiresAt > new Date()) {
       logger.info('Person discovery archive HIT', {
         email,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         cacheAge: Date.now() - cached.createdAt.getTime(),
       });
 
       const person = JSON.parse(cached.cleanedContent) as DiscoveredPerson;
-      
+
       // Emit Signal Bus signal even for cached data (lower priority)
-      await emitPersonDiscoverySignals(person, organizationId, true);
+      await emitPersonDiscoverySignals(person, true);
 
       return {
         person,
@@ -1024,10 +1021,10 @@ export async function discoverPerson(
     // Step 2: Cache MISS - perform discovery
     logger.info('Person discovery archive MISS - initiating search', {
       email,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
-    const person = await discoverPersonData(email, organizationId);
+    const person = await discoverPersonData(email, DEFAULT_ORG_ID);
 
     // Step 3: Save to discoveryArchive (30-day TTL)
     const scrapeResult = await saveToDiscoveryArchive({
@@ -1043,14 +1040,14 @@ export async function discoverPerson(
 
     logger.info('Person discovery complete', {
       email,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       fullName: person.fullName,
       title: person.title,
       fromCache: false,
     });
 
     // Emit Signal Bus signal for newly discovered person
-    await emitPersonDiscoverySignals(person, organizationId, false);
+    await emitPersonDiscoverySignals(person, false);
 
     return {
       person,
@@ -1061,7 +1058,7 @@ export async function discoverPerson(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to discover person', errorObj, {
       email,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -1380,7 +1377,6 @@ function capitalize(str: string): string {
  */
 export async function discoverPeopleBatch(
   emails: string[],
-  organizationId: string,
   options: {
     concurrency?: number;
     delayMs?: number;
@@ -1391,17 +1387,17 @@ export async function discoverPeopleBatch(
   logger.info('Starting batch person discovery', {
     emailsCount: emails.length,
     concurrency,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
   });
 
   const results: PersonDiscoveryResult[] = [];
-  
+
   // Process in batches
   for (let i = 0; i < emails.length; i += concurrency) {
     const batch = emails.slice(i, i + concurrency);
-    
+
     const batchResults = await Promise.allSettled(
-      batch.map(email => discoverPerson(email, organizationId))
+      batch.map(email => discoverPerson(email))
     );
 
     for (const result of batchResults) {
@@ -1440,7 +1436,6 @@ export async function discoverPeopleBatch(
  */
 async function emitDiscoverySignals(
   company: DiscoveredCompany,
-  organizationId: string,
   fromCache: boolean
 ): Promise<void> {
   try {
@@ -1449,7 +1444,7 @@ async function emitDiscoverySignals(
     // Signal 1: website.discovered - Always emit when company is discovered
     await coordinator.emitSignal({
       type: 'website.discovered',
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: company.metadata.confidence,
       priority: fromCache ? 'Low' : 'Medium',
       metadata: {
@@ -1471,7 +1466,7 @@ async function emitDiscoverySignals(
     if (company.techStack.length > 0) {
       await coordinator.emitSignal({
         type: 'website.technology.detected',
-        orgId: organizationId,
+        orgId: DEFAULT_ORG_ID,
         confidence: 0.9, // Tech stack detection is usually accurate
         priority: 'Medium',
         metadata: {
@@ -1496,7 +1491,7 @@ async function emitDiscoverySignals(
           await coordinator.emitSignal({
             type: 'lead.discovered',
             leadId: member.email, // Use email as temporary leadId
-            orgId: organizationId,
+            orgId: DEFAULT_ORG_ID,
             confidence: member.email ? 0.8 : 0.5,
             priority: member.email ? 'Medium' : 'Low',
             metadata: {
@@ -1519,7 +1514,7 @@ async function emitDiscoverySignals(
 
     logger.info('Discovery signals emitted', {
       domain: company.domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       fromCache,
       websiteDiscovered: 1,
       technologyDetected: company.techStack.length > 0 ? 1 : 0,
@@ -1530,7 +1525,7 @@ async function emitDiscoverySignals(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to emit discovery signals', errorObj, {
       domain: company.domain,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 }
@@ -1542,7 +1537,6 @@ async function emitDiscoverySignals(
  */
 async function emitPersonDiscoverySignals(
   person: DiscoveredPerson,
-  organizationId: string,
   fromCache: boolean
 ): Promise<void> {
   try {
@@ -1552,7 +1546,7 @@ async function emitPersonDiscoverySignals(
     await coordinator.emitSignal({
       type: 'lead.discovered',
       leadId: person.email,
-      orgId: organizationId,
+      orgId: DEFAULT_ORG_ID,
       confidence: person.metadata.confidence,
       priority: fromCache ? 'Low' : 'Medium',
       metadata: {
@@ -1578,7 +1572,7 @@ async function emitPersonDiscoverySignals(
 
     logger.info('Person discovery signal emitted', {
       email: person.email,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       fullName: person.fullName,
       fromCache,
     });
@@ -1587,7 +1581,7 @@ async function emitPersonDiscoverySignals(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to emit person discovery signal', errorObj, {
       email: person.email,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 }

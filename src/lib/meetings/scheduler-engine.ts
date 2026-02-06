@@ -10,6 +10,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { createZoomMeeting } from '@/lib/integrations/zoom';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface MeetingSchedulerConfig {
   id: string;
@@ -68,7 +69,6 @@ export interface ScheduledMeeting {
  * Schedule a meeting with automatic assignment
  */
 export async function scheduleMeeting(
-  organizationId: string,
   workspaceId: string,
   config: {
     schedulerConfigId: string;
@@ -83,7 +83,7 @@ export async function scheduleMeeting(
   try {
     // Get scheduler configuration
     const schedulerConfig = await FirestoreService.get<MeetingSchedulerConfig>(
-      `organizations/${organizationId}/meetingSchedulers`,
+      `organizations/${DEFAULT_ORG_ID}/meetingSchedulers`,
       config.schedulerConfigId
     );
 
@@ -92,7 +92,7 @@ export async function scheduleMeeting(
     }
 
     // Determine who to assign to
-    const assignedUserId = await assignMeeting(organizationId, schedulerConfig);
+    const assignedUserId = await assignMeeting(schedulerConfig);
 
     // Calculate end time
     const endTime = new Date(config.startTime);
@@ -127,7 +127,7 @@ export async function scheduleMeeting(
 
     const meeting: ScheduledMeeting = {
       id: meetingId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       schedulerConfigId: config.schedulerConfigId,
       title: config.title,
@@ -146,7 +146,7 @@ export async function scheduleMeeting(
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/workspaces/${workspaceId}/meetings`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/meetings`,
       meetingId,
       meeting,
       false
@@ -173,7 +173,7 @@ export async function scheduleMeeting(
     }
 
     logger.info('Meeting scheduled', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       meetingId,
       assignedTo: assignedUserId,
       hasZoom: !!zoomData.zoomMeetingId,
@@ -183,7 +183,7 @@ export async function scheduleMeeting(
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to schedule meeting', error instanceof Error ? error : new Error(errorMessage), { organizationId });
+    logger.error('Failed to schedule meeting', error instanceof Error ? error : new Error(errorMessage), { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }
@@ -192,15 +192,14 @@ export async function scheduleMeeting(
  * Assign meeting using configured strategy
  */
 async function assignMeeting(
-  organizationId: string,
   config: MeetingSchedulerConfig
 ): Promise<string> {
   if (config.assignmentType === 'round-robin') {
-    return getRoundRobinAssignment(organizationId, config.id, config.assignedUsers);
+    return getRoundRobinAssignment(config.id, config.assignedUsers);
   } else if (config.assignmentType === 'manual') {
     return config.assignedUsers[0]; // Default to first user
   }
-  
+
   // Default fallback
   return config.assignedUsers[0];
 }
@@ -209,14 +208,13 @@ async function assignMeeting(
  * Round-robin assignment
  */
 async function getRoundRobinAssignment(
-  organizationId: string,
   schedulerConfigId: string,
   userIds: string[]
 ): Promise<string> {
   try {
     // Get last assigned user index
     const state = await FirestoreService.get<{ lastIndex: number }>(
-      `organizations/${organizationId}/meetingSchedulers/${schedulerConfigId}/state`,
+      `organizations/${DEFAULT_ORG_ID}/meetingSchedulers/${schedulerConfigId}/state`,
       'roundRobin'
     );
 
@@ -226,7 +224,7 @@ async function getRoundRobinAssignment(
 
     // Update last assigned index
     await FirestoreService.set(
-      `organizations/${organizationId}/meetingSchedulers/${schedulerConfigId}/state`,
+      `organizations/${DEFAULT_ORG_ID}/meetingSchedulers/${schedulerConfigId}/state`,
       'roundRobin',
       { lastIndex: nextIndex, updatedAt: new Date() },
       true
@@ -285,12 +283,11 @@ async function scheduleReminders(
  * Send meeting reminder (called by cron job)
  */
 export async function sendMeetingReminder(
-  organizationId: string,
   meetingId: string
 ): Promise<void> {
   try {
     const meeting = await FirestoreService.get<ScheduledMeeting>(
-      `organizations/${organizationId}/workspaces/default/meetings`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/default/meetings`,
       meetingId
     );
 
@@ -300,7 +297,7 @@ export async function sendMeetingReminder(
 
     // Send email reminder
     const { sendEmail } = await import('@/lib/email/email-service');
-    
+
     for (const attendee of meeting.attendees) {
       const subject = `Reminder: ${meeting.title}`;
       const body = `
@@ -321,7 +318,7 @@ Looking forward to speaking with you!
         to: attendee.email,
         subject,
         text: body,
-        metadata: { organizationId },
+        metadata: { organizationId: DEFAULT_ORG_ID },
       });
 
       // Send SMS reminder if phone provided
@@ -330,14 +327,14 @@ Looking forward to speaking with you!
         await sendSMS({
           to: attendee.phone,
           message: `Reminder: ${meeting.title} at ${meeting.startTime.toLocaleTimeString()}. ${meeting.zoomJoinUrl ?? ''}`,
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
         });
       }
     }
 
     // Update meeting with reminder sent
     await FirestoreService.update(
-      `organizations/${organizationId}/workspaces/default/meetings`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/default/meetings`,
       meetingId,
       {
         reminders: [

@@ -45,10 +45,8 @@ jest.mock('@/lib/battlecard/battlecard-engine', () => ({
 import { generateSalesEmail, generateEmailVariants } from '@/lib/email-writer/server';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { calculateDealScore } from '@/lib/templates/deal-scoring-engine';
-import { discoverCompetitor, generateBattlecard } from '@/lib/battlecard/battlecard-engine';
-import type { DealScore } from '@/lib/templates/deal-scoring-engine';
-import type { Battlecard, CompetitorProfile } from '@/lib/battlecard/battlecard-engine';
+import { calculateDealScore, type DealScore } from '@/lib/templates/deal-scoring-engine';
+import { discoverCompetitor, generateBattlecard, type Battlecard, type CompetitorProfile } from '@/lib/battlecard/battlecard-engine';
 
 describe('Email Writer Engine', () => {
   // ============================================================================
@@ -482,7 +480,7 @@ IMPROVEMENTS:
         includeCompetitive: true,
       });
       
-      expect(discoverCompetitor).toHaveBeenCalledWith('https://competitor.com', 'org_123');
+      expect(discoverCompetitor).toHaveBeenCalledWith('https://competitor.com');
       expect(generateBattlecard).toHaveBeenCalledWith(mockCompetitorProfile, {
         ourProduct: '[Company]',
       });
@@ -656,8 +654,8 @@ IMPROVEMENTS:
     it('should generate variants with different tones', async () => {
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue(mockLLMResponse as never);
-      
-      const result = await generateEmailVariants({
+
+      const _result = await generateEmailVariants({
         organizationId: 'org_123',
         workspaceId: 'workspace_123',
         userId: 'user_123',
@@ -665,7 +663,7 @@ IMPROVEMENTS:
         dealId: 'deal_123',
         recipientName: 'John Doe',
       }, 3);
-      
+
       // Check that multiple LLM calls were made with different tones
       expect(sendUnifiedChatMessage).toHaveBeenCalledTimes(3);
     });

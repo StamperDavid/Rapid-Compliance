@@ -147,7 +147,6 @@ export async function GET(request: NextRequest) {
     
     // Emit dashboard viewed event
     await emitDashboardViewed(
-      validatedRequest.organizationId,
       validatedRequest.period
     );
 

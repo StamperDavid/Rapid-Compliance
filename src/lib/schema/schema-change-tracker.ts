@@ -6,6 +6,7 @@
 import { Timestamp, type QueryConstraint } from 'firebase/firestore';
 import type { Schema, SchemaField } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Schema Change Event
@@ -553,14 +554,13 @@ export class SchemaChangeEventPublisher {
    * Get unprocessed events for a schema
    */
   static async getUnprocessedEvents(
-    organizationId: string,
     schemaId?: string
   ): Promise<SchemaChangeEvent[]> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       const { where } = await import('firebase/firestore');
-      
-      const eventPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
+
+      const eventPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/schemaChangeEvents`;
 
       const filters: QueryConstraint[] = [
         where('processed', '==', false),
@@ -571,7 +571,7 @@ export class SchemaChangeEventPublisher {
       }
 
       const events = await FirestoreService.getAll(eventPath, filters);
-      
+
       return events as SchemaChangeEvent[];
     } catch (error) {
       logger.error('[Schema Change] Failed to get unprocessed events', error instanceof Error ? error : new Error(String(error)), {

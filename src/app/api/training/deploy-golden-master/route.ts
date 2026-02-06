@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Deploy the Golden Master
-    await deployGoldenMaster(organizationId, goldenMasterId);
+    await deployGoldenMaster(goldenMasterId);
 
     return NextResponse.json({
       success: true,

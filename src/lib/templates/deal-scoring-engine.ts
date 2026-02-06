@@ -850,17 +850,16 @@ function fetchDeal(dealId: string): Deal {
  * Batch score multiple deals
  */
 export function batchScoreDeals(
-  organizationId: string,
   workspaceId: string,
   dealIds: string[],
   templateId?: string
 ): BatchScoringResult {
   const scores = new Map<string, DealScore>();
-  
+
   for (const dealId of dealIds) {
     try {
       const score = calculateDealScore({
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         dealId,
         templateId

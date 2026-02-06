@@ -87,7 +87,6 @@ export async function POST(request: NextRequest) {
 
     // Create update request
     const updateRequest = await createUpdateRequest(
-      organizationId,
       goldenMasterId,
       filteredSuggestions,
       sessionIds

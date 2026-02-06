@@ -207,7 +207,7 @@ async function executeAction(
     case 'create_entity':
     case 'update_entity':
     case 'delete_entity': {
-      return executeEntityAction(action, triggerData, organizationId);
+      return executeEntityAction(action, triggerData);
     }
     case 'http_request': {
       return executeHTTPAction(action, triggerData);

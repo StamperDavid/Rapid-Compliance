@@ -165,14 +165,15 @@ export class ImplementationGuide {
    * Build the full implementation context for an organization
    */
   static async buildContext(
-    organizationId: string,
     assistantName: string,
     ownerName?: string,
     industry?: string,
     niche?: NicheRefinement
   ): Promise<ImplementationContext> {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+
     // Get system health report
-    const healthReport = await SystemHealthService.generateHealthReport(organizationId);
+    const healthReport = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
 
     // Try to find matching industry template
     const template = industry ? getTemplateById(industry) : undefined;
@@ -181,7 +182,7 @@ export class ImplementationGuide {
     const currentPhase = this.determinePhase(healthReport);
 
     return {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       assistantName,
       ownerName,
       industry: industry ?? 'default',
