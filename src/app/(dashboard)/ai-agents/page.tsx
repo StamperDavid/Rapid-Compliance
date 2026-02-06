@@ -1,15 +1,14 @@
 'use client';
 
 /**
- * Admin AI Agents / Tools
+ * AI Agents / Tools
  * Management hub for AI agent configuration and orchestration.
  * Uses DEFAULT_ORG_ID (rapid-compliance-root) for penthouse access.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/firebase/config';
 
 interface AgentStats {
@@ -90,9 +89,8 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
   'coming-soon': { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--color-warning)', label: 'Coming Soon' },
 };
 
-export default function AdminAIAgentsPage() {
-  const { adminUser } = useAdminAuth();
-  const _orgId = DEFAULT_ORG_ID;
+export default function AIAgentsPage() {
+  const { user } = useAuth();
   const [stats, setStats] = useState<AgentStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -128,7 +126,6 @@ export default function AdminAIAgentsPage() {
     void fetchStats();
   }, [fetchStats]);
 
-  // Calculate derived stats
   const activeAgents = stats?.standaloneAgentCount ?? 4;
   const conversationsToday = stats?.totalConversations ?? 0;
 
@@ -139,7 +136,7 @@ export default function AdminAIAgentsPage() {
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <span style={{ fontSize: '0.6875rem', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Admin / {adminUser?.email}
+              Command Center / {user?.email}
             </span>
           </div>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>

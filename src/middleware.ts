@@ -36,7 +36,35 @@ export function middleware(request: NextRequest) {
   // - Non-admin users → /workspace/{orgId}/dashboard (with proper context)
   // ============================================================================
 
-  // Allow all /admin/* routes through - let layout handle auth
+  // ============================================================================
+  // PHASE 10: ADMIN -> DASHBOARD ROUTE CONVERGENCE
+  // ============================================================================
+  // All /admin/* routes have been merged into /(dashboard)/*
+  // Redirect for backwards compatibility with bookmarks and external links
+  if (pathname === '/admin') {
+    const newUrl = request.nextUrl.clone();
+    newUrl.pathname = '/dashboard';
+    newUrl.search = search;
+    return NextResponse.redirect(newUrl, { status: 308 });
+  }
+
+  const adminRouteMap: Record<string, string> = {
+    '/admin/workforce': '/workforce',
+    '/admin/ai-agents': '/ai-agents',
+    '/admin/compliance-reports': '/compliance-reports',
+    '/admin/living-ledger': '/living-ledger',
+  };
+
+  for (const [oldPath, newPath] of Object.entries(adminRouteMap)) {
+    if (pathname.startsWith(oldPath)) {
+      const newUrl = request.nextUrl.clone();
+      newUrl.pathname = pathname.replace(oldPath, newPath);
+      newUrl.search = search;
+      return NextResponse.redirect(newUrl, { status: 308 });
+    }
+  }
+
+  // Allow remaining /admin/* routes through (e.g., /admin-login)
   if (pathname.startsWith('/admin')) {
     return NextResponse.next();
   }

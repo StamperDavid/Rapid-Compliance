@@ -212,60 +212,61 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
   },
 
   user: {
-    // Platform Administration - NO ACCESS
-    canAccessPlatformAdmin: false,
-    canManageAllOrganizations: false,
-    canViewSystemHealth: false,
-    canManageFeatureFlags: false,
-    canViewAuditLogs: false,
-    canManageSystemSettings: false,
-    canImpersonateUsers: false,
-    canAccessSupportTools: false,
+    // Penthouse model: all permissions granted for single-tenant deployment
+    // Platform Administration - FULL ACCESS
+    canAccessPlatformAdmin: true,
+    canManageAllOrganizations: true,
+    canViewSystemHealth: true,
+    canManageFeatureFlags: true,
+    canViewAuditLogs: true,
+    canManageSystemSettings: true,
+    canImpersonateUsers: true,
+    canAccessSupportTools: true,
 
-    // Organization Management - NO ACCESS
-    canManageOrganization: false,
-    canManageBilling: false,
-    canManageAPIKeys: false,
-    canManageTheme: false,
-    canDeleteOrganization: false,
+    // Organization Management - FULL ACCESS
+    canManageOrganization: true,
+    canManageBilling: true,
+    canManageAPIKeys: true,
+    canManageTheme: true,
+    canDeleteOrganization: true,
 
-    // User Management - VIEW ONLY
-    canInviteUsers: false,
-    canRemoveUsers: false,
-    canChangeUserRoles: false,
+    // User Management - FULL ACCESS
+    canInviteUsers: true,
+    canRemoveUsers: true,
+    canChangeUserRoles: true,
     canViewAllUsers: true,
 
-    // Data Management - LIMITED
-    canCreateSchemas: false,
-    canEditSchemas: false,
-    canDeleteSchemas: false,
+    // Data Management - FULL ACCESS
+    canCreateSchemas: true,
+    canEditSchemas: true,
+    canDeleteSchemas: true,
     canExportData: true,
-    canImportData: false,
-    canDeleteData: false,
+    canImportData: true,
+    canDeleteData: true,
     canViewAllRecords: true,
 
-    // CRM Operations - CREATE/EDIT
+    // CRM Operations - FULL ACCESS
     canCreateRecords: true,
     canEditRecords: true,
-    canDeleteRecords: false,
+    canDeleteRecords: true,
     canViewOwnRecordsOnly: false,
     canAssignRecords: true,
 
-    // Workflows & Automation - LIMITED
+    // Workflows & Automation - FULL ACCESS
     canCreateWorkflows: true,
     canEditWorkflows: true,
-    canDeleteWorkflows: false,
+    canDeleteWorkflows: true,
 
-    // AI Agents & Swarm - NO ACCESS
-    canTrainAIAgents: false,
-    canDeployAIAgents: false,
-    canManageAIAgents: false,
-    canAccessSwarmPanel: false,
+    // AI Agents & Swarm - FULL ACCESS
+    canTrainAIAgents: true,
+    canDeployAIAgents: true,
+    canManageAIAgents: true,
+    canAccessSwarmPanel: true,
 
-    // Marketing - LIMITED
+    // Marketing - FULL ACCESS
     canManageSocialMedia: true,
     canManageEmailCampaigns: true,
-    canManageWebsite: false,
+    canManageWebsite: true,
 
     // Sales - FULL ACCESS
     canViewLeads: true,
@@ -274,18 +275,18 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
     canManageDeals: true,
     canAccessVoiceAgents: true,
 
-    // Reports & Analytics - LIMITED
+    // Reports & Analytics - FULL ACCESS
     canViewReports: true,
     canCreateReports: true,
     canExportReports: true,
-    canViewPlatformAnalytics: false,
+    canViewPlatformAnalytics: true,
 
-    // Settings - NO ACCESS
-    canAccessSettings: false,
-    canManageIntegrations: false,
+    // Settings - FULL ACCESS
+    canAccessSettings: true,
+    canManageIntegrations: true,
 
-    // E-Commerce - LIMITED
-    canManageEcommerce: false,
+    // E-Commerce - FULL ACCESS
+    canManageEcommerce: true,
     canProcessOrders: true,
     canManageProducts: true,
   },

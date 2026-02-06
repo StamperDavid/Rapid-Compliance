@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
   // Redirect if already logged in as admin
   useEffect(() => {
     if (adminUser) {
-      router.push('/admin');
+      router.push('/dashboard');
     }
   }, [adminUser, router]);
 
@@ -107,7 +107,7 @@ export default function AdminLoginPage() {
       setAdminUser(adminUserData);
       
       // Redirect to admin dashboard
-      router.push('/admin');
+      router.push('/dashboard');
       
     } catch (err) {
       const error = err as FirebaseError;

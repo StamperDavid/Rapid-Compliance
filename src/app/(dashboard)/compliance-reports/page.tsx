@@ -1,13 +1,13 @@
 'use client';
 
 /**
- * Admin Compliance Reports
+ * Compliance Reports
  * Regulatory and compliance reporting dashboard.
  * Uses DEFAULT_ORG_ID (rapid-compliance-root) for penthouse access.
  */
 
 import React, { useState, useEffect } from 'react';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
@@ -29,9 +29,8 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
   pending: { bg: 'rgba(99, 102, 241, 0.1)', text: 'var(--color-primary)', label: 'Pending' },
 };
 
-export default function AdminComplianceReportsPage() {
-  const { adminUser } = useAdminAuth();
-  const _orgId = DEFAULT_ORG_ID;
+export default function ComplianceReportsPage() {
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [reports, setReports] = useState<ComplianceReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +91,7 @@ export default function AdminComplianceReportsPage() {
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <span style={{ fontSize: '0.6875rem', color: 'var(--color-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Admin / {adminUser?.email}
+              Command Center / {user?.email}
             </span>
           </div>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
@@ -108,8 +107,8 @@ export default function AdminComplianceReportsPage() {
           <div
             style={{
               padding: '3rem',
-              backgroundColor: '#0a0a0a',
-              border: '1px solid #1a1a1a',
+              backgroundColor: 'var(--color-bg-elevated)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '0.75rem',
               textAlign: 'center',
             }}
@@ -137,23 +136,23 @@ export default function AdminComplianceReportsPage() {
               <div
                 style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.75rem',
                 }}
               >
                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Overall Score</div>
-                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: overallScore >= 90 ? '#10b981' : overallScore >= 70 ? '#f59e0b' : '#ef4444' }}>
+                <div style={{ fontSize: '2.5rem', fontWeight: 800, color: overallScore >= 90 ? 'var(--color-success)' : overallScore >= 70 ? 'var(--color-warning)' : 'var(--color-error)' }}>
                   {overallScore}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-600)' }}>out of 100</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>out of 100</div>
               </div>
 
               <div
                 style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.75rem',
                 }}
               >
@@ -161,14 +160,14 @@ export default function AdminComplianceReportsPage() {
                 <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-success)' }}>
                   {compliantCount}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-600)' }}>of {reports.length} areas</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>of {reports.length} areas</div>
               </div>
 
               <div
                 style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.75rem',
                 }}
               >
@@ -176,14 +175,14 @@ export default function AdminComplianceReportsPage() {
                 <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-warning)' }}>
                   {reviewCount}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-600)' }}>areas flagged</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>areas flagged</div>
               </div>
 
               <div
                 style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.75rem',
                 }}
               >
@@ -191,7 +190,7 @@ export default function AdminComplianceReportsPage() {
                 <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>
                   {pendingCount}
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--color-neutral-600)' }}>awaiting review</div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>awaiting review</div>
               </div>
             </div>
 
@@ -211,9 +210,9 @@ export default function AdminComplianceReportsPage() {
                   onClick={() => setSelectedCategory(cat)}
                   style={{
                     padding: '0.5rem 1rem',
-                    backgroundColor: selectedCategory === cat ? '#6366f1' : '#1a1a1a',
-                    color: selectedCategory === cat ? '#fff' : '#999',
-                    border: `1px solid ${selectedCategory === cat ? '#6366f1' : '#333'}`,
+                    backgroundColor: selectedCategory === cat ? 'var(--color-primary)' : 'var(--color-bg-elevated)',
+                    color: selectedCategory === cat ? '#fff' : 'var(--color-text-secondary)',
+                    border: `1px solid ${selectedCategory === cat ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
                     fontSize: '0.8125rem',
@@ -228,8 +227,8 @@ export default function AdminComplianceReportsPage() {
             {/* Reports Table */}
             <div
               style={{
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #1a1a1a',
+                backgroundColor: 'var(--color-bg-elevated)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.75rem',
                 overflow: 'hidden',
               }}
@@ -241,8 +240,8 @@ export default function AdminComplianceReportsPage() {
                   gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 80px',
                   gap: '1rem',
                   padding: '1rem 1.5rem',
-                  backgroundColor: '#111',
-                  borderBottom: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  borderBottom: '1px solid var(--color-border-light)',
                   fontSize: '0.75rem',
                   fontWeight: 600,
                   color: 'var(--color-text-disabled)',
@@ -269,12 +268,12 @@ export default function AdminComplianceReportsPage() {
                       gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 80px',
                       gap: '1rem',
                       padding: '1.25rem 1.5rem',
-                      borderBottom: '1px solid #141414',
+                      borderBottom: '1px solid var(--color-border-main)',
                       alignItems: 'center',
                       transition: 'background-color 0.15s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#111';
+                      e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
@@ -312,10 +311,10 @@ export default function AdminComplianceReportsPage() {
                         fontWeight: 700,
                         color:
                           report.score >= 90
-                            ? '#10b981'
+                            ? 'var(--color-success)'
                             : report.score >= 70
-                              ? '#f59e0b'
-                              : '#ef4444',
+                              ? 'var(--color-warning)'
+                              : 'var(--color-error)',
                       }}
                     >
                       {report.score}

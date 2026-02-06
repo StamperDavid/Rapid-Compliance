@@ -121,55 +121,56 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
   },
 
   user: {
-    // Company Management - NO ACCESS
-    canManageOrganization: false,
-    canManageBilling: false,
-    canManageAPIKeys: false,
-    canManageTheme: false,
+    // Penthouse model: all permissions granted for single-tenant deployment
+    // Company Management - FULL ACCESS
+    canManageOrganization: true,
+    canManageBilling: true,
+    canManageAPIKeys: true,
+    canManageTheme: true,
 
-    // User Management - VIEW ONLY
-    canInviteUsers: false,
-    canRemoveUsers: false,
-    canChangeUserRoles: false,
+    // User Management - FULL ACCESS
+    canInviteUsers: true,
+    canRemoveUsers: true,
+    canChangeUserRoles: true,
     canViewAllUsers: true,
 
-    // Data Management - LIMITED
-    canCreateSchemas: false,
-    canEditSchemas: false,
-    canDeleteSchemas: false,
+    // Data Management - FULL ACCESS
+    canCreateSchemas: true,
+    canEditSchemas: true,
+    canDeleteSchemas: true,
     canExportData: true,
-    canImportData: false,
-    canDeleteData: false,
+    canImportData: true,
+    canDeleteData: true,
     canViewAllRecords: true,
 
-    // CRM Operations - CREATE/EDIT
+    // CRM Operations - FULL ACCESS
     canCreateRecords: true,
     canEditRecords: true,
-    canDeleteRecords: false,
+    canDeleteRecords: true,
     canViewOwnRecordsOnly: false,
     canAssignRecords: true,
 
-    // Workflows & Automation - LIMITED
+    // Workflows & Automation - FULL ACCESS
     canCreateWorkflows: true,
     canEditWorkflows: true,
-    canDeleteWorkflows: false,
+    canDeleteWorkflows: true,
 
-    // AI Agents - NO ACCESS
-    canTrainAIAgents: false,
-    canDeployAIAgents: false,
-    canManageAIAgents: false,
+    // AI Agents - FULL ACCESS
+    canTrainAIAgents: true,
+    canDeployAIAgents: true,
+    canManageAIAgents: true,
 
-    // Reports & Analytics - LIMITED
+    // Reports & Analytics - FULL ACCESS
     canViewReports: true,
     canCreateReports: true,
     canExportReports: true,
 
-    // Settings - NO ACCESS
-    canAccessSettings: false,
-    canManageIntegrations: false,
+    // Settings - FULL ACCESS
+    canAccessSettings: true,
+    canManageIntegrations: true,
 
-    // E-Commerce - LIMITED
-    canManageEcommerce: false,
+    // E-Commerce - FULL ACCESS
+    canManageEcommerce: true,
     canProcessOrders: true,
     canManageProducts: true,
   },

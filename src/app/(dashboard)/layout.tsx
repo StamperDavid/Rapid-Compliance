@@ -1,13 +1,13 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { MerchantOrchestrator } from '@/components/orchestrator';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 
 /**
  * Penthouse Dashboard Layout
- * Penthouse layout using the unified SalesVelocity.ai Admin Sidebar.
+ * Unified layout using the SalesVelocity.ai Command Center sidebar.
  * Dark theme enforced. All routes (/leads, /deals, /analytics, etc.) flow through here.
  */
 export default function PenthouseDashboardLayout({
@@ -15,7 +15,7 @@ export default function PenthouseDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = useAuth();
+  const { user } = useUnifiedAuth();
   useOrgTheme();
 
   // If no user, still render children (auth guards on individual pages handle redirects)
