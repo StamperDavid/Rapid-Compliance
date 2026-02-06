@@ -20,6 +20,7 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 
 import WorkflowStepCard, { type WorkflowStep } from '@/components/workflow/WorkflowStepCard';
 import WorkflowPalette, { type PaletteItem } from '@/components/workflow/WorkflowPalette';
@@ -37,6 +38,7 @@ export default function WorkflowBuilderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
+  const { user } = useAuth();
   const workflowId = searchParams.get('id');
 
   // Workflow state
@@ -270,7 +272,7 @@ export default function WorkflowBuilderPage() {
         version: 1,
         createdAt: workflowId ? undefined : now,
         updatedAt: now,
-        createdBy: 'current-user', // TODO: Get from auth
+        createdBy: user?.id ?? 'anonymous',
       };
 
       if (workflowId) {

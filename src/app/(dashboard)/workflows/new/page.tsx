@@ -13,6 +13,7 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface WorkflowAction {
   id: string;
@@ -29,6 +30,7 @@ interface WorkflowCondition {
 export default function WorkflowBuilderPage() {
   const router = useRouter();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [workflow, setWorkflow] = useState({
     name: '',
@@ -87,7 +89,7 @@ export default function WorkflowBuilderPage() {
           stats: { totalRuns: 0, successfulRuns: 0, failedRuns: 0 },
           createdAt: now,
           updatedAt: now,
-          createdBy: 'current-user', // TODO: Get from auth
+          createdBy: user?.id ?? 'anonymous',
           version: 1,
         },
         false

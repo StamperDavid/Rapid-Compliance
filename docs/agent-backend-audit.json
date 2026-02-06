@@ -1,0 +1,109 @@
+{
+  "audit": {
+    "title": "Agent Service Backend Verification",
+    "date": "2026-02-06",
+    "total_agents": 51,
+    "real": 50,
+    "stub": 0,
+    "missing": 1,
+    "summary": "50/51 agents have real execute() implementations with working backend services. 1 agent (SUBSCRIPTION_SPECIALIST) has a deleted file. AGENT_REGISTRY.json should be corrected."
+  },
+  "missing_agents": [
+    {
+      "id": "SUBSCRIPTION_SPECIALIST",
+      "expected_path": "src/lib/agents/commerce/subscription/specialist.ts",
+      "status": "MISSING",
+      "reason": "File deleted — subscription features temporarily disabled",
+      "parent_manager": "COMMERCE_MANAGER",
+      "impact": "Subscription lifecycle (billing cycles, dunning, state transitions) is non-operational",
+      "registry_claim": "FUNCTIONAL (incorrect — should be updated)"
+    }
+  ],
+  "agent_summary": {
+    "orchestrator": { "MASTER_ORCHESTRATOR": "REAL — 2000+ LOC, Command/Saga patterns, intent-based routing to 9 managers" },
+    "managers": {
+      "INTELLIGENCE_MANAGER": "REAL — Dynamic orchestration, parallel execution, delegates to 5 specialists",
+      "MARKETING_MANAGER": "REAL — 850 LOC, Brand DNA integration, SEO-social feedback loop",
+      "BUILDER_MANAGER": "REAL — 1650 LOC, blueprint-to-deployment, pixel injection (GA4/GTM/Meta/Hotjar)",
+      "ARCHITECT_MANAGER": "REAL — 2100 LOC, Brand DNA, TenantMemoryVault, site blueprint generation",
+      "COMMERCE_MANAGER": "REAL — 1400 LOC, product-to-payment orchestration, Stripe integration",
+      "OUTREACH_MANAGER": "REAL — 1900 LOC, multi-step sequences, channel escalation (EMAIL>SMS>VOICE)",
+      "CONTENT_MANAGER": "REAL — 1600 LOC, multi-modal production, SEO keyword injection",
+      "REVENUE_DIRECTOR": "REAL — 1800 LOC, lead pipeline state machine, RevenueBrief synthesis",
+      "REPUTATION_MANAGER": "REAL — 2000 LOC, review-to-revenue feedback, AI response engine"
+    },
+    "specialists": {
+      "intelligence": {
+        "SCRAPER_SPECIALIST": "REAL — web-scraper service",
+        "COMPETITOR_RESEARCHER": "REAL — competitive analysis algorithms",
+        "TECHNOGRAPHIC_SCOUT": "REAL — tech stack detection",
+        "SENTIMENT_ANALYST": "REAL — sentiment scoring",
+        "TREND_SCOUT": "REAL — market trend detection"
+      },
+      "marketing": {
+        "TIKTOK_EXPERT": "REAL — viral hook generation via Gemini AI",
+        "TWITTER_EXPERT": "REAL — Twitter API v2",
+        "FACEBOOK_EXPERT": "REAL — ad creative generation",
+        "LINKEDIN_EXPERT": "REAL — RapidAPI integration",
+        "SEO_EXPERT": "REAL — keyword research, on-page optimization"
+      },
+      "builder": {
+        "UX_UI_ARCHITECT": "REAL — component selection, design tokens",
+        "FUNNEL_ENGINEER": "REAL — conversion funnel design",
+        "ASSET_GENERATOR": "REAL — image generation, brand assets",
+        "WORKFLOW_OPTIMIZER": "REAL — process automation"
+      },
+      "architect": {
+        "UX_UI_SPECIALIST": "REAL — 1879 LOC, 10-category component schemas",
+        "FUNNEL_PATHOLOGIST": "REAL — 1705 LOC, THE SQUEEZE framework",
+        "COPY_SPECIALIST": "REAL — 1514 LOC, 6 copywriting frameworks"
+      },
+      "commerce": {
+        "PAYMENT_SPECIALIST": "REAL — Stripe checkout sessions",
+        "SUBSCRIPTION_SPECIALIST": "MISSING — file deleted",
+        "CATALOG_MANAGER": "REAL — Firestore product CRUD",
+        "PRICING_STRATEGIST": "REAL — dynamic pricing algorithms",
+        "INVENTORY_MANAGER": "REAL — stock tracking, reorder automation"
+      },
+      "outreach": {
+        "EMAIL_SPECIALIST": "REAL — SendGrid/Resend integration",
+        "SMS_SPECIALIST": "REAL — SMS with E164 validation"
+      },
+      "content": {
+        "COPYWRITER": "REAL — headline generation, brand voice",
+        "CALENDAR_COORDINATOR": "REAL — content scheduling",
+        "VIDEO_SPECIALIST": "REAL — video scripts, storyboards"
+      },
+      "sales": {
+        "LEAD_QUALIFIER": "REAL — 1835 LOC, BANT scoring (0-100)",
+        "OUTREACH_SPECIALIST": "REAL — 2000 LOC, 8 outreach frameworks",
+        "MERCHANDISER": "REAL — 1581 LOC, Stripe coupons, ROI calculation",
+        "DEAL_CLOSER": "REAL — closing strategies",
+        "OBJ_HANDLER": "REAL — objection response, battlecards"
+      },
+      "trust": {
+        "REVIEW_SPECIALIST": "REAL — 1520 LOC, 5-star response logic",
+        "GMB_SPECIALIST": "REAL — 1570 LOC, local SEO, NAP consistency",
+        "REV_MGR": "REAL — review response management",
+        "CASE_STUDY": "REAL — case study creation, social proof"
+      }
+    },
+    "standalone": {
+      "JASPER_GOLDEN_MASTER": "REAL — OpenRouter/Claude, 9 tool functions, Firestore persistence",
+      "VOICE_AGENT_HANDLER": "REAL — Gemini AI + Telnyx/Twilio, Prospector/Closer modes",
+      "AUTONOMOUS_POSTING_AGENT": "REAL — Twitter API v2 + RapidAPI (LinkedIn), Firestore analytics",
+      "CHAT_SESSION_SERVICE": "REAL — session CRUD, real-time subscriptions, sentiment tracking"
+    }
+  },
+  "backend_services_used": [
+    "OpenRouter (Anthropic Claude)",
+    "Gemini AI",
+    "Stripe API",
+    "SendGrid/Resend (email)",
+    "Twitter API v2",
+    "RapidAPI (LinkedIn, GMB)",
+    "Telnyx/Twilio (voice)",
+    "Firestore",
+    "Web Scraper (internal)"
+  ]
+}

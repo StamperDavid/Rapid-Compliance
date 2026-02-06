@@ -1,0 +1,132 @@
+{
+  "audit": {
+    "title": "TODO/FIXME Inventory — Critical Paths",
+    "scope": ["src/app/api/", "src/lib/services/"],
+    "date": "2026-02-06",
+    "total_items": 10,
+    "classification_key": {
+      "a": "Stub that blocks functionality — returns mock/fake data or is not implemented",
+      "b": "Enhancement — works but could be improved",
+      "c": "Dead code — unused or obsolete"
+    },
+    "summary": {
+      "a_stubs": 4,
+      "b_enhancements": 6,
+      "c_dead_code": 0
+    }
+  },
+  "items": [
+    {
+      "id": "TODO-001",
+      "file": "src/app/api/coaching/team/route.ts",
+      "line": 346,
+      "classification": "a",
+      "marker": "TODO",
+      "text": "TODO: Implement actual team member query",
+      "context": "getTeamMembers() returns hardcoded mock array instead of querying Firestore for team members. Blocks real team coaching functionality.",
+      "severity": "high",
+      "fix_effort": "medium"
+    },
+    {
+      "id": "TODO-002",
+      "file": "src/app/api/coaching/team/route.ts",
+      "line": 370,
+      "classification": "a",
+      "marker": "TODO",
+      "text": "TODO: Implement actual team name query",
+      "context": "getTeamName() returns hardcoded mock string instead of querying Firestore. Companion to TODO-001.",
+      "severity": "high",
+      "fix_effort": "low"
+    },
+    {
+      "id": "TODO-003",
+      "file": "src/app/api/crm/deals/monitor/start/route.ts",
+      "line": 68,
+      "classification": "b",
+      "marker": "TODO",
+      "text": "TODO: Add proper monitor lifecycle management",
+      "context": "Deal monitor starts a Firestore onSnapshot listener but has no server-side lifecycle management for the unsubscribe function. Works but leaks listeners.",
+      "severity": "medium",
+      "fix_effort": "medium"
+    },
+    {
+      "id": "TODO-004",
+      "file": "src/lib/services/smart-sequencer.ts",
+      "line": 574,
+      "classification": "b",
+      "marker": "TODO",
+      "text": "TODO: Implement sequence tagging and smart matching based on _score",
+      "context": "Sequence matching returns the first active sequence instead of scoring-based smart matching. Functional but suboptimal.",
+      "severity": "low",
+      "fix_effort": "medium"
+    },
+    {
+      "id": "TODO-005",
+      "file": "src/app/api/admin/stats/route.ts",
+      "line": 253,
+      "classification": "a",
+      "marker": "PLACEHOLDER",
+      "text": "const pendingTickets = 0; // Placeholder",
+      "context": "Admin stats endpoint returns hardcoded 0 for pending support tickets instead of querying a support collection.",
+      "severity": "medium",
+      "fix_effort": "low"
+    },
+    {
+      "id": "TODO-006",
+      "file": "src/app/api/voice/twiml/route.ts",
+      "line": 170,
+      "classification": "b",
+      "marker": "PLACEHOLDER",
+      "text": "Default placeholder voicemail audio URL (cowbell.mp3)",
+      "context": "Falls back to Twilio sample audio when VOICEMAIL_DROP_URL env var is not set. Works if env var is configured; placeholder is a sensible fallback.",
+      "severity": "low",
+      "fix_effort": "low"
+    },
+    {
+      "id": "TODO-007",
+      "file": "src/app/api/coaching/team/route.ts",
+      "line": 221,
+      "classification": "a",
+      "marker": "MOCK_DATA",
+      "text": "Using mock data — replace with actual team member queries",
+      "context": "Same root cause as TODO-001/002. The POST handler acknowledges it uses mock team data. Fix TODO-001 and TODO-002 to resolve.",
+      "severity": "high",
+      "fix_effort": "low",
+      "related_to": ["TODO-001", "TODO-002"]
+    },
+    {
+      "id": "TODO-008",
+      "file": "src/app/api/admin/voice/stats/route.ts",
+      "line": 169,
+      "classification": "b",
+      "marker": "MOCK_DATA",
+      "text": "Failed to fetch from Firestore, using mock data",
+      "context": "Voice stats endpoint tries real Firestore query first, falls back to mock data on error. This is a graceful degradation pattern, not a stub — but should log an alert.",
+      "severity": "low",
+      "fix_effort": "low"
+    },
+    {
+      "id": "TODO-009",
+      "file": "src/app/api/admin/social/post/route.ts",
+      "line": 108,
+      "classification": "b",
+      "marker": "MOCK_DATA",
+      "text": "For development/demo, return success with mock data",
+      "context": "Social media post endpoint returns mock success response when NODE_ENV=development. Production would hit the real social media service. Dev-only behavior.",
+      "severity": "low",
+      "fix_effort": "low"
+    },
+    {
+      "id": "TODO-010",
+      "file": "src/app/api/admin/social/post/route.ts",
+      "line": 259,
+      "classification": "b",
+      "marker": "MOCK_DATA",
+      "text": "For development/demo, return success with mock data (second endpoint)",
+      "context": "Same pattern as TODO-009 in a different handler within the same file. Dev-only mock response.",
+      "severity": "low",
+      "fix_effort": "low",
+      "related_to": ["TODO-009"]
+    }
+  ]
+}

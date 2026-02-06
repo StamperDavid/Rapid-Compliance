@@ -184,15 +184,15 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
   /**
    * Save API keys (encrypted)
    */
-  async saveKeys(keys: Partial<APIKeysConfig>): Promise<void> {
+  async saveKeys(keys: Partial<APIKeysConfig>, userId: string = 'system'): Promise<void> {
       // Save to Firestore
     const existingKeys =await this.fetchKeysFromFirestore(DEFAULT_ORG_ID) ?? this.getDefaultKeys();
-    
+
     const updatedKeys: APIKeysConfig = {
       ...existingKeys,
       ...keys,
       updatedAt: new Date(),
-      updatedBy: 'current-user', // TODO: Get from auth context
+      updatedBy: userId,
     };
 
     // Save to Firestore

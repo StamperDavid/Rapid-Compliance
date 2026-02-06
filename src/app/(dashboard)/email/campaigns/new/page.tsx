@@ -7,10 +7,12 @@ import { useRouter } from 'next/navigation';
 import { createCampaign } from '@/lib/email/campaign-manager'
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function NewCampaignPage() {
   const router = useRouter();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [campaign, setCampaign] = useState({
     name: '',
@@ -31,7 +33,7 @@ export default function NewCampaignPage() {
         ...campaign,
         scheduledFor: campaign.scheduledFor ? new Date(campaign.scheduledFor) : new Date(),
         organizationId: DEFAULT_ORG_ID,
-        createdBy: 'current-user', // TODO: Get from auth
+        createdBy: user?.id ?? 'anonymous',
       });
       
       router.push(`/email/campaigns`);

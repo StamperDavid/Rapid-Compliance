@@ -83,14 +83,14 @@ export default function BlogPostEditorPage() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
-      lastEditedBy: 'current-user',
-      author: 'current-user',
-      authorName: 'Current User',
+      lastEditedBy: user?.id ?? 'anonymous',
+      author: user?.id ?? 'anonymous',
+      authorName: user?.displayName ?? user?.email ?? 'Anonymous',
     };
 
     setPost(newPost);
     setLoading(false);
-  }, [user?.email, user?.displayName]);
+  }, [user?.email, user?.displayName, user?.id]);
 
   useEffect(() => {
     void loadCategories();

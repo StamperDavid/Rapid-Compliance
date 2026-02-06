@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 6, 2026 (Documentation cleanup, Stabilization Roadmap added, outdated plans removed)
+**Last Updated:** February 6, 2026 (Tier 1 Stabilization complete — TODO audit, error boundaries, mock data replacement, agent backend verification, auth context fixes)
 **Branches:** `dev` at commit `cd181754`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -207,11 +207,11 @@ These tasks fix broken or missing fundamentals. No new features until these are 
 
 | # | Task | Description | Status |
 |---|------|-------------|--------|
-| 1.1 | **Audit every TODO in critical paths** | Catalog every TODO/FIXME in `src/app/api/` and `src/lib/services/`. Classify each as: (a) stub that blocks functionality, (b) enhancement, (c) dead code. Produce a machine-readable inventory. | PENDING |
-| 1.2 | **Add error.tsx boundaries** | Add `error.tsx` and `loading.tsx` to every route group: `(dashboard)`, `dashboard/*`, `admin/*`, `(public)/*`. Follow Next.js 15 patterns. | PENDING |
-| 1.3 | **Replace mock data with real queries or empty states** | Grep for hardcoded arrays, sample data, and `mock` variables in page components. Replace with Firestore queries or proper empty-state UI with CTAs. | PENDING |
-| 1.4 | **Verify agent service backends** | For each of the 51 agents, trace from the agent's `execute()` method through to the underlying service. Document which services are real vs TODO stubs. | PENDING |
-| 1.5 | **Fix auth context TODOs** | Replace all 15 instances of `"TODO: Get from auth context"` with actual authenticated user resolution. | PENDING |
+| 1.1 | **Audit every TODO in critical paths** | Catalog every TODO/FIXME in `src/app/api/` and `src/lib/services/`. Classify each as: (a) stub that blocks functionality, (b) enhancement, (c) dead code. Produce a machine-readable inventory. | ✅ DONE — `docs/todo-audit-inventory.json` (10 items: 4 stubs, 6 enhancements, 0 dead code) |
+| 1.2 | **Add error.tsx boundaries** | Add `error.tsx` and `loading.tsx` to every route group: `(dashboard)`, `dashboard/*`, `admin/*`, `(public)/*`. Follow Next.js 15 patterns. | ✅ DONE — 30 error.tsx + 30 loading.tsx added across all route groups, dashboard sub-routes, store/checkout, onboarding |
+| 1.3 | **Replace mock data with real queries or empty states** | Grep for hardcoded arrays, sample data, and `mock` variables in page components. Replace with Firestore queries or proper empty-state UI with CTAs. | ✅ DONE — CRM page (10 entities), Living Ledger (deals), Templates (deal scores) now query Firestore with empty-state UI |
+| 1.4 | **Verify agent service backends** | For each of the 51 agents, trace from the agent's `execute()` method through to the underlying service. Document which services are real vs TODO stubs. | ✅ DONE — `docs/agent-backend-audit.json`. 50/51 REAL, 1 MISSING (SUBSCRIPTION_SPECIALIST — file deleted) |
+| 1.5 | **Fix auth context TODOs** | Replace all 15 instances of `"TODO: Get from auth context"` with actual authenticated user resolution. | ✅ DONE — All 15 instances replaced with `useAuth()` hook (pages/components) or `userId` parameter (services) |
 
 ### Tier 2 — UX Parity (Industry Competitiveness)
 
