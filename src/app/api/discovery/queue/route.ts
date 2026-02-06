@@ -9,6 +9,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { queueDiscoveryTask } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Discovery task request body schema
@@ -16,8 +17,6 @@ import { logger } from '@/lib/logger/logger';
 interface DiscoveryTaskRequest {
   type: 'company' | 'person';
   target: string;
-  organizationId: string;
-  workspaceId: string;
   priority?: number;
 }
 
@@ -41,8 +40,6 @@ function isDiscoveryTaskRequest(body: unknown): body is DiscoveryTaskRequest {
   return (
     (obj.type === 'company' || obj.type === 'person') &&
     typeof obj.target === 'string' &&
-    typeof obj.organizationId === 'string' &&
-    typeof obj.workspaceId === 'string' &&
     (obj.priority === undefined || typeof obj.priority === 'number')
   );
 }
@@ -74,7 +71,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'Invalid request body. Must include type (company/person), target, organizationId, and workspaceId.',
+            'Invalid request body. Must include type (company/person) and target.',
         },
         { status: 400 }
       );
@@ -84,8 +81,8 @@ export async function POST(request: NextRequest) {
     const taskId = await queueDiscoveryTask(
       body.type,
       body.target,
-      body.organizationId,
-      body.workspaceId,
+      DEFAULT_ORG_ID,
+      'default',
       body.priority ?? 0
     );
 
@@ -136,8 +133,8 @@ export async function PUT(request: NextRequest) {
         queueDiscoveryTask(
           task.type,
           task.target,
-          task.organizationId,
-          task.workspaceId,
+          DEFAULT_ORG_ID,
+          'default',
           task.priority ?? 0
         )
       )

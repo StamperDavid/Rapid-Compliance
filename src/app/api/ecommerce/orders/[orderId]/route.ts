@@ -5,6 +5,7 @@ import type { Order } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * GET /api/ecommerce/orders/[orderId] - Get order
@@ -24,15 +25,8 @@ export async function GET(
       return authResult;
     }
 
-    const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get('workspaceId');
-
-    if (!workspaceId) {
-      return errors.badRequest('workspaceId required');
-    }
-
     const order = await FirestoreService.get<Order>(
-      `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/orders`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/default/orders`,
       params.orderId
     );
 
@@ -42,7 +36,7 @@ export async function GET(
 
     // Verify user has access (customer email or organization member)
     const user = authResult.user;
-    if (order.customerEmail !== user?.email && user?.organizationId !== workspaceId.split('/')[0]) {
+    if (order.customerEmail !== user?.email && user?.organizationId !== DEFAULT_ORG_ID) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }

@@ -9,6 +9,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { backupService, type BackupConfig } from '@/lib/backup/backup-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,18 +54,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Parse request body
     const body = await request.json() as {
-      organizationId?: string;
       collections?: string[];
       incremental?: boolean;
       storageType?: 'local' | 'gcs';
     };
-
-    if (!body.organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
 
     // Get encryption key from environment
     const encryptionKey = process.env.BACKUP_ENCRYPTION_KEY;
@@ -82,7 +75,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       storageType: body.storageType ?? 'gcs',
       storagePath: process.env.BACKUP_STORAGE_PATH ?? './backups',
       incrementalEnabled: body.incremental ?? true,
-      organizationId: body.organizationId,
+      organizationId: DEFAULT_ORG_ID,
     };
 
     const result = await backupService.runBackup(config);
@@ -131,15 +124,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
     const storageType = searchParams.get('storageType') as 'local' | 'gcs' | null;
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId query parameter is required' },
-        { status: 400 }
-      );
-    }
 
     // Get encryption key from environment
     const encryptionKey = process.env.BACKUP_ENCRYPTION_KEY;
@@ -156,7 +141,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       storageType: storageType ?? 'gcs',
       storagePath: process.env.BACKUP_STORAGE_PATH ?? './backups',
       incrementalEnabled: true,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     };
 
     const backups = await backupService.listBackups(config);
@@ -194,15 +179,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
     const retentionDays = parseInt(searchParams.get('retentionDays') ?? '30', 10);
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId query parameter is required' },
-        { status: 400 }
-      );
-    }
 
     // Get encryption key from environment
     const encryptionKey = process.env.BACKUP_ENCRYPTION_KEY;
@@ -219,7 +196,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       storageType: 'gcs',
       storagePath: process.env.BACKUP_STORAGE_PATH ?? './backups',
       incrementalEnabled: true,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     };
 
     const deletedCount = await backupService.pruneOldBackups(config, retentionDays);
