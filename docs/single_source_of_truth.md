@@ -193,12 +193,16 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 
 ## Stabilization Roadmap
 
-> **Status:** ACTIVE — This is the current work plan. All new sessions should reference this section.
+> **Status:** ACTIVE — Tier 1 COMPLETE (commit `0d4c46fa`), Tier 2 IN PROGRESS.
 >
-> **Trigger Phrase:** To start this work in a new context window, paste:
->
+> **Tier 1 Trigger (COMPLETE):**
 > ```
 > Execute Stabilization Roadmap. Read CLAUDE.md first, then docs/single_source_of_truth.md — focus on the "Stabilization Roadmap" section. Begin with the next incomplete Tier 1 task. Do not skip to Tier 2 until Tier 1 is verified complete.
+> ```
+>
+> **Tier 2 Trigger (CURRENT):**
+> ```
+> Execute Stabilization Roadmap — Tier 2. Read CLAUDE.md first, then docs/single_source_of_truth.md — focus on the "Stabilization Roadmap" section. Tier 1 is verified complete. Begin with the next incomplete Tier 2 task. Reference docs/todo-audit-inventory.json and docs/agent-backend-audit.json for context from Tier 1 audits. Do not skip to Tier 3 until Tier 2 is verified complete.
 > ```
 
 ### Tier 1 — Foundation (Stop the Bleeding)
@@ -213,9 +217,19 @@ These tasks fix broken or missing fundamentals. No new features until these are 
 | 1.4 | **Verify agent service backends** | For each of the 51 agents, trace from the agent's `execute()` method through to the underlying service. Document which services are real vs TODO stubs. | ✅ DONE — `docs/agent-backend-audit.json`. 50/51 REAL, 1 MISSING (SUBSCRIPTION_SPECIALIST — file deleted) |
 | 1.5 | **Fix auth context TODOs** | Replace all 15 instances of `"TODO: Get from auth context"` with actual authenticated user resolution. | ✅ DONE — All 15 instances replaced with `useAuth()` hook (pages/components) or `userId` parameter (services) |
 
+### Critical Gap from Tier 1 Audit
+
+> **SUBSCRIPTION_SPECIALIST** — The Commerce Manager's subscription specialist file (`src/lib/agents/commerce/subscription/specialist.ts`) was **deleted** when subscription features were disabled. `AGENT_REGISTRY.json` still claims it is "FUNCTIONAL" — this is incorrect. Subscription lifecycle management (billing cycles, dunning, state transitions) is non-operational. This should be addressed in Tier 3 Task 3.5 (Stub Implementations) or restored when subscription features are re-enabled.
+
 ### Tier 2 — UX Parity (Industry Competitiveness)
 
 These tasks bring the UI to the level expected by users coming from HubSpot, Salesforce, Apollo, etc.
+
+> **Trigger Phrase:** To start Tier 2 in a new context window, paste:
+>
+> ```
+> Execute Stabilization Roadmap — Tier 2. Read CLAUDE.md first, then docs/single_source_of_truth.md — focus on the "Stabilization Roadmap" section. Tier 1 is verified complete. Begin with the next incomplete Tier 2 task. Reference docs/todo-audit-inventory.json and docs/agent-backend-audit.json for context from Tier 1 audits. Do not skip to Tier 3 until Tier 2 is verified complete.
+> ```
 
 | # | Task | Description | Status |
 |---|------|-------------|--------|
