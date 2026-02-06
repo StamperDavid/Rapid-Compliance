@@ -67,11 +67,30 @@ Claude must use sub-agents proactively for efficiency:
 | `fixer` | High-precision refactoring, ESLint warning resolution |
 | `Reviewer` | Final audit on code changes |
 | `steward` | Updating documentation after refactors |
+| `SaaS Architect` | UX/UI & product strategy — competitive audits, onboarding flow, user value mapping. Prompt: `.claude/agents/saas-architect.md` |
+| `SaaS Auditor` | Compliance, security & verification — endpoint gating, feature completeness, doc accuracy. Prompt: `.claude/agents/saas-auditor.md` |
+| `QA Revenue` | Revenue pipeline & payment QA — Stripe integration, checkout, pricing tiers, coupons, e-commerce flow. Prompt: `.claude/agents/qa-revenue-commerce.md` |
+| `QA Data Integrity` | Data consistency QA — Zod schema coverage, Firestore structure, referential integrity, analytics accuracy. Prompt: `.claude/agents/qa-data-integrity.md` |
+| `QA Growth` | Growth channel QA — social media, email campaigns, SEO, voice AI, video, website builder, forms, SMS. Prompt: `.claude/agents/qa-growth-outreach.md` |
+| `QA Platform` | Infrastructure QA — integrations, OAuth flows, webhooks, workflows, agent swarm, API contracts, cron jobs. Prompt: `.claude/agents/qa-platform-infrastructure.md` |
 
 **Rules:**
 - Launch multiple agents in parallel when tasks are independent
 - Use `Explore` agent for open-ended searches, not direct Glob/Grep
 - Use appropriate agent thoroughness levels (quick/medium/very thorough)
+
+**Custom Agents (SaaS Architect, SaaS Auditor & QA Suite):**
+- These are invoked via the `general-purpose` agent type with the specialized prompt from `.claude/agents/`
+- Before launching, read the agent's prompt file and include it in the task description
+- Example: "You are the SaaS Architect. [full prompt from .claude/agents/saas-architect.md]. Now audit the dashboard for competitive gaps."
+- These agents research and report — they do NOT write code directly
+- Use `SaaS Architect` when evaluating UX, features, onboarding, or competitive positioning
+- Use `SaaS Auditor` when verifying security, endpoint protection, documentation accuracy, or compliance
+- Use `QA Revenue` when auditing Stripe integration, checkout flows, pricing enforcement, coupons, or e-commerce
+- Use `QA Data Integrity` when verifying Zod schemas, Firestore structure, referential integrity, or analytics accuracy
+- Use `QA Growth` when testing social media posting, email campaigns, SEO output, voice AI, video, website builder, or forms
+- Use `QA Platform` when auditing integrations, OAuth flows, webhooks, workflow engine, agent swarm, or API contracts
+- **QA agents can be run in parallel** across all 4 domains for a full platform health check
 
 ---
 
