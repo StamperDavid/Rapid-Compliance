@@ -525,7 +525,7 @@ export class ContentManager extends BaseManager {
         );
       }
 
-      this.log('INFO', `Processing content request for organization: ${payload.orgId}`);
+      this.log('INFO', `Processing content request for organization: ${DEFAULT_ORG_ID}`);
 
       // Execute full content orchestration
       const contentPackage = await this.orchestrateContentProduction(payload, taskId, startTime);

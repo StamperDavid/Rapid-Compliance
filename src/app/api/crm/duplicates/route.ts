@@ -11,6 +11,7 @@ import {
 } from '@/lib/crm/duplicate-detection';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface RequestPayload {
   entityType: 'lead' | 'contact' | 'company';
@@ -26,11 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as RequestPayload;
-    const organizationId = token.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     const { entityType, record, workspaceId = 'default' } = body;
 

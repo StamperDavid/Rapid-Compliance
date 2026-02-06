@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { calculateLeaderboard } from '@/lib/team/collaboration';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Valid period type with type guard
 type LeaderboardPeriod = 'week' | 'month' | 'quarter' | 'year';
@@ -24,11 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = token.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';

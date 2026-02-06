@@ -9,6 +9,7 @@ import { getActivities, createActivity } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import type { RelatedEntityType, ActivityType, ActivityDirection, CreateActivityInput } from '@/types/activity';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /** Request body interface for creating an activity */
 interface CreateActivityRequestBody extends CreateActivityInput {
@@ -32,11 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = token.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
@@ -115,11 +112,7 @@ export async function POST(request: NextRequest) {
     }
 
     const rawBody: unknown = await request.json();
-    const organizationId = token.organizationId;
-
-    if (!organizationId) {
-      return NextResponse.json({ success: false, error: 'Organization ID required' }, { status: 400 });
-    }
+    const organizationId = DEFAULT_ORG_ID;
 
     if (!isValidCreateActivityBody(rawBody)) {
       return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
