@@ -1,6 +1,5 @@
 /**
  * Subdomain Lookup API
- * Maps subdomain to organizationId for routing
  * Used by middleware for fast subdomain resolution
  */
 
@@ -14,7 +13,7 @@ interface SubdomainData {
 
 /**
  * GET /api/website/subdomain/[subdomain]
- * Look up organizationId by subdomain
+ * Look up subdomain information
  * NOTE: This is called by middleware, should be FAST
  */
 export async function GET(

@@ -173,7 +173,6 @@ function transformFirestoreUser(docId: string, data: FirestoreUserData): UserDat
  * Uses Admin SDK to bypass client-side Firestore rules
  *
  * Query params:
- * - organizationId: filter by org (optional)
  * - limit: page size (default 50, max 100)
  * - startAfter: cursor for pagination (timestamp)
  */
@@ -198,13 +197,11 @@ export async function GET(request: NextRequest) {
     
     // Parse query params for filtering and pagination
     const { searchParams } = new URL(request.url);
-    // PENTHOUSE: organizationId param no longer used (penthouse)
     const limitParam = searchParams.get('limit');
     const pageSize = Math.min(parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50'), 100);
     const startAfter = searchParams.get('startAfter'); // ISO timestamp
-    
+
     // Build query using Admin DAL
-    // PENTHOUSE: organizationId filter removed (penthouse)
     const usersSnapshot = await adminDal.safeQuery('USERS', (ref) => {
       let query = ref.orderBy('createdAt', 'desc');
 

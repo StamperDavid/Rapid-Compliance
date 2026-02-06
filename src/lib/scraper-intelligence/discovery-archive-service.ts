@@ -114,13 +114,12 @@ export function calculateExpirationDate(): Date {
  * @example
  * ```typescript
  * const { scrape, isNew } = await saveToDiscoveryArchive({
- *   organizationId: 'org_123',
  *   url: 'https://example.com',
  *   rawHtml: '<html>...</html>',
  *   cleanedContent: 'Cleaned text',
  *   metadata: { title: 'Example' }
  * });
- * 
+ *
  * if (isNew) {
  *   console.log('New discovery created');
  * } else {
@@ -144,7 +143,6 @@ export async function saveToDiscoveryArchive(params: {
     const contentHash = calculateContentHash(rawHtml);
 
     // Check if this exact content already exists (30-day cache)
-    // PENTHOUSE: organizationId filter removed
     const existing = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('contentHash', '==', contentHash)
@@ -263,23 +261,21 @@ export async function flagArchiveEntryForDeletion(scrapeId: string): Promise<voi
 
 /**
  * Delete flagged entries immediately
- * 
+ *
  * Called by cleanup job to remove entries flagged for deletion.
  * Processes up to 500 entries per batch (Firestore limit).
- * 
- * @param organizationId - Organization ID to filter entries
+ *
  * @returns Number of entries deleted
  * @throws Error if Firestore operation fails
  * 
  * @example
  * ```typescript
- * const deleted = await deleteFlaggedArchiveEntries('org_123');
+ * const deleted = await deleteFlaggedArchiveEntries();
  * console.log(`Deleted ${deleted} flagged entries`);
  * ```
  */
 export async function deleteFlaggedArchiveEntries(organizationId: string): Promise<number> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const flagged = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('flaggedForDeletion', '==', true)
@@ -317,11 +313,10 @@ export async function deleteFlaggedArchiveEntries(organizationId: string): Promi
 
 /**
  * Delete expired entries (past expiresAt date)
- * 
+ *
  * Fallback for when Firestore TTL is not available.
  * Should be called by Cloud Function on schedule (daily).
- * 
- * @param organizationId - Organization ID to filter entries
+ *
  * @returns Number of entries deleted
  * @throws Error if Firestore operation fails
  */
@@ -329,7 +324,6 @@ export async function deleteExpiredArchiveEntries(organizationId: string): Promi
   try {
     const now = new Date();
 
-    // PENTHOUSE: organizationId filter removed
     const expired = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('expiresAt', '<=', now)
@@ -403,8 +397,7 @@ export async function getFromDiscoveryArchive(scrapeId: string): Promise<Tempora
 
 /**
  * Get discovery archive entry by content hash
- * 
- * @param organizationId - Organization ID
+ *
  * @param contentHash - SHA-256 content hash
  * @returns Entry object or null if not found
  * @throws Error if Firestore operation fails
@@ -414,7 +407,6 @@ export async function getFromDiscoveryArchiveByHash(
   contentHash: string
 ): Promise<TemporaryScrape | null> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('contentHash', '==', contentHash)
@@ -447,10 +439,9 @@ export async function getFromDiscoveryArchiveByHash(
 
 /**
  * Get discovery archive entries for a URL (for training UI)
- * 
+ *
  * Returns most recent entries for a URL, ordered by creation date.
- * 
- * @param organizationId - Organization ID
+ *
  * @param url - URL to search for
  * @returns Array of entries (up to 10 most recent)
  * @throws Error if Firestore operation fails
@@ -460,7 +451,6 @@ export async function getFromDiscoveryArchiveByUrl(
   url: string
 ): Promise<TemporaryScrape[]> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .where('url', '==', url)
@@ -495,16 +485,15 @@ export async function getFromDiscoveryArchiveByUrl(
 
 /**
  * Calculate storage cost estimate for an organization
- * 
+ *
  * Provides current storage usage and projected savings with 30-day TTL architecture.
- * 
- * @param organizationId - Organization ID
+ *
  * @returns Cost analysis object
  * @throws Error if Firestore operation fails
  * 
  * @example
  * ```typescript
- * const cost = await calculateStorageCost('org_123');
+ * const cost = await calculateStorageCost();
  * console.log(`Current storage: ${cost.totalBytes / 1024 / 1024} MB`);
  * console.log(`Monthly cost: $${cost.estimatedMonthlyCostUSD}`);
  * console.log(`Savings with TTL: $${cost.projectedSavingsWithTTL}`);
@@ -517,7 +506,6 @@ export async function calculateStorageCost(organizationId: string): Promise<{
   projectedSavingsWithTTL: number;
 }> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const scrapes = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .get();
@@ -574,8 +562,7 @@ function toDate(timestamp: Date | FirestoreTimestamp | string | number): Date {
 
 /**
  * Get storage statistics for monitoring
- * 
- * @param organizationId - Organization ID
+ *
  * @returns Statistics object
  */
 export async function getStorageStats(organizationId: string): Promise<{
@@ -587,7 +574,6 @@ export async function getStorageStats(organizationId: string): Promise<{
   newestScrape: Date | null;
 }> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const scrapes = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
       .get();

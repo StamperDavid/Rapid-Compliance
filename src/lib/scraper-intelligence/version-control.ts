@@ -225,11 +225,10 @@ function generateDiffSummary(changes: DiffEntry[]): string {
 
 /**
  * Compare two versions by their IDs
- * 
+ *
  * @param trainingDataId - Training data ID
  * @param fromVersion - Starting version
  * @param toVersion - Ending version
- * @param organizationId - Organization ID
  * @returns Diff between versions
  */
 export async function compareVersions(
@@ -240,7 +239,6 @@ export async function compareVersions(
 ): Promise<VersionDiff> {
   try {
     // Get history for both versions
-    // PENTHOUSE: organizationId filter removed
     const historyDocs = await db
       .collection(TRAINING_HISTORY_COLLECTION)
       .where('trainingDataId', '==', trainingDataId)
@@ -327,7 +325,6 @@ export async function createBranch(params: {
     }
 
     // Check if branch already exists
-    // PENTHOUSE: organizationId filter removed
     const existing = await db
       .collection(TRAINING_BRANCHES_COLLECTION)
       .where('name', '==', name)
@@ -343,7 +340,6 @@ export async function createBranch(params: {
     }
 
     // Snapshot current training data
-    // PENTHOUSE: organizationId filter removed
     const trainingDocs = await db
       .collection(TRAINING_DATA_COLLECTION)
       .get();
@@ -410,12 +406,11 @@ export async function createBranch(params: {
 
 /**
  * Merge a branch back to main
- * 
+ *
  * Applies changes from branch to main training data.
  * Detects and reports conflicts.
- * 
+ *
  * @param branchId - Branch to merge
- * @param organizationId - Organization ID
  * @param userId - User performing merge
  * @returns Merge result with conflicts
  */
@@ -450,7 +445,6 @@ export async function mergeBranch(
     }
 
     // Get current training data
-    // PENTHOUSE: organizationId filter removed
     const currentDocs = await db
       .collection(TRAINING_DATA_COLLECTION)
       .get();
@@ -565,8 +559,7 @@ export async function mergeBranch(
 
 /**
  * List all branches for an organization
- * 
- * @param organizationId - Organization ID
+ *
  * @param activeOnly - Only return active branches
  * @returns Array of branches
  */
@@ -575,7 +568,6 @@ export async function listBranches(
   activeOnly: boolean = true
 ): Promise<Branch[]> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const collectionRef = db.collection(TRAINING_BRANCHES_COLLECTION);
     const baseQuery = activeOnly
       ? collectionRef.where('active', '==', true)
@@ -610,10 +602,9 @@ export async function listBranches(
 
 /**
  * Generate changelog from version history
- * 
+ *
  * Creates human-readable changelog of all changes.
- * 
- * @param organizationId - Organization ID
+ *
  * @param sinceDate - Only include changes after this date
  * @returns Generated changelog
  */
@@ -622,7 +613,6 @@ export async function generateChangelog(
   sinceDate?: Date
 ): Promise<Changelog> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const collectionRef = db.collection(TRAINING_HISTORY_COLLECTION);
     const baseQuery = sinceDate
       ? collectionRef.where('changedAt', '>=', sinceDate)
@@ -792,7 +782,6 @@ export async function recoverFromHistory(
 ): Promise<TrainingData | null> {
   try {
     // Get all history entries for this training data
-    // PENTHOUSE: organizationId filter removed
     const historyDocs = await db
       .collection(TRAINING_HISTORY_COLLECTION)
       .where('trainingDataId', '==', trainingDataId)

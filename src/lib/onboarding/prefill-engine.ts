@@ -42,15 +42,14 @@ const COMPANY_SIZE_MAPPINGS: Record<string, string> = {
 
 /**
  * Prefill onboarding form data from website URL
- * 
+ *
  * This is the main entry point for the Onboarding Prefill Engine.
  * It uses the Discovery Engine to scrape and analyze the website,
  * then maps the discovered data to onboarding form fields.
- * 
+ *
  * @param websiteUrl - User's website URL
- * @param organizationId - Organization ID for multi-tenancy
  * @returns Prefilled form data with confidence scores
- * 
+ *
  * @example
  * ```typescript
  * const result = await prefillOnboardingData('https://stripe.com', 'org_123');

@@ -73,22 +73,20 @@ export interface ActionRecommendations {
 
 /**
  * Generate next best action recommendations for a deal
- * 
+ *
  * This is the main entry point for getting AI-powered recommendations.
- * 
- * @param organizationId - Organization ID
+ *
  * @param workspaceId - Workspace ID
  * @param dealId - Deal ID
  * @returns Prioritized action recommendations
- * 
+ *
  * @example
  * ```typescript
  * const recommendations = await generateNextBestActions(
- *   'org_123',
  *   'default',
  *   'deal_456'
  * );
- * 
+ *
  * console.log(`Urgency: ${recommendations.urgency}`);
  * console.log(`Top action: ${recommendations.actions[0].title}`);
  * ```

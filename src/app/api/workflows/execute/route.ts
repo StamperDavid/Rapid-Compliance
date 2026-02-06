@@ -9,7 +9,6 @@
  * ```json
  * {
  *   "workflowId": "workflow_123",
- *   "organizationId": "org_123",
  *   "workspaceId": "workspace_123",
  *   "dealId": "deal_456",
  *   "triggerData": {},

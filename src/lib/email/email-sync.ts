@@ -231,13 +231,12 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
     } else if (config.provider === 'outlook') {
       // Outlook uses Microsoft Graph webhooks (subscriptions)
       // This would be implemented in outlook-sync-service.ts
-      logger.info('Outlook webhooks would be set up here', { 
-        route: '/email/sync/start',
-        organizationId: config.organizationId 
+      logger.info('Outlook webhooks would be set up here', {
+        route: '/email/sync/start'
       });
-      
+
       // TODO: Implement Outlook webhook subscription
-      // await setupOutlookWebhook(config.accessToken, config.organizationId);
+      // await setupOutlookWebhook(config.accessToken);
     }
 
   } catch (error) {

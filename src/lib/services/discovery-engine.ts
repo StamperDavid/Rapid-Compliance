@@ -205,12 +205,11 @@ export interface RawScrapedData {
 
 /**
  * Discover company data from domain
- * 
+ *
  * This is the main entry point for company discovery.
  * Checks 30-day cache first, then scrapes if needed.
- * 
+ *
  * @param domain - Company domain (e.g., 'example.com')
- * @param organizationId - Organization requesting the discovery
  * @returns Complete discovery result with company data
  * 
  * @example
@@ -966,15 +965,14 @@ export async function discoverCompaniesBatch(
 
 /**
  * Discover person data from email address
- * 
+ *
  * This function enriches a person's email with professional data by:
  * 1. Checking 30-day cache first
  * 2. Extracting domain and searching company website
  * 3. Finding LinkedIn profile via Google search
  * 4. Synthesizing data with LLM
- * 
+ *
  * @param email - Person's email address
- * @param organizationId - Organization requesting the discovery
  * @returns Complete person discovery result
  * 
  * @example

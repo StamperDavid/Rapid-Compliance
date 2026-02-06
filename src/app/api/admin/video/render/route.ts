@@ -71,9 +71,6 @@ export async function POST(request: NextRequest) {
       metadata,
     } = validation.data;
 
-    // PENTHOUSE: Penthouse model - all admins have access to the organization
-    // Cross-org access checks removed
-
     logger.info('[AdminVideoRender] Starting video render job', {
       organizationId: DEFAULT_ORG_ID,
       storyboardId,
@@ -169,9 +166,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { jobId: validJobId } = validation.data;
-
-    // PENTHOUSE: Penthouse model - all admins have access to the organization
-    // Cross-org access checks removed
 
     // Get job status from Firestore
     const videoJobService = createVideoJobService();

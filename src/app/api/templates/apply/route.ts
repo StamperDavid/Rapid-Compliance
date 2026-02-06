@@ -17,7 +17,6 @@ export const dynamic = 'force-dynamic';
  *
  * Body:
  * {
- *   organizationId: string;
  *   workspaceId?: string;
  *   templateId: string;
  *   merge?: boolean;

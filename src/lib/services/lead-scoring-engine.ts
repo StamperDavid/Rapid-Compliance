@@ -75,7 +75,6 @@ const PRIORITY_THRESHOLDS_MAP = {
  * ```typescript
  * const score = await calculateLeadScore({
  *   leadId: 'lead_123',
- *   organizationId: 'org_456',
  * });
  * console.log(`Score: ${score.totalScore}/100 (${score.grade})`);
  * console.log(`Priority: ${score.priority}`);
@@ -864,7 +863,6 @@ async function calculateEngagement(
     }
 
     // Get sequence enrollments for this lead
-    // PENTHOUSE: organizationId filter removed
     const enrollments = await adminDal.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
       ref
         .where('leadId', '==', leadId)

@@ -82,7 +82,6 @@ function toDate(value: Date | FirestoreTimestamp | string | number): Date {
 /**
  * Get comprehensive dashboard analytics
  *
- * @param organizationId - Organization ID
  * @param period - Time period for analytics
  * @param startDate - Custom start date (for custom period)
  * @param endDate - Custom end date (for custom period)

@@ -27,7 +27,6 @@ interface TTSPostBody {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const engine = searchParams.get('engine') as TTSEngineType | null;
     const action = searchParams.get('action');
 
@@ -70,7 +69,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as TTSPostBody;
     const { text, engine, voiceId, settings, action, apiKey, config, userId } = body;
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
 
     // Validate API key
     if (action === 'validate-key') {

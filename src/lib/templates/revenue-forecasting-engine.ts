@@ -120,13 +120,12 @@ export interface ForecastTrend {
  * @example
  * ```typescript
  * const forecast = await generateRevenueForecast({
- *   organizationId: 'org_123',
  *   workspaceId: 'default',
  *   period: '90-day',
  *   templateId: 'saas',
  *   quota: 500000
  * });
- * 
+ *
  * console.log(`Forecast: $${forecast.forecast.toLocaleString()}`);
  * console.log(`Quota Attainment: ${forecast.quotaAttainment}%`);
  * ```

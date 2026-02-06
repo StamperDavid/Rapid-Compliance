@@ -1,7 +1,6 @@
 /**
  * Custom Domains Management
  * Add, verify, and manage custom domains for the website
- * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { userId } = stateValidation.data;
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
 
     // Exchange code for tokens
     const tokens = await getTokensFromCode(code);

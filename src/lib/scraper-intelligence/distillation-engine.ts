@@ -261,14 +261,13 @@ export function removeFluffPatterns(
  * @example
  * ```typescript
  * const result = await distillScrape({
- *   organizationId: 'org_123',
  *   url: 'https://example.com',
  *   rawHtml: '<html>...</html>',
  *   cleanedContent: 'About us...',
  *   research: hvacResearch,
  *   platform: 'website'
  * });
- * 
+ *
  * // result.signals = extracted high-value signals (2KB)
  * // result.tempScrapeId = reference to temporary scrape (500KB, auto-deleted)
  * ```

@@ -73,7 +73,7 @@ function checkRateLimit(key: string, limit: number, windowMs: number): {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID (from session/auth) - PENTHOUSE: always use DEFAULT_ORG_ID
+    // Get user ID (from session/auth)
     const userIdHeader = request.headers.get('x-user-id');
     const userId = (userIdHeader && userIdHeader !== '') ? userIdHeader : 'default_user';
 
@@ -156,7 +156,7 @@ export async function PUT(request: NextRequest) {
 
     const body = rawBody as UpdatePreferencesRequestBody;
 
-    // Get user ID - PENTHOUSE: always use DEFAULT_ORG_ID
+    // Get user ID
     const userIdHeader = request.headers.get('x-user-id');
     const bodyUserId = typeof body.userId === 'string' ? body.userId : undefined;
     const userId: string = userIdHeader ?? bodyUserId ?? 'default_user';

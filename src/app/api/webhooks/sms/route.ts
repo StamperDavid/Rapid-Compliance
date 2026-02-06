@@ -145,7 +145,6 @@ async function updateSMSRecord(
   }
 ): Promise<void> {
   try {
-    // PENTHOUSE: query directly under DEFAULT_ORG_ID
     const smsMessages = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
       []
@@ -201,7 +200,6 @@ async function handleSMSFailure(
       errorMessage
     });
 
-    // PENTHOUSE: query directly under DEFAULT_ORG_ID
     const smsMessages = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
       []

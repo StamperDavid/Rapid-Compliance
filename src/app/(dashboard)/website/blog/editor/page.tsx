@@ -1,7 +1,6 @@
 /**
  * Blog Post Editor
  * Create and edit blog posts using the visual editor
- * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

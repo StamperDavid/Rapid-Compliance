@@ -143,7 +143,6 @@ export class DiscountToolHandler {
   /**
    * Create a DiscountToolHandler with security permissions
    *
-   * @param organizationId - The organization ID
    * @param agentId - The agent ID
    * @param conversationId - The conversation ID
    * @param permissions - Security permissions (from AgentPersona.can_negotiate)

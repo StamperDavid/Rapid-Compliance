@@ -204,7 +204,6 @@ export class FeatureToggleService {
   /**
    * Toggle a single feature's visibility
    *
-   * @param organizationId - The org ID
    * @param featureId - The feature to toggle
    * @param status - 'hidden' to hide, 'unconfigured' or 'configured' to show
    * @param userId - Who made the change

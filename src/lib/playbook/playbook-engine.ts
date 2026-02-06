@@ -780,7 +780,6 @@ function getConversationAnalyses(
 
   // This would query:
   // 1. Conversations collection filtered by:
-  //    - organizationId
   //    - conversationIds (if specified)
   //    - conversationType (if specified)
   //    - dateRange (if specified)

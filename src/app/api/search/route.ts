@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q');
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const workspaceId = searchParams.get('workspaceId') ?? 'default';
     const limitParam = searchParams.get('limit');
     const limit = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
@@ -52,7 +51,6 @@ export async function GET(request: NextRequest) {
 
     const { workspaceId: validatedWorkspaceId, q: validatedQuery, limit: validatedLimit } = validation.data;
 
-    // PENTHOUSE: No org access check needed - all authenticated users access the same org
     const results = await searchWorkspace(DEFAULT_ORG_ID, validatedWorkspaceId, validatedQuery, { limit: validatedLimit });
 
     return NextResponse.json({

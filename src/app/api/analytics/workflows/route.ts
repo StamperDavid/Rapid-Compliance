@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
     if (rateLimitResponse) {return rateLimitResponse;}
 
     const { searchParams } = new URL(request.url);
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const period = (searchParams.get('period') !== '' && searchParams.get('period') != null)
       ? searchParams.get('period')
       : '30d';

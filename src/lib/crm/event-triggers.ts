@@ -105,7 +105,7 @@ function getApplicableWorkflows(_event: CRMEvent): Promise<WorkflowTriggerRule[]
 
   // Example query structure:
   // const rules = await FirestoreService.getAll<WorkflowTriggerRule>(
-  //   `organizations/${_event.organizationId}/workspaces/${_event.workspaceId}/workflowTriggers`
+  //   `workspaces/${_event.workspaceId}/workflowTriggers`
   // );
 
   // return rules.data.filter(rule => {

@@ -104,12 +104,11 @@ export interface TemplateUsageStats {
  * @example
  * ```typescript
  * const result = await applyTemplate({
- *   organizationId: 'org_123',
  *   templateId: 'saas',
  *   merge: false,
  *   applyWorkflows: true
  * });
- * 
+ *
  * if (result.success) {
  *   console.log(`Applied ${result.templateName} template`);
  * }

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { StripeIntegration as StripeType } from '@/types/integrations';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface StripeIntegrationProps {
   integration: StripeType | null;
@@ -39,14 +40,12 @@ export default function StripeIntegration({
     }
     setIsConnecting(true);
     try {
-      const orgId = window.location.pathname.split('/')[2] || 'current-org';
-
       // Save Stripe API key to backend
       const response = await fetch('/api/settings/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           service: 'stripe',
           apiKey: apiKey,
         }),

@@ -93,7 +93,6 @@ export default function LoginPage() {
       // Set redirecting state for clean transition
       setRedirecting(true);
 
-      // PENTHOUSE: Redirect to flat dashboard route
       router.push('/dashboard');
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));

@@ -436,7 +436,7 @@ interface CRMProductRecord {
 async function scanCRMForProducts(): Promise<KnowledgeAnalysisResult['crmProducts']> {
   const workspaceId = 'default';
   // Query CRM products:
-  // 1. Query built-in CRM using organizationId/workspaceId
+  // 1. Query built-in CRM using workspaceId
   // 2. Look for entities in the "products" schema (from STANDARD_SCHEMAS)
   // 3. Extract: name, description, price, sku, category, etc.
   // 4. Return structured product data
@@ -490,7 +490,7 @@ interface CRMServiceRecord {
 async function scanCRMForServices(): Promise<KnowledgeAnalysisResult['crmServices']> {
   const workspaceId = 'default';
   // Query CRM services:
-  // 1. Query built-in CRM using organizationId/workspaceId
+  // 1. Query built-in CRM using workspaceId
   // 2. Look for entities in a "services" schema or custom schema
   // 3. Extract: name, description, pricing, duration, etc.
   // 4. Return structured service data

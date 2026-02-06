@@ -1,7 +1,6 @@
 /**
  * Template Browser
  * Browse and apply page templates
- * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

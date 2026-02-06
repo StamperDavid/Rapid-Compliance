@@ -6,18 +6,18 @@
  * ```typescript
  * import { VoiceProviderFactory, voiceAgentHandler, aiConversationService } from '@/lib/voice';
  *
- * // Get the best available provider for an organization
- * const provider = await VoiceProviderFactory.getProvider(orgId);
+ * // Get the best available provider
+ * const provider = await VoiceProviderFactory.getProvider();
  *
  * // Initiate a call
  * const call = await provider.initiateCall('+15551234567', 'agent-123');
  *
  * // Start AI conversation
- * await voiceAgentHandler.initialize({ mode: 'prospector', organizationId: orgId, agentId: 'ai-1' });
+ * await voiceAgentHandler.initialize({ mode: 'prospector', agentId: 'ai-1' });
  * const response = await voiceAgentHandler.startConversation(call);
  *
  * // Get cost comparison
- * const costs = await VoiceProviderFactory.getCostComparison(orgId);
+ * const costs = await VoiceProviderFactory.getCostComparison();
  * ```
  */
 

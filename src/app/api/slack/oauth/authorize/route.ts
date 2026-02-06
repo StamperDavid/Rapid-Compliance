@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
     
     // Get parameters
     const searchParams = request.nextUrl.searchParams;
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const userId = searchParams.get('userId');
     const redirectUrl = searchParams.get('redirectUrl');
 

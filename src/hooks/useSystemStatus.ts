@@ -171,7 +171,6 @@ export function useSystemStatus(
         throw new Error('Failed to retrieve authentication token');
       }
 
-      // PENTHOUSE: Always use DEFAULT_ORG_ID
       const response = await fetch('/api/system/status', {
         method: 'GET',
         headers: {

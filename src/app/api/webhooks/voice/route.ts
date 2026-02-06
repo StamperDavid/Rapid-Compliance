@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'CallSid required' }, { status: 400 });
     }
 
-    // PENTHOUSE: query directly under DEFAULT_ORG_ID
     const calls = await FirestoreService.getAll(
       `organizations/${DEFAULT_ORG_ID}/workspaces/default/calls`,
       []

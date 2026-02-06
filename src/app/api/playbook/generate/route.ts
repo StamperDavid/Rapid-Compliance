@@ -166,7 +166,6 @@ function isNextResponse(value: GeneratePlaybookRequest | NextResponse): value is
  * 
  * REQUEST BODY:
  * {
- *   organizationId: string,
  *   workspaceId?: string,
  *   name: string,
  *   description?: string,
@@ -367,7 +366,6 @@ export function GET() {
     },
     examples: {
       request: {
-        organizationId: 'org_123',
         name: 'Discovery Call Playbook',
         category: 'discovery',
         conversationType: 'discovery_call',

@@ -18,14 +18,12 @@
  * // Analyze existing conversation
  * const analysis = await analyzeConversation({
  *   conversationId: 'conv-123',
- *   organizationId: 'org-456',
  *   includeCoaching: true,
  *   includeFollowUps: true,
  * });
- * 
+ *
  * // Analyze raw transcript
  * const analysis = await analyzeTranscript({
- *   organizationId: 'org-456',
  *   transcript: 'conversation text...',
  *   conversationType: 'discovery_call',
  *   participants: [...],
