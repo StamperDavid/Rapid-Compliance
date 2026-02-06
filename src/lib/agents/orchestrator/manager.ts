@@ -657,7 +657,7 @@ export class MasterOrchestrator extends BaseManager {
 
     try {
       const payload = message.payload as Record<string, unknown>;
-      const orgId = payload.orgId as string;
+      const orgId = DEFAULT_ORG_ID;
 
       if (!orgId) {
         return this.createReport(

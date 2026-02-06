@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
     ];
 
     // Initialize OpenRouter provider
-    const orgId = organizationId ?? (isAdminContext ? 'admin' : DEFAULT_ORG_ID);
+    const orgId = DEFAULT_ORG_ID;
     const provider = new OpenRouterProvider(orgId);
 
     const startTime = Date.now();

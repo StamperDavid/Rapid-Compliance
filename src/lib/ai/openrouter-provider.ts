@@ -6,6 +6,7 @@
 import type { ModelName, ChatResponse } from '@/types/ai-models';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface OpenRouterConfig {
   apiKey?: string;
@@ -128,10 +129,9 @@ export class OpenRouterProvider {
       // Extract config values - empty strings are invalid (Explicit Ternary for STRINGS)
       const apiKeyVal = configOrOrgId.apiKey;
       const baseURLVal = configOrOrgId.baseURL;
-      const orgIdVal = configOrOrgId.organizationId;
       this.apiKey = (apiKeyVal !== '' && apiKeyVal != null) ? apiKeyVal : null;
       this.baseURL = (baseURLVal !== '' && baseURLVal != null) ? baseURLVal : 'https://openrouter.ai/api/v1';
-      this.organizationId = (orgIdVal !== '' && orgIdVal != null) ? orgIdVal : null;
+      this.organizationId = DEFAULT_ORG_ID;
     }
   }
 
