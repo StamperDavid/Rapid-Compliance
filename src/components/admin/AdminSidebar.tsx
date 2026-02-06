@@ -6,12 +6,18 @@
  *
  * Full command-center sidebar exposing all 51 AI agents, 130+ routes,
  * and 215+ API endpoints across CRM, Sales, Marketing, AI, and more.
- * Penthouse: all links use static routes with rapid-compliance-root identity.
+ * Role-based filtering via unified-rbac NavigationSection/NavigationItem.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import {
+  type NavigationSection,
+  type NavigationItem,
+  filterNavigationByRole,
+} from '@/types/unified-rbac';
 import {
   LayoutDashboard,
   Users,
@@ -72,53 +78,44 @@ import {
   BookOpenText,
   Cog,
   Monitor,
-  type LucideIcon,
 } from 'lucide-react';
 
 // ============================================================================
-// NAVIGATION CONFIG
+// NAVIGATION CONFIG — role-gated via unified-rbac types
 // ============================================================================
 
-interface AdminNavItem {
-  id: string;
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  iconColor: string;
-}
-
-interface AdminNavSection {
-  id: string;
-  label: string;
-  items: AdminNavItem[];
-}
-
-const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
+const NAV_SECTIONS: NavigationSection[] = [
   // ── Command Center ──────────────────────────────────────────────────
   {
-    id: 'command-center',
+    id: 'command_center',
     label: 'Command Center',
+    icon: LayoutDashboard,
+    allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
-      { id: 'workforce-hq', label: 'Workforce HQ', href: '/workforce', icon: Monitor, iconColor: 'var(--color-secondary)' },
+      { id: 'workforce-hq', label: 'Workforce HQ', href: '/workforce', icon: Monitor, iconColor: 'var(--color-secondary)', requiredPermission: 'canAccessPlatformAdmin' },
     ],
   },
   // ── CRM ─────────────────────────────────────────────────────────────
   {
     id: 'crm',
     label: 'CRM',
+    icon: Users,
+    allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
-      { id: 'leads', label: 'Leads', href: '/leads', icon: Users, iconColor: 'var(--color-primary)' },
-      { id: 'deals', label: 'Deals / Pipeline', href: '/deals', icon: Handshake, iconColor: 'var(--color-secondary)' },
-      { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Contact, iconColor: 'var(--color-cyan)' },
-      { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)' },
-      { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)' },
+      { id: 'leads', label: 'Leads', href: '/leads', icon: Users, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads' },
+      { id: 'deals', label: 'Deals / Pipeline', href: '/deals', icon: Handshake, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewDeals' },
+      { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Contact, iconColor: 'var(--color-cyan)', requiredPermission: 'canCreateRecords' },
+      { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords' },
+      { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)', requiredPermission: 'canViewAllRecords' },
     ],
   },
   // ── Lead Gen ────────────────────────────────────────────────────────
   {
-    id: 'lead-gen',
+    id: 'lead_gen',
     label: 'Lead Gen',
+    icon: Target,
+    allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-primary)' },
       { id: 'lead-research', label: 'Lead Research', href: '/leads/research', icon: Microscope, iconColor: 'var(--color-secondary)' },
@@ -130,106 +127,124 @@ const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
   {
     id: 'outbound',
     label: 'Outbound',
+    icon: Send,
+    allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'outbound-hub', label: 'Outbound', href: '/outbound', icon: Send, iconColor: 'var(--color-primary)' },
-      { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: 'var(--color-secondary)' },
-      { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: 'var(--color-cyan)' },
-      { id: 'email-writer', label: 'Email Writer', href: '/email-writer', icon: PenTool, iconColor: 'var(--color-success)' },
-      { id: 'nurture', label: 'Nurture', href: '/nurture', icon: Sprout, iconColor: 'var(--color-warning)' },
-      { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)' },
+      { id: 'outbound-hub', label: 'Outbound', href: '/outbound', icon: Send, iconColor: 'var(--color-primary)', requiredPermission: 'canManageLeads' },
+      { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageLeads' },
+      { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageEmailCampaigns' },
+      { id: 'email-writer', label: 'Email Writer', href: '/email-writer', icon: PenTool, iconColor: 'var(--color-success)', requiredPermission: 'canManageEmailCampaigns' },
+      { id: 'nurture', label: 'Nurture', href: '/nurture', icon: Sprout, iconColor: 'var(--color-warning)', requiredPermission: 'canManageLeads' },
+      { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents' },
     ],
   },
   // ── Content Factory ─────────────────────────────────────────────────
   {
-    id: 'content-factory',
+    id: 'content_factory',
     label: 'Content Factory',
+    icon: Video,
+    allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)' },
-      { id: 'social-media', label: 'Social Media', href: '/social/campaigns', icon: Share2, iconColor: 'var(--color-secondary)' },
+      { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
+      { id: 'social-media', label: 'Social Media', href: '/social/campaigns', icon: Share2, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageSocialMedia' },
       { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: 'var(--color-cyan)' },
       { id: 'battlecards', label: 'Battlecards', href: '/battlecards', icon: Swords, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── AI Workforce ────────────────────────────────────────────────────
   {
-    id: 'ai-workforce',
+    id: 'ai_workforce',
     label: 'AI Workforce',
+    icon: Bot,
+    allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'agent-registry', label: 'Agent Registry', href: '/ai-agents', icon: Bot, iconColor: 'var(--color-cyan)' },
-      { id: 'training-center', label: 'Training Center', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)' },
-      { id: 'agent-persona', label: 'Agent Persona', href: '/settings/ai-agents/persona', icon: UserCog, iconColor: 'var(--color-secondary)' },
-      { id: 'voice-ai', label: 'Voice AI Lab', href: '/voice/training', icon: Phone, iconColor: 'var(--color-warning)' },
-      { id: 'social-ai', label: 'Social AI Lab', href: '/social/training', icon: Megaphone, iconColor: 'var(--color-accent)' },
-      { id: 'seo-ai', label: 'SEO AI Lab', href: '/seo/training', icon: SearchCode, iconColor: 'var(--color-teal)' },
-      { id: 'datasets', label: 'Datasets', href: '/ai/datasets', icon: Database, iconColor: 'var(--color-primary)' },
-      { id: 'fine-tuning', label: 'Fine-Tuning', href: '/ai/fine-tuning', icon: Sliders, iconColor: 'var(--color-orange)' },
+      { id: 'agent-registry', label: 'Agent Registry', href: '/ai-agents', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
+      { id: 'training-center', label: 'Training Center', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)', requiredPermission: 'canTrainAIAgents' },
+      { id: 'agent-persona', label: 'Agent Persona', href: '/settings/ai-agents/persona', icon: UserCog, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageAIAgents' },
+      { id: 'voice-ai', label: 'Voice AI Lab', href: '/voice/training', icon: Phone, iconColor: 'var(--color-warning)', requiredPermission: 'canTrainAIAgents' },
+      { id: 'social-ai', label: 'Social AI Lab', href: '/social/training', icon: Megaphone, iconColor: 'var(--color-accent)', requiredPermission: 'canTrainAIAgents' },
+      { id: 'seo-ai', label: 'SEO AI Lab', href: '/seo/training', icon: SearchCode, iconColor: 'var(--color-teal)', requiredPermission: 'canTrainAIAgents' },
+      { id: 'datasets', label: 'Datasets', href: '/ai/datasets', icon: Database, iconColor: 'var(--color-primary)', requiredPermission: 'canManageAIAgents' },
+      { id: 'fine-tuning', label: 'Fine-Tuning', href: '/ai/fine-tuning', icon: Sliders, iconColor: 'var(--color-orange)', requiredPermission: 'canManageAIAgents' },
     ],
   },
   // ── Automation ──────────────────────────────────────────────────────
   {
     id: 'automation',
     label: 'Automation',
+    icon: Workflow,
+    allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-primary)' },
+      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-primary)', requiredPermission: 'canCreateWorkflows' },
       { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)' },
-      { id: 'lead-routing', label: 'Lead Routing', href: '/settings/lead-routing', icon: Route, iconColor: 'var(--color-secondary)' },
+      { id: 'lead-routing', label: 'Lead Routing', href: '/settings/lead-routing', icon: Route, iconColor: 'var(--color-secondary)', requiredPermission: 'canAssignRecords' },
     ],
   },
   // ── E-Commerce ──────────────────────────────────────────────────────
   {
     id: 'ecommerce',
     label: 'E-Commerce',
+    icon: ShoppingCart,
+    allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
-      { id: 'products', label: 'Products', href: '/products', icon: Package, iconColor: 'var(--color-primary)' },
-      { id: 'orders', label: 'Orders', href: '/analytics/ecommerce', icon: ShoppingCart, iconColor: 'var(--color-secondary)' },
-      { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)' },
+      { id: 'products', label: 'Products', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
+      { id: 'orders', label: 'Orders', href: '/analytics/ecommerce', icon: ShoppingCart, iconColor: 'var(--color-secondary)', requiredPermission: 'canProcessOrders' },
+      { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEcommerce' },
     ],
   },
   // ── Compliance ──────────────────────────────────────────────────────
   {
-    id: 'compliance',
+    id: 'system',
     label: 'Compliance',
+    icon: ShieldCheck,
+    allowedRoles: ['owner', 'admin'],
     items: [
-      { id: 'compliance-reports', label: 'Compliance Reports', href: '/compliance-reports', icon: ShieldCheck, iconColor: 'var(--color-success)' },
-      { id: 'audit-log', label: 'Audit Log', href: '/website/audit-log', icon: ScrollText, iconColor: 'var(--color-warning)' },
+      { id: 'compliance-reports', label: 'Compliance Reports', href: '/compliance-reports', icon: ShieldCheck, iconColor: 'var(--color-success)', requiredPermission: 'canViewAuditLogs' },
+      { id: 'audit-log', label: 'Audit Log', href: '/website/audit-log', icon: ScrollText, iconColor: 'var(--color-warning)', requiredPermission: 'canViewAuditLogs' },
     ],
   },
   // ── Analytics ───────────────────────────────────────────────────────
   {
     id: 'analytics',
     label: 'Analytics',
+    icon: PieChart,
+    allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
-      { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)' },
-      { id: 'revenue', label: 'Revenue', href: '/analytics/revenue', icon: TrendingUp, iconColor: 'var(--color-success)' },
-      { id: 'pipeline', label: 'Pipeline', href: '/analytics/pipeline', icon: BarChart3, iconColor: 'var(--color-primary)' },
-      { id: 'sales-perf', label: 'Sales Performance', href: '/analytics/sales', icon: Activity, iconColor: 'var(--color-secondary)' },
-      { id: 'sequence-analytics', label: 'Sequences', href: '/sequences/analytics', icon: LineChart, iconColor: 'var(--color-warning)' },
+      { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
+      { id: 'revenue', label: 'Revenue', href: '/analytics/revenue', icon: TrendingUp, iconColor: 'var(--color-success)', requiredPermission: 'canViewReports' },
+      { id: 'pipeline', label: 'Pipeline', href: '/analytics/pipeline', icon: BarChart3, iconColor: 'var(--color-primary)', requiredPermission: 'canViewReports' },
+      { id: 'sales-perf', label: 'Sales Performance', href: '/analytics/sales', icon: Activity, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewReports' },
+      { id: 'sequence-analytics', label: 'Sequences', href: '/sequences/analytics', icon: LineChart, iconColor: 'var(--color-warning)', requiredPermission: 'canViewPlatformAnalytics' },
     ],
   },
   // ── Website ─────────────────────────────────────────────────────────
   {
     id: 'website',
     label: 'Website',
+    icon: Globe,
+    allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'site-editor', label: 'Site Editor', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)' },
-      { id: 'pages', label: 'Pages', href: '/website/pages', icon: FileEdit, iconColor: 'var(--color-secondary)' },
-      { id: 'blog', label: 'Blog', href: '/website/blog', icon: BookOpenText, iconColor: 'var(--color-cyan)' },
-      { id: 'seo', label: 'SEO', href: '/website/seo', icon: Search, iconColor: 'var(--color-success)' },
-      { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: 'var(--color-teal)' },
-      { id: 'site-settings', label: 'Site Settings', href: '/website/settings', icon: Cog, iconColor: 'var(--color-warning)' },
+      { id: 'site-editor', label: 'Site Editor', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite' },
+      { id: 'pages', label: 'Pages', href: '/website/pages', icon: FileEdit, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageWebsite' },
+      { id: 'blog', label: 'Blog', href: '/website/blog', icon: BookOpenText, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageWebsite' },
+      { id: 'seo', label: 'SEO', href: '/website/seo', icon: Search, iconColor: 'var(--color-success)', requiredPermission: 'canManageWebsite' },
+      { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: 'var(--color-teal)', requiredPermission: 'canManageWebsite' },
+      { id: 'site-settings', label: 'Site Settings', href: '/website/settings', icon: Cog, iconColor: 'var(--color-warning)', requiredPermission: 'canManageWebsite' },
     ],
   },
   // ── Settings ────────────────────────────────────────────────────────
   {
     id: 'settings',
     label: 'Settings',
+    icon: Settings,
+    allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'general', label: 'General', href: '/settings', icon: Settings, iconColor: 'var(--color-text-secondary)' },
-      { id: 'users-team', label: 'Users & Team', href: '/settings/users', icon: UsersRound, iconColor: 'var(--color-primary)' },
-      { id: 'integrations', label: 'Integrations', href: '/settings/integrations', icon: Plug, iconColor: 'var(--color-secondary)' },
-      { id: 'api-keys', label: 'API Keys', href: '/settings/api-keys', icon: KeyRound, iconColor: 'var(--color-success)' },
-      { id: 'theme', label: 'Theme & Branding', href: '/settings/theme', icon: Palette, iconColor: 'var(--color-warning)' },
-      { id: 'security', label: 'Security', href: '/settings/security', icon: Lock, iconColor: 'var(--color-error)' },
+      { id: 'general', label: 'General', href: '/settings', icon: Settings, iconColor: 'var(--color-text-secondary)', requiredPermission: 'canAccessSettings' },
+      { id: 'users-team', label: 'Users & Team', href: '/settings/users', icon: UsersRound, iconColor: 'var(--color-primary)', requiredPermission: 'canViewAllUsers' },
+      { id: 'integrations', label: 'Integrations', href: '/settings/integrations', icon: Plug, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageIntegrations' },
+      { id: 'api-keys', label: 'API Keys', href: '/settings/api-keys', icon: KeyRound, iconColor: 'var(--color-success)', requiredPermission: 'canManageAPIKeys' },
+      { id: 'theme', label: 'Theme & Branding', href: '/settings/theme', icon: Palette, iconColor: 'var(--color-warning)', requiredPermission: 'canManageTheme' },
+      { id: 'security', label: 'Security', href: '/settings/security', icon: Lock, iconColor: 'var(--color-error)', requiredPermission: 'canAccessPlatformAdmin' },
     ],
   },
 ];
@@ -243,9 +258,18 @@ const SIDEBAR_COLLAPSED_WIDTH = 64;
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const { user } = useUnifiedAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  // Filter navigation by user role
+  const filteredSections = useMemo(() => {
+    if (!user?.role) {
+      return [];
+    }
+    return filterNavigationByRole(NAV_SECTIONS, user.role);
+  }, [user?.role]);
 
   const handleToggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);
@@ -433,9 +457,9 @@ export default function AdminSidebar() {
             padding: '0.5rem 0',
           }}
         >
-          {ADMIN_NAV_SECTIONS.map((section) => {
+          {filteredSections.map((section) => {
             const isSectionCollapsed = collapsedSections[section.id] ?? false;
-            const hasActiveItem = section.items.some((item) => isActive(item.href));
+            const hasActiveItem = section.items.some((item: NavigationItem) => isActive(item.href));
 
             return (
               <div key={section.id} style={{ marginBottom: '0.25rem' }}>
@@ -485,7 +509,7 @@ export default function AdminSidebar() {
 
                 {/* Section Items */}
                 {!isSectionCollapsed &&
-                  section.items.map((item) => {
+                  section.items.map((item: NavigationItem) => {
                     const Icon = item.icon;
                     const active = isActive(item.href);
 

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -98,19 +98,12 @@ function isValidUpdateAgentPricingBody(body: unknown): body is UpdateAgentPricin
  */
 export async function POST(request: NextRequest) {
   try {
-    // Require admin auth
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
     const { user } = authResult;
-    if (user.role !== 'admin') {
-      return NextResponse.json<UpdateAgentPricingError>(
-        { success: false, error: 'Unauthorized' },
-        { status: 403 }
-      );
-    }
 
     // Parse and validate request body
     let body: unknown;

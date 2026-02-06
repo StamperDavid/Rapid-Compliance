@@ -17,13 +17,12 @@ import {
   isAdminClaims,
   type AuthClaims,
 } from '@/lib/auth/claims-validator';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+
 
 export interface AdminUser {
   uid: string;
   email: string;
   role: 'admin';
-  organizationId: string;
 }
 
 export type AuthSuccess = {
@@ -46,7 +45,6 @@ export function isAuthError(result: AuthResult): result is AuthError {
 interface UserData {
   email?: string;
   role?: string;
-  organizationId?: string;
 }
 
 /**
@@ -137,11 +135,9 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     const userData: UserData = rawUserData ? {
       email: rawUserData.email as string | undefined,
       role: rawUserData.role as string | undefined,
-      organizationId: rawUserData.organizationId as string | undefined,
     } : {
       email: decodedToken.email,
       role: claims.role ?? undefined,
-      organizationId: DEFAULT_ORG_ID,
     };
 
     // Merge token claims with database role (token claims take precedence)
@@ -181,7 +177,6 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
         uid: userId,
         email: userData.email ?? decodedToken.email ?? '',
         role: 'admin',
-        organizationId: DEFAULT_ORG_ID,
       },
     };
   } catch (error: unknown) {

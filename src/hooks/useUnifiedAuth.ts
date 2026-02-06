@@ -2,7 +2,7 @@
  * Unified Authentication Hook
  * Single source of truth for authentication in SalesVelocity.ai
  *
- * Binary RBAC: admin | user
+ * 4-Role RBAC: owner | admin | manager | member
  */
 
 'use client';
@@ -16,6 +16,7 @@ import {
   type AccountRole,
   type UnifiedUser,
   type UnifiedPermissions,
+  ROLE_HIERARCHY,
   getUnifiedPermissions,
   isAdmin,
 } from '@/types/unified-rbac';
@@ -57,24 +58,25 @@ export interface UseUnifiedAuthReturn {
 }
 
 /**
- * Map legacy/stored roles to binary roles.
- * superadmin/admin/owner/platform_admin -> 'admin'
- * manager/employee/everything else -> 'user'
+ * Map legacy/stored role strings to the 4-role AccountRole.
  */
-function toBinaryRole(role: string | undefined | null): AccountRole {
+function toAccountRole(role: string | undefined | null): AccountRole {
   if (!role) {
-    return 'user';
+    return 'member';
   }
-  const normalized = role.toLowerCase();
-  switch (normalized) {
+  switch (role.toLowerCase()) {
+    case 'owner':
+      return 'owner';
     case 'superadmin':
     case 'super_admin':
     case 'admin':
-    case 'owner':
     case 'platform_admin':
       return 'admin';
+    case 'manager':
+    case 'team_lead':
+      return 'manager';
     default:
-      return 'user';
+      return 'member';
   }
 }
 
@@ -103,9 +105,11 @@ async function verifyAdmin(
 
     const displayName = adminData.name ?? 'Admin';
     const email = adminData.email ?? firebaseUserEmail ?? '';
+    const role = toAccountRole(adminData.role ?? 'admin');
 
     logger.info('Admin authenticated', {
       email,
+      role,
       file: 'useUnifiedAuth.ts',
     });
 
@@ -113,7 +117,7 @@ async function verifyAdmin(
       id: firebaseUserId,
       email,
       displayName,
-      role: 'admin',
+      role,
       status: 'active',
       mfaEnabled: false,
       createdAt: Timestamp.now(),
@@ -151,7 +155,7 @@ async function loadUserProfile(
       return null;
     }
 
-    const role = toBinaryRole(rawProfile.role);
+    const role = toAccountRole(rawProfile.role);
 
     const displayName =
       rawProfile.displayName ??
@@ -197,7 +201,7 @@ async function loadUserProfile(
  * 2. If authenticated:
  *    a. Attempts to verify as admin via /api/admin/verify
  *    b. If not admin, loads from Firestore USERS collection
- *    c. Returns UnifiedUser with binary role
+ *    c. Returns UnifiedUser with 4-role RBAC
  */
 export function useUnifiedAuth(): UseUnifiedAuthReturn {
   const [user, setUser] = useState<UnifiedUser | null>(null);
@@ -239,10 +243,11 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
 
           if (adminUser) {
             setUser(adminUser);
-            setPermissions(getUnifiedPermissions('admin'));
+            setPermissions(getUnifiedPermissions(adminUser.role));
             setLoading(false);
-            logger.info('Admin authenticated - full permissions granted', {
+            logger.info('Admin authenticated - permissions granted', {
               userId: firebaseUser.uid,
+              role: adminUser.role,
               file: 'useUnifiedAuth.ts',
             });
             return;
@@ -309,13 +314,10 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
 
   const isAtLeastRole = useCallback(
     (minimumRole: AccountRole): boolean => {
-      if (!user) {
+      if (!user?.role) {
         return false;
       }
-      if (minimumRole === 'user') {
-        return true;
-      }
-      return user.role === 'admin';
+      return ROLE_HIERARCHY[user.role] >= ROLE_HIERARCHY[minimumRole];
     },
     [user]
   );

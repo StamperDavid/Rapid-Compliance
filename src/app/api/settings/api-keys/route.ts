@@ -4,7 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { handleAPIError, errors, validateRequired } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/settings/api-keys');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -83,7 +83,7 @@ interface SaveApiKeyBody {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
