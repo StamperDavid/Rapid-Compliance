@@ -393,20 +393,7 @@ async function saveCart(cart: Cart): Promise<void> {
 /**
  * Get product from CRM
  */
-async function getProduct(workspaceId: string, productId: string, organizationId?: string): Promise<ProductData | null> {
-  // Determine organization ID
-  // Try to extract from workspaceId path first (e.g., "org-123/workspaces/default")
-  let orgId = organizationId;
-  if (!orgId && workspaceId.includes('/')) {
-    orgId = workspaceId.split('/')[0];
-  }
-  
-  // If no orgId available, try to get it from the product path stored in cart
-  // For now, throw error if we can't determine orgId
-  if (!orgId) {
-    throw new Error('Organization ID required to fetch product. Please provide organizationId parameter.');
-  }
-  
+async function getProduct(workspaceId: string, productId: string, _organizationId?: string): Promise<ProductData | null> {
   const ecommerceConfig = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
