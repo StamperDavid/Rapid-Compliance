@@ -283,14 +283,12 @@ Remember: You are a GUIDE, not a help desk. Lead conversations with expertise an
    * Handle a "I don't need that" request from the client
    */
   static async handleFeatureRejection(
-    organizationId: string,
     featureId: string,
     userId: string,
     reason?: string
   ): Promise<{ success: boolean; message: string }> {
     try {
       await FeatureToggleService.toggleFeature(
-        organizationId,
         featureId,
         'hidden',
         userId,
@@ -313,12 +311,11 @@ Remember: You are a GUIDE, not a help desk. Lead conversations with expertise an
    * Handle a category hide request (e.g., "I don't need the whole E-Commerce section")
    */
   static async handleCategoryRejection(
-    organizationId: string,
     category: FeatureCategory,
     userId: string
   ): Promise<{ success: boolean; message: string }> {
     try {
-      await FeatureToggleService.toggleCategory(organizationId, category, true, userId);
+      await FeatureToggleService.toggleCategory(category, true, userId);
 
       return {
         success: true,

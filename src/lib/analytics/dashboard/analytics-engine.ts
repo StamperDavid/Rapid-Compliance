@@ -190,19 +190,17 @@ async function getWorkflowMetrics(
   }
 
   // Get all workflows - cast from DAL's Record<string, unknown>[] to typed array
-  const workflows = await adminDal.getAllWorkflows(organizationId) as unknown as Workflow[];
+  const workflows = await adminDal.getAllWorkflows() as unknown as Workflow[];
   const activeWorkflows = workflows.filter((w) => w.status === 'active');
 
   // Get executions in current period - cast from DAL's Record<string, unknown>[] to typed array
   const executions = await adminDal.getWorkflowExecutions(
-    organizationId,
     startDate,
     endDate
   ) as unknown as WorkflowExecution[];
 
   // Get executions in previous period (for trend) - cast from DAL's Record<string, unknown>[] to typed array
   const previousExecutions = await adminDal.getWorkflowExecutions(
-    organizationId,
     previousDateRange.start,
     previousDateRange.end
   ) as unknown as WorkflowExecution[];
@@ -415,13 +413,11 @@ function getEmailMetrics(
 
   // Get email generation events from Signal Bus or email writer logs
   const emails = adminDal.getEmailGenerations(
-    organizationId,
     startDate,
     endDate
   );
 
   const previousEmails = adminDal.getEmailGenerations(
-    organizationId,
     previousDateRange.start,
     previousDateRange.end
   );
@@ -564,9 +560,8 @@ async function getDealMetrics(
   }
 
   // Get all active deals
-  const deals = await adminDal.getActiveDeals(organizationId);
+  const deals = await adminDal.getActiveDeals();
   const previousDeals = await adminDal.getDealsSnapshot(
-    organizationId,
     previousDateRange.end
   );
   
@@ -602,7 +597,6 @@ async function getDealMetrics(
   
   // Calculate average velocity
   const closedDeals = await adminDal.getClosedDeals(
-    organizationId,
     startDate,
     endDate
   );
@@ -780,13 +774,11 @@ async function getRevenueMetrics(
 
   // Get closed/won deals in period
   const wonDeals = await adminDal.getWonDeals(
-    organizationId,
     startDate,
     endDate
   );
 
   const previousWonDeals = await adminDal.getWonDeals(
-    organizationId,
     previousDateRange.start,
     previousDateRange.end
   );
@@ -799,7 +791,7 @@ async function getRevenueMetrics(
   const quotaAttainment = quota > 0 ? (totalRevenue / quota) * 100 : 0;
   
   // Get revenue forecast from forecasting engine
-  const forecast = await adminDal.getRevenueForecast(organizationId);
+  const forecast = await adminDal.getRevenueForecast();
   
   // Calculate trend
   const revenueTrend = previousRevenue > 0
@@ -815,7 +807,7 @@ async function getRevenueMetrics(
   );
   
   // Calculate win rate
-  const allDeals = await adminDal.getClosedDeals(organizationId, startDate, endDate);
+  const allDeals = await adminDal.getClosedDeals(startDate, endDate);
   const winRate = allDeals.length > 0
     ? (wonDeals.length / allDeals.length) * 100
     : 0;
@@ -875,12 +867,12 @@ async function getTeamMetrics(
   }
 
   // Get all reps (users with role 'sales') - cast from DAL's Record<string, unknown>[] to typed array
-  const reps = await dal.getSalesReps(organizationId) as unknown as RepRecord[];
+  const reps = await dal.getSalesReps() as unknown as RepRecord[];
 
   // Get deals for each rep
   const repDeals = await Promise.all(
     reps.map((rep) =>
-      dal.getRepDeals(organizationId, rep.id, startDate, endDate)
+      dal.getRepDeals(rep.id, startDate, endDate)
     )
   ) as unknown as DealAnalyticsRecord[][];
 

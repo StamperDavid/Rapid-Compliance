@@ -17,6 +17,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './useAuth';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import {
   FeatureToggleService,
   buildNavigationStructure,
@@ -45,7 +46,7 @@ export interface UseFeatureVisibilityResult {
   refresh: () => Promise<void>;
 }
 
-export function useFeatureVisibility(organizationId: string): UseFeatureVisibilityResult {
+export function useFeatureVisibility(): UseFeatureVisibilityResult {
   const { user } = useAuth();
   const [settings, setSettings] = useState<FeatureVisibilitySettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,14 +54,9 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
 
   // Fetch visibility settings
   const fetchSettings = useCallback(async () => {
-    if (!organizationId) {
-      setIsLoading(false);
-      return;
-    }
-
     try {
       setIsLoading(true);
-      const data = await FeatureToggleService.getVisibilitySettings(organizationId);
+      const data = await FeatureToggleService.getVisibilitySettings();
       setSettings(data);
       setError(null);
     } catch (err) {
@@ -68,7 +64,7 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
     } finally {
       setIsLoading(false);
     }
-  }, [organizationId]);
+  }, []);
 
   useEffect(() => {
     void fetchSettings();
@@ -116,13 +112,13 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
     }
 
     const status: FeatureStatus = hidden ? 'hidden' : 'unconfigured';
-    await FeatureToggleService.toggleFeature(organizationId, featureId, status, user.id, reason);
+    await FeatureToggleService.toggleFeature(featureId, status, user.id, reason);
 
     // Update local state immediately for responsiveness
     setSettings(prev => {
       if (!prev) {
         return {
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           features: {
             [featureId]: {
               featureId,
@@ -154,7 +150,7 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
         updatedBy: user.id,
       };
     });
-  }, [organizationId, user?.id]);
+  }, [user?.id]);
 
   // Toggle an entire category
   const toggleCategory = useCallback(async (category: FeatureCategory, hidden: boolean) => {
@@ -162,13 +158,13 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
       return;
     }
 
-    await FeatureToggleService.toggleCategory(organizationId, category, hidden, user.id);
+    await FeatureToggleService.toggleCategory(category, hidden, user.id);
 
     // Update local state
     setSettings(prev => {
       if (!prev) {
         return {
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           features: {},
           hiddenCategories: hidden ? [category] : [],
           updatedAt: new Date(),
@@ -187,40 +183,40 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
         updatedBy: user.id,
       };
     });
-  }, [organizationId, user?.id]);
+  }, [user?.id]);
 
   // Hide multiple features
   const hideFeatures = useCallback(async (featureIds: string[], reason?: string) => {
     if (!user?.id) {
       return;
     }
-    await FeatureToggleService.hideFeatures(organizationId, featureIds, user.id, reason);
+    await FeatureToggleService.hideFeatures(featureIds, user.id, reason);
     await fetchSettings();
-  }, [organizationId, user?.id, fetchSettings]);
+  }, [user?.id, fetchSettings]);
 
   // Show multiple features
   const showFeatures = useCallback(async (featureIds: string[]) => {
     if (!user?.id) {
       return;
     }
-    await FeatureToggleService.showFeatures(organizationId, featureIds, user.id);
+    await FeatureToggleService.showFeatures(featureIds, user.id);
     await fetchSettings();
-  }, [organizationId, user?.id, fetchSettings]);
+  }, [user?.id, fetchSettings]);
 
   // Reset to default
   const resetToDefault = useCallback(async () => {
     if (!user?.id) {
       return;
     }
-    await FeatureToggleService.resetToDefault(organizationId, user.id);
+    await FeatureToggleService.resetToDefault(user.id);
     setSettings({
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       features: {},
       hiddenCategories: [],
       updatedAt: new Date(),
       updatedBy: user.id,
     });
-  }, [organizationId, user?.id]);
+  }, [user?.id]);
 
   // Check if a feature is hidden - applies uniformly to all roles
   const isFeatureHidden = useCallback((featureId: string): boolean => {

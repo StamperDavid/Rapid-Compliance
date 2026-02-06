@@ -180,7 +180,6 @@ export class ActionHandler {
    */
   static async processResponse(
     response: string,
-    organizationId: string,
     userId: string
   ): Promise<ProcessedResponse> {
     const parsedActions = this.parseActions(response);
@@ -196,7 +195,7 @@ export class ActionHandler {
     // Execute all actions
     const results = await Promise.all(
       parsedActions.map(action =>
-        this.executeAction(action, organizationId, userId)
+        this.executeAction(action, userId)
       )
     );
 
@@ -215,7 +214,6 @@ export class ActionHandler {
    */
   static async executeAction(
     action: ParsedAction,
-    organizationId: string,
     userId: string
   ): Promise<ActionResult> {
     try {
@@ -223,7 +221,6 @@ export class ActionHandler {
         case 'HIDE_FEATURE': {
           const featureId = this.resolveFeatureId(action.target);
           await FeatureToggleService.toggleFeature(
-            organizationId,
             featureId,
             'hidden',
             userId,
@@ -239,7 +236,6 @@ export class ActionHandler {
         case 'SHOW_FEATURE': {
           const featureId = this.resolveFeatureId(action.target);
           await FeatureToggleService.toggleFeature(
-            organizationId,
             featureId,
             'unconfigured',
             userId
@@ -254,7 +250,6 @@ export class ActionHandler {
         case 'HIDE_CATEGORY': {
           const category = this.resolveCategoryId(action.target);
           await FeatureToggleService.toggleCategory(
-            organizationId,
             category,
             true,
             userId
@@ -269,7 +264,6 @@ export class ActionHandler {
         case 'SHOW_CATEGORY': {
           const category = this.resolveCategoryId(action.target);
           await FeatureToggleService.toggleCategory(
-            organizationId,
             category,
             false,
             userId
