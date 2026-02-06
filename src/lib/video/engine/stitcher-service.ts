@@ -28,6 +28,7 @@ import type {
   DuckingConfig,
   VoiceoverSegment,
 } from './types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS
@@ -151,7 +152,7 @@ export class StitcherService {
     const job: PostProductionJob = {
       id: uuidv4(),
       storyboardId: storyboard.id,
-      organizationId: storyboard.organizationId,
+      organizationId: DEFAULT_ORG_ID,
       clips: generatedClips,
       sfxTracks: [],
       lutApplied: false,
@@ -194,7 +195,6 @@ export class StitcherService {
       if (storyboard.audioConfig.voiceover.enabled) {
         this.updateJobStatus(job, 'preparing', 10, 'Generating voiceover');
         voiceoverTrack = await this.generateVoiceover(
-          storyboard.organizationId,
           storyboard.audioConfig.voiceover.script.segments,
           storyboard.audioConfig.voiceover.ttsEngine,
           storyboard.audioConfig.voiceover.voiceId,
@@ -279,7 +279,7 @@ export class StitcherService {
 
       // Step 9: Upload and get final URLs
       this.updateJobStatus(job, 'uploading', 95, 'Uploading final video');
-      const uploadResult = this.uploadFinal(job.id, finalUrl, storyboard.organizationId);
+      const uploadResult = this.uploadFinal(job.id, finalUrl);
 
       // Update job with results
       job.outputUrl = uploadResult.videoUrl;
@@ -324,7 +324,6 @@ export class StitcherService {
    * Generate voiceover audio from script segments
    */
   private async generateVoiceover(
-    organizationId: string,
     segments: VoiceoverSegment[],
     engine: TTSEngineType,
     voiceId: string,
@@ -332,7 +331,7 @@ export class StitcherService {
     pitch: number
   ): Promise<AudioTrack> {
     logger.info('Stitcher: Generating voiceover', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       segmentCount: segments.length,
       engine,
     });
@@ -345,7 +344,7 @@ export class StitcherService {
         // Generate audio for this segment
         const response = await VoiceEngineFactory.getAudio({
           text: segment.text,
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           engine,
           voiceId,
           settings: {
@@ -900,12 +899,11 @@ export class StitcherService {
    */
   private uploadFinal(
     jobId: string,
-    _videoUrl: string,
-    organizationId: string
+    _videoUrl: string
   ): { videoUrl: string; thumbnailUrl: string; fileSize: number } {
     logger.info('Stitcher: Uploading final video', {
       jobId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     // In production, this would:
@@ -913,8 +911,8 @@ export class StitcherService {
     // 2. Generate thumbnail
     // 3. Return public URLs
 
-    const publicVideoUrl = `https://storage.example.com/videos/${organizationId}/${jobId}.mp4`;
-    const thumbnailUrl = `https://storage.example.com/thumbnails/${organizationId}/${jobId}.jpg`;
+    const publicVideoUrl = `https://storage.example.com/videos/${DEFAULT_ORG_ID}/${jobId}.mp4`;
+    const thumbnailUrl = `https://storage.example.com/thumbnails/${DEFAULT_ORG_ID}/${jobId}.jpg`;
 
     return {
       videoUrl: publicVideoUrl,
@@ -958,11 +956,11 @@ export class StitcherService {
   }
 
   /**
-   * Get all active jobs for an organization
+   * Get all active jobs
    */
-  getActiveJobs(organizationId: string): PostProductionJob[] {
+  getActiveJobs(): PostProductionJob[] {
     return Array.from(this.activeJobs.values())
-      .filter((job) => job.organizationId === organizationId);
+      .filter((job) => job.organizationId === DEFAULT_ORG_ID);
   }
 
   /**

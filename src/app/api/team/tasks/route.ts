@@ -9,7 +9,6 @@ import { z } from 'zod';
 import { createTask, getUserTasks } from '@/lib/team/collaboration';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Task status type with type guard
 type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'completed';
@@ -41,7 +40,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = DEFAULT_ORG_ID;
 
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
@@ -50,7 +48,7 @@ export async function GET(request: NextRequest) {
     const statusParam = searchParams.get('status');
     const status: TaskStatus | undefined = statusParam && isValidStatus(statusParam) ? statusParam : undefined;
 
-    const tasks = await getUserTasks(organizationId, workspaceId, userId, status);
+    const tasks = await getUserTasks(workspaceId, userId, status);
 
     return NextResponse.json({
       success: true,
@@ -83,12 +81,11 @@ export async function POST(request: NextRequest) {
     }
 
     const validatedData = parseResult.data;
-    const organizationId = DEFAULT_ORG_ID;
 
     const workspaceId = validatedData.workspaceId ?? 'default';
     const assignedByName = token.email ?? undefined;
 
-    const task = await createTask(organizationId, workspaceId, {
+    const task = await createTask(workspaceId, {
       title: validatedData.title,
       description: validatedData.description,
       assignedTo: validatedData.assignedTo,

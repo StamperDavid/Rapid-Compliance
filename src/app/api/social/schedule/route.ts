@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create posting agent
-    const agent = await createPostingAgent(data.organizationId);
+    const agent = await createPostingAgent();
 
     // Schedule the post
     const result = await agent.schedulePost(
@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Create posting agent
-    const agent = await createPostingAgent(data.organizationId);
+    const agent = await createPostingAgent();
 
     // Get scheduled posts
     const scheduledPosts = await agent.getScheduledPosts(data.platform);
@@ -252,7 +252,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     // Create posting agent
-    const agent = await createPostingAgent(data.organizationId);
+    const agent = await createPostingAgent();
 
     // Cancel the post
     const result = await agent.cancelPost(data.postId);

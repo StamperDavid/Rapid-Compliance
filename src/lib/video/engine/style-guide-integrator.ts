@@ -22,6 +22,7 @@ import type {
   ShotType,
   BrandDNASnapshot,
 } from './types';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // STYLE EXTRACTION CONFIGURATION
@@ -112,12 +113,11 @@ export class StyleGuideIntegrator {
    * Extract style guide from a crawled website
    */
   extractStyleGuide(
-    organizationId: string,
     sourceUrl: string,
     crawledData: CrawledWebsiteData
   ): SiteMimicryStyleGuide {
     logger.info('StyleGuideIntegrator: Extracting style guide', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       sourceUrl,
     });
 
@@ -145,7 +145,7 @@ export class StyleGuideIntegrator {
 
     const styleGuide: SiteMimicryStyleGuide = {
       id: uuidv4(),
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       sourceUrl,
       colorPalette,
       typography,
@@ -158,7 +158,7 @@ export class StyleGuideIntegrator {
     };
 
     logger.info('StyleGuideIntegrator: Style guide extracted', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       styleGuideId: styleGuide.id,
       confidence: extractionConfidence.overall,
     });
@@ -894,11 +894,10 @@ export const styleGuideIntegrator = StyleGuideIntegrator.getInstance();
  * Extract style guide from crawled website data
  */
 export function extractStyleGuide(
-  organizationId: string,
   sourceUrl: string,
   crawledData: CrawledWebsiteData
 ): SiteMimicryStyleGuide {
-  return styleGuideIntegrator.extractStyleGuide(organizationId, sourceUrl, crawledData);
+  return styleGuideIntegrator.extractStyleGuide(sourceUrl, crawledData);
 }
 
 /**

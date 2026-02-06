@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
     });
     
     const result = await applyTemplate({
-      organizationId,
       workspaceId,
       templateId,
       merge: merge ?? false,

@@ -60,7 +60,6 @@ function createComingSoonResponse(feature: string): ComingSoonResponse {
  * Log feature interest for analytics tracking
  */
 export async function logVideoInterest(
-  organizationId: string,
   feature: string,
   userId?: string,
   metadata?: Record<string, unknown>
@@ -71,7 +70,8 @@ export async function logVideoInterest(
       return;
     }
 
-    await addDoc(collection(db, 'organizations', organizationId, 'analytics_events'), {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    await addDoc(collection(db, 'organizations', DEFAULT_ORG_ID, 'analytics_events'), {
       event: 'video_feature_interest',
       feature,
       userId: userId ?? null,
@@ -80,7 +80,7 @@ export async function logVideoInterest(
     });
 
     logger.info(`Video interest logged: ${feature}`, {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       feature,
       file: 'video-service.ts'
     });
@@ -99,7 +99,6 @@ export async function logVideoInterest(
  * Add user to video feature waitlist
  */
 export async function joinVideoWaitlist(
-  organizationId: string,
   email: string,
   options?: {
     name?: string;
@@ -115,6 +114,7 @@ export async function joinVideoWaitlist(
       return { success: false, error: 'Database not available' };
     }
 
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const entry: Omit<VideoWaitlistEntry, 'id'> = {
       email: email.trim().toLowerCase(),
       name: options?.name ?? undefined,
@@ -128,7 +128,7 @@ export async function joinVideoWaitlist(
     };
 
     const docRef = await addDoc(
-      collection(db, 'organizations', organizationId, 'video_waitlist'),
+      collection(db, 'organizations', DEFAULT_ORG_ID, 'video_waitlist'),
       {
         ...entry,
         createdAt: serverTimestamp(),
@@ -136,12 +136,12 @@ export async function joinVideoWaitlist(
     );
 
     // Log for analytics
-    await logVideoInterest(organizationId, 'waitlist_signup', options?.userId, {
+    await logVideoInterest('waitlist_signup', options?.userId, {
       interests: options?.interests,
     });
 
     logger.info('User joined video waitlist', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       email: entry.email,
       file: 'video-service.ts'
     });
@@ -164,12 +164,10 @@ export async function joinVideoWaitlist(
  * @stub Returns coming soon response
  */
 export async function generateVideo(
-  organizationId: string,
   _request: VideoGenerationRequest
 ): Promise<ComingSoonResponse & { request?: VideoGenerationRequest }> {
   // Log interest for analytics
   await logVideoInterest(
-    organizationId,
     `generate_video_${_request.provider}`,
     _request.userId,
     { type: _request.type }
@@ -186,10 +184,9 @@ export async function generateVideo(
  * @stub Returns coming soon response
  */
 export async function getVideoStatus(
-  _organizationId: string,
   _videoId: string
 ): Promise<ComingSoonResponse> {
-  await logVideoInterest(_organizationId, 'get_video_status');
+  await logVideoInterest('get_video_status');
   return createComingSoonResponse('Video status tracking');
 }
 
@@ -198,10 +195,9 @@ export async function getVideoStatus(
  * @stub Returns coming soon response
  */
 export async function cancelVideoGeneration(
-  _organizationId: string,
   _videoId: string
 ): Promise<ComingSoonResponse> {
-  await logVideoInterest(_organizationId, 'cancel_video');
+  await logVideoInterest('cancel_video');
   return createComingSoonResponse('Video cancellation');
 }
 
@@ -213,10 +209,8 @@ export async function cancelVideoGeneration(
  * List available HeyGen avatars
  * @stub Returns coming soon response
  */
-export async function listHeyGenAvatars(
-  _organizationId: string
-): Promise<ComingSoonResponse & { avatars?: HeyGenAvatar[] }> {
-  await logVideoInterest(_organizationId, 'list_heygen_avatars');
+export async function listHeyGenAvatars(): Promise<ComingSoonResponse & { avatars?: HeyGenAvatar[] }> {
+  await logVideoInterest('list_heygen_avatars');
   return {
     ...createComingSoonResponse('HeyGen avatar library'),
     avatars: [],
@@ -228,10 +222,9 @@ export async function listHeyGenAvatars(
  * @stub Returns coming soon response
  */
 export async function listHeyGenVoices(
-  _organizationId: string,
   _language?: string
 ): Promise<ComingSoonResponse & { voices?: HeyGenVoice[] }> {
-  await logVideoInterest(_organizationId, 'list_heygen_voices');
+  await logVideoInterest('list_heygen_voices');
   return {
     ...createComingSoonResponse('HeyGen voice library'),
     voices: [],
@@ -243,7 +236,6 @@ export async function listHeyGenVoices(
  * @stub Returns coming soon response
  */
 export async function generateHeyGenVideo(
-  _organizationId: string,
   _script: string,
   _avatarId: string,
   _options?: {
@@ -252,7 +244,7 @@ export async function generateHeyGenVideo(
     aspectRatio?: '16:9' | '9:16' | '1:1';
   }
 ): Promise<ComingSoonResponse> {
-  await logVideoInterest(_organizationId, 'generate_heygen_video');
+  await logVideoInterest('generate_heygen_video');
   return createComingSoonResponse('HeyGen video generation');
 }
 
@@ -265,7 +257,6 @@ export async function generateHeyGenVideo(
  * @stub Returns coming soon response
  */
 export async function generateSoraVideo(
-  _organizationId: string,
   _prompt: string,
   _options?: {
     duration?: number;
@@ -273,7 +264,7 @@ export async function generateSoraVideo(
     style?: string;
   }
 ): Promise<ComingSoonResponse> {
-  await logVideoInterest(_organizationId, 'generate_sora_video');
+  await logVideoInterest('generate_sora_video');
   return createComingSoonResponse('Sora text-to-video generation');
 }
 
@@ -286,7 +277,6 @@ export async function generateSoraVideo(
  * @stub Returns coming soon response
  */
 export async function generateRunwayVideo(
-  _organizationId: string,
   _inputType: 'text' | 'image',
   _input: string,
   _options?: {
@@ -294,7 +284,7 @@ export async function generateRunwayVideo(
     motion?: 'auto' | 'slow' | 'fast';
   }
 ): Promise<ComingSoonResponse> {
-  await logVideoInterest(_organizationId, 'generate_runway_video');
+  await logVideoInterest('generate_runway_video');
   return createComingSoonResponse('Runway video generation');
 }
 
@@ -307,10 +297,9 @@ export async function generateRunwayVideo(
  * @stub Returns coming soon response
  */
 export async function listVideoTemplates(
-  _organizationId: string,
   _category?: string
 ): Promise<ComingSoonResponse & { templates?: VideoTemplate[] }> {
-  await logVideoInterest(_organizationId, 'list_templates');
+  await logVideoInterest('list_templates');
   return {
     ...createComingSoonResponse('Video templates'),
     templates: [],
@@ -322,10 +311,9 @@ export async function listVideoTemplates(
  * @stub Returns coming soon response
  */
 export async function createVideoTemplate(
-  organizationId: string,
   _template: Omit<VideoTemplate, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<ComingSoonResponse> {
-  await logVideoInterest(organizationId, 'create_template');
+  await logVideoInterest('create_template');
   return createComingSoonResponse('Template creation');
 }
 
@@ -338,10 +326,9 @@ export async function createVideoTemplate(
  * @stub Returns coming soon response
  */
 export async function listVideoProjects(
-  _organizationId: string,
   _userId?: string
 ): Promise<ComingSoonResponse & { projects?: VideoProject[] }> {
-  await logVideoInterest(_organizationId, 'list_projects');
+  await logVideoInterest('list_projects');
   return {
     ...createComingSoonResponse('Video projects'),
     projects: [],
@@ -353,10 +340,9 @@ export async function listVideoProjects(
  * @stub Returns coming soon response
  */
 export async function createVideoProject(
-  organizationId: string,
   _project: Omit<VideoProject, 'id' | 'createdAt' | 'updatedAt' | 'videos'>
 ): Promise<ComingSoonResponse> {
-  await logVideoInterest(organizationId, 'create_project');
+  await logVideoInterest('create_project');
   return createComingSoonResponse('Project creation');
 }
 
@@ -383,7 +369,6 @@ export function getVideoServiceStatus(): typeof VIDEO_SERVICE_STATUS {
  * @stub Always returns false (not configured)
  */
 export function isProviderConfigured(
-  _organizationId: string,
   _provider: VideoProvider
 ): boolean {
   // Will check API key configuration when service launches

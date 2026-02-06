@@ -15,6 +15,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type {
   VideoGenerationProvider,
   ProviderCapabilities,
@@ -210,7 +211,6 @@ export interface PickerConfig {
 }
 
 export interface RoutingContext {
-  organizationId: string;
   storyboardId: string;
   shot: StoryboardShot;
   aspectRatio: '16:9' | '9:16' | '1:1' | '4:3';
@@ -326,7 +326,7 @@ export class MultiModelPicker {
       id: uuidv4(),
       storyboardId: context.storyboardId,
       shotId: context.shot.id,
-      organizationId: context.organizationId,
+      organizationId: DEFAULT_ORG_ID,
       targetProvider: decision.selectedProvider,
       fallbackProviders: decision.alternatives.map((a) => a.provider),
       visualPrompt: context.shot.visualPrompt,
@@ -345,7 +345,6 @@ export class MultiModelPicker {
    * Route multiple shots efficiently
    */
   routeStoryboard(
-    organizationId: string,
     storyboardId: string,
     shots: StoryboardShot[],
     aspectRatio: '16:9' | '9:16' | '1:1' | '4:3',
@@ -359,7 +358,6 @@ export class MultiModelPicker {
 
     for (const shot of shots) {
       const context: RoutingContext = {
-        organizationId,
         storyboardId,
         shot,
         aspectRatio,
@@ -386,7 +384,6 @@ export class MultiModelPicker {
       Array.from(providerGroups.entries()).map(([p, s]) => [p, s.length])
     );
     logger.info('MultiModelPicker: Storyboard routing complete', {
-      organizationId,
       storyboardId,
       totalShots: shots.length,
       veo: providerDistribution['veo'] ?? 0,
@@ -520,7 +517,6 @@ export class MultiModelPicker {
 
     for (const shot of shots) {
       const context: RoutingContext = {
-        organizationId: 'estimate',
         storyboardId: 'estimate',
         shot,
         aspectRatio,
@@ -800,7 +796,6 @@ export function selectProvider(context: RoutingContext): ProviderRoutingDecision
  * Route all shots in a storyboard
  */
 export function routeStoryboard(
-  organizationId: string,
   storyboardId: string,
   shots: StoryboardShot[],
   aspectRatio: '16:9' | '9:16' | '1:1' | '4:3',
@@ -808,7 +803,6 @@ export function routeStoryboard(
   config?: PickerConfig
 ): GenerationQueueItem[] {
   return multiModelPicker.routeStoryboard(
-    organizationId,
     storyboardId,
     shots,
     aspectRatio,

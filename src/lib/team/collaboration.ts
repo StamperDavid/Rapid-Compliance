@@ -9,6 +9,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface OrganizationMember {
   userId: string;
@@ -40,7 +41,6 @@ interface HasOccurredAt {
 
 export interface TeamComment {
   id: string;
-  organizationId: string;
   workspaceId: string;
   entityType: 'lead' | 'contact' | 'deal' | 'company';
   entityId: string;
@@ -54,7 +54,6 @@ export interface TeamComment {
 
 export interface TeamTask {
   id: string;
-  organizationId: string;
   workspaceId: string;
   title: string;
   description?: string;
@@ -93,7 +92,6 @@ export interface LeaderboardEntry {
 
 export interface ActivityGoal {
   id: string;
-  organizationId: string;
   userId: string;
   goalType: 'calls' | 'emails' | 'meetings' | 'deals' | 'revenue';
   target: number;
@@ -110,9 +108,8 @@ export interface ActivityGoal {
  * Create a comment with @mentions
  */
 export async function createComment(
-  organizationId: string,
   workspaceId: string,
-  data: Omit<TeamComment, 'id' | 'createdAt' | 'mentions' | 'organizationId' | 'workspaceId'>
+  data: Omit<TeamComment, 'id' | 'createdAt' | 'mentions' | 'workspaceId'>
 ): Promise<TeamComment> {
   try {
     // Extract @mentions from content
@@ -124,14 +121,13 @@ export async function createComment(
     const comment: TeamComment = {
       ...data,
       id: commentId,
-      organizationId,
       workspaceId,
       mentions,
       createdAt: now,
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/workspaces/${workspaceId}/comments`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/comments`,
       commentId,
       comment,
       false
@@ -139,7 +135,7 @@ export async function createComment(
 
     // Send notifications to mentioned users
     if (mentions.length > 0) {
-      await notifyMentionedUsers(organizationId, comment, mentions);
+      await notifyMentionedUsers(comment, mentions);
     }
 
     logger.info('Comment created', { commentId, mentions: mentions.length });
@@ -184,7 +180,6 @@ function toDate(field: FirestoreDateField | undefined | null): Date {
  * Notify users who were mentioned
  */
 async function notifyMentionedUsers(
-  organizationId: string,
   comment: TeamComment,
   mentionedUserIds: string[]
 ): Promise<void> {
@@ -194,7 +189,7 @@ async function notifyMentionedUsers(
     for (const userId of mentionedUserIds) {
       // Get user email
       const user = await FirestoreService.get<OrganizationMember>(
-        `organizations/${organizationId}/members`,
+        `organizations/${DEFAULT_ORG_ID}/members`,
         userId
       );
 
@@ -203,7 +198,7 @@ async function notifyMentionedUsers(
           to: user.email,
           subject: `${comment.authorName} mentioned you in a comment`,
           text: `${comment.authorName} mentioned you:\n\n"${comment.content}"\n\nView in CRM: [LINK]`,
-          metadata: { organizationId },
+          metadata: { organizationId: DEFAULT_ORG_ID },
         });
       }
     }
@@ -218,9 +213,8 @@ async function notifyMentionedUsers(
  * Create and assign task
  */
 export async function createTask(
-  organizationId: string,
   workspaceId: string,
-  task: Omit<TeamTask, 'id' | 'createdAt' | 'organizationId' | 'workspaceId'>
+  task: Omit<TeamTask, 'id' | 'createdAt' | 'workspaceId'>
 ): Promise<TeamTask> {
   try {
     const taskId = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -229,20 +223,19 @@ export async function createTask(
     const newTask: TeamTask = {
       ...task,
       id: taskId,
-      organizationId,
       workspaceId,
       createdAt: now,
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/workspaces/${workspaceId}/tasks`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/tasks`,
       taskId,
       newTask,
       false
     );
 
     // Notify assigned user
-    await notifyTaskAssignment(organizationId, newTask);
+    await notifyTaskAssignment(newTask);
 
     logger.info('Task created and assigned', {
       taskId,
@@ -261,14 +254,13 @@ export async function createTask(
  * Notify user of task assignment
  */
 async function notifyTaskAssignment(
-  organizationId: string,
   task: TeamTask
 ): Promise<void> {
   try {
     const { sendEmail } = await import('@/lib/email/email-service');
 
     const user = await FirestoreService.get<OrganizationMember>(
-      `organizations/${organizationId}/members`,
+      `organizations/${DEFAULT_ORG_ID}/members`,
       task.assignedTo
     );
 
@@ -277,7 +269,7 @@ async function notifyTaskAssignment(
         to: user.email,
         subject: `New task assigned: ${task.title}`,
         text: `${task.assignedByName} assigned you a task:\n\nTitle: ${task.title}\nPriority: ${task.priority}\nDue: ${(() => { const v = task.dueDate?.toLocaleDateString(); return (v !== '' && v != null) ? v : 'No due date'; })()}\n\n${task.description ?? ''}`,
-        metadata: { organizationId },
+        metadata: { organizationId: DEFAULT_ORG_ID },
       });
     }
 
@@ -291,14 +283,13 @@ async function notifyTaskAssignment(
  * Calculate team leaderboard
  */
 export async function calculateLeaderboard(
-  organizationId: string,
   workspaceId: string,
   period: 'week' | 'month' | 'quarter' | 'year' = 'month'
 ): Promise<LeaderboardEntry[]> {
   try {
     // Get all team members
     const membersResult = await FirestoreService.getAll<OrganizationMember>(
-      `organizations/${organizationId}/members`
+      `organizations/${DEFAULT_ORG_ID}/members`
     );
 
     const members = membersResult;
@@ -315,7 +306,6 @@ export async function calculateLeaderboard(
     // Calculate metrics for each member
     for (const member of members) {
       const metrics = await calculateUserMetrics(
-        organizationId,
         workspaceId,
         member.userId,
         startDate,
@@ -347,7 +337,7 @@ export async function calculateLeaderboard(
     });
 
     logger.info('Leaderboard calculated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       period,
       teamSize: leaderboard.length,
     });
@@ -355,7 +345,7 @@ export async function calculateLeaderboard(
     return leaderboard;
 
   } catch (error: unknown) {
-    logger.error('Failed to calculate leaderboard', error instanceof Error ? error : new Error(String(error)), { organizationId });
+    logger.error('Failed to calculate leaderboard', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }
@@ -364,7 +354,6 @@ export async function calculateLeaderboard(
  * Calculate metrics for a user
  */
 async function calculateUserMetrics(
-  organizationId: string,
   workspaceId: string,
   userId: string,
   startDate: Date,
@@ -395,7 +384,7 @@ async function calculateUserMetrics(
 
     // Win rate
     const allClosedDeals = dealsResult.data.filter(d => d.stage === 'closed_won' || d.stage === 'closed_lost');
-    const winRate = allClosedDeals.length > 0 
+    const winRate = allClosedDeals.length > 0
       ? (dealsClosedWon.length / allClosedDeals.length) * 100
       : 0;
 
@@ -412,10 +401,10 @@ async function calculateUserMetrics(
 
     // Tasks completed
     const tasksResult = await FirestoreService.getAll<TeamTask>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/tasks`
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/tasks`
     );
-    const tasksCompleted = tasksResult.filter(t => 
-      t.assignedTo === userId && 
+    const tasksCompleted = tasksResult.filter(t =>
+      t.assignedTo === userId &&
       t.status === 'completed' &&
       t.completedAt &&
       new Date(t.completedAt) >= startDate &&
@@ -448,14 +437,13 @@ async function calculateUserMetrics(
  * Get tasks for a user
  */
 export async function getUserTasks(
-  organizationId: string,
   workspaceId: string,
   userId: string,
   status?: TeamTask['status']
 ): Promise<TeamTask[]> {
   try {
     const result = await FirestoreService.getAll<TeamTask>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/tasks`
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/tasks`
     );
 
     let tasks = result.filter(t => t.assignedTo === userId);
@@ -491,13 +479,12 @@ export async function getUserTasks(
  * Complete a task
  */
 export async function completeTask(
-  organizationId: string,
   workspaceId: string,
   taskId: string
 ): Promise<void> {
   try {
     await FirestoreService.update(
-      `organizations/${organizationId}/workspaces/${workspaceId}/tasks`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/tasks`,
       taskId,
       {
         status: 'completed',

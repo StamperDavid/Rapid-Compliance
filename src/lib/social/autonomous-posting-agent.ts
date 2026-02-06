@@ -24,6 +24,7 @@ import type {
   QueuedPost,
   ScheduledPost,
 } from '@/types/social';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Collection paths
 const SOCIAL_POSTS_COLLECTION = 'social_posts';
@@ -34,12 +35,10 @@ const SOCIAL_ANALYTICS_COLLECTION = 'social_analytics';
  * Autonomous Posting Agent Class
  */
 export class AutonomousPostingAgent {
-  private organizationId: string;
   private config: PostingAgentConfig;
   private twitterService: TwitterService | null = null;
 
-  constructor(organizationId: string, config?: Partial<PostingAgentConfig>) {
-    this.organizationId = organizationId;
+  constructor(config?: Partial<PostingAgentConfig>) {
     this.config = {
       platforms: config?.platforms ?? ['twitter', 'linkedin'],
       contentSources: config?.contentSources ?? [
@@ -68,7 +67,7 @@ export class AutonomousPostingAgent {
    */
   async initialize(): Promise<void> {
     logger.info('AutonomousPostingAgent: Initializing', {
-      organizationId: this.organizationId,
+      organizationId: DEFAULT_ORG_ID,
       platforms: this.config.platforms,
     });
 
@@ -77,7 +76,7 @@ export class AutonomousPostingAgent {
       this.twitterService = await createTwitterService();
       if (!this.twitterService) {
         logger.warn('AutonomousPostingAgent: Twitter service not configured', {
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
         });
       }
     }
@@ -106,7 +105,7 @@ export class AutonomousPostingAgent {
     }
 
     logger.info('AutonomousPostingAgent: Posting immediately', {
-      organizationId: this.organizationId,
+      organizationId: DEFAULT_ORG_ID,
       platforms,
       contentLength: finalContent.length,
     });
@@ -132,7 +131,7 @@ export class AutonomousPostingAgent {
     const failureCount = results.filter((r) => !r.success).length;
 
     logger.info('AutonomousPostingAgent: Batch posting complete', {
-      organizationId: this.organizationId,
+      organizationId: DEFAULT_ORG_ID,
       successCount,
       failureCount,
       duration: Date.now() - startTime.getTime(),
@@ -175,7 +174,7 @@ export class AutonomousPostingAgent {
     } catch (error) {
       logger.error('AutonomousPostingAgent: Platform posting error', error as Error, {
         platform,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return {
         success: false,
@@ -292,14 +291,14 @@ export class AutonomousPostingAgent {
         logger.warn('AutonomousPostingAgent: LinkedIn API error', {
           status: response.status,
           error: errorText,
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
         });
       }
 
       // Log if LinkedIn is not configured
       if (!linkedInConfig && !rapidApiKey) {
         logger.info('AutonomousPostingAgent: LinkedIn not configured, creating manual task', {
-          organizationId: this.organizationId,
+          organizationId: DEFAULT_ORG_ID,
         });
       }
 
@@ -315,7 +314,7 @@ export class AutonomousPostingAgent {
       };
     } catch (error) {
       logger.error('AutonomousPostingAgent: LinkedIn posting error', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return {
         success: false,
@@ -336,11 +335,11 @@ export class AutonomousPostingAgent {
     const taskId = `social-manual-${platform}-${Date.now()}`;
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/tasks`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/tasks`,
       taskId,
       {
         id: taskId,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
         title: `Post content to ${platform.charAt(0).toUpperCase() + platform.slice(1)}`,
         description: `Please manually post this content:\n\n${content}`,
         type: `social-${platform}-post`,
@@ -359,7 +358,7 @@ export class AutonomousPostingAgent {
     logger.info('AutonomousPostingAgent: Created manual task', {
       taskId,
       platform,
-      organizationId: this.organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 
@@ -409,7 +408,7 @@ export class AutonomousPostingAgent {
         };
 
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_POSTS_COLLECTION}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
           scheduledPost.id,
           scheduledPost
         );
@@ -419,7 +418,7 @@ export class AutonomousPostingAgent {
         postId,
         platforms,
         scheduledAt: scheduledAt.toISOString(),
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
 
       return {
@@ -428,7 +427,7 @@ export class AutonomousPostingAgent {
       };
     } catch (error) {
       logger.error('AutonomousPostingAgent: Failed to schedule post', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return {
         success: false,
@@ -462,7 +461,7 @@ export class AutonomousPostingAgent {
     try {
       // Get current queue position
       const existingQueue = await FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_QUEUE_COLLECTION}`
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_QUEUE_COLLECTION}`
       );
       const queuePosition = existingQueue.length + 1;
 
@@ -482,7 +481,7 @@ export class AutonomousPostingAgent {
         };
 
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_QUEUE_COLLECTION}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_QUEUE_COLLECTION}`,
           queuedPost.id,
           queuedPost
         );
@@ -492,7 +491,7 @@ export class AutonomousPostingAgent {
         postId,
         platforms,
         queuePosition,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
 
       return {
@@ -501,7 +500,7 @@ export class AutonomousPostingAgent {
       };
     } catch (error) {
       logger.error('AutonomousPostingAgent: Failed to add to queue', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return {
         success: false,
@@ -521,7 +520,7 @@ export class AutonomousPostingAgent {
       // Get all scheduled posts that are due
       const { where } = await import('firebase/firestore');
       const scheduledPosts = await FirestoreService.getAll<SocialMediaPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_POSTS_COLLECTION}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
         [
           where('status', '==', 'scheduled'),
           where('scheduledAt', '<=', now),
@@ -530,13 +529,13 @@ export class AutonomousPostingAgent {
 
       logger.info('AutonomousPostingAgent: Processing scheduled posts', {
         count: scheduledPosts.length,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
 
       for (const post of scheduledPosts) {
         // Update status to publishing
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_POSTS_COLLECTION}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
           post.id,
           { status: 'publishing', updatedAt: new Date() }
         );
@@ -547,7 +546,7 @@ export class AutonomousPostingAgent {
 
         // Update post record
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_POSTS_COLLECTION}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
           post.id,
           {
             status: result.success ? 'published' : 'failed',
@@ -565,7 +564,7 @@ export class AutonomousPostingAgent {
       logger.info('AutonomousPostingAgent: Scheduled posts processed', {
         successCount,
         failureCount,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
 
       return {
@@ -576,7 +575,7 @@ export class AutonomousPostingAgent {
       };
     } catch (error) {
       logger.error('AutonomousPostingAgent: Error processing scheduled posts', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return {
         results,
@@ -597,7 +596,7 @@ export class AutonomousPostingAgent {
       // Get queued posts ordered by position
       const { orderBy, limit } = await import('firebase/firestore');
       const queuedPosts = await FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_QUEUE_COLLECTION}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_QUEUE_COLLECTION}`,
         [
           orderBy('queuePosition', 'asc'),
           limit(maxPosts),
@@ -607,7 +606,7 @@ export class AutonomousPostingAgent {
       logger.info('AutonomousPostingAgent: Processing queue', {
         count: queuedPosts.length,
         maxPosts,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
 
       for (const post of queuedPosts) {
@@ -617,7 +616,7 @@ export class AutonomousPostingAgent {
 
         // Move from queue to posts collection
         await FirestoreService.delete(
-          `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_QUEUE_COLLECTION}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_QUEUE_COLLECTION}`,
           post.id
         );
 
@@ -648,7 +647,7 @@ export class AutonomousPostingAgent {
       };
     } catch (error) {
       logger.error('AutonomousPostingAgent: Error processing queue', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return {
         results,
@@ -666,14 +665,14 @@ export class AutonomousPostingAgent {
     try {
       const { orderBy } = await import('firebase/firestore');
       const queuedPosts = await FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_QUEUE_COLLECTION}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_QUEUE_COLLECTION}`,
         [orderBy('queuePosition', 'asc')]
       );
 
       for (let i = 0; i < queuedPosts.length; i++) {
         if (queuedPosts[i].queuePosition !== i + 1) {
           await FirestoreService.update(
-            `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_QUEUE_COLLECTION}`,
+            `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_QUEUE_COLLECTION}`,
             queuedPosts[i].id,
             { queuePosition: i + 1, updatedAt: new Date() }
           );
@@ -682,7 +681,7 @@ export class AutonomousPostingAgent {
     } catch (error) {
       logger.warn('AutonomousPostingAgent: Failed to reorder queue', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
     }
   }
@@ -717,14 +716,14 @@ export class AutonomousPostingAgent {
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_POSTS_COLLECTION}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
       postId,
       post
     );
 
     // Also log to analytics collection for reporting
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_ANALYTICS_COLLECTION}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_ANALYTICS_COLLECTION}`,
       postId,
       {
         postId,
@@ -750,12 +749,12 @@ export class AutonomousPostingAgent {
       }
 
       return await FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_QUEUE_COLLECTION}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_QUEUE_COLLECTION}`,
         constraints
       );
     } catch (error) {
       logger.error('AutonomousPostingAgent: Failed to get queue', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return [];
     }
@@ -777,12 +776,12 @@ export class AutonomousPostingAgent {
       }
 
       return await FirestoreService.getAll<ScheduledPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_POSTS_COLLECTION}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
         constraints
       );
     } catch (error) {
       logger.error('AutonomousPostingAgent: Failed to get scheduled posts', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return [];
     }
@@ -795,13 +794,13 @@ export class AutonomousPostingAgent {
     try {
       // Try to find in scheduled posts
       const post = await FirestoreService.get<SocialMediaPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_POSTS_COLLECTION}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
         postId
       );
 
       if (post?.status === 'scheduled') {
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_POSTS_COLLECTION}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
           postId,
           { status: 'cancelled', updatedAt: new Date() }
         );
@@ -810,13 +809,13 @@ export class AutonomousPostingAgent {
 
       // Try to find in queue
       const queuedPost = await FirestoreService.get<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_QUEUE_COLLECTION}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_QUEUE_COLLECTION}`,
         postId
       );
 
       if (queuedPost) {
         await FirestoreService.delete(
-          `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_QUEUE_COLLECTION}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_QUEUE_COLLECTION}`,
           postId
         );
         await this.reorderQueue();
@@ -827,7 +826,7 @@ export class AutonomousPostingAgent {
     } catch (error) {
       logger.error('AutonomousPostingAgent: Failed to cancel post', error as Error, {
         postId,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return {
         success: false,
@@ -866,7 +865,7 @@ export class AutonomousPostingAgent {
       constraints.push(orderBy('publishedAt', 'desc'));
 
       const posts = await FirestoreService.getAll<{ platform: SocialPlatform; success: boolean }>(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${SOCIAL_ANALYTICS_COLLECTION}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_ANALYTICS_COLLECTION}`,
         constraints
       );
 
@@ -893,7 +892,7 @@ export class AutonomousPostingAgent {
       return analytics;
     } catch (error) {
       logger.error('AutonomousPostingAgent: Failed to get analytics', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return {
         totalPosts: 0,
@@ -956,7 +955,7 @@ Return ONLY a JSON object with:
       return null;
     } catch (error) {
       logger.error('AutonomousPostingAgent: Failed to generate content', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       return null;
     }
@@ -964,13 +963,12 @@ Return ONLY a JSON object with:
 }
 
 /**
- * Create an autonomous posting agent for an organization
+ * Create an autonomous posting agent
  */
 export async function createPostingAgent(
-  organizationId: string,
   config?: Partial<PostingAgentConfig>
 ): Promise<AutonomousPostingAgent> {
-  const agent = new AutonomousPostingAgent(organizationId, config);
+  const agent = new AutonomousPostingAgent(config);
   await agent.initialize();
   return agent;
 }

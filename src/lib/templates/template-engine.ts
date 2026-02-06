@@ -28,13 +28,13 @@ import {
   type CustomField,
   type SalesWorkflow,
 } from './industry-templates';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 export interface TemplateApplicationOptions {
-  organizationId: string;
   workspaceId?: string;
   templateId: string;
   customizations?: TemplateCustomizations;
@@ -80,7 +80,6 @@ export interface TemplateValidationResult {
 
 export interface TemplateUsageStats {
   templateId: string;
-  organizationId: string;
   appliedAt: Date;
   dealsCreated: number;
   avgDealSize: number;
@@ -121,7 +120,7 @@ export async function applyTemplate(
   
   try {
     logger.info('Applying industry template', {
-      orgId: options.organizationId,
+      orgId: DEFAULT_ORG_ID,
       templateId: options.templateId,
       merge: options.merge
     });
@@ -167,7 +166,7 @@ export async function applyTemplate(
     // (In a real implementation, we'd save to Firestore)
     // For now, we just log it
     logger.info('Template configuration ready', {
-      orgId: options.organizationId,
+      orgId: DEFAULT_ORG_ID,
       stagesCount: configuration.stages.length,
       fieldsCount: configuration.fields.length,
       workflowsCount: configuration.workflows.length
@@ -178,7 +177,7 @@ export async function applyTemplate(
       const coordinator = getServerSignalCoordinator();
       await coordinator.emitSignal({
         type: 'template.applied',
-        orgId: options.organizationId,
+        orgId: DEFAULT_ORG_ID,
         workspaceId: options.workspaceId,
         confidence: 1.0,
         priority: 'Medium',
@@ -194,9 +193,9 @@ export async function applyTemplate(
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.info('Signal emitted: template.applied', {
-        orgId: options.organizationId,
+        orgId: DEFAULT_ORG_ID,
         templateId: template.id
       });
     } catch (signalError) {
@@ -205,7 +204,7 @@ export async function applyTemplate(
     
     const duration = Date.now() - startTime;
     logger.info('Template applied successfully', {
-      orgId: options.organizationId,
+      orgId: DEFAULT_ORG_ID,
       templateId: options.templateId,
       duration
     });
@@ -222,7 +221,7 @@ export async function applyTemplate(
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('Template application failed', error as Error, {
-      orgId: options.organizationId,
+      orgId: DEFAULT_ORG_ID,
       templateId: options.templateId
     });
     
@@ -329,23 +328,22 @@ export function validateTemplate(template: SalesIndustryTemplate): TemplateValid
  * Uses AI and heuristics to recommend the best template.
  */
 export function getRecommendedTemplateForOrg(
-  _organizationId: string,
   businessType?: string,
   industry?: string
 ): SalesIndustryTemplate | null {
   try {
     logger.info('Getting recommended template', {
-      orgId: _organizationId,
+      orgId: DEFAULT_ORG_ID,
       businessType,
       industry
     });
-    
+
     // Strategy 1: Use business type if provided
     if (businessType) {
       const recommended = getRecommendedTemplate(businessType);
       if (recommended) {
         logger.info('Template recommended by business type', {
-          orgId: _organizationId,
+          orgId: DEFAULT_ORG_ID,
           templateId: recommended.id
         });
         return recommended;
@@ -357,7 +355,7 @@ export function getRecommendedTemplateForOrg(
       const recommended = getRecommendedTemplate(industry);
       if (recommended) {
         logger.info('Template recommended by industry', {
-          orgId: _organizationId,
+          orgId: DEFAULT_ORG_ID,
           templateId: recommended.id
         });
         return recommended;
@@ -367,14 +365,14 @@ export function getRecommendedTemplateForOrg(
     // Strategy 3: Default to SaaS (most common)
     const defaultTemplate = getTemplateById('saas');
     logger.info('Using default template (SaaS)', {
-      orgId: _organizationId
+      orgId: DEFAULT_ORG_ID
     });
 
     return defaultTemplate;
 
   } catch (error) {
     logger.error('Failed to get recommended template', error as Error, {
-      orgId: _organizationId
+      orgId: DEFAULT_ORG_ID
     });
     return null;
   }

@@ -181,11 +181,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     return NextResponse.json({
       success: true,
       job: {
         id: job.id,
-        organizationId: job.organizationId,
+        organizationId: DEFAULT_ORG_ID,
         storyboardId: job.storyboardId,
         status: job.status,
         progress: job.progress,
