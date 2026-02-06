@@ -244,12 +244,8 @@ export function recordOpenEvent(
   // 3. Store IP, user agent, timestamp
   // 4. Trigger webhooks if configured
 
-  // Note: This function is called from API route, so we need organizationId
-  // The API route should extract it from the tracking data or metadata
   // For now, log it (API route will handle the actual storage)
   logger.info('Email opened', { trackingId, ipAddress, userAgent, file: 'email-tracking.ts' });
-
-  // The actual storage happens in the API route which has access to organizationId
 }
 
 /**

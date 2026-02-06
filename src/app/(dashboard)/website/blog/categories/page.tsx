@@ -1,7 +1,6 @@
 /**
  * Blog Categories Management
  * Create and manage blog categories
- * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

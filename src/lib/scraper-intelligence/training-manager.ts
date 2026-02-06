@@ -112,7 +112,6 @@ export class TrainingManagerError extends Error {
  * @example
  * ```typescript
  * const feedback = await submitFeedback({
- *   organizationId: 'org_123',
  *   userId: 'user_456',
  *   feedbackType: 'correct',
  *   signalId: 'signal_789',
@@ -262,7 +261,6 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
     }
 
     // Look for existing training data with this pattern
-    // PENTHOUSE: organizationId filter removed
     const existing = await db
       .collection(TRAINING_DATA_COLLECTION)
       .where('signalId', '==', signalId)
@@ -439,8 +437,7 @@ function updateConfidenceScore(
 
 /**
  * Get training data for a signal
- * 
- * @param organizationId - Organization ID
+ *
  * @param signalId - Signal ID
  * @param activeOnly - Only return active patterns
  * @returns Array of training data
@@ -451,7 +448,6 @@ export async function getTrainingData(
   activeOnly: boolean = true
 ): Promise<TrainingData[]> {
   try {
-    // PENTHOUSE: organizationId filter removed
     let query = db
       .collection(TRAINING_DATA_COLLECTION)
       .where('signalId', '==', signalId);
@@ -478,8 +474,7 @@ export async function getTrainingData(
 
 /**
  * Get all training data for an organization
- * 
- * @param organizationId - Organization ID
+ *
  * @param activeOnly - Only return active patterns
  * @returns Array of training data
  */
@@ -488,7 +483,6 @@ export async function getAllTrainingData(
   activeOnly: boolean = true
 ): Promise<TrainingData[]> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const collectionRef = db.collection(TRAINING_DATA_COLLECTION);
     const baseQuery = activeOnly
       ? collectionRef.where('active', '==', true)
@@ -511,11 +505,10 @@ export async function getAllTrainingData(
 
 /**
  * Deactivate training data pattern
- * 
+ *
  * Soft delete - keeps the data but marks it as inactive.
- * 
+ *
  * @param trainingDataId - Training data ID
- * @param organizationId - Organization ID (for auth)
  * @param userId - User making the change
  * @param reason - Reason for deactivation
  */
@@ -590,11 +583,10 @@ export async function deactivateTrainingData(
 
 /**
  * Activate training data pattern
- * 
+ *
  * Re-enables a previously deactivated pattern.
- * 
+ *
  * @param trainingDataId - Training data ID
- * @param organizationId - Organization ID (for auth)
  * @param userId - User making the change
  * @param reason - Reason for activation
  */
@@ -715,9 +707,8 @@ function logTrainingHistory(
 
 /**
  * Get training history for a pattern
- * 
+ *
  * @param trainingDataId - Training data ID
- * @param organizationId - Organization ID (for auth)
  * @returns Array of history entries
  */
 export async function getTrainingHistory(
@@ -725,7 +716,6 @@ export async function getTrainingHistory(
   organizationId: string
 ): Promise<TrainingHistory[]> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(TRAINING_HISTORY_COLLECTION)
       .where('trainingDataId', '==', trainingDataId)
@@ -756,10 +746,9 @@ export async function getTrainingHistory(
 
 /**
  * Rollback training data to a previous version
- * 
+ *
  * @param trainingDataId - Training data ID
  * @param targetVersion - Version to rollback to
- * @param organizationId - Organization ID (for auth)
  * @param userId - User making the change
  * @param reason - Reason for rollback
  */
@@ -772,7 +761,6 @@ export async function rollbackTrainingData(
 ): Promise<void> {
   try {
     // Get history for target version
-    // PENTHOUSE: organizationId filter removed
     const historyDocs = await db
       .collection(TRAINING_HISTORY_COLLECTION)
       .where('trainingDataId', '==', trainingDataId)
@@ -867,9 +855,8 @@ export async function rollbackTrainingData(
 
 /**
  * Get feedback for a scrape
- * 
+ *
  * @param sourceScrapeId - Scrape ID
- * @param organizationId - Organization ID
  * @returns Array of feedback
  */
 export async function getFeedbackForScrape(
@@ -877,7 +864,6 @@ export async function getFeedbackForScrape(
   organizationId: string
 ): Promise<ClientFeedback[]> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(FEEDBACK_COLLECTION)
       .where('sourceScrapeId', '==', sourceScrapeId)
@@ -907,8 +893,7 @@ export async function getFeedbackForScrape(
 
 /**
  * Get unprocessed feedback for background processing
- * 
- * @param organizationId - Organization ID
+ *
  * @param limit - Max number of feedback to fetch
  * @returns Array of unprocessed feedback
  */
@@ -917,7 +902,6 @@ export async function getUnprocessedFeedback(
   limit: number = 100
 ): Promise<ClientFeedback[]> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(FEEDBACK_COLLECTION)
       .where('processed', '==', false)
@@ -951,8 +935,7 @@ export async function getUnprocessedFeedback(
 
 /**
  * Get training analytics for an organization
- * 
- * @param organizationId - Organization ID
+ *
  * @returns Analytics object
  */
 export async function getTrainingAnalytics(organizationId: string): Promise<{
@@ -966,7 +949,6 @@ export async function getTrainingAnalytics(organizationId: string): Promise<{
 }> {
   try {
     // Get feedback stats
-    // PENTHOUSE: organizationId filter removed
     const feedbackDocs = await db
       .collection(FEEDBACK_COLLECTION)
       .get();
@@ -992,7 +974,6 @@ export async function getTrainingAnalytics(organizationId: string): Promise<{
     });
 
     // Get training data stats
-    // PENTHOUSE: organizationId filter removed
     const trainingDocs = await db
       .collection(TRAINING_DATA_COLLECTION)
       .get();

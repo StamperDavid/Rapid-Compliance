@@ -1,7 +1,6 @@
 /**
  * Audit Log Viewer
  * View all website builder events (publish, unpublish, domain changes, etc.)
- * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

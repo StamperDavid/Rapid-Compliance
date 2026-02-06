@@ -385,7 +385,6 @@ async function unenrollProspectFromSequences(
   reason: 'manual' | 'replied' | 'converted' | 'unsubscribed' | 'bounced'
 ): Promise<void> {
   try {
-    // PENTHOUSE: query directly under DEFAULT_ORG_ID
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
@@ -444,7 +443,6 @@ async function pauseProspectSequences(
   prospectEmail: string
 ): Promise<void> {
   try {
-    // PENTHOUSE: query directly under DEFAULT_ORG_ID
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,

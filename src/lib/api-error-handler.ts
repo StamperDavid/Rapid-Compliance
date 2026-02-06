@@ -156,7 +156,6 @@ export function validateParams(
 }
 
 /**
- * Validate organizationId is present
  * In single-tenant mode, always returns DEFAULT_ORG_ID
  */
 export function validateOrgId(_organizationId?: unknown): string {

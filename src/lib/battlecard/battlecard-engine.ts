@@ -255,14 +255,13 @@ export interface BattlecardOptions {
 
 /**
  * Discover and profile a competitor
- * 
+ *
  * Uses Discovery Engine to scrape competitor website and LLM to extract
  * competitive intelligence.
- * 
+ *
  * @param domain - Competitor domain (e.g., 'competitor.com')
- * @param organizationId - Organization requesting the intelligence
  * @returns Complete competitor profile with analysis
- * 
+ *
  * @example
  * ```typescript
  * const profile = await discoverCompetitor('salesforce.com', 'org_123');

@@ -22,7 +22,6 @@
  * import { generatePerformanceAnalytics } from '@/lib/performance';
  * 
  * const analytics = await generatePerformanceAnalytics({
- *   organizationId: 'org_123',
  *   periodType: 'month',
  * });
  * ```

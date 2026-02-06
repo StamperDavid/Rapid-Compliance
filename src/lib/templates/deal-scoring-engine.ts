@@ -102,12 +102,11 @@ export interface BatchScoringResult {
  * @example
  * ```typescript
  * const score = await calculateDealScore({
- *   organizationId: 'org_123',
  *   workspaceId: 'default',
  *   dealId: 'deal_456',
  *   templateId: 'saas'
  * });
- * 
+ *
  * console.log(`Score: ${score.score}, Probability: ${score.closeProbability}%`);
  * ```
  */

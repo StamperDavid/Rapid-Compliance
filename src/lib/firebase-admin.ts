@@ -81,7 +81,6 @@ export { admin };
 
 /**
  * Helper to get current user from request
- * TODO: Implement actual user authentication
  */
 export async function getCurrentUser(request: Request): Promise<{
   uid: string;
@@ -97,8 +96,6 @@ export async function getCurrentUser(request: Request): Promise<{
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await auth.verifyIdToken(token);
 
-    // TODO: Fetch user's organizationId from Firestore
-    // For now, return basic user info
     return {
       uid: decodedToken.uid,
       email: decodedToken.email,

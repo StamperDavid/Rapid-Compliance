@@ -64,8 +64,6 @@ export async function POST(request: NextRequest) {
     // Validate request
     const validatedData = sendNotificationRequestSchema.parse(body);
 
-    // PENTHOUSE: always use DEFAULT_ORG_ID
-
     // Check rate limit (50 req/min per org)
     const rateLimit = checkRateLimit(`send:${DEFAULT_ORG_ID}`, 50, 60000);
     

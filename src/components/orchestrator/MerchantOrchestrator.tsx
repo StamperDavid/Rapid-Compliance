@@ -37,7 +37,6 @@ interface MerchantProfile {
 }
 
 export function MerchantOrchestrator() {
-  const orgId = DEFAULT_ORG_ID;
   const { user } = useAuth();
   const { setContext, hasSeenWelcome } = useOrchestratorStore();
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
@@ -53,28 +52,25 @@ export function MerchantOrchestrator() {
   // Fetch system health report for Implementation Guide
   useEffect(() => {
     async function fetchSystemHealth() {
-      if (!orgId) {
-        return;
-      }
       try {
-        const report = await SystemHealthService.generateHealthReport(orgId);
+        const report = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
         setHealthReport(report);
       } catch (error) {
         console.error('Error fetching system health:', error);
       }
     }
     void fetchSystemHealth();
-  }, [orgId]);
+  }, []);
 
   // Build Implementation Context once we have profile and health report
   useEffect(() => {
     async function buildImplContext() {
-      if (!orgId || !profile || !healthReport) {
+      if (!profile || !healthReport) {
         return;
       }
       try {
         const context = await ImplementationGuide.buildContext(
-          orgId,
+          DEFAULT_ORG_ID,
           profile.assistantName ?? 'Assistant',
           profile.ownerName,
           profile.industry
@@ -85,17 +81,17 @@ export function MerchantOrchestrator() {
       }
     }
     void buildImplContext();
-  }, [orgId, profile, healthReport]);
+  }, [profile, healthReport]);
 
   // Fetch merchant profile from Firestore
   useEffect(() => {
     async function fetchProfile() {
-      if (!orgId || !db) {
+      if (!db) {
         return;
       }
 
       try {
-        const orgDoc = await getDoc(doc(db, 'organizations', orgId));
+        const orgDoc = await getDoc(doc(db, 'organizations', DEFAULT_ORG_ID));
         if (orgDoc.exists()) {
           const data = orgDoc.data() as MerchantProfile;
           setProfile({
@@ -116,7 +112,7 @@ export function MerchantOrchestrator() {
     }
 
     void fetchProfile();
-  }, [orgId]);
+  }, []);
 
   // Get industry persona for this merchant
   const industryPersona: IndustryPersona = getIndustryPersona((profile?.industry as IndustryType) ?? 'custom');
@@ -169,7 +165,7 @@ ${recommendation} What would you like to focus on?`;
     let currentHealth = healthReport;
     if (!currentHealth) {
       try {
-        currentHealth = await SystemHealthService.generateHealthReport(orgId);
+        currentHealth = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
       } catch (e) {
         console.error('Failed to fetch health report for briefing:', e);
       }
@@ -256,7 +252,7 @@ When hiding features, use this exact response format:
     <>
       <OrchestratorBase config={config} />
       <FeedbackModal
-        orgId={orgId}
+        orgId={DEFAULT_ORG_ID}
         userId={user?.id}
         userEmail={user?.email ?? undefined}
       />

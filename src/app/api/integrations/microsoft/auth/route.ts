@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
-  // PENTHOUSE: Always use DEFAULT_ORG_ID
 
   if (!userId) {
     return NextResponse.json(

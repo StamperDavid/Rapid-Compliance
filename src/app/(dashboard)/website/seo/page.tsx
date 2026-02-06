@@ -1,7 +1,6 @@
 /**
  * SEO Management
  * Site-wide SEO settings, robots.txt, analytics integration
- * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

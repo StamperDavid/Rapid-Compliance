@@ -8,7 +8,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
  * Full-page form builder interface for creating and editing forms.
  * Wraps the FormBuilder component with data fetching and persistence.
  *
- * @route /workspace/[orgId]/forms/[formId]/edit
+ * @route /forms/[formId]/edit
  * @version 1.0.0
  */
 

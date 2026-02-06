@@ -80,8 +80,6 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
-
     // Get agent configuration
     const agentConfigRaw = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentConfig`,
@@ -140,8 +138,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json() as SaveConfigRequestBody;
     const { selectedModel, modelConfig } = body;
-
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
 
     // Prepare configuration data with defaults
     const configData: AgentConfigData = {

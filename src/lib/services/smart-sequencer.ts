@@ -102,7 +102,6 @@ export interface PrioritizedLead {
  * const result = await smartEnrollInSequence({
  *   sequenceId: 'seq_123',
  *   leadId: 'lead_456',
- *   organizationId: 'org_789',
  *   minScore: 60, // Only enroll if score >= 60
  *   priorityBasedTiming: true, // Hot leads get faster follow-ups
  * });
@@ -321,7 +320,6 @@ export async function processSequenceStepsWithPriority(
     const now = new Date();
 
     // Get all due enrollments (using environment-aware collection path)
-    // PENTHOUSE: organizationId filter removed
     const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const snapshot = await db
       .collection(COLLECTIONS.SEQUENCE_ENROLLMENTS)
@@ -415,7 +413,6 @@ export async function rescoreActiveSequenceLeads(
     logger.info('Rescoring active sequence leads', { organizationId });
 
     // Get all active enrollments (using environment-aware collection path)
-    // PENTHOUSE: organizationId filter removed
     const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const snapshot = await db
       .collection(COLLECTIONS.SEQUENCE_ENROLLMENTS)
@@ -559,7 +556,6 @@ export async function getRecommendedSequence(params: {
     });
 
     // Get available sequences (using environment-aware collection path)
-    // PENTHOUSE: organizationId filter removed
     const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const sequences =
       availableSequences ??

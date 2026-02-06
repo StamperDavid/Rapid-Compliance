@@ -73,7 +73,6 @@ export function calculateExpirationDate(): Date {
  * @example
  * ```typescript
  * const { scrape, isNew } = await saveTemporaryScrape({
- *   organizationId: 'org_123',
  *   url: 'https://example.com',
  *   rawHtml: '<html>...</html>',
  *   cleanedContent: 'Cleaned text',
@@ -103,7 +102,6 @@ export async function saveTemporaryScrape(params: {
     const contentHash = calculateContentHash(rawHtml);
 
     // Check if this exact content already exists
-    // PENTHOUSE: organizationId filter removed
     const existing = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('contentHash', '==', contentHash)
@@ -220,11 +218,10 @@ export async function flagScrapeForDeletion(scrapeId: string): Promise<void> {
 
 /**
  * Delete flagged scrapes immediately
- * 
+ *
  * Called by cleanup job to remove scrapes flagged for deletion.
  * Processes up to 500 scrapes per batch (Firestore limit).
- * 
- * @param organizationId - Organization ID to filter scrapes
+ *
  * @returns Number of scrapes deleted
  * @throws Error if Firestore operation fails
  * 
@@ -236,7 +233,6 @@ export async function flagScrapeForDeletion(scrapeId: string): Promise<void> {
  */
 export async function deleteFlaggedScrapes(organizationId: string): Promise<number> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const flagged = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('flaggedForDeletion', '==', true)
@@ -274,11 +270,10 @@ export async function deleteFlaggedScrapes(organizationId: string): Promise<numb
 
 /**
  * Delete expired scrapes (past expiresAt date)
- * 
+ *
  * Fallback for when Firestore TTL is not available.
  * Should be called by Cloud Function on schedule (daily).
- * 
- * @param organizationId - Organization ID to filter scrapes
+ *
  * @returns Number of scrapes deleted
  * @throws Error if Firestore operation fails
  */
@@ -286,7 +281,6 @@ export async function deleteExpiredScrapes(organizationId: string): Promise<numb
   try {
     const now = new Date();
 
-    // PENTHOUSE: organizationId filter removed
     const expired = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('expiresAt', '<=', now)
@@ -360,8 +354,7 @@ export async function getTemporaryScrape(scrapeId: string): Promise<TemporaryScr
 
 /**
  * Get temporary scrape by content hash
- * 
- * @param organizationId - Organization ID
+ *
  * @param contentHash - SHA-256 content hash
  * @returns Scrape object or null if not found
  * @throws Error if Firestore operation fails
@@ -371,7 +364,6 @@ export async function getTemporaryScrapeByHash(
   contentHash: string
 ): Promise<TemporaryScrape | null> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('contentHash', '==', contentHash)
@@ -404,10 +396,9 @@ export async function getTemporaryScrapeByHash(
 
 /**
  * Get temporary scrapes for a URL (for training UI)
- * 
+ *
  * Returns most recent scrapes for a URL, ordered by creation date.
- * 
- * @param organizationId - Organization ID
+ *
  * @param url - URL to search for
  * @returns Array of scrapes (up to 10 most recent)
  * @throws Error if Firestore operation fails
@@ -417,7 +408,6 @@ export async function getTemporaryScrapesByUrl(
   url: string
 ): Promise<TemporaryScrape[]> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const docs = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .where('url', '==', url)
@@ -452,10 +442,9 @@ export async function getTemporaryScrapesByUrl(
 
 /**
  * Calculate storage cost estimate for an organization
- * 
+ *
  * Provides current storage usage and projected savings with TTL architecture.
- * 
- * @param organizationId - Organization ID
+ *
  * @returns Cost analysis object
  * @throws Error if Firestore operation fails
  * 
@@ -474,7 +463,6 @@ export async function calculateStorageCost(organizationId: string): Promise<{
   projectedSavingsWithTTL: number;
 }> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const scrapes = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .get();
@@ -539,8 +527,7 @@ function toDate(timestamp: Date | FirestoreTimestamp | { seconds: number } | str
 
 /**
  * Get storage statistics for monitoring
- * 
- * @param organizationId - Organization ID
+ *
  * @returns Statistics object
  */
 export async function getStorageStats(organizationId: string): Promise<{
@@ -552,7 +539,6 @@ export async function getStorageStats(organizationId: string): Promise<{
   newestScrape: Date | null;
 }> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const scrapes = await db
       .collection(TEMPORARY_SCRAPES_COLLECTION)
       .get();

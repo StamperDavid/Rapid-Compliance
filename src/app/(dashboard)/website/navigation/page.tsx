@@ -1,7 +1,6 @@
 /**
  * Navigation Management
  * Build and manage site navigation (header menu, footer)
- * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

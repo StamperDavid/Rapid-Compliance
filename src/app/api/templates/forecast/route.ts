@@ -17,7 +17,6 @@ export const dynamic = 'force-dynamic';
  *
  * Body:
  * {
- *   organizationId: string;
  *   workspaceId: string;
  *   period: '30-day' | '60-day' | '90-day' | 'quarter' | 'annual';
  *   quota?: number;

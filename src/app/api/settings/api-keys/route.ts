@@ -38,8 +38,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return authResult;
     }
 
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
-
     // Load keys from Firestore
     const apiKeys = await FirestoreService.get<ApiKeysDocument>(
       `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
@@ -100,7 +98,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const { service, key } = body as SaveApiKeyBody;
 
     // Load existing keys

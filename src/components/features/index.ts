@@ -1,8 +1,7 @@
 /**
  * Features Directory
  *
- * URL-agnostic feature components extracted from workspace routes.
- * These components receive organizationId via props, not URL params.
+ * URL-agnostic feature components for the platform.
  */
 
 // CRM Features

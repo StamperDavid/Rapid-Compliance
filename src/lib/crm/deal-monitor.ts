@@ -47,15 +47,14 @@ export interface DealMonitorConfig {
  * 
  * @param config - Monitor configuration
  * @returns Unsubscribe function
- * 
+ *
  * @example
  * ```typescript
  * const unsubscribe = await startDealMonitor({
- *   organizationId: 'org_123',
  *   workspaceId: 'default',
  *   autoGenerateRecommendations: true,
  * });
- * 
+ *
  * // Later, to stop monitoring:
  * unsubscribe();
  * ```
@@ -434,10 +433,9 @@ async function emitRecommendationsSignal(
 
 /**
  * Monitor all deals and generate recommendations for at-risk deals
- * 
+ *
  * This is useful for periodic batch processing (e.g., daily health check).
- * 
- * @param organizationId - Organization ID
+ *
  * @param workspaceId - Workspace ID
  * @returns Summary of monitored deals
  */

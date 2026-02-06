@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { userId } = stateValidation.data;
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const tokens = await getTokensFromCode(code);
 
     await FirestoreService.set(
@@ -67,7 +66,6 @@ export async function GET(request: NextRequest) {
 
     logger.info('Microsoft integration saved', { route: '/api/integrations/microsoft/callback', DEFAULT_ORG_ID });
 
-    // PENTHOUSE: Redirect to flat route, not workspace-scoped
     return NextResponse.redirect('/settings/integrations?success=microsoft');
   } catch (error) {
     const _errorMessage = error instanceof Error ? error.message : 'Unknown error';

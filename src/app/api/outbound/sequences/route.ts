@@ -60,7 +60,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
     const limitParam = searchParams.get('limit');
     const pageSize = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
 
@@ -108,7 +107,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, description, steps, autoEnroll = false } = body;
-    // PENTHOUSE: Always use DEFAULT_ORG_ID
 
     if (!name) {
       return errors.badRequest('Sequence name is required');

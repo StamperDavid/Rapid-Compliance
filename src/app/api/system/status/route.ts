@@ -710,8 +710,6 @@ export async function GET(
       );
     }
 
-    // PENTHOUSE MODEL: Always use DEFAULT_ORG_ID
-
     logger.info('[SystemStatus] Fetching swarm status', {
       DEFAULT_ORG_ID,
       adminId: authResult.user.uid,

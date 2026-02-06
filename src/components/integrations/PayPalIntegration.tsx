@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { PayPalIntegration as PayPalType } from '@/types/integrations';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface PayPalIntegrationProps {
   integration: PayPalType | null;
@@ -41,14 +42,12 @@ export default function PayPalIntegration({
     }
     setIsConnecting(true);
     try {
-      const orgId = window.location.pathname.split('/')[2] || 'current-org';
-
       // Save PayPal API keys to backend
       const response = await fetch('/api/settings/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           service: 'paypal',
           apiKey: clientId,
           apiSecret: clientSecret,

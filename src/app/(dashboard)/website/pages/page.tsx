@@ -1,7 +1,6 @@
 /**
  * Pages Management
  * List and manage all website pages
- * NOTE: PENTHOUSE - uses DEFAULT_ORG_ID
  */
 
 'use client';

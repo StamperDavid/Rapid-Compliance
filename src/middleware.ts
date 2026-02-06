@@ -53,12 +53,12 @@ export function middleware(request: NextRequest) {
   // ============================================================================
   // PENTHOUSE MODEL: LEGACY WORKSPACE URL REDIRECTS
   // ============================================================================
-  // Redirect legacy /workspace/[orgId]/* URLs to flat /(dashboard)/* routes
+  // Redirect legacy /workspace/* URLs to flat /(dashboard)/* routes
   // This ensures backwards compatibility with bookmarks and external links
   if (pathname.startsWith('/workspace/')) {
     const newUrl = request.nextUrl.clone();
-    // Remove /workspace/[orgId] prefix, keep the rest of the path
-    // Example: /workspace/salesvelocity/leads -> /leads
+    // Remove /workspace/* prefix, keep the rest of the path
+    // Example: /workspace/leads -> /leads
     newUrl.pathname = pathname.replace(/^\/workspace\/[^/]+/, '');
     if (newUrl.pathname === '' || newUrl.pathname === '/') {
       newUrl.pathname = '/dashboard';
@@ -71,10 +71,9 @@ export function middleware(request: NextRequest) {
   // PENTHOUSE PUBLIC SITE ROUTING
   // ============================================================================
   // For penthouse deployment, all public site traffic uses DEFAULT_ORG_ID
-  // The /sites/[orgId] routes still exist for URL compatibility but always use
-  // the same organization internally
+  // Legacy routes redirect to flat URL structure for consistency
 
-  // Redirect legacy /store/[orgId]/* to /store/*
+  // Redirect legacy /store/* to /store/*
   if (pathname.match(/^\/store\/[^/]+\/(products|cart|checkout)/)) {
     const newUrl = request.nextUrl.clone();
     newUrl.pathname = pathname.replace(/^\/store\/[^/]+/, '/store');
@@ -82,7 +81,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(newUrl, 308);
   }
 
-  // Redirect legacy /sites/[orgId]/* to /sites/*
+  // Redirect legacy /sites/* to /sites/*
   if (pathname.match(/^\/sites\/[^/]+\//)) {
     const newUrl = request.nextUrl.clone();
     newUrl.pathname = pathname.replace(/^\/sites\/[^/]+/, '/sites');

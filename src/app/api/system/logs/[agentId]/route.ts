@@ -1,6 +1,6 @@
 /**
  * Agent Telemetry Logs API
- * STATUS: PRODUCTION-READY (PENTHOUSE)
+ * STATUS: PRODUCTION-READY
  *
  * GET /api/system/logs/[agentId]
  * Fetches real-time telemetry from SignalBus history for a specific agent

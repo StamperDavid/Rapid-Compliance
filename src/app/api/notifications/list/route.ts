@@ -60,7 +60,7 @@ function checkRateLimit(key: string, limit: number, windowMs: number): {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID (from session/auth) - PENTHOUSE: always use DEFAULT_ORG_ID
+    // Get user ID (from session/auth)
     const userIdHeader = request.headers.get('x-user-id');
     const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default_user';
 
@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
     }
 
-    // Get user ID - PENTHOUSE: always use DEFAULT_ORG_ID
+    // Get user ID
     const userIdHeader = request.headers.get('x-user-id');
     const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default_user';
 

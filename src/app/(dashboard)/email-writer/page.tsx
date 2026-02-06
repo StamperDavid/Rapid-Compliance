@@ -1,16 +1,16 @@
 /**
  * Email Writer Dashboard Page
- * 
+ *
  * AI-powered sales email generation dashboard.
- * 
+ *
  * Features:
  * - Email generation with 5 template types
  * - Deal scoring integration
  * - Battlecard competitive positioning
  * - Email history and analytics
  * - A/B testing variants
- * 
- * Route: /workspace/[orgId]/email-writer
+ *
+ * Route: /email-writer
  */
 
 'use client';

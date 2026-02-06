@@ -5,6 +5,7 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Safe parseFloat that handles NaN correctly.
@@ -58,16 +59,12 @@ interface DealRecord {
  *
  * Authentication: Required - Valid session token must be provided
  *
- * The organizationId is automatically extracted from the authenticated user's token.
- * Do not pass orgId as a query parameter.
- *
  * Query params:
  * - period: '7d' | '30d' | '90d' | 'all' (optional, default: 'current')
  *
  * Response codes:
  * - 200: Success - Returns pipeline analytics data
  * - 401: Unauthorized - No valid authentication token provided
- * - 400: Bad Request - No organizationId found in user token
  */
 export async function GET(request: NextRequest) {
   try {
@@ -79,27 +76,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const orgId = token.organizationId;
-
-    if (!orgId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
-
     const { searchParams } = new URL(request.url);
     const periodParam = searchParams.get('period');
     const period = (periodParam !== '' && periodParam != null) ? periodParam : '30d';
 
     // Use caching for analytics queries (TTL: 10 minutes)
     const analytics = await withCache(
-      orgId,
+      DEFAULT_ORG_ID,
       'pipeline',
-      async () => calculatePipelineAnalytics(orgId, period),
+      async () => calculatePipelineAnalytics(DEFAULT_ORG_ID, period),
       { period }
     );
 
     logger.info('Pipeline analytics retrieved', {
       route: '/api/analytics/pipeline',
-      orgId,
+      orgId: DEFAULT_ORG_ID,
       period,
       dealsCount: analytics.dealsCount,
     });

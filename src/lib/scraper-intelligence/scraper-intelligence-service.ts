@@ -203,10 +203,9 @@ function handleFirestoreError(error: unknown, operation: string, context: Record
 
 /**
  * Get research intelligence for an industry
- * 
+ *
  * Uses cache when available to reduce Firestore reads.
- * 
- * @param organizationId - Organization ID
+ *
  * @param industryId - Industry identifier
  * @returns Research intelligence or null if not found
  * @throws ScraperIntelligenceError if operation fails
@@ -358,8 +357,7 @@ export async function deleteResearchIntelligence(
 
 /**
  * List all research intelligence for an organization
- * 
- * @param organizationId - Organization ID
+ *
  * @returns Array of research intelligence configurations
  * @throws ScraperIntelligenceError if query fails
  */
@@ -367,7 +365,6 @@ export async function listResearchIntelligence(
   organizationId: string
 ): Promise<Array<{ industryId: string; research: ResearchIntelligence }>> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const snapshot = await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
       .get();
@@ -410,10 +407,9 @@ export async function listResearchIntelligence(
 
 /**
  * Save extracted signals to permanent storage
- * 
+ *
  * Signals are saved to lead/company records for permanent retention.
- * 
- * @param organizationId - Organization ID
+ *
  * @param recordId - Lead or company ID
  * @param signals - Array of extracted signals
  * @throws ScraperIntelligenceError if save fails
@@ -484,8 +480,7 @@ export async function saveExtractedSignals(
 
 /**
  * Get extracted signals for a record
- * 
- * @param organizationId - Organization ID
+ *
  * @param recordId - Lead or company ID
  * @returns Array of signals
  * @throws ScraperIntelligenceError if query fails
@@ -540,8 +535,7 @@ export async function getExtractedSignals(
 
 /**
  * Query signals by platform
- * 
- * @param organizationId - Organization ID
+ *
  * @param platform - Scraping platform
  * @param limit - Max results (default: 100)
  * @returns Array of records with signals
@@ -552,7 +546,6 @@ export async function querySignalsByPlatform(
   limit: number = 100
 ): Promise<Array<{ recordId: string; signals: ExtractedSignal[] }>> {
   try {
-    // PENTHOUSE: organizationId filter removed
     const snapshot = await db
       .collection(EXTRACTED_SIGNALS_COLLECTION)
       .limit(limit)
@@ -722,8 +715,7 @@ export async function processAndStoreScrape(params: {
 
 /**
  * Get analytics for extracted signals
- * 
- * @param organizationId - Organization ID
+ *
  * @param recordId - Lead or company ID
  * @returns Analytics object
  */

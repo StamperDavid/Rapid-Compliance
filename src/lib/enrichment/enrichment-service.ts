@@ -756,10 +756,9 @@ export async function getEnrichmentAnalytics(
 
 /**
  * Get storage optimization analytics (NEW)
- * 
+ *
  * Tracks distillation engine efficiency and storage cost savings
- * 
- * @param organizationId - Organization to get analytics for
+ *
  * @param days - Number of days to analyze (default: 30)
  * @returns Storage metrics and cost savings
  */
