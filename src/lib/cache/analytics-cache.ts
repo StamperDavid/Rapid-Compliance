@@ -1,7 +1,7 @@
 /**
  * Analytics Caching Layer
  * BEST PRACTICE: Production-ready caching for expensive analytics queries
- * 
+ *
  * Features:
  * - In-memory cache with TTL
  * - Cache invalidation on data changes
@@ -10,6 +10,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface CacheEntry<T> {
   data: T;
@@ -182,33 +183,31 @@ export const analyticsCache = new AnalyticsCache();
 /**
  * Cache wrapper for analytics functions
  * USAGE:
- * 
+ *
  * const result = await withCache(
- *   'org-123',
  *   'revenue',
- *   async () => calculateRevenue(orgId, period),
+ *   async () => calculateRevenue(period),
  *   { period: '30d' }
  * );
  */
 export async function withCache<T>(
-  organizationId: string,
   queryType: string,
   fetchFn: () => Promise<T>,
   params?: Record<string, unknown>,
   customTTL?: number
 ): Promise<T> {
   // Try cache first
-  const cached = analyticsCache.get<T>(organizationId, queryType, params);
+  const cached = analyticsCache.get<T>(DEFAULT_ORG_ID, queryType, params);
   if (cached !== null) {
     return cached;
   }
 
   // Cache miss - fetch data
-  logger.info(`Cache MISS: ${organizationId}:${queryType} - fetching...`, { file: 'analytics-cache.ts' });
+  logger.info(`Cache MISS: ${DEFAULT_ORG_ID}:${queryType} - fetching...`, { file: 'analytics-cache.ts' });
   const data = await fetchFn();
 
   // Store in cache
-  analyticsCache.set(organizationId, queryType, data, params, customTTL);
+  analyticsCache.set(DEFAULT_ORG_ID, queryType, data, params, customTTL);
 
   return data;
 }
@@ -217,7 +216,7 @@ export async function withCache<T>(
  * Invalidate analytics cache when data changes
  * Call this after creating/updating/deleting deals, orders, etc.
  */
-export function invalidateAnalyticsCache(organizationId: string, dataType?: string): void {
+export function invalidateAnalyticsCache(dataType?: string): void {
   if (dataType) {
     // Invalidate specific query types affected by this data change
     const affectedQueries: Record<string, string[]> = {
@@ -229,11 +228,11 @@ export function invalidateAnalyticsCache(organizationId: string, dataType?: stri
 
     const queries = affectedQueries[dataType] || [];
     queries.forEach(queryType => {
-      analyticsCache.invalidate(organizationId, queryType);
+      analyticsCache.invalidate(DEFAULT_ORG_ID, queryType);
     });
   } else {
     // Invalidate everything for this org
-    analyticsCache.invalidateNamespace(organizationId);
+    analyticsCache.invalidateNamespace(DEFAULT_ORG_ID);
   }
 }
 

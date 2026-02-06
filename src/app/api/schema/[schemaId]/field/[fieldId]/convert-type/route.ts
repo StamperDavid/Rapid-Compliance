@@ -6,7 +6,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldTypeConverterServer } from '@/lib/schema/server/field-type-converter-server';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { FieldType, SchemaField } from '@/types/schema';
 
 interface ConversionRequestBody {
@@ -48,7 +47,6 @@ export async function GET(
 
     // Generate preview using SERVER version (admin SDK)
     const preview = await FieldTypeConverterServer.generateConversionPreview(
-      DEFAULT_ORG_ID,
       params.schemaId,
       fieldKey,
       oldType,

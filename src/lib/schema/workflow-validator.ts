@@ -60,7 +60,6 @@ export async function validateWorkflowsForSchema(
         
         // Create notification for user
         await createWorkflowWarningNotification(
-          event.organizationId,
           event.workspaceId,
           workflow,
           validation.warnings
@@ -175,23 +174,23 @@ function workflowUsesSchema(workflow: Workflow, schemaId: string): boolean {
  * Create notification for workflow warnings
  */
 async function createWorkflowWarningNotification(
-  organizationId: string,
   workspaceId: string,
   workflow: Workflow,
   warnings: string[]
 ): Promise<void> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
-    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/notifications`;
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+
+    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notifications`;
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     await FirestoreService.set(
       notificationPath,
       notificationId,
       {
         id: notificationId,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         title: 'Workflow May Be Affected by Schema Changes',
         message: `Workflow "${workflow.name}" references fields that have changed. Please review: ${warnings.join(', ')}`,
@@ -228,7 +227,6 @@ interface WorkflowValidationDetail {
  * Get validation summary for all workflows
  */
 export async function getWorkflowValidationSummary(
-  organizationId: string,
   workspaceId: string
 ): Promise<{
   total: number;
@@ -253,11 +251,12 @@ export async function getWorkflowValidationSummary(
 
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
 
-    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflows`;
+    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflows`;
     const workflows = await FirestoreService.getAll(workflowsPath);
 
-    const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
+    const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
     const schemas = await FirestoreService.getAll(schemasPath);
 
     summary.total = workflows.length;

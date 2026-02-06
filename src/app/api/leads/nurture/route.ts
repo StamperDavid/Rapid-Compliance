@@ -77,10 +77,10 @@ export async function POST(request: NextRequest) {
       }
 
       case 'enroll-lead': {
-        if (!data.leadId || !data.sequenceId || !data.organizationId) {
-          return errors.badRequest('leadId, sequenceId, and organizationId are required');
+        if (!data.leadId || !data.sequenceId) {
+          return errors.badRequest('leadId and sequenceId are required');
         }
-        const result = await enrollLeadInSequence(data.leadId, data.sequenceId, data.organizationId);
+        const result = await enrollLeadInSequence(data.leadId, data.sequenceId);
         if (!result.success) {
           return errors.badRequest((result.error !== '' && result.error != null) ? result.error : 'Failed to enroll lead');
         }

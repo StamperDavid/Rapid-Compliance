@@ -5,6 +5,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, Timestamp } from 'firebase/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type {
   RevenueReport,
   PipelineReport,
@@ -33,15 +34,14 @@ function safeParseFloat(value: unknown, fallback: number): number {
  * Get revenue report
  */
 export async function getRevenueReport(
-  organizationId: string,
   workspaceId: string,
   period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly',
   startDate: Date,
   endDate: Date
 ): Promise<RevenueReport> {
   // Get all deals/orders in period
-  const deals = await getDealsInPeriod(workspaceId, organizationId, startDate, endDate);
-  const orders = await getOrdersInPeriod(workspaceId, organizationId, startDate, endDate);
+  const deals = await getDealsInPeriod(workspaceId, startDate, endDate);
+  const orders = await getOrdersInPeriod(workspaceId, startDate, endDate);
   
   // Calculate totals
   const totalRevenue = calculateTotalRevenue(deals, orders);
@@ -72,33 +72,32 @@ export async function getRevenueReport(
  * Get pipeline report
  */
 export async function getPipelineReport(
-  organizationId: string,
   workspaceId: string,
   period: string
 ): Promise<PipelineReport> {
   // Get all open deals
-  const openDeals = await getOpenDeals(workspaceId, organizationId);
-  
+  const openDeals = await getOpenDeals(workspaceId);
+
   // Calculate pipeline metrics
   const totalValue = openDeals.reduce((sum, deal) => sum + (typeof deal.value === 'number' ? deal.value : parseFloat(String(deal.value)) || 0), 0);
   const totalDeals = openDeals.length;
   const averageDealSize = totalDeals > 0 ? totalValue / totalDeals : 0;
-  
+
   // Group by stage
   const byStage = calculatePipelineByStage(openDeals);
 
   // Calculate velocity
-  const velocityResult = await calculatePipelineVelocity(workspaceId, organizationId);
+  const velocityResult = await calculatePipelineVelocity(workspaceId);
 
   // Calculate conversion rates
-  const conversionRatesArray = await calculateConversionRates(workspaceId, organizationId);
+  const conversionRatesArray = await calculateConversionRates(workspaceId);
   const conversionRates: Record<string, number> = {};
   conversionRatesArray.forEach(rate => {
     conversionRates[`${rate.fromStage}->${rate.toStage}`] = rate.rate;
   });
 
   // Calculate trends
-  const trends = await calculatePipelineTrends(workspaceId, organizationId, period);
+  const trends = await calculatePipelineTrends(workspaceId, period);
 
   return {
     period,
@@ -116,12 +115,11 @@ export async function getPipelineReport(
  * Get sales forecast
  */
 export async function getSalesForecast(
-  organizationId: string,
   workspaceId: string,
   period: 'month' | 'quarter' | 'year'
 ): Promise<SalesForecast> {
   // Get open deals
-  const openDeals = await getOpenDeals(workspaceId, organizationId);
+  const openDeals = await getOpenDeals(workspaceId);
   
   // Calculate weighted forecast
   const forecastedRevenue = calculateWeightedForecast(openDeals);
@@ -163,14 +161,13 @@ export async function getSalesForecast(
  * Get win/loss analysis
  */
 export async function getWinLossAnalysis(
-  organizationId: string,
   workspaceId: string,
   period: string,
   startDate: Date,
   endDate: Date
 ): Promise<WinLossAnalysis> {
   // Get won and lost deals
-  const deals = await getDealsInPeriod(workspaceId, organizationId, startDate, endDate);
+  const deals = await getDealsInPeriod(workspaceId, startDate, endDate);
   const won = deals.filter(d => d.status === 'won' || d.stage === 'closed_won');
   const lost = deals.filter(d => d.status === 'lost' || d.stage === 'closed_lost');
   
@@ -215,7 +212,7 @@ export async function getWinLossAnalysis(
   });
 
   // Trends
-  const trendsArray = await calculateWinLossTrends(workspaceId, organizationId, startDate, endDate);
+  const trendsArray = await calculateWinLossTrends(workspaceId, startDate, endDate);
   const trends = trendsArray.map(item => ({
     date: item.date.toISOString().split('T')[0],
     winRate: item.winRate,
@@ -300,10 +297,10 @@ interface OrderItem {
 
 // Helper functions
 
-async function getDealsInPeriod(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<DealRecord[]> {
+async function getDealsInPeriod(workspaceId: string, startDate: Date, endDate: Date): Promise<DealRecord[]> {
   // Get deals from CRM
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('closedDate', '>=', Timestamp.fromDate(startDate)),
       where('closedDate', '<=', Timestamp.fromDate(endDate)),
@@ -313,9 +310,9 @@ async function getDealsInPeriod(workspaceId: string, organizationId: string, sta
   return deals;
 }
 
-async function getOrdersInPeriod(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<OrderRecord[]> {
+async function getOrdersInPeriod(workspaceId: string, startDate: Date, endDate: Date): Promise<OrderRecord[]> {
   const orders = await FirestoreService.getAll<OrderRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/orders`,
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
@@ -508,9 +505,9 @@ function getIntervalForPeriod(period: string): number {
   }
 }
 
-async function getOpenDeals(workspaceId: string, organizationId: string): Promise<DealRecord[]> {
+async function getOpenDeals(workspaceId: string): Promise<DealRecord[]> {
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('status', 'in', ['open', 'qualified', 'proposal', 'negotiation']),
     ]
@@ -567,13 +564,13 @@ interface PipelineVelocityResult {
   averageTimePerStage: Record<string, number>;
 }
 
-async function calculatePipelineVelocity(workspaceId: string, organizationId: string): Promise<PipelineVelocityResult> {
+async function calculatePipelineVelocity(workspaceId: string): Promise<PipelineVelocityResult> {
   // Get closed deals from last 90 days
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  
+
   const closedDeals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('status', 'in', ['won', 'lost']),
       where('closedDate', '>=', Timestamp.fromDate(ninetyDaysAgo)),
@@ -666,10 +663,10 @@ interface ConversionRateItem {
   deals: number;
 }
 
-async function calculateConversionRates(workspaceId: string, organizationId: string): Promise<ConversionRateItem[]> {
+async function calculateConversionRates(workspaceId: string): Promise<ConversionRateItem[]> {
   // Get all deals with stage history
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
     []
   );
   
@@ -706,13 +703,13 @@ async function calculateConversionRates(workspaceId: string, organizationId: str
   return rates;
 }
 
-async function calculatePipelineTrends(workspaceId: string, organizationId: string, _period: string): Promise<PipelineTrend[]> {
+async function calculatePipelineTrends(workspaceId: string, _period: string): Promise<PipelineTrend[]> {
   // Get deals over time
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
+
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('createdAt', '>=', Timestamp.fromDate(thirtyDaysAgo)),
     ]
@@ -1105,8 +1102,8 @@ interface WinLossTrendItem {
   winRate: number;
 }
 
-async function calculateWinLossTrends(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<WinLossTrendItem[]> {
-  const deals = await getDealsInPeriod(workspaceId, organizationId, startDate, endDate);
+async function calculateWinLossTrends(workspaceId: string, startDate: Date, endDate: Date): Promise<WinLossTrendItem[]> {
+  const deals = await getDealsInPeriod(workspaceId, startDate, endDate);
   
   // Group by week
   const trends: WinLossTrendItem[] = [];

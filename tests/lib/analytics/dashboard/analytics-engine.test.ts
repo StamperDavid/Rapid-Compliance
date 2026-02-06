@@ -138,7 +138,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getRepDeals).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', '30d');
+      const result = await getDashboardAnalytics( '30d');
 
       // Verify
       expect(result).toHaveProperty('workflows');
@@ -203,7 +203,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', '30d');
+      const result = await getDashboardAnalytics( '30d');
 
       // Verify workflow metrics
       expect(result.workflows.totalActiveWorkflows).toBe(1);
@@ -252,7 +252,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', '30d');
+      const result = await getDashboardAnalytics( '30d');
 
       // Verify action breakdown
       expect(result.workflows.actionBreakdown).toHaveLength(2);
@@ -297,7 +297,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', '30d');
+      const result = await getDashboardAnalytics( '30d');
 
       // Verify deal metrics
       expect(result.deals.totalActiveDeals).toBe(4);
@@ -341,7 +341,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', '30d');
+      const result = await getDashboardAnalytics( '30d');
 
       // Verify revenue metrics
       expect(result.revenue.totalRevenue).toBe(33000);
@@ -371,18 +371,18 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // First call
-      await getDashboardAnalytics('org1', '30d');
+      await getDashboardAnalytics( '30d');
       expect(mockAdminDal.getAllWorkflows).toHaveBeenCalledTimes(1);
 
       // Second call (should use cache)
-      await getDashboardAnalytics('org1', '30d');
+      await getDashboardAnalytics( '30d');
       expect(mockAdminDal.getAllWorkflows).toHaveBeenCalledTimes(1); // Still 1 (cached)
 
       // Clear cache
       await clearAnalyticsCache();
 
       // Third call (should fetch again)
-      await getDashboardAnalytics('org1', '30d');
+      await getDashboardAnalytics( '30d');
       expect(mockAdminDal.getAllWorkflows).toHaveBeenCalledTimes(2);
     });
 
@@ -416,7 +416,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', '30d');
+      const result = await getDashboardAnalytics( '30d');
 
       // Verify trend (200% increase: from 1 to 3)
       expect(result.workflows.executionsTrend).toBe(200);
@@ -442,7 +442,7 @@ describe('Analytics Engine', () => {
       const periods = ['24h', '7d', '30d', '90d', 'month', 'quarter', 'year'] as const;
 
       for (const period of periods) {
-        const result = await getDashboardAnalytics('org1', period);
+        const result = await getDashboardAnalytics( period);
         expect(result.period).toBe(period);
         expect(result.startDate).toBeInstanceOf(Date);
         expect(result.endDate).toBeInstanceOf(Date);
@@ -476,7 +476,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
-      const result = await getDashboardAnalytics('org1', '7d');
+      const result = await getDashboardAnalytics( '7d');
 
       // Verify time series
       expect(result.workflows.executionsByDay).toBeInstanceOf(Array);

@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       return errors.forbidden('Access denied to this organization');
     }
 
-    const enrichment = await enrichLead(leadId, organizationId, sources ?? {});
+    const enrichment = await enrichLead(leadId, sources ?? {});
 
     return NextResponse.json({ success: true, enrichment });
   } catch (error: unknown) {

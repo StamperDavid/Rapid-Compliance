@@ -19,6 +19,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type TeamPerformanceAnalytics,
@@ -89,7 +90,6 @@ export async function generatePerformanceAnalytics(
     
     // 2. Get all conversation analyses for the period
     const analyses = await getConversationAnalyses(
-      request.organizationId,
 (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       startDate,
       endDate
@@ -143,7 +143,6 @@ export async function generatePerformanceAnalytics(
     let trendAnalysis: TrendAnalysis;
     if (request.includeTrends !== false && fullConfig.includeTrendAnalysis) {
       trendAnalysis = generateTrendAnalysis(
-        request.organizationId,
 (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
         rankedMetrics,
         startDate,
@@ -195,10 +194,10 @@ export async function generatePerformanceAnalytics(
       repsAnalyzed: rankedMetrics.length,
       conversationsAnalyzed: analyses.length,
     });
-    
+
     // 13. Emit events
-    await emitAnalyticsEvents(analytics, request.organizationId);
-    
+    await emitAnalyticsEvents(analytics);
+
     return analytics;
     
   } catch (error) {
@@ -843,7 +842,6 @@ function findImprovementOpportunities(
  * Generate trend analysis
  */
 function generateTrendAnalysis(
-  _organizationId: string,
   _workspaceId: string,
   currentMetrics: RepPerformanceMetrics[],
   _startDate: Date,
@@ -1330,7 +1328,6 @@ function determinePeriod(request: PerformanceAnalyticsRequest): {
  * Get conversation analyses for a period
  */
 function getConversationAnalyses(
-  _organizationId: string,
   _workspaceId: string,
   _startDate: Date,
   _endDate: Date
@@ -1362,15 +1359,13 @@ function getRepInfo(_repId: string): Promise<{ name: string; email?: string }> {
  * Emit analytics events
  */
 async function emitAnalyticsEvents(
-  analytics: TeamPerformanceAnalytics,
-  organizationId: string
+  analytics: TeamPerformanceAnalytics
 ): Promise<void> {
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     // Emit performance analyzed event
     const analyzedEvent = createPerformanceAnalyzedEvent(
-      organizationId,
       analytics.workspaceId,
       analytics.repsIncluded,
       analytics.conversationsAnalyzed,
@@ -1379,11 +1374,10 @@ async function emitAnalyticsEvents(
       analytics.endDate
     );
     await coordinator.emitSignal(analyzedEvent);
-    
+
     // Emit top performer events
     for (const performer of analytics.topPerformers.slice(0, 3)) {
       const topPerformerEvent = createTopPerformerIdentifiedEvent(
-        organizationId,
         analytics.workspaceId,
         performer.repId,
         performer.rank,
@@ -1392,11 +1386,10 @@ async function emitAnalyticsEvents(
       );
       await coordinator.emitSignal(topPerformerEvent);
     }
-    
+
     // Emit coaching priority events
     for (const priority of analytics.coachingPriorities.filter(p => p.priority === 'critical' || p.priority === 'high')) {
       const priorityEvent = createCoachingPriorityCreatedEvent(
-        organizationId,
         analytics.workspaceId,
         priority.category,
         priority.priority,
@@ -1405,9 +1398,9 @@ async function emitAnalyticsEvents(
       );
       await coordinator.emitSignal(priorityEvent);
     }
-    
+
     logger.info('Performance analytics events emitted', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       eventsEmitted: 1 + analytics.topPerformers.length + analytics.coachingPriorities.filter(p => p.priority === 'critical' || p.priority === 'high').length,
     });
   } catch (error) {

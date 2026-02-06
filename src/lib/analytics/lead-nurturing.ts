@@ -8,6 +8,7 @@
 // Reserved for future use: lead scoring integration
 // import { calculateLeadScore, LeadScoringFactors } from './lead-scoring'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface LeadNurtureSequence {
   id: string;
@@ -210,8 +211,7 @@ export async function createNurtureSequence(sequence: Partial<LeadNurtureSequenc
  */
 export async function enrollLeadInSequence(
   leadId: string,
-  sequenceId: string,
-  _organizationId: string
+  sequenceId: string
 ): Promise<{ success: boolean; error?: string }> {
   // Load sequence from Firestore
   const { LeadNurturingService } = await import('@/lib/db/firestore-service');
@@ -257,7 +257,6 @@ export async function enrollLeadInSequence(
  */
 export async function enrichLead(
   leadId: string,
-  organizationId: string,
   sources: LeadEnrichment['sources']
 ): Promise<LeadEnrichment> {
   // In production, this would:
@@ -268,7 +267,7 @@ export async function enrichLead(
 
   const enrichment: LeadEnrichment = {
     leadId,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     sources,
     enrichedData: {
       // Mock enriched data - would come from APIs

@@ -9,7 +9,6 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { SchemaChangeDetector } from '@/lib/schema/schema-change-tracker';
 import { SchemaChangeEventPublisherServer } from '@/lib/schema/server/schema-change-publisher-server';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { Schema } from '@/types/schema';
 
 interface SchemaUpdateRequestBody {
@@ -70,8 +69,7 @@ export async function POST(
     // Detect changes
     const events = SchemaChangeDetector.detectChanges(
       oldSchemaData,
-      newSchema,
-      DEFAULT_ORG_ID
+      newSchema
     );
 
     // Publish events (server-side)

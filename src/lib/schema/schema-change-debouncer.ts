@@ -244,11 +244,9 @@ export interface SchemaChange {
 export class SchemaBatchUpdater {
   private changes: SchemaChange[] = [];
   private schemaId: string;
-  private organizationId: string;
   private workspaceId: string;
-  
-  constructor(organizationId: string, workspaceId: string, schemaId: string) {
-    this.organizationId = organizationId;
+
+  constructor(workspaceId: string, schemaId: string) {
     this.workspaceId = workspaceId;
     this.schemaId = schemaId;
   }
@@ -324,10 +322,11 @@ export class SchemaBatchUpdater {
     
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
 
       // Get current schema
       const schemaData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${COLLECTIONS.WORKSPACES}/${this.workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${this.workspaceId}/${COLLECTIONS.SCHEMAS}`,
         this.schemaId
       );
 
@@ -352,7 +351,7 @@ export class SchemaBatchUpdater {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${COLLECTIONS.WORKSPACES}/${this.workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${this.workspaceId}/${COLLECTIONS.SCHEMAS}`,
         this.schemaId,
         updatedSchema,
         false
@@ -363,7 +362,7 @@ export class SchemaBatchUpdater {
       const { Timestamp } = await import('firebase/firestore');
       await SchemaChangeEventPublisher.publishEvent({
         id: `sce_batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        organizationId: this.organizationId,
+        organizationId: DEFAULT_ORG_ID,
         workspaceId: this.workspaceId,
         schemaId: this.schemaId,
         timestamp: Timestamp.now(),

@@ -45,7 +45,6 @@ export async function processSchemaChangeEvent(
     
     // STEP 4: Mark event as processed
     await SchemaChangeEventPublisher.markEventProcessed(
-      event.organizationId,
       event.id
     );
     
@@ -89,10 +88,9 @@ async function handleFieldTypeChange(event: SchemaChangeEvent): Promise<void> {
       });
 
       await FieldTypeConverter.convertFieldType(
-        event.organizationId,
         event.workspaceId,
         event.schemaId,
-event.oldFieldKey ?? event.oldFieldName ?? '',
+        event.oldFieldKey ?? event.oldFieldName ?? '',
         event.oldFieldType as FieldType,
         event.newFieldType as FieldType
       );
@@ -106,21 +104,19 @@ event.oldFieldKey ?? event.oldFieldName ?? '',
       });
 
       const preview = await FieldTypeConverter.generateConversionPreview(
-        event.organizationId,
         event.workspaceId,
         event.schemaId,
-event.oldFieldKey ?? event.oldFieldName ?? '',
+        event.oldFieldKey ?? event.oldFieldName ?? '',
         event.oldFieldType as FieldType,
         event.newFieldType as FieldType,
         10 // sample size
       );
 
       await FieldTypeConverter.createConversionApprovalRequest(
-        event.organizationId,
         event.workspaceId,
         event.schemaId,
-event.oldFieldKey ?? event.oldFieldName ?? '',
-event.newFieldName ?? event.oldFieldName ?? '',
+        event.oldFieldKey ?? event.oldFieldName ?? '',
+        event.newFieldName ?? event.oldFieldName ?? '',
         event.oldFieldType as FieldType,
         event.newFieldType as FieldType,
         preview
@@ -203,17 +199,16 @@ async function handleIntegrationAdaptation(event: SchemaChangeEvent): Promise<vo
 /**
  * Process all unprocessed schema change events
  */
-export async function processUnprocessedEvents(
-  organizationId: string
-): Promise<{
+export async function processUnprocessedEvents(): Promise<{
   processed: number;
   failed: number;
 }> {
   let processed = 0;
   let failed = 0;
-  
+
   try {
-    const events = await SchemaChangeEventPublisher.getUnprocessedEvents(organizationId);
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const events = await SchemaChangeEventPublisher.getUnprocessedEvents(DEFAULT_ORG_ID);
     
     logger.info('[Schema Change Handler] Processing unprocessed events', {
       file: 'schema-change-handler.ts',
@@ -246,7 +241,6 @@ export async function processUnprocessedEvents(
  * Get schema change impact summary
  */
 export async function getSchemaChangeImpactSummary(
-  organizationId: string,
   workspaceId: string,
   schemaId: string
 ): Promise<{
@@ -263,8 +257,9 @@ export async function getSchemaChangeImpactSummary(
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const { where } = await import('firebase/firestore');
-    
-    const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+
+    const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/schemaChangeEvents`;
     
     // Get all events for this schema (last 30 days)
     const thirtyDaysAgo = new Date();

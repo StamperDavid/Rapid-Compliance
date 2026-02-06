@@ -5,6 +5,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, orderBy, Timestamp } from 'firebase/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Core data structure interfaces
 interface WorkflowData {
@@ -95,7 +96,6 @@ function toDate(timestamp: Timestamp | FirestoreTimestamp | Date): Date {
  * Get workflow analytics
  */
 export async function getWorkflowAnalytics(
-  organizationId: string,
   workspaceId: string,
   workflowId: string,
   startDate: Date,
@@ -103,7 +103,7 @@ export async function getWorkflowAnalytics(
 ): Promise<WorkflowAnalytics> {
   // Get workflow
   const workflowDoc = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
     workflowId
   );
 
@@ -115,7 +115,7 @@ export async function getWorkflowAnalytics(
 
   // Get executions in period
   const executionDocs = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/workflowExecutions`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflowExecutions`,
     [
       where('workflowId', '==', workflowId),
       where('startedAt', '>=', Timestamp.fromDate(startDate)),
@@ -255,14 +255,13 @@ function calculateExecutionsByDay(
  * Get all workflows analytics summary
  */
 export async function getAllWorkflowsAnalytics(
-  organizationId: string,
   workspaceId: string,
   startDate: Date,
   endDate: Date
 ): Promise<Array<{ workflowId: string; workflowName: string; executions: number; successRate: number }>> {
   // Get all workflows
   const workflowDocs = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
     [where('status', '==', 'active')]
   );
 
@@ -272,7 +271,7 @@ export async function getAllWorkflowsAnalytics(
   const analytics = await Promise.all(
     workflows.map(async (workflow) => {
       const executionDocs = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/workflowExecutions`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflowExecutions`,
         [
           where('workflowId', '==', workflow.id),
           where('startedAt', '>=', Timestamp.fromDate(startDate)),

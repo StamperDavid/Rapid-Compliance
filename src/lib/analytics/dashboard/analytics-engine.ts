@@ -42,6 +42,7 @@ import type {
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Workflow, WorkflowExecution } from '@/lib/workflow/types';
 import { emitDashboardGenerated } from './events';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CACHE CONFIGURATION
@@ -88,7 +89,6 @@ function toDate(value: Date | FirestoreTimestamp | string | number): Date {
  * @returns Dashboard overview with all metrics
  */
 export async function getDashboardAnalytics(
-  organizationId: string,
   period: TimePeriod,
   startDate?: Date,
   endDate?: Date
@@ -96,7 +96,7 @@ export async function getDashboardAnalytics(
   const startTime = Date.now();
 
   // Check cache
-  const cacheKey = `${organizationId}:${period}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
+  const cacheKey = `${DEFAULT_ORG_ID}:${period}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
   const cached = analyticsCache.get(cacheKey);
 
   if (cached) {
@@ -105,7 +105,7 @@ export async function getDashboardAnalytics(
       // Emit event for cached response
       const generationTime = Date.now() - startTime;
       await emitDashboardGenerated(
-        organizationId,
+        DEFAULT_ORG_ID,
         period,
         generationTime,
         true,
@@ -121,14 +121,14 @@ export async function getDashboardAnalytics(
 
   // Aggregate data from all sources in parallel
   const [workflows, deals, revenue, team] = await Promise.all([
-    getWorkflowMetrics(organizationId, dateRange.start, dateRange.end, previousDateRange),
-    getDealMetrics(organizationId, dateRange.start, dateRange.end, previousDateRange),
-    getRevenueMetrics(organizationId, dateRange.start, dateRange.end, previousDateRange),
-    getTeamMetrics(organizationId, dateRange.start, dateRange.end),
+    getWorkflowMetrics(dateRange.start, dateRange.end, previousDateRange),
+    getDealMetrics(dateRange.start, dateRange.end, previousDateRange),
+    getRevenueMetrics(dateRange.start, dateRange.end, previousDateRange),
+    getTeamMetrics(dateRange.start, dateRange.end),
   ]);
 
   // Get email metrics synchronously (no async DB calls)
-  const emails = getEmailMetrics(organizationId, dateRange.start, dateRange.end, previousDateRange);
+  const emails = getEmailMetrics(dateRange.start, dateRange.end, previousDateRange);
 
   const dashboard: DashboardOverview = {
     period,
@@ -150,7 +150,7 @@ export async function getDashboardAnalytics(
   // Emit event for new generation
   const generationTime = Date.now() - startTime;
   await emitDashboardGenerated(
-    organizationId,
+    DEFAULT_ORG_ID,
     period,
     generationTime,
     false,
@@ -168,7 +168,6 @@ export async function getDashboardAnalytics(
  * Get workflow analytics metrics
  */
 async function getWorkflowMetrics(
-  organizationId: string,
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
@@ -393,7 +392,6 @@ function calculateActionBreakdown(
  * Get email analytics metrics
  */
 function getEmailMetrics(
-  organizationId: string,
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
@@ -539,7 +537,6 @@ function calculateEmailsByTier(emails: EmailRecord[], total: number): TierDistri
  * Get deal analytics metrics
  */
 async function getDealMetrics(
-  organizationId: string,
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
@@ -604,7 +601,6 @@ async function getDealMetrics(
 
   // Get pipeline by day
   const pipelineByDay = generateDealPipelineTimeSeries(
-    organizationId,
     startDate,
     endDate
   );
@@ -735,7 +731,6 @@ function calculateAverageVelocity(closedDeals: DealAnalyticsRecord[]): number {
  * Generate deal pipeline time series
  */
 function generateDealPipelineTimeSeries(
-  _organizationId: string,
   _startDate: Date,
   _endDate: Date
 ): TimeSeriesDataPoint[] {
@@ -752,7 +747,6 @@ function generateDealPipelineTimeSeries(
  * Get revenue analytics metrics
  */
 async function getRevenueMetrics(
-  organizationId: string,
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
@@ -842,7 +836,6 @@ async function getRevenueMetrics(
  * Get team analytics metrics
  */
 async function getTeamMetrics(
-  organizationId: string,
   startDate: Date,
   endDate: Date
 ): Promise<TeamOverviewMetrics> {

@@ -36,7 +36,6 @@ export class SchemaChangeEventPublisherServer {
    * Mark event as processed
    */
   static async markEventProcessed(
-    organizationId: string,
     eventId: string
   ): Promise<void> {
     const schemaChangeEventsPath = getOrgSubCollection('schemaChangeEvents');
