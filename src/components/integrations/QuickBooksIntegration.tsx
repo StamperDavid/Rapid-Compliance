@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { QuickBooksIntegration as QuickBooksType } from '@/types/integrations';
+import { useAuth } from '@/hooks/useAuth';
 
 interface QuickBooksIntegrationProps {
   integration: QuickBooksType | null;
@@ -16,6 +17,7 @@ export default function QuickBooksIntegration({
   onDisconnect,
   onUpdate
 }: QuickBooksIntegrationProps) {
+  const { user } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -34,8 +36,7 @@ export default function QuickBooksIntegration({
   const handleConnect = () => {
     setIsConnecting(true);
     try {
-      // Get current user and org from context or URL
-      const userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
+      const userId = user?.id ?? 'anonymous';
 
       // Redirect to real QuickBooks OAuth flow
       window.location.href = `/api/integrations/quickbooks/auth?userId=${userId}`;

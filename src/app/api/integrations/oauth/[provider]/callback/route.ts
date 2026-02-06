@@ -17,6 +17,7 @@ export const dynamic = 'force-dynamic';
 const OAuthStateSchema = z.object({
   organizationId: z.string().min(1),
   provider: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 const GoogleTokenResponseSchema = z.object({
@@ -96,7 +97,7 @@ export async function GET(
         throw new Error('Invalid state: missing organizationId');
       }
 
-      const { organizationId: _organizationId } = stateValidation.data;
+      const { organizationId: _organizationId, userId } = stateValidation.data;
 
       // Exchange code for access token
       let credentials: ProviderCredentials;
@@ -127,7 +128,7 @@ export async function GET(
         },
       };
 
-      await apiKeyService.saveKeys(updatedKeys);
+      await apiKeyService.saveKeys(updatedKeys, userId ?? 'system');
 
       // Redirect back to integrations page with success
       return NextResponse.redirect(

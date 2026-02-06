@@ -57,7 +57,7 @@ export default function NavigationManagementPage() {
             showLogo: true,
           },
           updatedAt: new Date().toISOString(),
-          updatedBy: 'current-user',
+          updatedBy: user?.id ?? 'anonymous',
         });
       }
 
@@ -79,7 +79,7 @@ export default function NavigationManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     void loadData();

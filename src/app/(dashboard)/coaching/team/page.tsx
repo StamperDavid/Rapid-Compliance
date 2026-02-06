@@ -18,6 +18,7 @@ import type {
   TimePeriod,
   TeamCoachingInsights,
 } from '@/lib/coaching/types';
+import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Time period options
@@ -35,6 +36,8 @@ const TIME_PERIODS: { value: TimePeriod; label: string }[] = [
  * Team Coaching Dashboard Page Component
  */
 export default function TeamCoachingDashboardPage() {
+  const { user } = useAuth();
+
   // State
   const [period, setPeriod] = useState<TimePeriod>('last_30_days');
   const [teamInsights, setTeamInsights] = useState<TeamCoachingInsights | null>(null);
@@ -42,8 +45,7 @@ export default function TeamCoachingDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // TODO: Get from auth context
-  const currentTeamId = 'team_default';
+  const currentTeamId = user?.id ? `team_${user.id}` : 'team_default';
 
   /**
    * Fetch team coaching insights

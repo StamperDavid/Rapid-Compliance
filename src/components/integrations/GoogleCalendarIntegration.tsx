@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import type { GoogleCalendarIntegration as GoogleCalendarType } from '@/types/integrations'
 import { logger } from '@/lib/logger/logger';
+import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface GoogleCalendarIntegrationProps {
   integration: GoogleCalendarType | null;
@@ -17,6 +19,7 @@ export default function GoogleCalendarIntegration({
   onDisconnect,
   onUpdate
 }: GoogleCalendarIntegrationProps) {
+  const { user: authUser } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -35,11 +38,8 @@ export default function GoogleCalendarIntegration({
   const handleConnect = () => {
     setIsConnecting(true);
     try {
-      // Get current user and org from localStorage
-      // LEGACY BACKUP (DO NOT USE): const user = JSON.parse(localStorage.getItem('user') || '{}');
-      // LEGACY BACKUP (DO NOT USE): const org = JSON.parse(localStorage.getItem('currentOrganization') || '{}');
-      const user: { uid?: string } = typeof window !== 'undefined' ? {} : {}; // TODO: Get from auth context
-      const org: { id?: string } = typeof window !== 'undefined' ? {} : {}; // TODO: Get from route params
+      const user = { uid: authUser?.id };
+      const org = { id: DEFAULT_ORG_ID };
 
       if (!user.uid || !org.id) {
         logger.error('User or organization not found', new Error('User or organization not found'), { file: 'GoogleCalendarIntegration.tsx' });

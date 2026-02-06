@@ -75,16 +75,19 @@ export default function TemplatesDashboard() {
     }
   };
 
-  // Load Sample Deal Scores
+  // Load Deal Scores from Firestore
   const loadDealScores = async () => {
     try {
       setLoadingScores(true);
-      
-      // Mock: In real app, fetch actual deals
-      const mockDealIds = ['deal_1', 'deal_2', 'deal_3'];
+
+      // Fetch real deal IDs from Firestore
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const collectionPath = `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`;
+      const dealRecords = await FirestoreService.getAll<{ id: string }>(collectionPath);
+      const dealIds = dealRecords.map(d => d.id);
       const scores = new Map<string, DealScore>();
-      
-      for (const dealId of mockDealIds) {
+
+      for (const dealId of dealIds) {
         const response = await fetch(`/api/templates/deals/${dealId}/score`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

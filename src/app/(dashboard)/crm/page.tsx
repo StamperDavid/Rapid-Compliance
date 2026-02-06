@@ -201,62 +201,18 @@ function CRMContent() {
     void loadConfig();
   }, [user]);
 
-  // Sample data with setters
-  const [leads, setLeads] = useState<Lead[]>([
-    { id: '1', first_name: 'Sarah', last_name: 'Williams', email: 'sarah@newtech.com', phone: '555-0400', company: 'NewTech Inc', title: 'Marketing Director', lead_source: 'Website', lead_status: 'New', rating: 'Hot', estimated_value: 75000 },
-    { id: '2', first_name: 'Michael', last_name: 'Brown', email: 'mbrown@startup.io', phone: '555-0500', company: 'Startup.io', title: 'CEO', lead_source: 'Referral', lead_status: 'Contacted', rating: 'Warm', estimated_value: 150000 },
-    { id: '3', first_name: 'Emily', last_name: 'Davis', email: 'emily@enterprise.com', phone: '555-0600', company: 'Enterprise Corp', title: 'VP Operations', lead_source: 'Cold Call', lead_status: 'Qualified', rating: 'Hot', estimated_value: 200000 },
-  ]);
-
-  const [companies, setCompanies] = useState<Company[]>([
-    { id: '1', name: 'Acme Corp', website: 'acme.com', phone: '555-0100', industry: 'Technology', status: 'Active', annual_revenue: 5000000 },
-    { id: '2', name: 'Global Industries', website: 'global.com', phone: '555-0200', industry: 'Manufacturing', status: 'Active', annual_revenue: 12000000 },
-    { id: '3', name: 'Tech Solutions', website: 'techsol.com', phone: '555-0300', industry: 'Technology', status: 'Prospect', annual_revenue: 2500000 },
-  ]);
-
-  const [contacts, setContacts] = useState<Contact[]>([
-    { id: '1', first_name: 'John', last_name: 'Doe', email: 'john@acme.com', phone: '555-0101', title: 'CEO', company_id: '1', status: 'Active' },
-    { id: '2', first_name: 'Jane', last_name: 'Smith', email: 'jane@global.com', phone: '555-0201', title: 'VP Sales', company_id: '2', status: 'Active' },
-    { id: '3', first_name: 'Bob', last_name: 'Johnson', email: 'bob@techsol.com', phone: '555-0301', title: 'CTO', company_id: '3', status: 'Active' },
-  ]);
-
-  const [deals, setDeals] = useState<Deal[]>([
-    { id: '1', name: 'Q1 2024 Contract', company_id: '1', contact_id: '1', amount: 50000, stage: 'Proposal', probability: 60, expected_close_date: '2024-03-31' },
-    { id: '2', name: 'Enterprise License', company_id: '2', contact_id: '2', amount: 125000, stage: 'Negotiation', probability: 80, expected_close_date: '2024-02-28' },
-    { id: '3', name: 'Consulting Package', company_id: '3', contact_id: '3', amount: 75000, stage: 'Qualification', probability: 40, expected_close_date: '2024-04-15' },
-  ]);
-
-  const [products, setProducts] = useState<Product[]>([
-    { id: '1', name: 'Premium Plan', sku: 'PLAN-PREM', price: 299, category: 'Subscription', active: true, stock_quantity: 999 },
-    { id: '2', name: 'Enterprise Plan', sku: 'PLAN-ENT', price: 999, category: 'Subscription', active: true, stock_quantity: 999 },
-    { id: '3', name: 'Consulting Hours', sku: 'CONS-HR', price: 200, category: 'Service', active: true, stock_quantity: 0 },
-  ]);
-
-  const [quotes, setQuotes] = useState<Quote[]>([
-    { id: '1', quote_number: 'QUO-001', company_id: '1', quote_date: '2024-01-10', expiry_date: '2024-02-10', total: 50000, status: 'Sent' },
-    { id: '2', quote_number: 'QUO-002', company_id: '2', quote_date: '2024-01-15', expiry_date: '2024-02-15', total: 125000, status: 'Accepted' },
-  ]);
-
-  const [invoices, setInvoices] = useState<Invoice[]>([
-    { id: '1', invoice_number: 'INV-001', company_id: '1', invoice_date: '2024-01-15', due_date: '2024-02-15', total: 50000, paid_amount: 25000, balance: 25000, status: 'Partial' },
-    { id: '2', invoice_number: 'INV-002', company_id: '2', invoice_date: '2024-01-20', due_date: '2024-02-20', total: 125000, paid_amount: 125000, balance: 0, status: 'Paid' },
-  ]);
-
-  const [payments, setPayments] = useState<Payment[]>([
-    { id: '1', payment_number: 'PAY-001', invoice_id: '1', payment_date: '2024-01-20', amount: 25000, payment_method: 'Stripe', transaction_id: 'ch_3abc123xyz', status: 'Completed' },
-    { id: '2', payment_number: 'PAY-002', invoice_id: '2', payment_date: '2024-01-25', amount: 125000, payment_method: 'Bank Transfer', transaction_id: 'ACH-987654', status: 'Completed' },
-    { id: '3', payment_number: 'PAY-003', invoice_id: '1', payment_date: '2024-02-01', amount: 25000, payment_method: 'Credit Card', transaction_id: 'ch_4def456uvw', status: 'Completed' },
-  ]);
-
-  const [orders, setOrders] = useState<Order[]>([
-    { id: '1', order_number: 'ORD-001', company_id: '1', order_date: '2024-01-15', total: 50000, status: 'Processing' },
-  ]);
-
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: '1', subject: 'Follow up with Acme', due_date: '2024-01-25', priority: 'High', status: 'In Progress' },
-    { id: '2', subject: 'Send proposal to Global', due_date: '2024-01-26', priority: 'Urgent', status: 'Not Started' },
-    { id: '3', subject: 'Schedule demo with Tech Solutions', due_date: '2024-01-27', priority: 'Normal', status: 'Not Started' },
-  ]);
+  // Entity data (loaded from Firestore)
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [recordsLoading, setRecordsLoading] = useState(true);
 
   const dataMap: Record<ViewType, CRMRecord[]> = {
     leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks
@@ -274,6 +230,44 @@ function CRMContent() {
     orders: setOrders as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
     tasks: setTasks as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
   };
+
+  // Load entity records from Firestore
+  useEffect(() => {
+    if (!user) { return; }
+
+    const setters: Record<ViewType, React.Dispatch<React.SetStateAction<CRMRecord[]>>> = {
+      leads: setLeads as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+      companies: setCompanies as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+      contacts: setContacts as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+      deals: setDeals as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+      products: setProducts as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+      quotes: setQuotes as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+      invoices: setInvoices as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+      payments: setPayments as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+      orders: setOrders as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+      tasks: setTasks as React.Dispatch<React.SetStateAction<CRMRecord[]>>,
+    };
+
+    const loadRecords = async () => {
+      try {
+        setRecordsLoading(true);
+        const { FirestoreService } = await import('@/lib/db/firestore-service');
+        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+        const collectionPath = `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/${activeView}/records`;
+        const records = await FirestoreService.getAll<CRMRecord>(collectionPath);
+        const setter = setters[activeView];
+        if (setter) {
+          setter(records);
+        }
+      } catch (error: unknown) {
+        logger.error('Failed to load CRM records:', error instanceof Error ? error : new Error(String(error)), { entity: activeView });
+      } finally {
+        setRecordsLoading(false);
+      }
+    };
+
+    void loadRecords();
+  }, [user, activeView]);
 
   const getActiveData = (): CRMRecord[] => {
     let data: CRMRecord[] = dataMap[activeView] || [];
@@ -777,57 +771,107 @@ function CRMContent() {
                 </tr>
               </thead>
               <tbody>
-                {getActiveData().map((record: CRMRecord) => {
-                  const recordData = record as unknown as Record<string, unknown>;
-                  return (
-                  <tr key={record.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
-                    {getSchema().fields.slice(0, 6).map((field: SchemaField) => (
-                      <td key={field.key} style={{ padding: '1rem 1.5rem', color: '#ffffff' }}>
-                        {field.type === 'currency' ? (
-                          <span style={{ fontWeight: '600' }}>${Number(recordData[field.key] ?? 0).toLocaleString()}</span>
-                        ) : field.type === 'lookup' && field.key === 'company_id' ? (
-                          <span style={{ color: primaryColor }}>{getCompanyName(String(recordData[field.key] ?? ''))}</span>
-                        ) : field.type === 'checkbox' ? (
-                          <span style={{
-                            padding: '0.25rem 0.5rem',
-                            backgroundColor: recordData[field.key] ? '#065f46' : '#333',
-                            color: recordData[field.key] ? '#6ee7b7' : '#999',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.75rem'
-                          }}>
-                            {recordData[field.key] ? 'Yes' : 'No'}
-                          </span>
-                        ) : field.key.includes('status') || field.key.includes('stage') ? (
-                          <span style={{
-                            padding: '0.25rem 0.75rem',
-                            backgroundColor: '#1a1a1a',
-                            color: recordData[field.key] === 'Active' || recordData[field.key] === 'Paid' ? theme?.colors?.success?.main || '#10b981' : primaryColor,
-                            borderRadius: '9999px',
-                            fontSize: '0.75rem',
-                            border: '1px solid #333'
-                          }}>
-                            {String(recordData[field.key] ?? '')}
-                          </span>
-                        ) : (
-(recordData[field.key] !== '' && recordData[field.key] != null) ? String(recordData[field.key]) : '-'
-                        )}
-                      </td>
-                    ))}
-                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                      <button
-                        onClick={() => handleEdit(record)}
-                        style={{ color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem' }}>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(record)}
-                        style={{ color: theme?.colors?.error?.main || '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}>
-                        Delete
-                      </button>
+                {recordsLoading ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: '4rem', textAlign: 'center' }}>
+                      <div style={{ color: '#666' }}>Loading {getSchema().pluralName}...</div>
                     </td>
                   </tr>
-                  );
-                })}
+                ) : getActiveData().length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: '4rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{getSchema().icon}</div>
+                      <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                        No {getSchema().pluralName.toLowerCase()} yet
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem' }}>
+                        Get started by adding your first {getSchema().singularName.toLowerCase()} or importing from CSV.
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                        <button
+                          onClick={handleAdd}
+                          style={{
+                            padding: '0.625rem 1.25rem',
+                            backgroundColor: primaryColor,
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '0.875rem'
+                          }}>
+                          + Add {getSchema().singularName}
+                        </button>
+                        <button
+                          onClick={() => setShowImportModal(true)}
+                          style={{
+                            padding: '0.625rem 1rem',
+                            backgroundColor: '#1a1a1a',
+                            color: '#999',
+                            border: '1px solid #333',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '500'
+                          }}>
+                          Import CSV
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  getActiveData().map((record: CRMRecord) => {
+                    const recordData = record as unknown as Record<string, unknown>;
+                    return (
+                    <tr key={record.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                      {getSchema().fields.slice(0, 6).map((field: SchemaField) => (
+                        <td key={field.key} style={{ padding: '1rem 1.5rem', color: '#ffffff' }}>
+                          {field.type === 'currency' ? (
+                            <span style={{ fontWeight: '600' }}>${Number(recordData[field.key] ?? 0).toLocaleString()}</span>
+                          ) : field.type === 'lookup' && field.key === 'company_id' ? (
+                            <span style={{ color: primaryColor }}>{getCompanyName(String(recordData[field.key] ?? ''))}</span>
+                          ) : field.type === 'checkbox' ? (
+                            <span style={{
+                              padding: '0.25rem 0.5rem',
+                              backgroundColor: recordData[field.key] ? '#065f46' : '#333',
+                              color: recordData[field.key] ? '#6ee7b7' : '#999',
+                              borderRadius: '0.25rem',
+                              fontSize: '0.75rem'
+                            }}>
+                              {recordData[field.key] ? 'Yes' : 'No'}
+                            </span>
+                          ) : field.key.includes('status') || field.key.includes('stage') ? (
+                            <span style={{
+                              padding: '0.25rem 0.75rem',
+                              backgroundColor: '#1a1a1a',
+                              color: recordData[field.key] === 'Active' || recordData[field.key] === 'Paid' ? theme?.colors?.success?.main || '#10b981' : primaryColor,
+                              borderRadius: '9999px',
+                              fontSize: '0.75rem',
+                              border: '1px solid #333'
+                            }}>
+                              {String(recordData[field.key] ?? '')}
+                            </span>
+                          ) : (
+(recordData[field.key] !== '' && recordData[field.key] != null) ? String(recordData[field.key]) : '-'
+                          )}
+                        </td>
+                      ))}
+                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                        <button
+                          onClick={() => handleEdit(record)}
+                          style={{ color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem' }}>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(record)}
+                          style={{ color: theme?.colors?.error?.main || '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

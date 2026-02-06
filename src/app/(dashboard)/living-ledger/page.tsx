@@ -56,66 +56,28 @@ export default function LivingLedgerPage() {
   const [monitoringEnabled, setMonitoringEnabled] = useState(false);
   const [healthCheckSummary, setHealthCheckSummary] = useState<HealthCheckSummary | null>(null);
 
-  // Load deals
+  // Load deals from Firestore
   useEffect(() => {
-    const loadDeals = () => {
+    if (!user) { return; }
+
+    const loadDeals = async () => {
       try {
-        // For demo purposes, using mock data
-        // In production, this would fetch from Firestore
-        const mockDeals: Deal[] = [
-          {
-            id: 'deal-1',
-            organizationId: DEFAULT_ORG_ID,
-            workspaceId: 'default',
-            name: 'Q1 2024 Enterprise Contract - Acme Corp',
-            companyName: 'Acme Corp',
-            value: 125000,
-            stage: 'negotiation',
-            probability: 75,
-            expectedCloseDate: new Date('2024-03-15'),
-            createdAt: new Date('2024-01-01'),
-          },
-          {
-            id: 'deal-2',
-            organizationId: DEFAULT_ORG_ID,
-            workspaceId: 'default',
-            name: 'Startup Package - TechFlow',
-            companyName: 'TechFlow Inc',
-            value: 50000,
-            stage: 'proposal',
-            probability: 60,
-            expectedCloseDate: new Date('2024-02-28'),
-            createdAt: new Date('2023-12-15'),
-          },
-          {
-            id: 'deal-3',
-            organizationId: DEFAULT_ORG_ID,
-            workspaceId: 'default',
-            name: 'Consulting Services - Global Industries',
-            companyName: 'Global Industries',
-            value: 200000,
-            stage: 'qualification',
-            probability: 40,
-            expectedCloseDate: new Date('2024-04-30'),
-            createdAt: new Date('2024-01-10'),
-          },
-        ];
+        const { FirestoreService } = await import('@/lib/db/firestore-service');
+        const collectionPath = `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`;
+        const records = await FirestoreService.getAll<Deal>(collectionPath);
 
-        setDeals(mockDeals);
-
-        // Auto-select first deal
-        if (mockDeals.length > 0) {
-          setSelectedDealId(mockDeals[0].id);
+        setDeals(records);
+        if (records.length > 0) {
+          setSelectedDealId(records[0].id);
         }
-
-        setLoading(false);
       } catch (error: unknown) {
         logger.error('Failed to load deals', error instanceof Error ? error : new Error(String(error)));
+      } finally {
         setLoading(false);
       }
     };
 
-    loadDeals();
+    void loadDeals();
   }, [user]);
 
   // Load health score for selected deal
@@ -368,7 +330,40 @@ export default function LivingLedgerPage() {
             Active Deals ({deals.length})
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {deals.map((deal) => (
+            {deals.length === 0 ? (
+              <div
+                style={{
+                  padding: '2rem',
+                  backgroundColor: '#0a0a0a',
+                  border: '1px solid #1a1a1a',
+                  borderRadius: '0.5rem',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📊</div>
+                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
+                  No deals yet
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '1rem' }}>
+                  Add deals from the CRM to track health scores and get AI recommendations.
+                </div>
+                <a
+                  href="/crm?view=deals"
+                  style={{
+                    display: 'inline-block',
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#6366f1',
+                    color: '#fff',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Go to CRM
+                </a>
+              </div>
+            ) : deals.map((deal) => (
               <div
                 key={deal.id}
                 onClick={() => setSelectedDealId(deal.id)}

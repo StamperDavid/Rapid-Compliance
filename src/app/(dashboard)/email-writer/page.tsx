@@ -19,6 +19,7 @@ import React, { useState } from 'react';
 import { EmailWriterCard } from '@/components/email-writer/EmailWriterCard';
 import type { GeneratedEmail } from '@/lib/email-writer';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { useAuth } from '@/hooks/useAuth';
 
 // ============================================================================
 // TYPES
@@ -37,10 +38,10 @@ interface EmailHistory {
 // ============================================================================
 
 export default function EmailWriterPage() {
-  // TODO: Get from auth context
-  const workspaceId = 'workspace_default';
-  const userId = 'user_current';
-  
+  const { user } = useAuth();
+  const workspaceId = 'default';
+  const userId = user?.id ?? 'anonymous';
+
   // State
   const [emailHistory, setEmailHistory] = useState<EmailHistory>({
     emails: [],

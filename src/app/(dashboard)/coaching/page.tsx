@@ -19,6 +19,7 @@ import type {
   RepPerformanceMetrics,
   CoachingInsights,
 } from '@/lib/coaching/types';
+import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Time period options
@@ -36,6 +37,8 @@ const TIME_PERIODS: { value: TimePeriod; label: string }[] = [
  * Coaching Dashboard Page Component
  */
 export default function CoachingDashboardPage() {
+  const { user } = useAuth();
+
   // State
   const [period, setPeriod] = useState<TimePeriod>('last_30_days');
   const [performance, setPerformance] = useState<RepPerformanceMetrics | null>(null);
@@ -44,8 +47,7 @@ export default function CoachingDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // TODO: Get from auth context
-  const currentUserId = 'user_default';
+  const currentUserId = user?.id ?? 'user_default';
 
   /**
    * Fetch coaching insights

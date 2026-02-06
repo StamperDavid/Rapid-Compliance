@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { OutlookCalendarIntegration as OutlookCalendarType } from '@/types/integrations';
+import { useAuth } from '@/hooks/useAuth';
 
 interface OutlookCalendarIntegrationProps {
   integration: OutlookCalendarType | null;
@@ -16,6 +17,7 @@ export default function OutlookCalendarIntegration({
   onDisconnect,
   onUpdate
 }: OutlookCalendarIntegrationProps) {
+  const { user } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -34,8 +36,7 @@ export default function OutlookCalendarIntegration({
   const handleConnect = () => {
     setIsConnecting(true);
     try {
-      // Get current user and org from context or URL
-      const userId =(localStorage.getItem('userId') !== '' && localStorage.getItem('userId') != null) ? localStorage.getItem('userId') : 'current-user';
+      const userId = user?.id ?? 'anonymous';
 
       // Redirect to real Microsoft OAuth flow (same as Outlook, includes calendar scopes)
       window.location.href = `/api/integrations/microsoft/auth?userId=${userId}`;
