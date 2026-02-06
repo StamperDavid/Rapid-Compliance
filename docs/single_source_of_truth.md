@@ -1,8 +1,8 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 6, 2026 (Phase 11: 4-role RBAC restored — owner|admin|manager|member with real permission matrices, requireRole() API gating, sidebar permission filtering)
-**Branches:** `dev` at commit `c09135e7`
+**Last Updated:** February 6, 2026 (Documentation cleanup, Stabilization Roadmap added, outdated plans removed)
+**Branches:** `dev` at commit `cd181754`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -148,6 +148,94 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 - All internal operations route to `DEFAULT_ORG_ID` exclusively
 - No dynamic organization ID resolution - hard-coded to `rapid-compliance-root`
 - Maintains backward compatibility for swarm agent coordination
+
+---
+
+## Current Status Assessment (February 6, 2026)
+
+> **Honest audit of what's real vs what's stubbed. This section replaces all previous launch readiness scorecards.**
+
+### What's Solid
+
+| Area | Status | Evidence |
+|------|--------|----------|
+| Single-tenant architecture | **COMPLETE** | Firebase kill-switch, DEFAULT_ORG_ID everywhere, -71K lines purged |
+| 4-role RBAC | **ENFORCED** | `requireRole()` on API routes, sidebar permission filtering, 47 permissions |
+| Agent hierarchy | **STRUCTURALLY COMPLETE** | 51 agents defined with full config, manager orchestration logic implemented |
+| Type safety | **CLEAN** | `tsc --noEmit` passes, zero `any` policy enforced |
+| Build pipeline | **CLEAN** | `npm run build` passes with pre-commit hooks |
+
+### What Needs Work
+
+| Area | Issue | Severity |
+|------|-------|----------|
+| **100 TODO comments** | 15 services have `"TODO: Get from auth context"`, multiple services return mock/empty data | HIGH |
+| **No error boundaries** | Zero `error.tsx` or `loading.tsx` files at route level — crashes show white screens | HIGH |
+| **76 files with mock data** | Social campaigns, form templates, deal scores use hardcoded sample data | HIGH |
+| **Accessibility** | 1 `aria-label` across 115+ pages, no semantic HTML, no keyboard navigation | MEDIUM |
+| **Data tables** | No column sorting, no bulk actions, no CSV export on any table | MEDIUM |
+| **Agent end-to-end testing** | No test validates full chain: user → orchestrator → manager → specialist → UI | MEDIUM |
+| **Mixed styling** | Some pages use inline styles, some Tailwind, some CSS variables | LOW |
+
+### What's Stubbed (Not Yet Functional)
+
+| Endpoint/Feature | Issue |
+|------------------|-------|
+| Voice AI audio generation | TODO in voice agent — no actual audio output |
+| Video content generation | TODO in video endpoint — storyboard only, no render |
+| Email reply processing | TODO in reply processor — inbound parsing not implemented |
+| PDF proposal generation | TODO in proposal generator |
+| ML predictive lead scoring | Rule-based only, ML model placeholder |
+| `/api/coaching/team` | Returns hardcoded team member IDs |
+| `/api/crm/deals/[dealId]/recommendations` | Auth implementation incomplete |
+
+---
+
+## Stabilization Roadmap
+
+> **Status:** ACTIVE — This is the current work plan. All new sessions should reference this section.
+>
+> **Trigger Phrase:** To start this work in a new context window, paste:
+>
+> ```
+> Execute Stabilization Roadmap. Read CLAUDE.md first, then docs/single_source_of_truth.md — focus on the "Stabilization Roadmap" section. Begin with the next incomplete Tier 1 task. Do not skip to Tier 2 until Tier 1 is verified complete.
+> ```
+
+### Tier 1 — Foundation (Stop the Bleeding)
+
+These tasks fix broken or missing fundamentals. No new features until these are done.
+
+| # | Task | Description | Status |
+|---|------|-------------|--------|
+| 1.1 | **Audit every TODO in critical paths** | Catalog every TODO/FIXME in `src/app/api/` and `src/lib/services/`. Classify each as: (a) stub that blocks functionality, (b) enhancement, (c) dead code. Produce a machine-readable inventory. | PENDING |
+| 1.2 | **Add error.tsx boundaries** | Add `error.tsx` and `loading.tsx` to every route group: `(dashboard)`, `dashboard/*`, `admin/*`, `(public)/*`. Follow Next.js 15 patterns. | PENDING |
+| 1.3 | **Replace mock data with real queries or empty states** | Grep for hardcoded arrays, sample data, and `mock` variables in page components. Replace with Firestore queries or proper empty-state UI with CTAs. | PENDING |
+| 1.4 | **Verify agent service backends** | For each of the 51 agents, trace from the agent's `execute()` method through to the underlying service. Document which services are real vs TODO stubs. | PENDING |
+| 1.5 | **Fix auth context TODOs** | Replace all 15 instances of `"TODO: Get from auth context"` with actual authenticated user resolution. | PENDING |
+
+### Tier 2 — UX Parity (Industry Competitiveness)
+
+These tasks bring the UI to the level expected by users coming from HubSpot, Salesforce, Apollo, etc.
+
+| # | Task | Description | Status |
+|---|------|-------------|--------|
+| 2.1 | **Data table upgrades** | Add column sorting, filtering, bulk select/delete, and CSV export to: Leads, Deals, Contacts, Orders, Forms tables. Consider TanStack Table. | PENDING |
+| 2.2 | **Form validation standardization** | Standardize all dashboard forms on react-hook-form + zod (already used on API side). Add field-level error messages, loading states on submit buttons. | PENDING |
+| 2.3 | **Accessibility pass** | Add semantic HTML (`nav`, `main`, `section`), aria labels, keyboard navigation, focus management for modals. Target WCAG 2.1 AA. | PENDING |
+| 2.4 | **Page transition polish** | Add loading states between page navigations, skeleton screens for data-heavy pages, optimistic UI for mutations. | PENDING |
+| 2.5 | **Scraper distillation preview** | Add inline preview of distillation results on the scraper page so users don't need to download to verify AI output. | PENDING |
+
+### Tier 3 — Feature Completion
+
+Only after Tiers 1 and 2 are verified complete.
+
+| # | Task | Description | Status |
+|---|------|-------------|--------|
+| 3.1 | **Owner impersonation tool** | Build `/admin/support/impersonate` so the owner can see exactly what a member sees without logging out. | PENDING |
+| 3.2 | **LinkedIn selector update** | Update CSS selectors in scraper intelligence for recent LinkedIn UI changes. | PENDING |
+| 3.3 | **End-to-end agent testing** | Write integration tests that validate the full chain: user action → API → orchestrator → manager → specialist → result. | PENDING |
+| 3.4 | **Webhook signature verification** | Add HMAC validation to email, SMS, and voice webhook endpoints. | PENDING |
+| 3.5 | **Stub implementations** | Implement the stubbed features from the "What's Stubbed" table above, prioritized by user impact. | PENDING |
 
 ---
 
@@ -448,235 +536,13 @@ Legacy workspace URLs are automatically redirected:
 - `/workspace/any-org-id/path` → `/path`
 - Preserves query strings and hash fragments
 
-### Conversion Parameters
+### Single-Tenant Conversion Summary
 
-| Parameter | Decision | Rationale |
-|-----------|----------|-----------|
-| **Workspaces** | Flatten entirely | Remove workspace layer - all data lives directly under single org |
-| **Data Migration** | Fresh start | No existing production data to migrate |
-| **Admin Panel** | Simplify heavily | Keep basic admin (user management, settings) but remove org-browsing features |
-| **Public Features** | Keep both | Retain website builder (`/sites/`) and storefront (`/store/`) |
-| **RBAC** | 4-role hierarchy (COMPLETED Phase 11) | `owner` (level 3) → `admin` (level 2) → `manager` (level 1) → `member` (level 0) |
+**Status:** ✅ FULLY COMPLETE — February 2, 2026 (8 phases, 25 tasks, 100%)
+**Net Result:** -185 files, -71,369 lines of code
+**Details:** Workspace routes migrated to `/(dashboard)/*`, subscription/billing APIs deleted, TenantMemoryVault refactored, RBAC converted from 5-level to 4-role.
 
-### Current Multi-Tenant Architecture
-
-#### Database Layer
-- 60+ Firestore collections, most with `organizationId` field
-- Sub-collection pattern: `organizations/{orgId}/workspaces/{wsId}/*`
-- Security rules enforce `belongsToOrg(orgId)` checks
-- Key file: `firestore.rules` (855 lines)
-
-#### Route Structure (Before Conversion)
-
-| Route Pattern | Count | Conversion Action |
-|---------------|-------|-------------------|
-| `/workspace/[orgId]/*` | 95 pages | Remove `[orgId]` segment → `/workspace/*` |
-| `/admin/organizations/[id]/*` | 43 pages | Remove org-browsing, keep settings/integrations |
-| `/admin/organizations/*` | 4 pages | Remove org CRUD |
-| `/sites/[orgId]/*` | 12 pages | Hard-code to DEFAULT_ORG_ID |
-| `/store/[orgId]/*` | 3 pages | Hard-code to DEFAULT_ORG_ID |
-
-#### Key Multi-Tenant Files
-
-| File | Current Purpose | Conversion Change |
-|------|-----------------|-------------------|
-| `src/lib/constants/platform.ts` | Platform org config | Add `DEFAULT_ORG_ID` constant |
-| `src/types/organization.ts` | Org/Workspace types | Remove Workspace, simplify |
-| `src/types/unified-rbac.ts` | 5-level RBAC | Converted to 4-role (Phase 11) |
-| `src/lib/auth/claims-validator.ts` | Extract tenant_id from claims | Use DEFAULT_ORG_ID |
-| `src/lib/auth/api-auth.ts` | requireOrganization() middleware | Simplify to use constant |
-| `src/lib/firebase/dal.ts` | Client Firestore access | Remove org-scoped queries |
-| `src/lib/firebase/admin-dal.ts` | Server Firestore access | Remove workspace methods |
-| `src/lib/firebase/collections.ts` | Collection path helpers | Remove getWorkspaceSubCollection() |
-| `firestore.rules` | Security rules | Simplify org checks |
-| `src/middleware.ts` | Subdomain/domain routing | Remove multi-tenant routing |
-| `src/lib/ai/tenant-context-wrapper.ts` | AI tenant isolation | Simplify |
-| `src/lib/agents/shared/memory-vault.ts` | Cross-agent memory | Renamed from tenant-memory-vault.ts, tenantId removed |
-
-### Conversion Phases
-
-#### Phase 1: Constants & Types (COMPLETED)
-1. ✅ Add `DEFAULT_ORG_ID = 'rapid-compliance-root'` to `src/lib/constants/platform.ts`
-2. ✅ Update `src/types/unified-rbac.ts` to 4-role RBAC (Phase 11):
-   - AccountRole = 'owner' | 'admin' | 'manager' | 'member'
-   - Real differentiated permission matrices per role
-   - Owner = master key, Admin = full minus org deletion/impersonation
-   - Manager = team lead, Member = individual contributor
-3. ✅ Update `src/types/organization.ts`:
-   - Remove `Workspace` interface
-   - Remove `WorkspaceAccess` interface
-   - Simplify `OrganizationMember` (remove workspaceAccess array)
-
-#### Phase 2: Auth Simplification
-4. Update `src/lib/auth/claims-validator.ts`:
-   - `getEffectiveOrgId()` returns `DEFAULT_ORG_ID`
-   - `checkTenantAccess()` simplified (single org)
-5. Update `src/lib/auth/api-auth.ts`:
-   - `requireOrganization()` uses `DEFAULT_ORG_ID`
-6. Update `src/hooks/useUnifiedAuth.ts`:
-   - Remove org selection/switching logic
-
-#### Phase 3: Route Restructuring
-7. Rename `src/app/workspace/[orgId]/` → `src/app/workspace/`
-   - Update all 95 page files
-   - Remove `params.orgId` extraction
-   - Update all navigation links
-8. Update `src/lib/routes/workspace-routes.ts`:
-   - Remove `orgId` parameter from route builders
-   - Routes become static paths
-
-#### Phase 4: Database Layer
-9. Update `src/lib/firebase/admin-dal.ts`:
-   - Remove `getWorkspaceCollection()` methods
-   - Flatten collection paths
-   - Remove `workspaceId` parameters (~22 references)
-10. Update `src/lib/firebase/collections.ts`:
-    - Remove `getWorkspaceSubCollection()` function
-11. Update `firestore.rules`:
-    - Simplify `belongsToOrg()` function
-    - Remove workspace-nested path rules
-
-#### Phase 5: AI Agents
-12. Update `src/lib/ai/tenant-context-wrapper.ts`:
-    - Use `DEFAULT_ORG_ID` constant
-13. Update `src/lib/agents/shared/tenant-memory-vault.ts`:
-    - Removed mandatory tenantId parameters from public API
-    - Internal methods use `DEFAULT_ORG_ID` exclusively
-    - Renamed to MemoryVault (TenantMemoryVault → MemoryVault)
-    - **Status:** ✅ Fully Implemented (February 3, 2026 - Phase 4b)
-
-#### Phase 6: UI Cleanup
-14. Remove admin organization browser:
-    - Delete `src/app/admin/organizations/page.tsx`
-    - Delete `src/app/admin/organizations/new/page.tsx`
-    - Delete `src/app/admin/organizations/[id]/page.tsx`
-    - Delete `src/app/admin/organizations/[id]/edit/page.tsx`
-    - Delete 40+ feature routes under `[id]/`
-    - Keep only `settings/page.tsx` and `integrations/page.tsx` (hard-code org)
-15. Update `src/app/admin/organizations/[id]/settings` and `integrations` to use `DEFAULT_ORG_ID`
-16. Update `/sites/[orgId]/*` and `/store/[orgId]/*` routes
-
-#### Phase 7: Middleware
-17. Update `src/middleware.ts`:
-    - Remove subdomain-based org lookup
-    - Remove custom domain org routing
-
-#### Phase 8: Verification & Deployment
-18. Run full test suite:
-    - `npm run lint`
-    - `npm run type-check`
-    - `npm run build`
-19. Update this SSOT document with new route map
-20. Commit and push to dev branch
-
-### RBAC Hierarchy (After Conversion - Phase 11 COMPLETED)
-
-| Role | Level | Key Permissions |
-|------|-------|-----------------|
-| `owner` | 3 | Master key — full system access, can delete org, impersonate users |
-| `admin` | 2 | Full access minus org deletion and user impersonation |
-| `manager` | 1 | Team lead — CRM, marketing, sales, limited user/data management, no platform admin |
-| `member` | 0 | Individual contributor — own records, view-only on most features, no admin access |
-
-### Files to Remove
-
-```
-src/app/admin/organizations/page.tsx           # Org browser
-src/app/admin/organizations/new/page.tsx       # Org creator
-src/app/admin/organizations/[id]/page.tsx      # Org details
-src/app/admin/organizations/[id]/edit/page.tsx # Org editor
-src/app/admin/organizations/[id]/ab-tests/
-src/app/admin/organizations/[id]/analytics/
-src/app/admin/organizations/[id]/api-keys/
-src/app/admin/organizations/[id]/battlecards/
-src/app/admin/organizations/[id]/billing/
-src/app/admin/organizations/[id]/calls/
-src/app/admin/organizations/[id]/contacts/
-src/app/admin/organizations/[id]/conversations/
-src/app/admin/organizations/[id]/custom-tools/
-src/app/admin/organizations/[id]/dashboard/
-src/app/admin/organizations/[id]/datasets/
-src/app/admin/organizations/[id]/deals/
-src/app/admin/organizations/[id]/email-campaigns/
-src/app/admin/organizations/[id]/fine-tuning/
-src/app/admin/organizations/[id]/forms/
-src/app/admin/organizations/[id]/lead-scoring/
-src/app/admin/organizations/[id]/leads/
-src/app/admin/organizations/[id]/living-ledger/
-src/app/admin/organizations/[id]/nurture/
-src/app/admin/organizations/[id]/orders/
-src/app/admin/organizations/[id]/products/
-src/app/admin/organizations/[id]/proposals/
-src/app/admin/organizations/[id]/sequences/
-src/app/admin/organizations/[id]/seo-ai-lab/
-src/app/admin/organizations/[id]/social-ai-lab/
-src/app/admin/organizations/[id]/social-campaigns/
-src/app/admin/organizations/[id]/storefront/
-src/app/admin/organizations/[id]/templates/
-src/app/admin/organizations/[id]/video-studio/
-src/app/admin/organizations/[id]/voice-ai-lab/
-src/app/admin/organizations/[id]/website-blog/
-src/app/admin/organizations/[id]/website-domains/
-src/app/admin/organizations/[id]/website-pages/
-src/app/admin/organizations/[id]/website-seo/
-src/app/admin/organizations/[id]/webhooks/
-src/app/admin/organizations/[id]/workflows/
-src/app/admin/organizations/[id]/workforce/
-src/app/admin/organizations/[id]/agent-training/
-src/app/admin/organizations/[id]/analytics-pipeline/
-src/app/admin/organizations/[id]/analytics-revenue/
-```
-
-### Files to Keep (with modifications)
-
-```
-src/app/admin/organizations/[id]/settings/page.tsx      # Hard-code to DEFAULT_ORG_ID
-src/app/admin/organizations/[id]/integrations/page.tsx  # Hard-code to DEFAULT_ORG_ID
-```
-
-### Post-Conversion Route Map
-
-| Area | Routes | Status |
-|------|--------|--------|
-| Admin (`/admin/*`) | ~50 | Simplified (org-browsing removed) |
-| Workspace (`/workspace/*`) | 95 | Static (no [orgId] param) |
-| Sites (`/sites/*`) | 12 | Hard-coded to DEFAULT_ORG_ID |
-| Store (`/store/*`) | 3 | Hard-coded to DEFAULT_ORG_ID |
-| Public | 15 | Unchanged |
-| Dashboard | 17 | Unchanged |
-| **TOTAL** | ~190 | Estimated |
-
-### Task Tracking
-
-Tasks are tracked in Claude Code session. Current status:
-
-| Phase | Tasks | Status |
-|-------|-------|--------|
-| Phase 1: Constants & Types | 3 | ✅ Complete |
-| Phase 1.1: Firebase Kill-Switch | 1 | ✅ Complete (Penthouse security) |
-| Phase 2: Auth Simplification | 3 | ✅ Complete |
-| Phase 2.1: Route Flattening | 1 | ✅ Complete (/(dashboard)/ route group) |
-| Phase 3: AI Agent Endpoints | 5 | ✅ Complete (DEFAULT_ORG_ID usage) |
-| Phase 4: Database Layer | 3 | ✅ Complete |
-| Phase 5: AI Agents | 2 | ✅ Complete (TenantMemoryVault refactored Feb 3, 2026) |
-| Phase 6: UI Cleanup | 3 | ✅ Complete |
-| Phase 7: Middleware | 1 | ✅ Complete (legacy redirects) |
-| Phase 8: Verification | 3 | ✅ Complete |
-| **TOTAL** | **25** | **25 Complete (100%)** |
-
-### Key Files Changed (Penthouse Model)
-
-| File | Change |
-|------|--------|
-| `src/lib/firebase/config.ts` | Added `CriticalConfigurationError` kill-switch |
-| `src/lib/constants/platform.ts` | `DEFAULT_ORG_ID = 'rapid-compliance-root'` |
-| `src/app/(dashboard)/` | 108 new files (flattened routes) |
-| `src/middleware.ts` | Legacy `/workspace/*` redirects |
-| `src/app/api/voice/ai-agent/route.ts` | Uses `DEFAULT_ORG_ID` |
-| `src/app/api/voice/ai-agent/fallback/route.ts` | Uses `DEFAULT_ORG_ID` |
-| `src/app/api/voice/ai-agent/speech/route.ts` | Uses `DEFAULT_ORG_ID` |
-| `src/app/api/voice/twiml/route.ts` | Uses `DEFAULT_ORG_ID` |
-| `src/app/api/orchestrator/chat/route.ts` | Uses `DEFAULT_ORG_ID` |
+> Historical conversion phase details have been archived. See `docs/archive/` for forensic records.
 
 ---
 
@@ -3106,424 +2972,21 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: January 30, 2026 - Backend Integration: Video Rendering + Social Scheduling*
+*Last updated: February 6, 2026 - Documentation cleanup, Stabilization Roadmap added*
 
-### Changelog (January 30, 2026 - Backend Integration: Video Rendering + Social Scheduling)
-
-- **NEW:** `/api/admin/video/render` endpoint - Triggers video rendering with real `jobId` persistence to Firestore
-- **NEW:** `VideoJobService` (`src/lib/video/video-job-service.ts`) - Service layer for video job CRUD operations
-- **NEW:** `SocialPostService` (`src/lib/social/social-post-service.ts`) - Service layer for scheduled post persistence
-- **UPGRADED:** `/api/admin/social/post` - Scheduled posts now persist to Firestore `platform_social_posts` collection
-- **ADDED:** Future-date validation for scheduled posts (rejects past-dated scheduledAt)
-- **ADDED:** GET endpoint returns scheduled posts from Firestore instead of empty array
-- **UPDATED:** E2E test `admin-content-factory.spec.ts` to verify operational status matrix
-- **RESOLVED:** Video Rendering status elevated from "COMING SOON" to ✅ OPERATIONAL
-- **RESOLVED:** Post Scheduling status elevated from "PARTIAL" to ✅ OPERATIONAL
-
-### Changelog (January 30, 2026 - Authority Synchronization Update)
-
-- **ADDED:** AI Governance Layer section documenting CLAUDE.md as authoritative AI instruction set
-- **ADDED:** Governance constraint table (Linting Lock, Zero-Any Policy, Sub-Agent Protocol, Session Sync)
-- **ADDED:** Key Governance Files table with modification status (BINDING/LOCKED)
-- **ADDED:** Pre-Commit Gate Requirements documentation
-- **UPDATED:** Automated Cleanup Protocol - Protected Organizations list corrected to match actual code:
-  - Removed: `demo-org`, `test-org`, `development-org`
-  - Added: `org_demo_auraflow`, `org_demo_greenthumb`, `org_demo_adventuregear`, `org_demo_summitwm`, `org_demo_pixelperfect`
-- **UPDATED:** Recursive Deletion Strategy - Added full list of 24+ known organization sub-collections
-- **UPDATED:** Stale Data Detection - Corrected function name to `cleanupAllE2ETempData()` with accurate implementation details
-- **ADDED:** Safety Features documentation for cleanup utility
-- **VERIFIED:** Playwright ✅ OPERATIONAL with `*.spec.ts` naming convention (no changes needed)
-
-### Changelog (January 29, 2026 - MASTER_ORCHESTRATOR Swarm CEO Activation)
-
-- **MILESTONE:** 100% SWARM COMPLETION ACHIEVED - All 47 agents now FUNCTIONAL
-- **MAJOR:** MASTER_ORCHESTRATOR activated as Swarm CEO (L1 Orchestrator)
-- **Added:** Swarm CEO with 2000+ LOC implementing comprehensive orchestration
-- **Added:** Command Pattern for task dispatching with priority, dependencies, and compensation
-- **Added:** Saga Pattern for multi-manager workflows with sequential/parallel execution
-- **Added:** processGoal() hierarchical task decomposition from user intents
-- **Added:** Intent-based domain routing engine with 9 intent categories:
-  - FULL_BUSINESS_SETUP, WEBSITE_BUILD, MARKETING_CAMPAIGN, SALES_PIPELINE
-  - CONTENT_CREATION, CUSTOMER_OUTREACH, ECOMMERCE_SETUP, REPUTATION_MANAGEMENT, MARKET_RESEARCH
-- **Added:** 8 pre-defined saga templates for common business workflows
-- **Added:** Cross-domain synchronization with dependency graph resolution
-- **Added:** getSwarmStatus() global state aggregation from all 9 domain managers
-- **Added:** Manager registry with health monitoring and metrics collection
-- **Added:** TenantMemoryVault integration for goal insights and cross-agent coordination
-- **Added:** Compensating transaction support for failed saga rollback
-- **Updated:** Agent counts (47 FUNCTIONAL, 0 SHELL, 0 GHOST)
-- **Updated:** Platform Statistics to reflect 100% agent completion
-- **Added:** MASTER_ORCHESTRATOR documentation in Agent Registry
-
-### Changelog (January 29, 2026 - REPUTATION_MANAGER Activation)
-
-- **MAJOR:** REPUTATION_MANAGER upgraded from SHELL to FUNCTIONAL
-- **Added:** Brand Defense Commander with 2000+ LOC
-- **Added:** Dynamic specialist resolution (REVIEW_SPECIALIST, GMB_SPECIALIST, SENTIMENT_ANALYST)
-- **Added:** Automated review solicitation from sale.completed signals (Review-to-Revenue loop)
-- **Added:** AI-powered response engine with star-rating specific strategies
-- **Added:** GMB profile optimization coordination with CONTENT_MANAGER assets
-- **Added:** ReputationBrief trust score synthesis (Average Rating, Review Velocity, Sentiment, Response Rate, NPS)
-- **Added:** webhook.review.received signal handling for real-time review response
-- **Added:** SignalBus integration (reputation.review_solicitation_requested, reputation.gmb_updated)
-- **Added:** TenantMemoryVault integration for response templates and cross-agent insights
-- **Updated:** Agent counts (46 FUNCTIONAL, 0 ENHANCED SHELL, 1 SHELL)
-- **Updated:** All 9 managers now fully FUNCTIONAL with complete orchestration logic
-
-### Changelog (January 29, 2026 - OUTREACH_MANAGER Activation)
-
-- **MAJOR:** OUTREACH_MANAGER upgraded from SHELL to FUNCTIONAL
-- **Added:** Omni-Channel Communication Commander with 1900+ LOC
-- **Added:** Multi-Step Sequence execution with channel escalation (EMAIL → SMS → VOICE)
-- **Added:** Sentiment-aware routing via INTELLIGENCE_MANAGER insights
-- **Added:** DNC compliance via TenantMemoryVault
-- **Added:** Frequency throttling and quiet hours enforcement
-- **Added:** SignalBus integration for outreach lifecycle events
-- **Updated:** Agent counts (37 FUNCTIONAL, 3 ENHANCED SHELL, 4 SHELL → 40 total specialists functional)
-- **Added:** OUTREACH_MANAGER orchestration logic documentation
-
-### Changelog (January 29, 2026 - Intelligence Manager Implementation)
-
-- **MAJOR:** INTELLIGENCE_MANAGER upgraded from SHELL to FUNCTIONAL
-- **Added:** Dynamic orchestration engine with parallel specialist execution
-- **Added:** IntelligenceBrief synthesis output structure
-- **Added:** 7 orchestration patterns (FULL_MARKET_RESEARCH, COMPETITOR_ANALYSIS, etc.)
-- **Added:** Graceful degradation for partial specialist failures
-- **Added:** TenantMemoryVault integration for cross-agent insights
-- **Updated:** Agent counts (36 FUNCTIONAL, 3 ENHANCED SHELL, 5 SHELL)
-- **Added:** Intelligence Manager documentation in Architecture Notes
-
-### Changelog (January 27, 2026 - Forensic Audit)
-
-- **Added:** Infrastructure Systems section (Rate Limiting, Notifications, Caching, Logging)
-- **Added:** Data Contracts Reference section (TypeScript interfaces, Zod schemas)
-- **Added:** State Management Architecture subsection
-- **Added:** API Implementation Notes (endpoints with mock data identified)
-- **Updated:** Agent Registry with accurate manager statuses (3 ENHANCED SHELL, 6 SHELL)
-- **Updated:** Platform Statistics to reflect partial endpoint implementations
-- **Fixed:** Theme Architecture to note Admin Theme Editor UI does not exist
-- **Fixed:** Firestore path for Admin theme (`platform_settings/adminTheme` not `platform_config/settings/adminTheme`)
+> Historical changelogs (January 27 - January 30, 2026) have been removed to reduce document size. Key changes from those sessions are reflected in the current document state.
 
 ---
 
-## FEBRUARY 15th LAUNCH GAP ANALYSIS
+## Previous Launch Gap Analysis (Archived)
 
-> **Audit Date:** January 29, 2026
-> **Audit Method:** Parallelized Multi-Agent Deep-Trace (4 Specialized Sub-Agents)
-> **Audit Scope:** Agent Logic, Frontend-Backend Wiring, Data Infrastructure, External Integrations
-
-### Executive Summary
-
-| Domain | Status | Blocking Issues | Est. Fix Time |
-|--------|--------|-----------------|---------------|
-| Agent Logic (47 agents) | ✅ PRODUCTION-READY | None | 0 hrs |
-| Frontend-Backend Wiring | ✅ COMPLETE | ~~Workforce HQ disconnected~~ **FIXED** | 0 hrs |
-| Data Infrastructure | ✅ COMPLETE (Hardened) | ~~SignalBus tenant isolation~~ **FIXED** | 0 hrs |
-| External Integrations | ⚠️ PARTIAL (75%) | Salesforce/HubSpot missing | 10-14 days (defer to v1.1) |
-
-**Overall Launch Readiness: 92% - Frontend-Backend Wiring RESOLVED (Jan 29, 2026)**
+> The January 29, 2026 launch gap analysis has been superseded by the **Stabilization Roadmap** above. Key findings have been incorporated into the "Current Status Assessment" section. Historical audit details are available in `docs/archive/`.
 
 ---
 
-### SECTOR 1: AGENT LOGIC AUDIT (Logic Specialist)
+## Login Architecture
 
-#### Verdict: ✅ 100% PRODUCTION-READY
-
-**Scope:** All 49 agents (38 specialists + 11 managers) execute() methods audited
-
-| Metric | Result |
-|--------|--------|
-| Agents with real execute() logic | 49/49 (100%) |
-| Agents with stub/mock implementations | 0 |
-| Agents with TODO/FIXME in execute() | 0 |
-| Agents with proper error handling | 49/49 |
-| Agents with type safety | 49/49 |
-
-**Key Findings:**
-- ✅ All agents implement proper request/response patterns
-- ✅ All managers implement parallel specialist orchestration with graceful degradation
-- ✅ Real integrations verified: Stripe payments, Firestore persistence, web scraping
-- ✅ Advanced patterns: Command, Saga, State Machine, Factory patterns in use
-- ✅ BANT scoring engine, 8 closing strategies, 10 objection categories implemented
-
-**Blocking Issues:** NONE
-
----
-
-### SECTOR 2: FRONTEND-BACKEND WIRING AUDIT (Wiring Specialist)
-
-#### Verdict: ✅ COMPLETE - Full 47-Agent Swarm Wired to UI (Jan 29, 2026)
-
-**Status:** All dashboard components now display live data from the full 47-agent swarm.
-
-| Component | Location | Data Source | Agents Shown | Status |
-|-----------|----------|-------------|--------------|--------|
-| Workforce HQ | `/workspace/[orgId]/workforce` | `/api/system/status` | **47** | ✅ LIVE (Hierarchical L1/L2/L3 view) |
-| SwarmMonitorWidget | `components/shared/` | `/api/system/status` | **47** | ✅ LIVE (Full swarm, no slice limit) |
-| Dashboard Swarm | `/dashboard/swarm` | **HARDCODED** | 8 | ⚠️ Mockup (deferred) |
-
-**Fixes Implemented (Jan 29, 2026):**
-1. ✅ `/api/system/status` expanded to return all 47 agents with hierarchical data (L1/L2/L3 tiers)
-2. ✅ `useSystemStatus` hook updated with hierarchy support and helper functions
-3. ✅ Workforce HQ completely rewritten with API-driven data, tier filtering, hierarchy/grid views
-4. ✅ SwarmMonitorWidget `.slice(0,9)` limit removed - now shows full swarm
-5. ✅ Execute/Configure/Logs buttons wired to valid routes
-
-**API Response Now Includes:**
-- `hierarchy.orchestrator` - L1 Master Orchestrator
-- `hierarchy.managers` - 9 L2 Domain Commanders
-- `hierarchy.specialists` - 37 L3 Workers
-- `metrics.byTier` - Breakdown by tier (L1/L2/L3)
-- Agent `tier`, `parentId`, `role`, `capabilities` fields
-
-**Wiring Gaps Resolved:**
-
-| Gap | Status | Resolution |
-|-----|--------|------------|
-| ~~Workforce HQ disconnected from API~~ | ✅ FIXED | Connected to `/api/system/status` with `useSystemStatus` hook |
-| ~~SwarmMonitorWidget `.slice(0,9)` limit~~ | ✅ FIXED | Limit removed, shows full swarm |
-| ~~37 specialists hidden from APIs~~ | ✅ FIXED | All 47 agents now in `/api/system/status` response |
-| ~~Configure/Train/Logs buttons non-functional~~ | ✅ FIXED | Wired to `/workspace/[orgId]/settings/ai-agents/configuration` and `/admin/system/logs` |
-
-**Remaining (Deferred):**
-- Dashboard Swarm mockup → Will be addressed in v1.1
-
----
-
-### SECTOR 3: DATA INFRASTRUCTURE AUDIT (Data Specialist)
-
-#### Verdict: ✅ COMPLETE (Hardened) - SignalBus tenant isolation IMPLEMENTED
-
-**Component Status Matrix:**
-
-| Component | Tenant Isolation | Production Ready | Risk |
-|-----------|------------------|------------------|------|
-| TenantMemoryVault | ✅ STRICT | YES | Low |
-| SignalCoordinator (Firestore) | ✅ FULL | YES | Low |
-| SignalBus (In-Memory) | ✅ STRICT (Hardened) | **YES** | **Low** |
-| Onboarding Persistence | ✅ GOOD | YES | Low |
-| Base Model Storage | ⚠️ PARTIAL | CONDITIONAL | Medium |
-
-**SignalBus Security Hardening (COMPLETED Jan 29, 2026):**
-
-**DEPRECATED:** SignalBus was demolished in Phase 4a (commit 035697cd). The system now uses a flat global bus architecture:
-
-1. ✅ SignalBus is now a singleton global event bus
-2. ✅ All tenant-scoped registries removed
-3. ✅ tenantId parameters purged from signal interfaces
-4. ✅ Flat event model with no isolation (single-tenant architecture)
-5. ✅ Agent managers use orgId (DEFAULT_ORG_ID) instead of tenantId
-6. ✅ Memory vault simplified to MemoryVault (no tenant prefix)
-7. ✅ Context wrapper simplified to BusinessContext
-
-**Phase 4a Purge (February 3, 2026):** All multi-tenant signal isolation removed.
-
-**Single-Tenant Architecture:** No cross-tenant data leak scenarios possible (only one tenant exists).
-```
-Org A broadcasts signal → SignalBus looks up Org A's registry ONLY
-→ Org B's registry is NEVER accessed → NO DATA LEAK POSSIBLE
-```
-
-**Implementation Pattern:** Registry Pattern with O(1) tenant lookup
-**Fix Time:** COMPLETED (0 hrs remaining)
-
-**Onboarding Persistence Status:** ✅ CONFIRMED REAL (NOT UI-Only)
-- Form data → `organizations/{orgId}/onboarding/current`
-- Agent Persona → `organizations/{orgId}/agentPersona/current`
-- Knowledge Base → `organizations/{orgId}/knowledgeBase/current`
-- Base Model → `baseModels/{id}` (⚠️ should be org-scoped path)
-
----
-
-### SECTOR 4: INTEGRATION AUDIT (Integration Specialist)
-
-#### Verdict: ⚠️ 75% READY - Salesforce/HubSpot NOT STARTED
-
-**Integration Status Summary:**
-
-| Status | Count | Integrations |
-|--------|-------|--------------|
-| ✅ IMPLEMENTED | 14 | Gmail, Outlook, Google Calendar, Slack, Teams, Stripe, Twitter, Zoom, QuickBooks, Xero, SendGrid, PayPal, Clearbit, Google Drive |
-| ⚠️ PARTIAL | 4 | LinkedIn Messaging, Shopify, Twilio, Microsoft Teams |
-| ❌ STUB | 3 | TikTok, Facebook, Voice endpoints |
-| 🔴 NOT STARTED | 3 | **Salesforce**, **HubSpot**, Full Twilio |
-
-**OAuth Infrastructure:** ✅ FUNCTIONAL
-- Google, Microsoft, Slack, QuickBooks, Xero, Zoom all working
-- Token refresh with 5-minute buffer implemented
-- State token expiration (5 minutes) working
-
-**Security Gaps:**
-
-| Gap | Severity | Fix Required |
-|-----|----------|--------------|
-| Email/SMS/Voice webhooks lack signature verification | HIGH | Add HMAC validation |
-| No webhook rate limiting | MEDIUM | Add rate limits |
-| Tokens not encrypted at rest in Firestore | MEDIUM | Enable encryption |
-| No audit logging for credential access | LOW | Add logging |
-
-**Launch Recommendation:**
-- ✅ **Proceed with launch** using 14 working integrations
-- ⚠️ **Document limitations** for LinkedIn (RapidAPI fallback)
-- 🔴 **Defer Salesforce/HubSpot** to v1.1 (10-14 days each)
-
----
-
-### CONSOLIDATED LAUNCH BLOCKERS
-
-#### 🔴 CRITICAL (Must Fix Before Launch)
-
-| # | Issue | Domain | Est. Hours | Owner | Status |
-|---|-------|--------|------------|-------|--------|
-| 1 | ~~SignalBus tenant isolation~~ | Data | ~~6-8 hrs~~ | Backend | ✅ **COMPLETE (Hardened)** |
-| 2 | ~~Workforce HQ API connection~~ | Wiring | ~~2 hrs~~ | Frontend | ✅ **COMPLETE (Live)** |
-| 3 | ~~Agent control endpoints~~ | Wiring | ~~4 hrs~~ | Backend | ✅ **COMPLETE (Operational)** - Full 47-agent execute + logs routes |
-| 4 | Webhook signature verification | Integrations | 4 hrs | Backend | 🔴 PENDING |
-
-**Total Critical Fix Time: ~~16-18 hours~~ 0 hours critical remaining (Agent Control Endpoints COMPLETE Jan 29, 2026)**
-
-#### ⚠️ HIGH (Should Fix Before Launch)
-
-| # | Issue | Domain | Est. Hours | Status |
-|---|-------|--------|------------|--------|
-| 5 | ~~Remove `.slice(0,9)` agent limit~~ | Wiring | ~~1 hr~~ | ✅ **COMPLETE** |
-| 6 | ~~Expose 37 specialist agents via API~~ | Wiring | ~~3 hrs~~ | ✅ **COMPLETE** |
-| 7 | Base model path isolation | Data | 2 hrs | 🔴 PENDING |
-
-**Total High Priority Fix Time: ~~6 hours~~ 2 hours remaining**
-
-#### 📋 DEFERRED TO v1.1
-
-| # | Issue | Est. Days |
-|---|-------|-----------|
-| 1 | Salesforce CRM integration | 5-7 days |
-| 2 | HubSpot CRM integration | 5-7 days |
-| 3 | Full Twilio SMS/Voice | 3-4 days |
-| 4 | TikTok integration | 3-4 days |
-| 5 | Facebook integration | 3-4 days |
-
----
-
-### LAUNCH READINESS SCORECARD
-
-| Category | Score | Status |
-|----------|-------|--------|
-| Agent Logic | 100% | ✅ GO |
-| API Endpoints | 85% | ✅ GO (with noted partials) |
-| Frontend-Backend Wiring | 95% | ✅ GO (Workforce HQ + SwarmMonitor LIVE - Jan 29, 2026) |
-| Multi-Tenant Data Isolation | 100% | ✅ GO (SignalBus HARDENED Jan 29, 2026) |
-| OAuth Integrations | 75% | ✅ GO (document limitations) |
-| Webhook Security | 50% | ⚠️ CONDITIONAL |
-| **OVERALL** | **92%** | **✅ GO (6 hrs fixes remaining - Wiring + Data Infrastructure RESOLVED)** |
-
----
-
-### RECOMMENDED ACTION PLAN
-
-**Phase 1: Critical Fixes (Days 1-2)** ✅ COMPLETE
-1. ~~SignalBus tenant isolation retrofit~~ ✅ **COMPLETE (Jan 29, 2026)**
-2. ~~Workforce HQ → API connection~~ ✅ **COMPLETE (Jan 29, 2026)** - Full 47-agent hierarchy live
-3. Webhook signature verification - 🔴 PENDING (4 hrs)
-
-**Phase 2: High Priority (Day 3)** ✅ COMPLETE
-1. ~~Agent control endpoints~~ ✅ **COMPLETE (Jan 29, 2026)** - Full 47-agent execute + logs routes
-2. ~~Remove hardcoded limits~~ ✅ **COMPLETE (Jan 29, 2026)** - `.slice(0,9)` removed
-3. Base model path fix - 🔴 PENDING (2 hrs)
-
-**Phase 3: Launch Prep (Day 4)**
-1. Integration testing
-2. Documentation of known limitations
-3. Customer communication re: Salesforce/HubSpot "Coming Soon"
-
-**Projected Launch-Ready Date:** January 30, 2026 (Agent Control Layer COMPLETE, 2 hrs remaining for base model path)
-
----
-
-## UNIFIED LOGIN ARCHITECTURE: SMART ROLE REDIRECTION
-
-**Status:** ✅ OPERATIONAL
-**Implemented:** January 30, 2026
-**Location:** `src/app/(public)/login/page.tsx`
-
-### Overview
-
-The public `/login` page now implements **Smart Role Redirection** to route users to their appropriate dashboard based on their role. This eliminates the "Layout Collision" issue previously experienced in the `/workspace/platform` path.
-
-### Redirect Logic (4-Role RBAC)
-
-| User Role | Destination | Layout |
-|-----------|-------------|--------|
-| `owner` | `/dashboard` | DashboardLayout (full access) |
-| `admin` | `/dashboard` | DashboardLayout (full access) |
-| `manager` | `/dashboard` | DashboardLayout (team-lead access) |
-| `member` | `/dashboard` | DashboardLayout (restricted access) |
-
-### Implementation Details
-
-#### Role Detection Flow
-
-```
-1. User submits email/password → Firebase Auth
-   ↓
-2. Fetch user document from Firestore (users/{uid})
-   ↓
-3. Extract role from user document (AccountRole type: 'owner' | 'admin' | 'manager' | 'member')
-   ↓
-4. SMART ROLE REDIRECTION:
-   - All roles → router.push('/dashboard')
-   - Sidebar filtering handles feature visibility per role
-   ↓
-5. Show "Redirecting..." loading state (prevents FOUC)
-```
-
-#### Key Features
-
-| Feature | Implementation |
-|---------|----------------|
-| **Type-Safe Routing** | `AccountRole` type from `unified-rbac.ts` (owner \| admin \| manager \| member) |
-| **FOUC Prevention** | `redirecting` state shows clean loading UI during navigation |
-| **Single-Tenant Architecture** | All users operate under DEFAULT_ORG_ID |
-| **4-Role RBAC** | Differentiated access: owner (full), admin (near-full), manager (team-lead), member (restricted) |
-| **Structured Logging** | Role detection logged with uid, role for debugging |
-
-#### Code Changes
-
-**File:** `src/app/(public)/login/page.tsx`
-
-```typescript
-// Admin Detection
-if (userRole === 'admin') {
-  logger.info('Admin user detected, redirecting to /admin', {
-    uid: user.uid,
-    file: 'login/page.tsx'
-  });
-  setRedirecting(true);  // Clean loading state
-  router.push('/admin');
-  return;
-}
-```
-
-### Theme Isolation Compliance
-
-The Smart Role Redirection works in conjunction with the existing theme isolation architecture:
-
-- **Admin Users** → Routed to `/admin` which uses `useAdminTheme()` hook
-- **Standard Users** → Routed to `/(dashboard)/*` which uses `useOrgTheme()` hook
-
-This ensures that organization-specific theme customizations do NOT affect the Admin Dashboard, and vice versa.
-
-### Related Components
-
-| Component | Purpose |
-|-----------|---------|
-| `src/app/admin/layout.tsx` | PlatformAdminLayout - verifies role on admin routes |
-| `src/hooks/useUnifiedAuth.ts` | `isPlatformAdmin()` helper function |
-| `src/hooks/useAdminTheme.ts` | Admin-scoped CSS variable application |
-| `src/types/unified-rbac.ts` | `AccountRole` type definition |
-
-### Legacy Cleanup
-
-**CONFIRMED:** No legacy sidebar components exist in `/workspace/platform` path. The codebase is clean with no orphaned navigation references.
+**Status:** ✅ OPERATIONAL — Smart role redirection implemented in `src/app/(public)/login/page.tsx`. All roles redirect to `/dashboard` where sidebar filtering handles feature visibility per role. Admin users redirect to `/admin`. FOUC prevented with loading state.
 
 ---
 

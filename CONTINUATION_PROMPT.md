@@ -3,78 +3,51 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Commits:
-- `7edc1f4c` refactor: remove tenantId from TenantMemoryVault public API and all agent callers
-- `d00f643a` feat: rebrand to SalesVelocity.ai, remove multi-tenant remnants, refactor theme to CSS variables
+Last Commit: `cd181754` docs: add QA agent suite to CLAUDE.md sub-agent registry
 
-## What Was Completed (February 3, 2026)
+## Current State (February 6, 2026)
 
-### SalesVelocity.ai Rebrand ✅
-- All user-facing brand references changed from RapidCompliance.US → SalesVelocity.ai
-- 72 files updated across UI, agents, email services, social config, types, and docs
-- Zero `RapidCompliance` references remaining in `src/` (verified by grep)
-- Exclusions preserved: Firebase project ID (`rapid-compliance-65f87`), org ID (`rapid-compliance-root`), admin email (`dstamper@rapidcompliance.us`)
-- CLAUDE.md and SSOT updated with new brand identity
+### Architecture
+- **Single-tenant penthouse model** — fully converted from multi-tenant SaaS
+- **51 AI agents** (47 swarm + 4 standalone) with hierarchical orchestration
+- **4-role RBAC** (owner/admin/manager/member) with 47 permissions
+- **148 physical routes**, **215 API endpoints**, **331K lines of TypeScript**
 
-### Multi-Tenant Cleanup ✅
-- Removed `orgId` parameter from `getOrgSubCollection()`, `getSchemaSubCollection()`, `getMerchantCouponsCollection()` in `collections.ts`
-- Removed `orgId` from `getOrgCollection()` in `dal.ts` and `admin-dal.ts`
-- Updated all 20+ callers across the codebase
-- Removed multi-tenant validation from marketing agent manager
+### What's Done
+- Single-tenant conversion: COMPLETE (-71K lines, -185 files)
+- SalesVelocity.ai rebrand: COMPLETE
+- CSS variable theme system: COMPLETE
+- Agent hierarchy with full manager orchestration: COMPLETE
+- 4-role RBAC with API gating and sidebar filtering: COMPLETE
 
-### TenantMemoryVault Refactor ✅
-- Removed `tenantId` from all public vault methods (write, read, search, delete, etc.)
-- Removed `tenantId` from helper functions (shareInsight, broadcastSignal, readAgentInsights, checkPendingSignals)
-- Updated 12 agent manager/specialist files
-- All vault methods now use `DEFAULT_ORG_ID` internally
-- SSOT Rule #5 marked as Fully Implemented
+### What's In Progress
+- **Stabilization Roadmap** — see `docs/single_source_of_truth.md` section "Stabilization Roadmap"
+- The system has 100 TODO comments, 76 files with mock data, zero error boundaries, and minimal accessibility
+- The goal is to solidify existing functionality before adding new features
 
-### Theme CSS Variable Refactor (Partial) ✅
-- Added extended CSS variables (teal, cyan, orange, rose) to `globals.css`
-- Converted 200+ hard-coded hex colors to CSS variables across:
-  - AdminSidebar (42 colors), HumanPowerDialer (50+), VisualWorkflowBuilder (25)
-  - ABTestComparison (45), 8 analytics chart components
-  - DealHealthCard, NextBestActionsCard, admin-login page
-  - Profile page, admin dashboard, AI agents page, compliance reports page
-  - OnboardingFlow, FormBuilder, FormCanvas, FieldEditor, LoadingState, Tooltip, etc.
+## Trigger Phrase
 
-### Verification ✅
-- `npx tsc --noEmit` — clean
-- `npm run lint --max-warnings 0` — clean
-- `npm run build` — clean
-- Pre-commit hooks passed on both commits
-
-## What Remains
-
-### Theme CSS Variables — Additional Waves
-The initial 5 waves covered the highest-impact files, but hex colors remain in:
-- Integration components: Zapier, PayPal, Gmail, Outlook, Stripe (some done)
-- Website builder components: `src/components/website/`
-- Email template lib files: `src/lib/email-writer/`
-- Widget/template files in `src/lib/`
-- Additional settings/social/deals/leads/contacts/sequences components
-
-To find remaining files: `grep -r "#[0-9a-fA-F]\{6\}" src/components/ src/app/ --include="*.tsx" --include="*.ts" -l | grep -v node_modules | grep -v globals.css`
-
-### Environment Variables
-- `.env.local` — FROM_NAME and brand-related comment values should be updated to SalesVelocity
-
-### Visual QA
-- Check `localhost:3000` for correct branding across all pages
-- Test Theme Editor toggle — switching presets should affect all converted components
-- Verify agent identity in chat/orchestrator UI
-
-## Instructions for Next Session
+Paste this into a new context window to begin work:
 
 ```
-Continue the SalesVelocity.ai platform work.
-
-Read CLAUDE.md first, then docs/single_source_of_truth.md.
-
-Previous session completed: full rebrand, multi-tenant cleanup, TenantMemoryVault refactor, and initial theme CSS variable waves.
-
-Priority remaining work:
-1. Additional theme CSS variable waves (integration components, website builder, etc.)
-2. .env.local brand value updates
-3. Visual QA on localhost:3000
+Execute Stabilization Roadmap. Read CLAUDE.md first, then docs/single_source_of_truth.md — focus on the "Stabilization Roadmap" section. Begin with the next incomplete Tier 1 task. Do not skip to Tier 2 until Tier 1 is verified complete.
 ```
+
+## Key Files
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | Binding governance for all Claude Code sessions |
+| `docs/single_source_of_truth.md` | Authoritative architecture doc with Stabilization Roadmap |
+| `ENGINEERING_STANDARDS.md` | Code quality requirements |
+| `AGENT_REGISTRY.json` | AI agent configurations (51 agents) |
+| `src/lib/constants/platform.ts` | DEFAULT_ORG_ID and platform identity |
+
+## Documentation Inventory (Clean)
+
+**Root docs** (5 files): CLAUDE.md, README.md, ENGINEERING_STANDARDS.md, COMPETITIVE_ANALYSIS_BRIEFING.md, SOCIAL-MEDIA-AI-SPEC.md
+**docs/** (3 files): single_source_of_truth.md, playwright-audit-2026-01-30.md, test-results-summary.md
+**docs/master_library/** (16 files): Per-feature audit summaries from Feb 5, 2026
+**docs/archive/** (16 files): Historical records — do not reference for architectural decisions
+**.claude/agents/** (6 files): QA and architecture agent prompts
+
+**Deleted** (February 6, 2026): CONTINUATION_PROMPT.md (old), SYSTEM_TRANSFER_MANIFEST.md, PATH_SYNC_REPORT.md, WORKFLOW_STATE_IMPLEMENTATION.md, LEGACY_ROUTE_REDIRECTS.md, eslint-output.txt, tsc-output.txt, app_structure.txt, rule-breakdown.txt, unique-files-with-unused-vars.txt, docs/audit_dashboard_connectivity.md
