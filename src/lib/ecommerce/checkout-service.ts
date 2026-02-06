@@ -319,24 +319,23 @@ function generateOrderNumber(_workspaceId: string): string {
 /**
  * Get product (helper)
  */
-async function getProduct(workspaceId: string, productId: string, organizationId?: string): Promise<Record<string, unknown> | null> {
+async function getProduct(workspaceId: string, productId: string, _organizationId?: string): Promise<Record<string, unknown> | null> {
   // Import DEFAULT_ORG_ID
   const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-  const orgId = organizationId ?? DEFAULT_ORG_ID;
 
   // Similar to cart-service implementation
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
-  
+
   if (!ecommerceConfig) {
     throw new Error('E-commerce not configured');
   }
-  
+
   const productSchema = (ecommerceConfig as unknown as EcommerceConfig).productSchema;
   const product = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/${workspaceId}/entities/${productSchema}/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
     productId
   );
   

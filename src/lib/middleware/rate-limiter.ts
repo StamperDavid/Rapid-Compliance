@@ -28,6 +28,7 @@
 
 import type { NextRequest } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -218,14 +219,8 @@ function getIdentifier(
     }
       
     case 'org': {
-      // Extract organization ID from request
-      const orgId = request.headers.get('x-organization-id') ?? 
-                    request.nextUrl.searchParams.get('organizationId');
-      if (orgId) {
-        return `org:${orgId}`;
-      }
-      // Fallback to IP if no org ID
-      return `ip:${getClientIp(request)}`;
+      // Single-tenant system - use DEFAULT_ORG_ID
+      return `org:${DEFAULT_ORG_ID}`;
     }
       
     case 'ip':

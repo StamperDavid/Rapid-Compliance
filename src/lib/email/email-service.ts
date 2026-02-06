@@ -64,35 +64,26 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     };
   }
 
-  // Get organization ID from metadata
-  const organizationId = options.metadata?.organizationId;
-  if (!organizationId) {
-    return {
-      success: false,
-      error: 'Organization ID required in metadata',
-    };
-  }
-
   // Determine provider and get credentials
   let provider: 'sendgrid' | 'resend' | 'smtp' | null = null;
   let credentials: Record<string, unknown> | null = null;
 
   // Try SendGrid first
-  const sendgridKeys = await apiKeyService.getServiceKey(String(organizationId), 'sendgrid');
+  const sendgridKeys = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'sendgrid');
   const sendgridKeysObj = typeof sendgridKeys === 'object' && sendgridKeys !== null ? sendgridKeys : null;
   if (sendgridKeysObj && typeof sendgridKeysObj.apiKey === 'string') {
     provider = 'sendgrid';
     credentials = sendgridKeysObj;
   } else {
     // Try Resend
-    const resendKeys = await apiKeyService.getServiceKey(String(organizationId), 'resend');
+    const resendKeys = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'resend');
     const resendKeysObj = typeof resendKeys === 'object' && resendKeys !== null ? resendKeys : null;
     if (resendKeysObj && typeof resendKeysObj.apiKey === 'string') {
       provider = 'resend';
       credentials = resendKeysObj;
     } else {
       // Try SMTP
-      const smtpKeys = await apiKeyService.getServiceKey(String(organizationId), 'smtp');
+      const smtpKeys = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'smtp');
       const smtpKeysObj = typeof smtpKeys === 'object' && smtpKeys !== null ? smtpKeys : null;
       if (smtpKeysObj && typeof smtpKeysObj.host === 'string' && typeof smtpKeysObj.username === 'string' && typeof smtpKeysObj.password === 'string') {
         provider = 'smtp';
@@ -179,12 +170,10 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
   };
 
   if (options.html) {
-    const orgId = typeof options.metadata?.organizationId === 'string' ? options.metadata.organizationId : undefined;
     const { html: modifiedHtml } = addTrackingPixel(
       options.html,
       options.tracking?.trackOpens,
-      undefined, // messageId not available yet
-      orgId
+      undefined // messageId not available yet
     );
     payload.content.push({
       type: 'text/html',
@@ -229,15 +218,14 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
   const messageIdValue = response.headers.get('x-message-id') ?? `sg_${Date.now()}`;
 
   // Store tracking mapping if tracking is enabled
-  const orgId = typeof options.metadata?.organizationId === 'string' ? options.metadata.organizationId : undefined;
-  if (orgId && options.tracking?.trackOpens) {
+  if (options.tracking?.trackOpens) {
     void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       void FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTrackingMappings`,
         messageIdValue,
         {
           messageId: messageIdValue,
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           createdAt: new Date().toISOString(),
         },
         false
@@ -286,7 +274,8 @@ async function sendViaResend(options: EmailOptions, credentials: Record<string, 
     const { html: modifiedHtml } = addTrackingPixel(
       options.html,
       options.tracking?.trackOpens,
-      undefined, DEFAULT_ORG_ID);
+      undefined
+    );
     payload.html = modifiedHtml;
   }
   if (options.text) {
@@ -332,15 +321,14 @@ async function sendViaResend(options: EmailOptions, credentials: Record<string, 
   const messageId = data.id;
 
   // Store tracking mapping if tracking is enabled
-  const orgId = typeof options.metadata?.organizationId === 'string' ? options.metadata.organizationId : undefined;
-  if (orgId && options.tracking?.trackOpens) {
+  if (options.tracking?.trackOpens) {
     void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       void FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTrackingMappings`,
         messageId,
         {
           messageId,
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           createdAt: new Date().toISOString(),
         },
         false
@@ -400,24 +388,23 @@ async function sendViaSMTP(options: EmailOptions, credentials: Record<string, un
 function addTrackingPixel(
   html: string,
   trackOpens?: boolean,
-  messageId?: string,
-  organizationId?: string
+  messageId?: string
 ): { html: string; trackingId?: string } {
   if (!trackOpens) {return { html };}
   
   // Use messageId as trackingId if provided, otherwise generate one
   const trackingId =(messageId !== '' && messageId != null) ? messageId : `track_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const trackingUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/email/track/${trackingId}`;
-  
-  // Store tracking mapping in Firestore if we have organizationId
-  if (organizationId && messageId) {
+
+  // Store tracking mapping in Firestore
+  if (messageId) {
     void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       void FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTrackingMappings`,
         trackingId,
         {
           messageId,
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           createdAt: new Date().toISOString(),
         },
         false
