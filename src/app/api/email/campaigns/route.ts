@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
       return errors.badRequest('organizationId is required');
     }
 
-    // Validate organizationId format
     const orgValidation = organizationIdSchema.safeParse(organizationId);
     if (!orgValidation.success) {
       return errors.badRequest('Invalid organizationId format');

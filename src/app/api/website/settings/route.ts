@@ -106,10 +106,9 @@ export async function POST(request: NextRequest) {
       { orgId: DEFAULT_ORG_ID }
     );
 
-    // CRITICAL: Ensure organizationId is in the data
     const settingsData: Record<string, unknown> = {
       ...settings,
-      organizationId: DEFAULT_ORG_ID, // Force correct organizationId
+      organizationId: DEFAULT_ORG_ID,
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -165,10 +164,9 @@ export async function PUT(request: NextRequest) {
       { orgId: DEFAULT_ORG_ID }
     );
 
-    // CRITICAL: Ensure organizationId is in the data
     const settingsData: Record<string, unknown> = {
       ...settings,
-      organizationId: DEFAULT_ORG_ID, // Force correct organizationId
+      organizationId: DEFAULT_ORG_ID,
       updatedAt: FieldValue.serverTimestamp(),
     };
 

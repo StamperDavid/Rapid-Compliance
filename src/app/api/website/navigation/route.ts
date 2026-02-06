@@ -75,11 +75,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure organizationId is set
     const navigationData: Navigation = {
       ...navigation,
       id: 'navigation',
-      organizationId: DEFAULT_ORG_ID, // CRITICAL: Set org ownership
+      organizationId: DEFAULT_ORG_ID,
       updatedAt: new Date().toISOString(),
     } as Navigation;
 

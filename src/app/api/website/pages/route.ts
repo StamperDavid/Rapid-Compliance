@@ -123,13 +123,12 @@ export async function POST(request: NextRequest) {
     const performedBy = await getUserIdentifier();
     const pageId = (page.id !== '' && page.id != null) ? page.id : `page_${Date.now()}`;
 
-    // CRITICAL: Force organizationId to match the authenticated org
     const pageData: PageData = {
       ...page,
       id: pageId,
       title: page.title,
       slug: page.slug,
-      organizationId: DEFAULT_ORG_ID, // ← Force correct organizationId
+      organizationId: DEFAULT_ORG_ID,
       status: (page.status !== '' && page.status != null) ? page.status : 'draft',
       content: page.content ?? [],
       seo: page.seo ?? {},

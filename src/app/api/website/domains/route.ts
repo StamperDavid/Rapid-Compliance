@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     const dnsRecords = generateDNSRecords(domain, verificationMethod);
 
     const domainData: DomainData = {
-      organizationId: DEFAULT_ORG_ID, // CRITICAL: Set ownership
+      organizationId: DEFAULT_ORG_ID,
       verified: false,
       verificationMethod,
       verificationValue: generateVerificationToken(),
