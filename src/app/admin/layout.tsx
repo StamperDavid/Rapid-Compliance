@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { MerchantOrchestrator } from '@/components/orchestrator';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Admin Layout
@@ -72,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {children}
       </main>
 
-      <MerchantOrchestrator orgId={DEFAULT_ORG_ID} />
+      <MerchantOrchestrator />
     </div>
   );
 }

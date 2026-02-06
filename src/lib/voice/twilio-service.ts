@@ -217,8 +217,7 @@ export async function getCallRecording(
  * Get Twilio configuration
  */
 async function getTwilioConfig(): Promise<VoiceConfig> {
-  const organizationId = DEFAULT_ORG_ID;
-  const keys: unknown = await apiKeyService.getServiceKey(organizationId, 'twilio');
+  const keys: unknown = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'twilio');
 
   if (!keys) {
     throw new Error('Twilio not configured');

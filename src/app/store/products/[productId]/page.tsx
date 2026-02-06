@@ -32,7 +32,6 @@ export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { theme } = useTheme();
-  const orgId = DEFAULT_ORG_ID;
   const productId = params.productId as string;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -45,7 +44,7 @@ export default function ProductDetailPage() {
     try {
       setLoading(true);
       const productData = await FirestoreService.get(
-        `organizations/${orgId}/products`,
+        `organizations/${DEFAULT_ORG_ID}/products`,
         productId
       );
       setProduct(productData as Product);
@@ -54,7 +53,7 @@ export default function ProductDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, productId]);
+  }, [productId]);
 
   useEffect(() => {
     void loadProduct();
@@ -70,7 +69,7 @@ export default function ProductDetailPage() {
       const sessionId = localStorage.getItem('cartSessionId') ?? `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
 
-      await addToCart(sessionId, 'default', orgId, productId, quantity);
+      await addToCart(sessionId, 'default', DEFAULT_ORG_ID, productId, quantity);
 
       // Show success and redirect to cart
       toast.success('Added to cart!');

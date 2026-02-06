@@ -49,7 +49,6 @@ interface VerifyDomainResponse {
 }
 
 export default function CustomDomainsPage() {
-  const organizationId = DEFAULT_ORG_ID as string;
   const { theme } = useOrgTheme();
 
   const [domains, setDomains] = useState<CustomDomain[]>([]);
@@ -71,7 +70,7 @@ export default function CustomDomainsPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/website/domains?organizationId=${organizationId}`);
+      const response = await fetch('/api/website/domains');
 
       if (!response.ok) {
         throw new Error('Failed to load domains');
@@ -86,7 +85,7 @@ export default function CustomDomainsPage() {
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, []);
 
   useEffect(() => {
     void loadDomains();
@@ -116,7 +115,7 @@ export default function CustomDomainsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           domain: newDomain.toLowerCase().trim(),
         }),
       });
@@ -148,7 +147,7 @@ export default function CustomDomainsPage() {
       const response = await fetch(`/api/website/domains/${domainId}/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId }),
+        body: JSON.stringify({ organizationId: DEFAULT_ORG_ID }),
       });
 
       if (!response.ok) {
@@ -179,7 +178,7 @@ export default function CustomDomainsPage() {
         setError(null);
         setSuccess(null);
 
-        const response = await fetch(`/api/website/domains/${domainId}?organizationId=${organizationId}`, {
+        const response = await fetch(`/api/website/domains/${domainId}`, {
           method: 'DELETE',
         });
 

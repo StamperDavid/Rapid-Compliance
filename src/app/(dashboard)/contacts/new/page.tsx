@@ -12,7 +12,6 @@ import type { NewContactFormData } from '@/types/contact';
 
 export default function NewContactPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const [contact, setContact] = useState<NewContactFormData>({
     firstName: '',
     lastName: '',
@@ -29,7 +28,7 @@ export default function NewContactPage() {
     try {
       setSaving(true);
       const contactId = `contact-${Date.now()}`;
-      await FirestoreService.set(`organizations/${orgId}/workspaces/default/entities/contacts/records`, contactId, { ...contact, id: contactId, createdAt: Timestamp.now() }, false);
+      await FirestoreService.set(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/contacts/records`, contactId, { ...contact, id: contactId, createdAt: Timestamp.now() }, false);
       router.push(`/contacts`);
     } catch (error: unknown) {
       logger.error('Error creating contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

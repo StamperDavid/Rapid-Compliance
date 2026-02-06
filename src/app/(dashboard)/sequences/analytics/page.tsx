@@ -134,8 +134,7 @@ interface ChannelStats {
 
 export default function SequenceAnalyticsPage() {
   const { user: _user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
-
+  
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [sequences, setSequences] = useState<SequencePerformance[]>([]);
   const [selectedSequence, setSelectedSequence] = useState<SequencePerformance | null>(null);
@@ -157,7 +156,7 @@ export default function SequenceAnalyticsPage() {
 
   // Load analytics data
   useEffect(() => {
-    if (!orgId) {return;}
+    if (!DEFAULT_ORG_ID) {return;}
 
     const loadAnalytics = async () => {
       try {
@@ -172,7 +171,7 @@ export default function SequenceAnalyticsPage() {
         
         const response = await fetch(`/api/sequences/analytics?${params.toString()}`, {
           headers: {
-            'x-organization-id': orgId,
+            'x-organization-id': DEFAULT_ORG_ID,
           },
         });
 
@@ -187,7 +186,7 @@ export default function SequenceAnalyticsPage() {
         // Load recent executions
         const executionsResponse = await fetch(`/api/sequences/executions?limit=50`, {
           headers: {
-            'x-organization-id': orgId,
+            'x-organization-id': DEFAULT_ORG_ID,
           },
         });
 
@@ -210,7 +209,7 @@ export default function SequenceAnalyticsPage() {
         try {
           const executionsResponse = await fetch(`/api/sequences/executions?limit=50`, {
             headers: {
-              'x-organization-id': orgId,
+              'x-organization-id': DEFAULT_ORG_ID,
             },
           });
 
@@ -225,7 +224,7 @@ export default function SequenceAnalyticsPage() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [orgId, dateRange]);
+  }, [dateRange]);
 
   if (loading) {
     return (

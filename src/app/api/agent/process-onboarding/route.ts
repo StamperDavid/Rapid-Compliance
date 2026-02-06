@@ -182,20 +182,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (result.success) {
-      // Update user's organizationId if not already set
-      const userOrgId = user.organizationId;
-      if (typeof userOrgId !== 'string' || userOrgId === '') {
-        try {
-          await AdminFirestoreService.update('users', user.uid, {
-            organizationId,
-            currentOrganizationId: organizationId,
-            updatedAt: new Date().toISOString(),
-          });
-        } catch (error: unknown) {
-          logger.warn('Failed to update user organizationId', { route: '/api/agent/process-onboarding', error: error instanceof Error ? error.message : String(error) });
-          // Continue anyway - onboarding succeeded
-        }
-      }
+      // In penthouse model, user is always associated with DEFAULT_ORG_ID
+      // No need to update user.organizationId (it no longer exists on the user object)
 
       return NextResponse.json<ApiSuccessResponse>({
         success: true,

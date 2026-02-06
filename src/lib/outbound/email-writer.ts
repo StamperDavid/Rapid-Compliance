@@ -13,7 +13,7 @@ export interface EmailGenerationRequest {
   tone: EmailTone;
   valueProposition?: string;
   cta?: string; // Call to action
-  organizationId?: string; // For checking AI usage settings
+  DEFAULT_ORG_ID?: string; // For checking AI usage settings
 }
 
 export type EmailTemplate = 'AIDA' | 'PAS' | 'BAB' | 'custom';
@@ -346,7 +346,6 @@ function calculatePersonalizationScore(
  */
 async function shouldUseAI(): Promise<boolean> {
   const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-  const organizationId = DEFAULT_ORG_ID;
 
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
@@ -364,7 +363,7 @@ async function shouldUseAI(): Promise<boolean> {
     // Get organization document
     const orgDoc = await FirestoreService.get<OrganizationDoc>(
       'organizations',
-      organizationId
+      DEFAULT_ORG_ID
     );
 
     if (!orgDoc) {
@@ -381,7 +380,7 @@ async function shouldUseAI(): Promise<boolean> {
   } catch (error) {
     const { logger } = await import('@/lib/logger/logger');
     logger.warn('Failed to check AI setting, defaulting to true', {
-      organizationId,
+      DEFAULT_ORG_ID,
       error: (error as Error).message,
     });
     // On error, default to true

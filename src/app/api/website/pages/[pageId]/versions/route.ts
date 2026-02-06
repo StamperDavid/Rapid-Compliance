@@ -44,12 +44,11 @@ export async function GET(
     }
 
     const params = await context.params;
-    const organizationId = DEFAULT_ORG_ID;
 
     // Verify the page belongs to this org
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: organizationId, pageId: params.pageId }
+      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
     );
 
     const pageDoc = await pageRef.get();
@@ -113,7 +112,6 @@ export async function POST(
     const params = await context.params;
     const body = await request.json() as RequestBody;
     const { versionId } = body;
-    const organizationId = DEFAULT_ORG_ID;
 
     if (!versionId) {
       return NextResponse.json(
@@ -124,7 +122,7 @@ export async function POST(
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: organizationId, pageId: params.pageId }
+      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
     );
 
     const pageDoc = await pageRef.get();
@@ -180,7 +178,7 @@ export async function POST(
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/audit-log/entries',
-      { orgId: organizationId }
+      { orgId: DEFAULT_ORG_ID }
     );
 
     await auditRef.add({
@@ -190,7 +188,7 @@ export async function POST(
       restoredVersion: versionData?.version,
       performedBy,
       performedAt: now,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     return NextResponse.json({

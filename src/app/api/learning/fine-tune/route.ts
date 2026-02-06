@@ -25,7 +25,7 @@ interface TrainingMessage {
 }
 
 interface FineTunePostRequestBody {
-  organizationId?: string;
+  DEFAULT_ORG_ID?: string;
   action?: string;
   conversationId?: string;
   messages?: TrainingMessage[];
@@ -41,7 +41,7 @@ interface FineTunePostRequestBody {
 }
 
 interface FineTunePutRequestBody {
-  organizationId?: string;
+  DEFAULT_ORG_ID?: string;
   config?: Record<string, unknown>;
 }
 
@@ -74,23 +74,22 @@ export async function GET(request: NextRequest) {
     if (rateLimitResponse) { return rateLimitResponse; }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = DEFAULT_ORG_ID;
     const actionParam = searchParams.get('action');
     const action = (actionParam !== '' && actionParam != null) ? actionParam : 'stats';
 
     switch (action) {
       case 'stats': {
-        const stats = await getTrainingDataStats(organizationId);
+        const stats = await getTrainingDataStats(DEFAULT_ORG_ID);
 
         // Get fine-tuning jobs
         const jobs = await FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
           []
         );
 
         // Get learning config
         const config = await FirestoreService.get<LearningConfig>(
-          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/config`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/config`,
           'continuousLearning'
         );
 
@@ -110,13 +109,13 @@ export async function GET(request: NextRequest) {
       case 'examples': {
         const statusParam = searchParams.get('status');
         const status = isValidTrainingExampleStatus(statusParam) ? statusParam : undefined;
-        const examples = await getTrainingExamples(organizationId, status);
+        const examples = await getTrainingExamples(DEFAULT_ORG_ID, status);
         return NextResponse.json({ examples });
       }
 
       case 'jobs': {
         const jobs = await FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
           []
         );
         return NextResponse.json({ jobs });
@@ -148,9 +147,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { organizationId, action } = body;
+    const { DEFAULT_ORG_ID, action } = body;
 
-    if (!organizationId) {
+    if (!DEFAULT_ORG_ID) {
       return NextResponse.json(
         { error: 'Organization ID required' },
         { status: 400 }
@@ -161,7 +160,7 @@ export async function POST(request: NextRequest) {
       case 'collect_feedback': {
         // Collect training data from conversation
         const result = await processConversationFeedback({
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           conversationId: body.conversationId ?? '',
           messages: body.messages ?? [],
           confidence: body.confidence ?? 0,
@@ -187,7 +186,7 @@ export async function POST(request: NextRequest) {
         }
 
         const approver = (approvedBy !== '' && approvedBy != null) ? approvedBy : 'system';
-        await approveTrainingExample(organizationId, exampleId, approver);
+        await approveTrainingExample(DEFAULT_ORG_ID, exampleId, approver);
         return NextResponse.json({
           success: true,
           message: `Example ${exampleId} approved`,
@@ -203,7 +202,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        await rejectTrainingExample(organizationId, exampleId);
+        await rejectTrainingExample(DEFAULT_ORG_ID, exampleId);
         return NextResponse.json({
           success: true,
           message: `Example ${exampleId} rejected`,
@@ -213,7 +212,7 @@ export async function POST(request: NextRequest) {
       case 'start_training': {
         // Manually trigger fine-tuning
         const { createOpenAIFineTuningJob } = await import('@/lib/ai/fine-tuning/openai-tuner');
-        const examples = await getTrainingExamples(organizationId, 'approved');
+        const examples = await getTrainingExamples(DEFAULT_ORG_ID, 'approved');
 
         if (examples.length < 10) {
           return NextResponse.json(
@@ -225,7 +224,7 @@ export async function POST(request: NextRequest) {
         const baseModel: FineTuneBaseModel = body.baseModel ?? 'gpt-3.5-turbo';
 
         const job = await createOpenAIFineTuningJob({
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           baseModel,
           examples,
           hyperparameters: body.hyperparameters,
@@ -248,13 +247,13 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const result = await processCompletedFineTuningJob(organizationId, jobId);
+        const result = await processCompletedFineTuningJob(DEFAULT_ORG_ID, jobId);
         return NextResponse.json(result);
       }
 
       case 'check_and_deploy': {
         // Check A/B test results and deploy winner
-        const result = await checkAndDeployWinner(organizationId);
+        const result = await checkAndDeployWinner(DEFAULT_ORG_ID);
         return NextResponse.json(result);
       }
 
@@ -280,9 +279,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { organizationId, config } = body;
+    const { DEFAULT_ORG_ID, config } = body;
 
-    if (!organizationId) {
+    if (!DEFAULT_ORG_ID) {
       return NextResponse.json(
         { error: 'Organization ID required' },
         { status: 400 }
@@ -292,12 +291,12 @@ export async function PUT(request: NextRequest) {
     // Update learning config
     const configData: Record<string, unknown> = {
       ...(config ?? {}),
-      organizationId,
+      DEFAULT_ORG_ID,
       updatedAt: new Date().toISOString(),
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/config`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/config`,
       'continuousLearning',
       configData,
       false

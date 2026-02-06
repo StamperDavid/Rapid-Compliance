@@ -53,8 +53,6 @@ function isRevenueAnalytics(data: unknown): data is RevenueAnalytics {
 }
 
 export default function RevenueAnalyticsPage() {
-  const orgId = DEFAULT_ORG_ID;
-
   const { theme } = useOrgTheme();
   const [analytics, setAnalytics] = useState<RevenueAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +61,7 @@ export default function RevenueAnalyticsPage() {
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/analytics/revenue?orgId=${orgId}&period=${period}`);
+      const response = await fetch(`/api/analytics/revenue?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${period}`);
       const data = await response.json() as { success?: boolean; analytics?: unknown };
       if (data.success && isRevenueAnalytics(data.analytics)) {
         setAnalytics(data.analytics);
@@ -73,7 +71,7 @@ export default function RevenueAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, period]);
+  }, [period]);
 
   useEffect(() => {
     void loadAnalytics();

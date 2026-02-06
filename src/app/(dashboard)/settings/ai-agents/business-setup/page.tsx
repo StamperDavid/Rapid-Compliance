@@ -23,7 +23,6 @@ interface OnboardingData {
 
 export default function BusinessSetupPage() {
   const _auth = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,7 +36,7 @@ export default function BusinessSetupPage() {
       try {
         setLoading(true);
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
         
         if (org?.onboardingData) {
           setOnboardingData(org.onboardingData as OnboardingData);
@@ -61,14 +60,14 @@ export default function BusinessSetupPage() {
     }
 
     void loadOnboardingData();
-  }, [orgId]);
+  }, []);
 
   const handleSave = async () => {
     try {
       setSaving(true);
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       
-      await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, orgId, {
+      await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID, {
         onboardingData,
         updatedAt: new Date()
       });

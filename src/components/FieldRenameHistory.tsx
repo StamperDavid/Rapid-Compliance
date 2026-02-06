@@ -10,8 +10,6 @@ import { useState, useEffect, useCallback } from 'react';
 type FirestoreTimestamp = Date | string | { toDate: () => Date } | null | undefined;
 
 interface FieldRenameHistoryProps {
-  organizationId: string;
-  workspaceId: string;
   schemaId: string;
   fieldId: string;
   userId: string;
@@ -50,8 +48,6 @@ interface HistoryApiResponse {
 }
 
 export default function FieldRenameHistory({
-  organizationId,
-  workspaceId,
   schemaId,
   fieldId,
   userId,
@@ -69,7 +65,7 @@ export default function FieldRenameHistory({
     try {
       setLoading(true);
       const response = await fetch(
-        `/api/schema/${schemaId}/field/${fieldId}/rename-history?organizationId=${organizationId}&workspaceId=${workspaceId}`
+        `/api/schema/${schemaId}/field/${fieldId}/rename-history`
       );
 
       if (!response.ok) {
@@ -88,7 +84,7 @@ export default function FieldRenameHistory({
     } finally {
       setLoading(false);
     }
-  }, [organizationId, workspaceId, schemaId, fieldId]);
+  }, [schemaId, fieldId]);
 
   useEffect(() => {
     void loadHistory();
@@ -108,8 +104,6 @@ export default function FieldRenameHistory({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            organizationId,
-            workspaceId,
             toVersion,
             userId,
           }),

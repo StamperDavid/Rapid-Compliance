@@ -135,11 +135,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(_request: NextRequest) {
   try {
-    const organizationId = DEFAULT_ORG_ID;
-
-    const settings = await FeatureToggleService.getVisibilitySettings(organizationId);
-    const navigation = await FeatureToggleService.getFilteredNavigation(organizationId);
-    const hiddenCount = await FeatureToggleService.getHiddenCount(organizationId);
+    const settings = await FeatureToggleService.getVisibilitySettings(DEFAULT_ORG_ID);
+    const navigation = await FeatureToggleService.getFilteredNavigation(DEFAULT_ORG_ID);
+    const hiddenCount = await FeatureToggleService.getHiddenCount(DEFAULT_ORG_ID);
 
     return NextResponse.json({
       settings,

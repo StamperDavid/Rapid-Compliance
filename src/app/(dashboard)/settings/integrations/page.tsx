@@ -33,12 +33,12 @@ export default function IntegrationsPage() {
 
     // Load saved integrations from Firestore
     const loadIntegrations = async () => {
-      if (!user?.organizationId) {return;}
+      if (!user) {return;}
       
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         const integrationsData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/${COLLECTIONS.INTEGRATIONS}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.INTEGRATIONS}`,
           'all'
         );
         
@@ -51,7 +51,7 @@ export default function IntegrationsPage() {
     };
     
     void loadIntegrations();
-  }, [user?.organizationId]);
+  }, [user]);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
   const textColor = theme?.colors?.text?.primary || '#ffffff';
@@ -59,7 +59,7 @@ export default function IntegrationsPage() {
   const borderColor = theme?.colors?.border?.main || '#333333';
 
   const handleConnect = async (integrationId: string, integration: Partial<ConnectedIntegration>) => {
-    if (!user?.organizationId) {return;}
+    if (!user) {return;}
 
     const updated: Record<string, ConnectedIntegration | null> = {
       ...integrations,
@@ -71,7 +71,7 @@ export default function IntegrationsPage() {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/${COLLECTIONS.INTEGRATIONS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.INTEGRATIONS}`,
         'all',
         updated,
         false
@@ -82,7 +82,7 @@ export default function IntegrationsPage() {
   };
 
   const handleDisconnect = async (integrationId: string) => {
-    if (!user?.organizationId) {return;}
+    if (!user) {return;}
     
     const updated = {
       ...integrations,
@@ -94,7 +94,7 @@ export default function IntegrationsPage() {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/${COLLECTIONS.INTEGRATIONS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.INTEGRATIONS}`,
         'all',
         updated,
         false
@@ -105,7 +105,7 @@ export default function IntegrationsPage() {
   };
 
   const handleUpdate = async (integrationId: string, updates: Partial<ConnectedIntegration>) => {
-    if (!user?.organizationId) {return;}
+    if (!user) {return;}
     
     const current = integrations[integrationId];
     if (current) {
@@ -119,7 +119,7 @@ export default function IntegrationsPage() {
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/${COLLECTIONS.INTEGRATIONS}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.INTEGRATIONS}`,
           'all',
           updated,
           false

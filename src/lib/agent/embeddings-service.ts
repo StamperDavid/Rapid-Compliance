@@ -23,11 +23,10 @@ export interface EmbeddingResult {
 export async function generateEmbedding(
   text: string
 ): Promise<EmbeddingResult> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     // Get API key
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-    const geminiKey = await apiKeyService.getServiceKey(organizationId, 'gemini') as string | { apiKey: string } | null;
+    const geminiKey = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'gemini') as string | { apiKey: string } | null;
     
     if (!geminiKey) {
       throw new Error('Gemini API key not configured');

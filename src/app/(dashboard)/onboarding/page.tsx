@@ -115,7 +115,6 @@ function TextAreaField({ label, field, placeholder, rows = 4, helper, required, 
 export default function OnboardingWizard() {
   const router = useRouter();
   const { user: _user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const toast = useToast();
   
   const [currentStep, setCurrentStep] = useState(1);
@@ -349,7 +348,7 @@ export default function OnboardingWizard() {
         },
         body: JSON.stringify({
           websiteUrl: formData.website,
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
         }),
       });
 
@@ -388,12 +387,12 @@ export default function OnboardingWizard() {
       });
 
       logger.info('Prefill complete', {
-        organizationId: orgId,
+        organizationId: DEFAULT_ORG_ID,
         overallConfidence: result.overallConfidence,
         fieldsPrefilledCount: Object.keys(result.fieldConfidences).length,
       });
     } catch (error) {
-      logger.error('Prefill failed', error instanceof Error ? error : undefined, { organizationId: orgId });
+      logger.error('Prefill failed', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID });
       toast.error('Failed to analyze website. You can still continue with manual entry.');
     } finally {
       setIsPrefilling(false);
@@ -549,7 +548,7 @@ export default function OnboardingWizard() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           onboardingData,
         }),
       });

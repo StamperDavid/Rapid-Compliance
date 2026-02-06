@@ -9,8 +9,6 @@ import { useState, useEffect, useCallback } from 'react';
 import type { FieldType } from '@/types/schema';
 
 interface FieldTypeConversionPreviewProps {
-  organizationId: string;
-  workspaceId: string;
   schemaId: string;
   fieldId: string;
   fieldKey: string;
@@ -49,8 +47,6 @@ interface ConversionResult {
 }
 
 export default function FieldTypeConversionPreview({
-  organizationId,
-  workspaceId,
   schemaId,
   fieldId,
   fieldKey,
@@ -75,7 +71,7 @@ export default function FieldTypeConversionPreview({
     try {
       setLoading(true);
       const response = await fetch(
-        `/api/schema/${schemaId}/field/${fieldId}/convert-type?organizationId=${organizationId}&workspaceId=${workspaceId}&fieldKey=${fieldKey}&oldType=${oldType}&newType=${newType}`
+        `/api/schema/${schemaId}/field/${fieldId}/convert-type?fieldKey=${fieldKey}&oldType=${oldType}&newType=${newType}`
       );
 
       if (!response.ok) {
@@ -96,7 +92,7 @@ export default function FieldTypeConversionPreview({
     } finally {
       setLoading(false);
     }
-  }, [organizationId, workspaceId, schemaId, fieldId, fieldKey, oldType, newType]);
+  }, [schemaId, fieldId, fieldKey, oldType, newType]);
 
   useEffect(() => {
     void loadPreview();
@@ -116,8 +112,6 @@ export default function FieldTypeConversionPreview({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            organizationId,
-            workspaceId,
             fieldKey,
             oldType,
             newType,

@@ -23,7 +23,6 @@ interface APIKeyTestResponse {
 }
 
 export default function APIKeysPage() {
-  const orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
   
   const [keys, setKeys] = useState<Record<string, string>>({});
@@ -33,12 +32,11 @@ export default function APIKeysPage() {
 
   useEffect(() => {
     void loadKeys();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- Load keys only once on mount
   }, []);
 
   const loadKeys = async () => {
     try {
-      const response = await fetch(`/api/settings/api-keys?orgId=${orgId}`);
+      const response = await fetch(`/api/settings/api-keys?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}`);
       const data = await response.json() as APIKeyLoadResponse;
       if (data.success) {
         setKeys(data.keys ?? {});
@@ -53,7 +51,7 @@ export default function APIKeysPage() {
       const response = await fetch('/api/settings/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orgId, service, key: value }),
+        body: JSON.stringify({ DEFAULT_ORG_ID, service, key: value }),
       });
 
       const data = await response.json() as APIKeySaveResponse;
@@ -74,7 +72,7 @@ export default function APIKeysPage() {
   const testKey = async (service: string) => {
     setTesting(service);
     try {
-      const response = await fetch(`/api/settings/api-keys/test?orgId=${orgId}&service=${service}`);
+      const response = await fetch(`/api/settings/api-keys/test?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&service=${service}`);
       const data = await response.json() as APIKeyTestResponse;
 
       setTestResults({ ...testResults, [service]: data });

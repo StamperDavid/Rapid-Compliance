@@ -17,7 +17,6 @@ interface Dataset {
 
 export default function DatasetsPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
 
   // Fetch function with pagination
   const fetchDatasets = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData>): Promise<{
@@ -30,7 +29,7 @@ export default function DatasetsPage() {
     ];
 
     const result = await FirestoreService.getAllPaginated(
-      `organizations/${orgId}/trainingDatasets`,
+      `organizations/${DEFAULT_ORG_ID}/trainingDatasets`,
       constraints,
       50,
       lastDoc
@@ -40,7 +39,7 @@ export default function DatasetsPage() {
       lastDoc: result.lastDoc,
       hasMore: result.hasMore,
     };
-  }, [orgId]);
+  }, []);
 
   const {
     data: datasets,

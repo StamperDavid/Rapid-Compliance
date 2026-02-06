@@ -10,7 +10,7 @@ import { DEFAULT_ORG_ID } from '../constants/platform';
 // Type for Firestore document data (raw data before conversion)
 interface FirestoreKeysData {
   id?: string;
-  organizationId?: string;
+  DEFAULT_ORG_ID?: string;
   firebase?: Record<string, unknown>;
   googleCloud?: Record<string, unknown>;
   ai?: {
@@ -85,12 +85,11 @@ class APIKeyService {
    * Uses cache to avoid repeated database calls
    */
   async getKeys(): Promise<APIKeysConfig | null> {
-    const organizationId = DEFAULT_ORG_ID;
-    const now = Date.now();
+      const now = Date.now();
 
     // In test mode, always bypass cache to ensure fresh data
     if (process.env.NODE_ENV === 'test') {
-      return this.fetchKeysFromFirestore(organizationId);
+      return this.fetchKeysFromFirestore(DEFAULT_ORG_ID);
     }
 
     // Return cached keys if still valid
@@ -100,7 +99,7 @@ class APIKeyService {
     }
 
     // Fetch from Firestore
-    const keys = await this.fetchKeysFromFirestore(organizationId);
+    const keys = await this.fetchKeysFromFirestore(DEFAULT_ORG_ID);
     
     if (keys) {
       this.keysCache = keys;
@@ -114,7 +113,7 @@ class APIKeyService {
    * Get specific API key for a service
    * OpenRouter is used as universal fallback for ALL AI services
    */
-  async getServiceKey(organizationId: string, service: APIServiceName): Promise<ServiceKeyResult> {
+  async getServiceKey(DEFAULT_ORG_ID: string, service: APIServiceName): Promise<ServiceKeyResult> {
     const keys = await this.getKeys();
     if (!keys) {return null;}
 
@@ -186,9 +185,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
    * Save API keys (encrypted)
    */
   async saveKeys(keys: Partial<APIKeysConfig>): Promise<void> {
-    const organizationId = DEFAULT_ORG_ID;
-    // Save to Firestore
-    const existingKeys =await this.fetchKeysFromFirestore(organizationId) ?? this.getDefaultKeys();
+      // Save to Firestore
+    const existingKeys =await this.fetchKeysFromFirestore(DEFAULT_ORG_ID) ?? this.getDefaultKeys();
     
     const updatedKeys: APIKeysConfig = {
       ...existingKeys,
@@ -200,8 +198,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     // Save to Firestore
     const { FirestoreService, COLLECTIONS } = await import('../db/firestore-service');
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.API_KEYS}`,
-      organizationId,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.API_KEYS}`,
+      DEFAULT_ORG_ID,
       {
         ...updatedKeys,
         createdAt: updatedKeys.createdAt.toISOString(),
@@ -240,8 +238,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
    * Check if a service is configured
    */
   async isServiceConfigured(service: APIServiceName): Promise<boolean> {
-    const organizationId = DEFAULT_ORG_ID;
-    const key = await this.getServiceKey(organizationId, service);
+      const key = await this.getServiceKey(DEFAULT_ORG_ID, service);
     return key !== null && key !== undefined;
   }
 
@@ -255,11 +252,11 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
 
   // Private helper methods
 
-  private async fetchKeysFromFirestore(organizationId: string): Promise<APIKeysConfig | null> {
+  private async fetchKeysFromFirestore(DEFAULT_ORG_ID: string): Promise<APIKeysConfig | null> {
     // Special case: platform-level orgs use global platform API keys
     const platformOrgIds = ['platform', 'platform-admin', 'admin', 'default'];
-    if (platformOrgIds.includes(organizationId)) {
-      logger.info('[APIKeyService] Using platform keys for org:', { organizationId, file: 'api-key-service.ts' });
+    if (platformOrgIds.includes(DEFAULT_ORG_ID)) {
+      logger.info('[APIKeyService] Using platform keys for org:', { DEFAULT_ORG_ID, file: 'api-key-service.ts' });
       try {
         // Prefer admin SDK to bypass security rules
         const { adminDb } = await import('../firebase/admin');
@@ -325,7 +322,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         const apiKeysPath = getOrgSubCollection('apiKeys');
         const snap = await adminDb
           .collection(apiKeysPath)
-          .doc(organizationId)
+          .doc(DEFAULT_ORG_ID)
           .get();
         if (snap.exists) {
           const keysData = snap.data() as FirestoreKeysData;
@@ -343,8 +340,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     try {
       const { FirestoreService, COLLECTIONS } = await import('../db/firestore-service');
       const keysData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.API_KEYS}`,
-        organizationId
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.API_KEYS}`,
+        DEFAULT_ORG_ID
       );
 
       if (!keysData) {
@@ -371,9 +368,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
   }
 
   private getDefaultKeys(): APIKeysConfig {
-    const organizationId = DEFAULT_ORG_ID;
-    return {
-      id: `keys-${organizationId}`,
+      return {
+      id: `keys-${DEFAULT_ORG_ID}`,
       firebase: {
         apiKey: '',
         authDomain: '',

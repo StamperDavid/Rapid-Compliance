@@ -30,7 +30,6 @@ interface Cart {
 export default function CheckoutPage() {
   const router = useRouter();
   const { theme } = useTheme();
-  const orgId = DEFAULT_ORG_ID;
 
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +56,7 @@ export default function CheckoutPage() {
         return;
       }
 
-      const cartData = await getOrCreateCart(sessionId, 'default', orgId);
+      const cartData = await getOrCreateCart(sessionId, 'default', DEFAULT_ORG_ID);
       if (!cartData.items || cartData.items.length === 0) {
         router.push('/store/cart');
         return;
@@ -69,7 +68,7 @@ export default function CheckoutPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, router]);
+  }, [router]);
 
   useEffect(() => {
     void loadCart();
@@ -95,7 +94,7 @@ export default function CheckoutPage() {
 
       const order = await processCheckout({
         cartId,
-        organizationId: orgId,
+        organizationId: DEFAULT_ORG_ID,
         workspaceId: 'default',
         customer: {
           email: formData.email,

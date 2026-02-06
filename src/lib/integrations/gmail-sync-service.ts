@@ -118,7 +118,7 @@ async function fullSync(
     
     if (!listResponse.data.messages) {
       return {
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         lastSyncAt: new Date().toISOString(),
         historyId: (() => {
           const histId = listResponse.data.resultSizeEstimate?.toString();
@@ -166,7 +166,7 @@ async function fullSync(
     
     // Save sync status
     const status: GmailSyncStatus = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       historyId,
       messagesSynced,
@@ -203,7 +203,7 @@ async function incrementalSync(
     
     if (!historyResponse.data.history) {
       return {
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         lastSyncAt: new Date().toISOString(),
         historyId: (historyResponse.data.historyId !== '' && historyResponse.data.historyId != null) ? historyResponse.data.historyId : startHistoryId,
         messagesSynced: 0,
@@ -279,7 +279,7 @@ async function incrementalSync(
     }
     
     const status: GmailSyncStatus = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       historyId: (historyResponse.data.historyId !== '' && historyResponse.data.historyId != null) ? historyResponse.data.historyId : startHistoryId,
       messagesSynced,
@@ -370,7 +370,6 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
  * Save message to CRM
  */
 async function saveMessageToCRM(message: GmailMessage): Promise<void> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     // Extract email address from "Name <email@example.com>" format
     const extractEmail = (str: string): string => {
@@ -386,7 +385,7 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
     // Save email record
     const emailData = {
       id: message.id,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       threadId: message.threadId,
       contactId: contact?.id,
       from: message.from,
@@ -409,7 +408,7 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
     };
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
       message.id,
       emailData
     );
@@ -417,7 +416,7 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
     // Update contact with last interaction
     if (contact) {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`,
         contact.id,
         {
           lastContactDate: new Date(parseInt(message.internalDate)),
@@ -436,10 +435,9 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
  * Delete message from CRM
  */
 async function deleteMessageFromCRM(messageId: string): Promise<void> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
       messageId
     );
   } catch (error) {
@@ -451,10 +449,9 @@ async function deleteMessageFromCRM(messageId: string): Promise<void> {
  * Update message labels in CRM
  */
 async function updateMessageLabels(messageId: string, labels: string[]): Promise<void> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
       messageId,
       {
         isRead: !labels.includes('UNREAD'),
@@ -471,10 +468,9 @@ async function updateMessageLabels(messageId: string, labels: string[]): Promise
  * Find contact by email
  */
 async function findContactByEmail(email: string): Promise<GmailContact | null> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     const contacts = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`
     );
     const contactsFiltered = contacts.filter((c: unknown) => {
       const contact = c as GmailContact;
@@ -492,10 +488,9 @@ async function findContactByEmail(email: string): Promise<GmailContact | null> {
  * Get last sync status
  */
 async function getLastSyncStatus(): Promise<GmailSyncStatus | null> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     const status = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
       'gmail-sync'
     );
     return status as GmailSyncStatus | null;

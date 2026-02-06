@@ -10,7 +10,6 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { ResponsiveRenderer } from '@/components/website-builder/ResponsiveRenderer';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Type definitions for SEO metadata
 interface SeoMetadata {
@@ -56,7 +55,6 @@ function isPagesApiResponse(data: unknown): data is PagesApiResponse {
 
 export default function PublicSitePage() {
   const params = useParams();
-  const orgId = DEFAULT_ORG_ID;
   const slug = (params.slug as string[]) || [''];
   const pagePath = slug.join('/') || 'home';
 
@@ -73,7 +71,7 @@ export default function PublicSitePage() {
 
       // Fetch page by slug
       const response = await fetch(
-        `/api/website/pages?organizationId=${orgId}&slug=${pagePath}&status=published`
+        `/api/website/pages?slug=${pagePath}&status=published`
       );
 
       if (!response.ok) {
@@ -101,7 +99,7 @@ export default function PublicSitePage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, pagePath]);
+  }, [pagePath]);
 
   useEffect(() => {
     void loadPage();

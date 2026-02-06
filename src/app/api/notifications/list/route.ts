@@ -63,7 +63,6 @@ export async function GET(request: NextRequest) {
     // Get user ID (from session/auth) - PENTHOUSE: always use DEFAULT_ORG_ID
     const userIdHeader = request.headers.get('x-user-id');
     const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default_user';
-    const orgId = DEFAULT_ORG_ID;
 
     // Check rate limit
     const rateLimit = checkRateLimit(`list:${userId}`, 60, 60000);
@@ -111,7 +110,7 @@ export async function GET(request: NextRequest) {
     ];
 
     let notifications = await FirestoreService.getAll<Notification>(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/notifications`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notifications`,
       constraints
     );
 
@@ -234,7 +233,6 @@ export async function POST(request: NextRequest) {
     // Get user ID - PENTHOUSE: always use DEFAULT_ORG_ID
     const userIdHeader = request.headers.get('x-user-id');
     const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default_user';
-    const orgId = DEFAULT_ORG_ID;
 
     // Validate notification IDs
     const notificationIds = body.notificationIds;
@@ -268,7 +266,7 @@ export async function POST(request: NextRequest) {
     // Mark as read
     const updatePromises = validIds.map((id) =>
       FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/notifications`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notifications`,
         id,
         {
           'metadata.read': true,

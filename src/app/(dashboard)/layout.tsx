@@ -4,7 +4,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { MerchantOrchestrator } from '@/components/orchestrator';
 import AdminSidebar from '@/components/admin/AdminSidebar';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Penthouse Dashboard Layout
@@ -16,7 +15,6 @@ export default function PenthouseDashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const orgId = DEFAULT_ORG_ID;
   const { user } = useAuth();
   useOrgTheme();
 
@@ -37,7 +35,7 @@ export default function PenthouseDashboardLayout({
       </main>
 
       {/* Merchant AI Orchestrator - Floating Assistant */}
-      <MerchantOrchestrator orgId={orgId} />
+      <MerchantOrchestrator />
     </div>
   );
 }

@@ -11,7 +11,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';
 import { LeadScoreCard } from '@/components/lead-scoring/LeadScoreCard';
 import type { StoredLeadScore, LeadScoreAnalytics } from '@/types/lead-scoring';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import {
   Target,
   Flame,
@@ -29,7 +28,6 @@ import {
 
 export default function LeadScoringDashboard() {
   const { user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
 
   const [loading, setLoading] = useState(true);
   const [scores, setScores] = useState<StoredLeadScore[]>([]);
@@ -54,7 +52,7 @@ export default function LeadScoringDashboard() {
       const token = await currentUser.getIdToken();
 
       const analyticsRes = await fetch(
-        `/api/lead-scoring/analytics?organizationId=${orgId}`,
+        '/api/lead-scoring/analytics',
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -74,7 +72,7 @@ export default function LeadScoringDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     if (user) {

@@ -10,7 +10,6 @@ import { logger } from '@/lib/logger/logger';;
 
 export default function NewDealPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const [deal, setDeal] = useState({ name: '', company: '', value: 0, probability: 50, stage: 'prospecting', expectedCloseDate: '', notes: '' });
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -21,7 +20,7 @@ export default function NewDealPage() {
     try {
       setSaving(true);
       const dealId = `deal-${Date.now()}`;
-      await FirestoreService.set(`organizations/${orgId}/workspaces/default/entities/deals/records`, dealId, { ...deal, id: dealId, createdAt: Timestamp.now() }, false);
+      await FirestoreService.set(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`, dealId, { ...deal, id: dealId, createdAt: Timestamp.now() }, false);
       router.push(`/deals`);
     } catch (error: unknown) {
       logger.error('Error creating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

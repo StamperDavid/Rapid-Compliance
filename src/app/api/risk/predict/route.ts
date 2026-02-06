@@ -15,7 +15,7 @@
  * 
  * REQUEST BODY:
  * - dealId (required): Deal ID to analyze
- * - organizationId (required): Organization ID
+ * - DEFAULT_ORG_ID (required): Organization ID
  * - workspaceId (optional): Workspace ID (default: 'default')
  * - includeInterventions (optional): Include AI interventions (default: true)
  * - forceRefresh (optional): Skip cache (default: false)
@@ -42,7 +42,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 interface RawRequestBody {
   dealIds?: string[];
   dealId?: string;
-  organizationId?: string;
+  DEFAULT_ORG_ID?: string;
   [key: string]: unknown;
 }
 
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     
     const validatedRequest = validationResult.data as RiskPredictionRequest;
     
-    // Rate limiting (use organizationId as user identifier)
+    // Rate limiting (use DEFAULT_ORG_ID as user identifier)
     const rateLimit = checkRateLimit(validatedRequest.organizationId);
     
     if (!rateLimit.allowed) {
@@ -410,7 +410,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const dealId = searchParams.get('dealId');
-    const organizationId = DEFAULT_ORG_ID;
     const workspaceId = 'default';
     const includeInterventions = searchParams.get('includeInterventions') !== 'false';
 
@@ -428,14 +427,14 @@ export async function GET(request: NextRequest) {
     // Convert to POST request format and call prediction directly
     const riskRequest: RiskPredictionRequest = {
       dealId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       includeInterventions,
       forceRefresh: false,
     };
 
     // Rate limiting
-    const rateLimit = checkRateLimit(organizationId);
+    const rateLimit = checkRateLimit(DEFAULT_ORG_ID);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { success: false, error: 'Rate limit exceeded' },

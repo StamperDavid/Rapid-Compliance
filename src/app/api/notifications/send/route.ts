@@ -65,10 +65,9 @@ export async function POST(request: NextRequest) {
     const validatedData = sendNotificationRequestSchema.parse(body);
 
     // PENTHOUSE: always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
 
     // Check rate limit (50 req/min per org)
-    const rateLimit = checkRateLimit(`send:${orgId}`, 50, 60000);
+    const rateLimit = checkRateLimit(`send:${DEFAULT_ORG_ID}`, 50, 60000);
     
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -89,17 +88,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create notification service
-    const service = new NotificationService(orgId);
+    const service = new NotificationService(DEFAULT_ORG_ID);
 
     // Parse scheduled date if provided
     const scheduledFor = validatedData.scheduledFor 
       ? new Date(validatedData.scheduledFor)
       : undefined;
 
-    // Ensure orgId is in variables (required by NotificationVariables interface)
+    // Ensure DEFAULT_ORG_ID is in variables (required by NotificationVariables interface)
     const variables = {
       ...validatedData.variables,
-      orgId,
+      DEFAULT_ORG_ID,
     };
     
     // Send notification

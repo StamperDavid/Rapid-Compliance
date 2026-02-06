@@ -47,7 +47,6 @@ interface DialerConfig {
 }
 
 interface PowerDialerProps {
-  organizationId: string;
   campaignId?: string;
   contacts?: DialerContact[];
   onCallComplete?: (contact: DialerContact, outcome: string, notes: string) => void;
@@ -77,7 +76,6 @@ const CALL_OUTCOMES = [
 ];
 
 export default function HumanPowerDialer({
-  organizationId,
   campaignId: _campaignId,
   contacts: initialContacts = [],
   onCallComplete,
@@ -115,7 +113,7 @@ export default function HumanPowerDialer({
 
   const loadVoicemailDrops = useCallback(async () => {
     try {
-      const response = await fetch(`/api/voice/voicemail-drops?organizationId=${organizationId}`);
+      const response = await fetch('/api/voice/voicemail-drops');
       if (response.ok) {
         const data = await response.json() as { drops?: Array<{ id: string; name: string; url: string }> };
         setVoicemailDrops(data.drops ?? []);
@@ -123,7 +121,7 @@ export default function HumanPowerDialer({
     } catch (error) {
       logger.error('Failed to load voicemail drops:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
-  }, [organizationId]);
+  }, []);
 
   const dialNext = useCallback(async () => {
     if (isPaused || currentIndex >= contacts.length) {
@@ -141,7 +139,6 @@ export default function HumanPowerDialer({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
           to: contact.phone,
           userId: user?.id,
           contactId: contact.id,
@@ -184,7 +181,7 @@ export default function HumanPowerDialer({
     } catch (error) {
       logger.error('Dial error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
-  }, [isPaused, currentIndex, contacts, activeCalls.length, config.maxConcurrentCalls, config.localPresence, config.voicemailDetection, config.abandonTimeout, organizationId, user?.id]);
+  }, [isPaused, currentIndex, contacts, activeCalls.length, config.maxConcurrentCalls, config.localPresence, config.voicemailDetection, config.abandonTimeout, user?.id]);
 
   // Load voicemail drops
   useEffect(() => {
@@ -236,7 +233,7 @@ export default function HumanPowerDialer({
       await fetch(`/api/voice/calls/${callId}/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId }),
+        body: JSON.stringify({}),
       });
 
       const call = activeCalls.find(c => c.id === callId);
@@ -262,7 +259,7 @@ export default function HumanPowerDialer({
     } catch (error) {
       logger.error('End call error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
-  }, [organizationId, activeCalls, selectedCall?.id, config.autoAdvance, config.dialDelay, isActive, isPaused, dialNext]);
+  }, [activeCalls, selectedCall?.id, config.autoAdvance, config.dialDelay, isActive, isPaused, dialNext]);
 
   const stopDialer = useCallback(() => {
     setIsActive(false);
@@ -290,7 +287,7 @@ export default function HumanPowerDialer({
       await fetch(`/api/voice/calls/${_callId}/answer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId }),
+        body: JSON.stringify({}),
       });
 
       setActiveCalls(prev =>
@@ -310,7 +307,7 @@ export default function HumanPowerDialer({
       await fetch(`/api/voice/calls/${callId}/hold`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId, hold }),
+        body: JSON.stringify({ hold }),
       });
 
       setActiveCalls(prev =>
@@ -330,7 +327,7 @@ export default function HumanPowerDialer({
       await fetch(`/api/voice/calls/${callId}/mute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId, muted }),
+        body: JSON.stringify({ muted }),
       });
 
       setActiveCalls(prev =>
@@ -354,7 +351,6 @@ export default function HumanPowerDialer({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
           to: transferTarget,
         }),
       });
@@ -383,7 +379,6 @@ export default function HumanPowerDialer({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
           voicemailId: selectedVoicemail,
         }),
       });
@@ -406,7 +401,6 @@ export default function HumanPowerDialer({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
           callId: selectedCall.id,
           contactId: selectedCall.contact.id,
           outcome: selectedOutcome,

@@ -26,7 +26,6 @@ export default function BlogPostEditorPage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
   const postId = searchParams.get('postId');
 
   const [post, setPost] = useState<BlogPost | null>(null);
@@ -38,7 +37,7 @@ export default function BlogPostEditorPage() {
 
   const loadCategories = useCallback(async () => {
     try {
-      const response = await fetch(`/api/website/blog/categories?organizationId=${orgId}`);
+      const response = await fetch('/api/website/blog/categories');
       if (response.ok) {
         const data = await response.json() as { categories?: string[] };
         setCategories(data.categories ?? []);
@@ -46,12 +45,12 @@ export default function BlogPostEditorPage() {
     } catch (error) {
       console.error('[Blog Editor] Load categories error:', error);
     }
-  }, [orgId]);
+  }, []);
 
   const loadPost = useCallback(async (id: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/website/blog/posts/${id}?organizationId=${orgId}`);
+      const response = await fetch(`/api/website/blog/posts/${id}`);
 
       if (!response.ok) {throw new Error('Failed to load post');}
 
@@ -64,7 +63,7 @@ export default function BlogPostEditorPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, toast]);
+  }, [toast]);
 
   const createBlankPost = useCallback(() => {
     const newPost: BlogPost = {
@@ -119,7 +118,7 @@ export default function BlogPostEditorPage() {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           post: {
             ...post,
             tags,

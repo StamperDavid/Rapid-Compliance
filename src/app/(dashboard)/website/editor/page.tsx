@@ -109,7 +109,6 @@ function askInput(message: string, defaultValue?: string): string | null {
 export default function PageEditorPage() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const pageId = searchParams.get('pageId'); // If editing existing page
 
   // Editor state
@@ -140,7 +139,7 @@ export default function PageEditorPage() {
   const loadPageStable = React.useCallback(async (id: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/website/pages/${id}?organizationId=${orgId}`);
+      const response = await fetch(`/api/website/pages/${id}`);
 
       if (!response.ok) {throw new Error('Failed to load page');}
 
@@ -159,7 +158,7 @@ export default function PageEditorPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, pushState]);
+  }, [pushState]);
 
   const createBlankPageStable = React.useCallback(() => {
     const newPage: Page = {
@@ -209,7 +208,7 @@ export default function PageEditorPage() {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           page: {
             ...page,
             updatedAt: new Date().toISOString(),
@@ -231,7 +230,7 @@ export default function PageEditorPage() {
     } finally {
       setSaving(false);
     }
-  }, [page, pageId, orgId, user]);
+  }, [page, pageId, user]);
 
   useEffect(() => {
     if (!autoSaveEnabled || !page) {return;}
@@ -288,7 +287,7 @@ export default function PageEditorPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           template: {
             name: templateName,
             description:(templateDescription !== '' && templateDescription != null) ? templateDescription : `Custom template based on ${page.title}`,
@@ -322,7 +321,7 @@ export default function PageEditorPage() {
       const response = await fetch(`/api/website/pages/${pageId}/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId: orgId, scheduledFor }),
+        body: JSON.stringify({ organizationId: DEFAULT_ORG_ID, scheduledFor }),
       });
 
       if (!response.ok) {
@@ -396,7 +395,7 @@ export default function PageEditorPage() {
     try {
       setPublishing(true);
 
-      const response = await fetch(`/api/website/pages/${pageId}/publish?organizationId=${orgId}`, {
+      const response = await fetch(`/api/website/pages/${pageId}/publish`, {
         method: 'DELETE',
       });
 
@@ -429,7 +428,7 @@ export default function PageEditorPage() {
       const response = await fetch(`/api/website/pages/${pageId}/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId: orgId }),
+        body: JSON.stringify({ organizationId: DEFAULT_ORG_ID }),
       });
 
       if (!response.ok) {
@@ -677,7 +676,7 @@ export default function PageEditorPage() {
       {showVersionHistory && pageId && (
         <VersionHistory
           pageId={pageId}
-          organizationId={orgId}
+          organizationId={DEFAULT_ORG_ID}
           onRestore={handleRestoreVersion}
           onClose={() => setShowVersionHistory(false)}
         />

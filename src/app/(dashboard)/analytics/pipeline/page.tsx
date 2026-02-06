@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -37,8 +35,6 @@ function isPipelineAnalytics(data: unknown): data is PipelineAnalytics {
 }
 
 export default function PipelineAnalyticsPage() {
-  const orgId = DEFAULT_ORG_ID;
-
   const { theme } = useOrgTheme();
   const [analytics, setAnalytics] = useState<PipelineAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +42,7 @@ export default function PipelineAnalyticsPage() {
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/analytics/pipeline?orgId=${orgId}`);
+      const response = await fetch('/api/analytics/pipeline');
       const data = await response.json() as { success?: boolean; analytics?: unknown };
       if (data.success && isPipelineAnalytics(data.analytics)) {
         setAnalytics(data.analytics);
@@ -56,7 +52,7 @@ export default function PipelineAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadAnalytics();

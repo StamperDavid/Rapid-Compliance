@@ -27,21 +27,20 @@ interface ABTest {
 export default function ABTestResultsPage() {
   const params = useParams();
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const testId = params.id as string;
   const [test, setTest] = useState<ABTest | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadTest = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${orgId}/abTests`, testId);
+      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/abTests`, testId);
       setTest(data as ABTest);
     } catch (error: unknown) {
       logger.error('Error loading test:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [orgId, testId]);
+  }, [testId]);
 
   useEffect(() => {
     void loadTest();

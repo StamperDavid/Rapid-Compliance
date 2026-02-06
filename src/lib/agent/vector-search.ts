@@ -94,14 +94,13 @@ export async function searchKnowledgeBase(
   query: string,
   limit: number = 5
 ): Promise<SearchResult[]> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     // Generate embedding for query
     const queryEmbedding = await generateEmbedding(query);
     
     // Get all knowledge base embeddings from Firestore
     const knowledgeBase = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBase`,
       'current'
     );
     
@@ -111,7 +110,7 @@ export async function searchKnowledgeBase(
     
     // Get all embeddings
     const embeddings: KnowledgeEmbeddingDoc[] = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeEmbeddings`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeEmbeddings`,
       []
     );
 
@@ -158,12 +157,11 @@ export async function storeEmbedding(
   sourceId: string,
   metadata?: Record<string, unknown>
 ): Promise<void> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     const embeddingId = `emb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeEmbeddings`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeEmbeddings`,
       embeddingId,
       {
         embedding: embedding.embedding.values,
@@ -186,11 +184,10 @@ export async function storeEmbedding(
  * Index knowledge base documents (generate and store embeddings)
  */
 export async function indexKnowledgeBase(): Promise<void> {
-  const organizationId = DEFAULT_ORG_ID;
   try {
     // Get knowledge base
     const knowledgeBaseData: KnowledgeBase | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBase`,
       'current'
     );
 

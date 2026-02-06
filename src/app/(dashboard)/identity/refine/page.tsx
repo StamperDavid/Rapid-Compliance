@@ -122,7 +122,6 @@ const AVATAR_STYLES = [
 
 export default function IdentityRefinementPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const { user } = useAuth();
   const { theme } = useOrgTheme();
   const toast = useToast();
@@ -200,17 +199,17 @@ export default function IdentityRefinementPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       // Load organization data (includes brandDNA)
-      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId) as OrganizationData;
+      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID) as OrganizationData;
 
       // Load onboarding data for pre-population
       const onboardingData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/onboarding`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/onboarding`,
         'current'
       ) as OnboardingData;
 
       // Load existing workforce identity if exists
       const workforceIdentity = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/settings`,
         'workforceIdentity'
       ) as WorkforceIdentity;
 
@@ -246,12 +245,12 @@ export default function IdentityRefinementPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId, mapToneToArchetype]);
+  }, [mapToneToArchetype]);
 
   const loadVoices = useCallback(async (engine: TTSEngineType) => {
     setLoadingVoices(true);
     try {
-      const response = await fetch(`/api/voice/tts?orgId=${orgId}&engine=${engine}`);
+      const response = await fetch(`/api/voice/tts?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&engine=${engine}`);
       const data = await response.json() as VoicesApiResponse;
       if (data.success && data.voices && data.voices.length > 0) {
         setVoices(data.voices);
@@ -271,7 +270,7 @@ export default function IdentityRefinementPage() {
     } finally {
       setLoadingVoices(false);
     }
-  }, [orgId, identity.voiceId, toast]);
+  }, [identity.voiceId, toast]);
 
   // Load existing data
   useEffect(() => {
@@ -293,7 +292,7 @@ export default function IdentityRefinementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: testText,
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           engine: identity.voiceEngine,
           voiceId: identity.voiceId,
         }),
@@ -386,7 +385,7 @@ export default function IdentityRefinementPage() {
 
       // Save workforce identity
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/settings`,
         'workforceIdentity',
         {
           ...identity,
@@ -398,14 +397,14 @@ export default function IdentityRefinementPage() {
       );
 
       // Update organization Brand DNA
-      await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, orgId, {
+      await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID, {
         brandDNA: identity.brandDNA,
         updatedAt: new Date(),
       });
 
       // Mark identity refinement as complete
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/settings`,
         'onboardingProgress',
         {
           identityRefinementCompleted: true,

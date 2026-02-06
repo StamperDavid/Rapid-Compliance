@@ -81,11 +81,10 @@ export async function GET(request: NextRequest) {
     }
 
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
 
     // Get agent configuration
     const agentConfigRaw = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentConfig`,
       'default'
     );
 
@@ -101,7 +100,7 @@ export async function GET(request: NextRequest) {
     // Validate and type the configuration
     if (!isValidAgentConfig(agentConfigRaw)) {
       logger.warn('Invalid agent config structure, returning defaults', {
-        orgId,
+        DEFAULT_ORG_ID,
         route: '/api/agent/config',
       });
 
@@ -143,7 +142,6 @@ export async function POST(request: NextRequest) {
     const { selectedModel, modelConfig } = body;
 
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
 
     // Prepare configuration data with defaults
     const configData: AgentConfigData = {
@@ -154,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     // Save agent configuration (single model - ensemble removed for MVP)
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentConfig`,
       'default',
       configData,
       false

@@ -35,7 +35,6 @@ interface SettingsResponse {
 }
 
 export default function WebsiteSettingsPage() {
-  const orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
 
   const [settings, setSettings] = useState({
@@ -66,7 +65,7 @@ export default function WebsiteSettingsPage() {
   const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/website/settings?organizationId=${orgId}`);
+      const response = await fetch('/api/website/settings');
 
       if (!response.ok) {
         throw new Error('Failed to load settings');
@@ -83,7 +82,7 @@ export default function WebsiteSettingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadSettings();
@@ -98,7 +97,7 @@ export default function WebsiteSettingsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           settings,
         }),
       });

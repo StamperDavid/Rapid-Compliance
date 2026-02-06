@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { successResponse } from '@/lib/api/error-handler';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Request payload structure for knowledge upload
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+    const { user: _user } = authResult;
 
     // Parse form data (multipart/form-data for file uploads)
     const rawFormData = await request.formData();
@@ -90,8 +91,8 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Organization ID is required');
     }
 
-    // Verify user has access
-    if (user.organizationId !== organizationId) {
+    // Verify user has access (penthouse model - verify against DEFAULT_ORG_ID)
+    if (DEFAULT_ORG_ID !== organizationId) {
       return errors.forbidden('Access denied');
     }
 

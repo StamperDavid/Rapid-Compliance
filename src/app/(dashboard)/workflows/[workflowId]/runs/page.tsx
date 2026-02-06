@@ -23,7 +23,6 @@ interface WorkflowExecution {
 
 export default function WorkflowRunsPage() {
   const params = useParams();
-  const orgId = DEFAULT_ORG_ID;
   const workflowId = params.workflowId as string;
 
   const [executions, setExecutions] = useState<WorkflowExecution[]>([]);
@@ -31,7 +30,7 @@ export default function WorkflowRunsPage() {
 
   const loadExecutions = useCallback(async () => {
     try {
-      const data = await getWorkflowExecutions(workflowId, orgId, 'default');
+      const data = await getWorkflowExecutions(workflowId, DEFAULT_ORG_ID, 'default');
       // Map WorkflowEngineExecution to WorkflowExecution format
       const mappedExecutions: WorkflowExecution[] = data.map((exec) => ({
         id: exec.id,
@@ -53,7 +52,7 @@ export default function WorkflowRunsPage() {
     } finally {
       setLoading(false);
     }
-  }, [workflowId, orgId]);
+  }, [workflowId]);
 
   useEffect(() => {
     void loadExecutions();

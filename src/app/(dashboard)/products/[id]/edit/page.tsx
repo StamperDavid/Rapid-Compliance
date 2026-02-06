@@ -24,7 +24,6 @@ export default function EditProductPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
   const productId = params.id as string;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,14 +31,14 @@ export default function EditProductPage() {
 
   const loadProduct = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/products/records`, productId);
+      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/products/records`, productId);
       setProduct(data as Product);
     } catch (error) {
       logger.error('Error loading product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [orgId, productId]);
+  }, [productId]);
 
   useEffect(() => {
     void loadProduct();
@@ -52,7 +51,7 @@ export default function EditProductPage() {
     }
     try {
       setSaving(true);
-      await FirestoreService.update(`organizations/${orgId}/workspaces/default/entities/products/records`, productId, { ...product, updatedAt: Timestamp.now() });
+      await FirestoreService.update(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/products/records`, productId, { ...product, updatedAt: Timestamp.now() });
       toast.success('Product updated successfully');
       router.push(`/products`);
     } catch (error) {

@@ -42,7 +42,6 @@ interface TeamMember {
 
 export default function TeamMembersPage() {
   const { user: _user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -63,9 +62,9 @@ export default function TeamMembersPage() {
   // Fetch function with pagination
   const fetchUsers = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData, DocumentData>) => {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
+
     const constraints: QueryConstraint[] = [
-      where('organizationId', '==', orgId),
+      where('organizationId', '==', DEFAULT_ORG_ID),
       firestoreOrderBy('createdAt', 'desc')
     ];
 
@@ -75,7 +74,7 @@ export default function TeamMembersPage() {
       50,
       lastDoc
     );
-  }, [orgId]);
+  }, []);
 
   const {
     data: users,
@@ -118,10 +117,8 @@ export default function TeamMembersPage() {
 
   // Initial load
   useEffect(() => {
-    if (orgId) {
-      void refresh();
-    }
-  }, [orgId, refresh]);
+    void refresh();
+  }, [refresh]);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 

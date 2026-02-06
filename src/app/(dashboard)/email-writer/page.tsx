@@ -37,8 +37,6 @@ interface EmailHistory {
 // ============================================================================
 
 export default function EmailWriterPage() {
-  const organizationId = DEFAULT_ORG_ID;
-  
   // TODO: Get from auth context
   const workspaceId = 'workspace_default';
   const userId = 'user_current';
@@ -143,7 +141,7 @@ export default function EmailWriterPage() {
         
         {/* Email Writer Card */}
         <EmailWriterCard
-          organizationId={organizationId}
+          organizationId={DEFAULT_ORG_ID}
           workspaceId={workspaceId}
           userId={userId}
           onEmailSent={handleEmailSent}

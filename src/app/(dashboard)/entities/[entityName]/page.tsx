@@ -4,7 +4,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useRecords } from '@/hooks/useRecords';
 import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas'
 import { logger } from '@/lib/logger/logger';
@@ -45,9 +45,6 @@ interface SchemaResponse {
 export default function EntityTablePage() {
   const params = useParams();
   const entityName = params.entityName as string;
-  const orgId = DEFAULT_ORG_ID;
-  const searchParams = useSearchParams();
-  const workspaceId = (searchParams?.get('workspaceId') as string) || 'default';
 
   const {
     records,
@@ -68,7 +65,7 @@ export default function EntityTablePage() {
     let isMounted = true;
     void (async () => {
       try {
-        const res = await fetch(`/api/schemas?organizationId=${orgId}&workspaceId=${workspaceId}`);
+        const res = await fetch('/api/schemas');
         if (!res.ok) {throw new Error(`Failed to load schemas (${res.status})`);}
         const data = await res.json() as SchemaResponse;
         if (isMounted) {
@@ -81,7 +78,7 @@ export default function EntityTablePage() {
     return () => {
       isMounted = false;
     };
-  }, [orgId, workspaceId]);
+  }, []);
 
   // Get schema dynamically based on entity name
   const schema = useMemo((): ApiSchema | null => {
@@ -399,7 +396,7 @@ export default function EntityTablePage() {
         // Lookup field with record picker
         return (
           <LookupFieldPicker
-            organizationId={orgId}
+            organizationId={DEFAULT_ORG_ID}
             workspaceId="default"
             targetEntity={(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : 'contacts'}
             value={typeof value === 'string' ? value : value != null ? String(value) : null}

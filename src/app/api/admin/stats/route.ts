@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
     const { user } = authResult;
 
     // Admin always has full access in penthouse model
-    const effectiveOrgId = user.organizationId;
+    const effectiveOrgId = DEFAULT_ORG_ID;
 
     let stats: PlatformStats;
 

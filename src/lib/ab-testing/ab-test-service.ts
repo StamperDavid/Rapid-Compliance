@@ -54,7 +54,6 @@ export interface ABAssignment {
 export async function createABTest(
   test: Omit<ABTest, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<ABTest> {
-  const organizationId = DEFAULT_ORG_ID;
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   
   const testId = crypto.randomUUID();
@@ -68,7 +67,7 @@ export async function createABTest(
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
     testId,
     fullTest,
     false

@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
     // Decode and validate state
     let userId = 'default';
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
 
     if (state) {
       const decodedState: unknown = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
@@ -47,7 +46,7 @@ export async function GET(request: NextRequest) {
 
       if (stateValidation.success) {
         userId = stateValidation.data.userId;
-        // orgId is now always DEFAULT_ORG_ID, ignore state.orgId
+        // DEFAULT_ORG_ID is now always DEFAULT_ORG_ID, ignore state.DEFAULT_ORG_ID
       } else {
         logger.warn('Invalid QuickBooks OAuth state', { errors: JSON.stringify(stateValidation.error.errors) });
       }
@@ -61,7 +60,7 @@ export async function GET(request: NextRequest) {
       {
         id: `quickbooks_${realmId}`,
         userId,
-        organizationId: orgId,
+        organizationId: DEFAULT_ORG_ID,
         provider: 'quickbooks',
         type: 'accounting',
         status: 'active',
@@ -75,7 +74,7 @@ export async function GET(request: NextRequest) {
       false
     );
 
-    logger.info('QuickBooks integration saved', { route: '/api/integrations/quickbooks/callback', orgId, realmId });
+    logger.info('QuickBooks integration saved', { route: '/api/integrations/quickbooks/callback', DEFAULT_ORG_ID, realmId });
 
     // PENTHOUSE: Redirect to flat route, not workspace-scoped
     return NextResponse.redirect('/settings/integrations?success=quickbooks');

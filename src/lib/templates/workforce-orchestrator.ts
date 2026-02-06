@@ -210,8 +210,8 @@ export class WorkforceOrchestrator {
   /**
    * Get workforce for an organization
    */
-  getWorkforce(orgId: string): OrganizationWorkforce | null {
-    return this.workforceCache.get(orgId) ?? null;
+  getWorkforce(_orgId: string): OrganizationWorkforce | null {
+    return this.workforceCache.get(DEFAULT_ORG_ID) ?? null;
   }
 
   // ==========================================================================
@@ -229,7 +229,7 @@ export class WorkforceOrchestrator {
     platform: WorkforcePlatform,
     reason: string = 'Manual activation'
   ): Promise<AgentActivationResult> {
-    const workforce = this.workforceCache.get(orgId);
+    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
     if (!workforce) {
       return {
         success: false,
@@ -313,7 +313,7 @@ export class WorkforceOrchestrator {
     platform: WorkforcePlatform,
     reason: string = 'Manual hibernation'
   ): Promise<AgentActivationResult> {
-    const workforce = this.workforceCache.get(orgId);
+    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
     if (!workforce) {
       return {
         success: false,
@@ -382,7 +382,7 @@ export class WorkforceOrchestrator {
     platform: WorkforcePlatform,
     reason: string = 'Administrative action'
   ): Promise<AgentActivationResult> {
-    const workforce = this.workforceCache.get(orgId);
+    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
     if (!workforce) {
       return {
         success: false,
@@ -449,7 +449,7 @@ export class WorkforceOrchestrator {
       accountName: string;
     }
   ): Promise<void> {
-    const workforce = this.workforceCache.get(orgId);
+    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
     if (!workforce) {
       logger.warn('Platform connected but workforce not found', { orgId, platform });
       return;
@@ -509,7 +509,7 @@ export class WorkforceOrchestrator {
     platform: WorkforcePlatform,
     reason: string = 'User disconnected'
   ): Promise<void> {
-    const workforce = this.workforceCache.get(orgId);
+    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
     if (!workforce) {
       logger.warn('Platform disconnected but workforce not found', { orgId, platform });
       return;
@@ -557,7 +557,7 @@ export class WorkforceOrchestrator {
    * for a specialized agent, with any organization-specific overrides applied.
    */
   getAgentManual(orgId: string, platform: WorkforcePlatform): AgentManual | null {
-    const workforce = this.workforceCache.get(orgId);
+    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
     if (!workforce) {
       return null;
     }
@@ -591,7 +591,7 @@ export class WorkforceOrchestrator {
    */
   getActiveAgentManuals(orgId: string): Map<WorkforcePlatform, AgentManual> {
     const result = new Map<WorkforcePlatform, AgentManual>();
-    const workforce = this.workforceCache.get(orgId);
+    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
 
     if (!workforce) {
       return result;
@@ -616,14 +616,14 @@ export class WorkforceOrchestrator {
   /**
    * Get workforce health summary
    */
-  getWorkforceHealth(orgId: string): {
+  getWorkforceHealth(_orgId: string): {
     score: number;
     activeAgents: number;
     hibernatedAgents: number;
     disabledAgents: number;
     connectedPlatforms: number;
   } | null {
-    const workforce = this.workforceCache.get(orgId);
+    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
     if (!workforce) {
       return null;
     }
@@ -644,8 +644,8 @@ export class WorkforceOrchestrator {
   /**
    * Get agents available for activation
    */
-  getActivatableAgents(orgId: string): WorkforcePlatform[] {
-    const workforce = this.workforceCache.get(orgId);
+  getActivatableAgents(_orgId: string): WorkforcePlatform[] {
+    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
     if (!workforce) {
       return [];
     }
@@ -774,9 +774,8 @@ export function getVisualStyleSeeds(): {
   webSeeds: WorkforceTemplate['visualStyleSeeds']['webSeeds'];
   brandDNA: WorkforceTemplate['visualStyleSeeds']['brandDNA'];
 } | null {
-  const orgId = DEFAULT_ORG_ID;
   const orchestrator = getWorkforceOrchestrator();
-  const workforce = orchestrator.getWorkforce(orgId);
+  const workforce = orchestrator.getWorkforce(DEFAULT_ORG_ID);
 
   if (!workforce) {
     return null;

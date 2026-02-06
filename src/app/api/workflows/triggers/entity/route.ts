@@ -6,6 +6,7 @@ import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const entityChangeSchema = z.object({
   organizationId: z.string(),
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user } = authResult;
+    const { user: _user } = authResult;
 
     // Parse and validate input
     const body: unknown = await request.json();
@@ -49,8 +50,8 @@ export async function POST(request: NextRequest) {
 
     const { organizationId, workspaceId, schemaId, changeType, recordId, recordData } = validation.data;
 
-    // Verify user has access
-    if (user.organizationId !== organizationId) {
+    // Verify user has access (penthouse model - verify against DEFAULT_ORG_ID)
+    if (DEFAULT_ORG_ID !== organizationId) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }

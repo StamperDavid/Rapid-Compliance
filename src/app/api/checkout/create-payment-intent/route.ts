@@ -6,6 +6,7 @@ import { paymentIntentSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export async function POST(request: NextRequest) {
   let requestOrganizationId: string | undefined;
@@ -55,8 +56,8 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Currency is required');
     }
 
-    // Verify user has access to this organization
-    if (user.organizationId !== organizationId) {
+    // Verify user has access to this organization (penthouse model - verify against DEFAULT_ORG_ID)
+    if (DEFAULT_ORG_ID !== organizationId) {
       return errors.forbidden('Access denied to this organization');
     }
 

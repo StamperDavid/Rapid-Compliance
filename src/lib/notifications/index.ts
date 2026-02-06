@@ -146,7 +146,6 @@ export type {
  * ```
  */
 export async function seedNotificationTemplates(): Promise<number> {
-  const orgId = DEFAULT_ORG_ID;
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const { getAllTemplates } = await import('./templates');
   
@@ -154,7 +153,7 @@ export async function seedNotificationTemplates(): Promise<number> {
   
   const createPromises = templates.map((template) =>
     FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/notification_templates`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notification_templates`,
       template.id,
       template
     )

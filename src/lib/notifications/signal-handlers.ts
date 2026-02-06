@@ -29,8 +29,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
  * Call this on server startup to begin listening for signals
  */
 export function initializeNotificationHandlers(): void {
-  const orgId = DEFAULT_ORG_ID;
-  const service = new NotificationService(orgId);
+  const service = new NotificationService(DEFAULT_ORG_ID);
 
   // Deal Risk Predictor signals
   registerDealRiskHandlers(service);

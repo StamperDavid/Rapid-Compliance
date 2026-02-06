@@ -6,6 +6,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { formatValidationErrors } from '@/lib/validation/error-formatter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     const { organizationId, ...smsData } = validation.data;
 
     // Verify user has access to this organization
-    if (user.organizationId !== organizationId) {
+    if (DEFAULT_ORG_ID !== organizationId) {
       return errors.forbidden('Access denied to this organization');
     }
 

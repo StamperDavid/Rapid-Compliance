@@ -26,7 +26,6 @@ export default function EditLeadPage() {
   const params = useParams();
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
   const leadId = params.id as string;
   const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,14 +33,14 @@ export default function EditLeadPage() {
 
   const loadLead = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/leads/records`, leadId);
+      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/leads/records`, leadId);
       setLead(data as Lead);
     } catch (error: unknown) {
       logger.error('Error loading lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [orgId, leadId]);
+  }, [leadId]);
 
   useEffect(() => {
     void loadLead();
@@ -51,7 +50,7 @@ export default function EditLeadPage() {
     e.preventDefault();
     try {
       setSaving(true);
-      await FirestoreService.update(`organizations/${orgId}/workspaces/default/entities/leads/records`, leadId, { ...lead, updatedAt: Timestamp.now() });
+      await FirestoreService.update(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/leads/records`, leadId, { ...lead, updatedAt: Timestamp.now() });
       router.push(`/leads/${leadId}`);
     } catch (error: unknown) {
       logger.error('Error updating lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

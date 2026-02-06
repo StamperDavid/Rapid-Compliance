@@ -46,7 +46,7 @@ interface UserRecord {
   id: string;
   email: string;
   role: string;
-  organizationId: string;
+  DEFAULT_ORG_ID: string;
   name?: string;
   createdAt?: string;
 }
@@ -73,7 +73,7 @@ interface UpdatePricingArgs {
 }
 
 interface ListUsersArgs {
-  organizationId?: string;
+  DEFAULT_ORG_ID?: string;
   role?: string;
   limit?: string;
 }
@@ -89,7 +89,7 @@ interface QueryDocsArgs {
 
 interface GetPlatformStatsArgs {
   metric?: 'all' | 'organizations' | 'agents' | 'health' | 'trials' | 'errors';
-  organizationId?: string;
+  DEFAULT_ORG_ID?: string;
 }
 
 interface DelegateToAgentArgs {
@@ -101,7 +101,7 @@ interface DelegateToAgentArgs {
 interface InspectAgentLogsArgs {
   source: 'provisioner' | 'agents' | 'errors' | 'all';
   limit?: number;
-  organizationId?: string;
+  DEFAULT_ORG_ID?: string;
 }
 
 // ============================================================================
@@ -137,7 +137,7 @@ function parseInspectAgentLogsArgs(args: Record<string, unknown>): InspectAgentL
   return {
     source: args.source as InspectAgentLogsArgs['source'],
     limit: typeof args.limit === 'number' ? args.limit : undefined,
-    organizationId: typeof args.organizationId === 'string' ? args.organizationId : undefined,
+    DEFAULT_ORG_ID: typeof args.DEFAULT_ORG_ID === 'string' ? args.DEFAULT_ORG_ID : undefined,
   };
 }
 
@@ -340,7 +340,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             description: 'Specific metric to retrieve',
             enum: ['all', 'organizations', 'agents', 'health', 'trials', 'errors'],
           },
-          organizationId: {
+          DEFAULT_ORG_ID: {
             type: 'string',
             description: 'Optional: Get stats for a specific organization',
           },
@@ -358,7 +358,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          organizationId: {
+          DEFAULT_ORG_ID: {
             type: 'string',
             description: 'Optional: Get state for a specific organization context',
           },
@@ -408,12 +408,12 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          organizationId: {
+          DEFAULT_ORG_ID: {
             type: 'string',
             description: 'The organization ID to retrieve',
           },
         },
-        required: ['organizationId'],
+        required: ['DEFAULT_ORG_ID'],
       },
     },
   },
@@ -426,7 +426,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          organizationId: {
+          DEFAULT_ORG_ID: {
             type: 'string',
             description: 'The organization ID to update',
           },
@@ -435,7 +435,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             description: 'JSON object with fields to update (plan, status, name, features)',
           },
         },
-        required: ['organizationId', 'updates'],
+        required: ['DEFAULT_ORG_ID', 'updates'],
       },
     },
   },
@@ -666,7 +666,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          organizationId: {
+          DEFAULT_ORG_ID: {
             type: 'string',
             description: 'Organization context for scoring model',
           },
@@ -760,7 +760,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          organizationId: {
+          DEFAULT_ORG_ID: {
             type: 'string',
             description: 'Filter by organization',
           },
@@ -858,7 +858,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             type: 'string',
             description: 'Maximum number of log entries (default: 10)',
           },
-          organizationId: {
+          DEFAULT_ORG_ID: {
             type: 'string',
             description: 'Optional: Filter logs by organization',
           },
@@ -885,7 +885,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             description: 'Type of analytics report',
             enum: ['overview', 'revenue', 'engagement', 'conversion', 'churn', 'growth'],
           },
-          organizationId: {
+          DEFAULT_ORG_ID: {
             type: 'string',
             description: 'Specific organization (omit for platform-wide)',
           },
@@ -918,7 +918,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             description: 'Output format',
             enum: ['summary', 'detailed', 'presentation'],
           },
-          organizationId: {
+          DEFAULT_ORG_ID: {
             type: 'string',
             description: 'Organization scope',
           },
@@ -1402,7 +1402,7 @@ PENTHOUSE MODEL:
  */
 export async function executeGetPlatformStats(
   metric: 'all' | 'organizations' | 'agents' | 'health' | 'trials' | 'errors',
-  organizationId?: string
+  DEFAULT_ORG_ID?: string
 ): Promise<PlatformStats> {
   try {
     const stats: PlatformStats = {
@@ -1436,8 +1436,8 @@ export async function executeGetPlatformStats(
     }
 
     if (metric === 'all' || metric === 'health') {
-      if (organizationId) {
-        const healthReport = await SystemHealthService.generateHealthReport(organizationId);
+      if (DEFAULT_ORG_ID) {
+        const healthReport = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
         stats.health = {
           readinessScore: healthReport.readinessScore,
           configuredFeatures: healthReport.features.filter((f) => f.status === 'configured').length,
@@ -1446,7 +1446,7 @@ export async function executeGetPlatformStats(
         };
       } else {
         stats.health = {
-          note: 'Provide organizationId for detailed health report',
+          note: 'Provide DEFAULT_ORG_ID for detailed health report',
         };
       }
     }
@@ -1539,7 +1539,7 @@ export function executeDelegateToAgent(
 export function executeInspectAgentLogs(
   source: 'provisioner' | 'agents' | 'errors' | 'all',
   limit: number = 10,
-  _organizationId?: string
+  _DEFAULT_ORG_ID?: string
 ): Promise<AgentLog[]> {
   const logs: AgentLog[] = [];
 
@@ -1590,7 +1590,6 @@ export function executeInspectAgentLogs(
  * Get complete system state - MANDATORY before strategic responses.
  */
 export async function executeGetSystemState(): Promise<SystemState> {
-  const organizationId = DEFAULT_ORG_ID;
   const state: SystemState = {
     timestamp: new Date().toISOString(),
     platform: {
@@ -1641,8 +1640,8 @@ export async function executeGetSystemState(): Promise<SystemState> {
     };
 
     // Get feature configuration for specific org
-    if (organizationId) {
-      const healthReport = await SystemHealthService.generateHealthReport(organizationId);
+    if (DEFAULT_ORG_ID) {
+      const healthReport = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
       state.features = {
         configured: healthReport.features
           .filter((f) => f.status === 'configured')
@@ -1696,7 +1695,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
 
       case 'get_platform_stats': {
         const typedArgs = args as GetPlatformStatsArgs;
-        const stats = await executeGetPlatformStats(typedArgs.metric ?? 'all', typedArgs.organizationId);
+        const stats = await executeGetPlatformStats(typedArgs.metric ?? 'all', typedArgs.DEFAULT_ORG_ID);
         content = JSON.stringify(stats);
         break;
       }
@@ -1735,7 +1734,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       }
 
       case 'get_organization': {
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, args.organizationId as string);
+        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, args.DEFAULT_ORG_ID as string);
         content = JSON.stringify(org ?? { error: 'Organization not found' });
         break;
       }
@@ -1747,8 +1746,8 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         } catch {
           updates = { note: args.updates };
         }
-        await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, args.organizationId as string, updates);
-        content = JSON.stringify({ success: true, organizationId: args.organizationId, updates });
+        await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, args.DEFAULT_ORG_ID as string, updates);
+        content = JSON.stringify({ success: true, DEFAULT_ORG_ID: args.DEFAULT_ORG_ID, updates });
         break;
       }
 
@@ -1860,7 +1859,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       case 'score_leads': {
         content = JSON.stringify({
           status: 'scoring',
-          organizationId: args.organizationId ?? 'default',
+          DEFAULT_ORG_ID: args.DEFAULT_ORG_ID ?? 'default',
           leadIds: args.leadIds ?? 'all',
           message: 'Lead scoring model applied',
         });
@@ -1901,8 +1900,8 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         const typedArgs = args as unknown as ListUsersArgs;
         const users = await FirestoreService.getAll('users');
         let filtered = (users ?? []) as UserRecord[];
-        if (typedArgs.organizationId) {
-          filtered = filtered.filter((u) => u.organizationId === typedArgs.organizationId);
+        if (typedArgs.DEFAULT_ORG_ID) {
+          filtered = filtered.filter((u) => u.DEFAULT_ORG_ID === typedArgs.DEFAULT_ORG_ID);
         }
         if (typedArgs.role && typedArgs.role !== 'all') {
           filtered = filtered.filter((u) => u.role === typedArgs.role);
@@ -1913,7 +1912,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
             id: u.id,
             email: u.email,
             role: u.role,
-            organizationId: u.organizationId,
+            DEFAULT_ORG_ID: u.DEFAULT_ORG_ID,
           })),
         });
         break;
@@ -1952,7 +1951,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         const logs = await executeInspectAgentLogs(
           parsedArgs.source,
           parsedArgs.limit ?? 10,
-          parsedArgs.organizationId
+          parsedArgs.DEFAULT_ORG_ID
         );
         content = JSON.stringify(logs);
         break;
@@ -1987,7 +1986,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           status: 'generating',
           reportType: args.reportType,
           format: args.format ?? 'summary',
-          organizationId: args.organizationId ?? 'platform',
+          DEFAULT_ORG_ID: args.DEFAULT_ORG_ID ?? 'platform',
           message: `${args.reportType} report generation initiated`,
           estimatedCompletion: '30 seconds',
         });

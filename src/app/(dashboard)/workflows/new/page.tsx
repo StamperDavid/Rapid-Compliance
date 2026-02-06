@@ -29,7 +29,6 @@ interface WorkflowCondition {
 export default function WorkflowBuilderPage() {
   const router = useRouter();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
 
   const [workflow, setWorkflow] = useState({
     name: '',
@@ -75,12 +74,12 @@ export default function WorkflowBuilderPage() {
       const now = Timestamp.now();
       
       await FirestoreService.set(
-        `organizations/${orgId}/workspaces/default/workflows`,
+        `organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`,
         workflowId,
         {
           ...workflow,
           id: workflowId,
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           workspaceId: 'default',
           trigger: { ...workflow.trigger, id: `trigger-${Date.now()}`, name: 'Main Trigger' },
           settings: { stopOnError: false, parallel: false },

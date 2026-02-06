@@ -1,6 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 /* eslint-disable @next/next/no-img-element -- User uploaded images displayed in preview */
 
 import { useState, useEffect } from 'react';
@@ -92,7 +91,6 @@ const THEME_PRESETS = [
 ];
 
 export default function ThemeEditorPage() {
-  const orgId = DEFAULT_ORG_ID;
   const [theme, setTheme] = useState<ThemeConfig>(DEFAULT_THEME);
   const [activeSection, setActiveSection] = useState<'colors' | 'typography' | 'layout' | 'branding'>('colors');
   const [activeColorGroup, setActiveColorGroup] = useState<'brand' | 'semantic' | 'neutral' | 'background'>('brand');
@@ -155,7 +153,7 @@ export default function ThemeEditorPage() {
     };
 
     void loadTheme();
-  }, [orgId]);
+  }, []);
 
   const updateColor = (path: string[], value: string) => {
     setTheme(prev => {

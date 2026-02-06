@@ -19,7 +19,6 @@ export default function ShoppingCartPage() {
   const router = useRouter();
   const { theme } = useTheme();
   const toast = useToast();
-  const orgId = DEFAULT_ORG_ID;
 
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,14 +30,14 @@ export default function ShoppingCartPage() {
       const sessionId = localStorage.getItem('cartSessionId') ?? `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
 
-      const cartData = await getOrCreateCart(sessionId, 'default', orgId);
+      const cartData = await getOrCreateCart(sessionId, 'default', DEFAULT_ORG_ID);
       setCart(cartData);
     } catch (error) {
       logger.error('Error loading cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   useEffect(() => {
     void loadCart();
@@ -54,7 +53,7 @@ export default function ShoppingCartPage() {
         toast.error('Session not found');
         return;
       }
-      await updateCartItemQuantity(sessionId, 'default', orgId, itemId, newQuantity);
+      await updateCartItemQuantity(sessionId, 'default', DEFAULT_ORG_ID, itemId, newQuantity);
       await loadCart();
     } catch (error) {
       logger.error('Error updating quantity:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -74,7 +73,7 @@ export default function ShoppingCartPage() {
         toast.error('Session not found');
         return;
       }
-      await removeFromCart(sessionId, 'default', orgId, itemId);
+      await removeFromCart(sessionId, 'default', DEFAULT_ORG_ID, itemId);
       await loadCart();
     } catch (error) {
       logger.error('Error removing item:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

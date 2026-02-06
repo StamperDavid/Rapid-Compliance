@@ -11,7 +11,6 @@ import { showErrorToast } from '@/components/ErrorToast';
 
 export default function NewABTestPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const [test, setTest] = useState({ name: '', description: '', variants: [{ name: 'A', config: {} }, { name: 'B', config: {} }] });
   const [saving, setSaving] = useState(false);
 
@@ -19,7 +18,7 @@ export default function NewABTestPage() {
     try {
       setSaving(true);
       const testId = `abtest-${Date.now()}`;
-      await FirestoreService.set(`organizations/${orgId}/abTests`, testId, { ...test, id: testId, status: 'draft', createdAt: Timestamp.now() }, false);
+      await FirestoreService.set(`organizations/${DEFAULT_ORG_ID}/abTests`, testId, { ...test, id: testId, status: 'draft', createdAt: Timestamp.now() }, false);
       router.push(`/ab-tests`);
     } catch (error: unknown) {
       logger.error('Error saving test:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

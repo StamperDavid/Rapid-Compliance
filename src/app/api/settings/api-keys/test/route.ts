@@ -76,7 +76,6 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     // PENTHOUSE: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
     const service = searchParams.get('service');
 
     if (!service) {
@@ -85,7 +84,7 @@ export async function GET(request: NextRequest) {
 
     // Load API keys
     const apiKeys = await FirestoreService.get<ApiKeysCollection>(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
       'apiKeys'
     );
 

@@ -6,6 +6,7 @@
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface EmailOptions {
   to: string | string[];
@@ -232,7 +233,7 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
   if (orgId && options.tracking?.trackOpens) {
     void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       void FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/emailTrackingMappings`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTrackingMappings`,
         messageIdValue,
         {
           messageId: messageIdValue,
@@ -282,13 +283,10 @@ async function sendViaResend(options: EmailOptions, credentials: Record<string, 
   };
 
   if (options.html) {
-    const orgId = typeof options.metadata?.organizationId === 'string' ? options.metadata.organizationId : undefined;
     const { html: modifiedHtml } = addTrackingPixel(
       options.html,
       options.tracking?.trackOpens,
-      undefined,
-      orgId
-    );
+      undefined, DEFAULT_ORG_ID);
     payload.html = modifiedHtml;
   }
   if (options.text) {
@@ -338,7 +336,7 @@ async function sendViaResend(options: EmailOptions, credentials: Record<string, 
   if (orgId && options.tracking?.trackOpens) {
     void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       void FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/emailTrackingMappings`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTrackingMappings`,
         messageId,
         {
           messageId,
@@ -415,7 +413,7 @@ function addTrackingPixel(
   if (organizationId && messageId) {
     void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       void FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTrackingMappings`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTrackingMappings`,
         trackingId,
         {
           messageId,
@@ -479,12 +477,11 @@ export async function sendBulkEmails(
  */
 export async function getEmailTracking(messageId: string): Promise<EmailTracking | null> {
   const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-  const organizationId = DEFAULT_ORG_ID;
 
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
   const trackingData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
     messageId
   );
 
@@ -532,7 +529,7 @@ export async function recordEmailOpen(
   // Get existing tracking or create new
    
   const existing = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
     messageId
   );
 
@@ -544,7 +541,7 @@ export async function recordEmailOpen(
   const existingData = (existing ?? {}) as ExistingTracking;
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
     messageId,
     {
       emailId: messageId,
@@ -575,7 +572,7 @@ export async function recordEmailClick(
   // Get existing tracking or create new
    
   const existing = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
     messageId
   );
 
@@ -595,7 +592,7 @@ export async function recordEmailClick(
   });
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
     messageId,
     {
       emailId: messageId,

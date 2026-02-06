@@ -6,7 +6,6 @@
 
 import { VoiceProviderFactory } from './voice-factory';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface TransferAgent {
   id: string;
@@ -343,7 +342,7 @@ class CallTransferService {
    */
   async findAvailableAgent(organizationId: string, intent?: string): Promise<TransferAgent | null> {
     try {
-      const response = await fetch(`/api/voice/agents/available?organizationId=${organizationId}&intent=${encodeURIComponent(intent ?? '')}`);
+      const response = await fetch(`/api/voice/agents/available?intent=${encodeURIComponent(intent ?? '')}`);
       if (!response.ok) {return null;}
 
       const data = await response.json() as { agents?: TransferAgent[] };
@@ -373,8 +372,7 @@ class CallTransferService {
    * Get agent phone number
    */
   private async getAgentPhone(agentId: string): Promise<string> {
-    const organizationId = DEFAULT_ORG_ID;
-    const response = await fetch(`/api/voice/agents/${agentId}?organizationId=${organizationId}`);
+      const response = await fetch(`/api/voice/agents/${agentId}`);
     if (!response.ok) {
       throw new Error('Agent not found');
     }
@@ -386,8 +384,7 @@ class CallTransferService {
    * Get organization caller ID
    */
   private async getOrganizationCallerId(): Promise<string> {
-    const organizationId = DEFAULT_ORG_ID;
-    const response = await fetch(`/api/settings/voice?organizationId=${organizationId}`);
+      const response = await fetch('/api/settings/voice');
     if (!response.ok) {
       throw new Error('Voice settings not found');
     }

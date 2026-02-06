@@ -88,16 +88,16 @@ export default function AccountingPage() {
   const [_showConnectionModal, setShowConnectionModal] = useState(false);
 
   useEffect(() => {
-    if (!user?.organizationId) {return;}
-    
+    if (!user) {return;}
+
     const loadConfig = async () => {
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         const configData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/accountingConfig`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/accountingConfig`,
           'default'
         );
-        
+
         if (configData) {
           setConfig(configData as AccountingConfig);
         }
@@ -105,18 +105,18 @@ export default function AccountingPage() {
         logger.error('Failed to load accounting config:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       }
     };
-    
+
     void loadConfig();
-  }, [user?.organizationId]);
+  }, [user]);
 
   const handleSave = async () => {
-    if (!user?.organizationId) {return;}
-    
+    if (!user) {return;}
+
     setIsSaving(true);
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/accountingConfig`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/accountingConfig`,
         'default',
         {
           ...config,

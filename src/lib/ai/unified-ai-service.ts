@@ -106,7 +106,7 @@ export async function recordABTestResult(params: {
   const { recordConversationResult } = await import('./learning/ab-testing-service');
   
   await recordConversationResult({
-    organizationId: params.organizationId,
+    DEFAULT_ORG_ID: params.organizationId,
     testId: params.testId,
     isTestGroup: params.isTestGroup,
     // converted is a BOOLEAN - false is valid (use ?? for booleans)

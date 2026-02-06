@@ -138,11 +138,11 @@ export default function PreviewPage() {
         throw new Error('Invalid token validation response');
       }
 
-      const { pageId, organizationId } = tokenData;
+      const { pageId } = tokenData;
 
       // Fetch the page data
       const pageResponse = await fetch(
-        `/api/website/pages/${pageId}/preview?organizationId=${organizationId}&token=${token}`
+        `/api/website/pages/${pageId}/preview?token=${token}`
       );
 
       if (!pageResponse.ok) {

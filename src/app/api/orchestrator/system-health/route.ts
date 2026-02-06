@@ -5,7 +5,7 @@
  * Used by the Implementation Guide to understand what's configured
  * and what needs attention.
  *
- * GET /api/orchestrator/system-health?organizationId=xxx
+ * GET /api/orchestrator/system-health?DEFAULT_ORG_ID=xxx
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -13,7 +13,7 @@ import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface SpecialistStatusRequestBody {
-  organizationId?: string;
+  DEFAULT_ORG_ID?: string;
 }
 
 function isSpecialistStatusRequestBody(value: unknown): value is SpecialistStatusRequestBody {
@@ -23,17 +23,16 @@ function isSpecialistStatusRequestBody(value: unknown): value is SpecialistStatu
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const organizationId = DEFAULT_ORG_ID;
     const quickOnly = searchParams.get('quick') === 'true';
 
     if (quickOnly) {
       // Return just the quick status for performance
-      const quickStatus = await SystemHealthService.getQuickStatus(organizationId);
+      const quickStatus = await SystemHealthService.getQuickStatus(DEFAULT_ORG_ID);
       return NextResponse.json(quickStatus);
     }
 
     // Return full health report
-    const report = await SystemHealthService.generateHealthReport(organizationId);
+    const report = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
 
     return NextResponse.json(report);
   } catch (error) {
@@ -57,16 +56,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { organizationId } = body;
+    const { DEFAULT_ORG_ID } = body;
 
-    if (!organizationId) {
+    if (!DEFAULT_ORG_ID) {
       return NextResponse.json(
-        { error: 'organizationId is required' },
+        { error: 'DEFAULT_ORG_ID is required' },
         { status: 400 }
       );
     }
 
-    const specialistStatus = await SystemHealthService.getSpecialistStatus(organizationId);
+    const specialistStatus = await SystemHealthService.getSpecialistStatus(DEFAULT_ORG_ID);
 
     return NextResponse.json({
       specialists: specialistStatus,

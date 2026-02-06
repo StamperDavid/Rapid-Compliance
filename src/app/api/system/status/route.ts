@@ -711,10 +711,9 @@ export async function GET(
     }
 
     // PENTHOUSE MODEL: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
 
     logger.info('[SystemStatus] Fetching swarm status', {
-      orgId,
+      DEFAULT_ORG_ID,
       adminId: authResult.user.uid,
       file: 'api/system/status/route.ts',
     });
@@ -733,7 +732,7 @@ export async function GET(
 
     const duration = Date.now() - startTime;
     logger.info('[SystemStatus] Status retrieved successfully', {
-      orgId,
+      DEFAULT_ORG_ID,
       overallHealth: response.overallHealth,
       agentCount: response.agents.length,
       duration,

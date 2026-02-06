@@ -33,7 +33,6 @@ interface ExtendedChatSession extends ChatSession {
 
 export default function ConversationsPage() {
   const { user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
 
@@ -46,7 +45,7 @@ export default function ConversationsPage() {
 
   // Subscribe to real-time active sessions
   useEffect(() => {
-    if (!orgId) {
+    if (!DEFAULT_ORG_ID) {
       return;
     }
 
@@ -55,7 +54,7 @@ export default function ConversationsPage() {
 
     // Subscribe to active sessions
     const unsubscribe = ChatSessionService.subscribeToActiveSessions(
-      orgId,
+      DEFAULT_ORG_ID,
       (sessions) => {
         setLiveConversations(sessions);
         setLoading(false);
@@ -63,7 +62,7 @@ export default function ConversationsPage() {
     );
 
     // Load history
-    ChatSessionService.getSessionHistory(orgId, 50)
+    ChatSessionService.getSessionHistory(DEFAULT_ORG_ID, 50)
       .then(setCompletedConversations)
       .catch((err: unknown) => {
         const error = err instanceof Error ? err : new Error(String(err));
@@ -71,23 +70,23 @@ export default function ConversationsPage() {
       });
 
     return () => unsubscribe();
-  }, [orgId]);
+  }, []);
 
   // Load messages when conversation is selected
   useEffect(() => {
-    if (!selectedConversation || !orgId) {
+    if (!selectedConversation || !DEFAULT_ORG_ID) {
       setSelectedMessages([]);
       return;
     }
 
     const unsubscribe = ChatSessionService.subscribeToSessionMessages(
-      orgId,
+      DEFAULT_ORG_ID,
       selectedConversation,
       setSelectedMessages
     );
 
     return () => unsubscribe();
-  }, [selectedConversation, orgId]);
+  }, [selectedConversation]);
 
   const formatTimeAgo = (dateStr: string) => {
     const now = new Date();
@@ -114,7 +113,7 @@ export default function ConversationsPage() {
         window.alert('You must be logged in to take over a conversation.');
         return;
       }
-      await ChatSessionService.requestTakeover(orgId, conversationId, user.id, 'Manual takeover');
+      await ChatSessionService.requestTakeover(DEFAULT_ORG_ID, conversationId, user.id, 'Manual takeover');
       // eslint-disable-next-line no-alert
       window.alert('Taking over conversation. You are now connected to the customer chat.');
     } catch (err: unknown) {
@@ -127,7 +126,7 @@ export default function ConversationsPage() {
 
   const handleSendToTraining = async (conversationId: string, issue: string) => {
     try {
-      await ChatSessionService.flagForTraining(orgId, conversationId, issue);
+      await ChatSessionService.flagForTraining(DEFAULT_ORG_ID, conversationId, issue);
 
       // Update local state
       setCompletedConversations(prev =>
@@ -589,7 +588,7 @@ export default function ConversationsPage() {
                                 <button
                                   onClick={() => {
                                     setSelectedConversation(conv.id);
-                                    void ChatSessionService.getSessionMessages(orgId, conv.id).then(setSelectedMessages);
+                                    void ChatSessionService.getSessionMessages(DEFAULT_ORG_ID, conv.id).then(setSelectedMessages);
                                   }}
                                   className="flex-1 px-3 py-2 bg-black/60 hover:bg-black/80 text-white border border-white/10 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1"
                                 >

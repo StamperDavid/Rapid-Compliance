@@ -18,16 +18,15 @@ import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function EmailCampaignsPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
 
   // Fetch function with pagination using service layer
   const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getCampaigns(
-      orgId,
+      DEFAULT_ORG_ID,
       undefined,
       { pageSize: 50, lastDoc }
     );
-  }, [orgId]);
+  }, []);
 
   const {
     data: campaigns,
@@ -50,7 +49,7 @@ export default function EmailCampaignsPage() {
     }
 
     try {
-      await deleteCampaign(orgId, campaignId);
+      await deleteCampaign(DEFAULT_ORG_ID, campaignId);
       await refresh();
     } catch (err: unknown) {
       logger.error('Error deleting campaign:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });

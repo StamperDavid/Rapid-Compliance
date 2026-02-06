@@ -52,17 +52,16 @@ const itemVariants = {
 
 export default function WorkflowsPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
 
   // Fetch function with pagination using service layer
   const fetchWorkflows = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getWorkflows(
-      orgId,
+      DEFAULT_ORG_ID,
       'default',
       undefined,
       { pageSize: 50, lastDoc }
     );
-  }, [orgId]);
+  }, []);
 
   const {
     data: workflows,
@@ -85,7 +84,7 @@ export default function WorkflowsPage() {
     }
 
     try {
-      await deleteWorkflow(orgId, workflowId, 'default');
+      await deleteWorkflow(DEFAULT_ORG_ID, workflowId, 'default');
       await refresh();
     } catch (err) {
       logger.error('Error deleting workflow:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
@@ -98,7 +97,7 @@ export default function WorkflowsPage() {
     const newStatus: 'active' | 'paused' = currentStatus === 'active' ? 'paused' : 'active';
 
     try {
-      await setWorkflowStatus(orgId, workflowId, newStatus, 'default');
+      await setWorkflowStatus(DEFAULT_ORG_ID, workflowId, newStatus, 'default');
       await refresh();
     } catch (err) {
       logger.error('Error updating workflow:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });

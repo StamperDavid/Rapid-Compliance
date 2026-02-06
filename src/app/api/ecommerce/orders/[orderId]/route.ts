@@ -36,7 +36,8 @@ export async function GET(
 
     // Verify user has access (customer email or organization member)
     const user = authResult.user;
-    if (order.customerEmail !== user?.email && user?.organizationId !== DEFAULT_ORG_ID) {
+    // In penthouse model, authenticated users belong to DEFAULT_ORG_ID
+    if (order.customerEmail !== user?.email) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }

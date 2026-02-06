@@ -64,7 +64,7 @@ export default function VersionHistory({
       setError(null);
 
       const response = await fetch(
-        `/api/website/pages/${pageId}/versions?organizationId=${organizationId}`
+        `/api/website/pages/${pageId}/versions`
       );
 
       if (!response.ok) {

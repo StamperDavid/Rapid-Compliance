@@ -6,8 +6,6 @@
 
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState } from 'react';
 
 interface AuditLogEntry {
@@ -25,7 +23,6 @@ interface AuditLogEntry {
 }
 
 export default function AuditLogPage() {
-  const orgId = DEFAULT_ORG_ID;
 
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +34,7 @@ export default function AuditLogPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/website/audit-log?organizationId=${orgId}`);
+      const response = await fetch('/api/website/audit-log');
 
       if (!response.ok) {
         throw new Error('Failed to load audit log');
@@ -52,7 +49,7 @@ export default function AuditLogPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   React.useEffect(() => {
     void loadAuditLog();

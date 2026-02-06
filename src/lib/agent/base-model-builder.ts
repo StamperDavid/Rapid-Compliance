@@ -190,37 +190,36 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
  * Get Base Model for an organization
  */
 export async function getBaseModel(): Promise<BaseModel | null> {
-  const orgId = DEFAULT_ORG_ID;
-  logger.info('[getBaseModel] Looking for base model', { orgId, file: 'base-model-builder.ts' });
-  
+  logger.info('[getBaseModel] Looking for base model', { orgId: DEFAULT_ORG_ID, file: 'base-model-builder.ts' });
+
   if (isServer) {
     // Server-side: Use Admin SDK
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { where } = await import('firebase/firestore');
     const baseModels = await AdminFirestoreService.getAll('baseModels', [
-      where('orgId', '==', orgId)
+      where('orgId', '==', DEFAULT_ORG_ID)
     ]);
-    
+
     logger.info('[getBaseModel] Found base models', { count: baseModels.length, file: 'base-model-builder.ts' });
     return baseModels.length > 0 ? (baseModels[0] as unknown as BaseModel) : null;
   } else {
     // Client-side: Use DAL
     const { dal } = await import('@/lib/firebase/dal');
     const { where } = await import('firebase/firestore');
-    
+
     const snapshot = await dal.safeGetDocs('BASE_MODELS',
-      where('orgId', '==', orgId)
+      where('orgId', '==', DEFAULT_ORG_ID)
     );
-    
-    logger.info('[getBaseModel] Client query found base models', { 
+
+    logger.info('[getBaseModel] Client query found base models', {
       count: snapshot.docs.length,
-      file: 'base-model-builder.ts' 
+      file: 'base-model-builder.ts'
     });
-    
+
     if (snapshot.empty) {
       return null;
     }
-    
+
     const doc = snapshot.docs[0];
     return doc.data() as BaseModel;
   }
@@ -233,21 +232,20 @@ export async function updateBaseModel(
   baseModelId: string,
   updates: Partial<BaseModel>
 ): Promise<void> {
-  const orgId = DEFAULT_ORG_ID;
   // Rebuild system prompt if config changed
   if (updates.businessContext || updates.agentPersona || updates.behaviorConfig) {
     const current = await getBaseModel();
     if (!current) {
       throw new Error('Base model not found');
     }
-    
+
     updates.systemPrompt = buildSystemPrompt({
       businessContext: updates.businessContext ?? current.businessContext,
       agentPersona: updates.agentPersona ?? current.agentPersona,
       behaviorConfig: updates.behaviorConfig ?? current.behaviorConfig,
     });
   }
-  
+
   if (isServer) {
     // Server-side: Use Admin SDK
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
@@ -265,7 +263,7 @@ export async function updateBaseModel(
     } as UpdateData<BaseModel>, {
       audit: true,
       userId: 'system-update', // No userId available in this context
-      organizationId: orgId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 }

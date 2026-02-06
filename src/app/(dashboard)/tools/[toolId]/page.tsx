@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppWrapper from '@/components/custom-tools/AppWrapper';
@@ -17,7 +15,6 @@ import type { CustomTool } from '@/types/custom-tools';
 export default function CustomToolPage() {
   const params = useParams();
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const toolId = params.toolId as string;
 
   const [tool, setTool] = useState<CustomTool | null>(null);
@@ -62,7 +59,7 @@ export default function CustomToolPage() {
     };
 
     void fetchTool();
-  }, [orgId, toolId]);
+  }, [toolId]);
 
   // Loading State
   if (loading) {

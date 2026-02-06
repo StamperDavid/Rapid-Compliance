@@ -11,7 +11,6 @@ import { showErrorToast } from '@/components/ErrorToast';
 
 export default function NewFineTuningPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const [job, setJob] = useState({ modelName: '', baseModel: 'gpt-3.5-turbo', datasetId: '' });
   const [creating, setCreating] = useState(false);
 
@@ -19,7 +18,7 @@ export default function NewFineTuningPage() {
     try {
       setCreating(true);
       const jobId = `finetune-${Date.now()}`;
-      await FirestoreService.set(`organizations/${orgId}/fineTuningJobs`, jobId, { ...job, id: jobId, status: 'pending', createdAt: Timestamp.now() }, false);
+      await FirestoreService.set(`organizations/${DEFAULT_ORG_ID}/fineTuningJobs`, jobId, { ...job, id: jobId, status: 'pending', createdAt: Timestamp.now() }, false);
       router.push(`/ai/fine-tuning`);
     } catch (error: unknown) {
       logger.error('Error creating job:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

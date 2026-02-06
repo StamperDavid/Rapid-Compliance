@@ -103,7 +103,6 @@ function isErrorResponse(data: unknown): data is ErrorResponse {
 
 export default function VideoStudioPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const { user: _user } = useAuth();
 
   // State Management
@@ -156,7 +155,7 @@ export default function VideoStudioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           brief,
           constraints,
           creativeDirection: creative,
@@ -183,7 +182,7 @@ export default function VideoStudioPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [orgId, brief, constraints, creative, voiceoverScript]);
+  }, [brief, constraints, creative, voiceoverScript]);
 
   // Start Video Generation
   const handleStartGeneration = useCallback(async () => {
@@ -196,7 +195,7 @@ export default function VideoStudioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: orgId,
+          organizationId: DEFAULT_ORG_ID,
           storyboardId: generatedStoryboard.id,
         }),
       });
@@ -213,7 +212,7 @@ export default function VideoStudioPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start generation');
     }
-  }, [orgId, generatedStoryboard, router]);
+  }, [generatedStoryboard, router]);
 
   return (
     <div style={{

@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/useToast';
 
 export default function NewProductPage() {
   const router = useRouter();
-  const orgId = DEFAULT_ORG_ID;
   const toast = useToast();
 
   const [product, setProduct] = useState({
@@ -35,7 +34,7 @@ export default function NewProductPage() {
         const productId = `prod-${Date.now()}`;
 
         await FirestoreService.set(
-          `organizations/${orgId}/workspaces/default/entities/products/records`,
+          `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/products/records`,
           productId,
           {
             ...product,

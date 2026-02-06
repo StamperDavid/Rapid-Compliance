@@ -100,7 +100,6 @@ interface AdminKeysConfig {
 
 export default function SEOTrainingPage() {
   const { user } = useAuth();
-  const orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
   const toast = useToast();
   const primaryColor = theme?.colors?.primary?.main ?? COLORS.primary;
@@ -145,7 +144,7 @@ export default function SEOTrainingPage() {
 
       // Load SEO training settings from Firestore
       const seoSettings = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/toolTraining`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/toolTraining`,
         'seo'
       );
       if (seoSettings) {
@@ -153,7 +152,7 @@ export default function SEOTrainingPage() {
       }
 
       // Load organization Brand DNA
-      const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+      const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
       if (org?.brandDNA) {
         setBrandDNA(org.brandDNA as BrandDNA);
       }
@@ -161,7 +160,7 @@ export default function SEOTrainingPage() {
       // Load generation history
       const { orderBy } = await import('firebase/firestore');
       const historyResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/seoHistory`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/seoHistory`,
         [orderBy('generatedAt', 'desc')],
         50
       );
@@ -169,7 +168,7 @@ export default function SEOTrainingPage() {
 
       // Load knowledge base items
       const knowledgeResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/seoKnowledge`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/seoKnowledge`,
         [orderBy('uploadedAt', 'desc')],
         50
       );
@@ -181,7 +180,7 @@ export default function SEOTrainingPage() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, []);
 
   // Load data on mount
   useEffect(() => {
@@ -261,7 +260,7 @@ export default function SEOTrainingPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/toolTraining`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/toolTraining`,
         'seo',
         {
           ...settings,
@@ -491,7 +490,7 @@ export default function SEOTrainingPage() {
 
       const historyId = `history_${Date.now()}`;
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/seoHistory`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/seoHistory`,
         historyId,
         historyItem,
         false

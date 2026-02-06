@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect } from 'react';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -266,7 +264,6 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
 }
 
 export default function CustomToolsSettingsPage() {
-  const orgId = DEFAULT_ORG_ID;
   const _user = useAuth().user;
   const { theme } = useOrgTheme();
   const canManageOrganization = usePermission('canManageOrganization');
@@ -296,7 +293,7 @@ export default function CustomToolsSettingsPage() {
     };
 
     void fetchTools();
-  }, [orgId]);
+  }, []);
 
   const handleAddTool = () => {
     setEditingTool(null);

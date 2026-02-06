@@ -38,6 +38,7 @@ import { logger } from '@/lib/logger/logger';
 import type { Lead, RouteLeadResponse } from '@/lib/routing/types';
 import { createLeadRoutedSignal, createRoutingFailedSignal } from '@/lib/routing/events';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RATE LIMITING
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { user } = authResult;
-    organizationId = user.organizationId;
+    organizationId = DEFAULT_ORG_ID;
 
     // Verify user has permission to assign records
     if (!hasUnifiedPermission(user.role as AccountRole, 'canAssignRecords')) {

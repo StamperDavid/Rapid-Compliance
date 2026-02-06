@@ -230,7 +230,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
 
     const { agentId, taskId, payload, priority, traceId } = validation.data;
     // PENTHOUSE MODEL: Always use DEFAULT_ORG_ID
-    const orgId = DEFAULT_ORG_ID;
 
     // ========================================================================
     // CIRCUIT BREAKER CHECK
@@ -311,8 +310,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
       priority: priority ?? 'NORMAL',
       payload: {
         ...payload,
-        // PENTHOUSE MODEL: orgId included for internal consistency
-        orgId,
+        // PENTHOUSE MODEL: DEFAULT_ORG_ID included for internal consistency
+        DEFAULT_ORG_ID,
       },
       requiresResponse: true,
       traceId: traceId ?? taskId,

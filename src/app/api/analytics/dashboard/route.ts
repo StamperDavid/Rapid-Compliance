@@ -13,7 +13,7 @@
  * - Performance tracking
  *
  * QUERY PARAMETERS:
- * - organizationId (required): Organization ID
+ * - DEFAULT_ORG_ID (required): Organization ID
  * - period (required): Time period ('24h', '7d', '30d', '90d', 'month', 'quarter', 'year', 'custom')
  * - startDate (optional): Custom start date (ISO string)
  * - endDate (optional): Custom end date (ISO string)
@@ -71,7 +71,6 @@ export async function GET(request: NextRequest) {
   try {
     // Extract query parameters
     const { searchParams } = new URL(request.url);
-    const organizationId = DEFAULT_ORG_ID;
     const period = searchParams.get('period') as TimePeriod;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
@@ -84,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     // Build request object
     const requestData = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       period,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
@@ -113,7 +112,7 @@ export async function GET(request: NextRequest) {
         await emitAnalyticsError(
           'Validation error',
           'VALIDATION_ERROR',
-          organizationId ?? undefined,
+          DEFAULT_ORG_ID ?? undefined,
           { errors: error.errors }
         );
         
@@ -122,7 +121,7 @@ export async function GET(request: NextRequest) {
       throw error;
     }
     
-    // Check rate limit (use organizationId as identifier)
+    // Check rate limit (use DEFAULT_ORG_ID as identifier)
     const rateLimit = checkRateLimit(validatedRequest.organizationId);
     
     if (!rateLimit.allowed) {
