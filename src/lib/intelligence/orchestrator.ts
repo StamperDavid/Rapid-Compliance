@@ -656,7 +656,6 @@ export class IntelligenceOrchestrator {
 
     // Create orchestrator agent
     let agentState = createInitialAgentState(
-      validatedRequest.organizationId,
       validatedRequest.workspaceId,
       'orchestrator',
       validatedRequest.task,

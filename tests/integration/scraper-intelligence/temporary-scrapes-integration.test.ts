@@ -34,7 +34,6 @@ const TEMPORARY_SCRAPES_COLLECTION = 'temporary_scrapes';
 // ============================================================================
 
 const createTestScrapeData = (index: number = 1) => ({
-  organizationId: TEST_ORG_ID,
   workspaceId: TEST_WORKSPACE_ID,
   url: `https://example.com/page${index}`,
   rawHtml: `<html><body><h1>Test Page ${index}</h1><p>Content for page ${index}</p></body></html>`,
@@ -287,7 +286,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       await flagScrapeForDeletion(scrapes[0].scrape.id);
       await flagScrapeForDeletion(scrapes[1].scrape.id);
       
-      const deletedCount = await deleteFlaggedScrapes(TEST_ORG_ID);
+      const deletedCount = await deleteFlaggedScrapes();
       
       expect(deletedCount).toBe(2);
       
@@ -309,7 +308,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       
       await Promise.all(scrapes.map(({ scrape }) => flagScrapeForDeletion(scrape.id)));
       
-      const deletedCount = await deleteFlaggedScrapes(TEST_ORG_ID);
+      const deletedCount = await deleteFlaggedScrapes();
       
       expect(deletedCount).toBe(5);
     });
@@ -319,13 +318,12 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       const org1Scrape = await saveTemporaryScrape(createTestScrapeData(1));
       const org2Scrape = await saveTemporaryScrape({
         ...createTestScrapeData(2),
-        organizationId: 'other-org',
       });
       
       await flagScrapeForDeletion(org1Scrape.scrape.id);
       await flagScrapeForDeletion(org2Scrape.scrape.id);
       
-      const deletedCount = await deleteFlaggedScrapes(TEST_ORG_ID);
+      const deletedCount = await deleteFlaggedScrapes();
       
       expect(deletedCount).toBe(1);
       
@@ -338,7 +336,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
     });
 
     it('should return 0 if no flagged scrapes exist', async () => {
-      const deletedCount = await deleteFlaggedScrapes(TEST_ORG_ID);
+      const deletedCount = await deleteFlaggedScrapes();
       expect(deletedCount).toBe(0);
     });
   });
@@ -358,7 +356,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
         expiresAt: pastDate,
       });
       
-      const deletedCount = await deleteExpiredScrapes(TEST_ORG_ID);
+      const deletedCount = await deleteExpiredScrapes();
       
       expect(deletedCount).toBe(1);
       
@@ -370,7 +368,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
     it('should not delete scrapes before expiresAt', async () => {
       const { scrape } = await saveTemporaryScrape(createTestScrapeData(1));
       
-      const deletedCount = await deleteExpiredScrapes(TEST_ORG_ID);
+      const deletedCount = await deleteExpiredScrapes();
       
       expect(deletedCount).toBe(0);
       
@@ -394,7 +392,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
         db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(scrapes[1].scrape.id).update({ expiresAt: pastDate }),
       ]);
       
-      const deletedCount = await deleteExpiredScrapes(TEST_ORG_ID);
+      const deletedCount = await deleteExpiredScrapes();
       
       expect(deletedCount).toBe(2);
       
@@ -447,7 +445,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
         saveTemporaryScrape({ ...createTestScrapeData(3), url }),
       ]);
       
-      const scrapes = await getTemporaryScrapesByUrl(TEST_ORG_ID, url);
+      const scrapes = await getTemporaryScrapesByUrl(url);
 
       expect(scrapes).toHaveLength(3);
       scrapes.forEach((scrape) => {
@@ -456,7 +454,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
     });
 
     it('should return empty array for unknown URL', async () => {
-      const scrapes = await getTemporaryScrapesByUrl(TEST_ORG_ID, 'https://unknown.com');
+      const scrapes = await getTemporaryScrapesByUrl('https://unknown.com');
       
       expect(scrapes).toEqual([]);
     });
@@ -471,7 +469,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
         )
       );
       
-      const scrapes = await getTemporaryScrapesByUrl(TEST_ORG_ID, url);
+      const scrapes = await getTemporaryScrapesByUrl(url);
       
       expect(scrapes).toHaveLength(10);
     });
@@ -485,7 +483,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
         await new Promise((resolve) => { setTimeout(resolve, 100); });
       }
       
-      const scrapes = await getTemporaryScrapesByUrl(TEST_ORG_ID, url);
+      const scrapes = await getTemporaryScrapesByUrl(url);
       
       // Should be ordered newest first
       expect(scrapes[0].createdAt.getTime()).toBeGreaterThan(scrapes[1].createdAt.getTime());
@@ -504,7 +502,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       
       await saveTemporaryScrape(testData);
       
-      const cost = await calculateStorageCost(TEST_ORG_ID);
+      const cost = await calculateStorageCost();
       
       expect(cost.totalBytes).toBe(expectedSize);
       expect(cost.totalScrapes).toBe(1);
@@ -513,7 +511,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
     it('should estimate monthly cost', async () => {
       await saveTemporaryScrape(createTestScrapeData(1));
       
-      const cost = await calculateStorageCost(TEST_ORG_ID);
+      const cost = await calculateStorageCost();
       
       expect(cost.estimatedMonthlyCostUSD).toBeGreaterThan(0);
       expect(cost.estimatedMonthlyCostUSD).toBeLessThan(1); // Should be very small for one scrape
@@ -522,7 +520,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
     it('should project savings with TTL', async () => {
       await saveTemporaryScrape(createTestScrapeData(1));
       
-      const cost = await calculateStorageCost(TEST_ORG_ID);
+      const cost = await calculateStorageCost();
       
       expect(cost.projectedSavingsWithTTL).toBeGreaterThan(0);
       // Savings should be ~76.7% of monthly cost
@@ -530,7 +528,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
     });
 
     it('should return zero for no scrapes', async () => {
-      const cost = await calculateStorageCost(TEST_ORG_ID);
+      const cost = await calculateStorageCost();
       
       expect(cost.totalScrapes).toBe(0);
       expect(cost.totalBytes).toBe(0);
@@ -554,7 +552,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       
       await flagScrapeForDeletion(scrapes[0].scrape.id);
       
-      const stats = await getStorageStats(TEST_ORG_ID);
+      const stats = await getStorageStats();
       
       expect(stats.totalScrapes).toBe(3);
       expect(stats.verifiedScrapes).toBe(1);
@@ -572,7 +570,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       const size2 = Buffer.byteLength(data2.rawHtml, 'utf8');
       const expectedAvg = (size1 + size2) / 2;
       
-      const stats = await getStorageStats(TEST_ORG_ID);
+      const stats = await getStorageStats();
       
       expect(stats.averageSizeBytes).toBe(expectedAvg);
     });
@@ -584,7 +582,7 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       await new Promise((resolve) => { setTimeout(resolve, 100); });
       const scrape3 = await saveTemporaryScrape(createTestScrapeData(3));
       
-      const stats = await getStorageStats(TEST_ORG_ID);
+      const stats = await getStorageStats();
       
       expect(stats.oldestScrape).not.toBeNull();
       expect(stats.newestScrape).not.toBeNull();

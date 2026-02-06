@@ -296,7 +296,6 @@ export async function distillScrape(params: {
 
   try {
     const {
-      organizationId,
       workspaceId,
       url,
       rawHtml,
@@ -319,7 +318,6 @@ export async function distillScrape(params: {
 
     // Step 3: Save raw scrape to temporary storage (with TTL)
     const { scrape, isNew } = await saveTemporaryScrape({
-      organizationId,
       workspaceId,
       url,
       rawHtml,

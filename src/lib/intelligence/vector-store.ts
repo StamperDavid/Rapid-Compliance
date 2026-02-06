@@ -504,7 +504,6 @@ export class VectorStore {
 
       // Get candidate chunks for the organization
       const candidateChunks = this.getCandidateChunks(
-        validatedRequest.organizationId,
         validatedRequest.workspaceId,
         validatedRequest.filters
       );

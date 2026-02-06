@@ -346,7 +346,7 @@ describe('Training Manager', () => {
 
       (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
-      const result = await getTrainingData('org_123', 'signal_789');
+      const result = await getTrainingData('signal_789');
 
       expect(result).toHaveLength(1);
       expect(result[0].pattern).toBe('hiring engineers');
@@ -381,7 +381,7 @@ describe('Training Manager', () => {
 
       (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
-      await getTrainingData('org_123', 'signal_789', true);
+      await getTrainingData('signal_789', true);
 
       expect(activeFilterApplied).toBe(true);
     });
@@ -412,7 +412,7 @@ describe('Training Manager', () => {
 
       (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
-      await getTrainingData('org_123', 'signal_789', false);
+      await getTrainingData('signal_789', false);
 
       expect(activeFilterApplied).toBe(false);
     });
@@ -475,7 +475,7 @@ describe('Training Manager', () => {
         return mockCollection;
       });
 
-      const result = await getTrainingAnalytics('org_123');
+      const result = await getTrainingAnalytics();
 
       expect(result.totalFeedback).toBe(4);
       expect(result.processedFeedback).toBe(3);
@@ -500,7 +500,7 @@ describe('Training Manager', () => {
 
       (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
-      const result = await getTrainingAnalytics('org_123');
+      const result = await getTrainingAnalytics();
 
       expect(result.totalFeedback).toBe(0);
       expect(result.processedFeedback).toBe(0);

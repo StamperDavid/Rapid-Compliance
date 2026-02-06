@@ -13,13 +13,13 @@ const TEST_ORG_ID = 'test-org-discovery-engine';
 describe('Discovery Engine Integration Tests', () => {
   beforeAll(async () => {
     // Clean up any existing test data
-    await deleteFlaggedArchiveEntries(TEST_ORG_ID);
-    await deleteExpiredArchiveEntries(TEST_ORG_ID);
+    await deleteFlaggedArchiveEntries();
+    await deleteExpiredArchiveEntries();
   });
 
   afterAll(async () => {
     // Clean up test data
-    await deleteFlaggedArchiveEntries(TEST_ORG_ID);
+    await deleteFlaggedArchiveEntries();
   });
 
   describe('Single Company Discovery', () => {

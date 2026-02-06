@@ -186,10 +186,10 @@ async function cleanupTestData(): Promise<void> {
 describe('Research Intelligence CRUD', () => {
   it('should save and retrieve research intelligence', async () => {
     // Save
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, mockResearch);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
 
     // Retrieve
-    const retrieved = await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    const retrieved = await getResearchIntelligence(TEST_INDUSTRY_ID);
 
     expect(retrieved).not.toBeNull();
     expect(retrieved?.highValueSignals).toHaveLength(2);
@@ -200,23 +200,23 @@ describe('Research Intelligence CRUD', () => {
 
   it('should use cache on second retrieval', async () => {
     // First retrieval (cache miss)
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, mockResearch);
-    const first = await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
+    const first = await getResearchIntelligence(TEST_INDUSTRY_ID);
 
     // Check cache stats
     const stats1 = getCacheStats();
     expect(stats1.researchCacheSize).toBeGreaterThan(0);
 
     // Second retrieval (cache hit)
-    const second = await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    const second = await getResearchIntelligence(TEST_INDUSTRY_ID);
 
     expect(second).toEqual(first);
   });
 
   it('should invalidate cache on save', async () => {
     // Save and retrieve
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, mockResearch);
-    await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
+    await getResearchIntelligence(TEST_INDUSTRY_ID);
 
     // Modify and save again
     const updated = { ...mockResearch };
@@ -231,21 +231,21 @@ describe('Research Intelligence CRUD', () => {
       platform: 'any',
     });
 
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, updated);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, updated);
 
     // Retrieve should have updated data
-    const retrieved = await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    const retrieved = await getResearchIntelligence(TEST_INDUSTRY_ID);
     expect(retrieved?.highValueSignals).toHaveLength(3);
   });
 
   it('should list all research intelligence for org', async () => {
     // Save multiple industries
-    await saveResearchIntelligence(TEST_ORG_ID, 'hvac', mockResearch);
-    await saveResearchIntelligence(TEST_ORG_ID, 'saas', mockResearch);
-    await saveResearchIntelligence(TEST_ORG_ID, 'real-estate', mockResearch);
+    await saveResearchIntelligence('hvac', mockResearch);
+    await saveResearchIntelligence('saas', mockResearch);
+    await saveResearchIntelligence('real-estate', mockResearch);
 
     // List all
-    const list = await listResearchIntelligence(TEST_ORG_ID);
+    const list = await listResearchIntelligence();
 
     expect(list.length).toBeGreaterThanOrEqual(3);
     
@@ -257,22 +257,22 @@ describe('Research Intelligence CRUD', () => {
 
   it('should delete research intelligence', async () => {
     // Save
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, mockResearch);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
 
     // Verify exists
-    let retrieved = await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    let retrieved = await getResearchIntelligence(TEST_INDUSTRY_ID);
     expect(retrieved).not.toBeNull();
 
     // Delete
-    await deleteResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    await deleteResearchIntelligence(TEST_INDUSTRY_ID);
 
     // Verify deleted
-    retrieved = await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    retrieved = await getResearchIntelligence(TEST_INDUSTRY_ID);
     expect(retrieved).toBeNull();
   });
 
   it('should return null for non-existent research', async () => {
-    const result = await getResearchIntelligence(TEST_ORG_ID, 'nonexistent');
+    const result = await getResearchIntelligence('nonexistent');
     expect(result).toBeNull();
   });
 });
@@ -284,10 +284,10 @@ describe('Research Intelligence CRUD', () => {
 describe('Extracted Signals CRUD', () => {
   it('should save and retrieve extracted signals', async () => {
     // Save
-    await saveExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID, mockSignals);
+    await saveExtractedSignals(TEST_RECORD_ID, mockSignals);
 
     // Retrieve
-    const retrieved = await getExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID);
+    const retrieved = await getExtractedSignals(TEST_RECORD_ID);
 
     expect(retrieved).toHaveLength(2);
     expect(retrieved[0].signalId).toBe('hiring');
@@ -296,43 +296,43 @@ describe('Extracted Signals CRUD', () => {
 
   it('should append signals on multiple saves', async () => {
     // First save
-    await saveExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID, [mockSignals[0]]);
+    await saveExtractedSignals(TEST_RECORD_ID, [mockSignals[0]]);
 
     // Second save (should append)
-    await saveExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID, [mockSignals[1]]);
+    await saveExtractedSignals(TEST_RECORD_ID, [mockSignals[1]]);
 
     // Retrieve all
-    const retrieved = await getExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID);
+    const retrieved = await getExtractedSignals(TEST_RECORD_ID);
 
     expect(retrieved).toHaveLength(2);
   });
 
   it('should use cache on second retrieval', async () => {
     // Save and retrieve
-    await saveExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID, mockSignals);
-    const first = await getExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID);
+    await saveExtractedSignals(TEST_RECORD_ID, mockSignals);
+    const first = await getExtractedSignals(TEST_RECORD_ID);
 
     // Check cache
     const stats = getCacheStats();
     expect(stats.signalsCacheSize).toBeGreaterThan(0);
 
     // Second retrieval (cache hit)
-    const second = await getExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID);
+    const second = await getExtractedSignals(TEST_RECORD_ID);
 
     expect(second).toEqual(first);
   });
 
   it('should query signals by platform', async () => {
     // Save signals for multiple records
-    await saveExtractedSignals(TEST_ORG_ID, 'record_1', [
+    await saveExtractedSignals('record_1', [
       { ...mockSignals[0], platform: 'website' },
     ]);
-    await saveExtractedSignals(TEST_ORG_ID, 'record_2', [
+    await saveExtractedSignals('record_2', [
       { ...mockSignals[1], platform: 'linkedin-jobs' },
     ]);
 
     // Query website signals
-    const websiteResults = await querySignalsByPlatform(TEST_ORG_ID, 'website');
+    const websiteResults = await querySignalsByPlatform('website');
 
     expect(websiteResults.length).toBeGreaterThanOrEqual(1);
     
@@ -342,22 +342,22 @@ describe('Extracted Signals CRUD', () => {
 
   it('should delete extracted signals', async () => {
     // Save
-    await saveExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID, mockSignals);
+    await saveExtractedSignals(TEST_RECORD_ID, mockSignals);
 
     // Verify exists
-    let retrieved = await getExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID);
+    let retrieved = await getExtractedSignals(TEST_RECORD_ID);
     expect(retrieved).toHaveLength(2);
 
     // Delete
-    await deleteExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID);
+    await deleteExtractedSignals(TEST_RECORD_ID);
 
     // Verify deleted
-    retrieved = await getExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID);
+    retrieved = await getExtractedSignals(TEST_RECORD_ID);
     expect(retrieved).toHaveLength(0);
   });
 
   it('should return empty array for non-existent signals', async () => {
-    const result = await getExtractedSignals(TEST_ORG_ID, 'nonexistent');
+    const result = await getExtractedSignals('nonexistent');
     expect(result).toEqual([]);
   });
 });
@@ -369,7 +369,7 @@ describe('Extracted Signals CRUD', () => {
 describe('Process and Store Scrape', () => {
   beforeEach(async () => {
     // Ensure research intelligence exists
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, mockResearch);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
   });
 
   it('should process scrape and store signals', async () => {
@@ -384,7 +384,6 @@ describe('Process and Store Scrape', () => {
     `;
 
     const result = await processAndStoreScrape({
-      organizationId: TEST_ORG_ID,
       industryId: TEST_INDUSTRY_ID,
       recordId: TEST_RECORD_ID,
       url: 'https://example.com/careers',
@@ -404,15 +403,14 @@ describe('Process and Store Scrape', () => {
     expect(result.storageReduction.reductionPercent).toBeGreaterThan(90);
 
     // Verify signals saved to Firestore
-    const savedSignals = await getExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID);
+    const savedSignals = await getExtractedSignals(TEST_RECORD_ID);
     expect(savedSignals.length).toBe(result.signals.length);
   });
 
   it('should throw error if research not found', async () => {
     await expect(
       processAndStoreScrape({
-        organizationId: TEST_ORG_ID,
-        industryId: 'nonexistent',
+          industryId: 'nonexistent',
         recordId: TEST_RECORD_ID,
         url: 'https://example.com',
         rawHtml: '<html></html>',
@@ -425,7 +423,6 @@ describe('Process and Store Scrape', () => {
 
   it('should handle scrape with no signals detected', async () => {
     const result = await processAndStoreScrape({
-      organizationId: TEST_ORG_ID,
       industryId: TEST_INDUSTRY_ID,
       recordId: 'record_no_signals',
       url: 'https://example.com/about',
@@ -447,11 +444,11 @@ describe('Process and Store Scrape', () => {
 describe('Signal Analytics', () => {
   beforeEach(async () => {
     // Save test signals
-    await saveExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID, mockSignals);
+    await saveExtractedSignals(TEST_RECORD_ID, mockSignals);
   });
 
   it('should calculate analytics correctly', async () => {
-    const analytics = await getSignalAnalytics(TEST_ORG_ID, TEST_RECORD_ID);
+    const analytics = await getSignalAnalytics(TEST_RECORD_ID);
 
     expect(analytics.totalSignals).toBe(2);
     expect(analytics.averageConfidence).toBeCloseTo(87.5, 1); // (85 + 90) / 2
@@ -462,7 +459,7 @@ describe('Signal Analytics', () => {
   });
 
   it('should handle empty signals', async () => {
-    const analytics = await getSignalAnalytics(TEST_ORG_ID, 'nonexistent');
+    const analytics = await getSignalAnalytics('nonexistent');
 
     expect(analytics.totalSignals).toBe(0);
     expect(analytics.averageConfidence).toBe(0);
@@ -478,14 +475,13 @@ describe('Signal Analytics', () => {
 
 describe('Batch Processing', () => {
   beforeEach(async () => {
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, mockResearch);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
   });
 
   it('should process multiple scrapes in batch', async () => {
     const scrapes = [
       {
-        organizationId: TEST_ORG_ID,
-        industryId: TEST_INDUSTRY_ID,
+          industryId: TEST_INDUSTRY_ID,
         recordId: 'batch_record_1',
         url: 'https://example1.com',
         rawHtml: "<html><body>We're hiring! Join our team.</body></html>",
@@ -494,8 +490,7 @@ describe('Batch Processing', () => {
         platform: 'website' as const,
       },
       {
-        organizationId: TEST_ORG_ID,
-        industryId: TEST_INDUSTRY_ID,
+          industryId: TEST_INDUSTRY_ID,
         recordId: 'batch_record_2',
         url: 'https://example2.com',
         rawHtml: '<html><body>Opening new office next month.</body></html>',
@@ -515,8 +510,7 @@ describe('Batch Processing', () => {
   it('should continue on individual failures', async () => {
     const scrapes = [
       {
-        organizationId: TEST_ORG_ID,
-        industryId: TEST_INDUSTRY_ID,
+          industryId: TEST_INDUSTRY_ID,
         recordId: 'batch_success',
         url: 'https://example.com',
         rawHtml: "<html><body>We're hiring!</body></html>",
@@ -525,8 +519,7 @@ describe('Batch Processing', () => {
         platform: 'website' as const,
       },
       {
-        organizationId: TEST_ORG_ID,
-        industryId: 'nonexistent', // This will fail
+          industryId: 'nonexistent', // This will fail
         recordId: 'batch_fail',
         url: 'https://fail.com',
         rawHtml: '<html></html>',
@@ -556,8 +549,8 @@ describe('Cache Management', () => {
     expect(stats.signalsCacheSize).toBe(0);
 
     // Add to cache
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, mockResearch);
-    await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
+    await getResearchIntelligence(TEST_INDUSTRY_ID);
 
     stats = getCacheStats();
     expect(stats.researchCacheSize).toBeGreaterThan(0);
@@ -565,17 +558,17 @@ describe('Cache Management', () => {
 
   it('should invalidate organization caches', async () => {
     // Populate caches
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, mockResearch);
-    await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
+    await getResearchIntelligence(TEST_INDUSTRY_ID);
     
-    await saveExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID, mockSignals);
-    await getExtractedSignals(TEST_ORG_ID, TEST_RECORD_ID);
+    await saveExtractedSignals(TEST_RECORD_ID, mockSignals);
+    await getExtractedSignals(TEST_RECORD_ID);
 
     const before = getCacheStats();
     expect(before.researchCacheSize + before.signalsCacheSize).toBeGreaterThan(0);
 
     // Invalidate
-    invalidateOrganizationCaches(TEST_ORG_ID);
+    invalidateOrganizationCaches();
 
     const after = getCacheStats();
     expect(after.researchCacheSize + after.signalsCacheSize).toBeLessThan(
@@ -585,8 +578,8 @@ describe('Cache Management', () => {
 
   it('should clear all caches', async () => {
     // Populate caches
-    await saveResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID, mockResearch);
-    await getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID);
+    await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
+    await getResearchIntelligence(TEST_INDUSTRY_ID);
 
     clearAllCaches();
 
@@ -606,7 +599,7 @@ describe('Rate Limiting', () => {
     const promises = [];
     for (let i = 0; i < 150; i++) {
       promises.push(
-        getResearchIntelligence(TEST_ORG_ID, TEST_INDUSTRY_ID).catch((error) => error)
+        getResearchIntelligence(TEST_INDUSTRY_ID).catch((error) => error)
       );
     }
 
@@ -643,8 +636,7 @@ describe('Error Handling', () => {
   it('should throw ScraperIntelligenceError with proper metadata', async () => {
     try {
       await processAndStoreScrape({
-        organizationId: TEST_ORG_ID,
-        industryId: 'nonexistent',
+          industryId: 'nonexistent',
         recordId: TEST_RECORD_ID,
         url: 'https://example.com',
         rawHtml: '<html></html>',
