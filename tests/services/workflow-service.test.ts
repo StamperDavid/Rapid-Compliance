@@ -29,7 +29,7 @@ describe('WorkflowService', () => {
   afterEach(async () => {
     if (testWorkflowId) {
       try {
-        await deleteWorkflow(testOrgId, testWorkflowId, testWorkspaceId);
+        await deleteWorkflow(testWorkflowId, testWorkspaceId);
       } catch (error) {
         // Ignore
       }
@@ -39,7 +39,6 @@ describe('WorkflowService', () => {
   describe('createWorkflow', () => {
     it('should create a new workflow', async () => {
       const workflow = await createWorkflow(
-        testOrgId,
         {
           name: 'Test Workflow',
           description: 'A test workflow',
@@ -89,7 +88,6 @@ describe('WorkflowService', () => {
   describe('setWorkflowStatus', () => {
     it('should activate workflow', async () => {
       const workflow = await createWorkflow(
-        testOrgId,
         {
           name: 'Activatable Workflow',
           trigger: { id: 't1', type: 'manual', name: 'Manual', requireConfirmation: false },
@@ -104,14 +102,13 @@ describe('WorkflowService', () => {
       );
       testWorkflowId = workflow.id;
 
-      const activated = await setWorkflowStatus(testOrgId, workflow.id, 'active', testWorkspaceId);
+      const activated = await setWorkflowStatus(workflow.id, 'active', testWorkspaceId);
 
       expect(activated.status).toBe('active');
     });
 
     it('should pause workflow', async () => {
       const workflow = await createWorkflow(
-        testOrgId,
         {
           name: 'Pausable Workflow',
           trigger: { id: 't1', type: 'manual', name: 'Manual', requireConfirmation: false },
@@ -126,7 +123,7 @@ describe('WorkflowService', () => {
       );
       testWorkflowId = workflow.id;
 
-      const paused = await setWorkflowStatus(testOrgId, workflow.id, 'paused', testWorkspaceId);
+      const paused = await setWorkflowStatus(workflow.id, 'paused', testWorkspaceId);
 
       expect(paused.status).toBe('paused');
     });
@@ -135,7 +132,6 @@ describe('WorkflowService', () => {
   describe('getWorkflows with filters', () => {
     it('should filter workflows by status', async () => {
       const active = await createWorkflow(
-        testOrgId,
         {
           name: 'Active Workflow',
           trigger: { id: 't1', type: 'manual', name: 'Manual', requireConfirmation: false },
@@ -150,7 +146,6 @@ describe('WorkflowService', () => {
       );
 
       const draft = await createWorkflow(
-        testOrgId,
         {
           name: 'Draft Workflow',
           trigger: { id: 't2', type: 'manual', name: 'Manual', requireConfirmation: false },
@@ -164,13 +159,13 @@ describe('WorkflowService', () => {
         testWorkspaceId
       );
 
-      const result = await getWorkflows(testOrgId, testWorkspaceId, { status: 'active' });
+      const result = await getWorkflows(testWorkspaceId, { status: 'active' });
 
       expect(result.data.some(w => w.id === active.id)).toBe(true);
       expect(result.data.every(w => w.status === 'active')).toBe(true);
 
-      await deleteWorkflow(testOrgId, active.id, testWorkspaceId);
-      await deleteWorkflow(testOrgId, draft.id, testWorkspaceId);
+      await deleteWorkflow(active.id, testWorkspaceId);
+      await deleteWorkflow(draft.id, testWorkspaceId);
     });
   });
 });

@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
 
     // Enroll each prospect
     const results = await Promise.allSettled(
-      prospectIds.map(prospectId => 
-        SequenceEngine.enrollProspect(prospectId, sequenceId, orgId)
+      prospectIds.map(prospectId =>
+        SequenceEngine.enrollProspect(prospectId, sequenceId)
       )
     );
 

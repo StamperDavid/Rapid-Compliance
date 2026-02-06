@@ -93,23 +93,22 @@ function getGraphClient(accessToken: string): Client {
  * Sync Outlook messages to CRM
  */
 export async function syncOutlookMessages(
-  organizationId: string,
   accessToken: string,
   maxResults = 100
 ): Promise<OutlookSyncStatus> {
   const client = getGraphClient(accessToken);
-  
+
   try {
     // Get last sync status
     const lastSync = await getLastSyncStatus();
 
     // If we have a delta link, use incremental sync
     if (lastSync?.deltaLink) {
-      return await incrementalSync(client, organizationId, lastSync.deltaLink);
+      return await incrementalSync(client, lastSync.deltaLink);
     }
 
     // Full sync (first time)
-    return await fullSync(client, organizationId, maxResults);
+    return await fullSync(client, maxResults);
   } catch (error) {
     logger.error('[Outlook Sync] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'outlook-sync-service.ts' });
     throw error;
@@ -121,13 +120,12 @@ export async function syncOutlookMessages(
  */
 async function fullSync(
   client: Client,
-  organizationId: string,
   maxResults: number
 ): Promise<OutlookSyncStatus> {
   let messagesSynced = 0;
   let errors = 0;
   let deltaLink: string | undefined;
-  
+
   try {
     // Get messages from inbox and sent items
     const response = await client
@@ -150,7 +148,7 @@ async function fullSync(
     deltaLink = response['@odata.deltaLink'];
 
     const status: OutlookSyncStatus = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       deltaLink,
       messagesSynced,
@@ -171,13 +169,12 @@ async function fullSync(
  */
 async function incrementalSync(
   client: Client,
-  organizationId: string,
   startDeltaLink: string
 ): Promise<OutlookSyncStatus> {
   let messagesSynced = 0;
   let errors = 0;
   let deltaLink: string = startDeltaLink;
-  
+
   try {
     // Use delta link to get changes
     const response = await client
@@ -207,7 +204,7 @@ async function incrementalSync(
     }
 
     const status: OutlookSyncStatus = {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       deltaLink,
       messagesSynced,
@@ -223,7 +220,7 @@ async function incrementalSync(
     const statusCode = (error as { statusCode?: number }).statusCode;
     if (statusCode === 410) {
       logger.info('[Outlook Sync] Delta link invalid, performing full sync', { file: 'outlook-sync-service.ts' });
-      return fullSync(client, organizationId, 100);
+      return fullSync(client, 100);
     }
     throw error;
   }

@@ -22,6 +22,7 @@ import { db } from '../firebase-admin';
 import { logger } from '../logger/logger';
 import * as crypto from 'crypto';
 import type { TemporaryScrape } from '../../types/scraper-intelligence';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Represents a Firestore Timestamp that can be converted to Date
@@ -128,7 +129,6 @@ export function calculateExpirationDate(): Date {
  * ```
  */
 export async function saveToDiscoveryArchive(params: {
-  organizationId: string;
   workspaceId?: string;
   url: string;
   rawHtml: string;
@@ -137,7 +137,7 @@ export async function saveToDiscoveryArchive(params: {
   relatedRecordId?: string;
 }): Promise<{ scrape: TemporaryScrape; isNew: boolean }> {
   try {
-    const { organizationId, workspaceId, url, rawHtml, cleanedContent, metadata, relatedRecordId } = params;
+    const { workspaceId, url, rawHtml, cleanedContent, metadata, relatedRecordId } = params;
 
     // Calculate content hash for duplicate detection
     const contentHash = calculateContentHash(rawHtml);
@@ -165,7 +165,7 @@ export async function saveToDiscoveryArchive(params: {
         url,
         contentHash,
         scrapeCount: existingData.scrapeCount + 1,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         message: 'Serving from 30-day cache - cost savings achieved',
       });
 
@@ -207,17 +207,17 @@ export async function saveToDiscoveryArchive(params: {
       url,
       sizeBytes: newScrape.sizeBytes,
       expiresAt: newScrape.expiresAt.toISOString(),
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       message: 'Cached for 30 days - building proprietary moat',
     });
 
     return { scrape: newScrape, isNew: true };
   } catch (error) {
     logger.error('Failed to save to discovery archive', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: params.organizationId,
+      organizationId: DEFAULT_ORG_ID,
       url: params.url,
     });
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to save to discovery archive: ${errorMessage}`);
   }
@@ -274,7 +274,7 @@ export async function flagArchiveEntryForDeletion(scrapeId: string): Promise<voi
  * console.log(`Deleted ${deleted} flagged entries`);
  * ```
  */
-export async function deleteFlaggedArchiveEntries(organizationId: string): Promise<number> {
+export async function deleteFlaggedArchiveEntries(): Promise<number> {
   try {
     const flagged = await db
       .collection(DISCOVERY_ARCHIVE_COLLECTION)
@@ -296,14 +296,14 @@ export async function deleteFlaggedArchiveEntries(organizationId: string): Promi
     if (deletedCount > 0) {
       logger.info('Deleted flagged discovery archive entries', {
         deletedCount,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
     }
 
     return deletedCount;
   } catch (error) {
     logger.error('Failed to delete flagged archive entries', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -320,7 +320,7 @@ export async function deleteFlaggedArchiveEntries(organizationId: string): Promi
  * @returns Number of entries deleted
  * @throws Error if Firestore operation fails
  */
-export async function deleteExpiredArchiveEntries(organizationId: string): Promise<number> {
+export async function deleteExpiredArchiveEntries(): Promise<number> {
   try {
     const now = new Date();
 
@@ -343,14 +343,14 @@ export async function deleteExpiredArchiveEntries(organizationId: string): Promi
     if (deletedCount > 0) {
       logger.info('Deleted expired discovery archive entries', {
         deletedCount,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
     }
 
     return deletedCount;
   } catch (error) {
     logger.error('Failed to delete expired archive entries', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -403,7 +403,6 @@ export async function getFromDiscoveryArchive(scrapeId: string): Promise<Tempora
  * @throws Error if Firestore operation fails
  */
 export async function getFromDiscoveryArchiveByHash(
-  organizationId: string,
   contentHash: string
 ): Promise<TemporaryScrape | null> {
   try {
@@ -428,7 +427,7 @@ export async function getFromDiscoveryArchiveByHash(
     } as TemporaryScrape;
   } catch (error) {
     logger.error('Failed to get from discovery archive by hash', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       contentHash: contentHash.substring(0, 16),
     });
     
@@ -447,7 +446,6 @@ export async function getFromDiscoveryArchiveByHash(
  * @throws Error if Firestore operation fails
  */
 export async function getFromDiscoveryArchiveByUrl(
-  organizationId: string,
   url: string
 ): Promise<TemporaryScrape[]> {
   try {
@@ -470,7 +468,7 @@ export async function getFromDiscoveryArchiveByUrl(
     });
   } catch (error) {
     logger.error('Failed to get from discovery archive by URL', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       url,
     });
     
@@ -499,7 +497,7 @@ export async function getFromDiscoveryArchiveByUrl(
  * console.log(`Savings with TTL: $${cost.projectedSavingsWithTTL}`);
  * ```
  */
-export async function calculateStorageCost(organizationId: string): Promise<{
+export async function calculateStorageCost(): Promise<{
   totalScrapes: number;
   totalBytes: number;
   estimatedMonthlyCostUSD: number;
@@ -534,7 +532,7 @@ export async function calculateStorageCost(organizationId: string): Promise<{
     };
   } catch (error) {
     logger.error('Failed to calculate storage cost', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -565,7 +563,7 @@ function toDate(timestamp: Date | FirestoreTimestamp | string | number): Date {
  *
  * @returns Statistics object
  */
-export async function getStorageStats(organizationId: string): Promise<{
+export async function getStorageStats(): Promise<{
   totalScrapes: number;
   verifiedScrapes: number;
   flaggedForDeletion: number;
@@ -609,7 +607,7 @@ export async function getStorageStats(organizationId: string): Promise<{
     };
   } catch (error) {
     logger.error('Failed to get storage stats', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

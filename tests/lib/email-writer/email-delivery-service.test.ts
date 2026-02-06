@@ -315,7 +315,7 @@ describe('Email Delivery Service', () => {
   describe('updateDeliveryStatus', () => {
     it('should update delivery status', async () => {
       // Act
-      await updateDeliveryStatus('org_123', 'delivery_123', 'delivered', {
+      await updateDeliveryStatus('delivery_123', 'delivered', {
         deliveredAt: new Date('2026-01-02T12:00:00Z'),
       });
       
@@ -327,7 +327,7 @@ describe('Email Delivery Service', () => {
   describe('incrementOpenCount', () => {
     it('should increment open count and emit signal', async () => {
       // Act
-      await incrementOpenCount('org_123', 'delivery_123');
+      await incrementOpenCount('delivery_123');
       
       // Assert
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
@@ -343,7 +343,7 @@ describe('Email Delivery Service', () => {
   describe('incrementClickCount', () => {
     it('should increment click count and emit signal', async () => {
       // Act
-      await incrementClickCount('org_123', 'delivery_123');
+      await incrementClickCount('delivery_123');
       
       // Assert
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
@@ -388,7 +388,7 @@ describe('Email Delivery Service', () => {
       mockAdminDb.collection.mockReturnValue(mockQuery as unknown as ReturnType<typeof mockAdminDb.collection>);
       
       // Act
-      const stats = await getDeliveryStatsForUser('org_123', 'user_123');
+      const stats = await getDeliveryStatsForUser('user_123');
       
       // Assert
       expect(stats.totalSent).toBe(5); // All except failed

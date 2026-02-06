@@ -1,6 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Email Campaigns List
@@ -22,7 +21,6 @@ export default function EmailCampaignsPage() {
   // Fetch function with pagination using service layer
   const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getCampaigns(
-      DEFAULT_ORG_ID,
       undefined,
       { pageSize: 50, lastDoc }
     );
@@ -49,7 +47,7 @@ export default function EmailCampaignsPage() {
     }
 
     try {
-      await deleteCampaign(DEFAULT_ORG_ID, campaignId);
+      await deleteCampaign(campaignId);
       await refresh();
     } catch (err: unknown) {
       logger.error('Error deleting campaign:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });

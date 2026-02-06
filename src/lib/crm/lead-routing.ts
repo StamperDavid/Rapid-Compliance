@@ -9,6 +9,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { Lead } from './lead-service';
 
 export interface RoutingRule {
@@ -74,14 +75,13 @@ interface Organization {
  * Route a lead to the appropriate user
  */
 export async function routeLead(
-  organizationId: string,
   workspaceId: string,
   lead: Lead
 ): Promise<RoutingResult> {
   try {
     // Get all routing rules for this organization
     const rulesResult = await FirestoreService.getAll<RoutingRule>(
-      `organizations/${organizationId}/leadRoutingRules`
+      `organizations/${DEFAULT_ORG_ID}/leadRoutingRules`
     );
 
     const rules = rulesResult
@@ -100,7 +100,7 @@ export async function routeLead(
 
       switch (rule.routingType) {
         case 'round-robin':
-          assignedUserId = await getRoundRobinUser(organizationId, rule.id, rule.assignedUsers);
+          assignedUserId = await getRoundRobinUser(rule.id, rule.assignedUsers);
           break;
 
         case 'territory':
@@ -108,7 +108,7 @@ export async function routeLead(
           break;
 
         case 'load-balance':
-          assignedUserId = await getLoadBalancedUser(organizationId, workspaceId, rule);
+          assignedUserId = await getLoadBalancedUser(workspaceId, rule);
           break;
 
         case 'skill-based':
@@ -137,7 +137,7 @@ export async function routeLead(
     }
 
     // No rule matched - use default round-robin
-    const defaultUserId = await getDefaultAssignment(organizationId);
+    const defaultUserId = await getDefaultAssignment();
 
     return {
       assignedTo: defaultUserId,
@@ -185,13 +185,12 @@ function evaluateConditions(lead: Lead, conditions: RoutingCondition[]): boolean
  * Get round-robin assignment
  */
 async function getRoundRobinUser(
-  organizationId: string,
   ruleId: string,
   userIds: string[]
 ): Promise<string> {
   try {
     const state = await FirestoreService.get<{ lastIndex: number }>(
-      `organizations/${organizationId}/leadRoutingRules/${ruleId}/state`,
+      `organizations/${DEFAULT_ORG_ID}/leadRoutingRules/${ruleId}/state`,
       'roundRobin'
     );
 
@@ -200,7 +199,7 @@ async function getRoundRobinUser(
     const assignedUserId = userIds[nextIndex];
 
     await FirestoreService.set(
-      `organizations/${organizationId}/leadRoutingRules/${ruleId}/state`,
+      `organizations/${DEFAULT_ORG_ID}/leadRoutingRules/${ruleId}/state`,
       'roundRobin',
       { lastIndex: nextIndex, updatedAt: new Date() },
       true
@@ -249,7 +248,6 @@ function getTerritoryUser(lead: Lead, rule: RoutingRule): string | null {
  * Get load-balanced assignment
  */
 async function getLoadBalancedUser(
-  organizationId: string,
   workspaceId: string,
   rule: RoutingRule
 ): Promise<string> {
@@ -262,7 +260,7 @@ async function getLoadBalancedUser(
     const userCounts = new Map<string, number>();
 
     for (const userId of rule.assignedUsers) {
-      const count = await getUserLeadCount(organizationId, workspaceId, userId, period);
+      const count = await getUserLeadCount(workspaceId, userId, period);
       userCounts.set(userId, count);
     }
 
@@ -289,14 +287,13 @@ async function getLoadBalancedUser(
  * Get user's lead count in period
  */
 async function getUserLeadCount(
-  organizationId: string,
   workspaceId: string,
   userId: string,
   period: 'day' | 'week' | 'month'
 ): Promise<number> {
   try {
     const { getLeads } = await import('./lead-service');
-    
+
     const since = new Date();
     if (period === 'day') {since.setDate(since.getDate() - 1);}
     else if (period === 'week') {since.setDate(since.getDate() - 7);}
@@ -355,11 +352,11 @@ function getSkillBasedUser(lead: Lead, rule: RoutingRule): string | null {
 /**
  * Get default assignment (fallback)
  */
-async function getDefaultAssignment(organizationId: string): Promise<string> {
+async function getDefaultAssignment(): Promise<string> {
   try {
     // Get organization members
     const membersResult = await FirestoreService.getAll<OrganizationMember>(
-      `organizations/${organizationId}/members`
+      `organizations/${DEFAULT_ORG_ID}/members`
     );
 
     const activeMembers = membersResult.filter(m => m.role === 'admin' || m.role === 'member');
@@ -372,7 +369,7 @@ async function getDefaultAssignment(organizationId: string): Promise<string> {
     }
 
     // Fallback to org owner
-    const org = await FirestoreService.get<Organization>('organizations', organizationId);
+    const org = await FirestoreService.get<Organization>('organizations', DEFAULT_ORG_ID);
     const orgCreatedBy = org?.createdBy;
     return org?.ownerId ?? (orgCreatedBy ?? 'unknown');
 

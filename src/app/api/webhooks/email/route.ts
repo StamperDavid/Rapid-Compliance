@@ -174,12 +174,12 @@ async function processEvent(event: EmailWebhookEvent): Promise<void> {
       break;
 
     case 'open':
-      await handleEmailOpen(enrollmentId, stepId, organizationId);
+      await handleEmailOpen(enrollmentId, stepId);
       logger.info('Email opened', { route: '/api/webhooks/email', enrollmentId });
       break;
 
     case 'click':
-      await handleEmailClick(enrollmentId, stepId, organizationId);
+      await handleEmailClick(enrollmentId, stepId);
       logger.info('Email clicked', { route: '/api/webhooks/email', enrollmentId, url: event.url });
       break;
 
@@ -192,18 +192,18 @@ async function processEvent(event: EmailWebhookEvent): Promise<void> {
         reason: bounceReason,
         bounceType: event.type
       });
-      await handleEmailBounce(enrollmentId, stepId, organizationId, bounceReason);
+      await handleEmailBounce(enrollmentId, stepId, bounceReason);
       break;
     }
 
     case 'spamreport':
       logger.warn('Spam report', { route: '/api/webhooks/email', enrollmentId, email: event.email });
-      await handleEmailBounce(enrollmentId, stepId, organizationId, 'spam_report');
+      await handleEmailBounce(enrollmentId, stepId, 'spam_report');
       break;
 
     case 'unsubscribe':
       logger.info('Unsubscribe request', { route: '/api/webhooks/email', enrollmentId, email: event.email });
-      await handleEmailBounce(enrollmentId, stepId, organizationId, 'unsubscribed');
+      await handleEmailBounce(enrollmentId, stepId, 'unsubscribed');
       break;
 
     default:

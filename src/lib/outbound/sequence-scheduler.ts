@@ -41,7 +41,7 @@ export async function processSequences(): Promise<{
 
               if (now >= nextStepTime) {
                 // Process next step
-                await SequenceEngine.processNextStep(enrollment.id, DEFAULT_ORG_ID);
+                await SequenceEngine.processNextStep(enrollment.id);
                 processed++;
               }
             }
@@ -118,7 +118,6 @@ async function getActiveEnrollments(): Promise<ProspectEnrollment[]> {
 export async function handleEmailBounce(
   enrollmentId: string,
   stepId: string,
-  organizationId: string,
   reason?: string
 ): Promise<void> {
   logger.info('Sequence Scheduler Handling bounce for enrollment', { 
@@ -154,7 +153,6 @@ export async function handleEmailBounce(
   await SequenceEngine['unenrollProspect'](
     enrollment.prospectId,
     enrollment.sequenceId,
-    organizationId,
     unenrollReason
   );
 }
@@ -165,7 +163,6 @@ export async function handleEmailBounce(
 export async function handleEmailReply(
   enrollmentId: string,
   stepId: string,
-  _organizationId: string,
   _replyContent: string
 ): Promise<void> {
   logger.info('Sequence Scheduler Handling reply for enrollment enrollmentId}', { file: 'sequence-scheduler.ts' });
@@ -219,8 +216,7 @@ export async function handleEmailReply(
  */
 export async function handleEmailOpen(
   enrollmentId: string,
-  stepId: string,
-  _organizationId: string
+  stepId: string
 ): Promise<void> {
   const enrollment = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
@@ -250,8 +246,7 @@ export async function handleEmailOpen(
  */
 export async function handleEmailClick(
   enrollmentId: string,
-  stepId: string,
-  _organizationId: string
+  stepId: string
 ): Promise<void> {
   const enrollment = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,

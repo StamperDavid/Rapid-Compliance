@@ -26,7 +26,7 @@ export async function POST(_request: NextRequest) {
     });
 
     // Run health check
-    const summary = await runDealHealthCheck(DEFAULT_ORG_ID, workspaceId);
+    const summary = await runDealHealthCheck(workspaceId);
 
     return NextResponse.json({
       success: true,

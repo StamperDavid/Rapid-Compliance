@@ -7,6 +7,7 @@ import { getActivityStats } from './activity-service';
 import { getDeal, type Deal } from './deal-service';
 import { logger } from '@/lib/logger/logger';
 import type { ActivityStats } from '@/types/activity';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Type guard to check if value has a toDate method (Firestore Timestamp)
@@ -62,7 +63,6 @@ export interface DealHealthFactor {
  * Calculate comprehensive deal health score
  */
 export async function calculateDealHealth(
-  organizationId: string,
   workspaceId: string,
   dealId: string
 ): Promise<DealHealthScore> {
@@ -77,7 +77,7 @@ export async function calculateDealHealth(
     const recommendations: string[] = [];
 
     // Factor 1: Activity Recency (20% weight)
-    const activityStats = await getActivityStats(organizationId, workspaceId, 'deal', dealId);
+    const activityStats = await getActivityStats(workspaceId, 'deal', dealId);
     const activityRecencyFactor = calculateActivityRecencyFactor(activityStats);
     factors.push(activityRecencyFactor);
     
@@ -143,7 +143,7 @@ export async function calculateDealHealth(
     };
 
     logger.info('Deal health calculated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       dealId,
       overall,
       status,
@@ -153,7 +153,7 @@ export async function calculateDealHealth(
     return healthScore;
 
   } catch (error: unknown) {
-    logger.error('Failed to calculate deal health', error instanceof Error ? error : new Error(String(error)), { organizationId, dealId });
+    logger.error('Failed to calculate deal health', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, dealId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Deal health calculation failed: ${errorMessage}`);
   }
@@ -377,7 +377,6 @@ function getDaysSinceLastActivity(activityStats: ActivityStats): number | null {
  * Get health scores for all deals in a pipeline
  */
 export async function getPipelineHealth(
-  organizationId: string,
   workspaceId: string,
   dealIds: string[]
 ): Promise<Map<string, DealHealthScore>> {
@@ -385,7 +384,7 @@ export async function getPipelineHealth(
 
   for (const dealId of dealIds) {
     try {
-      const health = await calculateDealHealth(organizationId, workspaceId, dealId);
+      const health = await calculateDealHealth(workspaceId, dealId);
       healthScores.set(dealId, health);
     } catch (error) {
       logger.warn('Failed to calculate health for deal', { dealId, error: error instanceof Error ? error.message : String(error) });

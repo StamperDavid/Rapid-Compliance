@@ -42,12 +42,11 @@ interface ShopifyOrder {
  * Sync product to Shopify
  */
 export async function syncProductToShopify(
-  organizationId: string,
   product: ShopifyProduct
 ): Promise<string> {
   try {
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'shopify');
+    const credentials = await getIntegrationCredentials('shopify');
     
     if (!credentials?.accessToken) {
       throw new Error('Shopify not connected');
@@ -103,12 +102,14 @@ export async function syncProductToShopify(
     const data = await response.json() as ShopifyProductResponse;
     const productId = data.product.id.toString();
 
-    logger.info('Product synced to Shopify', { organizationId, productId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.info('Product synced to Shopify', { organizationId: DEFAULT_ORG_ID, productId });
 
     return productId;
 
   } catch (error) {
-    logger.error('Failed to sync product to Shopify', error as Error, { organizationId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to sync product to Shopify', error as Error, { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }
@@ -117,12 +118,11 @@ export async function syncProductToShopify(
  * Fetch orders from Shopify
  */
 export async function fetchShopifyOrders(
-  organizationId: string,
   since?: Date
 ): Promise<ShopifyOrder[]> {
   try {
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'shopify');
+    const credentials = await getIntegrationCredentials('shopify');
     
     if (!credentials?.accessToken) {
       throw new Error('Shopify not connected');
@@ -204,15 +204,17 @@ export async function fetchShopifyOrders(
       financialStatus: order.financial_status === 'paid' || order.financial_status === 'refunded' ? order.financial_status : 'pending',
     }));
 
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     logger.info('Shopify orders fetched', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       count: orders.length,
     });
 
     return orders;
 
   } catch (error) {
-    logger.error('Failed to fetch Shopify orders', error as Error, { organizationId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to fetch Shopify orders', error as Error, { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }
@@ -221,7 +223,6 @@ export async function fetchShopifyOrders(
  * Sync Shopify orders to CRM as deals
  */
 export async function syncShopifyOrdersToCRM(
-  organizationId: string,
   workspaceId: string = 'default'
 ): Promise<number> {
   try {
@@ -229,7 +230,7 @@ export async function syncShopifyOrdersToCRM(
     const since = new Date();
     since.setDate(since.getDate() - 30);
 
-    const orders = await fetchShopifyOrders(organizationId, since);
+    const orders = await fetchShopifyOrders(since);
 
     // Create deals in CRM
     const { createDeal } = await import('@/lib/crm/deal-service');
@@ -271,12 +272,14 @@ export async function syncShopifyOrdersToCRM(
       }
     }
 
-    logger.info('Shopify orders synced to CRM', { organizationId, synced });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.info('Shopify orders synced to CRM', { organizationId: DEFAULT_ORG_ID, synced });
 
     return synced;
 
   } catch (error) {
-    logger.error('Failed to sync Shopify orders to CRM', error as Error, { organizationId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to sync Shopify orders to CRM', error as Error, { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }

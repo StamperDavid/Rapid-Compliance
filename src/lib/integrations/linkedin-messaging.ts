@@ -27,39 +27,40 @@ export interface LinkedInMessageResult {
 export async function sendLinkedInMessage(
   _accessToken: string,
   recipientIdentifier: string, // LinkedIn URL or email
-  message: string,
-  organizationId: string
+  message: string
 ): Promise<LinkedInMessageResult> {
   try {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     logger.info('LinkedIn: Attempting to send message', {
       recipient: `${recipientIdentifier.substring(0, 30)  }...`,
       messageLength: message.length,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
-    
+
     // Check if using RapidAPI
     const rapidApiKey = process.env.RAPIDAPI_KEY;
-    
+
     if (rapidApiKey) {
       return await sendViaRapidAPI(rapidApiKey, recipientIdentifier, message);
     }
-    
+
     // Fallback: Log message for manual sending
     logger.info('LinkedIn: No RapidAPI key configured, creating manual task', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
-    
-    await logMessageForManualSend(organizationId, recipientIdentifier, message);
-    
+
+    await logMessageForManualSend(recipientIdentifier, message);
+
     return {
       success: true,
       messageId: `linkedin-manual-${Date.now()}`,
     };
   } catch (error) {
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     logger.error('LinkedIn: Error sending message', error as Error, {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
-    
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -123,20 +124,20 @@ async function sendViaRapidAPI(
  * Creates a task for sales rep to manually send the LinkedIn message
  */
 async function logMessageForManualSend(
-  organizationId: string,
   recipientIdentifier: string,
   message: string
 ): Promise<void> {
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+
   const taskId = `linkedin-manual-${Date.now()}`;
-  
+
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/tasks`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/tasks`,
     taskId,
     {
       id: taskId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       title: `Send LinkedIn message to ${recipientIdentifier}`,
       description: `Please manually send this message on LinkedIn:\n\n${message}`,
       type: 'linkedin-message',
@@ -151,10 +152,10 @@ async function logMessageForManualSend(
       updatedAt: new Date(),
     }
   );
-  
+
   logger.info('LinkedIn: Created manual task for message', {
     taskId,
-    organizationId,
+    organizationId: DEFAULT_ORG_ID,
     recipient: `${recipientIdentifier.substring(0, 30)  }...`,
   });
 }

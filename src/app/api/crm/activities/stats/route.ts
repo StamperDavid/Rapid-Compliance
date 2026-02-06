@@ -8,7 +8,7 @@ import { getActivityStats } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import type { RelatedEntityType } from '@/types/activity';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = DEFAULT_ORG_ID;
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
 
@@ -37,7 +36,6 @@ export async function GET(request: NextRequest) {
     }
 
     const stats = await getActivityStats(
-      organizationId,
       workspaceId,
       entityType,
       entityId

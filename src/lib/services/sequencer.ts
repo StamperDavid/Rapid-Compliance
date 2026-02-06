@@ -900,8 +900,7 @@ async function executeLinkedInAction(
   const result = await sendLinkedInMessage(
     accessToken,
     linkedInIdentifier,
-    messageContent,
-    enrollment.organizationId
+    messageContent
   );
   
   if (!result.success) {

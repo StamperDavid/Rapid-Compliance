@@ -123,7 +123,7 @@ describe('E-Commerce UI Integration', () => {
   }, 10000);
 
   it('should add product to cart (product detail → cart service)', async () => {
-    const cart = await addToCart(testSessionId, testWorkspaceId, testOrgId, 'test-product-1', 2);
+    const cart = await addToCart(testSessionId, testWorkspaceId, 'test-product-1', 2);
     
     expect(cart.items).toHaveLength(1);
     expect(cart.items[0].quantity).toBe(2);
@@ -135,11 +135,10 @@ describe('E-Commerce UI Integration', () => {
     // TODO: Fix Jest module mocking for apiKeyService
     
     // First add item to cart
-    await addToCart(testSessionId, testWorkspaceId, testOrgId, 'test-product-1', 1);
-    
+    await addToCart(testSessionId, testWorkspaceId, 'test-product-1', 1);
+
     const order = await processCheckout({
       cartId: testSessionId,
-      organizationId: testOrgId,
       workspaceId: testWorkspaceId,
       customer: {
         email: 'test@example.com',
@@ -280,8 +279,8 @@ describe('Email Campaign UI Integration', () => {
   }, 10000);
 
   it('should list campaigns (campaigns page → campaign service)', async () => {
-    const result = await listCampaigns(testOrgId);
-    
+    const result = await listCampaigns();
+
     expect(result).toBeDefined();
     expect(result.campaigns).toBeDefined();
     expect(Array.isArray(result.campaigns)).toBe(true);

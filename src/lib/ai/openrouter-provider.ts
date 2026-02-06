@@ -119,11 +119,9 @@ interface ProviderResult {
 export class OpenRouterProvider {
   private apiKey: string | null = null;
   private baseURL: string;
-  private organizationId: string | null = null;
 
   constructor(configOrOrgId: OpenRouterConfig | string) {
     if (typeof configOrOrgId === 'string') {
-      this.organizationId = configOrOrgId;
       this.baseURL = 'https://openrouter.ai/api/v1';
     } else {
       // Extract config values - empty strings are invalid (Explicit Ternary for STRINGS)
@@ -131,7 +129,6 @@ export class OpenRouterProvider {
       const baseURLVal = configOrOrgId.baseURL;
       this.apiKey = (apiKeyVal !== '' && apiKeyVal != null) ? apiKeyVal : null;
       this.baseURL = (baseURLVal !== '' && baseURLVal != null) ? baseURLVal : 'https://openrouter.ai/api/v1';
-      this.organizationId = DEFAULT_ORG_ID;
     }
   }
 
@@ -373,11 +370,7 @@ export class OpenRouterProvider {
       logger.debug(`[OpenRouter] Using cached API key: ${this.apiKey.slice(0, 8)}...`, { file: 'openrouter-provider.ts' });
       return this.apiKey;
     }
-    if (!this.organizationId) {
-      logger.error('[OpenRouter] No organizationId provided and no API key set', new Error('No organizationId'), { file: 'openrouter-provider.ts' });
-      throw new Error('OpenRouter API key not configured');
-    }
-    logger.debug(`[OpenRouter] Fetching API key for org: ${this.organizationId}`, { file: 'openrouter-provider.ts' });
+    logger.debug(`[OpenRouter] Fetching API key for org: ${DEFAULT_ORG_ID}`, { file: 'openrouter-provider.ts' });
     const keys = await apiKeyService.getKeys();
     const key = keys?.ai?.openrouterApiKey;
     if (!key) {
@@ -387,7 +380,7 @@ export class OpenRouterProvider {
         hasAiSection: !!keys?.ai,
         aiKeys: keys?.ai ? Object.keys(keys.ai) : [],
       });
-      throw new Error(`OpenRouter API key not configured for organization ${this.organizationId}. Please add it in the API Keys settings.`);
+      throw new Error(`OpenRouter API key not configured for organization ${DEFAULT_ORG_ID}. Please add it in the API Keys settings.`);
     }
     logger.debug(`[OpenRouter] API key loaded: ${key.slice(0, 8)}...`, { file: 'openrouter-provider.ts' });
     this.apiKey = key;

@@ -9,6 +9,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface EmailTemplate {
   id: string;
@@ -227,7 +228,6 @@ export function replaceVariables(content: string, variables: Record<string, unkn
  * Create A/B test
  */
 export async function createABTest(
-  organizationId: string,
   test: Omit<ABTest, 'id' | 'createdAt' | 'status'>
 ): Promise<ABTest> {
   try {
@@ -242,19 +242,19 @@ export async function createABTest(
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/abTests`,
+      `organizations/${DEFAULT_ORG_ID}/abTests`,
       testId,
       abTest,
       false
     );
 
-    logger.info('A/B test created', { organizationId, testId, testType: test.testType });
+    logger.info('A/B test created', { organizationId: DEFAULT_ORG_ID, testId, testType: test.testType });
 
     return abTest;
 
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to create A/B test', err, { organizationId });
+    logger.error('Failed to create A/B test', err, { organizationId: DEFAULT_ORG_ID });
     throw err;
   }
 }
@@ -263,13 +263,12 @@ export async function createABTest(
  * Determine which variant to send for recipient
  */
 export async function getABTestVariant(
-  organizationId: string,
   testId: string,
   recipientId: string
 ): Promise<'A' | 'B'> {
   try {
     const test = await FirestoreService.get<ABTest>(
-      `organizations/${organizationId}/abTests`,
+      `organizations/${DEFAULT_ORG_ID}/abTests`,
       testId
     );
 
@@ -305,7 +304,6 @@ function hashString(str: string): number {
  * Calculate A/B test results
  */
 export async function calculateABTestResults(
-  organizationId: string,
   testId: string
 ): Promise<ABTestResults> {
   try {
@@ -339,7 +337,7 @@ export async function calculateABTestResults(
 
     // Determine winner based on configured metric
     const test = await FirestoreService.get<ABTest>(
-      `organizations/${organizationId}/abTests`,
+      `organizations/${DEFAULT_ORG_ID}/abTests`,
       testId
     );
 

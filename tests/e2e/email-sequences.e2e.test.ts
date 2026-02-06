@@ -59,8 +59,7 @@ describe('Email Sequences E2E', () => {
       
       const enrollment = await SequenceEngine.enrollProspect(
         prospectId,
-        sequenceId,
-        orgId
+        sequenceId
       );
 
       expect(enrollment).toBeDefined();
@@ -91,7 +90,7 @@ describe('Email Sequences E2E', () => {
       }
       // Try to enroll the same prospect again - should fail
       await expect(
-        SequenceEngine.enrollProspect(prospectId, sequenceId, orgId)
+        SequenceEngine.enrollProspect(prospectId, sequenceId)
       ).rejects.toThrow('already enrolled');
       
       console.log('✅ Duplicate enrollment prevention works');
@@ -125,7 +124,7 @@ describe('Email Sequences E2E', () => {
       expect(enrollmentId).toBeDefined();
 
       console.log('\n📧 Handling email open webhook...');
-      await handleEmailOpen(enrollmentId, 'step-001', orgId);
+      await handleEmailOpen(enrollmentId, 'step-001');
 
       // Verify it was ACTUALLY updated in Firestore
       const enrollment = await db.collection('organizations')
@@ -148,7 +147,7 @@ describe('Email Sequences E2E', () => {
         return;
       }
       console.log('\n🖱️  Handling email click webhook...');
-      await handleEmailClick(enrollmentId, 'step-001', orgId);
+      await handleEmailClick(enrollmentId, 'step-001');
 
       // Verify in REAL Firestore
       const enrollment = await db.collection('organizations')

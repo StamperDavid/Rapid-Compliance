@@ -243,7 +243,6 @@ async function handleSMSFailure(
           await SequenceEngine['unenrollProspect'](
             enrollment.prospectId,
             enrollment.sequenceId,
-            DEFAULT_ORG_ID,
             'bounced'
           );
 

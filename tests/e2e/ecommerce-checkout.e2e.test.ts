@@ -78,7 +78,7 @@ describe('E-Commerce Checkout E2E', () => {
     );
 
     // Create test product
-    const product = await createProduct(testOrgId, {
+    const product = await createProduct({
       name: 'Test Product',
       description: 'A test product for checkout',
       sku: 'TEST-001',
@@ -97,7 +97,7 @@ describe('E-Commerce Checkout E2E', () => {
     // Cleanup: Delete test data
     try {
       if (testCartId) {
-        await clearCart(testCartId, testWorkspaceId, testOrgId);
+        await clearCart(testCartId, testWorkspaceId);
       }
       
       // Note: Leave test org for manual inspection if needed
@@ -126,7 +126,7 @@ describe('E-Commerce Checkout E2E', () => {
       expect(testCartId).toBeDefined();
       expect(testProductId).toBeDefined();
       
-      const cart = await addToCart(testCartId, testWorkspaceId, testOrgId, testProductId, 2);
+      const cart = await addToCart(testCartId, testWorkspaceId, testProductId, 2);
 
       expect(cart.items.length).toBe(1);
       expect(cart.items[0].productId).toBe(testProductId);
@@ -217,7 +217,6 @@ describe('E-Commerce Checkout E2E', () => {
       await expect(async () => {
         await processCheckout({
           cartId: emptyCartId,
-          organizationId: testOrgId,
           workspaceId: testWorkspaceId,
           customer: {
             email: 'test@example.com',

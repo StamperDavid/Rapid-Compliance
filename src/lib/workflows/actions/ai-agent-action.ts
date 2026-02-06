@@ -97,7 +97,7 @@ export async function executeAIAgentAction(
   }
 
   // Create provider and generate response
-  const provider = AIProviderFactory.createProvider(selectedModel as ModelName, organizationId);
+  const provider = AIProviderFactory.createProvider(selectedModel as ModelName);
   
   const response = await provider.generateResponse(
     messages,

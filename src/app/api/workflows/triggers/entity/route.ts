@@ -60,7 +60,6 @@ export async function POST(request: NextRequest) {
 
     // Handle entity change (triggers workflows)
     await handleEntityChange(
-      organizationId,
       workspaceId,
       schemaId,
       changeType,

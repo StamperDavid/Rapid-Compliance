@@ -25,6 +25,7 @@ import {
   ExtractedSignalSchema
 } from '@/types/scraper-intelligence';
 import { distillScrape, calculateLeadScore } from './distillation-engine';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS
@@ -109,13 +110,13 @@ interface RateLimitEntry {
 class RateLimiter {
   private limits = new Map<string, RateLimitEntry>();
 
-  check(organizationId: string, maxRequests: number = RATE_LIMIT_MAX_REQUESTS): boolean {
+  check(maxRequests: number = RATE_LIMIT_MAX_REQUESTS): boolean {
     const now = Date.now();
-    const entry = this.limits.get(organizationId);
+    const entry = this.limits.get(DEFAULT_ORG_ID);
 
     // No entry or window expired - create new window
     if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-      this.limits.set(organizationId, {
+      this.limits.set(DEFAULT_ORG_ID, {
         count: 1,
         windowStart: now,
       });
@@ -125,7 +126,7 @@ class RateLimiter {
     // Within window - check if limit exceeded
     if (entry.count >= maxRequests) {
       logger.warn('Rate limit exceeded', {
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         count: entry.count,
         maxRequests,
       });
@@ -137,8 +138,8 @@ class RateLimiter {
     return true;
   }
 
-  reset(organizationId: string): void {
-    this.limits.delete(organizationId);
+  reset(): void {
+    this.limits.delete(DEFAULT_ORG_ID);
   }
 
   cleanup(): void {
@@ -211,32 +212,31 @@ function handleFirestoreError(error: unknown, operation: string, context: Record
  * @throws ScraperIntelligenceError if operation fails
  */
 export async function getResearchIntelligence(
-  organizationId: string,
   industryId: string
 ): Promise<ResearchIntelligence | null> {
   try {
     // Check rate limit
-    if (!rateLimiter.check(organizationId)) {
+    if (!rateLimiter.check()) {
       throw new ScraperIntelligenceError(
         'Rate limit exceeded',
         'RATE_LIMIT_EXCEEDED',
         429,
-        { organizationId }
+        { organizationId: DEFAULT_ORG_ID }
       );
     }
 
     // Check cache
-    const cacheKey = `research:${organizationId}:${industryId}`;
+    const cacheKey = `research:${DEFAULT_ORG_ID}:${industryId}`;
     const cached = researchCache.get(cacheKey);
     if (cached) {
-      logger.debug('Research intelligence cache hit', { organizationId, industryId });
+      logger.debug('Research intelligence cache hit', { organizationId: DEFAULT_ORG_ID, industryId });
       return cached;
     }
 
     // Fetch from Firestore
     const doc = await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
-      .doc(`${organizationId}_${industryId}`)
+      .doc(`${DEFAULT_ORG_ID}_${industryId}`)
       .get();
 
     if (!doc.exists) {
@@ -266,12 +266,12 @@ export async function getResearchIntelligence(
     // Cache for future requests (use original typed object, not Zod result)
     researchCache.set(cacheKey, research);
 
-    logger.info('Research intelligence fetched', { organizationId, industryId });
+    logger.info('Research intelligence fetched', { organizationId: DEFAULT_ORG_ID, industryId });
 
     return research;
   } catch (error) {
     return handleFirestoreError(error, 'getResearchIntelligence', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       industryId,
     });
   }
@@ -279,25 +279,23 @@ export async function getResearchIntelligence(
 
 /**
  * Save or update research intelligence
- * 
- * @param organizationId - Organization ID
+ *
  * @param industryId - Industry identifier
  * @param research - Research intelligence configuration
  * @throws ScraperIntelligenceError if validation or save fails
  */
 export async function saveResearchIntelligence(
-  organizationId: string,
   industryId: string,
   research: ResearchIntelligence
 ): Promise<void> {
   try {
     // Check rate limit
-    if (!rateLimiter.check(organizationId)) {
+    if (!rateLimiter.check()) {
       throw new ScraperIntelligenceError(
         'Rate limit exceeded',
         'RATE_LIMIT_EXCEEDED',
         429,
-        { organizationId }
+        { organizationId: DEFAULT_ORG_ID }
       );
     }
 
@@ -305,20 +303,20 @@ export async function saveResearchIntelligence(
     const validated = ResearchIntelligenceSchema.parse(research);
 
     // Save to Firestore
-    const docId = `${organizationId}_${industryId}`;
+    const docId = `${DEFAULT_ORG_ID}_${industryId}`;
     await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
       .doc(docId)
       .set(validated, { merge: true });
 
     // Invalidate cache
-    const cacheKey = `research:${organizationId}:${industryId}`;
+    const cacheKey = `research:${DEFAULT_ORG_ID}:${industryId}`;
     researchCache.invalidate(cacheKey);
 
-    logger.info('Research intelligence saved', { organizationId, industryId });
+    logger.info('Research intelligence saved', { organizationId: DEFAULT_ORG_ID, industryId });
   } catch (error) {
     return handleFirestoreError(error, 'saveResearchIntelligence', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       industryId,
     });
   }
@@ -326,30 +324,28 @@ export async function saveResearchIntelligence(
 
 /**
  * Delete research intelligence
- * 
- * @param organizationId - Organization ID
+ *
  * @param industryId - Industry identifier
  * @throws ScraperIntelligenceError if delete fails
  */
 export async function deleteResearchIntelligence(
-  organizationId: string,
   industryId: string
 ): Promise<void> {
   try {
-    const docId = `${organizationId}_${industryId}`;
+    const docId = `${DEFAULT_ORG_ID}_${industryId}`;
     await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
       .doc(docId)
       .delete();
 
     // Invalidate cache
-    const cacheKey = `research:${organizationId}:${industryId}`;
+    const cacheKey = `research:${DEFAULT_ORG_ID}:${industryId}`;
     researchCache.invalidate(cacheKey);
 
-    logger.info('Research intelligence deleted', { organizationId, industryId });
+    logger.info('Research intelligence deleted', { organizationId: DEFAULT_ORG_ID, industryId });
   } catch (error) {
     return handleFirestoreError(error, 'deleteResearchIntelligence', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       industryId,
     });
   }
@@ -361,9 +357,7 @@ export async function deleteResearchIntelligence(
  * @returns Array of research intelligence configurations
  * @throws ScraperIntelligenceError if query fails
  */
-export async function listResearchIntelligence(
-  organizationId: string
-): Promise<Array<{ industryId: string; research: ResearchIntelligence }>> {
+export async function listResearchIntelligence(): Promise<Array<{ industryId: string; research: ResearchIntelligence }>> {
   try {
     const snapshot = await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
@@ -371,7 +365,7 @@ export async function listResearchIntelligence(
 
     const results = snapshot.docs.map((doc) => {
       const data = doc.data() as Record<string, unknown>;
-      const industryId = doc.id.replace(`${organizationId}_`, '');
+      const industryId = doc.id.replace(`${DEFAULT_ORG_ID}_`, '');
       const rawMetadata = data.metadata as { lastUpdated?: unknown; version?: number; updatedBy?: 'system' | 'user'; notes?: string } | undefined;
 
       return {
@@ -388,15 +382,15 @@ export async function listResearchIntelligence(
       };
     });
 
-    logger.info('Listed research intelligence', { 
-      organizationId, 
-      count: results.length 
+    logger.info('Listed research intelligence', {
+      organizationId: DEFAULT_ORG_ID,
+      count: results.length
     });
 
     return results;
   } catch (error) {
     return handleFirestoreError(error, 'listResearchIntelligence', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
   }
 }
@@ -415,18 +409,17 @@ export async function listResearchIntelligence(
  * @throws ScraperIntelligenceError if save fails
  */
 export async function saveExtractedSignals(
-  organizationId: string,
   recordId: string,
   signals: ExtractedSignal[]
 ): Promise<void> {
   try {
     // Check rate limit
-    if (!rateLimiter.check(organizationId)) {
+    if (!rateLimiter.check()) {
       throw new ScraperIntelligenceError(
         'Rate limit exceeded',
         'RATE_LIMIT_EXCEEDED',
         429,
-        { organizationId }
+        { organizationId: DEFAULT_ORG_ID }
       );
     }
 
@@ -437,7 +430,7 @@ export async function saveExtractedSignals(
     await db.runTransaction(async (transaction) => {
       const docRef = db
         .collection(EXTRACTED_SIGNALS_COLLECTION)
-        .doc(`${organizationId}_${recordId}`);
+        .doc(`${DEFAULT_ORG_ID}_${recordId}`);
 
       const doc = await transaction.get(docRef);
 
@@ -452,7 +445,7 @@ export async function saveExtractedSignals(
       } else {
         // Create new document
         transaction.set(docRef, {
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           recordId,
           signals: validated,
           createdAt: new Date(),
@@ -462,16 +455,16 @@ export async function saveExtractedSignals(
     });
 
     // Invalidate cache
-    signalsCache.invalidatePattern(`signals:${organizationId}:${recordId}`);
+    signalsCache.invalidatePattern(`signals:${DEFAULT_ORG_ID}:${recordId}`);
 
     logger.info('Extracted signals saved', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       recordId,
       signalCount: signals.length,
     });
   } catch (error) {
     return handleFirestoreError(error, 'saveExtractedSignals', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       recordId,
       signalCount: signals.length,
     });
@@ -486,22 +479,21 @@ export async function saveExtractedSignals(
  * @throws ScraperIntelligenceError if query fails
  */
 export async function getExtractedSignals(
-  organizationId: string,
   recordId: string
 ): Promise<ExtractedSignal[]> {
   try {
     // Check cache
-    const cacheKey = `signals:${organizationId}:${recordId}`;
+    const cacheKey = `signals:${DEFAULT_ORG_ID}:${recordId}`;
     const cached = signalsCache.get(cacheKey);
     if (cached) {
-      logger.debug('Signals cache hit', { organizationId, recordId });
+      logger.debug('Signals cache hit', { organizationId: DEFAULT_ORG_ID, recordId });
       return cached;
     }
 
     // Fetch from Firestore
     const doc = await db
       .collection(EXTRACTED_SIGNALS_COLLECTION)
-      .doc(`${organizationId}_${recordId}`)
+      .doc(`${DEFAULT_ORG_ID}_${recordId}`)
       .get();
 
     if (!doc.exists) {
@@ -519,7 +511,7 @@ export async function getExtractedSignals(
     signalsCache.set(cacheKey, signals);
 
     logger.info('Extracted signals fetched', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       recordId,
       signalCount: signals.length,
     });
@@ -527,7 +519,7 @@ export async function getExtractedSignals(
     return signals;
   } catch (error) {
     return handleFirestoreError(error, 'getExtractedSignals', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       recordId,
     });
   }
@@ -541,7 +533,6 @@ export async function getExtractedSignals(
  * @returns Array of records with signals
  */
 export async function querySignalsByPlatform(
-  organizationId: string,
   platform: ScrapingPlatform,
   limit: number = 100
 ): Promise<Array<{ recordId: string; signals: ExtractedSignal[] }>> {
@@ -571,7 +562,7 @@ export async function querySignalsByPlatform(
     }
 
     logger.info('Queried signals by platform', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       platform,
       resultCount: results.length,
     });
@@ -579,7 +570,7 @@ export async function querySignalsByPlatform(
     return results;
   } catch (error) {
     return handleFirestoreError(error, 'querySignalsByPlatform', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       platform,
     });
   }
@@ -587,28 +578,26 @@ export async function querySignalsByPlatform(
 
 /**
  * Delete signals for a record
- * 
- * @param organizationId - Organization ID
+ *
  * @param recordId - Lead or company ID
  * @throws ScraperIntelligenceError if delete fails
  */
 export async function deleteExtractedSignals(
-  organizationId: string,
   recordId: string
 ): Promise<void> {
   try {
     await db
       .collection(EXTRACTED_SIGNALS_COLLECTION)
-      .doc(`${organizationId}_${recordId}`)
+      .doc(`${DEFAULT_ORG_ID}_${recordId}`)
       .delete();
 
     // Invalidate cache
-    signalsCache.invalidatePattern(`signals:${organizationId}:${recordId}`);
+    signalsCache.invalidatePattern(`signals:${DEFAULT_ORG_ID}:${recordId}`);
 
-    logger.info('Extracted signals deleted', { organizationId, recordId });
+    logger.info('Extracted signals deleted', { organizationId: DEFAULT_ORG_ID, recordId });
   } catch (error) {
     return handleFirestoreError(error, 'deleteExtractedSignals', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       recordId,
     });
   }
@@ -630,7 +619,6 @@ export async function deleteExtractedSignals(
  * @returns Distillation result with storage info
  */
 export async function processAndStoreScrape(params: {
-  organizationId: string;
   workspaceId?: string;
   industryId: string;
   recordId: string;
@@ -652,22 +640,22 @@ export async function processAndStoreScrape(params: {
   const startTime = Date.now();
 
   try {
-    const { organizationId, industryId, recordId, workspaceId, url, rawHtml, cleanedContent, metadata, platform } = params;
+    const { industryId, recordId, workspaceId, url, rawHtml, cleanedContent, metadata, platform } = params;
 
     // Step 1: Get research intelligence
-    const research = await getResearchIntelligence(organizationId, industryId);
+    const research = await getResearchIntelligence(industryId);
     if (!research) {
       throw new ScraperIntelligenceError(
         `Research intelligence not found for industry: ${industryId}`,
         'RESEARCH_NOT_FOUND',
         404,
-        { organizationId, industryId }
+        { organizationId: DEFAULT_ORG_ID, industryId }
       );
     }
 
     // Step 2: Distill scrape
     const distillResult = await distillScrape({
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       url,
       rawHtml,
@@ -687,11 +675,11 @@ export async function processAndStoreScrape(params: {
 
     // Step 4: Save signals to permanent storage
     if (distillResult.signals.length > 0) {
-      await saveExtractedSignals(organizationId, recordId, distillResult.signals);
+      await saveExtractedSignals(recordId, distillResult.signals);
     }
 
     logger.info('Scrape processed and stored', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       recordId,
       url,
       signalsDetected: distillResult.signals.length,
@@ -707,7 +695,7 @@ export async function processAndStoreScrape(params: {
     };
   } catch (error) {
     return handleFirestoreError(error, 'processAndStoreScrape', {
-      organizationId: params.organizationId,
+      organizationId: DEFAULT_ORG_ID,
       url: params.url,
     });
   }
@@ -720,7 +708,6 @@ export async function processAndStoreScrape(params: {
  * @returns Analytics object
  */
 export async function getSignalAnalytics(
-  organizationId: string,
   recordId: string
 ): Promise<{
   totalSignals: number;
@@ -731,7 +718,7 @@ export async function getSignalAnalytics(
   newestSignal: Date | null;
 }> {
   try {
-    const signals = await getExtractedSignals(organizationId, recordId);
+    const signals = await getExtractedSignals(recordId);
 
     const totalSignals = signals.length;
 
@@ -794,7 +781,7 @@ export async function getSignalAnalytics(
     };
   } catch (error) {
     return handleFirestoreError(error, 'getSignalAnalytics', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       recordId,
     });
   }
@@ -808,7 +795,6 @@ export async function getSignalAnalytics(
  */
 export async function batchProcessScrapes(
   scrapes: Array<{
-    organizationId: string;
     workspaceId?: string;
     industryId: string;
     recordId: string;
@@ -834,7 +820,7 @@ export async function batchProcessScrapes(
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error('Batch processing item failed', err, {
         url: scrape.url,
-        organizationId: scrape.organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       // Continue with next item
     }
@@ -878,10 +864,10 @@ export function getCacheStats(): {
 /**
  * Invalidate caches for an organization
  */
-export function invalidateOrganizationCaches(organizationId: string): void {
-  researchCache.invalidatePattern(`research:${organizationId}:`);
-  signalsCache.invalidatePattern(`signals:${organizationId}:`);
-  logger.info('Organization caches invalidated', { organizationId });
+export function invalidateOrganizationCaches(): void {
+  researchCache.invalidatePattern(`research:${DEFAULT_ORG_ID}:`);
+  signalsCache.invalidatePattern(`signals:${DEFAULT_ORG_ID}:`);
+  logger.info('Organization caches invalidated', { organizationId: DEFAULT_ORG_ID });
 }
 
 // ============================================================================

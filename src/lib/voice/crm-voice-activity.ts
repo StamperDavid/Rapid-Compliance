@@ -5,6 +5,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { VoiceCall, SMSMessage, CallStatus, SMSStatus } from './types';
 
 export interface VoiceActivity {
@@ -70,7 +71,6 @@ class CRMVoiceActivityLogger {
    * Log a voice call activity
    */
   async logCall(
-    organizationId: string,
     call: VoiceCall,
     options?: {
       userId?: string;
@@ -89,14 +89,14 @@ class CRMVoiceActivityLogger {
       // Auto-detect associated CRM records if not provided
       let { contactId, leadId, dealId } = options ?? {};
       if (!contactId && !leadId) {
-        const associated = await this.findAssociatedRecords(organizationId, call.from, call.to);
+        const associated = await this.findAssociatedRecords(call.from, call.to);
         contactId = associated.contactId ?? contactId;
         leadId = associated.leadId ?? leadId;
         dealId = associated.dealId ?? dealId;
       }
 
       const activity: Omit<VoiceActivity, 'id'> = {
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         callId: call.callId,
         type: 'call',
         direction: call.direction,
@@ -133,10 +133,10 @@ class CRMVoiceActivityLogger {
       const data = await response.json() as { id: string };
 
       // Update associated records with last contacted timestamp
-      await this.updateLastContacted(organizationId, { contactId, leadId, dealId });
+      await this.updateLastContacted({ contactId, leadId, dealId });
 
       // Trigger workflow if applicable
-      await this.triggerWorkflow(organizationId, 'call.completed', {
+      await this.triggerWorkflow('call.completed', {
         ...activity,
         id: data.id,
       });
@@ -152,7 +152,6 @@ class CRMVoiceActivityLogger {
    * Log an SMS activity
    */
   async logSMS(
-    organizationId: string,
     message: SMSMessage,
     options?: {
       userId?: string;
@@ -165,14 +164,14 @@ class CRMVoiceActivityLogger {
     try {
       let { contactId, leadId, dealId } = options ?? {};
       if (!contactId && !leadId) {
-        const associated = await this.findAssociatedRecords(organizationId, message.from, message.to);
+        const associated = await this.findAssociatedRecords(message.from, message.to);
         contactId = associated.contactId ?? contactId;
         leadId = associated.leadId ?? leadId;
         dealId = associated.dealId ?? dealId;
       }
 
       const activity: Omit<VoiceActivity, 'id'> = {
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         callId: message.messageId,
         type: 'sms',
         direction: message.direction,
@@ -200,9 +199,9 @@ class CRMVoiceActivityLogger {
 
       const data = await response.json() as { id: string };
 
-      await this.updateLastContacted(organizationId, { contactId, leadId, dealId });
+      await this.updateLastContacted({ contactId, leadId, dealId });
 
-      await this.triggerWorkflow(organizationId, 'sms.sent', {
+      await this.triggerWorkflow('sms.sent', {
         ...activity,
         id: data.id,
       });
@@ -218,7 +217,6 @@ class CRMVoiceActivityLogger {
    * Log a voicemail activity
    */
   async logVoicemail(
-    organizationId: string,
     callId: string,
     options: {
       from: string;
@@ -233,13 +231,13 @@ class CRMVoiceActivityLogger {
     try {
       let { contactId, leadId } = options;
       if (!contactId && !leadId) {
-        const associated = await this.findAssociatedRecords(organizationId, options.from, options.to);
+        const associated = await this.findAssociatedRecords(options.from, options.to);
         contactId = associated.contactId ?? contactId;
         leadId = associated.leadId ?? leadId;
       }
 
       const activity: Omit<VoiceActivity, 'id'> = {
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         callId,
         type: 'voicemail',
         direction: 'inbound',
@@ -266,7 +264,7 @@ class CRMVoiceActivityLogger {
 
       const data = await response.json() as { id: string };
 
-      await this.triggerWorkflow(organizationId, 'voicemail.received', {
+      await this.triggerWorkflow('voicemail.received', {
         ...activity,
         id: data.id,
       });
@@ -282,7 +280,6 @@ class CRMVoiceActivityLogger {
    * Update call activity with disposition
    */
   async updateCallDisposition(
-    organizationId: string,
     callId: string,
     disposition: {
       outcome: string;
@@ -297,7 +294,7 @@ class CRMVoiceActivityLogger {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           ...disposition,
         }),
       });
@@ -308,7 +305,7 @@ class CRMVoiceActivityLogger {
 
       // Create follow-up task if next action specified
       if (disposition.nextAction && disposition.nextActionDate) {
-        await this.createFollowUpTask(organizationId, callId, disposition);
+        await this.createFollowUpTask(callId, disposition);
       }
 
       return true;
@@ -355,7 +352,6 @@ class CRMVoiceActivityLogger {
    * Get activity statistics
    */
   async getStats(
-    organizationId: string,
     params?: {
       dateFrom?: Date;
       dateTo?: Date;
@@ -365,7 +361,7 @@ class CRMVoiceActivityLogger {
   ): Promise<ActivityStats> {
     try {
       const queryParams = new URLSearchParams();
-      queryParams.set('organizationId', organizationId);
+      queryParams.set('organizationId', DEFAULT_ORG_ID);
 
       if (params?.dateFrom) {queryParams.set('dateFrom', params.dateFrom.toISOString());}
       if (params?.dateTo) {queryParams.set('dateTo', params.dateTo.toISOString());}
@@ -401,7 +397,6 @@ class CRMVoiceActivityLogger {
    * Find associated CRM records by phone number
    */
   private async findAssociatedRecords(
-    organizationId: string,
     from: string,
     to: string
   ): Promise<{ contactId?: string; leadId?: string; dealId?: string; companyId?: string }> {
@@ -410,7 +405,7 @@ class CRMVoiceActivityLogger {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           phoneNumbers: [from, to],
         }),
       });
@@ -441,7 +436,6 @@ class CRMVoiceActivityLogger {
    * Update last contacted timestamp on associated records
    */
   private async updateLastContacted(
-    organizationId: string,
     records: { contactId?: string; leadId?: string; dealId?: string }
   ): Promise<void> {
     try {
@@ -449,7 +443,7 @@ class CRMVoiceActivityLogger {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           ...records,
           timestamp: new Date().toISOString(),
         }),
@@ -463,7 +457,6 @@ class CRMVoiceActivityLogger {
    * Trigger workflow based on voice activity
    */
   private async triggerWorkflow(
-    organizationId: string,
     event: string,
     data: Record<string, unknown>
   ): Promise<void> {
@@ -472,7 +465,7 @@ class CRMVoiceActivityLogger {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           event,
           data,
           source: 'voice',
@@ -487,7 +480,6 @@ class CRMVoiceActivityLogger {
    * Create follow-up task
    */
   private async createFollowUpTask(
-    organizationId: string,
     callId: string,
     disposition: {
       nextAction?: string;
@@ -500,7 +492,7 @@ class CRMVoiceActivityLogger {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           title: disposition.nextAction,
           description: `Follow-up from call ${callId}. Notes: ${disposition.notes ?? ''}`,
           dueDate: disposition.nextActionDate?.toISOString(),

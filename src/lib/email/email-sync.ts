@@ -8,6 +8,7 @@ import { syncGmailMessages, setupGmailPushNotifications, stopGmailPushNotificati
 import { syncOutlookMessages } from '@/lib/integrations/outlook-sync-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface EmailSyncConfig {
   provider: 'gmail' | 'outlook';
@@ -89,7 +90,6 @@ export async function syncEmails(config: EmailSyncConfig): Promise<SyncResult> {
  */
 async function syncGmailEmails(config: EmailSyncConfig): Promise<SyncResult> {
   const result = await syncGmailMessages(
-    config.organizationId,
     config.accessToken,
     100 // maxResults
   );
@@ -107,7 +107,6 @@ async function syncGmailEmails(config: EmailSyncConfig): Promise<SyncResult> {
  */
 async function syncOutlookEmails(config: EmailSyncConfig): Promise<SyncResult> {
   const result = await syncOutlookMessages(
-    config.organizationId,
     config.accessToken,
     100 // maxResults
   );
@@ -252,22 +251,22 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
 /**
  * Stop email sync and remove webhooks
  */
-export async function stopEmailSync(organizationId: string, provider: 'gmail' | 'outlook'): Promise<void> {
-  logger.info('Stopping email sync', { 
-    route: '/email/sync/stop', 
+export async function stopEmailSync(provider: 'gmail' | 'outlook'): Promise<void> {
+  logger.info('Stopping email sync', {
+    route: '/email/sync/stop',
     provider,
-    organizationId 
+    organizationId: DEFAULT_ORG_ID
   });
 
   try {
     // Get sync configuration
     const syncConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
       `${provider}-sync-config`
     );
 
     if (!syncConfig) {
-      logger.warn('No sync config found', { organizationId, provider });
+      logger.warn('No sync config found', { organizationId: DEFAULT_ORG_ID, provider });
       return;
     }
 
@@ -281,16 +280,16 @@ export async function stopEmailSync(organizationId: string, provider: 'gmail' | 
     // Stop push notifications
     if (provider === 'gmail') {
       await stopGmailPushNotifications(typedSyncConfig.accessToken);
-      logger.info('Gmail push notifications stopped', { organizationId });
+      logger.info('Gmail push notifications stopped', { organizationId: DEFAULT_ORG_ID });
     } else if (provider === 'outlook') {
       // TODO: Implement Outlook webhook removal
       // await stopOutlookWebhook(typedSyncConfig.accessToken);
-      logger.info('Outlook webhooks would be stopped here', { organizationId });
+      logger.info('Outlook webhooks would be stopped here', { organizationId: DEFAULT_ORG_ID });
     }
 
     // Update sync configuration
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
       `${provider}-sync-config`,
       {
         isActive: false,
@@ -321,17 +320,17 @@ export interface SyncStatus {
   lastError?: string;
 }
 
-export async function getSyncStatus(organizationId: string, provider: 'gmail' | 'outlook'): Promise<SyncStatus> {
+export async function getSyncStatus(provider: 'gmail' | 'outlook'): Promise<SyncStatus> {
   try {
     // Get sync configuration
     const syncConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
       `${provider}-sync-config`
     );
 
     // Get last sync result
     const lastSyncResult = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
       `${provider}-sync`
     );
 
@@ -368,7 +367,7 @@ export async function getSyncStatus(organizationId: string, provider: 'gmail' | 
     };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to get sync status', err, { organizationId, provider });
+    logger.error('Failed to get sync status', err, { organizationId: DEFAULT_ORG_ID, provider });
     return {
       isActive: false,
       syncedCount: 0,

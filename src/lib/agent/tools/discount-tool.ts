@@ -135,7 +135,6 @@ Use this when closing a deal or offering a promotional discount.`,
  * Process function calls from AI agents
  */
 export class DiscountToolHandler {
-  private organizationId: string;
   private agentId: string;
   private conversationId: string;
   private permissions: DiscountToolPermissions;
@@ -151,12 +150,10 @@ export class DiscountToolHandler {
    * stored configuration, not from runtime/user input.
    */
   constructor(
-    organizationId: string,
     agentId: string,
     conversationId: string,
     permissions: DiscountToolPermissions = { canNegotiate: false }
   ) {
-    this.organizationId = organizationId;
     this.agentId = agentId;
     this.conversationId = conversationId;
     this.permissions = permissions;
@@ -180,7 +177,6 @@ export class DiscountToolHandler {
     try {
       // SECURITY: Pass agent permissions to filter coupons by category
       const discounts = await CouponService.getAuthorizedDiscounts(
-        this.organizationId,
         {
           canNegotiate: this.permissions.canNegotiate,
           isInternalAdmin: this.permissions.isInternalAdmin,
@@ -227,7 +223,6 @@ export class DiscountToolHandler {
     try {
       const result = await CouponService.validateMerchantCoupon(
         args.coupon_code,
-        this.organizationId,
         args.purchase_amount ?? 0,
         args.product_ids,
         undefined,
@@ -312,7 +307,6 @@ export class DiscountToolHandler {
 
       // Get authorization limits (respecting permissions)
       const authorization = await CouponService.getAuthorizedDiscounts(
-        this.organizationId,
         {
           canNegotiate: this.permissions.canNegotiate,
           isInternalAdmin: this.permissions.isInternalAdmin,
@@ -323,7 +317,6 @@ export class DiscountToolHandler {
       if (args.discount_type === 'coupon' && args.coupon_code) {
         const validation = await CouponService.validateMerchantCoupon(
           args.coupon_code,
-          this.organizationId,
           args.customer_context?.cart_value ?? 0,
           undefined,
           args.customer_context?.customer_id,
@@ -369,7 +362,6 @@ export class DiscountToolHandler {
       if (requiresApproval) {
         // Create approval request
         const request = await CouponService.requestAIDiscount(
-          this.organizationId,
           this.agentId,
           this.conversationId,
           discountPercentage,

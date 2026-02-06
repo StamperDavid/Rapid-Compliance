@@ -38,11 +38,9 @@ export class TwilioProvider implements VoiceProvider {
 
   private client: Twilio | null = null;
   private config: VoiceProviderConfig;
-  private organizationId: string;
 
-  constructor(config: VoiceProviderConfig, organizationId: string) {
+  constructor(config: VoiceProviderConfig) {
     this.config = config;
-    this.organizationId = organizationId;
   }
 
   /**

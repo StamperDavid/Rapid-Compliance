@@ -5,6 +5,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface Relationship {
   id: string;
@@ -74,7 +75,6 @@ export interface BuyingCommitteeAnalysis {
  * Create a relationship
  */
 export async function createRelationship(
-  organizationId: string,
   workspaceId: string,
   data: Omit<Relationship, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>
 ): Promise<Relationship> {
@@ -85,14 +85,14 @@ export async function createRelationship(
     const relationship: Relationship = {
       ...data,
       id: relationshipId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       createdAt: now,
       updatedAt: now,
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/workspaces/${workspaceId}/relationships`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/relationships`,
       relationshipId,
       relationship,
       false
@@ -114,14 +114,13 @@ export async function createRelationship(
  * Get relationships for an entity
  */
 export async function getEntityRelationships(
-  organizationId: string,
   workspaceId: string,
   entityType: string,
   entityId: string
 ): Promise<Relationship[]> {
   try {
     const allRels = await FirestoreService.getAll<Relationship>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/relationships`
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/relationships`
     );
 
     const filtered = allRels.filter(
@@ -141,23 +140,22 @@ export async function getEntityRelationships(
  * Get stakeholder map for a deal
  */
 export async function getDealStakeholderMap(
-  organizationId: string,
   workspaceId: string,
   dealId: string
 ): Promise<StakeholderMap> {
   try {
     // Get all stakeholder relationships for this deal
-    const allRels = await getEntityRelationships(organizationId, workspaceId, 'deal', dealId);
+    const allRels = await getEntityRelationships(workspaceId, 'deal', dealId);
     const stakeholderRels = allRels.filter(r => r.relationshipType === 'stakeholder');
 
     // Get activity stats for each stakeholder
     const { getActivityStats } = await import('./activity-service');
-    
+
     const stakeholders: Stakeholder[] = [];
-    
+
     for (const rel of stakeholderRels) {
       const contactId = rel.fromEntityId;
-      const activityStats = await getActivityStats(organizationId, workspaceId, 'contact', contactId);
+      const activityStats = await getActivityStats(workspaceId, 'contact', contactId);
       
       stakeholders.push({
         contactId,
@@ -173,7 +171,7 @@ export async function getDealStakeholderMap(
     }
 
     // Build org chart
-    const orgChart = await buildOrgChart(organizationId, workspaceId, stakeholders);
+    const orgChart = await buildOrgChart(workspaceId, stakeholders);
 
     // Analyze buying committee
     const buyingCommittee = analyzeBuyingCommittee(stakeholders);
@@ -194,16 +192,14 @@ export async function getDealStakeholderMap(
  * Build org chart from stakeholders
  */
 async function buildOrgChart(
-  organizationId: string,
   workspaceId: string,
   stakeholders: Stakeholder[]
 ): Promise<OrgChartNode[]> {
   // Get reporting relationships
   const nodes: OrgChartNode[] = [];
-  
+
   for (const stakeholder of stakeholders) {
     const relationships = await getEntityRelationships(
-      organizationId,
       workspaceId,
       'contact',
       stakeholder.contactId

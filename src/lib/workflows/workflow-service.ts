@@ -7,6 +7,7 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type { Workflow } from '@/types/workflow';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Helper to extract error message from unknown error
@@ -48,7 +49,6 @@ export interface WorkflowExecution {
  * Get workflows with pagination and filtering
  */
 export async function getWorkflows(
-  organizationId: string,
   workspaceId: string = 'default',
   filters?: WorkflowFilters,
   options?: PaginationOptions
@@ -69,14 +69,14 @@ export async function getWorkflows(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Workflow>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/workflows`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
     );
 
     logger.info('Workflows retrieved', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       count: result.data.length,
       filterStatus: filters?.status,
       filterTriggerType: filters?.triggerType,
@@ -85,7 +85,7 @@ export async function getWorkflows(
     return result;
   } catch (error: unknown) {
     logger.error('Failed to get workflows', error instanceof Error ? error : undefined, {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       filterStatus: filters?.status,
       filterTriggerType: filters?.triggerType,
     });
@@ -97,25 +97,24 @@ export async function getWorkflows(
  * Get a single workflow
  */
 export async function getWorkflow(
-  organizationId: string,
   workflowId: string,
   workspaceId: string = 'default'
 ): Promise<Workflow | null> {
   try {
     const workflow = await FirestoreService.get<Workflow>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/workflows`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
       workflowId
     );
 
     if (!workflow) {
-      logger.warn('Workflow not found', { organizationId, workflowId });
+      logger.warn('Workflow not found', { organizationId: DEFAULT_ORG_ID, workflowId });
       return null;
     }
 
-    logger.info('Workflow retrieved', { organizationId, workflowId });
+    logger.info('Workflow retrieved', { organizationId: DEFAULT_ORG_ID, workflowId });
     return workflow;
   } catch (error: unknown) {
-    logger.error('Failed to get workflow', error instanceof Error ? error : undefined, { organizationId, workflowId });
+    logger.error('Failed to get workflow', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
     throw new Error(`Failed to retrieve workflow: ${getErrorMessage(error)}`);
   }
 }
@@ -124,7 +123,6 @@ export async function getWorkflow(
  * Create a new workflow
  */
 export async function createWorkflow(
-  organizationId: string,
   data: Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>,
   createdBy: string,
   workspaceId: string = 'default'
@@ -150,14 +148,14 @@ export async function createWorkflow(
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/workspaces/${workspaceId}/workflows`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
       workflowId,
       workflow,
       false
     );
 
     logger.info('Workflow created', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
       name: workflow.name,
       triggerType: workflow.trigger?.type,
@@ -166,7 +164,7 @@ export async function createWorkflow(
     return workflow;
   } catch (error: unknown) {
     logger.error('Failed to create workflow', error instanceof Error ? error : undefined, {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowName: data.name,
       triggerType: data.trigger?.type,
     });
@@ -178,7 +176,6 @@ export async function createWorkflow(
  * Update workflow
  */
 export async function updateWorkflow(
-  organizationId: string,
   workflowId: string,
   updates: Partial<Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'stats'>>,
   workspaceId: string = 'default'
@@ -190,25 +187,25 @@ export async function updateWorkflow(
     };
 
     await FirestoreService.update(
-      `organizations/${organizationId}/workspaces/${workspaceId}/workflows`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
       workflowId,
       updatedData
     );
 
     logger.info('Workflow updated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
       updatedFields: Object.keys(updates),
     });
 
-    const workflow = await getWorkflow(organizationId, workflowId, workspaceId);
+    const workflow = await getWorkflow(workflowId, workspaceId);
     if (!workflow) {
       throw new Error('Workflow not found after update');
     }
 
     return workflow;
   } catch (error: unknown) {
-    logger.error('Failed to update workflow', error instanceof Error ? error : undefined, { organizationId, workflowId });
+    logger.error('Failed to update workflow', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
     throw new Error(`Failed to update workflow: ${getErrorMessage(error)}`);
   }
 }
@@ -217,19 +214,18 @@ export async function updateWorkflow(
  * Delete workflow
  */
 export async function deleteWorkflow(
-  organizationId: string,
   workflowId: string,
   workspaceId: string = 'default'
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${organizationId}/workspaces/${workspaceId}/workflows`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
       workflowId
     );
 
-    logger.info('Workflow deleted', { organizationId, workflowId });
+    logger.info('Workflow deleted', { organizationId: DEFAULT_ORG_ID, workflowId });
   } catch (error: unknown) {
-    logger.error('Failed to delete workflow', error instanceof Error ? error : undefined, { organizationId, workflowId });
+    logger.error('Failed to delete workflow', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
     throw new Error(`Failed to delete workflow: ${getErrorMessage(error)}`);
   }
 }
@@ -238,23 +234,22 @@ export async function deleteWorkflow(
  * Activate/pause workflow
  */
 export async function setWorkflowStatus(
-  organizationId: string,
   workflowId: string,
   status: 'active' | 'paused',
   workspaceId: string = 'default'
 ): Promise<Workflow> {
   try {
-    const workflow = await updateWorkflow(organizationId, workflowId, { status }, workspaceId);
+    const workflow = await updateWorkflow(workflowId, { status }, workspaceId);
 
     logger.info('Workflow status changed', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
       newStatus: status,
     });
 
     return workflow;
   } catch (error: unknown) {
-    logger.error('Failed to change workflow status', error instanceof Error ? error : undefined, { organizationId, workflowId, status });
+    logger.error('Failed to change workflow status', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId, status });
     throw new Error(`Failed to change workflow status: ${getErrorMessage(error)}`);
   }
 }
@@ -263,24 +258,23 @@ export async function setWorkflowStatus(
  * Execute workflow manually
  */
 export async function executeWorkflow(
-  organizationId: string,
   workflowId: string,
   context: Record<string, unknown>,
   workspaceId: string = 'default'
 ): Promise<{ success: boolean; executionId: string; error?: string }> {
   try {
-    const workflow = await getWorkflow(organizationId, workflowId, workspaceId);
+    const workflow = await getWorkflow(workflowId, workspaceId);
     if (!workflow) {
       throw new Error('Workflow not found');
     }
 
     // Execute via workflow engine
     const { executeWorkflowImpl: runEngine } = await import('./workflow-engine');
-    
+
     const result = await runEngine(workflow, context);
 
     logger.info('Workflow executed', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
       executionId: result.id,
       status: result.status,
@@ -291,7 +285,7 @@ export async function executeWorkflow(
       executionId: result.id,
     };
   } catch (error: unknown) {
-    logger.error('Workflow execution failed', error instanceof Error ? error : undefined, { organizationId, workflowId });
+    logger.error('Workflow execution failed', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
     return {
       success: false,
       executionId: '',
@@ -304,7 +298,6 @@ export async function executeWorkflow(
  * Get workflow execution history
  */
 export async function getWorkflowRuns(
-  organizationId: string,
   workflowId: string,
   workspaceId: string = 'default',
   options?: PaginationOptions
@@ -316,21 +309,21 @@ export async function getWorkflowRuns(
     ];
 
     const result = await FirestoreService.getAllPaginated<WorkflowExecution>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/workflowExecutions`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflowExecutions`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
     );
 
     logger.info('Workflow runs retrieved', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workflowId,
       count: result.data.length,
     });
 
     return result;
   } catch (error: unknown) {
-    logger.error('Failed to get workflow runs', error instanceof Error ? error : undefined, { organizationId, workflowId });
+    logger.error('Failed to get workflow runs', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
     throw new Error(`Failed to retrieve workflow runs: ${getErrorMessage(error)}`);
   }
 }

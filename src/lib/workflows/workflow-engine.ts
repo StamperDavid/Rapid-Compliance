@@ -16,6 +16,7 @@ import type {
 } from '@/types/workflow';
 import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface WorkflowEngineExecution {
   id: string;
@@ -216,10 +217,10 @@ async function executeAction(
 
   switch (action.type) {
     case 'send_email':
-      return executeEmailAction(action, triggerData, organizationId);
+      return executeEmailAction(action, triggerData, DEFAULT_ORG_ID);
 
     case 'send_sms':
-      return executeSMSAction(action, triggerData, organizationId);
+      return executeSMSAction(action, triggerData, DEFAULT_ORG_ID);
 
     case 'create_entity':
     case 'update_entity':
@@ -227,7 +228,7 @@ async function executeAction(
       return executeEntityAction(
         action,
         triggerData,
-        organizationId
+        DEFAULT_ORG_ID
       );
 
     case 'http_request':
@@ -237,16 +238,16 @@ async function executeAction(
       return executeDelayAction(action, triggerData);
 
     case 'conditional_branch':
-      return executeConditionalAction(action, triggerData, workflow, organizationId);
+      return executeConditionalAction(action, triggerData, workflow, DEFAULT_ORG_ID);
 
     case 'send_slack':
-      return executeSlackAction(convertToSlackConfig(action), triggerData, organizationId);
+      return executeSlackAction(convertToSlackConfig(action), triggerData, DEFAULT_ORG_ID);
 
     case 'loop':
-      return executeLoopAction(convertToLoopConfig(action), triggerData, workflow, organizationId);
+      return executeLoopAction(convertToLoopConfig(action), triggerData, workflow, DEFAULT_ORG_ID);
 
     case 'ai_agent':
-      return executeAIAgentAction(convertToAIAgentConfig(action), triggerData, organizationId);
+      return executeAIAgentAction(convertToAIAgentConfig(action), triggerData, DEFAULT_ORG_ID);
 
     case 'cloud_function':
       // Cloud functions are called via HTTP action with the function URL
@@ -268,7 +269,7 @@ async function executeAction(
           { targetField: 'priority', source: 'static', staticValue: taskAction.priority },
         ],
       };
-      return executeEntityAction(taskEntityAction, triggerData, organizationId);
+      return executeEntityAction(taskEntityAction, triggerData, DEFAULT_ORG_ID);
     }
 
     default: {
@@ -426,26 +427,25 @@ function convertToAIAgentConfig(action: AIAgentAction): {
  */
 export async function registerWorkflowTrigger(
   workflow: Workflow,
-  organizationId: string,
   workspaceId: string
 ): Promise<void> {
   const { registerFirestoreTrigger } = await import('./triggers/firestore-trigger');
   const { registerWebhookTrigger } = await import('./triggers/webhook-trigger');
   const { registerScheduleTrigger } = await import('./triggers/schedule-trigger');
-  
+
   switch (workflow.trigger.type) {
     case 'entity.created':
     case 'entity.updated':
     case 'entity.deleted':
-      await registerFirestoreTrigger(workflow, organizationId, workspaceId);
+      await registerFirestoreTrigger(workflow, workspaceId);
       break;
-    
+
     case 'webhook':
-      await registerWebhookTrigger(workflow, organizationId, workspaceId);
+      await registerWebhookTrigger(workflow, workspaceId);
       break;
-    
+
     case 'schedule':
-      await registerScheduleTrigger(workflow, organizationId, workspaceId);
+      await registerScheduleTrigger(workflow, workspaceId);
       break;
     
     case 'manual':
@@ -469,16 +469,15 @@ export async function registerWorkflowTrigger(
  */
 export async function unregisterWorkflowTrigger(
   workflowId: string,
-  organizationId: string,
   workspaceId: string
 ): Promise<void> {
   const { unregisterFirestoreTrigger } = await import('./triggers/firestore-trigger');
   const { unregisterScheduleTrigger } = await import('./triggers/schedule-trigger');
-  
+
   // Unregister all trigger types (safe to call even if not registered)
   await Promise.all([
-    unregisterFirestoreTrigger(workflowId, organizationId, workspaceId).catch(() => {}),
-    unregisterScheduleTrigger(workflowId, organizationId, workspaceId).catch(() => {}),
+    unregisterFirestoreTrigger(workflowId, workspaceId).catch(() => {}),
+    unregisterScheduleTrigger(workflowId, workspaceId).catch(() => {}),
   ]);
 
   logger.info(`Workflow Engine: Unregistered trigger for workflow ${workflowId}`, { file: 'workflow-engine.ts' });
@@ -490,14 +489,13 @@ export async function unregisterWorkflowTrigger(
  */
 export async function getWorkflowExecutions(
   workflowId: string,
-  organizationId: string,
   workspaceId: string,
   limit: number = 50
 ): Promise<WorkflowEngineExecution[]> {
   // Load executions from Firestore
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const executions = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
     [
       where('workflowId', '==', workflowId),
       orderBy('startedAt', 'desc'),

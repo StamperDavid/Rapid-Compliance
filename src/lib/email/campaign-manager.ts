@@ -384,7 +384,6 @@ export async function getCampaignStats(campaignId: string): Promise<CampaignStat
  * List all campaigns
  */
 export async function listCampaigns(
-  organizationId: string,
   pageSize: number = 50,
   _lastDocId?: string
 ): Promise<{ campaigns: EmailCampaign[]; hasMore: boolean }> {

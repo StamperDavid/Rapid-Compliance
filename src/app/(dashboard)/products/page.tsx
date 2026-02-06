@@ -1,6 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Admin Product Management
@@ -23,7 +22,6 @@ export default function ProductManagementPage() {
   // Fetch function with pagination using service layer
   const fetchProducts = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getProducts(
-      DEFAULT_ORG_ID,
       'default',
       undefined,
       { pageSize: 50, lastDoc }
@@ -55,7 +53,7 @@ export default function ProductManagementPage() {
 
     void (async () => {
       try {
-        await deleteProduct(DEFAULT_ORG_ID, deletingId, 'default');
+        await deleteProduct(deletingId, 'default');
         toast.success('Product deleted successfully');
         await refresh(); // Refresh pagination after delete
       } catch (error) {

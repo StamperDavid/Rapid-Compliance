@@ -507,7 +507,6 @@ export async function getEmailTracking(messageId: string): Promise<EmailTracking
  */
 export async function recordEmailOpen(
   messageId: string,
-  organizationId: string,
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> {
@@ -549,7 +548,6 @@ export async function recordEmailOpen(
  */
 export async function recordEmailClick(
   messageId: string,
-  organizationId: string,
   url: string,
   ipAddress?: string,
   userAgent?: string

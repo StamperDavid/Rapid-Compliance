@@ -51,8 +51,7 @@ export const FALLBACK_CHAINS: Record<string, string[]> = {
  * Send request with automatic fallback on failure
  */
 export async function sendWithFallback(
-  request: FallbackRequest,
-  organizationId?: string
+  request: FallbackRequest
 ): Promise<FallbackResponse> {
   const { model, messages, systemInstruction, temperature, maxTokens, topP } = request;
   
@@ -75,7 +74,7 @@ export async function sendWithFallback(
         temperature,
         maxTokens,
         topP,
-      }, organizationId);
+      });
       
       // Success!
       const fallbackOccurred = currentModel !== model;
@@ -124,8 +123,7 @@ export function getRecommendedFallback(model: string): string {
  * Check if a model is available (has API key configured)
  */
 export async function isModelAvailable(
-  model: string,
-  organizationId: string = 'demo'
+  model: string
 ): Promise<boolean> {
   try {
     // Try to send a minimal test request
@@ -133,7 +131,7 @@ export async function isModelAvailable(
       model,
       messages: [{ role: 'user', content: 'test' }],
       maxTokens: 1,
-    }, organizationId);
+    });
 
     return true;
   } catch (_error: unknown) {
@@ -142,11 +140,9 @@ export async function isModelAvailable(
 }
 
 /**
- * Get all available models for an organization
+ * Get all available models
  */
-export async function getAvailableModels(
-  organizationId: string = 'demo'
-): Promise<string[]> {
+export async function getAvailableModels(): Promise<string[]> {
   const allModels = [
     'gpt-4',
     'gpt-4-turbo',
@@ -158,14 +154,14 @@ export async function getAvailableModels(
     'gemini-2.0-flash-exp',
     'gemini-pro',
   ];
-  
+
   const availabilityChecks = await Promise.all(
     allModels.map(async (model) => ({
       model,
-      available: await isModelAvailable(model, organizationId),
+      available: await isModelAvailable(model),
     }))
   );
-  
+
   return availabilityChecks
     .filter(check => check.available)
     .map(check => check.model);
@@ -176,24 +172,23 @@ export async function getAvailableModels(
  * Returns best available model for the use case
  */
 export async function selectBestAvailableModel(
-  preferredModel: string,
-  organizationId: string = 'demo'
+  preferredModel: string
 ): Promise<string> {
   // Check if preferred model is available
-  if (await isModelAvailable(preferredModel, organizationId)) {
+  if (await isModelAvailable(preferredModel)) {
     return preferredModel;
   }
-  
+
   // Try fallback chain
   const fallbackChain = FALLBACK_CHAINS[preferredModel] ?? [];
-  
+
   for (const fallbackModel of fallbackChain) {
-    if (await isModelAvailable(fallbackModel, organizationId)) {
+    if (await isModelAvailable(fallbackModel)) {
       logger.info(`Fallback Using ${fallbackModel} instead of ${preferredModel}`, { file: 'model-fallback-service.ts' });
       return fallbackModel;
     }
   }
-  
+
   // Default to Gemini (no API key required in dev)
   return 'gemini-2.0-flash-exp';
 }
@@ -286,25 +281,24 @@ export const circuitBreaker = new CircuitBreaker();
  * Send with circuit breaker protection
  */
 export async function sendWithCircuitBreaker(
-  request: FallbackRequest,
-  organizationId?: string
+  request: FallbackRequest
 ): Promise<FallbackResponse> {
   const { model } = request;
-  
+
   // Check circuit breaker
   if (circuitBreaker.isOpen(model)) {
     logger.warn(`[CircuitBreaker] Circuit is open for ${model}, using fallback`, { file: 'model-fallback-service.ts' });
-    
+
     // Use fallback directly
     const fallbackModel = getRecommendedFallback(model);
     return sendWithFallback({
       ...request,
       model: fallbackModel,
-    }, organizationId);
+    });
   }
-  
+
   try {
-    const response = await sendWithFallback(request, organizationId);
+    const response = await sendWithFallback(request);
     circuitBreaker.recordSuccess(model);
     return response;
   } catch (error) {

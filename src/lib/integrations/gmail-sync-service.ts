@@ -73,7 +73,6 @@ function getGmailClient(accessToken: string): gmail_v1.Gmail {
  * Sync Gmail messages to CRM
  */
 export async function syncGmailMessages(
-  organizationId: string,
   accessToken: string,
   maxResults = 100
 ): Promise<GmailSyncStatus> {
@@ -85,11 +84,11 @@ export async function syncGmailMessages(
 
     // If we have a history ID, use incremental sync
     if (lastSync?.historyId) {
-      return await incrementalSync(gmail, organizationId, lastSync.historyId);
+      return await incrementalSync(gmail, lastSync.historyId);
     }
 
     // Full sync (first time)
-    return await fullSync(gmail, organizationId, maxResults);
+    return await fullSync(gmail, maxResults);
   } catch (error) {
     logger.error('[Gmail Sync] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'gmail-sync-service.ts' });
     throw error;
@@ -101,7 +100,6 @@ export async function syncGmailMessages(
  */
 async function fullSync(
   gmail: gmail_v1.Gmail,
-  organizationId: string,
   maxResults: number
 ): Promise<GmailSyncStatus> {
   let messagesSynced = 0;
@@ -187,7 +185,6 @@ async function fullSync(
  */
 async function incrementalSync(
   gmail: gmail_v1.Gmail,
-  organizationId: string,
   startHistoryId: string
 ): Promise<GmailSyncStatus> {
   let messagesSynced = 0;

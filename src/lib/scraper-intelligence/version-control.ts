@@ -13,6 +13,7 @@
 import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
 import type { TrainingData, TrainingHistory } from '@/types/scraper-intelligence';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS
@@ -234,8 +235,7 @@ function generateDiffSummary(changes: DiffEntry[]): string {
 export async function compareVersions(
   trainingDataId: string,
   fromVersion: number,
-  toVersion: number,
-  _organizationId: string
+  toVersion: number
 ): Promise<VersionDiff> {
   try {
     // Get history for both versions
@@ -307,13 +307,12 @@ export async function compareVersions(
  */
 export async function createBranch(params: {
   name: string;
-  organizationId: string;
   userId: string;
   description: string;
   parentBranch?: string;
 }): Promise<Branch> {
   try {
-    const { name, organizationId, userId, description, parentBranch } = params;
+    const { name, userId, description, parentBranch } = params;
 
     // Validate branch name
     if (!name || !/^[a-z0-9-_]+$/.test(name)) {
@@ -362,7 +361,7 @@ export async function createBranch(params: {
     const branch: Branch = {
       id: branchId,
       name,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       description,
       createdAt: now,
       createdBy: userId,
@@ -379,7 +378,7 @@ export async function createBranch(params: {
     logger.info('Created training data branch', {
       branchId,
       name,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       snapshotSize: Object.keys(snapshot).length,
     });
 
@@ -392,7 +391,7 @@ export async function createBranch(params: {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to create branch', err, {
       name: params.name,
-      organizationId: params.organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = err.message;
@@ -416,7 +415,6 @@ export async function createBranch(params: {
  */
 export async function mergeBranch(
   branchId: string,
-  organizationId: string,
   _userId: string
 ): Promise<MergeResult> {
   try {
@@ -436,7 +434,7 @@ export async function mergeBranch(
 
     const branch = branchDoc.data() as Branch;
 
-    if (branch.organizationId !== organizationId) {
+    if (branch.organizationId !== DEFAULT_ORG_ID) {
       throw new VersionControlError(
         'Unauthorized: branch belongs to different organization',
         'UNAUTHORIZED',
@@ -520,14 +518,14 @@ export async function mergeBranch(
         branchId,
         branchName: branch.name,
         mergedCount,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
     } else {
       logger.warn('Branch merge has conflicts', {
         branchId,
         branchName: branch.name,
         conflictCount: conflicts.length,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
     }
 
@@ -545,7 +543,7 @@ export async function mergeBranch(
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to merge branch', err, {
       branchId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = err.message;
@@ -564,7 +562,6 @@ export async function mergeBranch(
  * @returns Array of branches
  */
 export async function listBranches(
-  organizationId: string,
   activeOnly: boolean = true
 ): Promise<Branch[]> {
   try {
@@ -585,7 +582,7 @@ export async function listBranches(
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to list branches', err, {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     throw new VersionControlError(
@@ -609,7 +606,6 @@ export async function listBranches(
  * @returns Generated changelog
  */
 export async function generateChangelog(
-  organizationId: string,
   sinceDate?: Date
 ): Promise<Changelog> {
   try {
@@ -654,12 +650,12 @@ export async function generateChangelog(
     return {
       entries: sortedEntries,
       generatedAt: new Date(),
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to generate changelog', err, {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     throw new VersionControlError(
@@ -777,8 +773,7 @@ export function validateIntegrity(trainingData: TrainingData): {
  * @returns Recovered data or null
  */
 export async function recoverFromHistory(
-  trainingDataId: string,
-  organizationId: string
+  trainingDataId: string
 ): Promise<TrainingData | null> {
   try {
     // Get all history entries for this training data
@@ -800,7 +795,7 @@ export async function recoverFromHistory(
           logger.info('Recovered training data from history', {
             trainingDataId,
             version: historyData.version,
-            organizationId,
+            organizationId: DEFAULT_ORG_ID,
           });
 
           return historyData;
@@ -813,7 +808,7 @@ export async function recoverFromHistory(
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to recover from history', err, {
       trainingDataId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
 
     return null;

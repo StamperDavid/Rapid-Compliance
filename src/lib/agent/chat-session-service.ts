@@ -6,6 +6,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { limit as firestoreLimit, orderBy, where, type QueryConstraint } from 'firebase/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface ChatSession {
   id: string;
@@ -68,14 +69,13 @@ export interface SessionMetrics {
  */
 export class ChatSessionService {
   /**
-   * Get active chat sessions for organization
+   * Get active chat sessions
    */
   static async getActiveSessions(
-    organizationId: string,
     limitCount: number = 50
   ): Promise<ChatSession[]> {
     const sessions = await FirestoreService.getAll<ChatSession>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       [
         where('status', 'in', ['active', 'needs_help']),
         orderBy('lastMessageAt', 'desc'),
@@ -90,7 +90,6 @@ export class ChatSessionService {
    * Get session history (completed sessions)
    */
   static async getSessionHistory(
-    organizationId: string,
     limitCount: number = 100,
     filters?: QueryConstraint[]
   ): Promise<ChatSession[]> {
@@ -102,7 +101,7 @@ export class ChatSessionService {
     ];
 
     const sessions = await FirestoreService.getAll<ChatSession>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       constraints
     );
 
@@ -113,11 +112,10 @@ export class ChatSessionService {
    * Subscribe to active sessions (real-time)
    */
   static subscribeToActiveSessions(
-    organizationId: string,
     callback: (sessions: ChatSession[]) => void
   ): () => void {
     return FirestoreService.subscribeToCollection<ChatSession>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       [
         where('status', 'in', ['active', 'needs_help']),
         orderBy('lastMessageAt', 'desc'),
@@ -131,11 +129,10 @@ export class ChatSessionService {
    * Get messages for a specific session
    */
   static async getSessionMessages(
-    organizationId: string,
     sessionId: string
   ): Promise<ChatMessage[]> {
     const messages = await FirestoreService.getAll<ChatMessage>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions/${sessionId}/messages`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions/${sessionId}/messages`,
       [orderBy('timestamp', 'asc')]
     );
 
@@ -146,12 +143,11 @@ export class ChatSessionService {
    * Subscribe to session messages (real-time)
    */
   static subscribeToSessionMessages(
-    organizationId: string,
     sessionId: string,
     callback: (messages: ChatMessage[]) => void
   ): () => void {
     return FirestoreService.subscribeToCollection<ChatMessage>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions/${sessionId}/messages`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions/${sessionId}/messages`,
       [orderBy('timestamp', 'asc')],
       callback
     );
@@ -161,13 +157,12 @@ export class ChatSessionService {
    * Request agent takeover
    */
   static async requestTakeover(
-    organizationId: string,
     sessionId: string,
     agentId: string,
     reason?: string
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       sessionId,
       {
         status: 'needs_help',
@@ -181,7 +176,7 @@ export class ChatSessionService {
     );
 
     // Create system message
-    await this.addMessage(organizationId, sessionId, {
+    await this.addMessage(sessionId, {
       role: 'system',
       content: `Agent ${agentId} has taken over this conversation.`,
       metadata: {
@@ -194,12 +189,11 @@ export class ChatSessionService {
    * Complete session
    */
   static async completeSession(
-    organizationId: string,
     sessionId: string,
     outcome?: 'sale' | 'no_sale' | 'abandoned' | 'human_requested'
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       sessionId,
       {
         status: 'completed',
@@ -213,14 +207,13 @@ export class ChatSessionService {
    * Add message to session
    */
   static async addMessage(
-    organizationId: string,
     sessionId: string,
     message: Omit<ChatMessage, 'id' | 'sessionId' | 'timestamp'>
   ): Promise<void> {
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions/${sessionId}/messages`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions/${sessionId}/messages`,
       messageId,
       {
         ...message,
@@ -232,12 +225,12 @@ export class ChatSessionService {
 
     // Update session's last message
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       sessionId,
       {
         lastMessage: message.content.substring(0, 200),
         lastMessageAt: new Date().toISOString(),
-        messageCount: (await this.getSessionMessages(organizationId, sessionId)).length,
+        messageCount: (await this.getSessionMessages(sessionId)).length,
       }
     );
   }
@@ -246,12 +239,11 @@ export class ChatSessionService {
    * Update session sentiment
    */
   static async updateSentiment(
-    organizationId: string,
     sessionId: string,
     sentiment: 'positive' | 'neutral' | 'frustrated'
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       sessionId,
       { sentiment }
     );
@@ -260,9 +252,9 @@ export class ChatSessionService {
   /**
    * Get session metrics
    */
-  static async getMetrics(organizationId: string): Promise<SessionMetrics> {
+  static async getMetrics(): Promise<SessionMetrics> {
     const allSessions = await FirestoreService.getAll<ChatSession>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       []
     );
 
@@ -310,12 +302,11 @@ export class ChatSessionService {
    * Flag session for training
    */
   static async flagForTraining(
-    organizationId: string,
     sessionId: string,
     issue: string
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       sessionId,
       {
         flaggedForTraining: true,
@@ -329,7 +320,6 @@ export class ChatSessionService {
    * Create new session (called when customer starts chat)
    */
   static async createSession(
-    organizationId: string,
     customerId: string,
     customerName: string,
     customerEmail: string,
@@ -338,10 +328,10 @@ export class ChatSessionService {
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/chatSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/chatSessions`,
       sessionId,
       {
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         customerId,
         customerName,
         customerEmail,
@@ -359,5 +349,4 @@ export class ChatSessionService {
     return sessionId;
   }
 }
-
 

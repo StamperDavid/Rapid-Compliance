@@ -34,11 +34,9 @@ const rateLimitCache = new Map<string, TwitterRateLimitInfo>();
  */
 export class TwitterService {
   private config: TwitterConfig;
-  private organizationId: string;
 
-  constructor(config: TwitterConfig, organizationId: string) {
+  constructor(config: TwitterConfig) {
     this.config = config;
-    this.organizationId = organizationId;
   }
 
   /**
@@ -61,7 +59,7 @@ export class TwitterService {
   ): Promise<{ data: T | null; error?: string; rateLimitInfo?: TwitterRateLimitInfo }> {
     if (!this.isConfigured()) {
       logger.warn('Twitter: Service not configured', {
-        organizationId: this.organizationId,
+        organizationId: 'rapid-compliance-root',
       });
       return {
         data: null,
@@ -102,7 +100,7 @@ export class TwitterService {
       logger.debug('Twitter: Making API request', {
         endpoint,
         method: options.method ?? 'GET',
-        organizationId: this.organizationId,
+        organizationId: 'rapid-compliance-root',
       });
 
       const response = await fetch(url, {
@@ -136,7 +134,7 @@ export class TwitterService {
         logger.error('Twitter: API request failed', new Error(errorMessage), {
           endpoint,
           status: response.status,
-          organizationId: this.organizationId,
+          organizationId: 'rapid-compliance-root',
         });
 
         // Handle specific error codes
@@ -173,7 +171,7 @@ export class TwitterService {
     } catch (error) {
       logger.error('Twitter: Request failed', error as Error, {
         endpoint,
-        organizationId: this.organizationId,
+        organizationId: 'rapid-compliance-root',
       });
       return {
         data: null,
@@ -209,7 +207,7 @@ export class TwitterService {
   async postTweet(request: TwitterPostRequest): Promise<TwitterPostResponse> {
     if (!this.config.accessToken) {
       logger.warn('Twitter: Cannot post tweet - OAuth 2.0 access token required', {
-        organizationId: this.organizationId,
+        organizationId: 'rapid-compliance-root',
       });
       return {
         success: false,
@@ -261,7 +259,7 @@ export class TwitterService {
       textLength: request.text.length,
       hasMedia: !!(request.mediaIds && request.mediaIds.length > 0),
       hasPoll: !!(request.pollOptions && request.pollOptions.length > 0),
-      organizationId: this.organizationId,
+      organizationId: 'rapid-compliance-root',
     });
 
     const result = await this.makeRequest<{ data: { id: string; text: string } }>(
@@ -284,7 +282,7 @@ export class TwitterService {
 
     logger.info('Twitter: Tweet posted successfully', {
       tweetId: result.data.data.id,
-      organizationId: this.organizationId,
+      organizationId: 'rapid-compliance-root',
     });
 
     return {
@@ -341,13 +339,13 @@ export class TwitterService {
           quoteTweetId: request.quoteTweetId,
         },
         scheduledTime: request.scheduledTime,
-        organizationId: this.organizationId,
+        organizationId: 'rapid-compliance-root',
       });
 
       logger.info('Twitter: Tweet scheduled', {
         scheduledId,
         scheduledTime: request.scheduledTime.toISOString(),
-        organizationId: this.organizationId,
+        organizationId: 'rapid-compliance-root',
       });
 
       return {
@@ -356,7 +354,7 @@ export class TwitterService {
       };
     } catch (error) {
       logger.error('Twitter: Failed to schedule tweet', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: 'rapid-compliance-root',
       });
       return {
         success: false,
@@ -567,7 +565,7 @@ export class TwitterService {
 
     logger.info('Twitter: Tweet deleted', {
       tweetId,
-      organizationId: this.organizationId,
+      organizationId: 'rapid-compliance-root',
     });
 
     return {
@@ -626,7 +624,7 @@ export class TwitterService {
         const errorText = await response.text();
         logger.error('Twitter: Token refresh failed', new Error(errorText), {
           status: response.status,
-          organizationId: this.organizationId,
+          organizationId: 'rapid-compliance-root',
         });
         return {
           success: false,
@@ -643,7 +641,7 @@ export class TwitterService {
       }
 
       logger.info('Twitter: Access token refreshed', {
-        organizationId: this.organizationId,
+        organizationId: 'rapid-compliance-root',
         expiresIn: data.expires_in,
       });
 
@@ -655,7 +653,7 @@ export class TwitterService {
       };
     } catch (error) {
       logger.error('Twitter: Token refresh error', error as Error, {
-        organizationId: this.organizationId,
+        organizationId: 'rapid-compliance-root',
       });
       return {
         success: false,
@@ -668,9 +666,7 @@ export class TwitterService {
 /**
  * Create a Twitter service instance from organization's API keys
  */
-export async function createTwitterService(
-  organizationId: string
-): Promise<TwitterService | null> {
+export async function createTwitterService(): Promise<TwitterService | null> {
   try {
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
 
@@ -679,7 +675,7 @@ export async function createTwitterService(
 
     if (!apiKeys) {
       logger.debug('Twitter: No API keys configured for organization', {
-        organizationId,
+        organizationId: 'rapid-compliance-root',
       });
       return null;
     }
@@ -691,7 +687,7 @@ export async function createTwitterService(
 
     if (!twitterConfig) {
       logger.debug('Twitter: Twitter integration not configured', {
-        organizationId,
+        organizationId: 'rapid-compliance-root',
       });
       return null;
     }
@@ -707,22 +703,22 @@ export async function createTwitterService(
     // Validate at least one auth method is configured
     if (!config.bearerToken && !config.accessToken && !config.clientId) {
       logger.debug('Twitter: No valid authentication credentials found', {
-        organizationId,
+        organizationId: 'rapid-compliance-root',
       });
       return null;
     }
 
     logger.info('Twitter: Service created successfully', {
-      organizationId,
+      organizationId: 'rapid-compliance-root',
       hasBearerToken: !!config.bearerToken,
       hasAccessToken: !!config.accessToken,
       hasClientId: !!config.clientId,
     });
 
-    return new TwitterService(config, organizationId);
+    return new TwitterService(config);
   } catch (error) {
     logger.error('Twitter: Failed to create service', error as Error, {
-      organizationId,
+      organizationId: 'rapid-compliance-root',
     });
     return null;
   }
@@ -732,11 +728,10 @@ export async function createTwitterService(
  * Send a tweet (convenience function)
  */
 export async function postTweet(
-  organizationId: string,
   text: string,
   options: Omit<TwitterPostRequest, 'text'> = {}
 ): Promise<TwitterPostResponse> {
-  const service = await createTwitterService(organizationId);
+  const service = await createTwitterService();
 
   if (!service) {
     return {

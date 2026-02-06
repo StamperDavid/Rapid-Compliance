@@ -7,6 +7,7 @@
 
 import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, increment } from 'firebase/firestore';
 import { COLLECTIONS, getMerchantCouponsCollection } from '@/lib/firebase/collections';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type {
   MerchantCoupon,
   PlatformCoupon,
@@ -304,7 +305,6 @@ export class CouponService {
    */
   static async validateMerchantCoupon(
     code: string,
-    organizationId: string,
     purchaseAmount: number,
     productIds?: string[],
     customerId?: string,
@@ -431,7 +431,6 @@ export class CouponService {
     // Validate first
     const validation = await this.validateMerchantCoupon(
       code,
-      organizationId,
       purchaseAmount,
       productIds,
       customerId,
@@ -504,7 +503,6 @@ export class CouponService {
    * - isInternalAdmin=true: Overrides all restrictions, returns everything
    */
   static async getAuthorizedDiscounts(
-    organizationId: string,
     options: {
       canNegotiate?: boolean;
       isInternalAdmin?: boolean;
@@ -513,7 +511,7 @@ export class CouponService {
     const { canNegotiate = false, isInternalAdmin = false } = options;
 
     // Check if org is internal admin (override flag)
-    const orgIsInternalAdmin = isInternalAdmin || await this.isInternalAdminOrg(organizationId);
+    const orgIsInternalAdmin = isInternalAdmin || await this.isInternalAdminOrg(DEFAULT_ORG_ID);
 
     // Get all AI-authorized coupons for this organization
     const couponsPath = getMerchantCouponsCollection();
@@ -558,7 +556,7 @@ export class CouponService {
     });
 
     // Get organization's AI discount settings
-    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, organizationId);
+    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
     const orgSnap = await getDoc(orgRef);
     const orgData = orgSnap.data() ?? {};
 
@@ -577,7 +575,7 @@ export class CouponService {
     const autoOfferPriceObjection = (orgData.ai_auto_offer_price_objection as boolean | undefined) ?? true;
 
     return {
-      organization_id: organizationId,
+      organization_id: DEFAULT_ORG_ID,
       available_coupons: availableCoupons,
       max_ai_discount_percentage: maxAiDiscount,
       require_human_approval_above: humanApprovalThreshold,
@@ -591,7 +589,6 @@ export class CouponService {
    * Request a discount (for AI agents when exceeding their limit)
    */
   static async requestAIDiscount(
-    organizationId: string,
     agentId: string,
     conversationId: string,
     requestedDiscount: number,
@@ -606,12 +603,12 @@ export class CouponService {
     const requestId = `ai_discount_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Check if within auto-approval threshold
-    const authorized = await this.getAuthorizedDiscounts(organizationId);
+    const authorized = await this.getAuthorizedDiscounts();
     const isAutoApproved = requestedDiscount <= authorized.require_human_approval_above;
 
     const request: AIDiscountRequest = {
       id: requestId,
-      organization_id: organizationId,
+      organization_id: DEFAULT_ORG_ID,
       agent_id: agentId,
       conversation_id: conversationId,
       requested_discount: requestedDiscount,
@@ -664,7 +661,7 @@ export class CouponService {
   /**
    * Get all merchant coupons for an organization
    */
-  static async getMerchantCoupons(_organizationId: string): Promise<MerchantCoupon[]> {
+  static async getMerchantCoupons(): Promise<MerchantCoupon[]> {
     const couponPath = getMerchantCouponsCollection();
     const couponsRef = collection(this.db, couponPath);
     const snapshot = await getDocs(couponsRef);
@@ -679,7 +676,6 @@ export class CouponService {
    * Update a merchant coupon
    */
   static async updateMerchantCoupon(
-    organizationId: string,
     couponId: string,
     updates: Partial<MerchantCoupon>
   ): Promise<void> {
@@ -695,8 +691,8 @@ export class CouponService {
   /**
    * Disable a merchant coupon
    */
-  static async disableMerchantCoupon(organizationId: string, couponId: string): Promise<void> {
-    await this.updateMerchantCoupon(organizationId, couponId, { status: 'disabled' });
+  static async disableMerchantCoupon(couponId: string): Promise<void> {
+    await this.updateMerchantCoupon(couponId, { status: 'disabled' });
   }
 
   // ----------------------------------------
@@ -787,7 +783,7 @@ export class CouponService {
     totalDiscountGiven: number;
     topCoupons: { code: string; uses: number; revenue_impact: number }[];
   }> {
-    const coupons = await this.getMerchantCoupons(organizationId);
+    const coupons = await this.getMerchantCoupons();
 
     // Get redemptions
     const redemptionsRef = collection(this.db, COLLECTIONS.COUPON_REDEMPTIONS);

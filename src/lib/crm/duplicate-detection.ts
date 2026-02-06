@@ -6,6 +6,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { Lead } from './lead-service';
 import type { RelatedEntityType } from '@/types/activity';
 
@@ -124,14 +125,13 @@ function levenshteinDistance(str1: string, str2: string): number {
  * Detect duplicates for a lead
  */
 export async function detectLeadDuplicates(
-  organizationId: string,
   workspaceId: string,
   lead: Partial<Lead>
 ): Promise<DuplicateDetectionResult> {
   try {
     // Get all leads in organization
     const existingLeads = await FirestoreService.getAll<Lead>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/entities/leads/records`
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/leads/records`
     );
     const matches: DuplicateMatch[] = [];
 
@@ -246,7 +246,7 @@ export async function detectLeadDuplicates(
     };
 
     logger.info('Duplicate detection completed', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       duplicatesFound: matches.length,
       highestScore: matches[0]?.matchScore,
     });
@@ -255,7 +255,7 @@ export async function detectLeadDuplicates(
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Duplicate detection failed', error instanceof Error ? error : undefined, { organizationId });
+    logger.error('Duplicate detection failed', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID });
     throw new Error(`Duplicate detection failed: ${errorMessage}`);
   }
 }
@@ -264,13 +264,12 @@ export async function detectLeadDuplicates(
  * Detect duplicates for a contact
  */
 export async function detectContactDuplicates(
-  organizationId: string,
   workspaceId: string,
   contact: Partial<Contact>
 ): Promise<DuplicateDetectionResult> {
   try {
     const existingContacts = await FirestoreService.getAll<Contact>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/entities/contacts/records`
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/contacts/records`
     );
     const matches: DuplicateMatch[] = [];
 
@@ -350,13 +349,12 @@ export async function detectContactDuplicates(
  * Detect duplicates for a company
  */
 export async function detectCompanyDuplicates(
-  organizationId: string,
   workspaceId: string,
   company: Partial<Company>
 ): Promise<DuplicateDetectionResult> {
   try {
     const existingCompanies = await FirestoreService.getAll<Company>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/entities/companies/records`
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/companies/records`
     );
     const matches: DuplicateMatch[] = [];
 
@@ -447,14 +445,13 @@ function isUnknownArray(value: unknown): value is unknown[] {
  * Merge two records (keeps newer data, combines arrays)
  */
 export async function mergeRecords(
-  organizationId: string,
   workspaceId: string,
   entityType: RelatedEntityType,
   keepId: string,
   mergeId: string
 ): Promise<CRMRecord> {
   try {
-    const collectionPath = `organizations/${organizationId}/workspaces/${workspaceId}/entities/${entityType}s/records`;
+    const collectionPath = `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/${entityType}s/records`;
 
     // Get both records - use Record<string, unknown> as base type
     const keepRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, keepId);
@@ -497,7 +494,7 @@ export async function mergeRecords(
     await FirestoreService.delete(collectionPath, mergeId);
 
     logger.info('Records merged successfully', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       entityType,
       keepId,
       mergeId,
@@ -507,7 +504,7 @@ export async function mergeRecords(
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Record merge failed', error instanceof Error ? error : undefined);
+    logger.error('Record merge failed', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID });
     throw new Error(`Merge failed: ${errorMessage}`);
   }
 }

@@ -7,6 +7,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, WebhookTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import crypto from 'crypto';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Verify webhook signature
@@ -115,35 +116,34 @@ export function generateWebhookUrl(workflowId: string, baseUrl?: string): string
  */
 export async function registerWebhookTrigger(
   workflow: Workflow,
-  organizationId: string,
   workspaceId: string
 ): Promise<string> {
   const trigger = workflow.trigger as WebhookTrigger;
-  
+
   if (trigger?.type !== 'webhook') {
     throw new Error('Not a webhook trigger');
   }
-  
+
   // Generate webhook URL if not provided
   if (!trigger.webhookUrl) {
     trigger.webhookUrl = generateWebhookUrl(workflow.id);
   }
-  
+
   // Store webhook configuration
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/webhookTriggers`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/webhookTriggers`,
     workflow.id,
     {
       workflowId: workflow.id,
       webhookUrl: trigger.webhookUrl,
       secret: trigger.secret,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       registeredAt: new Date().toISOString(),
     },
     false
   );
-  
+
   return trigger.webhookUrl;
 }
 

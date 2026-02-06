@@ -340,7 +340,6 @@ export async function sendEmailViaGmail(options: {
  */
 export async function syncEmailsToCRM(
   tokens: { access_token: string; refresh_token?: string },
-  organizationId: string,
   userId: string
 ): Promise<{ synced: number; errors: number }> {
   try {
@@ -366,8 +365,9 @@ export async function syncEmailsToCRM(
 
         // Save to CRM
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
           emailId,
           {
             id: emailId,

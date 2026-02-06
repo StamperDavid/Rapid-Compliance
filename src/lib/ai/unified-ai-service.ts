@@ -37,17 +37,16 @@ export interface UnifiedChatRequest {
  * Send chat message using the appropriate provider
  */
 export async function sendUnifiedChatMessage(
-  request: UnifiedChatRequest,
-  organizationId?: string
+  request: UnifiedChatRequest
 ): Promise<UnifiedChatResponse> {
   const { model, messages, systemInstruction, temperature, maxTokens, topP } = request;
   
   // Determine provider from model name
   if (model.startsWith('gpt-') || model.startsWith('ft:gpt-')) {
     // Fine-tuned models start with ft:gpt-
-    return sendOpenAIMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
+    return sendOpenAIMessage(model, messages, systemInstruction, { temperature, maxTokens, topP });
   } else if (model.startsWith('claude-')) {
-    return sendAnthropicMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
+    return sendAnthropicMessage(model, messages, systemInstruction, { temperature, maxTokens, topP });
   } else {
     // Default to Gemini
     return sendGeminiMessage(model, messages, systemInstruction, { temperature, maxTokens, topP });
@@ -60,7 +59,6 @@ export async function sendUnifiedChatMessage(
  */
 export async function sendChatWithABTesting(
   request: UnifiedChatRequest,
-  organizationId: string,
   conversationId: string
 ): Promise<UnifiedChatResponse & {
   isTestGroup: boolean;
@@ -70,14 +68,14 @@ export async function sendChatWithABTesting(
   // Get model for this conversation (may be different due to A/B test)
   const { getModelForConversation } = await import('./learning/ab-testing-service');
 
-  const modelAssignment = await getModelForConversation(organizationId, conversationId);
-  
+  const modelAssignment = await getModelForConversation(conversationId);
+
   // Use the assigned model instead of requested model
   const actualModel = modelAssignment.model;
   const modifiedRequest = { ...request, model: actualModel };
-  
+
   // Send the message
-  const response = await sendUnifiedChatMessage(modifiedRequest, organizationId);
+  const response = await sendUnifiedChatMessage(modifiedRequest);
   
   // If this conversation is part of an A/B test, we'll record the result later
   // when we get feedback (rating, conversion, etc.)
@@ -95,7 +93,6 @@ export async function sendChatWithABTesting(
  * Call this when you get feedback (rating, conversion, etc.)
  */
 export async function recordABTestResult(params: {
-  organizationId: string;
   testId: string;
   isTestGroup: boolean;
   converted?: boolean;
@@ -104,9 +101,8 @@ export async function recordABTestResult(params: {
   tokensUsed: number;
 }): Promise<void> {
   const { recordConversationResult } = await import('./learning/ab-testing-service');
-  
+
   await recordConversationResult({
-    DEFAULT_ORG_ID: params.organizationId,
     testId: params.testId,
     isTestGroup: params.isTestGroup,
     // converted is a BOOLEAN - false is valid (use ?? for booleans)
@@ -121,13 +117,12 @@ export async function recordABTestResult(params: {
  * Stream chat message using the appropriate provider
  */
 export async function* streamUnifiedChatMessage(
-  request: UnifiedChatRequest,
-  organizationId?: string
+  request: UnifiedChatRequest
 ): AsyncGenerator<string, void, unknown> {
   const { model, messages, systemInstruction, temperature, maxTokens, topP } = request;
-  
+
   if (model.startsWith('gpt-')) {
-    const provider = new OpenAIProvider(organizationId);
+    const provider = new OpenAIProvider();
     const chatMessages = convertToProviderFormat(messages, systemInstruction);
 
     yield* provider.chatStream({
@@ -138,7 +133,7 @@ export async function* streamUnifiedChatMessage(
       topP,
     });
   } else if (model.startsWith('claude-')) {
-    const provider = new AnthropicProvider(organizationId);
+    const provider = new AnthropicProvider();
     const chatMessages = convertToProviderFormat(messages, systemInstruction);
 
     yield* provider.chatStream({
@@ -162,10 +157,9 @@ async function sendOpenAIMessage(
   model: string,
   messages: UnifiedChatMessage[],
   systemInstruction?: string,
-  config?: { temperature?: number; maxTokens?: number; topP?: number },
-  organizationId?: string
+  config?: { temperature?: number; maxTokens?: number; topP?: number }
 ): Promise<UnifiedChatResponse> {
-  const provider = new OpenAIProvider(organizationId);
+  const provider = new OpenAIProvider();
 
   const chatMessages = convertToProviderFormat(messages, systemInstruction);
 
@@ -192,10 +186,9 @@ async function sendAnthropicMessage(
   model: string,
   messages: UnifiedChatMessage[],
   systemInstruction?: string,
-  _config?: { temperature?: number; maxTokens?: number; topP?: number },
-  organizationId?: string
+  _config?: { temperature?: number; maxTokens?: number; topP?: number }
 ): Promise<UnifiedChatResponse> {
-  const provider = new AnthropicProvider(organizationId);
+  const provider = new AnthropicProvider();
 
   const chatMessages = convertToProviderFormat(messages, systemInstruction);
 

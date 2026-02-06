@@ -10,6 +10,7 @@ import { GeminiProvider } from './providers/gemini-provider';
 import { OpenRouterProvider } from './openrouter-provider';
 import type { ModelName, ChatRequest, ChatResponse } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Simple provider interface for chat routes
@@ -44,11 +45,10 @@ interface InternalProvider {
  */
 export class AIProviderFactory {
   /**
-   * Create a provider instance for the specified model and organization
+   * Create a provider instance for the specified model
    */
   static createProvider(
-    model: ModelName,
-    organizationId: string
+    model: ModelName
   ): AIProvider {
     // Determine which provider to use based on model name
     const providerType = this.getProviderType(model);
@@ -58,11 +58,11 @@ export class AIProviderFactory {
 
     switch (providerType) {
       case 'openai':
-        provider = new OpenAIProvider(organizationId);
+        provider = new OpenAIProvider();
         break;
 
       case 'anthropic':
-        provider = new AnthropicProvider(organizationId);
+        provider = new AnthropicProvider();
         break;
 
       case 'google':
@@ -70,7 +70,7 @@ export class AIProviderFactory {
         break;
 
       case 'openrouter':
-        provider = new OpenRouterProvider(organizationId);
+        provider = new OpenRouterProvider(DEFAULT_ORG_ID);
         break;
 
       default:

@@ -8,6 +8,7 @@ import type { EcommerceConfig, ProductFieldMappings } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
 import type { Schema } from '@/types/schema';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * Adapt e-commerce mappings to schema changes
@@ -17,9 +18,9 @@ export async function adaptEcommerceMappings(
 ): Promise<void> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
+
     // Get e-commerce config for this workspace
-    const configPath = `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/ecommerceConfig`;
+    const configPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/ecommerceConfig`;
     const configs = await FirestoreService.getAll(configPath);
     
     if (configs.length === 0) {
@@ -60,7 +61,6 @@ event.newFieldKey ?? event.newFieldName ?? ''
         updated = await handleFieldDeletion(
           mappings,
 event.oldFieldKey ?? event.oldFieldName ?? '',
-          event.organizationId,
           event.workspaceId,
           event.schemaId
         );
@@ -161,16 +161,15 @@ function handleFieldRename(
 async function handleFieldDeletion(
   mappings: ProductFieldMappings,
   deletedFieldKey: string,
-  organizationId: string,
   workspaceId: string,
   schemaId: string
 ): Promise<boolean> {
   let updated = false;
-  
+
   // Get schema for field resolution
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const schemaData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
     schemaId
   );
   
@@ -231,7 +230,6 @@ async function handleFieldDeletion(
  */
 export async function validateEcommerceMappings(
   config: EcommerceConfig,
-  organizationId: string,
   workspaceId: string
 ): Promise<{
   valid: boolean;
@@ -240,12 +238,12 @@ export async function validateEcommerceMappings(
 }> {
   const errors: string[] = [];
   const warnings: string[] = [];
-  
+
   try {
     // Get product schema
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
       config.productSchema
     );
     
@@ -318,17 +316,16 @@ export async function validateEcommerceMappings(
  * Auto-configure e-commerce mappings based on schema
  */
 export async function autoConfigureEcommerceMappings(
-  organizationId: string,
   workspaceId: string,
   schemaId: string
 ): Promise<Partial<ProductFieldMappings>> {
   const mappings: Partial<ProductFieldMappings> = {};
-  
+
   try {
     // Get schema
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
       schemaId
     );
     

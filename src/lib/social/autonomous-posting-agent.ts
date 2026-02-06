@@ -74,7 +74,7 @@ export class AutonomousPostingAgent {
 
     // Initialize Twitter service if configured
     if (this.config.platforms.includes('twitter')) {
-      this.twitterService = await createTwitterService(this.organizationId);
+      this.twitterService = await createTwitterService();
       if (!this.twitterService) {
         logger.warn('AutonomousPostingAgent: Twitter service not configured', {
           organizationId: this.organizationId,
@@ -195,7 +195,7 @@ export class AutonomousPostingAgent {
     _mediaUrls?: string[]
   ): Promise<PostingResult> {
     // Try to initialize if not already initialized
-    this.twitterService ??= await createTwitterService(this.organizationId);
+    this.twitterService ??= await createTwitterService();
 
     if (!this.twitterService) {
       return {

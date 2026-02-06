@@ -9,7 +9,6 @@ import {
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * GET /api/integrations/[integrationId] - Get integration
@@ -29,7 +28,7 @@ export async function GET(
 
     const { user: _user } = authResult;
 
-    const integration = await getIntegration(DEFAULT_ORG_ID, params.integrationId);
+    const integration = await getIntegration(params.integrationId);
 
     if (!integration) {
       return errors.notFound('Integration not found');
@@ -79,7 +78,7 @@ export async function PATCH(
       ...(bodyResult.data.expiresAt && { expiresAt: new Date(bodyResult.data.expiresAt) }),
       ...(bodyResult.data.metadata && { metadata: bodyResult.data.metadata }),
     };
-    await updateIntegration(DEFAULT_ORG_ID, params.integrationId, updateData);
+    await updateIntegration(params.integrationId, updateData);
 
     return NextResponse.json({
       success: true,
@@ -106,7 +105,7 @@ export async function DELETE(
 
     const { user: _user } = authResult;
 
-    await deleteIntegration(DEFAULT_ORG_ID, params.integrationId);
+    await deleteIntegration(params.integrationId);
 
     return NextResponse.json({
       success: true,

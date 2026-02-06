@@ -401,7 +401,6 @@ async function calculateUserMetrics(
 
     // Activities
     const activitiesResult = await getActivities(
-      organizationId,
       workspaceId,
       { createdBy: userId },
       { pageSize: 1000 }

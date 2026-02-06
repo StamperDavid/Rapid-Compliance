@@ -6,6 +6,7 @@
 
 import { VoiceProviderFactory } from './voice-factory';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface TransferAgent {
   id: string;
@@ -72,7 +73,7 @@ class CallTransferService {
    */
   async coldTransfer(request: TransferRequest): Promise<TransferResult> {
     try {
-      const provider = await VoiceProviderFactory.getProvider(request.organizationId);
+      const provider = await VoiceProviderFactory.getProvider();
 
       if (!request.toPhone && !request.toAgentId) {
         throw new Error('Either toPhone or toAgentId must be provided');
@@ -90,7 +91,7 @@ class CallTransferService {
 
       // Create screen pop for receiving agent
       if (request.toAgentId && request.context) {
-        await this.createScreenPop(request.organizationId, request.toAgentId, request.context);
+        await this.createScreenPop(request.toAgentId, request.context);
       }
 
       return { success: true };
@@ -108,7 +109,7 @@ class CallTransferService {
    */
   async warmTransfer(request: TransferRequest): Promise<TransferResult> {
     try {
-      const provider = await VoiceProviderFactory.getProvider(request.organizationId);
+      const provider = await VoiceProviderFactory.getProvider();
 
       if (!request.toPhone && !request.toAgentId) {
         throw new Error('Either toPhone or toAgentId must be provided');
@@ -147,7 +148,7 @@ class CallTransferService {
 
       // Try to unhold the original call if something goes wrong
       try {
-        const provider = await VoiceProviderFactory.getProvider(request.organizationId);
+        const provider = await VoiceProviderFactory.getProvider();
         await provider.holdCall(request.callId, false);
       } catch {
         // Ignore errors here
@@ -161,9 +162,9 @@ class CallTransferService {
   /**
    * Complete a warm transfer - merge calls and drop original agent
    */
-  async completeWarmTransfer(originalCallId: string, consultCallId: string, organizationId: string): Promise<TransferResult> {
+  async completeWarmTransfer(originalCallId: string, consultCallId: string): Promise<TransferResult> {
     try {
-      const provider = await VoiceProviderFactory.getProvider(organizationId);
+      const provider = await VoiceProviderFactory.getProvider();
 
       // Create a conference with both parties
       const conferenceName = `transfer-${originalCallId}-${Date.now()}`;
@@ -197,9 +198,9 @@ class CallTransferService {
   /**
    * Cancel a warm transfer - return to original call
    */
-  async cancelWarmTransfer(originalCallId: string, consultCallId: string, organizationId: string): Promise<TransferResult> {
+  async cancelWarmTransfer(originalCallId: string, consultCallId: string): Promise<TransferResult> {
     try {
-      const provider = await VoiceProviderFactory.getProvider(organizationId);
+      const provider = await VoiceProviderFactory.getProvider();
 
       // End the consult call
       await provider.endCall(consultCallId);
@@ -224,7 +225,7 @@ class CallTransferService {
    */
   async conferenceTransfer(request: TransferRequest): Promise<TransferResult> {
     try {
-      const provider = await VoiceProviderFactory.getProvider(request.organizationId);
+      const provider = await VoiceProviderFactory.getProvider();
 
       if (!request.toPhone && !request.toAgentId) {
         throw new Error('Either toPhone or toAgentId must be provided');
@@ -266,7 +267,7 @@ class CallTransferService {
 
       // Create screen pop for receiving agent
       if (request.toAgentId && request.context) {
-        await this.createScreenPop(request.organizationId, request.toAgentId, request.context);
+        await this.createScreenPop(request.toAgentId, request.context);
       }
 
       await this.logTransfer(request, 'conference', true);
@@ -287,7 +288,7 @@ class CallTransferService {
   async aiToHumanHandoff(context: AIHandoffContext): Promise<TransferResult> {
     try {
       // Find the best available human agent
-      const agent = await this.findAvailableAgent(context.organizationId, context.customerIntent);
+      const agent = await this.findAvailableAgent(context.customerIntent);
 
       if (!agent) {
         logger.warn('[CallTransfer] No agents available for handoff', { file: 'call-transfer-service.ts' });
@@ -295,7 +296,7 @@ class CallTransferService {
       }
 
       // Create comprehensive screen pop for human agent
-      await this.createScreenPop(context.organizationId, agent.id, {
+      await this.createScreenPop(agent.id, {
         contactId: context.customerInfo.crmRecordId,
         contactName: context.customerInfo.name,
         summary: context.conversationSummary,
@@ -340,7 +341,7 @@ class CallTransferService {
   /**
    * Find available agent based on skills and workload
    */
-  async findAvailableAgent(organizationId: string, intent?: string): Promise<TransferAgent | null> {
+  async findAvailableAgent(intent?: string): Promise<TransferAgent | null> {
     try {
       const response = await fetch(`/api/voice/agents/available?intent=${encodeURIComponent(intent ?? '')}`);
       if (!response.ok) {return null;}
@@ -396,7 +397,6 @@ class CallTransferService {
    * Create screen pop notification for receiving agent
    */
   private async createScreenPop(
-    organizationId: string,
     agentId: string,
     context: TransferRequest['context']
   ): Promise<void> {
@@ -405,7 +405,7 @@ class CallTransferService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
           agentId,
           ...context,
           timestamp: new Date().toISOString(),

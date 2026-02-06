@@ -421,7 +421,6 @@ async function unenrollProspectFromSequences(
       await SequenceEngine['unenrollProspect'](
         prospectId,
         enrollment.sequenceId,
-        DEFAULT_ORG_ID,
         reason
       );
       logger.info('Unenrolled prospect from sequence', {

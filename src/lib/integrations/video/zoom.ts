@@ -39,7 +39,7 @@ export async function executeZoomFunction(
         throw new Error('duration (number) is required for createMeeting');
       }
 
-      return createZoomMeeting(DEFAULT_ORG_ID, {
+      return createZoomMeeting({
         topic: parameters.topic,
         startTime: new Date(parameters.startTime),
         duration: parameters.duration,
@@ -75,7 +75,7 @@ export async function executeZoomFunction(
         throw new Error('meetingId (string) is required for cancelMeeting');
       }
 
-      return cancelZoomMeeting(DEFAULT_ORG_ID, parameters.meetingId);
+      return cancelZoomMeeting(parameters.meetingId);
 
     default:
       throw new Error(`Unknown Zoom function: ${functionName}`);

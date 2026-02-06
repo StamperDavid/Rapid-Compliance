@@ -7,7 +7,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { calculateDealHealth } from '@/lib/crm/deal-health';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export async function GET(
   request: NextRequest,
@@ -20,13 +19,12 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = DEFAULT_ORG_ID;
 
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     const { dealId } = params;
 
-    const health = await calculateDealHealth(organizationId, workspaceId, dealId);
+    const health = await calculateDealHealth(workspaceId, dealId);
 
     return NextResponse.json({
       success: true,

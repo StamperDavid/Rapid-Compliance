@@ -1,6 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
@@ -30,7 +29,7 @@ export default function WorkflowRunsPage() {
 
   const loadExecutions = useCallback(async () => {
     try {
-      const data = await getWorkflowExecutions(workflowId, DEFAULT_ORG_ID, 'default');
+      const data = await getWorkflowExecutions(workflowId, 'default');
       // Map WorkflowEngineExecution to WorkflowExecution format
       const mappedExecutions: WorkflowExecution[] = data.map((exec) => ({
         id: exec.id,

@@ -175,12 +175,11 @@ function extractQuickBooksError(errorData: QuickBooksErrorResponse): string {
  * Create or update customer in QuickBooks
  */
 export async function syncCustomerToQuickBooks(
-  organizationId: string,
   customer: QuickBooksCustomer
 ): Promise<string> {
   try {
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'quickbooks') as IntegrationCredentials | null;
+    const credentials = await getIntegrationCredentials('quickbooks') as IntegrationCredentials | null;
 
     if (!credentials?.accessToken) {
       throw new Error('QuickBooks not connected');
@@ -230,12 +229,14 @@ export async function syncCustomerToQuickBooks(
     const customerResponse = data as QuickBooksCustomerResponse;
     const customerId = customerResponse.Customer.Id;
 
-    logger.info('QuickBooks customer synced', { organizationId, customerId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.info('QuickBooks customer synced', { organizationId: DEFAULT_ORG_ID, customerId });
 
     return customerId;
 
   } catch (error) {
-    logger.error('Failed to sync customer to QuickBooks', error as Error, { organizationId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to sync customer to QuickBooks', error as Error, { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }
@@ -244,12 +245,11 @@ export async function syncCustomerToQuickBooks(
  * Create invoice in QuickBooks
  */
 export async function createQuickBooksInvoice(
-  organizationId: string,
   invoice: QuickBooksInvoice
 ): Promise<{ invoiceId: string; invoiceNumber: string }> {
   try {
     const { getIntegrationCredentials } = await import('./integration-manager');
-    const credentials = await getIntegrationCredentials(organizationId, 'quickbooks') as IntegrationCredentials | null;
+    const credentials = await getIntegrationCredentials('quickbooks') as IntegrationCredentials | null;
 
     if (!credentials?.accessToken) {
       throw new Error('QuickBooks not connected');
@@ -306,8 +306,9 @@ export async function createQuickBooksInvoice(
 
     const invoiceResponse = data as QuickBooksInvoiceResponse;
 
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     logger.info('QuickBooks invoice created', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       invoiceId: invoiceResponse.Invoice.Id,
     });
 
@@ -317,7 +318,8 @@ export async function createQuickBooksInvoice(
     };
 
   } catch (error) {
-    logger.error('Failed to create QuickBooks invoice', error as Error, { organizationId });
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to create QuickBooks invoice', error as Error, { organizationId: DEFAULT_ORG_ID });
     throw error;
   }
 }

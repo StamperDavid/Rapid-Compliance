@@ -103,8 +103,7 @@ export function generateAgentTwiML(
  * Convert speech to text using Twilio/Google
  */
 export async function speechToText(
-  audioUrl: string,
-  _organizationId: string
+  audioUrl: string
 ): Promise<string> {
   try {
     // Use Whisper API for speech-to-text

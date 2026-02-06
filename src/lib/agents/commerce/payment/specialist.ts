@@ -494,7 +494,6 @@ export class PaymentSpecialist extends BaseSpecialist {
 
       const refundResult = await refundPayment(
         payload.workspaceId,
-        payload.organizationId,
         payload.paymentIntentId,
         payload.amount
       );

@@ -174,7 +174,6 @@ class VoiceAgentHandler {
 
     // Get the preferred voice provider (Telnyx for better rates)
     this.provider = await VoiceProviderFactory.getProvider(
-      config.organizationId,
       'telnyx' // Prefer Telnyx for 60-70% savings
     );
 
@@ -334,7 +333,7 @@ class VoiceAgentHandler {
     // Log to CRM
     if (this.provider && context && this.config) {
       const call = await this.provider.getCall(callId);
-      await crmVoiceActivity.logCall(this.config.organizationId, call, {
+      await crmVoiceActivity.logCall(call, {
         aiAgentId: this.config.agentId,
         sentiment: context.sentiment,
         outcome: 'transferred_to_human',
@@ -402,7 +401,7 @@ class VoiceAgentHandler {
     if (context && this.provider && this.config) {
       try {
         const call = await this.provider.getCall(callId);
-        await crmVoiceActivity.logCall(this.config.organizationId, call, {
+        await crmVoiceActivity.logCall(call, {
           aiAgentId: this.config.agentId,
           sentiment: context.sentiment,
           outcome: context.qualificationScore >= 70 ? 'qualified' : 'disqualified',

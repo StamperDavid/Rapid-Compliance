@@ -313,7 +313,6 @@ export async function evaluateAndDeployModel(
   
   // Start A/B test
   const test = await createABTest({
-    DEFAULT_ORG_ID: organizationId,
     controlModel: currentModel,
     treatmentModel: fineTunedModelId,
     trafficSplit: 50, // 50/50 split
@@ -411,7 +410,7 @@ export async function checkAndDeployWinner(
   const config = await getLearningConfig(organizationId);
   const autoDeploy = config?.autoDeployFineTunedModels ?? false;
   
-  const result = await completeABTestAndDeploy(organizationId, test.id, autoDeploy);
+  const result = await completeABTestAndDeploy(test.id, autoDeploy);
   
   return {
     deployed: result.deployed,

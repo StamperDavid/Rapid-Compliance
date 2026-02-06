@@ -8,7 +8,6 @@ import { routeLead } from '@/lib/crm/lead-routing';
 import { updateLead, getLead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface RouteLeadRequestBody {
   leadId?: string;
@@ -31,8 +30,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const organizationId = DEFAULT_ORG_ID;
-
     const leadId = body.leadId;
     const workspaceId = body.workspaceId ?? 'default';
 
@@ -53,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Route the lead
-    const routingResult = await routeLead(organizationId, workspaceId, lead);
+    const routingResult = await routeLead(workspaceId, lead);
 
     // Update lead with assignment
     await updateLead(leadId, {

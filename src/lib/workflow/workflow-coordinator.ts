@@ -31,6 +31,7 @@ import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SalesSignal, SignalType } from '@/lib/orchestration/types';
 import { WorkflowEngine, type WorkflowExecutionContext } from './workflow-engine';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type {
   Workflow,
   WorkflowExecution,
@@ -120,8 +121,7 @@ export class WorkflowCoordinator {
       
       // Find workflows that match this trigger type
       const workflows = await this.findMatchingWorkflows(
-        signal.orgId,
-(signal.workspaceId !== '' && signal.workspaceId != null) ? signal.workspaceId : 'default',
+        (signal.workspaceId !== '' && signal.workspaceId != null) ? signal.workspaceId : 'default',
         triggerTypes
       );
       
@@ -369,7 +369,6 @@ export class WorkflowCoordinator {
    * Find workflows that match the trigger types
    */
   private findMatchingWorkflows(
-    organizationId: string,
     workspaceId: string,
     triggerTypes: WorkflowTriggerType[]
   ): Promise<Workflow[]> {
@@ -377,7 +376,7 @@ export class WorkflowCoordinator {
       // In production, this would query Firestore with proper filters
       // For now, return empty array (workflows will be stored/retrieved in API layer)
       logger.debug('Querying workflows', {
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         triggerTypes,
       });
@@ -398,7 +397,7 @@ export class WorkflowCoordinator {
         'Failed to find matching workflows',
         error instanceof Error ? error : new Error(String(error)),
         {
-          organizationId,
+          organizationId: DEFAULT_ORG_ID,
         }
       );
       return Promise.resolve([]);

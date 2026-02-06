@@ -30,6 +30,7 @@ import {
   type Result,
 } from './types';
 import { validateRetrievalRequest } from './validation';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RESULT HELPERS
@@ -556,11 +557,10 @@ export class VectorStore {
    * Get candidate chunks based on filters
    */
   private getCandidateChunks(
-    organizationId: string,
     workspaceId?: string,
     filters?: RetrievalFilters
   ): ReadonlyArray<KnowledgeChunk> {
-    const orgChunkIds = this.storage.organizationIndex.get(organizationId);
+    const orgChunkIds = this.storage.organizationIndex.get(DEFAULT_ORG_ID);
     if (!orgChunkIds) {
       return [];
     }
@@ -738,13 +738,12 @@ export class VectorStore {
    * Create a knowledge base
    */
   createKnowledgeBase(
-    organizationId: string,
     name: string,
     description: string,
     workspaceId?: string,
     config?: Partial<KnowledgeBaseConfig>
   ): Result<KnowledgeBase, IntelligenceError> {
-    const id = `kb_${organizationId}_${Date.now()}`;
+    const id = `kb_${DEFAULT_ORG_ID}_${Date.now()}`;
 
     if (this.knowledgeBases.has(id)) {
       return failure(
@@ -758,7 +757,7 @@ export class VectorStore {
     const now = new Date();
     const knowledgeBase: KnowledgeBase = {
       id,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       name,
       description,
@@ -789,7 +788,7 @@ export class VectorStore {
 
     this.knowledgeBases.set(id, knowledgeBase);
 
-    logger.info('Knowledge base created', { id, organizationId, name });
+    logger.info('Knowledge base created', { id, organizationId: DEFAULT_ORG_ID, name });
 
     return success(knowledgeBase);
   }
@@ -813,11 +812,9 @@ export class VectorStore {
   /**
    * Get all knowledge bases for an organization
    */
-  getOrganizationKnowledgeBases(
-    organizationId: string
-  ): ReadonlyArray<KnowledgeBase> {
+  getOrganizationKnowledgeBases(): ReadonlyArray<KnowledgeBase> {
     return Array.from(this.knowledgeBases.values()).filter(
-      (kb) => kb.organizationId === organizationId
+      (kb) => kb.organizationId === DEFAULT_ORG_ID
     );
   }
 
@@ -845,8 +842,8 @@ export class VectorStore {
   /**
    * Get chunk count for organization
    */
-  getOrganizationChunkCount(organizationId: string): number {
-    const chunks = this.storage.organizationIndex.get(organizationId);
+  getOrganizationChunkCount(): number {
+    const chunks = this.storage.organizationIndex.get(DEFAULT_ORG_ID);
     return chunks?.size ?? 0;
   }
 }

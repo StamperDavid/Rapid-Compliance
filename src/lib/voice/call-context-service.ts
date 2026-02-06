@@ -5,6 +5,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { QueryConstraint } from 'firebase/firestore';
 
 export interface StoredCallContext {
@@ -105,7 +106,7 @@ class CallContextService {
   /**
    * Get call context from cache or Firestore
    */
-  async getContext(organizationId: string, callId: string): Promise<StoredCallContext | null> {
+  async getContext(callId: string): Promise<StoredCallContext | null> {
     // Check cache first
     const expiry = this.cacheExpiry.get(callId);
     if (expiry && expiry > Date.now()) {
@@ -116,7 +117,7 @@ class CallContextService {
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${organizationId}/callContexts`;
+      const path = `organizations/${DEFAULT_ORG_ID}/callContexts`;
       const context = await FirestoreService.get(path, callId);
 
       if (context) {
@@ -138,13 +139,13 @@ class CallContextService {
   /**
    * Get context by customer phone number (for callback scenarios)
    */
-  async getContextByPhone(organizationId: string, phone: string): Promise<StoredCallContext | null> {
+  async getContextByPhone(phone: string): Promise<StoredCallContext | null> {
     try {
       const { where, orderBy, limit } = await import('firebase/firestore');
 
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${organizationId}/callContexts`;
+      const path = `organizations/${DEFAULT_ORG_ID}/callContexts`;
       const results = await FirestoreService.getAll<StoredCallContext>(path, [
         where('customerPhone', '==', phone),
         orderBy('updatedAt', 'desc'),
@@ -164,14 +165,13 @@ class CallContextService {
    * Update call context
    */
   async updateContext(
-    organizationId: string,
     callId: string,
     updates: Partial<StoredCallContext>
   ): Promise<void> {
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${organizationId}/callContexts`;
+      const path = `organizations/${DEFAULT_ORG_ID}/callContexts`;
 
       await FirestoreService.set(
         path,
@@ -201,7 +201,6 @@ class CallContextService {
    * End call context
    */
   async endCall(
-    organizationId: string,
     callId: string,
     outcome: {
       finalState: string;
@@ -209,7 +208,7 @@ class CallContextService {
       callDuration?: number;
     }
   ): Promise<void> {
-    await this.updateContext(organizationId, callId, {
+    await this.updateContext(callId, {
       state: outcome.finalState,
       transferReason: outcome.transferReason,
       callDuration: outcome.callDuration,
@@ -270,12 +269,11 @@ class CallContextService {
    * Get recent qualified leads
    */
   async getQualifiedLeads(
-    organizationId: string,
     minScore: number = 70,
     limit: number = 50
   ): Promise<StoredCallContext[]> {
     return this.queryContexts({
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       minQualificationScore: minScore,
       limit,
     });
@@ -284,12 +282,12 @@ class CallContextService {
   /**
    * Get calls requiring follow-up
    */
-  async getFollowUpCalls(organizationId: string, limitCount: number = 50): Promise<StoredCallContext[]> {
+  async getFollowUpCalls(limitCount: number = 50): Promise<StoredCallContext[]> {
     try {
       const { where, orderBy, limit: limitFn } = await import('firebase/firestore');
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${organizationId}/callContexts`;
+      const path = `organizations/${DEFAULT_ORG_ID}/callContexts`;
 
       // Get calls with positive sentiment but not transferred
       const results = await FirestoreService.getAll<StoredCallContext>(
@@ -375,14 +373,13 @@ class CallContextService {
    * Get conversation logs for training
    */
   async getTrainingData(
-    organizationId: string,
     startDate: Date,
     endDate: Date,
     limit: number = 1000
   ): Promise<Array<{ input: string; output: string; context: { state: string; qualificationScore: number; sentiment: string; mode: string } }>> {
     try {
       const contexts = await this.queryContexts({
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         startDate,
         endDate,
         limit,

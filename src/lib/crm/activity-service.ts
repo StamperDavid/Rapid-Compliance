@@ -4,6 +4,7 @@
  * Foundation for timeline, insights, and recommendations
  */
 
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot} from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
@@ -47,7 +48,6 @@ function toDate(value: Date | { toDate?: () => Date } | string | number): Date {
  * Create a new activity
  */
 export async function createActivity(
-  organizationId: string,
   workspaceId: string,
   data: CreateActivityInput
 ): Promise<Activity> {
@@ -64,14 +64,14 @@ export async function createActivity(
     };
 
     await FirestoreService.set(
-      `organizations/${organizationId}/workspaces/${workspaceId}/activities`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/activities`,
       activityId,
       activity,
       false
     );
 
     logger.info('Activity created', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       activityId,
       type: activity.type,
       relatedEntities: activity.relatedTo.length,
@@ -79,7 +79,7 @@ export async function createActivity(
 
     return activity;
   } catch (error: unknown) {
-    logger.error('Failed to create activity', error instanceof Error ? error : new Error(String(error)), { organizationId });
+    logger.error('Failed to create activity', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to create activity: ${errorMessage}`);
   }
@@ -89,7 +89,6 @@ export async function createActivity(
  * Get activities with filtering and pagination
  */
 export async function getActivities(
-  organizationId: string,
   workspaceId: string,
   filters?: ActivityFilters,
   options?: PaginationOptions
@@ -126,7 +125,7 @@ export async function getActivities(
     constraints.push(orderBy('occurredAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Activity>(
-      `organizations/${organizationId}/workspaces/${workspaceId}/activities`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/activities`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -153,7 +152,7 @@ export async function getActivities(
     }
 
     logger.info('Activities retrieved', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       count: filteredData.length,
       filters: filters ? JSON.stringify(filters) : undefined,
     });
@@ -164,7 +163,7 @@ export async function getActivities(
       hasMore: result.hasMore,
     };
   } catch (error: unknown) {
-    logger.error('Failed to get activities', error instanceof Error ? error : new Error(String(error)), { organizationId, filters: filters ? JSON.stringify(filters) : undefined });
+    logger.error('Failed to get activities', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, filters: filters ? JSON.stringify(filters) : undefined });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to retrieve activities: ${errorMessage}`);
   }
@@ -174,7 +173,6 @@ export async function getActivities(
  * Get activity timeline for an entity (grouped by date)
  */
 export async function getEntityTimeline(
-  organizationId: string,
   workspaceId: string,
   entityType: RelatedEntityType,
   entityId: string,
@@ -182,7 +180,6 @@ export async function getEntityTimeline(
 ): Promise<TimelineGroup[]> {
   try {
     const result = await getActivities(
-      organizationId,
       workspaceId,
       { entityType, entityId },
       options
@@ -217,7 +214,7 @@ export async function getEntityTimeline(
       .sort((a, b) => b.date.localeCompare(a.date));
 
     logger.info('Timeline generated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       entityType,
       entityId,
       days: timeline.length,
@@ -226,7 +223,7 @@ export async function getEntityTimeline(
 
     return timeline;
   } catch (error: unknown) {
-    logger.error('Failed to get timeline', error instanceof Error ? error : new Error(String(error)), { organizationId, entityType, entityId });
+    logger.error('Failed to get timeline', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, entityType, entityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to retrieve timeline: ${errorMessage}`);
   }
@@ -236,14 +233,12 @@ export async function getEntityTimeline(
  * Get activity statistics for an entity
  */
 export async function getActivityStats(
-  organizationId: string,
   workspaceId: string,
   entityType: RelatedEntityType,
   entityId: string
 ): Promise<ActivityStats> {
   try {
     const result = await getActivities(
-      organizationId,
       workspaceId,
       { entityType, entityId },
       { pageSize: 1000 } // Get all recent activities
@@ -295,7 +290,7 @@ export async function getActivityStats(
     };
 
     logger.info('Activity stats calculated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       entityType,
       entityId,
       totalActivities: stats.totalActivities,
@@ -304,7 +299,7 @@ export async function getActivityStats(
 
     return stats;
   } catch (error: unknown) {
-    logger.error('Failed to calculate activity stats', error instanceof Error ? error : new Error(String(error)), { organizationId, entityType, entityId });
+    logger.error('Failed to calculate activity stats', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, entityType, entityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to calculate stats: ${errorMessage}`);
   }
@@ -352,13 +347,12 @@ function calculateEngagementScore(activities: Activity[]): number {
  * Get insights based on activity patterns
  */
 export async function getActivityInsights(
-  organizationId: string,
   workspaceId: string,
   entityType: RelatedEntityType,
   entityId: string
 ): Promise<ActivityInsight[]> {
   try {
-    const stats = await getActivityStats(organizationId, workspaceId, entityType, entityId);
+    const stats = await getActivityStats(workspaceId, entityType, entityId);
     const insights: ActivityInsight[] = [];
 
     // No recent activity warning
@@ -417,7 +411,7 @@ export async function getActivityInsights(
     }
 
     logger.info('Activity insights generated', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       entityType,
       entityId,
       insightCount: insights.length,
@@ -425,7 +419,7 @@ export async function getActivityInsights(
 
     return insights;
   } catch (error: unknown) {
-    logger.error('Failed to generate insights', error instanceof Error ? error : new Error(String(error)), { organizationId, entityType, entityId });
+    logger.error('Failed to generate insights', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, entityType, entityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to generate insights: ${errorMessage}`);
   }
@@ -435,15 +429,13 @@ export async function getActivityInsights(
  * Get next best action recommendation
  */
 export async function getNextBestAction(
-  organizationId: string,
   workspaceId: string,
   entityType: RelatedEntityType,
   entityId: string
 ): Promise<NextBestAction | null> {
   try {
-    const stats = await getActivityStats(organizationId, workspaceId, entityType, entityId);
+    const stats = await getActivityStats(workspaceId, entityType, entityId);
     const recentActivities = await getActivities(
-      organizationId,
       workspaceId,
       { entityType, entityId },
       { pageSize: 20 }
@@ -539,7 +531,7 @@ export async function getNextBestAction(
     };
 
   } catch (error: unknown) {
-    logger.error('Failed to get next best action', error instanceof Error ? error : new Error(String(error)), { organizationId, entityType, entityId });
+    logger.error('Failed to get next best action', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, entityType, entityId });
     return null;
   }
 }
@@ -548,7 +540,6 @@ export async function getNextBestAction(
  * Bulk create activities (for imports, integrations)
  */
 export async function bulkCreateActivities(
-  organizationId: string,
   workspaceId: string,
   activities: CreateActivityInput[]
 ): Promise<number> {
@@ -557,7 +548,7 @@ export async function bulkCreateActivities(
 
     for (const activityData of activities) {
       try {
-        await createActivity(organizationId, workspaceId, activityData);
+        await createActivity(workspaceId, activityData);
         successCount++;
       } catch (error) {
         logger.warn('Failed to create activity in bulk operation', { error: error instanceof Error ? error.message : String(error) });
@@ -565,7 +556,7 @@ export async function bulkCreateActivities(
     }
 
     logger.info('Bulk activity creation completed', {
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       total: activities.length,
       successful: successCount,
       failed: activities.length - successCount,
@@ -573,7 +564,7 @@ export async function bulkCreateActivities(
 
     return successCount;
   } catch (error: unknown) {
-    logger.error('Bulk activity creation failed', error instanceof Error ? error : new Error(String(error)), { organizationId });
+    logger.error('Bulk activity creation failed', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Bulk creation failed: ${errorMessage}`);
   }
@@ -583,19 +574,18 @@ export async function bulkCreateActivities(
  * Delete activity
  */
 export async function deleteActivity(
-  organizationId: string,
   workspaceId: string,
   activityId: string
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${organizationId}/workspaces/${workspaceId}/activities`,
+      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/activities`,
       activityId
     );
 
-    logger.info('Activity deleted', { organizationId, activityId });
+    logger.info('Activity deleted', { organizationId: DEFAULT_ORG_ID, activityId });
   } catch (error: unknown) {
-    logger.error('Failed to delete activity', error instanceof Error ? error : new Error(String(error)), { organizationId, activityId });
+    logger.error('Failed to delete activity', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, activityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to delete activity: ${errorMessage}`);
   }

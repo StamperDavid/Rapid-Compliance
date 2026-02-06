@@ -158,12 +158,10 @@ export class TelnyxProvider implements VoiceProvider {
   };
 
   private config: VoiceProviderConfig;
-  private organizationId: string;
   private connectionId: string | null = null;
 
-  constructor(config: VoiceProviderConfig, organizationId: string) {
+  constructor(config: VoiceProviderConfig) {
     this.config = config;
-    this.organizationId = organizationId;
   }
 
   private async request<T>(

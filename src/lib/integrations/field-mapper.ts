@@ -158,26 +158,26 @@ export class FieldMappingManager {
    * Get field mapping for integration
    */
   static async getFieldMapping(
-    organizationId: string,
     integrationId: string,
     schemaId?: string
   ): Promise<IntegrationFieldMapping | null> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
       const { where } = await import('firebase/firestore');
-      
-      const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationFieldMappings`;
-      
+
+      const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationFieldMappings`;
+
       const filters: QueryConstraint[] = [
         where('integrationId', '==', integrationId),
       ];
-      
+
       if (schemaId) {
         filters.push(where('schemaId', '==', schemaId));
       }
-      
+
       const mappings = await FirestoreService.getAll(mappingsPath, filters);
-      
+
       return mappings.length > 0 ? (mappings[0] as IntegrationFieldMapping) : null;
     } catch (error) {
       logger.error('[Field Mapper] Failed to get field mapping', error instanceof Error ? error : new Error(String(error)), {
@@ -192,21 +192,21 @@ export class FieldMappingManager {
    * Update field mapping
    */
   static async updateFieldMapping(
-    organizationId: string,
     mappingId: string,
     updates: Partial<IntegrationFieldMapping>
   ): Promise<void> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
-      const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationFieldMappings`;
-      
+      const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+
+      const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationFieldMappings`;
+
       const existing = await FirestoreService.get(mappingsPath, mappingId);
-      
+
       if (!existing) {
         throw new Error(`Field mapping ${mappingId} not found`);
       }
-      
+
       await FirestoreService.set(
         mappingsPath,
         mappingId,
@@ -217,7 +217,7 @@ export class FieldMappingManager {
         },
         false
       );
-      
+
       logger.info('[Field Mapper] Updated field mapping', {
         file: 'field-mapper.ts',
         mappingId,
@@ -288,7 +288,6 @@ export class FieldMappingManager {
         
         if (updated) {
           await this.updateFieldMapping(
-            event.organizationId,
             fieldMapping.id,
             { mappings: fieldMapping.mappings }
           );

@@ -11,6 +11,7 @@ import type {
 } from '@/types/outbound-sequence';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface ProspectData {
   email?: string;
@@ -44,13 +45,12 @@ export class SequenceEngine {
    */
   static async enrollProspect(
     prospectId: string,
-    sequenceId: string,
-    organizationId: string
+    sequenceId: string
   ): Promise<ProspectEnrollment> {
-    
+
 
     // Load sequence
-    const sequence = await this.getSequence(sequenceId, organizationId);
+    const sequence = await this.getSequence(sequenceId);
     if (!sequence) {
       throw new Error('Sequence not found');
     }
@@ -60,7 +60,7 @@ export class SequenceEngine {
     }
 
     // Check if already enrolled
-    const existing = await this.getEnrollment(prospectId, sequenceId, organizationId);
+    const existing = await this.getEnrollment(prospectId, sequenceId);
     if (existing?.status === 'active') {
       throw new Error('Prospect already enrolled in this sequence');
     }
@@ -86,7 +86,7 @@ export class SequenceEngine {
     await this.scheduleStep(enrollment, sequence.steps[0]);
 
     // Update sequence analytics
-    await this.updateSequenceAnalytics(sequenceId, organizationId, {
+    await this.updateSequenceAnalytics(sequenceId, {
       totalEnrolled: 1,
       activeProspects: 1,
     });
@@ -102,12 +102,11 @@ export class SequenceEngine {
   static async unenrollProspect(
     prospectId: string,
     sequenceId: string,
-    organizationId: string,
     reason: 'manual' | 'replied' | 'converted' | 'unsubscribed' | 'bounced'
   ): Promise<void> {
-    
 
-    const enrollment = await this.getEnrollment(prospectId, sequenceId, organizationId);
+
+    const enrollment = await this.getEnrollment(prospectId, sequenceId);
     if (!enrollment) {
       throw new Error('Enrollment not found');
     }
@@ -122,7 +121,7 @@ export class SequenceEngine {
     await this.saveEnrollment(enrollment);
 
     // Update sequence analytics
-    await this.updateSequenceAnalytics(sequenceId, organizationId, {
+    await this.updateSequenceAnalytics(sequenceId, {
       activeProspects: -1,
       completedProspects: 1,
     });
@@ -132,15 +131,14 @@ export class SequenceEngine {
    * Process next step for a prospect
    */
   static async processNextStep(
-    enrollmentId: string,
-    organizationId: string
+    enrollmentId: string
   ): Promise<void> {
-    const enrollment = await this.getEnrollmentById(enrollmentId, organizationId);
+    const enrollment = await this.getEnrollmentById(enrollmentId);
     if (enrollment?.status !== 'active') {
       return; // Nothing to process
     }
 
-    const sequence = await this.getSequence(enrollment.sequenceId, organizationId);
+    const sequence = await this.getSequence(enrollment.sequenceId);
     if (sequence?.status !== 'active') {
       return;
     }
@@ -150,7 +148,7 @@ export class SequenceEngine {
 
     if (!currentStep) {
       // Sequence completed
-      await this.completeEnrollment(enrollment, organizationId);
+      await this.completeEnrollment(enrollment);
       return;
     }
 
@@ -164,13 +162,13 @@ export class SequenceEngine {
 
     // Check step conditions
     if (!this.checkStepConditions(enrollment, currentStep)) {
-      
-      await this.skipStep(enrollment, currentStep, organizationId);
+
+      await this.skipStep(enrollment, currentStep);
       return;
     }
 
     // Execute step
-    await this.executeStep(enrollment, currentStep, sequence, organizationId);
+    await this.executeStep(enrollment, currentStep, sequence);
   }
 
   /**
@@ -179,8 +177,7 @@ export class SequenceEngine {
   private static async executeStep(
     enrollment: ProspectEnrollment,
     step: SequenceStep,
-    sequence: OutboundSequence,
-    organizationId: string
+    sequence: OutboundSequence
   ): Promise<void> {
     
 
@@ -199,26 +196,26 @@ export class SequenceEngine {
       // Execute based on step type
       switch (step.type) {
         case 'email': {
-          await this.sendEmail(enrollment, step, organizationId);
+          await this.sendEmail(enrollment, step);
           action.sentAt = new Date().toISOString();
           break;
         }
 
         case 'linkedin_message': {
-          await this.sendLinkedInMessage(enrollment, step, organizationId);
+          await this.sendLinkedInMessage(enrollment, step);
           action.sentAt = new Date().toISOString();
           break;
         }
 
         case 'sms': {
-          await this.sendSMS(enrollment, step, organizationId);
+          await this.sendSMS(enrollment, step);
           action.sentAt = new Date().toISOString();
           break;
         }
 
         case 'call_task':
         case 'manual_task': {
-          await this.createTask(enrollment, step, organizationId);
+          await this.createTask(enrollment, step);
           action.status = 'scheduled';
           break;
         }
@@ -244,12 +241,12 @@ export class SequenceEngine {
       await this.saveEnrollment(enrollment);
 
       // Update step analytics
-      await this.updateStepAnalytics(step.id, organizationId, {
+      await this.updateStepAnalytics(step.id, {
         sent: 1,
       });
 
       // Update sequence analytics
-      await this.updateSequenceAnalytics(sequence.id, organizationId, {
+      await this.updateSequenceAnalytics(sequence.id, {
         totalSent: 1,
       });
 
@@ -281,14 +278,13 @@ export class SequenceEngine {
    */
   private static async sendEmail(
     enrollment: ProspectEnrollment,
-    step: SequenceStep,
-    organizationId: string
+    step: SequenceStep
   ): Promise<void> {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
+
     // Get prospect email from CRM
     const prospect: ProspectData | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/leads`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/leads`,
       enrollment.prospectId
     );
 
@@ -297,7 +293,7 @@ export class SequenceEngine {
     }
 
     // Get organization settings to determine email provider
-    const orgData: OrgData | null = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
+    const orgData: OrgData | null = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
     const emailProvider = (orgData?.emailProvider !== '' && orgData?.emailProvider != null)
       ? orgData.emailProvider
       : 'gmail'; // Default to Gmail
@@ -318,7 +314,7 @@ export class SequenceEngine {
         from: fromEmail,
         subject:(step.subject !== '' && step.subject != null) ? step.subject : 'Follow-up',
         body: step.body,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
         metadata: {
           enrollmentId: enrollment.id,
           stepId: step.id,
@@ -335,7 +331,7 @@ export class SequenceEngine {
       // Fallback to SendGrid if Gmail fails
       if (emailProvider === 'sendgrid') {
         const { getAPIKey } = await import('@/lib/config/api-keys');
-        const sendgridKey = await getAPIKey(organizationId, 'sendgrid');
+        const sendgridKey = await getAPIKey(DEFAULT_ORG_ID, 'sendgrid');
         
         if (!sendgridKey) {
           throw new Error('Gmail failed and SendGrid not configured. Cannot send email.');
@@ -355,7 +351,7 @@ export class SequenceEngine {
           metadata: {
             enrollmentId: enrollment.id,
             stepId: step.id,
-            organizationId,
+            organizationId: DEFAULT_ORG_ID,
             prospectId: enrollment.prospectId,
           },
         }, sendgridKey);
@@ -378,14 +374,13 @@ export class SequenceEngine {
    */
   private static async sendLinkedInMessage(
     enrollment: ProspectEnrollment,
-    step: SequenceStep,
-    organizationId: string
+    step: SequenceStep
   ): Promise<void> {
-    
-    
+
+
     // Get prospect details
     const prospect: ProspectData | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
       enrollment.prospectId
     );
 
@@ -395,7 +390,7 @@ export class SequenceEngine {
 
     // Get LinkedIn integration credentials
     const integrations: IntegrationData[] = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`
     );
     const integration = integrations.filter((i) => i.service === 'linkedin');
 
@@ -411,12 +406,11 @@ export class SequenceEngine {
     await sendLinkedInMessage(
       linkedInToken,
       prospect.linkedInUrl ?? prospect.email ?? '',
-      step.content ?? '',
-      organizationId
+      step.content ?? ''
     );
-    
+
     // Track step execution
-    await this.trackStepExecution(enrollment.id, step.id, organizationId, 'success');
+    await this.trackStepExecution(enrollment.id, step.id, 'success');
   }
 
   /**
@@ -424,14 +418,13 @@ export class SequenceEngine {
    */
   private static async sendSMS(
     enrollment: ProspectEnrollment,
-    step: SequenceStep,
-    organizationId: string
+    step: SequenceStep
   ): Promise<void> {
-    
-    
+
+
     // Get prospect details
     const prospect: ProspectData | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
       enrollment.prospectId
     );
 
@@ -441,11 +434,11 @@ export class SequenceEngine {
     
     // Send SMS via Twilio
     const { sendSMS } = await import('@/lib/sms/sms-service');
-    
+
     const result = await sendSMS({
       to: prospect.phone,
       message: step.content ?? '',
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
     });
     
     if (!result.success) {
@@ -457,7 +450,7 @@ export class SequenceEngine {
     // Save SMS record with Twilio message ID for webhook tracking
     const smsRecordId = result.messageId ?? `${Date.now()}-${enrollment.prospectId}`;
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/smsMessages`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
       smsRecordId,
       {
         id: smsRecordId,
@@ -477,9 +470,9 @@ export class SequenceEngine {
         updatedAt: new Date().toISOString(),
       }
     );
-    
+
     // Track step execution
-    await this.trackStepExecution(enrollment.id, step.id, organizationId, 'success');
+    await this.trackStepExecution(enrollment.id, step.id, 'success');
   }
 
   /**
@@ -487,14 +480,13 @@ export class SequenceEngine {
    */
   private static async createTask(
     enrollment: ProspectEnrollment,
-    step: SequenceStep,
-    organizationId: string
+    step: SequenceStep
   ): Promise<void> {
     
     
     // Get prospect details
     const prospect: ProspectData | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
       enrollment.prospectId
     );
 
@@ -510,7 +502,7 @@ export class SequenceEngine {
     const taskId = `task-${Date.now()}-${enrollment.prospectId}`;
     const task = {
       id: taskId,
-      organizationId,
+      organizationId: DEFAULT_ORG_ID,
       title: (step.taskTitle !== '' && step.taskTitle != null)
         ? step.taskTitle
         : `Follow up with ${prospect.name}`,
@@ -535,30 +527,29 @@ export class SequenceEngine {
     };
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/tasks`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/tasks`,
       taskId,
       task
     );
-    
+
     // Track step execution
-    await this.trackStepExecution(enrollment.id, step.id, organizationId, 'success');
+    await this.trackStepExecution(enrollment.id, step.id, 'success');
   }
-  
+
   /**
    * Track step execution for analytics
    */
   private static async trackStepExecution(
     enrollmentId: string,
     stepId: string,
-    organizationId: string,
     status: 'success' | 'failed' | 'skipped',
     error?: string
   ): Promise<void> {
     try {
       const analyticsId = `${enrollmentId}-${stepId}-${Date.now()}`;
-      
+
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequenceAnalytics`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequenceAnalytics`,
         analyticsId,
         {
           enrollmentId,
@@ -569,11 +560,11 @@ export class SequenceEngine {
           createdAt: new Date(),
         }
       );
-      
+
       // Update step statistics
       const statsId = `step-${stepId}`;
       const currentStats: StepStats | null = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequenceStepStats`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequenceStepStats`,
         statsId
       );
 
@@ -590,9 +581,10 @@ export class SequenceEngine {
       if (status === 'skipped') {stats.skippedCount = (stats.skippedCount ?? 0) + 1;}
       stats.successRate = (stats.successCount / stats.totalExecutions) * 100;
       stats.updatedAt = new Date();
-      
+
+
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequenceStepStats`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequenceStepStats`,
         statsId,
         stats
       );
@@ -675,8 +667,7 @@ export class SequenceEngine {
    */
   private static async skipStep(
     enrollment: ProspectEnrollment,
-    step: SequenceStep,
-    _organizationId: string
+    step: SequenceStep
   ): Promise<void> {
     const skippedAction: StepAction = {
       stepId: step.id,
@@ -697,8 +688,7 @@ export class SequenceEngine {
    * Complete enrollment
    */
   private static async completeEnrollment(
-    enrollment: ProspectEnrollment,
-    organizationId: string
+    enrollment: ProspectEnrollment
   ): Promise<void> {
     enrollment.status = 'completed';
     enrollment.outcome = 'completed';
@@ -708,7 +698,7 @@ export class SequenceEngine {
 
     await this.saveEnrollment(enrollment);
 
-    await this.updateSequenceAnalytics(enrollment.sequenceId, organizationId, {
+    await this.updateSequenceAnalytics(enrollment.sequenceId, {
       activeProspects: -1,
       completedProspects: 1,
     });
@@ -718,11 +708,10 @@ export class SequenceEngine {
    * Get sequence from Firestore
    */
   private static async getSequence(
-    sequenceId: string,
-    organizationId: string
+    sequenceId: string
   ): Promise<OutboundSequence | null> {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
       sequenceId
     );
   }
@@ -732,14 +721,13 @@ export class SequenceEngine {
    */
   private static async getEnrollment(
     prospectId: string,
-    sequenceId: string,
-    organizationId: string
+    sequenceId: string
   ): Promise<ProspectEnrollment | null> {
     try {
       const { where, limit } = await import('firebase/firestore');
-      
+
       const enrollments = await FirestoreService.getAll<ProspectEnrollment>(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
         [
           where('prospectId', '==', prospectId),
           where('sequenceId', '==', sequenceId),
@@ -758,11 +746,10 @@ export class SequenceEngine {
    * Get enrollment by ID
    */
   private static async getEnrollmentById(
-    enrollmentId: string,
-    organizationId: string
+    enrollmentId: string
   ): Promise<ProspectEnrollment | null> {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
       enrollmentId
     );
   }
@@ -785,10 +772,9 @@ export class SequenceEngine {
    */
   private static async updateSequenceAnalytics(
     sequenceId: string,
-    organizationId: string,
     updates: Partial<OutboundSequence['analytics']>
   ): Promise<void> {
-    const sequence = await this.getSequence(sequenceId, organizationId);
+    const sequence = await this.getSequence(sequenceId);
     if (!sequence) {return;}
 
     // Increment analytics
@@ -831,7 +817,7 @@ export class SequenceEngine {
     }
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
       sequenceId,
       sequence,
       false
@@ -843,12 +829,11 @@ export class SequenceEngine {
    */
   private static async updateStepAnalytics(
     stepId: string,
-    organizationId: string,
     updates: Partial<SequenceStep>
   ): Promise<void> {
     try {
       // Find the sequence that contains this step
-      const sequencesPath = `organizations/${organizationId}/sequences`;
+      const sequencesPath = `organizations/${DEFAULT_ORG_ID}/sequences`;
       const sequences = await FirestoreService.getAll<OutboundSequence>(sequencesPath);
       
       let targetSequence: OutboundSequence | null = null;
@@ -864,7 +849,7 @@ export class SequenceEngine {
       }
       
       if (!targetSequence || targetStepIndex === -1) {
-        logger.warn('Step not found for analytics update', { stepId, organizationId });
+        logger.warn('Step not found for analytics update', { stepId, organizationId: DEFAULT_ORG_ID });
         return;
       }
       
@@ -886,17 +871,17 @@ export class SequenceEngine {
       targetSequence.steps[targetStepIndex] = updatedStep;
 
       // Save the updated sequence
-      const sequencePath = `organizations/${organizationId}/sequences`;
+      const sequencePath = `organizations/${DEFAULT_ORG_ID}/sequences`;
       await FirestoreService.set(sequencePath, targetSequence.id, targetSequence, false);
 
       logger.info('Step analytics updated', {
         stepId,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
     } catch (error) {
       logger.error('Failed to update step analytics', error instanceof Error ? error : new Error(String(error)), {
         stepId,
-        organizationId,
+        organizationId: DEFAULT_ORG_ID,
       });
       // Don't throw - analytics updates shouldn't break the main flow
     }
