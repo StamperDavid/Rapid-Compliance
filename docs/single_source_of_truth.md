@@ -1,8 +1,8 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 5, 2026 (Phase 5 Deep Architecture Purge: binary RBAC (admin|user), Firestore rules simplified, /workspace/{orgId} URL patterns removed, superadmin/platform_admin eradicated)
-**Branches:** `dev` at commit `d44d1494`
+**Last Updated:** February 6, 2026 (Phase 11: 4-role RBAC restored — owner|admin|manager|member with real permission matrices, requireRole() API gating, sidebar permission filtering)
+**Branches:** `dev` at commit `c09135e7`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -38,7 +38,7 @@
 | Physical Routes (page.tsx) | 148 | Verified (single-tenant flat routes) |
 | API Endpoints (route.ts) | 215 | Functional |
 | AI Agents | 51 | **51 FUNCTIONAL (47 swarm + 4 standalone)** |
-| RBAC Roles | 2 | `admin` (level 2), `user` (level 1) - binary RBAC |
+| RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 60+ | Active |
 
 **Architecture:** Single-company deployment for SalesVelocity.ai. Clients purchase services/products - they do NOT get SaaS tenants.
@@ -456,7 +456,7 @@ Legacy workspace URLs are automatically redirected:
 | **Data Migration** | Fresh start | No existing production data to migrate |
 | **Admin Panel** | Simplify heavily | Keep basic admin (user management, settings) but remove org-browsing features |
 | **Public Features** | Keep both | Retain website builder (`/sites/`) and storefront (`/store/`) |
-| **RBAC** | Binary hierarchy (COMPLETED) | `admin` (level 2) → `user` (level 1) - superadmin/owner/manager/employee eradicated |
+| **RBAC** | 4-role hierarchy (COMPLETED Phase 11) | `owner` (level 3) → `admin` (level 2) → `manager` (level 1) → `member` (level 0) |
 
 ### Current Multi-Tenant Architecture
 
@@ -482,7 +482,7 @@ Legacy workspace URLs are automatically redirected:
 |------|-----------------|-------------------|
 | `src/lib/constants/platform.ts` | Platform org config | Add `DEFAULT_ORG_ID` constant |
 | `src/types/organization.ts` | Org/Workspace types | Remove Workspace, simplify |
-| `src/types/unified-rbac.ts` | 5-level RBAC | Convert to 4-level |
+| `src/types/unified-rbac.ts` | 5-level RBAC | Converted to 4-role (Phase 11) |
 | `src/lib/auth/claims-validator.ts` | Extract tenant_id from claims | Use DEFAULT_ORG_ID |
 | `src/lib/auth/api-auth.ts` | requireOrganization() middleware | Simplify to use constant |
 | `src/lib/firebase/dal.ts` | Client Firestore access | Remove org-scoped queries |
@@ -497,10 +497,11 @@ Legacy workspace URLs are automatically redirected:
 
 #### Phase 1: Constants & Types (COMPLETED)
 1. ✅ Add `DEFAULT_ORG_ID = 'rapid-compliance-root'` to `src/lib/constants/platform.ts`
-2. ✅ Update `src/types/unified-rbac.ts` to binary hierarchy:
-   - Removed `superadmin`, `owner`, `manager`, `employee`
-   - Binary RBAC: `admin` (level 2), `user` (level 1)
-   - AccountRole = 'admin' | 'user'
+2. ✅ Update `src/types/unified-rbac.ts` to 4-role RBAC (Phase 11):
+   - AccountRole = 'owner' | 'admin' | 'manager' | 'member'
+   - Real differentiated permission matrices per role
+   - Owner = master key, Admin = full minus org deletion/impersonation
+   - Manager = team lead, Member = individual contributor
 3. ✅ Update `src/types/organization.ts`:
    - Remove `Workspace` interface
    - Remove `WorkspaceAccess` interface
@@ -568,12 +569,14 @@ Legacy workspace URLs are automatically redirected:
 19. Update this SSOT document with new route map
 20. Commit and push to dev branch
 
-### RBAC Hierarchy (After Conversion - COMPLETED)
+### RBAC Hierarchy (After Conversion - Phase 11 COMPLETED)
 
 | Role | Level | Key Permissions |
 |------|-------|-----------------|
-| `admin` | 2 | Full system access, user management, billing, all features, system administration |
-| `user` | 1 | Operational access - create/edit records, workflows, marketing, limited admin features |
+| `owner` | 3 | Master key — full system access, can delete org, impersonate users |
+| `admin` | 2 | Full access minus org deletion and user impersonation |
+| `manager` | 1 | Team lead — CRM, marketing, sales, limited user/data management, no platform admin |
+| `member` | 0 | Individual contributor — own records, view-only on most features, no admin access |
 
 ### Files to Remove
 
@@ -1359,162 +1362,162 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 
 ## Unified RBAC Matrix
 
-### Role Hierarchy (Binary RBAC)
+### Role Hierarchy (4-Role RBAC — Phase 11)
 
 | Role | Level | Description |
 |------|-------|-------------|
-| `admin` | 2 | Full platform access - system administration, all features, all data |
-| `user` | 1 | Standard contributor - can view/edit assigned records, limited admin features |
+| `owner` | 3 | Master key — full system access, can delete org, impersonate users |
+| `admin` | 2 | Full access minus org deletion and user impersonation |
+| `manager` | 1 | Team lead — CRM, marketing, sales, limited user/data management |
+| `member` | 0 | Individual contributor — own records, limited read access |
 
-**Note:** All legacy role references (superadmin, owner, manager, employee) have been eradicated. The system now uses a binary permission model.
+**Source of Truth:** `src/types/unified-rbac.ts` — `UNIFIED_ROLE_PERMISSIONS` constant
+**Legacy Compatibility:** `src/types/permissions.ts` re-exports from unified-rbac.ts (31-field subset)
 
-### Permission Categories (Binary RBAC)
-
-**Note:** The permission system has been simplified to binary RBAC. Admin users have full access to all features. User role has restricted access to operational features only.
+### Permission Categories (4-Role RBAC)
 
 #### Platform Administration (8 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canAccessPlatformAdmin | YES | - |
-| canManageAllOrganizations | YES | - |
-| canViewSystemHealth | YES | - |
-| canManageFeatureFlags | YES | - |
-| canViewAuditLogs | YES | - |
-| canManageSystemSettings | YES | - |
-| canImpersonateUsers | YES | - |
-| canAccessSupportTools | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canAccessPlatformAdmin | YES | YES | - | - |
+| canManageAllOrganizations | YES | YES | - | - |
+| canViewSystemHealth | YES | YES | - | - |
+| canManageFeatureFlags | YES | YES | - | - |
+| canViewAuditLogs | YES | YES | - | - |
+| canManageSystemSettings | YES | YES | - | - |
+| canImpersonateUsers | YES | - | - | - |
+| canAccessSupportTools | YES | YES | - | - |
 
 #### Organization Management (5 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canManageOrganization | YES | - |
-| canManageBilling | YES | - |
-| canManageAPIKeys | YES | - |
-| canManageTheme | YES | - |
-| canDeleteOrganization | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canManageOrganization | YES | YES | - | - |
+| canManageBilling | YES | YES | - | - |
+| canManageAPIKeys | YES | YES | - | - |
+| canManageTheme | YES | YES | YES | - |
+| canDeleteOrganization | YES | - | - | - |
 
 #### User Management (4 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canInviteUsers | YES | - |
-| canRemoveUsers | YES | - |
-| canChangeUserRoles | YES | - |
-| canViewAllUsers | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canInviteUsers | YES | YES | YES | - |
+| canRemoveUsers | YES | YES | - | - |
+| canChangeUserRoles | YES | YES | - | - |
+| canViewAllUsers | YES | YES | YES | - |
 
 #### Data Management (7 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canCreateSchemas | YES | - |
-| canEditSchemas | YES | - |
-| canDeleteSchemas | YES | - |
-| canExportData | YES | YES |
-| canImportData | YES | YES |
-| canDeleteData | YES | - |
-| canViewAllRecords | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canCreateSchemas | YES | YES | - | - |
+| canEditSchemas | YES | YES | YES | - |
+| canDeleteSchemas | YES | YES | - | - |
+| canExportData | YES | YES | YES | YES |
+| canImportData | YES | YES | YES | - |
+| canDeleteData | YES | YES | - | - |
+| canViewAllRecords | YES | YES | YES | - |
 
 #### CRM Operations (5 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canCreateRecords | YES | YES |
-| canEditRecords | YES | YES |
-| canDeleteRecords | YES | - |
-| canViewOwnRecordsOnly | - | YES |
-| canAssignRecords | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canCreateRecords | YES | YES | YES | YES |
+| canEditRecords | YES | YES | YES | YES |
+| canDeleteRecords | YES | YES | YES | - |
+| canViewOwnRecordsOnly | - | - | - | YES |
+| canAssignRecords | YES | YES | YES | - |
 
 #### Workflows & Automation (3 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canCreateWorkflows | YES | YES |
-| canEditWorkflows | YES | YES |
-| canDeleteWorkflows | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canCreateWorkflows | YES | YES | YES | - |
+| canEditWorkflows | YES | YES | YES | - |
+| canDeleteWorkflows | YES | YES | - | - |
 
 #### AI Agents & Swarm (4 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canTrainAIAgents | YES | - |
-| canDeployAIAgents | YES | - |
-| canManageAIAgents | YES | - |
-| canAccessSwarmPanel | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canTrainAIAgents | YES | YES | YES | - |
+| canDeployAIAgents | YES | YES | YES | - |
+| canManageAIAgents | YES | YES | - | - |
+| canAccessSwarmPanel | YES | YES | YES | - |
 
 #### Marketing (3 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canManageSocialMedia | YES | YES |
-| canManageEmailCampaigns | YES | YES |
-| canManageWebsite | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canManageSocialMedia | YES | YES | YES | - |
+| canManageEmailCampaigns | YES | YES | YES | - |
+| canManageWebsite | YES | YES | YES | - |
 
 #### Sales (5 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canViewLeads | YES | YES |
-| canManageLeads | YES | - |
-| canViewDeals | YES | YES |
-| canManageDeals | YES | - |
-| canAccessVoiceAgents | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canViewLeads | YES | YES | YES | YES |
+| canManageLeads | YES | YES | YES | - |
+| canViewDeals | YES | YES | YES | YES |
+| canManageDeals | YES | YES | YES | - |
+| canAccessVoiceAgents | YES | YES | YES | - |
 
 #### Reports & Analytics (4 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canViewReports | YES | YES |
-| canCreateReports | YES | - |
-| canExportReports | YES | - |
-| canViewPlatformAnalytics | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canViewReports | YES | YES | YES | YES |
+| canCreateReports | YES | YES | YES | - |
+| canExportReports | YES | YES | YES | - |
+| canViewPlatformAnalytics | YES | YES | YES | - |
 
 #### Settings (2 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canAccessSettings | YES | - |
-| canManageIntegrations | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canAccessSettings | YES | YES | YES | - |
+| canManageIntegrations | YES | YES | - | - |
 
 #### E-Commerce (3 permissions)
 
-| Permission | admin | user |
-|------------|-------|------|
-| canManageEcommerce | YES | - |
-| canProcessOrders | YES | YES |
-| canManageProducts | YES | - |
+| Permission | owner | admin | manager | member |
+|------------|-------|-------|---------|--------|
+| canManageEcommerce | YES | YES | YES | - |
+| canProcessOrders | YES | YES | YES | YES |
+| canManageProducts | YES | YES | YES | - |
 
-### Navigation Section Visibility (12 Sections - Binary RBAC)
+### Navigation Section Visibility (12 Sections — 4-Role RBAC)
 
-**12 Unified Sections** in `AdminSidebar.tsx` (permission-gated per role):
-**11 Operational Sections** (available to all users with permission gating)
-**1 System Section** (admin only — see Rule 4 in Ironclad Architecture Rules)
+**12 Unified Sections** in `AdminSidebar.tsx` (permission-gated per role via `filterNavigationByRole()`):
 
-| Section | admin | user | Key Permission |
-|---------|-------|------|----------------|
-| 1. Command Center | YES | YES | - |
-| 2. CRM | YES | YES* | canViewLeads, canViewDeals |
-| 3. Lead Gen | YES | YES* | canManageLeads (admin only) |
-| 4. Outbound | YES | YES | canManageEmailCampaigns |
-| 5. Automation | YES | YES | canCreateWorkflows |
-| 6. Content Factory | YES | YES | canManageSocialMedia |
-| 7. AI Workforce | YES | - | canTrainAIAgents, canManageAIAgents |
-| 8. E-Commerce | YES | YES* | canManageProducts (admin only), canProcessOrders (both) |
-| 9. Analytics | YES | YES | canViewReports |
-| 10. Website | YES | - | canManageWebsite |
-| 11. Settings | YES | - | canManageOrganization |
-| 12. System | YES | - | canViewSystemHealth (admin only) |
+| Section | owner | admin | manager | member | Key Permission |
+|---------|-------|-------|---------|--------|----------------|
+| 1. Command Center | YES | YES | YES | YES | - |
+| 2. CRM | YES | YES | YES | YES* | canViewLeads, canViewDeals |
+| 3. Lead Gen | YES | YES | YES | - | canManageLeads |
+| 4. Outbound | YES | YES | YES | - | canManageLeads, canManageEmailCampaigns |
+| 5. Content Factory | YES | YES | YES | - | canManageSocialMedia |
+| 6. AI Workforce | YES | YES | YES | - | canDeployAIAgents, canTrainAIAgents |
+| 7. Automation | YES | YES | YES | - | canCreateWorkflows |
+| 8. E-Commerce | YES | YES | YES | YES* | canProcessOrders |
+| 9. Compliance | YES | YES | - | - | canViewAuditLogs |
+| 10. Analytics | YES | YES | YES | YES* | canViewReports |
+| 11. Website | YES | YES | YES | - | canManageWebsite |
+| 12. Settings | YES | YES | YES | - | canAccessSettings |
 
-*Limited items visible based on specific permissions
-
-**Admin Verification:** Admin users see all 12 sections simultaneously in `AdminSidebar.tsx`. Standard users see sections 1-10 with limited functionality.
+*Member sees limited items based on specific permissions
 
 ### RBAC Source Files
 
-- **Definitions:** `src/types/unified-rbac.ts`
-- **Middleware:** `src/middleware.ts` (role-based segment routing)
-- **Layouts:** `src/app/admin/layout.tsx`, `src/app/workspace/[orgId]/layout.tsx`
+- **Definitions:** `src/types/unified-rbac.ts` (single source of truth)
+- **Legacy re-export:** `src/types/permissions.ts` (thin compatibility layer)
+- **Sidebar filtering:** `src/components/admin/AdminSidebar.tsx` → `filterNavigationByRole()`
+- **API middleware:** `src/lib/auth/api-auth.ts` → `requireRole()`
+- **Claims mapping:** `src/lib/auth/claims-validator.ts` → `validateRole()`
+- **Client hooks:** `src/hooks/useUnifiedAuth.ts`, `src/hooks/useAuth.ts`
 
 ---
 
@@ -1531,7 +1534,7 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
    ↓
 3. Check Firestore USERS collection
    ├─ If document exists → Load user profile
-   │  └─ Extract role (admin|user)
+   │  └─ Extract role (owner|admin|manager|member)
    └─ If document missing → User is unauthenticated
    ↓
 4. Set permissions via getUnifiedPermissions(role)
@@ -1547,14 +1550,14 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 2. Verify token using Firebase Admin SDK
    ↓
 3. Extract custom claims from decoded token
-   ├─ role, organizationId, admin flag
+   ├─ role, admin flag
    ↓
 4. If no role in claims → Try Firestore lookup
    ├─ Check USERS collection for user document
    ↓
-5. Return AuthenticatedUser with uid, email, organizationId, role
+5. Return AuthenticatedUser with uid, email, role
    ↓
-6. Route-level checks (requireRole, requireOrganization) enforce access
+6. Route-level checks (requireRole) enforce access
 ```
 
 ### API Protection Functions
@@ -1562,8 +1565,7 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 | Function | Purpose | Returns |
 |----------|---------|---------|
 | `requireAuth(request)` | Basic authentication | 401 if invalid token |
-| `requireRole(request, allowedRoles[])` | Role-based access | 403 if role not in whitelist |
-| `requireOrganization(request, orgId?)` | Organization membership | 403 if org mismatch |
+| `requireRole(request, allowedRoles[])` | Role-based access (4-role RBAC) | 403 if role not in whitelist |
 | `optionalAuth(request)` | Non-blocking authentication | User or null |
 
 ### Security Strengths
@@ -1571,7 +1573,7 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 | Strength | Implementation | Files |
 |----------|----------------|-------|
 | Single-Tenant Security | All requests operate under DEFAULT_ORG_ID | `claims-validator.ts`, `api-auth.ts` |
-| Binary RBAC | Admin (level 2) and User (level 1) roles with clear permission boundaries | `unified-rbac.ts` |
+| 4-Role RBAC | owner/admin/manager/member with differentiated permission matrices | `unified-rbac.ts` |
 | Token Verification | Firebase Admin SDK validates ID tokens server-side | `api-auth.ts` |
 | Layout-Level Auth | Admin routes protected at layout level before render | `admin/layout.tsx` |
 | Permission Matrix | Comprehensive 47-permission definitions per role | `unified-rbac.ts` |
@@ -1581,7 +1583,7 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 | Severity | Issue | Location | Status |
 |----------|-------|----------|--------|
 | ~~MEDIUM~~ | ~~Demo mode fallback in useAuth.ts~~ | `src/hooks/useAuth.ts` | ✅ RESOLVED - Wrapped in `NODE_ENV === 'development'` check |
-| ~~LOW~~ | ~~Inconsistent role naming~~ | Multiple files | ✅ RESOLVED - Binary RBAC (admin|user) deployed across entire codebase. All legacy role references (superadmin/owner/manager/employee) eradicated. |
+| ~~LOW~~ | ~~Inconsistent role naming~~ | Multiple files | ✅ RESOLVED - 4-role RBAC (owner|admin|manager|member) deployed. claims-validator maps legacy strings. |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
 | LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
 | ~~CRITICAL~~ | ~~Auth Handshake Failure: `useSystemStatus` hook missing Authorization header~~ | `src/hooks/useSystemStatus.ts` | ✅ **RESOLVED 2026-01-29** - Implemented reactive auth handshake with fresh Firebase ID Token per request. Features: (1) `onAuthStateChanged` listener for reactive auth state, (2) `getIdToken()` called inside fetch for token freshness, (3) Auth-ready polling kill-switch, (4) Graceful 401/403 error handling via `connectionError` state, (5) Proper cleanup on unmount. `/api/system/status` is now **AUTHENTICATED-LIVE**. |
@@ -1600,7 +1602,7 @@ This script:
 - Updates Firestore user document with standardized role
 - Verifies claims were successfully applied
 
-**Note:** Custom claims provide the primary authentication mechanism. The binary RBAC system uses admin (level 2) and user (level 1) roles.
+**Note:** Custom claims provide the primary authentication mechanism. The 4-role RBAC system uses owner (level 3), admin (level 2), manager (level 1), and member (level 0).
 
 ### Protected Route Patterns
 
@@ -1617,7 +1619,7 @@ This script:
 
 - Unauthenticated → `/admin-login`
 - Non-admin role → `/(dashboard)/dashboard`
-- Only admin users (role === 'admin') allowed through
+- Only admin-level users (owner or admin role) allowed through
 
 ### Public Routes (No Auth Required)
 
@@ -2464,24 +2466,24 @@ The `/admin/organizations/[id]/*` route tree now has **45 functional pages** (Ja
 
 **CommandCenterSidebar Contents (437 lines):** 10 navigation categories (Dashboard, Clients, Leads & Sales, Social Media, Email Marketing, AI Voice, Analytics, System, Jasper Lab), collapsible sections, badge support, role display. All functionality migrated to unified system.
 
-#### Section Visibility by Role (12 Sections - Binary RBAC)
+#### Section Visibility by Role (12 Sections — 4-Role RBAC)
 
-| # | Section | admin | user |
-|---|---------|-------|------|
-| 1 | Command Center | ✅ | ✅ |
-| 2 | CRM | ✅ | ✅* |
-| 3 | Lead Gen | ✅ | ✅* |
-| 4 | Outbound | ✅ | ✅ |
-| 5 | Automation | ✅ | ✅ |
-| 6 | Content Factory | ✅ | ✅ |
-| 7 | AI Workforce | ✅ | - |
-| 8 | E-Commerce | ✅ | ✅* |
-| 9 | Analytics | ✅ | ✅ |
-| 10 | Website | ✅ | - |
-| 11 | Settings | ✅ | - |
-| 12 | System | ✅ | - |
+| # | Section | owner | admin | manager | member |
+|---|---------|-------|-------|---------|--------|
+| 1 | Command Center | ✅ | ✅ | ✅ | ✅ |
+| 2 | CRM | ✅ | ✅ | ✅ | ✅* |
+| 3 | Lead Gen | ✅ | ✅ | ✅ | - |
+| 4 | Outbound | ✅ | ✅ | ✅ | - |
+| 5 | Content Factory | ✅ | ✅ | ✅ | - |
+| 6 | AI Workforce | ✅ | ✅ | ✅ | - |
+| 7 | Automation | ✅ | ✅ | ✅ | - |
+| 8 | E-Commerce | ✅ | ✅ | ✅ | ✅* |
+| 9 | Compliance | ✅ | ✅ | - | - |
+| 10 | Analytics | ✅ | ✅ | ✅ | ✅* |
+| 11 | Website | ✅ | ✅ | ✅ | - |
+| 12 | Settings | ✅ | ✅ | ✅ | - |
 
-*User sees limited items based on specific permissions (view-only or restricted operations)
+*Member sees limited items based on specific permissions
 
 #### Files for Navigation Debugging
 
@@ -2494,7 +2496,7 @@ src/components/dashboard/
 └── IMPLEMENTATION_SUMMARY.md   # Implementation details
 
 src/types/
-└── unified-rbac.ts             # filterNavigationByRole() at lines 699-714
+└── unified-rbac.ts             # filterNavigationByRole() + UNIFIED_ROLE_PERMISSIONS
 ```
 
 #### Orphaned Code Status: ✅ CLEAN
@@ -2921,9 +2923,9 @@ The orchestrator enforces execution order through dependency tracking:
 
 | Type | Location | Purpose |
 |------|----------|---------|
-| `UnifiedUser` | `src/types/unified-rbac.ts` | Authenticated user with role, organizationId, permissions |
+| `UnifiedUser` | `src/types/unified-rbac.ts` | Authenticated user with role, permissions |
 | `UnifiedPermissions` | `src/types/unified-rbac.ts` | 47 permission flags per role |
-| `AccountRole` | `src/types/unified-rbac.ts` | `'admin' \| 'user'` (binary RBAC) |
+| `AccountRole` | `src/types/unified-rbac.ts` | `'owner' \| 'admin' \| 'manager' \| 'member'` (4-role RBAC) |
 | `Organization` | `src/types/organization.ts` | Tenant definition with plan, branding, settings |
 | `Lead` | `src/types/crm-entities.ts` | CRM lead with scoring, enrichment |
 | `Deal` | `src/types/crm-entities.ts` | CRM deal with stage history, value |
@@ -3447,12 +3449,14 @@ Org A broadcasts signal → SignalBus looks up Org A's registry ONLY
 
 The public `/login` page now implements **Smart Role Redirection** to route users to their appropriate dashboard based on their role. This eliminates the "Layout Collision" issue previously experienced in the `/workspace/platform` path.
 
-### Redirect Logic (Binary RBAC)
+### Redirect Logic (4-Role RBAC)
 
 | User Role | Destination | Layout |
 |-----------|-------------|--------|
-| `admin` | `/admin` | PlatformAdminLayout (isolated theme) |
-| `user` | `/(dashboard)/dashboard` | DashboardLayout |
+| `owner` | `/dashboard` | DashboardLayout (full access) |
+| `admin` | `/dashboard` | DashboardLayout (full access) |
+| `manager` | `/dashboard` | DashboardLayout (team-lead access) |
+| `member` | `/dashboard` | DashboardLayout (restricted access) |
 
 ### Implementation Details
 
@@ -3463,11 +3467,11 @@ The public `/login` page now implements **Smart Role Redirection** to route user
    ↓
 2. Fetch user document from Firestore (users/{uid})
    ↓
-3. Extract role from user document (AccountRole type: 'admin' | 'user')
+3. Extract role from user document (AccountRole type: 'owner' | 'admin' | 'manager' | 'member')
    ↓
 4. SMART ROLE REDIRECTION:
-   - if (role === 'admin') → router.push('/admin')
-   - else → router.push('/(dashboard)/dashboard')
+   - All roles → router.push('/dashboard')
+   - Sidebar filtering handles feature visibility per role
    ↓
 5. Show "Redirecting..." loading state (prevents FOUC)
 ```
@@ -3476,10 +3480,10 @@ The public `/login` page now implements **Smart Role Redirection** to route user
 
 | Feature | Implementation |
 |---------|----------------|
-| **Type-Safe Routing** | `AccountRole` type from `unified-rbac.ts` (admin \| user) |
+| **Type-Safe Routing** | `AccountRole` type from `unified-rbac.ts` (owner \| admin \| manager \| member) |
 | **FOUC Prevention** | `redirecting` state shows clean loading UI during navigation |
 | **Single-Tenant Architecture** | All users operate under DEFAULT_ORG_ID |
-| **Binary RBAC** | Admin gets full access, user gets restricted operational access |
+| **4-Role RBAC** | Differentiated access: owner (full), admin (near-full), manager (team-lead), member (restricted) |
 | **Structured Logging** | Role detection logged with uid, role for debugging |
 
 #### Code Changes
