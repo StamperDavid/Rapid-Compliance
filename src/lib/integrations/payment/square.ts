@@ -62,12 +62,8 @@ export async function executeSquareFunction(
   parameters: Record<string, unknown>,
   _integration: ConnectedIntegration
 ): Promise<unknown> {
-  // Import DEFAULT_ORG_ID for penthouse
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-  const organizationId = DEFAULT_ORG_ID;
-
   // Get Square API keys from organization settings
-  const keys = await apiKeyService.getKeys(organizationId);
+  const keys = await apiKeyService.getKeys();
   const squareConfig = (keys?.payments?.square ?? {}) as SquareConfig;
   const squareAccessToken = squareConfig.accessToken;
 

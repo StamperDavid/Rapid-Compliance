@@ -14,6 +14,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
 import type { VideoStatus, VideoAspectRatio, VideoResolution, VideoProvider } from '@/types/video';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // =============================================================================
 // TYPES
@@ -356,6 +357,7 @@ export class VideoJobService {
 /**
  * Create a VideoJobService instance for an organization
  */
-export function createVideoJobService(organizationId: string): VideoJobService {
+export function createVideoJobService(): VideoJobService {
+  const organizationId = DEFAULT_ORG_ID;
   return new VideoJobService(organizationId);
 }

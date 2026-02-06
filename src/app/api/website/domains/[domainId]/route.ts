@@ -1,17 +1,14 @@
 /**
  * Single Domain API
  * Manage individual custom domain
- * CRITICAL: Organization isolation - validates organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-
-interface DomainData {
-  organizationId: string;
-}
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 /**
  * DELETE /api/website/domains/[domainId]
@@ -27,17 +24,8 @@ export async function DELETE(
     }
 
     const params = await context.params;
-    const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
+    const organizationId = DEFAULT_ORG_ID;
     const domainId = decodeURIComponent(params.domainId);
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
 
     const domainRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/custom-domains/{domainId}',
@@ -50,23 +38,6 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Domain not found' },
         { status: 404 }
-      );
-    }
-
-    const domainData = doc.data() as DomainData | undefined;
-
-    // CRITICAL: Verify organizationId matches
-    if (domainData?.organizationId !== organizationId) {
-      logger.error('[SECURITY] Attempted cross-org domain deletion', new Error('Cross-org domain delete attempt'), {
-        route: '/api/website/domains/[domainId]',
-        method: 'DELETE',
-        requested: organizationId,
-        actual: domainData?.organizationId,
-        domainId,
-      });
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       );
     }
 

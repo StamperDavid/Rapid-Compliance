@@ -22,11 +22,10 @@ export interface LinkedInJob {
  */
 export async function getCompanyJobs(
   companyName: string,
-  organizationId: string,
   maxResults: number = 10
 ): Promise<LinkedInJob[]> {
   try {
-    const apiKey = await getLinkedInApiKey(organizationId);
+    const apiKey = await getLinkedInApiKey();
     
     if (apiKey) {
       // Use RapidAPI LinkedIn API if available
@@ -246,7 +245,7 @@ function cleanHtml(html: string): string {
 /**
  * Get LinkedIn API key (RapidAPI)
  */
-async function getLinkedInApiKey(organizationId: string): Promise<string | null> {
+async function getLinkedInApiKey(): Promise<string | null> {
   try {
     // Try environment variable first
     if (process.env.RAPIDAPI_KEY) {
@@ -254,7 +253,7 @@ async function getLinkedInApiKey(organizationId: string): Promise<string | null>
     }
 
     // Try organization API keys
-    const keys = await apiKeyService.getKeys(organizationId);
+    const keys = await apiKeyService.getKeys();
     return keys?.enrichment?.rapidApiKey ?? null;
   } catch (error) {
     logger.error('[LinkedIn] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'linkedin-service.ts' });

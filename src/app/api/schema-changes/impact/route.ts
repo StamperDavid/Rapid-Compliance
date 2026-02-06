@@ -5,6 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { getSchemaChangeImpactSummary } from '@/lib/schema/schema-change-handler';
 import { getWorkflowValidationSummary } from '@/lib/schema/workflow-validator';
 
@@ -15,27 +16,26 @@ import { getWorkflowValidationSummary } from '@/lib/schema/workflow-validator';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId');
     const schemaId = searchParams.get('schemaId');
-    
-    if (!organizationId || !workspaceId || !schemaId) {
+    const workspaceId = 'default';
+
+    if (!schemaId) {
       return NextResponse.json(
-        { error: 'organizationId, workspaceId, and schemaId are required' },
+        { error: 'schemaId is required' },
         { status: 400 }
       );
     }
-    
+
     // Get impact summary
     const impactSummary = await getSchemaChangeImpactSummary(
-      organizationId,
+      DEFAULT_ORG_ID,
       workspaceId,
       schemaId
     );
-    
+
     // Get workflow validation summary
     const workflowSummary = await getWorkflowValidationSummary(
-      organizationId,
+      DEFAULT_ORG_ID,
       workspaceId
     );
     

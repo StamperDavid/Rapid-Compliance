@@ -1414,7 +1414,7 @@ export class OutreachManager extends BaseManager {
     // Load brand DNA for personalization context
     let brandContext = '';
     try {
-      const brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
+      const brandDNA = await getBrandDNA();
       if (brandDNA) {
         brandContext = brandDNA.companyDescription ?? '';
       }

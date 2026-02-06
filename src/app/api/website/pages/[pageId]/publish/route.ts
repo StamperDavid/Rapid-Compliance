@@ -1,7 +1,7 @@
 /**
  * Page Publishing API
  * Handle publish/unpublish actions with version tracking
- * CRITICAL: Organization isolation - validates organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import type { NextRequest } from 'next/server';
@@ -9,12 +9,11 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import {
   handleAPIError,
-  validateOrgId,
-  verifyOrgOwnership,
   successResponse,
   errorResponse,
 } from '@/lib/api-error-handler';
 import { getUserIdentifier } from '@/lib/server-auth';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface PageData {
   organizationId?: string;
@@ -27,7 +26,6 @@ interface PageData {
 }
 
 interface RequestBody {
-  organizationId?: string;
   scheduledFor?: string;
 }
 
@@ -56,10 +54,8 @@ export async function POST(
 
     const params = await context.params;
     const body = await request.json() as RequestBody;
-    const { organizationId, scheduledFor } = body;
-
-    // CRITICAL: Validate organizationId
-    const validOrgId = validateOrgId(organizationId);
+    const { scheduledFor } = body;
+    const validOrgId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
@@ -76,11 +72,6 @@ export async function POST(
 
     if (!pageData) {
       return errorResponse('Page data not found', 404, 'PAGE_DATA_NOT_FOUND');
-    }
-
-    // CRITICAL: Verify organizationId matches
-    if (pageData.organizationId) {
-      verifyOrgOwnership(pageData.organizationId, validOrgId, 'page');
     }
 
     const now = FieldValue.serverTimestamp();
@@ -181,11 +172,7 @@ export async function DELETE(
     }
 
     const params = await context.params;
-    const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
-
-    // CRITICAL: Validate organizationId
-    const validOrgId = validateOrgId(organizationId);
+    const validOrgId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
@@ -202,11 +189,6 @@ export async function DELETE(
 
     if (!pageData) {
       return errorResponse('Page data not found', 404, 'PAGE_DATA_NOT_FOUND');
-    }
-
-    // CRITICAL: Verify organizationId matches
-    if (pageData.organizationId) {
-      verifyOrgOwnership(pageData.organizationId, validOrgId, 'page');
     }
 
     const now = FieldValue.serverTimestamp();

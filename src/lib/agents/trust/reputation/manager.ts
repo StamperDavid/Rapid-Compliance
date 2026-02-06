@@ -2047,7 +2047,7 @@ export class ReputationManager extends BaseManager {
    */
   private async loadBrandDNA(): Promise<BrandDNA | null> {
     try {
-      const brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
+      const brandDNA = await getBrandDNA();
       return brandDNA;
     } catch {
       return null;

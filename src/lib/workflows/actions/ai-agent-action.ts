@@ -81,8 +81,7 @@ export async function executeAIAgentAction(
         parts: [{ text: m.content }],
       }));
       const ragResult = await enhanceChatWithRAG(
-        ragMessages, 
-        organizationId, 
+        ragMessages,
         enhancedSystemPrompt
       );
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;

@@ -1,7 +1,7 @@
 /**
  * Individual Blog Post API
  * Get, update, delete a specific blog post
- * CRITICAL: Organization-scoped - scoped to organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,13 +9,10 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const paramsSchema = z.object({
   postId: z.string().min(1, 'postId is required'),
-});
-
-const getQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
 });
 
 const pageSEOSchema = z.object({
@@ -29,7 +26,6 @@ const pageSEOSchema = z.object({
 });
 
 const putBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   post: z.object({
     title: z.string().optional(),
     slug: z.string().optional(),
@@ -67,20 +63,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
     }
     const { postId } = paramsResult.data;
-
-    const { searchParams } = new URL(request.url);
-    const queryResult = getQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId') ?? undefined,
-    });
-
-    if (!queryResult.success) {
-      return NextResponse.json(
-        { error: queryResult.error.errors[0]?.message ?? 'organizationId required' },
-        { status: 400 }
-      );
-    }
-
-    const { organizationId } = queryResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Get post document
     const postRef = adminDal.getNestedDocRef(
@@ -147,7 +130,8 @@ export async function PUT(
       );
     }
 
-    const { organizationId, post } = bodyResult.data;
+    const { post } = bodyResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Get existing post
     const postRef = adminDal.getNestedDocRef(
@@ -229,20 +213,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
     }
     const { postId } = paramsResult.data;
-
-    const { searchParams } = new URL(request.url);
-    const queryResult = getQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId') ?? undefined,
-    });
-
-    if (!queryResult.success) {
-      return NextResponse.json(
-        { error: queryResult.error.errors[0]?.message ?? 'organizationId required' },
-        { status: 400 }
-      );
-    }
-
-    const { organizationId } = queryResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Get post to verify ownership
     const postRef = adminDal.getNestedDocRef(

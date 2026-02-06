@@ -10,6 +10,7 @@ import { createVertexAIFineTuningJob } from '../fine-tuning/vertex-tuner';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { where, type Timestamp } from 'firebase/firestore';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface OrganizationPreferences {
   preferredModel?: string;
@@ -107,7 +108,7 @@ async function shouldTriggerFineTuning(
   }
   
   // Check last training date
-  const lastJob = await getLastFineTuningJob(organizationId);
+  const lastJob = await getLastFineTuningJob();
 
   if (lastJob) {
     const daysSinceLastTraining = getDaysSinceDate(toDate(lastJob.createdAt));
@@ -126,7 +127,7 @@ async function shouldTriggerFineTuning(
   }
   
   // Check budget
-  const monthlySpend = await getMonthlyTrainingSpend(organizationId);
+  const monthlySpend = await getMonthlyTrainingSpend();
   if (monthlySpend >= config.maxMonthlyTrainingCost) {
     logger.info('[Continuous Learning] Budget limit reached', { file: 'continuous-learning-engine.ts' });
     return false;
@@ -220,7 +221,8 @@ async function getLearningConfig(
 /**
  * Get last fine-tuning job
  */
-async function getLastFineTuningJob(organizationId: string): Promise<FineTuningJob | null> {
+async function getLastFineTuningJob(): Promise<FineTuningJob | null> {
+  const organizationId = DEFAULT_ORG_ID;
   const jobs = await FirestoreService.getAll<FineTuningJob>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
     []
@@ -239,7 +241,8 @@ async function getLastFineTuningJob(organizationId: string): Promise<FineTuningJ
 /**
  * Get monthly training spend
  */
-async function getMonthlyTrainingSpend(organizationId: string): Promise<number> {
+async function getMonthlyTrainingSpend(): Promise<number> {
+  const organizationId = DEFAULT_ORG_ID;
   const jobs = await FirestoreService.getAll<FineTuningJob>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
     []
@@ -289,9 +292,9 @@ export async function evaluateAndDeployModel(
   
   // Import A/B testing service
   const { createABTest, getActiveABTest } = await import('./ab-testing-service');
-  
+
   // Check if there's already an active test
-  const existingTest = await getActiveABTest(organizationId);
+  const existingTest = await getActiveABTest();
   if (existingTest?.status === 'running') {
     return {
       deployed: false,
@@ -387,9 +390,9 @@ export async function checkAndDeployWinner(
   reason: string;
 }> {
   const { getActiveABTest, completeABTestAndDeploy } = await import('./ab-testing-service');
-  
-  const test = await getActiveABTest(organizationId);
-  
+
+  const test = await getActiveABTest();
+
   if (!test) {
     return { deployed: false, reason: 'No active A/B test' };
   }

@@ -1,6 +1,6 @@
 /**
  * Website Pages API
- * CRITICAL: Organization isolation - validates organizationId on every request
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -8,6 +8,7 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface PageSEO {
   title?: string;
@@ -31,7 +32,6 @@ interface PageData {
 }
 
 interface RequestBody {
-  organizationId?: string;
   page?: {
     id?: string;
     title?: string;
@@ -53,16 +53,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
+    const organizationId = DEFAULT_ORG_ID;
     const status = searchParams.get('status'); // Filter by status
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
 
     const pagesRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/pages/items',
@@ -112,15 +104,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as RequestBody;
-    const { organizationId, page } = body;
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const { page } = body;
+    const organizationId = DEFAULT_ORG_ID;
 
     if (!page) {
       return NextResponse.json(

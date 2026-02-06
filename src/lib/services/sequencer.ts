@@ -989,7 +989,6 @@ async function executePhoneAction(
   const agentId = (step.data?.agentId as string | undefined) ?? 'default';
   
   const call = await initiateCall(
-    enrollment.organizationId,
     leadData.phone,
     agentId,
     {

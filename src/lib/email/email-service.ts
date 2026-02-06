@@ -477,13 +477,12 @@ export async function sendBulkEmails(
  * Get email tracking data
  * REAL: Queries Firestore for tracking data
  */
-export async function getEmailTracking(messageId: string, organizationId?: string): Promise<EmailTracking | null> {
-  if (!organizationId) {
-    return null;
-  }
+export async function getEmailTracking(messageId: string): Promise<EmailTracking | null> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const organizationId = DEFAULT_ORG_ID;
 
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-   
+
   const trackingData = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
     messageId

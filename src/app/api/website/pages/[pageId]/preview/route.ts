@@ -1,7 +1,7 @@
 /**
  * Page Preview API
  * Generate shareable preview links and retrieve preview data
- * CRITICAL: Organization isolation - validates organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,6 +9,7 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface PageData {
   organizationId: string;
@@ -20,7 +21,6 @@ interface TokenData {
 }
 
 interface RequestBody {
-  organizationId?: string;
   expiresIn?: number;
 }
 
@@ -39,15 +39,8 @@ export async function POST(
 
     const params = await context.params;
     const body = await request.json() as RequestBody;
-    const { organizationId, expiresIn } = body; // expiresIn in hours, default 24
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
+    const { expiresIn } = body; // expiresIn in hours, default 24
+    const organizationId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
@@ -60,16 +53,6 @@ export async function POST(
       return NextResponse.json(
         { error: 'Page not found' },
         { status: 404 }
-      );
-    }
-
-    const pageData = doc.data() as PageData | undefined;
-
-    // CRITICAL: Verify organizationId matches
-    if (pageData?.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       );
     }
 
@@ -133,16 +116,8 @@ export async function GET(
 
     const params = await context.params;
     const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
+    const organizationId = DEFAULT_ORG_ID;
     const token = searchParams.get('token');
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
 
     if (!token) {
       return NextResponse.json(
@@ -202,14 +177,6 @@ export async function GET(
     }
 
     const pageData = doc.data() as PageData | undefined;
-
-    // CRITICAL: Verify organizationId matches
-    if (pageData?.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
 
     return NextResponse.json({
       success: true,

@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
     // For factual queries, inject verified state context
     let stateContext = '';
     if (queryClassification.requiresStateReflection) {
-      stateContext = await SystemStateService.generateStateContext(organizationId);
+      stateContext = await SystemStateService.generateStateContext();
     }
 
     // Convert conversation history to provider format with tool support

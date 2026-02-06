@@ -114,9 +114,9 @@ async function buildAIDAEmail(
   tokens: Record<string, string>
 ): Promise<string> {
   const { valueProposition = 'increase sales productivity', cta = 'book a 15-minute call' } = request;
-  
+
   // Use AI to generate if enabled for this organization
-  const useAI = await shouldUseAI(request.organizationId);
+  const useAI = await shouldUseAI();
   
   if (useAI) {
     return generateWithAI(request, tokens, 'AIDA');
@@ -141,7 +141,7 @@ async function buildPASEmail(
   request: EmailGenerationRequest,
   tokens: Record<string, string>
 ): Promise<string> {
-  if (await shouldUseAI(request.organizationId)) {
+  if (await shouldUseAI()) {
     return generateWithAI(request, tokens, 'PAS');
   }
 
@@ -161,7 +161,7 @@ async function buildBABEmail(
   request: EmailGenerationRequest,
   tokens: Record<string, string>
 ): Promise<string> {
-  if (await shouldUseAI(request.organizationId)) {
+  if (await shouldUseAI()) {
     return generateWithAI(request, tokens, 'BAB');
   }
 
@@ -344,12 +344,10 @@ function calculatePersonalizationScore(
 /**
  * Check if we should use AI or template based on organization settings
  */
-async function shouldUseAI(organizationId?: string): Promise<boolean> {
-  // If no organizationId provided, default to true
-  if (!organizationId) {
-    return true;
-  }
-  
+async function shouldUseAI(): Promise<boolean> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const organizationId = DEFAULT_ORG_ID;
+
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 

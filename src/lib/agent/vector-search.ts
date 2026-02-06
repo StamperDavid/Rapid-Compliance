@@ -6,6 +6,7 @@
 import { generateEmbedding, type EmbeddingResult } from './embeddings-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface SearchResult {
   text: string;
@@ -91,12 +92,12 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
  */
 export async function searchKnowledgeBase(
   query: string,
-  organizationId: string,
   limit: number = 5
 ): Promise<SearchResult[]> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Generate embedding for query
-    const queryEmbedding = await generateEmbedding(query, organizationId);
+    const queryEmbedding = await generateEmbedding(query);
     
     // Get all knowledge base embeddings from Firestore
     const knowledgeBase = await FirestoreService.get(
@@ -152,12 +153,12 @@ export async function searchKnowledgeBase(
  * Store embedding in Firestore
  */
 export async function storeEmbedding(
-  organizationId: string,
   embedding: EmbeddingResult,
   source: 'document' | 'url' | 'faq' | 'product',
   sourceId: string,
   metadata?: Record<string, unknown>
 ): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const embeddingId = `emb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -184,9 +185,8 @@ export async function storeEmbedding(
 /**
  * Index knowledge base documents (generate and store embeddings)
  */
-export async function indexKnowledgeBase(
-  organizationId: string
-): Promise<void> {
+export async function indexKnowledgeBase(): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Get knowledge base
     const knowledgeBaseData: KnowledgeBase | null = await FirestoreService.get(
@@ -202,8 +202,8 @@ export async function indexKnowledgeBase(
     if (knowledgeBaseData.documents && knowledgeBaseData.documents.length > 0) {
       for (const doc of knowledgeBaseData.documents) {
         if (doc.extractedContent) {
-          const embedding = await generateEmbedding(doc.extractedContent, organizationId);
-          await storeEmbedding(organizationId, embedding, 'document', doc.id, {
+          const embedding = await generateEmbedding(doc.extractedContent);
+          await storeEmbedding(embedding, 'document', doc.id, {
             filename: doc.filename,
             type: doc.type,
           });
@@ -215,8 +215,8 @@ export async function indexKnowledgeBase(
     if (knowledgeBaseData.urls && knowledgeBaseData.urls.length > 0) {
       for (const url of knowledgeBaseData.urls) {
         if (url.extractedContent) {
-          const embedding = await generateEmbedding(url.extractedContent, organizationId);
-          await storeEmbedding(organizationId, embedding, 'url', url.id, {
+          const embedding = await generateEmbedding(url.extractedContent);
+          await storeEmbedding(embedding, 'url', url.id, {
             url: url.url,
             title: url.title,
           });
@@ -228,8 +228,8 @@ export async function indexKnowledgeBase(
     if (knowledgeBaseData.faqs && knowledgeBaseData.faqs.length > 0) {
       for (const faq of knowledgeBaseData.faqs) {
         const faqText = `${faq.question} ${faq.answer}`;
-        const embedding = await generateEmbedding(faqText, organizationId);
-        await storeEmbedding(organizationId, embedding, 'faq', faq.id, {
+        const embedding = await generateEmbedding(faqText);
+        await storeEmbedding(embedding, 'faq', faq.id, {
           question: faq.question,
           category: faq.category,
         });
@@ -240,8 +240,8 @@ export async function indexKnowledgeBase(
     if (knowledgeBaseData.productCatalog?.products) {
       for (const product of knowledgeBaseData.productCatalog.products) {
         const productText = `${product.name} ${product.description ?? ''}`;
-        const embedding = await generateEmbedding(productText, organizationId);
-        await storeEmbedding(organizationId, embedding, 'product', product.id, {
+        const embedding = await generateEmbedding(productText);
+        await storeEmbedding(embedding, 'product', product.id, {
           name: product.name,
           price: product.price,
           category: product.category,

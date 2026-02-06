@@ -69,20 +69,19 @@ export interface ProspectData {
  * Research a prospect's company and extract insights for personalization
  */
 export async function researchProspect(
-  prospect: ProspectData,
-  organizationId: string = 'default'
+  prospect: ProspectData
 ): Promise<ProspectResearch> {
   logger.info('Prospect Research Researching prospect.company}...', { file: 'prospect-research.ts' });
 
   try {
     // Run research tasks in parallel
     const [companyInfo, news, funding, tech, hiring, social] = await Promise.all([
-      getCompanyInfo(prospect.company, organizationId),
-      getRecentNews(prospect.company, organizationId),
-      getFundingInfo(prospect.company, organizationId),
-      getTechStack(prospect.company, organizationId),
-      getHiringSignals(prospect.company, organizationId),
-      getSocialPresence(prospect.company, organizationId),
+      getCompanyInfo(prospect.company),
+      getRecentNews(prospect.company),
+      getFundingInfo(prospect.company),
+      getTechStack(prospect.company),
+      getHiringSignals(prospect.company),
+      getSocialPresence(prospect.company),
     ]);
 
     // Generate AI insights from the research
@@ -128,9 +127,11 @@ export async function researchProspect(
  * Get company information using NEW enrichment service (no Clearbit!)
  * Cost: ~$0.001 per lead (vs $0.50-$1.00 with Clearbit)
  */
-async function getCompanyInfo(companyName: string, orgId: string): Promise<CompanyInfo> {
+async function getCompanyInfo(companyName: string): Promise<CompanyInfo> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const orgId = DEFAULT_ORG_ID;
   const { enrichCompany } = await import('../enrichment/enrichment-service');
-  
+
   try {
     // Use our new enrichment service
     const result = await enrichCompany(
@@ -186,19 +187,19 @@ function guessDomainFromCompanyName(companyName: string): string {
 /**
  * Get recent news about the company
  */
-async function getRecentNews(companyName: string, _orgId: string): Promise<NewsItem[]> {
+async function getRecentNews(companyName: string): Promise<NewsItem[]> {
   const { searchCompanyNews } = await import('../enrichment/search-service');
-  
+
   return searchCompanyNews(companyName, 5);
 }
 
 /**
  * Get funding information
  */
-async function getFundingInfo(companyName: string, orgId: string): Promise<FundingInfo | undefined> {
+async function getFundingInfo(companyName: string): Promise<FundingInfo | undefined> {
   const { searchOrganization, formatFundingData } = await import('./apis/crunchbase-service');
-  
-  const organization = await searchOrganization(companyName, orgId);
+
+  const organization = await searchOrganization(companyName);
   
   if (!organization) {
     return undefined;
@@ -224,24 +225,24 @@ async function getFundingInfo(companyName: string, orgId: string): Promise<Fundi
 /**
  * Detect technology stack using our free scraper
  */
-async function getTechStack(companyName: string, _orgId: string): Promise<string[]> {
+async function getTechStack(companyName: string): Promise<string[]> {
   const { detectTechStack } = await import('../enrichment/search-service');
-  
+
   const domain = guessDomainFromCompanyName(companyName);
-  
+
   return detectTechStack(domain);
 }
 
 /**
  * Find hiring signals (job postings) by scraping careers page
  */
-async function getHiringSignals(companyName: string, _orgId: string): Promise<JobPosting[]> {
+async function getHiringSignals(companyName: string): Promise<JobPosting[]> {
   const { scrapeCareersPage } = await import('../enrichment/web-scraper');
-  
+
   try {
     const domain = guessDomainFromCompanyName(companyName);
     const careers = await scrapeCareersPage(`https://${domain}`);
-    
+
     return careers.jobs.map(job => ({
       title: job.title,
       department: 'Unknown',
@@ -256,10 +257,10 @@ async function getHiringSignals(companyName: string, _orgId: string): Promise<Jo
 /**
  * Get social media presence by scraping the company website
  */
-async function getSocialPresence(companyName: string, _orgId: string): Promise<SocialPresence> {
+async function getSocialPresence(companyName: string): Promise<SocialPresence> {
   const { searchLinkedIn } = await import('../enrichment/search-service');
   const { scrapeWebsite, extractDataPoints } = await import('../enrichment/web-scraper');
-  
+
   try {
     // Scrape website to find social links
     const domain = guessDomainFromCompanyName(companyName);

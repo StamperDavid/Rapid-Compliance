@@ -31,11 +31,10 @@ export interface BuiltWithResult {
  * Get technology stack for a domain
  */
 export async function getTechStack(
-  domain: string,
-  organizationId: string
+  domain: string
 ): Promise<string[]> {
   try {
-    const apiKey = await getBuiltWithApiKey(organizationId);
+    const apiKey = await getBuiltWithApiKey();
     
     if (!apiKey) {
       logger.warn('[BuiltWith] API key not configured, using fallback', { file: 'builtwith-service.ts' });
@@ -98,11 +97,10 @@ export async function getTechStack(
  * Get detailed technology information
  */
 export async function getTechStackDetailed(
-  domain: string,
-  organizationId: string
+  domain: string
 ): Promise<BuiltWithResult | null> {
   try {
-    const apiKey = await getBuiltWithApiKey(organizationId);
+    const apiKey = await getBuiltWithApiKey();
     
     if (!apiKey) {
       return null;
@@ -224,7 +222,7 @@ async function getFallbackTechStack(domain: string): Promise<string[]> {
 /**
  * Get BuiltWith API key
  */
-async function getBuiltWithApiKey(organizationId: string): Promise<string | null> {
+async function getBuiltWithApiKey(): Promise<string | null> {
   try {
     // Try environment variable first
     if (process.env.BUILTWITH_API_KEY) {
@@ -232,7 +230,7 @@ async function getBuiltWithApiKey(organizationId: string): Promise<string | null
     }
 
     // Try organization API keys
-    const keys = await apiKeyService.getKeys(organizationId);
+    const keys = await apiKeyService.getKeys();
     return keys?.enrichment?.builtWithApiKey ?? null;
   } catch (error) {
     logger.error('[BuiltWith] Error getting API key:', error instanceof Error ? error : new Error(String(error)), { file: 'builtwith-service.ts' });

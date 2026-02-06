@@ -10,6 +10,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface SpecialistStatusRequestBody {
   organizationId?: string;
@@ -22,15 +23,8 @@ function isSpecialistStatusRequestBody(value: unknown): value is SpecialistStatu
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
+    const organizationId = DEFAULT_ORG_ID;
     const quickOnly = searchParams.get('quick') === 'true';
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
 
     if (quickOnly) {
       // Return just the quick status for performance

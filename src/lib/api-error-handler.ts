@@ -4,6 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export class APIError extends Error {
   constructor(
@@ -156,16 +157,10 @@ export function validateParams(
 
 /**
  * Validate organizationId is present
+ * In single-tenant mode, always returns DEFAULT_ORG_ID
  */
-export function validateOrgId(organizationId: unknown): string {
-  if (!organizationId || typeof organizationId !== 'string') {
-    throw new APIError(
-      'organizationId is required and must be a string',
-      400,
-      'INVALID_ORGANIZATION_ID'
-    );
-  }
-  return organizationId;
+export function validateOrgId(_organizationId?: unknown): string {
+  return DEFAULT_ORG_ID;
 }
 
 /**

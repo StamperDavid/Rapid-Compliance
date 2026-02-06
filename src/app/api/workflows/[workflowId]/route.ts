@@ -5,6 +5,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { z } from 'zod';
 import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { getWorkflow, updateWorkflow, deleteWorkflow, setWorkflowStatus } from '@/lib/workflows/workflow-service';
 
 const paramsSchema = z.object({
@@ -12,24 +13,20 @@ const paramsSchema = z.object({
 });
 
 const getQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   workspaceId: z.string().optional().default('default'),
 });
 
 const putBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   workspaceId: z.string().optional().default('default'),
   workflow: z.record(z.unknown()),
 });
 
 const patchBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   workspaceId: z.string().optional().default('default'),
   status: z.enum(['active', 'paused']),
 });
 
 const deleteQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   workspaceId: z.string().optional().default('default'),
 });
 
@@ -66,16 +63,15 @@ export async function GET(
 
     const { searchParams } = new URL(request.url);
     const queryResult = getQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId'),
       workspaceId: searchParams.get('workspaceId') ?? undefined,
     });
 
     if (!queryResult.success) {
-      return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
     }
 
-    const { organizationId, workspaceId } = queryResult.data;
-    const workflow = await getWorkflow(organizationId, workflowId, workspaceId);
+    const { workspaceId } = queryResult.data;
+    const workflow = await getWorkflow(DEFAULT_ORG_ID, workflowId, workspaceId);
 
     if (!workflow) {
       return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
@@ -133,10 +129,10 @@ export async function PUT(
       );
     }
 
-    const { organizationId, workspaceId, workflow } = bodyResult.data;
+    const { workspaceId, workflow } = bodyResult.data;
 
     const updatedWorkflow = await updateWorkflow(
-      organizationId,
+      DEFAULT_ORG_ID,
       workflowId,
       workflow,
       workspaceId
@@ -194,10 +190,10 @@ export async function PATCH(
       );
     }
 
-    const { organizationId, workspaceId, status } = bodyResult.data;
+    const { workspaceId, status } = bodyResult.data;
 
     const updatedWorkflow = await setWorkflowStatus(
-      organizationId,
+      DEFAULT_ORG_ID,
       workflowId,
       status,
       workspaceId
@@ -247,16 +243,15 @@ export async function DELETE(
 
     const { searchParams } = new URL(request.url);
     const queryResult = deleteQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId'),
       workspaceId: searchParams.get('workspaceId') ?? undefined,
     });
 
     if (!queryResult.success) {
-      return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
     }
 
-    const { organizationId, workspaceId } = queryResult.data;
-    await deleteWorkflow(organizationId, workflowId, workspaceId);
+    const { workspaceId } = queryResult.data;
+    await deleteWorkflow(DEFAULT_ORG_ID, workflowId, workspaceId);
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

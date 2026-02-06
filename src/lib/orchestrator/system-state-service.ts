@@ -13,6 +13,7 @@
 import { executeGetSystemState, type SystemState } from './jasper-tools';
 import { SPECIALISTS } from './feature-manifest';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // STATE VALIDATION TYPES
@@ -174,10 +175,9 @@ export function classifyQuery(query: string): QueryClassification {
  * Used to catch hallucinations BEFORE they reach the user.
  */
 export async function validateClaim(
-  claimedData: ClaimedData,
-  organizationId?: string
+  claimedData: ClaimedData
 ): Promise<StateValidation> {
-  const actualState = await executeGetSystemState(organizationId);
+  const actualState = await executeGetSystemState();
   const corrections: StateCorrection[] = [];
 
   // Validate organization counts
@@ -231,9 +231,10 @@ export async function validateClaim(
  * Generate a state context block to inject into Jasper's prompt.
  * This ensures Jasper has accurate data BEFORE generating a response.
  */
-export async function generateStateContext(organizationId?: string): Promise<string> {
+export async function generateStateContext(): Promise<string> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
-    const state = await executeGetSystemState(organizationId);
+    const state = await executeGetSystemState();
 
     return `
 ═══════════════════════════════════════════════════════════════════════════════

@@ -23,6 +23,7 @@
 import { logger } from '@/lib/logger/logger';
 import { discoverCompetitor, type CompetitorProfile } from './battlecard-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -678,29 +679,31 @@ const monitors = new Map<string, CompetitiveMonitor>();
 /**
  * Get or create competitive monitor for organization
  */
-export function getCompetitiveMonitor(organizationId: string): CompetitiveMonitor {
+export function getCompetitiveMonitor(): CompetitiveMonitor {
+  const organizationId = DEFAULT_ORG_ID;
   let monitor = monitors.get(organizationId);
-  
+
   if (!monitor) {
     monitor = new CompetitiveMonitor(organizationId);
     monitors.set(organizationId, monitor);
   }
-  
+
   return monitor;
 }
 
 /**
  * Start monitoring for organization
  */
-export async function startCompetitiveMonitoring(organizationId: string): Promise<void> {
-  const monitor = getCompetitiveMonitor(organizationId);
+export async function startCompetitiveMonitoring(): Promise<void> {
+  const monitor = getCompetitiveMonitor();
   await monitor.start();
 }
 
 /**
  * Stop monitoring for organization
  */
-export function stopCompetitiveMonitoring(organizationId: string): void {
+export function stopCompetitiveMonitoring(): void {
+  const organizationId = DEFAULT_ORG_ID;
   const monitor = monitors.get(organizationId);
   if (monitor) {
     monitor.stop();

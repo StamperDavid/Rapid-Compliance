@@ -165,12 +165,11 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
 /**
  * Send email campaign
  */
-export async function sendCampaign(campaignId: string, organizationId?: string): Promise<{ success: boolean; error?: string }> {
-  // Load campaign from Firestore
-  if (!organizationId) {
-    return { success: false, error: 'Organization ID is required' };
-  }
+export async function sendCampaign(campaignId: string): Promise<{ success: boolean; error?: string }> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const organizationId = DEFAULT_ORG_ID;
 
+  // Load campaign from Firestore
   const { EmailCampaignService } = await import('@/lib/db/firestore-service');
   const campaignData = await EmailCampaignService.get(organizationId, campaignId);
   
@@ -351,12 +350,11 @@ function determineABTestWinner(
 /**
  * Get campaign statistics
  */
-export async function getCampaignStats(campaignId: string, organizationId?: string): Promise<CampaignStats | null> {
-  // Load campaign from Firestore
-  if (!organizationId) {
-    return null;
-  }
+export async function getCampaignStats(campaignId: string): Promise<CampaignStats | null> {
+  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const organizationId = DEFAULT_ORG_ID;
 
+  // Load campaign from Firestore
   const { EmailCampaignService } = await import('@/lib/db/firestore-service');
   const campaignData = await EmailCampaignService.get(organizationId, campaignId);
   

@@ -227,16 +227,16 @@ export default function AgentTrainingPage() {
 
       // Load Base Model
       const { getBaseModel } = await import('@/lib/agent/base-model-builder');
-      const model = await getBaseModel(orgId) as BaseModel | null;
+      const model = await getBaseModel() as BaseModel | null;
 
       setBaseModel(model);
 
       // Load Golden Masters
       const { getAllGoldenMasters, getActiveGoldenMaster } = await import('@/lib/agent/golden-master-builder');
-      const masters = await getAllGoldenMasters(orgId) as unknown as GoldenMaster[];
+      const masters = await getAllGoldenMasters() as unknown as GoldenMaster[];
       setGoldenMasters(masters);
 
-      const active = await getActiveGoldenMaster(orgId) as unknown as GoldenMaster | null;
+      const active = await getActiveGoldenMaster() as unknown as GoldenMaster | null;
       setActiveGoldenMaster(active);
 
       // Load training materials (paginated - first 100)
@@ -424,7 +424,7 @@ export default function AgentTrainingPage() {
 
       // Reload base model to get updated score
       const { getBaseModel } = await import('@/lib/agent/base-model-builder');
-      const updated = await getBaseModel(orgId) as BaseModel | null;
+      const updated = await getBaseModel() as BaseModel | null;
       setBaseModel(updated);
       if (updated?.trainingScore) {
         setOverallScore(updated.trainingScore);
@@ -653,7 +653,7 @@ export default function AgentTrainingPage() {
       const { createGoldenMaster } = await import('@/lib/agent/golden-master-builder');
 
       const userId = user?.id;
-      const newGoldenMaster = await createGoldenMaster(orgId, baseModel.id, (userId !== '' && userId !== undefined) ? userId : 'system', notes ?? undefined) as { version: string | number };
+      const newGoldenMaster = await createGoldenMaster(baseModel.id, (userId !== '' && userId !== undefined) ? userId : 'system', notes ?? undefined) as { version: string | number };
 
       // eslint-disable-next-line no-alert -- User feedback
       alert(`✅ Golden Master ${newGoldenMaster.version} Created!\n\nYour trained AI agent has been saved as a production-ready version.\n\nNext steps:\n1. Review the Golden Master in the "Golden Master" tab\n2. Deploy it to production when ready\n3. Continue training your Base Model for future improvements`);
@@ -865,7 +865,7 @@ export default function AgentTrainingPage() {
     try {
       const { deployGoldenMaster } = await import('@/lib/agent/golden-master-builder');
 
-      await deployGoldenMaster(orgId, gmId);
+      await deployGoldenMaster(gmId);
 
       // eslint-disable-next-line no-alert -- User feedback
       alert(`✅ Golden Master ${version} is now LIVE!\n\nAll customer conversations will now use this version of your AI agent.`);

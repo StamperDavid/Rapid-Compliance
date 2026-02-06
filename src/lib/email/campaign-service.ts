@@ -258,8 +258,8 @@ export async function sendCampaign(
 
     // Use existing campaign manager
     const { sendCampaign: executeSend } = await import('./campaign-manager');
-    
-    const result = await executeSend(campaignId, organizationId);
+
+    const result = await executeSend(campaignId);
 
     if (!result.success) {
       return { success: false, sent: 0, error: result.error };

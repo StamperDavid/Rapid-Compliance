@@ -15,34 +15,11 @@ import { runDealHealthCheck } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
-/** Request body interface for health check */
-interface HealthCheckRequestBody {
-  workspaceId?: string;
-}
-
-/** Parse and validate body with fallback to empty object */
-function parseBody(rawBody: unknown): HealthCheckRequestBody {
-  if (typeof rawBody !== 'object' || rawBody === null) {
-    return {};
-  }
-  const b = rawBody as Record<string, unknown>;
-  return {
-    workspaceId: typeof b.workspaceId === 'string' ? b.workspaceId : undefined,
-  };
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // Penthouse: orgId is always DEFAULT_ORG_ID
     const organizationId = DEFAULT_ORG_ID;
-
-    // Get workspaceId from headers or body
-    const rawBody = await request.json().catch(() => ({})) as unknown;
-    const body = parseBody(rawBody);
-    const wsIdFromHeader = request.headers.get('x-workspace-id');
-    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId
-      : (wsIdFromHeader !== '' && wsIdFromHeader != null) ? wsIdFromHeader
-      : 'default';
+    const workspaceId = 'default';
 
     logger.info('Running deal health check', {
       organizationId,

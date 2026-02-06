@@ -14,6 +14,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 type TrainingExampleStatus = 'pending' | 'approved' | 'rejected' | 'used_in_training';
 type FineTuneBaseModel = 'gpt-3.5-turbo' | 'gpt-4';
@@ -73,13 +74,9 @@ export async function GET(request: NextRequest) {
     if (rateLimitResponse) { return rateLimitResponse; }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
+    const organizationId = DEFAULT_ORG_ID;
     const actionParam = searchParams.get('action');
     const action = (actionParam !== '' && actionParam != null) ? actionParam : 'stats';
-
-    if (!organizationId) {
-      return errors.badRequest('Organization ID required');
-    }
 
     switch (action) {
       case 'stats': {

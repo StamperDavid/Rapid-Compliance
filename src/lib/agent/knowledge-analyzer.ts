@@ -6,6 +6,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface KnowledgeAnalysisResult {
   companyInfo: {
@@ -75,11 +76,11 @@ export interface KnowledgeAnalysisResult {
  */
 export async function analyzeCompanyKnowledge(
   websiteUrl: string,
-  organizationId: string,
-  workspaceId?: string,
   faqPageUrl?: string,
   socialMediaUrls?: string[]
 ): Promise<KnowledgeAnalysisResult> {
+  const organizationId = DEFAULT_ORG_ID;
+  const workspaceId = 'default';
   // REAL: Perform actual analysis
   logger.info('Starting knowledge analysis...', { file: 'knowledge-analyzer.ts' });
 
@@ -98,8 +99,8 @@ export async function analyzeCompanyKnowledge(
 
   // STEP 1: Scan built-in CRM for products/services (client uploaded these first)
   logger.info('Step 1: Scanning built-in CRM for products and services...', { file: 'knowledge-analyzer.ts' });
-  const crmProducts = await scanCRMForProducts(organizationId, workspaceId);
-  const crmServices = await scanCRMForServices(organizationId, workspaceId);
+  const crmProducts = await scanCRMForProducts();
+  const crmServices = await scanCRMForServices();
   
   logger.info(`Found ${crmProducts.length} products and ${crmServices.length} services in CRM`, { file: 'knowledge-analyzer.ts' });
 
@@ -433,10 +434,9 @@ interface CRMProductRecord {
  * Scan built-in CRM for products
  * Queries the CRM that's already part of the platform
  */
-async function scanCRMForProducts(
-  organizationId: string,
-  workspaceId?: string
-): Promise<KnowledgeAnalysisResult['crmProducts']> {
+async function scanCRMForProducts(): Promise<KnowledgeAnalysisResult['crmProducts']> {
+  const organizationId = DEFAULT_ORG_ID;
+  const workspaceId = 'default';
   // Query CRM products:
   // 1. Query built-in CRM using organizationId/workspaceId
   // 2. Look for entities in the "products" schema (from STANDARD_SCHEMAS)
@@ -446,10 +446,8 @@ async function scanCRMForProducts(
   // Query Firestore for products
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    // Extract workspaceId to avoid empty path segment (Explicit Ternary for STRING identifiers)
-    const resolvedWorkspaceId = (workspaceId !== '' && workspaceId != null) ? workspaceId : 'default';
     const products = await FirestoreService.getAll<CRMProductRecord>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${resolvedWorkspaceId}/${COLLECTIONS.RECORDS}/products`,
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/products`,
       []
     );
 
@@ -491,10 +489,9 @@ interface CRMServiceRecord {
  * Scan built-in CRM for services
  * Queries the CRM that's already part of the platform
  */
-async function scanCRMForServices(
-  organizationId: string,
-  workspaceId?: string
-): Promise<KnowledgeAnalysisResult['crmServices']> {
+async function scanCRMForServices(): Promise<KnowledgeAnalysisResult['crmServices']> {
+  const organizationId = DEFAULT_ORG_ID;
+  const workspaceId = 'default';
   // Query CRM services:
   // 1. Query built-in CRM using organizationId/workspaceId
   // 2. Look for entities in a "services" schema or custom schema
@@ -504,10 +501,8 @@ async function scanCRMForServices(
   // Query Firestore for services
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    // Extract workspaceId to avoid empty path segment (Explicit Ternary for STRING identifiers)
-    const resolvedWorkspaceId = (workspaceId !== '' && workspaceId != null) ? workspaceId : 'default';
     const services = await FirestoreService.getAll<CRMServiceRecord>(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${resolvedWorkspaceId}/${COLLECTIONS.RECORDS}/services`,
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/services`,
       []
     );
 
@@ -535,9 +530,9 @@ async function scanCRMForServices(
  * REAL: Creates structured knowledge base (vector embeddings can be added later)
  */
 export async function buildKnowledgeBase(
-  analysisResult: KnowledgeAnalysisResult,
-  organizationId: string
+  analysisResult: KnowledgeAnalysisResult
 ): Promise<string> {
+  const organizationId = DEFAULT_ORG_ID;
   // Structure all knowledge into searchable format
   const knowledgeBaseId = `kb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   

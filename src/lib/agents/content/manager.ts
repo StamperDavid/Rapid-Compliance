@@ -639,7 +639,7 @@ export class ContentManager extends BaseManager {
     }
 
     try {
-      const brandDNA = await getBrandDNA(DEFAULT_ORG_ID);
+      const brandDNA = await getBrandDNA();
 
       if (!brandDNA) {
         this.log('WARN', `No Brand DNA found for org ${DEFAULT_ORG_ID}, using defaults`);

@@ -6,10 +6,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldTypeConverterServer } from '@/lib/schema/server/field-type-converter-server';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { FieldType, SchemaField } from '@/types/schema';
 
 interface ConversionRequestBody {
-  organizationId: string;
   fieldKey: string;
   oldType: FieldType;
   newType: FieldType;
@@ -32,14 +32,13 @@ export async function GET(
   try {
     const params = await context.params;
     const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
     const oldType = searchParams.get('oldType') as FieldType;
     const newType = searchParams.get('newType') as FieldType;
     const fieldKey = searchParams.get('fieldKey');
 
-    if (!organizationId || !oldType || !newType || !fieldKey) {
+    if (!oldType || !newType || !fieldKey) {
       return NextResponse.json(
-        { error: 'organizationId, oldType, newType, and fieldKey are required' },
+        { error: 'oldType, newType, and fieldKey are required' },
         { status: 400 }
       );
     }
@@ -49,7 +48,7 @@ export async function GET(
 
     // Generate preview using SERVER version (admin SDK)
     const preview = await FieldTypeConverterServer.generateConversionPreview(
-      organizationId,
+      DEFAULT_ORG_ID,
       params.schemaId,
       fieldKey,
       oldType,
@@ -92,12 +91,12 @@ export async function POST(
   try {
     const params = await context.params;
     const body = (await request.json()) as ConversionRequestBody;
-    const { organizationId, fieldKey, oldType, newType } = body;
+    const { fieldKey, oldType, newType } = body;
 
     // Validate required fields
-    if (!organizationId || !fieldKey || !oldType || !newType) {
+    if (!fieldKey || !oldType || !newType) {
       return NextResponse.json(
-        { error: 'Missing required fields: organizationId, fieldKey, oldType, newType' },
+        { error: 'Missing required fields: fieldKey, oldType, newType' },
         { status: 400 }
       );
     }

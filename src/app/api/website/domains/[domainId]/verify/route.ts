@@ -1,13 +1,14 @@
 /**
  * Domain Verification API
  * Verify DNS records and activate domain
- * CRITICAL: Organization isolation - validates organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { promises as dns } from 'dns';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface DNSRecord {
   type: string;
@@ -20,10 +21,6 @@ interface DomainData {
   organizationId: string;
   verificationMethod: string;
   dnsRecords: DNSRecord[];
-}
-
-interface RequestBody {
-  organizationId?: string;
 }
 
 interface VerificationResult {
@@ -46,17 +43,8 @@ export async function POST(
     }
 
     const params = await context.params;
-    const body = await request.json() as RequestBody;
-    const { organizationId } = body;
+    const organizationId = DEFAULT_ORG_ID;
     const domainId = decodeURIComponent(params.domainId);
-
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
 
     const domainRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/custom-domains/{domainId}',
@@ -74,17 +62,9 @@ export async function POST(
 
     const domainData = doc.data() as DomainData | undefined;
 
-    // CRITICAL: Verify organizationId matches
-    if (domainData?.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
     // Verify DNS records
-    const verificationMethod = domainData.verificationMethod ?? 'cname';
-    const dnsRecords = domainData.dnsRecords ?? [];
+    const verificationMethod = domainData?.verificationMethod ?? 'cname';
+    const dnsRecords = domainData?.dnsRecords ?? [];
     const verification = await verifyDNSRecords(domainId, verificationMethod, dnsRecords);
 
     const now = new Date().toISOString();

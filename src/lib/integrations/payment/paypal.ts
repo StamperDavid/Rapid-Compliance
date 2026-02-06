@@ -41,10 +41,6 @@ export async function executePayPalFunction(
   parameters: Record<string, unknown>,
   _integration: ConnectedIntegration
 ): Promise<unknown> {
-  // Import DEFAULT_ORG_ID for penthouse
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-  const organizationId = DEFAULT_ORG_ID;
-
   // Type guard for parameters
   const params = parameters as PayPalFunctionParams;
 
@@ -56,7 +52,6 @@ export async function executePayPalFunction(
       }
 
       const order = (await createOrder(
-        organizationId,
         params.amount,
         (params.currency !== '' && params.currency != null) ? params.currency : 'USD'
       )) as PayPalOrder;
@@ -76,7 +71,7 @@ export async function executePayPalFunction(
         throw new Error('orderId (string) is required for getTransaction');
       }
 
-      return getOrderDetails(organizationId, params.orderId);
+      return getOrderDetails(params.orderId);
     }
 
     case 'capturePayment': {
@@ -85,7 +80,7 @@ export async function executePayPalFunction(
         throw new Error('orderId (string) is required for capturePayment');
       }
 
-      return captureOrder(organizationId, params.orderId);
+      return captureOrder(params.orderId);
     }
 
     default:

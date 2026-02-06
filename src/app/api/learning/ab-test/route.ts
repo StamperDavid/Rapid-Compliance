@@ -44,15 +44,8 @@ export async function GET(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/learning/ab-test');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-    
-    if (!organizationId) {
-      return errors.badRequest('Organization ID required');
-    }
-    
     // Get active A/B test
-    const test = await getActiveABTest(organizationId);
+    const test = await getActiveABTest();
     
     if (!test) {
       return NextResponse.json({
@@ -99,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for existing test
-    const existingTest = await getActiveABTest(organizationId);
+    const existingTest = await getActiveABTest();
     if (existingTest?.status === 'running') {
       return NextResponse.json(
         { error: 'An A/B test is already running. Complete it first.' },
@@ -150,7 +143,7 @@ export async function PUT(request: NextRequest) {
 
     if (action === 'evaluate') {
       // Force evaluation of current test
-      const test = await getActiveABTest(organizationId);
+      const test = await getActiveABTest();
       if (!test) {
         return NextResponse.json(
           { error: 'No active test to evaluate' },

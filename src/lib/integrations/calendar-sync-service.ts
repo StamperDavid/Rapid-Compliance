@@ -6,6 +6,7 @@
 import { google, type calendar_v3 } from 'googleapis';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface CalendarEvent {
   id: string;
@@ -75,7 +76,7 @@ export async function syncCalendarEvents(
 
   try {
     // Get last sync status
-    const lastSync = await getLastSyncStatus(organizationId, calendarId);
+    const lastSync = await getLastSyncStatus(calendarId);
 
     // If we have a sync token, use incremental sync
     if (lastSync?.syncToken) {
@@ -126,7 +127,7 @@ async function fullSync(
         for (const event of response.data.items) {
           try {
             const parsed = parseCalendarEvent(event, calendarId);
-            await saveEventToCRM(organizationId, parsed);
+            await saveEventToCRM(parsed);
             eventsSynced++;
           } catch (err) {
             logger.error(`[Calendar Sync] Error processing event ${event.id ?? 'unknown'}:`, err instanceof Error ? err : new Error(String(err)), { file: 'calendar-sync-service.ts' });
@@ -149,7 +150,7 @@ async function fullSync(
       errors,
     };
 
-    await saveSyncStatus(organizationId, calendarId, status);
+    await saveSyncStatus(calendarId, status);
 
     return status;
   } catch (error) {
@@ -187,12 +188,12 @@ async function incrementalSync(
             if (event.status === 'cancelled') {
               // Delete cancelled events
               if (event.id) {
-                await deleteEventFromCRM(organizationId, event.id);
+                await deleteEventFromCRM(event.id);
               }
             } else {
               // Update or create event
               const parsed = parseCalendarEvent(event, calendarId);
-              await saveEventToCRM(organizationId, parsed);
+              await saveEventToCRM(parsed);
               eventsSynced++;
             }
           } catch (err) {
@@ -216,7 +217,7 @@ async function incrementalSync(
       errors,
     };
 
-    await saveSyncStatus(organizationId, calendarId, status);
+    await saveSyncStatus(calendarId, status);
 
     return status;
   } catch (error) {
@@ -286,13 +287,14 @@ function parseCalendarEvent(event: calendar_v3.Schema$Event, calendarId: string)
 /**
  * Save event to CRM
  */
-async function saveEventToCRM(organizationId: string, event: CalendarEvent): Promise<void> {
+async function saveEventToCRM(event: CalendarEvent): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     // Try to match attendees to contacts
     const contactIds: string[] = [];
     if (event.attendees) {
       for (const attendee of event.attendees) {
-        const contact = await findContactByEmail(organizationId, attendee.email);
+        const contact = await findContactByEmail(attendee.email);
         if (contact?.id) {
           contactIds.push(contact.id);
         }
@@ -352,7 +354,8 @@ async function saveEventToCRM(organizationId: string, event: CalendarEvent): Pro
 /**
  * Delete event from CRM
  */
-async function deleteEventFromCRM(organizationId: string, eventId: string): Promise<void> {
+async function deleteEventFromCRM(eventId: string): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.delete(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/calendarEvents`,
@@ -480,7 +483,8 @@ export async function deleteCalendarEvent(
 /**
  * Find contact by email
  */
-async function findContactByEmail(organizationId: string, email: string): Promise<ContactWithId | null> {
+async function findContactByEmail(email: string): Promise<ContactWithId | null> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const contacts = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
@@ -501,7 +505,8 @@ async function findContactByEmail(organizationId: string, email: string): Promis
 /**
  * Get last sync status
  */
-async function getLastSyncStatus(organizationId: string, calendarId: string): Promise<CalendarSyncStatus | null> {
+async function getLastSyncStatus(calendarId: string): Promise<CalendarSyncStatus | null> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     const status = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
@@ -516,7 +521,8 @@ async function getLastSyncStatus(organizationId: string, calendarId: string): Pr
 /**
  * Save sync status
  */
-async function saveSyncStatus(organizationId: string, calendarId: string, status: CalendarSyncStatus): Promise<void> {
+async function saveSyncStatus(calendarId: string, status: CalendarSyncStatus): Promise<void> {
+  const organizationId = DEFAULT_ORG_ID;
   try {
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,

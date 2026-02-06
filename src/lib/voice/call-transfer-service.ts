@@ -6,6 +6,7 @@
 
 import { VoiceProviderFactory } from './voice-factory';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export interface TransferAgent {
   id: string;
@@ -78,7 +79,7 @@ class CallTransferService {
         throw new Error('Either toPhone or toAgentId must be provided');
       }
 
-      const destination = request.toPhone ?? await this.getAgentPhone(request.organizationId, request.toAgentId as string);
+      const destination = request.toPhone ?? await this.getAgentPhone(request.toAgentId as string);
 
       await provider.transfer(request.callId, {
         to: destination,
@@ -114,14 +115,14 @@ class CallTransferService {
         throw new Error('Either toPhone or toAgentId must be provided');
       }
 
-      const destination = request.toPhone ?? await this.getAgentPhone(request.organizationId, request.toAgentId as string);
+      const destination = request.toPhone ?? await this.getAgentPhone(request.toAgentId as string);
 
       // Step 1: Put original call on hold
       await provider.holdCall(request.callId, true);
 
       // Step 2: Dial receiving agent
       const consultCall = await provider.initiateCall(destination, request.toAgentId ?? 'transfer', {
-        callerId: await this.getOrganizationCallerId(request.organizationId),
+        callerId: await this.getOrganizationCallerId(),
       });
 
       // Step 3: Play whisper message if provided
@@ -230,7 +231,7 @@ class CallTransferService {
         throw new Error('Either toPhone or toAgentId must be provided');
       }
 
-      const destination = request.toPhone ?? await this.getAgentPhone(request.organizationId, request.toAgentId as string);
+      const destination = request.toPhone ?? await this.getAgentPhone(request.toAgentId as string);
 
       // Create conference
       const conferenceName = `conf-${request.callId}-${Date.now()}`;
@@ -244,7 +245,7 @@ class CallTransferService {
 
       // Dial and add new participant
       const newCall = await provider.initiateCall(destination, request.toAgentId ?? 'conference', {
-        callerId: await this.getOrganizationCallerId(request.organizationId),
+        callerId: await this.getOrganizationCallerId(),
       });
 
       // Play announce message if provided
@@ -371,7 +372,8 @@ class CallTransferService {
   /**
    * Get agent phone number
    */
-  private async getAgentPhone(organizationId: string, agentId: string): Promise<string> {
+  private async getAgentPhone(agentId: string): Promise<string> {
+    const organizationId = DEFAULT_ORG_ID;
     const response = await fetch(`/api/voice/agents/${agentId}?organizationId=${organizationId}`);
     if (!response.ok) {
       throw new Error('Agent not found');
@@ -383,7 +385,8 @@ class CallTransferService {
   /**
    * Get organization caller ID
    */
-  private async getOrganizationCallerId(organizationId: string): Promise<string> {
+  private async getOrganizationCallerId(): Promise<string> {
+    const organizationId = DEFAULT_ORG_ID;
     const response = await fetch(`/api/settings/voice?organizationId=${organizationId}`);
     if (!response.ok) {
       throw new Error('Voice settings not found');

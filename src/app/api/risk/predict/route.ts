@@ -37,6 +37,7 @@ import type {
   DealRiskPrediction,
 } from '@/lib/risk/types';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface RawRequestBody {
   dealIds?: string[];
@@ -407,18 +408,18 @@ async function handleBatchRequest(
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     const dealId = searchParams.get('dealId');
-    const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId') ?? 'default';
+    const organizationId = DEFAULT_ORG_ID;
+    const workspaceId = 'default';
     const includeInterventions = searchParams.get('includeInterventions') !== 'false';
-    
-    if (!dealId || !organizationId) {
+
+    if (!dealId) {
       return NextResponse.json(
         {
           success: false,
           error: 'Missing required parameters',
-          message: 'dealId and organizationId are required',
+          message: 'dealId is required',
         },
         { status: 400 }
       );

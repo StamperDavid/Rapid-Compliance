@@ -7,6 +7,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============== Type Definitions ==============
 
@@ -603,7 +604,8 @@ export class PluginManager {
 
 const pluginManagerInstances: Map<string, PluginManager> = new Map();
 
-export function getPluginManager(organizationId: string, config: Record<string, unknown> = {}): PluginManager {
+export function getPluginManager(config: Record<string, unknown> = {}): PluginManager {
+  const organizationId = DEFAULT_ORG_ID;
   let instance = pluginManagerInstances.get(organizationId);
   if (!instance) {
     instance = new PluginManager(organizationId, config);
@@ -612,6 +614,7 @@ export function getPluginManager(organizationId: string, config: Record<string, 
   return instance;
 }
 
-export function clearPluginManager(organizationId: string): void {
+export function clearPluginManager(): void {
+  const organizationId = DEFAULT_ORG_ID;
   pluginManagerInstances.delete(organizationId);
 }

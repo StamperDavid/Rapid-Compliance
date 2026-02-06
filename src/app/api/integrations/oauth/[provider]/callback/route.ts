@@ -96,7 +96,7 @@ export async function GET(
         throw new Error('Invalid state: missing organizationId');
       }
 
-      const { organizationId } = stateValidation.data;
+      const { organizationId: _organizationId } = stateValidation.data;
 
       // Exchange code for access token
       let credentials: ProviderCredentials;
@@ -118,7 +118,7 @@ export async function GET(
       }
 
       // Store credentials in API keys
-      const existingKeys = await apiKeyService.getKeys(organizationId);
+      const existingKeys = await apiKeyService.getKeys();
       const updatedKeys = {
         ...existingKeys,
         integrations: {
@@ -127,7 +127,7 @@ export async function GET(
         },
       };
 
-      await apiKeyService.saveKeys(organizationId, updatedKeys);
+      await apiKeyService.saveKeys(updatedKeys);
 
       // Redirect back to integrations page with success
       return NextResponse.redirect(

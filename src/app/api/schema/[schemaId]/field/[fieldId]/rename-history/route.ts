@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import type { SchemaField } from '@/types/schema';
 
 interface SchemaData {
@@ -15,8 +16,6 @@ interface SchemaData {
 }
 
 interface RollbackRequestBody {
-  organizationId: string;
-  workspaceId: string;
   toVersion: number;
   userId: string;
 }
@@ -38,21 +37,12 @@ export async function GET(
     }
 
     const params = await context.params;
-    const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId');
-    
-    if (!organizationId || !workspaceId) {
-      return NextResponse.json(
-        { error: 'organizationId and workspaceId are required' },
-        { status: 400 }
-      );
-    }
-    
+    const workspaceId = 'default';
+
     // Get schema
     const schemaRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/workspaces/{workspaceId}/schemas/{schemaId}',
-      { orgId: organizationId, workspaceId, schemaId: params.schemaId }
+      { orgId: DEFAULT_ORG_ID, workspaceId, schemaId: params.schemaId }
     );
     const schemaDoc = await schemaRef.get();
     
@@ -115,18 +105,19 @@ export async function POST(
   try {
     const params = await context.params;
     const body = (await request.json()) as RollbackRequestBody;
-    const { organizationId, workspaceId, toVersion, userId } = body;
-    
-    if (!organizationId || !workspaceId || toVersion === undefined || !userId) {
+    const { toVersion, userId } = body;
+    const workspaceId = 'default';
+
+    if (toVersion === undefined || !userId) {
       return NextResponse.json(
-        { error: 'organizationId, workspaceId, toVersion, and userId are required' },
+        { error: 'toVersion and userId are required' },
         { status: 400 }
       );
     }
-    
+
     // Rollback field
     await FieldRenameManager.rollbackField(
-      organizationId,
+      DEFAULT_ORG_ID,
       workspaceId,
       params.schemaId,
       params.fieldId,

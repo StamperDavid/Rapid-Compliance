@@ -58,8 +58,6 @@ export async function processKnowledgeBase(
     const finalUrl = (websiteUrl !== '' && websiteUrl != null) ? websiteUrl : urlFallback;
     const analysisResult = await analyzeCompanyKnowledge(
       finalUrl,
-      organizationId,
-      undefined,
       faqPageUrl,
       socialMediaUrls.length > 0 ? socialMediaUrls : undefined
     );

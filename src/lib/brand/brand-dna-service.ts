@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const FILE = 'brand-dna-service.ts';
 
@@ -59,7 +60,8 @@ export interface SEOTrainingSettings {
 /**
  * Get Brand DNA for an organization
  */
-export async function getBrandDNA(orgId: string): Promise<BrandDNA | null> {
+export async function getBrandDNA(): Promise<BrandDNA | null> {
+  const orgId = DEFAULT_ORG_ID;
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
@@ -103,7 +105,7 @@ export async function updateBrandDNA(
     logger.info('[BrandDNA] Brand DNA updated', { orgId, userId, file: FILE });
 
     // Sync to all tools that inherit from brand DNA
-    await syncBrandDNA(orgId);
+    await syncBrandDNA();
 
     return true;
   } catch (error) {
@@ -117,11 +119,12 @@ export async function updateBrandDNA(
  * Sync Brand DNA to all tool training contexts
  * This ensures that Voice, Social, and SEO tools inherit updated brand settings
  */
-export async function syncBrandDNA(orgId: string): Promise<void> {
+export async function syncBrandDNA(): Promise<void> {
+  const orgId = DEFAULT_ORG_ID;
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-    const brandDNA = await getBrandDNA(orgId);
+    const brandDNA = await getBrandDNA();
 
     if (!brandDNA) {
       logger.warn('[BrandDNA] No brand DNA to sync', { orgId, file: FILE });
@@ -175,7 +178,7 @@ export async function getToolTrainingContext(
 
     // If tool inherits from brand DNA, merge the values
     if (typedToolDoc.inheritFromBrandDNA !== false) {
-      const brandDNA = await getBrandDNA(orgId);
+      const brandDNA = await getBrandDNA();
 
       if (brandDNA) {
         // Merge brand DNA with any tool-specific overrides
@@ -204,11 +207,11 @@ export async function getToolTrainingContext(
  * Build system prompt for a tool incorporating Brand DNA
  */
 export async function buildToolSystemPrompt(
-  orgId: string,
   toolType: 'voice' | 'social' | 'seo'
 ): Promise<string> {
-  const brandDNA = await getBrandDNA(orgId);
-  const toolContext = await getToolTrainingContext(orgId, toolType);
+  const organizationId = DEFAULT_ORG_ID;
+  const brandDNA = await getBrandDNA();
+  const toolContext = await getToolTrainingContext(organizationId, toolType);
 
   let systemPrompt = '';
 
@@ -302,11 +305,11 @@ export async function buildToolSystemPrompt(
  * Get effective brand values for a tool (brand DNA + overrides)
  */
 export async function getEffectiveBrandValues(
-  orgId: string,
   toolType: 'voice' | 'social' | 'seo'
 ): Promise<Partial<BrandDNA>> {
-  const brandDNA = await getBrandDNA(orgId);
-  const toolContext = await getToolTrainingContext(orgId, toolType);
+  const organizationId = DEFAULT_ORG_ID;
+  const brandDNA = await getBrandDNA();
+  const toolContext = await getToolTrainingContext(organizationId, toolType);
 
   if (!brandDNA) {
     return {};

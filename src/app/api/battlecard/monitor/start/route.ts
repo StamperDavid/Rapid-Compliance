@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       competitorCount: competitors.length,
     });
 
-    const monitor = getCompetitiveMonitor(organizationId);
+    const monitor = getCompetitiveMonitor();
 
     // Add competitors to monitoring
     for (const config of competitors) {

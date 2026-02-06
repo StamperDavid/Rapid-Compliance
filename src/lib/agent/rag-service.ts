@@ -21,12 +21,11 @@ export interface RAGContext {
  */
 export async function buildRAGPrompt(
   query: string,
-  organizationId: string,
   baseSystemPrompt: string,
   maxChunks: number = 5
 ): Promise<string> {
   // Search knowledge base for relevant context
-  const searchResults = await searchKnowledgeBase(query, organizationId, maxChunks);
+  const searchResults = await searchKnowledgeBase(query, maxChunks);
   
   if (searchResults.length === 0) {
     // No relevant context found, return base prompt
@@ -56,10 +55,9 @@ export async function buildRAGPrompt(
  */
 export async function getRAGContext(
   query: string,
-  organizationId: string,
   maxChunks: number = 5
 ): Promise<RAGContext> {
-  const searchResults = await searchKnowledgeBase(query, organizationId, maxChunks);
+  const searchResults = await searchKnowledgeBase(query, maxChunks);
   
   return {
     relevantChunks: searchResults.map(result => ({
@@ -77,7 +75,6 @@ export async function getRAGContext(
  */
 export async function enhanceChatWithRAG(
   messages: ChatMessage[],
-  organizationId: string,
   systemPrompt: string
 ): Promise<{
   enhancedSystemPrompt: string;
@@ -88,19 +85,19 @@ export async function enhanceChatWithRAG(
   // Extract query text - empty strings are invalid queries (Explicit Ternary for STRING)
   const queryText = lastUserMessage?.parts?.[0]?.text;
   const query = (queryText !== '' && queryText != null) ? queryText : '';
-  
+
   if (!query) {
     return {
       enhancedSystemPrompt: systemPrompt,
       context: { relevantChunks: [], query: '' },
     };
   }
-  
+
   // Get RAG context
-  const context = await getRAGContext(query, organizationId);
-  
+  const context = await getRAGContext(query);
+
   // Build enhanced prompt
-  const enhancedSystemPrompt = await buildRAGPrompt(query, organizationId, systemPrompt);
+  const enhancedSystemPrompt = await buildRAGPrompt(query, systemPrompt);
   
   return {
     enhancedSystemPrompt,

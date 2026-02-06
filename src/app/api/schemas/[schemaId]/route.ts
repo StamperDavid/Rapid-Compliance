@@ -20,16 +20,6 @@ export async function GET(
     }
 
     const params = await context.params;
-    const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
-
     const schemasCollection = adminDal.getOrgCollection('schemas');
     const docSnap = await schemasCollection.doc(params.schemaId).get();
 
@@ -63,16 +53,6 @@ export async function DELETE(
     }
 
     const params = await context.params;
-    const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
-
     const schemasCollection = adminDal.getOrgCollection('schemas');
     const docRef = schemasCollection.doc(params.schemaId);
 

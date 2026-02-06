@@ -1,20 +1,16 @@
 /**
  * Blog Categories API
  * Manage blog categories
- * CRITICAL: Organization-scoped - scoped to organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-
-const getQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
-});
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const postBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   categories: z.array(z.string()),
 });
 
@@ -27,25 +23,13 @@ interface CategoriesDocData {
  * GET /api/website/blog/categories
  * Get categories for an organization
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const queryResult = getQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId'),
-    });
-
-    if (!queryResult.success) {
-      return NextResponse.json(
-        { error: 'organizationId required' },
-        { status: 400 }
-      );
-    }
-
-    const { organizationId } = queryResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Get categories document
     const categoriesRef = adminDal.getNestedDocRef(
@@ -61,15 +45,7 @@ export async function GET(request: NextRequest) {
 
     const data = categoriesDoc.data() as CategoriesDocData | undefined;
 
-    // CRITICAL: Double-check organizationId matches
-    if (data?.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json({ categories: data.categories ?? [] });
+    return NextResponse.json({ categories: data?.categories ?? [] });
   } catch (error: unknown) {
     logger.error('Failed to fetch blog categories', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/blog/categories',
@@ -103,7 +79,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { organizationId, categories } = bodyResult.data;
+    const { categories } = bodyResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Save categories
     const categoriesRef = adminDal.getNestedDocRef(

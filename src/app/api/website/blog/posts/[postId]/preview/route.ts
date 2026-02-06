@@ -1,7 +1,7 @@
 /**
  * Blog Post Preview API
  * Generate shareable preview links for blog posts
- * CRITICAL: Organization isolation - validates organizationId
+ * Single-tenant: Uses DEFAULT_ORG_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -10,18 +10,17 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const paramsSchema = z.object({
   postId: z.string().min(1, 'postId is required'),
 });
 
 const postBodySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   expiresIn: z.number().int().positive().optional().default(24),
 });
 
 const getQuerySchema = z.object({
-  organizationId: z.string().min(1, 'organizationId is required'),
   token: z.string().min(1, 'Preview token is required'),
 });
 
@@ -71,7 +70,8 @@ export async function POST(
       );
     }
 
-    const { organizationId, expiresIn } = bodyResult.data;
+    const { expiresIn } = bodyResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
@@ -84,16 +84,6 @@ export async function POST(
       return NextResponse.json(
         { error: 'Blog post not found' },
         { status: 404 }
-      );
-    }
-
-    const postData = doc.data() as BlogPostData | undefined;
-
-    // CRITICAL: Verify organizationId matches
-    if (postData?.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
       );
     }
 
@@ -164,7 +154,6 @@ export async function GET(
 
     const { searchParams } = request.nextUrl;
     const queryResult = getQuerySchema.safeParse({
-      organizationId: searchParams.get('organizationId') ?? undefined,
       token: searchParams.get('token') ?? undefined,
     });
 
@@ -175,7 +164,8 @@ export async function GET(
       );
     }
 
-    const { organizationId, token } = queryResult.data;
+    const { token } = queryResult.data;
+    const organizationId = DEFAULT_ORG_ID;
 
     // Verify preview token
     const tokenRef = adminDal.getNestedDocRef(
@@ -229,14 +219,6 @@ export async function GET(
     }
 
     const postData = doc.data() as BlogPostData | undefined;
-
-    // CRITICAL: Verify organizationId matches
-    if (postData?.organizationId !== organizationId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
 
     return NextResponse.json({
       success: true,

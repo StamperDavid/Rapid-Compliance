@@ -13,6 +13,7 @@ import { SPECIALISTS, getSpecialist, type SpecialistPlatform } from './feature-m
 import { SystemHealthService } from './system-health-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // ORGANIZATION TYPE (for type-safe Firestore queries)
@@ -100,10 +101,6 @@ interface DelegateToAgentArgs {
 interface InspectAgentLogsArgs {
   source: 'provisioner' | 'agents' | 'errors' | 'all';
   limit?: number;
-  organizationId?: string;
-}
-
-interface GetSystemStateArgs {
   organizationId?: string;
 }
 
@@ -1592,7 +1589,8 @@ export function executeInspectAgentLogs(
 /**
  * Get complete system state - MANDATORY before strategic responses.
  */
-export async function executeGetSystemState(organizationId?: string): Promise<SystemState> {
+export async function executeGetSystemState(): Promise<SystemState> {
+  const organizationId = DEFAULT_ORG_ID;
   const state: SystemState = {
     timestamp: new Date().toISOString(),
     platform: {
@@ -1704,8 +1702,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       }
 
       case 'get_system_state': {
-        const typedArgs = args as GetSystemStateArgs;
-        const state = await executeGetSystemState(typedArgs.organizationId);
+        const state = await executeGetSystemState();
         content = JSON.stringify(state);
         break;
       }

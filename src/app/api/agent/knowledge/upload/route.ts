@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     // Index knowledge base (generate embeddings)
     try {
-      await indexKnowledgeBase(organizationId);
+      await indexKnowledgeBase();
     } catch (indexError: unknown) {
       logger.warn('Failed to index knowledge base (embeddings)', {
         route: '/api/agent/knowledge/upload',

@@ -448,13 +448,12 @@ export async function getSMSDeliveryStatus(
  * Query Twilio API for real-time delivery status
  */
 export async function queryTwilioStatus(
-  messageId: string,
-  organizationId: string
+  messageId: string
 ): Promise<SMSDeliveryStatus | null> {
   try {
     // Get Twilio credentials
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-    const keys = await apiKeyService.getKeys(organizationId);
+    const keys = await apiKeyService.getKeys();
     const twilioConfig = keys?.sms?.twilio;
 
     if (!twilioConfig || typeof twilioConfig !== 'object') {

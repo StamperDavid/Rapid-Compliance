@@ -473,13 +473,14 @@ interface AIFunction {
  * Get available functions for AI agent
  * These are passed to the AI model so it knows what it can call
  */
-export async function getAvailableFunctions(organizationId: string): Promise<AIFunction[]> {
+export async function getAvailableFunctions(): Promise<AIFunction[]> {
   const functions: AIFunction[] = [];
 
   try {
     // Get connected integrations for this org
+    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     const { listConnectedIntegrations } = await import('./integration-manager');
-    const connectedIntegrations = await listConnectedIntegrations(organizationId);
+    const connectedIntegrations = await listConnectedIntegrations(DEFAULT_ORG_ID);
 
     // Only return functions for connected integrations (credentials exist = active)
     const activeProviderIds = connectedIntegrations
@@ -512,7 +513,7 @@ export async function getAvailableFunctions(organizationId: string): Promise<AIF
       }
     }
 
-    logger.info(`Function Calling ${functions.length} functions available for org ${organizationId}`, { file: 'function-calling.ts' });
+    logger.info(`Function Calling ${functions.length} functions available`, { file: 'function-calling.ts' });
     return functions;
   } catch (error) {
     logger.error('[Function Calling] Error getting functions:', error instanceof Error ? error : undefined, { file: 'function-calling.ts' });

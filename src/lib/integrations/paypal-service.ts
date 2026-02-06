@@ -11,13 +11,13 @@ interface PayPalConfig {
   mode: 'sandbox' | 'live';
 }
 
-async function getPayPalConfig(organizationId: string): Promise<PayPalConfig> {
-  const keys = await apiKeyService.getKeys(organizationId);
-  
+async function getPayPalConfig(): Promise<PayPalConfig> {
+  const keys = await apiKeyService.getKeys();
+
   if (!keys?.payments?.paypal?.clientId || !keys?.payments?.paypal?.clientSecret) {
     throw new Error('PayPal not configured. Please add your PayPal API keys in Settings > API Keys');
   }
-  
+
   return {
     clientId: keys.payments.paypal.clientId,
     secret: keys.payments.paypal.clientSecret,
@@ -25,10 +25,10 @@ async function getPayPalConfig(organizationId: string): Promise<PayPalConfig> {
   };
 }
 
-async function getAccessToken(organizationId: string): Promise<string> {
-  const config = await getPayPalConfig(organizationId);
-  const baseUrl = config.mode === 'live' 
-    ? 'https://api-m.paypal.com' 
+async function getAccessToken(): Promise<string> {
+  const config = await getPayPalConfig();
+  const baseUrl = config.mode === 'live'
+    ? 'https://api-m.paypal.com'
     : 'https://api-m.sandbox.paypal.com';
   
   const auth = Buffer.from(`${config.clientId}:${config.secret}`).toString('base64');
@@ -63,12 +63,11 @@ interface PayPalOrder {
 }
 
 export async function createOrder(
-  organizationId: string,
   amount: number,
   currency: string = 'USD'
 ): Promise<PayPalOrder> {
-  const accessToken = await getAccessToken(organizationId);
-  const config = await getPayPalConfig(organizationId);
+  const accessToken = await getAccessToken();
+  const config = await getPayPalConfig();
   const baseUrl = config.mode === 'live' 
     ? 'https://api-m.paypal.com' 
     : 'https://api-m.sandbox.paypal.com';
@@ -111,11 +110,10 @@ interface PayPalCaptureResponse {
 }
 
 export async function captureOrder(
-  organizationId: string,
   orderId: string
 ): Promise<PayPalCaptureResponse> {
-  const accessToken = await getAccessToken(organizationId);
-  const config = await getPayPalConfig(organizationId);
+  const accessToken = await getAccessToken();
+  const config = await getPayPalConfig();
   const baseUrl = config.mode === 'live' 
     ? 'https://api-m.paypal.com' 
     : 'https://api-m.sandbox.paypal.com';
@@ -139,11 +137,10 @@ interface PayPalPayoutResponse {
 }
 
 export async function createPayout(
-  organizationId: string,
   recipients: Array<{ email: string; amount: number }>
 ): Promise<PayPalPayoutResponse> {
-  const accessToken = await getAccessToken(organizationId);
-  const config = await getPayPalConfig(organizationId);
+  const accessToken = await getAccessToken();
+  const config = await getPayPalConfig();
   const baseUrl = config.mode === 'live' 
     ? 'https://api-m.paypal.com' 
     : 'https://api-m.sandbox.paypal.com';
@@ -174,11 +171,10 @@ export async function createPayout(
 }
 
 export async function getOrderDetails(
-  organizationId: string,
   orderId: string
 ): Promise<PayPalOrder> {
-  const accessToken = await getAccessToken(organizationId);
-  const config = await getPayPalConfig(organizationId);
+  const accessToken = await getAccessToken();
+  const config = await getPayPalConfig();
   const baseUrl = config.mode === 'live' 
     ? 'https://api-m.paypal.com' 
     : 'https://api-m.sandbox.paypal.com';

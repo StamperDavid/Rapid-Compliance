@@ -156,7 +156,7 @@ export async function cancelZoomMeeting(
 /**
  * Get Zoom OAuth authorization URL
  */
-export function getZoomAuthUrl(organizationId: string, redirectUri: string): string {
+export function getZoomAuthUrl(redirectUri: string): string {
   const clientId = process.env.ZOOM_CLIENT_ID;
   if (!clientId) {
     throw new Error('ZOOM_CLIENT_ID not configured');
@@ -166,7 +166,7 @@ export function getZoomAuthUrl(organizationId: string, redirectUri: string): str
     client_id: clientId,
     response_type: 'code',
     redirect_uri: redirectUri,
-    state: organizationId, // Pass org ID to know which org to save tokens for
+    state: 'rapid-compliance-root', // Pass org ID to know which org to save tokens for
   });
 
   return `https://zoom.us/oauth/authorize?${params.toString()}`;
