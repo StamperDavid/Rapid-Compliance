@@ -6,6 +6,7 @@
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 // OrderPayment type not needed in this service
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Type interfaces for ecommerce configuration
 interface PaymentProvider {
@@ -169,7 +170,7 @@ async function processStripePayment(
 ): Promise<PaymentResult> {
   try {
     // Get Stripe API key
-    const orgId = request.organizationId ?? request.workspaceId.split('/')[0]; // Use org ID directly or extract from workspace
+    const orgId = DEFAULT_ORG_ID;
     const stripeKeyResponse: unknown = await apiKeyService.getServiceKey(orgId, 'stripe');
 
     if (!stripeKeyResponse) {
@@ -266,7 +267,7 @@ async function processSquarePayment(
 ): Promise<PaymentResult> {
   try {
     // Get Square API credentials
-    const orgId = request.workspaceId.split('/')[0];
+    const orgId = DEFAULT_ORG_ID;
     const squareKeysResponse: unknown = await apiKeyService.getServiceKey(orgId, 'square');
 
     if (!squareKeysResponse) {
@@ -358,7 +359,7 @@ async function processPayPalPayment(
 ): Promise<PaymentResult> {
   try {
     // Get PayPal API credentials
-    const orgId = request.workspaceId.split('/')[0];
+    const orgId = DEFAULT_ORG_ID;
     const paypalKeysResponse: unknown = await apiKeyService.getServiceKey(orgId, 'paypal');
 
     if (!paypalKeysResponse) {

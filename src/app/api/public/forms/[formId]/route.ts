@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/config';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import {
   collection,
   doc,
@@ -49,49 +50,42 @@ export async function GET(
       );
     }
 
-    // Search for form across all organizations
-    // In production, you'd have a global forms index or use the shareableLink
-    const orgsSnapshot = await getDocs(collection(db, 'organizations'));
+    // Use the penthouse organization ID
+    const orgId = DEFAULT_ORG_ID;
     let form: FormDefinition | null = null;
     let fields: FormFieldConfig[] = [];
-    let orgId: string | null = null;
 
-    for (const orgDoc of orgsSnapshot.docs) {
-      const formRef = doc(
+    const formRef = doc(
+      db,
+      'organizations',
+      orgId,
+      'workspaces',
+      'default',
+      'forms',
+      formId
+    );
+    const formSnap = await getDoc(formRef);
+
+    if (formSnap.exists()) {
+      form = { id: formSnap.id, ...formSnap.data() } as FormDefinition;
+
+      // Fetch fields
+      const fieldsRef = collection(
         db,
         'organizations',
-        orgDoc.id,
+        orgId,
         'workspaces',
         'default',
         'forms',
-        formId
+        formId,
+        'fields'
       );
-      const formSnap = await getDoc(formRef);
-
-      if (formSnap.exists()) {
-        form = { id: formSnap.id, ...formSnap.data() } as FormDefinition;
-        orgId = orgDoc.id;
-
-        // Fetch fields
-        const fieldsRef = collection(
-          db,
-          'organizations',
-          orgDoc.id,
-          'workspaces',
-          'default',
-          'forms',
-          formId,
-          'fields'
-        );
-        const fieldsQuery = query(fieldsRef, orderBy('pageIndex'), orderBy('order'));
-        const fieldsSnap = await getDocs(fieldsQuery);
-        fields = fieldsSnap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as FormFieldConfig[];
-
-        break;
-      }
+      const fieldsQuery = query(fieldsRef, orderBy('pageIndex'), orderBy('order'));
+      const fieldsSnap = await getDocs(fieldsQuery);
+      fields = fieldsSnap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as FormFieldConfig[];
     }
 
     if (!form) {
@@ -114,20 +108,18 @@ export async function GET(
     }
 
     // Increment view count
-    if (orgId) {
-      const formRef = doc(
-        db,
-        'organizations',
-        orgId,
-        'workspaces',
-        'default',
-        'forms',
-        formId
-      );
-      await updateDoc(formRef, {
-        viewCount: increment(1),
-      });
-    }
+    const formRefForUpdate = doc(
+      db,
+      'organizations',
+      orgId,
+      'workspaces',
+      'default',
+      'forms',
+      formId
+    );
+    await updateDoc(formRefForUpdate, {
+      viewCount: increment(1),
+    });
 
     // Return public form data (exclude sensitive settings)
     return NextResponse.json({
@@ -201,50 +193,44 @@ export async function POST(
       );
     }
 
-    // Find the form
-    const orgsSnapshot = await getDocs(collection(db, 'organizations'));
+    // Use the penthouse organization ID
+    const orgId = DEFAULT_ORG_ID;
     let form: FormDefinition | null = null;
     let fields: FormFieldConfig[] = [];
-    let orgId: string | null = null;
 
-    for (const orgDoc of orgsSnapshot.docs) {
-      const formRef = doc(
+    const formRef = doc(
+      db,
+      'organizations',
+      orgId,
+      'workspaces',
+      'default',
+      'forms',
+      formId
+    );
+    const formSnap = await getDoc(formRef);
+
+    if (formSnap.exists()) {
+      form = { id: formSnap.id, ...formSnap.data() } as FormDefinition;
+
+      // Fetch fields for validation
+      const fieldsRef = collection(
         db,
         'organizations',
-        orgDoc.id,
+        orgId,
         'workspaces',
         'default',
         'forms',
-        formId
+        formId,
+        'fields'
       );
-      const formSnap = await getDoc(formRef);
-
-      if (formSnap.exists()) {
-        form = { id: formSnap.id, ...formSnap.data() } as FormDefinition;
-        orgId = orgDoc.id;
-
-        // Fetch fields for validation
-        const fieldsRef = collection(
-          db,
-          'organizations',
-          orgDoc.id,
-          'workspaces',
-          'default',
-          'forms',
-          formId,
-          'fields'
-        );
-        const fieldsSnap = await getDocs(fieldsRef);
-        fields = fieldsSnap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as FormFieldConfig[];
-
-        break;
-      }
+      const fieldsSnap = await getDocs(fieldsRef);
+      fields = fieldsSnap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as FormFieldConfig[];
     }
 
-    if (!form || !orgId) {
+    if (!form) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
@@ -324,7 +310,7 @@ export async function POST(
     const submissionDoc = await addDoc(submissionsRef, submission);
 
     // Update form submission count
-    const formRef = doc(
+    const formRefForSubmissionCount = doc(
       db,
       'organizations',
       orgId,
@@ -333,7 +319,7 @@ export async function POST(
       'forms',
       formId
     );
-    await updateDoc(formRef, {
+    await updateDoc(formRefForSubmissionCount, {
       submissionCount: increment(1),
     });
 
