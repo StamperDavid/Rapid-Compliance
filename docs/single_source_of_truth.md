@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 6, 2026 (Tier 2.5 Scraper Distillation Preview — inline signal preview dialog, results API endpoint, View button on completed jobs)
+**Last Updated:** February 7, 2026 (Tier 3.2 LinkedIn Selector Update + Tier 3.3 E2E Agent Pipeline Tests — updated LinkedIn CSS selectors for 2026 UI, guest API endpoint, JSON-LD extraction, 38 integration tests covering full agent chain)
 **Branches:** `dev` at commit `04367869`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
