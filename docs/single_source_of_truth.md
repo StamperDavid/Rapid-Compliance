@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 7, 2026 (Restored SUBSCRIPTION_SPECIALIST as graceful stub — Commerce Manager delegation pipeline now complete at 51/51 agents; Tier 3.4 Webhook Signature Verification + Tier 3.5 Stub Implementations)
+**Last Updated:** February 7, 2026 (Removed SUBSCRIPTION_SPECIALIST — multi-tenant debt, not applicable to single-tenant architecture. Agent count: 50. Commerce Manager cleaned of subscription lifecycle code.)
 **Branches:** `dev` at commit `04367869`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -213,12 +213,12 @@ These tasks fix broken or missing fundamentals. No new features until these are 
 | 1.1 | **Audit every TODO in critical paths** | Catalog every TODO/FIXME in `src/app/api/` and `src/lib/services/`. Classify each as: (a) stub that blocks functionality, (b) enhancement, (c) dead code. Produce a machine-readable inventory. | ✅ DONE — `docs/todo-audit-inventory.json` (10 items: 4 stubs, 6 enhancements, 0 dead code) |
 | 1.2 | **Add error.tsx boundaries** | Add `error.tsx` and `loading.tsx` to every route group: `(dashboard)`, `dashboard/*`, `admin/*`, `(public)/*`. Follow Next.js 15 patterns. | ✅ DONE — 30 error.tsx + 30 loading.tsx added across all route groups, dashboard sub-routes, store/checkout, onboarding |
 | 1.3 | **Replace mock data with real queries or empty states** | Grep for hardcoded arrays, sample data, and `mock` variables in page components. Replace with Firestore queries or proper empty-state UI with CTAs. | ✅ DONE — CRM page (10 entities), Living Ledger (deals), Templates (deal scores) now query Firestore with empty-state UI |
-| 1.4 | **Verify agent service backends** | For each of the 51 agents, trace from the agent's `execute()` method through to the underlying service. Document which services are real vs TODO stubs. | ✅ DONE — `docs/agent-backend-audit.json`. 51/51 REAL (SUBSCRIPTION_SPECIALIST restored as graceful stub) |
+| 1.4 | **Verify agent service backends** | For each of the 50 agents, trace from the agent's `execute()` method through to the underlying service. Document which services are real vs TODO stubs. | ✅ DONE — `docs/agent-backend-audit.json`. 50/50 REAL (SUBSCRIPTION_SPECIALIST removed — multi-tenant debt) |
 | 1.5 | **Fix auth context TODOs** | Replace all 15 instances of `"TODO: Get from auth context"` with actual authenticated user resolution. | ✅ DONE — All 15 instances replaced with `useAuth()` hook (pages/components) or `userId` parameter (services) |
 
 ### Critical Gap from Tier 1 Audit
 
-> **SUBSCRIPTION_SPECIALIST** — ✅ RESOLVED. The Commerce Manager's subscription specialist file (`src/lib/agents/commerce/subscription/specialist.ts`) was restored as a graceful stub. It handles all subscription intents (start_trial, process_billing, transition_state, calculate_mrr, cancel_subscription) with structured "feature disabled" responses and zeroed metrics. The Commerce Manager's delegation pipeline is now complete — no more BLOCKED/not-registered errors. When subscription features are re-enabled, replace stub handlers with real Stripe Subscription API calls.
+> **SUBSCRIPTION_SPECIALIST** — ✅ RESOLVED (REMOVED). This agent was multi-tenant debt from the SaaS era — subscription lifecycle management (trials, billing cycles, dunning, state machine) is not applicable to the single-tenant Penthouse Model where clients purchase services and products. The agent file, Commerce Manager subscription methods, delegation rules, intent types, and all registry references have been fully removed. Agent count updated from 51 to 50.
 
 ### Tier 2 — UX Parity (Industry Competitiveness)
 

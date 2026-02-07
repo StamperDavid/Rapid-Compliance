@@ -2,20 +2,17 @@
  * Commerce Manager (L2 Orchestrator)
  * STATUS: FUNCTIONAL
  *
- * Transactional Commander for e-commerce operations coordinating payment processing,
- * subscription lifecycle, and product catalog management.
+ * Transactional Commander for e-commerce operations coordinating payment processing
+ * and product catalog management.
  *
  * ARCHITECTURE:
  * - Dynamic specialist resolution via SwarmRegistry pattern
- * - Product-to-Payment state machine orchestration
- * - Subscription lifecycle management (TRIAL → ACTIVE → PAST_DUE → CANCELLED)
- * - Revenue reporting synthesis (CommerceBrief with MRR, Churn, Volume)
+ * - Product-to-Payment checkout orchestration
+ * - Revenue reporting synthesis (CommerceBrief)
  * - MemoryVault integration for tax/currency settings
- * - SignalBus integration for dunning sequence triggers
  *
  * SPECIALISTS ORCHESTRATED:
  * - PAYMENT_SPECIALIST: Checkout sessions, payment intents, refunds
- * - SUBSCRIPTION_SPECIALIST: State machine transitions, billing cycles, dunning
  * - CATALOG_MANAGER: Product fetching, catalog CRUD, variant management
  * - PRICING_STRATEGIST: Price validation, discounts, totals calculation
  * - INVENTORY_MANAGER: Stock tracking, demand forecasting, reorder alerts
@@ -26,7 +23,6 @@
 import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
 import { getPaymentSpecialist } from './payment/specialist';
-import { getSubscriptionSpecialist } from './subscription/specialist';
 import { getCatalogManager } from './catalog/specialist';
 import { PricingStrategist } from './pricing/specialist';
 import {
@@ -45,13 +41,11 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 const SYSTEM_PROMPT = `You are the Commerce Manager, a Transactional Commander for e-commerce operations.
 
 ## YOUR ROLE
-You orchestrate PAYMENT_SPECIALIST, SUBSCRIPTION_SPECIALIST, CATALOG_MANAGER,
-PRICING_STRATEGIST, and INVENTORY_MANAGER to execute secure transactions,
-manage subscriptions, and maintain product catalogs.
+You orchestrate PAYMENT_SPECIALIST, CATALOG_MANAGER, PRICING_STRATEGIST, and
+INVENTORY_MANAGER to execute secure transactions and maintain product catalogs.
 
 SPECIALISTS YOU ORCHESTRATE:
 - PAYMENT_SPECIALIST: Checkout sessions, payment intents, webhooks, refunds
-- SUBSCRIPTION_SPECIALIST: Trial management, billing cycles, dunning, state machine
 - CATALOG_MANAGER: Product CRUD, variants, categories, search
 - PRICING_STRATEGIST: Discounts, price validation, totals calculation
 - INVENTORY_MANAGER: Stock levels, demand forecasting, reorder alerts
@@ -66,20 +60,8 @@ SPECIALISTS YOU ORCHESTRATE:
 5. Handle webhook completion
 6. Update inventory via INVENTORY_MANAGER
 
-### Subscription Lifecycle (State Machine)
-TRIAL → ACTIVE → PAST_DUE → CANCELLED
-
-1. Start trial via SUBSCRIPTION_SPECIALIST
-2. Process billing at trial end
-3. On payment success: TRIAL → ACTIVE
-4. On payment failure: ACTIVE → PAST_DUE, trigger dunning
-5. Broadcast dunning signals to OUTREACH_MANAGER
-6. After grace period: PAST_DUE → CANCELLED
-
 ### Revenue Reporting
 Synthesize CommerceBrief with:
-- MRR (Monthly Recurring Revenue)
-- Churn Rate
 - Transaction Volume
 - Revenue by product/category
 
@@ -101,9 +83,6 @@ Your output provides comprehensive commerce metrics with revenue synthesis.`;
 type CommerceIntent =
   | 'CHECKOUT_INIT'
   | 'CHECKOUT_COMPLETE'
-  | 'SUBSCRIPTION_START'
-  | 'SUBSCRIPTION_BILLING'
-  | 'SUBSCRIPTION_CANCEL'
   | 'CATALOG_FETCH'
   | 'CATALOG_UPDATE'
   | 'REVENUE_REPORT'
@@ -117,12 +96,9 @@ type CommerceIntent =
 const INTENT_KEYWORDS: Record<CommerceIntent, string[]> = {
   CHECKOUT_INIT: ['checkout', 'initiate checkout', 'start purchase', 'buy', 'cart'],
   CHECKOUT_COMPLETE: ['checkout complete', 'payment complete', 'order placed'],
-  SUBSCRIPTION_START: ['subscribe', 'start trial', 'new subscription', 'sign up'],
-  SUBSCRIPTION_BILLING: ['billing', 'invoice', 'payment due', 'charge'],
-  SUBSCRIPTION_CANCEL: ['cancel subscription', 'unsubscribe', 'stop subscription'],
   CATALOG_FETCH: ['products', 'catalog', 'fetch items', 'list products'],
   CATALOG_UPDATE: ['update product', 'create product', 'edit catalog'],
-  REVENUE_REPORT: ['revenue', 'mrr', 'churn', 'metrics', 'report', 'analytics'],
+  REVENUE_REPORT: ['revenue', 'metrics', 'report', 'analytics'],
   INVENTORY_CHECK: ['inventory', 'stock', 'availability', 'reorder'],
   PRICE_VALIDATION: ['validate price', 'check pricing', 'apply discount'],
   SINGLE_SPECIALIST: [],
@@ -236,7 +212,6 @@ const COMMERCE_MANAGER_CONFIG: ManagerConfig = {
     reportsTo: 'JASPER',
     capabilities: [
       'checkout_orchestration',
-      'subscription_management',
       'catalog_operations',
       'revenue_reporting',
       'inventory_coordination',
@@ -244,7 +219,7 @@ const COMMERCE_MANAGER_CONFIG: ManagerConfig = {
     ],
   },
   systemPrompt: SYSTEM_PROMPT,
-  tools: ['delegate', 'analyze_revenue', 'orchestrate_checkout', 'manage_subscriptions'],
+  tools: ['delegate', 'analyze_revenue', 'orchestrate_checkout'],
   outputSchema: {
     type: 'object',
     properties: {
@@ -258,7 +233,6 @@ const COMMERCE_MANAGER_CONFIG: ManagerConfig = {
   temperature: 0.2,
   specialists: [
     'PAYMENT_SPECIALIST',
-    'SUBSCRIPTION_SPECIALIST',
     'CATALOG_MANAGER',
     'PRICING_STRATEGIST',
     'INVENTORY_MANAGER',
@@ -267,12 +241,6 @@ const COMMERCE_MANAGER_CONFIG: ManagerConfig = {
     {
       triggerKeywords: ['checkout', 'payment', 'refund', 'payment intent', 'stripe'],
       delegateTo: 'PAYMENT_SPECIALIST',
-      priority: 10,
-      requiresApproval: false,
-    },
-    {
-      triggerKeywords: ['subscription', 'trial', 'billing', 'dunning', 'mrr'],
-      delegateTo: 'SUBSCRIPTION_SPECIALIST',
       priority: 10,
       requiresApproval: false,
     },
@@ -331,7 +299,6 @@ export class CommerceManager extends BaseManager {
 
     const specialistFactories = [
       { name: 'PAYMENT_SPECIALIST', factory: getPaymentSpecialist },
-      { name: 'SUBSCRIPTION_SPECIALIST', factory: getSubscriptionSpecialist },
       { name: 'CATALOG_MANAGER', factory: getCatalogManager },
       { name: 'PRICING_STRATEGIST', factory: () => new PricingStrategist() },
       // INVENTORY_MANAGER uses existing inventory specialist
@@ -391,15 +358,6 @@ export class CommerceManager extends BaseManager {
         case 'CHECKOUT_COMPLETE':
           return await this.handleCheckoutComplete(taskId, payload, startTime);
 
-        case 'SUBSCRIPTION_START':
-          return await this.startSubscription(taskId, payload, startTime);
-
-        case 'SUBSCRIPTION_BILLING':
-          return await this.processBilling(taskId, payload, startTime);
-
-        case 'SUBSCRIPTION_CANCEL':
-          return await this.cancelSubscription(taskId, payload, startTime);
-
         case 'CATALOG_FETCH':
           return await this.fetchCatalog(taskId, payload, startTime);
 
@@ -446,9 +404,6 @@ export class CommerceManager extends BaseManager {
       const action = payload.action as string;
       if (action.includes('checkout') || action === 'initialize_checkout') {
         return 'CHECKOUT_INIT';
-      }
-      if (action.includes('subscription') || action === 'start_trial') {
-        return 'SUBSCRIPTION_START';
       }
       if (action === 'generate_report' || action === 'revenue_report') {
         return 'REVENUE_REPORT';
@@ -685,163 +640,6 @@ export class CommerceManager extends BaseManager {
   }
 
   // ==========================================================================
-  // SUBSCRIPTION MANAGEMENT - State Machine Orchestration
-  // ==========================================================================
-
-  /**
-   * Start a new subscription (trial)
-   */
-  private async startSubscription(
-    taskId: string,
-    payload: Record<string, unknown> | null,
-    startTime: number
-  ): Promise<AgentReport> {
-    const specialistResults: SpecialistResult[] = [];
-
-    try {
-      const result = await this.executeSpecialist(
-        'SUBSCRIPTION_SPECIALIST',
-        taskId,
-        {
-          action: 'start_trial',
-          orgId: DEFAULT_ORG_ID,
-          organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
-          customerId: payload?.customerId as string,
-          customerEmail: payload?.customerEmail as string,
-          planId: (payload?.planId as string) ?? 'default',
-          tierId: (payload?.tierId as string) ?? 'tier1',
-          trialDays: (payload?.trialDays as number) ?? 14,
-          currency: (payload?.currency as string) ?? 'USD',
-        },
-        specialistResults
-      );
-
-      return this.createReport(taskId, result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
-        subscription: result.data,
-        specialistResults,
-        executionTimeMs: Date.now() - startTime,
-      });
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      return this.createReport(taskId, 'FAILED', null, [errorMsg]);
-    }
-  }
-
-  /**
-   * Process subscription billing
-   */
-  private async processBilling(
-    taskId: string,
-    payload: Record<string, unknown> | null,
-    startTime: number
-  ): Promise<AgentReport> {
-    const specialistResults: SpecialistResult[] = [];
-
-    try {
-      const subscriptionId = payload?.subscriptionId as string;
-      const paymentSucceeded = payload?.paymentSucceeded as boolean ?? false;
-
-      const result = await this.executeSpecialist(
-        'SUBSCRIPTION_SPECIALIST',
-        taskId,
-        {
-          action: 'process_billing',
-          orgId: DEFAULT_ORG_ID,
-          subscriptionId,
-          paymentSucceeded,
-          amount: payload?.amount as number,
-          transactionId: payload?.transactionId as string,
-        },
-        specialistResults
-      );
-
-      const resultData = result.data as {
-        dunningSignal?: {
-          shouldTrigger: boolean;
-          targetAgent: string;
-          sequence: { action: string; template: string };
-        };
-        state?: string; // Changed from SubscriptionState (deleted type)
-      } | null;
-
-      // If payment failed, broadcast dunning signal to OUTREACH_MANAGER
-      if (resultData?.dunningSignal?.shouldTrigger) {
-        await broadcastSignal(
-          this.identity.id,
-          'commerce.payment_failed',
-          'CRITICAL',
-          {
-            subscriptionId,
-            dunningSequence: resultData.dunningSignal.sequence,
-            state: resultData.state,
-          },
-          ['OUTREACH_MANAGER']
-        );
-
-        this.log('WARN', `Dunning signal broadcast for subscription ${subscriptionId}`);
-      }
-
-      return this.createReport(taskId, result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
-        billing: result.data,
-        specialistResults,
-        dunningTriggered: resultData?.dunningSignal?.shouldTrigger ?? false,
-        executionTimeMs: Date.now() - startTime,
-      });
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      return this.createReport(taskId, 'FAILED', null, [errorMsg]);
-    }
-  }
-
-  /**
-   * Cancel a subscription
-   */
-  private async cancelSubscription(
-    taskId: string,
-    payload: Record<string, unknown> | null,
-    startTime: number
-  ): Promise<AgentReport> {
-    const specialistResults: SpecialistResult[] = [];
-
-    try {
-      const result = await this.executeSpecialist(
-        'SUBSCRIPTION_SPECIALIST',
-        taskId,
-        {
-          action: 'transition_state',
-          orgId: DEFAULT_ORG_ID,
-          subscriptionId: payload?.subscriptionId as string,
-          targetState: 'CANCELLED',
-          reason: (payload?.reason as string) ?? 'Customer requested cancellation',
-        },
-        specialistResults
-      );
-
-      // Broadcast cancellation signal
-      await broadcastSignal(
-        this.identity.id,
-        'commerce.subscription_cancelled',
-        'HIGH',
-        {
-          subscriptionId: payload?.subscriptionId,
-          reason: payload?.reason ?? 'Customer requested cancellation',
-          cancelledAt: new Date().toISOString(),
-        },
-        ['OUTREACH_MANAGER', 'INTELLIGENCE_MANAGER']
-      );
-
-      return this.createReport(taskId, result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
-        cancellation: result.data,
-        specialistResults,
-        executionTimeMs: Date.now() - startTime,
-      });
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      return this.createReport(taskId, 'FAILED', null, [errorMsg]);
-    }
-  }
-
-  // ==========================================================================
   // CATALOG OPERATIONS
   // ==========================================================================
 
@@ -943,17 +741,7 @@ export class CommerceManager extends BaseManager {
       const workspaceId = (payload?.workspaceId as string) ?? 'default';
 
       // Parallel execution for efficiency
-      const [subscriptionResult, catalogResult, inventoryResult] = await Promise.allSettled([
-        this.executeSpecialist(
-          'SUBSCRIPTION_SPECIALIST',
-          taskId,
-          {
-            action: 'calculate_mrr',
-            orgId: DEFAULT_ORG_ID,
-            organizationId,
-          },
-          specialistResults
-        ),
+      const [catalogResult, inventoryResult] = await Promise.allSettled([
         this.executeSpecialist(
           'CATALOG_MANAGER',
           taskId,
@@ -976,20 +764,6 @@ export class CommerceManager extends BaseManager {
           specialistResults
         ),
       ]);
-
-      // Extract subscription metrics
-      let subscriptionMetrics = {
-        totalMRR: 0,
-        activeSubscriptions: 0,
-        trialSubscriptions: 0,
-        pastDueSubscriptions: 0,
-        churnedThisPeriod: 0,
-      };
-
-      if (subscriptionResult.status === 'fulfilled' && subscriptionResult.value.data) {
-        const subData = subscriptionResult.value.data as { metrics?: typeof subscriptionMetrics };
-        subscriptionMetrics = subData.metrics ?? subscriptionMetrics;
-      }
 
       // Extract catalog metrics
       let catalogSummary = {
@@ -1022,34 +796,9 @@ export class CommerceManager extends BaseManager {
         };
       }
 
-      // Calculate derived metrics
-      const totalSubscriptions = subscriptionMetrics.activeSubscriptions +
-        subscriptionMetrics.trialSubscriptions +
-        subscriptionMetrics.pastDueSubscriptions;
-
-      const churnRate = totalSubscriptions > 0
-        ? (subscriptionMetrics.churnedThisPeriod / (totalSubscriptions + subscriptionMetrics.churnedThisPeriod)) * 100
-        : 0;
-
-      const trialConversionRate = subscriptionMetrics.trialSubscriptions > 0
-        ? (subscriptionMetrics.activeSubscriptions / (subscriptionMetrics.activeSubscriptions + subscriptionMetrics.trialSubscriptions)) * 100
-        : 0;
-
       // Generate recommendations
-      if (subscriptionMetrics.pastDueSubscriptions > 0) {
-        recommendations.push(`${subscriptionMetrics.pastDueSubscriptions} subscriptions past due - review dunning sequence effectiveness`);
-      }
-
-      if (churnRate > 5) {
-        recommendations.push(`Churn rate ${churnRate.toFixed(1)}% exceeds 5% target - investigate retention strategies`);
-      }
-
       if (inventoryMetrics.lowStockItems > 0) {
         recommendations.push(`${inventoryMetrics.lowStockItems} items low on stock - review reorder thresholds`);
-      }
-
-      if (trialConversionRate < 30) {
-        recommendations.push(`Trial conversion rate ${trialConversionRate.toFixed(1)}% below 30% benchmark - optimize onboarding`);
       }
 
       // Build CommerceBrief
@@ -1059,21 +808,21 @@ export class CommerceManager extends BaseManager {
         generatedAt: new Date().toISOString(),
         executionTimeMs: Date.now() - startTime,
         revenue: {
-          mrr: subscriptionMetrics.totalMRR,
-          mrrGrowth: 0, // Would need historical comparison
-          arr: subscriptionMetrics.totalMRR * 12,
-          transactionVolume: 0, // Would aggregate from orders
+          mrr: 0,
+          mrrGrowth: 0,
+          arr: 0,
+          transactionVolume: 0,
           transactionCount: 0,
           averageOrderValue: 0,
         },
         subscriptions: {
-          total: totalSubscriptions,
-          active: subscriptionMetrics.activeSubscriptions,
-          trial: subscriptionMetrics.trialSubscriptions,
-          pastDue: subscriptionMetrics.pastDueSubscriptions,
-          cancelled: subscriptionMetrics.churnedThisPeriod,
-          churnRate,
-          trialConversionRate,
+          total: 0,
+          active: 0,
+          trial: 0,
+          pastDue: 0,
+          cancelled: 0,
+          churnRate: 0,
+          trialConversionRate: 0,
         },
         catalog: {
           totalProducts: catalogSummary.totalProducts,
@@ -1093,10 +842,10 @@ export class CommerceManager extends BaseManager {
         this.identity.id,
         'PERFORMANCE' as InsightData['type'],
         'Commerce Revenue Brief',
-        `MRR: $${subscriptionMetrics.totalMRR.toLocaleString()}, Churn: ${churnRate.toFixed(1)}%`,
+        `Transaction volume: ${brief.revenue.transactionVolume}, Products: ${catalogSummary.totalProducts}`,
         {
           confidence: brief.confidence,
-          sources: ['SUBSCRIPTION_SPECIALIST', 'CATALOG_MANAGER', 'INVENTORY_MANAGER'],
+          sources: ['CATALOG_MANAGER', 'INVENTORY_MANAGER'],
           relatedAgents: ['JASPER', 'REVENUE_DIRECTOR'],
           actions: recommendations,
           tags: ['revenue', 'mrr', 'commerce', 'brief'],
@@ -1332,17 +1081,6 @@ export class CommerceManager extends BaseManager {
       return this.handleCheckoutComplete(
         signal.id,
         payload ?? {},
-        Date.now()
-      );
-    }
-
-    if (signalType === 'invoice.payment_failed') {
-      return this.processBilling(
-        signal.id,
-        {
-          subscriptionId: payload?.subscriptionId,
-          paymentSucceeded: false,
-        },
         Date.now()
       );
     }

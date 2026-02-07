@@ -56,9 +56,9 @@
       "level": "L2",
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/commerce/manager.ts",
-      "specialists": ["PAYMENT_SPECIALIST", "SUBSCRIPTION_SPECIALIST", "CATALOG_MANAGER", "PRICING_STRATEGIST", "INVENTORY_MANAGER"],
-      "functionalLOC": 1400,
-      "note": "Transactional Commerce Commander - Product-to-Payment checkout orchestration, subscription state machine, CommerceBrief revenue synthesis, dunning triggers"
+      "specialists": ["PAYMENT_SPECIALIST", "CATALOG_MANAGER", "PRICING_STRATEGIST", "INVENTORY_MANAGER"],
+      "functionalLOC": 1100,
+      "note": "Transactional Commerce Commander - Product-to-Payment checkout orchestration, CommerceBrief revenue synthesis"
     },
     "OUTREACH_MANAGER": {
       "level": "L2",
@@ -240,14 +240,6 @@
       "path": "src/lib/agents/commerce/payment/specialist.ts",
       "reportsTo": "COMMERCE_MANAGER",
       "capabilities": ["checkout_sessions", "payment_intents", "refunds", "stripe_integration", "webhook_handling"],
-      "verdict": "HIRED",
-      "jasperTool": "delegate_to_commerce"
-    },
-    "SUBSCRIPTION_SPECIALIST": {
-      "status": "FUNCTIONAL",
-      "path": "src/lib/agents/commerce/subscription/specialist.ts",
-      "reportsTo": "COMMERCE_MANAGER",
-      "capabilities": ["trial_management", "billing_cycles", "dunning_sequences", "state_transitions"],
       "verdict": "HIRED",
       "jasperTool": "delegate_to_commerce"
     },
@@ -467,7 +459,6 @@
     "WORKFLOW_OPTIMIZER",
     "COMMERCE_MANAGER",
     "PAYMENT_SPECIALIST",
-    "SUBSCRIPTION_SPECIALIST",
     "CATALOG_MANAGER",
     "PRICING_STRATEGIST",
     "INVENTORY_MANAGER",
@@ -544,9 +535,9 @@
       "delegate_to_commerce": {
         "manager": "COMMERCE_MANAGER",
         "status": "CONNECTED",
-        "input": "{ action, products?, customerId?, subscriptionId?, pricingRules? }",
-        "output": "{ checkoutSession?, subscriptionState?, catalogResult?, commerceBrief }",
-        "delegates_to": ["PAYMENT_SPECIALIST", "SUBSCRIPTION_SPECIALIST", "CATALOG_MANAGER", "PRICING_STRATEGIST", "INVENTORY_MANAGER"]
+        "input": "{ action, products?, customerId?, pricingRules? }",
+        "output": "{ checkoutSession?, catalogResult?, commerceBrief }",
+        "delegates_to": ["PAYMENT_SPECIALIST", "CATALOG_MANAGER", "PRICING_STRATEGIST", "INVENTORY_MANAGER"]
       }
     },
     "outreachTools": {
