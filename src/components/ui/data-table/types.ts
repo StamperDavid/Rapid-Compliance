@@ -71,4 +71,6 @@ export interface DataTableProps<T extends { id: string }> {
   emptyIcon?: ReactNode;
   /** Accent color for gradients and focus rings (tailwind class prefix, e.g., "indigo") */
   accentColor?: string;
+  /** Accessible label for the table (announced by screen readers) */
+  tableLabel?: string;
 }

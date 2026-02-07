@@ -24,6 +24,7 @@ export function DataTable<T extends { id: string }>({
   emptyMessage = 'No data found',
   emptyIcon,
   accentColor = 'indigo',
+  tableLabel,
 }: DataTableProps<T>) {
   const {
     searchQuery,
@@ -75,7 +76,7 @@ export function DataTable<T extends { id: string }>({
       {/* Table */}
       <div className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" aria-label={tableLabel}>
             <DataTableHeader
               columns={columns}
               sortState={sortState}

@@ -15,7 +15,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] px-5 py-10">
+    <div className="flex flex-col items-center justify-center min-h-[50vh] px-5 py-10" role="alert">
       <div
         className="rounded-xl p-10 w-full max-w-md text-center"
         style={{
