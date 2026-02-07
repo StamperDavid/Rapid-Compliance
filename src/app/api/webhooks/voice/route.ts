@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 
 // Type definitions
 interface CallRecord {
@@ -30,11 +31,37 @@ function isCallRecord(value: unknown): value is CallRecord {
  */
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const callSid = formData.get('CallSid') as string;
-    const callStatus = formData.get('CallStatus') as string;
-    const duration = formData.get('CallDuration') as string;
-    const recordingUrl = formData.get('RecordingUrl') as string;
+    // Get raw body for signature verification
+    const rawBody = await request.text();
+
+    // Verify Twilio signature if auth token is configured
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (authToken) {
+      const signature = request.headers.get('x-twilio-signature');
+      if (!signature) {
+        logger.warn('Missing Twilio signature header', { route: '/api/webhooks/voice' });
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+
+      const params = parseFormBody(rawBody);
+      const isValid = verifyTwilioSignature(authToken, signature, request.url, params);
+
+      if (!isValid) {
+        logger.warn('Invalid Twilio signature', { route: '/api/webhooks/voice' });
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+    } else {
+      logger.warn('TWILIO_AUTH_TOKEN not configured - skipping signature verification', {
+        route: '/api/webhooks/voice',
+      });
+    }
+
+    // Parse form body
+    const params = parseFormBody(rawBody);
+    const callSid = params.CallSid;
+    const callStatus = params.CallStatus;
+    const duration = params.CallDuration;
+    const recordingUrl = params.RecordingUrl;
 
     if (!callSid) {
       return NextResponse.json({ success: false, error: 'CallSid required' }, { status: 400 });

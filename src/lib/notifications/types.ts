@@ -277,7 +277,18 @@ export interface NotificationTemplate {
       style?: 'primary' | 'default' | 'danger';
     }>;
   };
-  
+
+  /**
+   * SMS-specific formatting
+   */
+  sms?: {
+    /**
+     * SMS text message (supports {{variables}})
+     * Must be 160 characters or less for single SMS
+     */
+    text: string;
+  };
+
   /**
    * Template metadata
    */
@@ -364,6 +375,10 @@ export interface NotificationPreferences {
       enabled: boolean;
       sound?: boolean;          // Play sound for notifications
       desktop?: boolean;        // Show desktop notifications
+    };
+    sms?: {
+      enabled: boolean;
+      phoneNumber?: string;     // Phone number for SMS notifications
     };
   };
   
@@ -488,6 +503,10 @@ export interface Notification {
       body: string;
       icon?: string;
       actionUrl?: string;
+    };
+    sms?: {
+      text: string;
+      phoneNumber?: string;
     };
   };
   

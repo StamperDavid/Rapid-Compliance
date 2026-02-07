@@ -3,17 +3,44 @@
  * Our proprietary hosted high-quality TTS service
  */
 
+import { logger } from '@/lib/logger/logger';
 import {
   TTS_PROVIDER_INFO,
   type TTSProvider,
   type TTSSynthesizeResponse,
   type TTSVoice,
   type TTSVoiceSettings,
-  type TTSProviderInfo
+  type TTSProviderInfo,
+  type AudioFormat
 } from '../types';
 
 // Native API endpoint - configurable via environment
 const NATIVE_VOICE_URL = process.env.NATIVE_VOICE_URL ?? 'https://voice.platform.local/api/v1';
+
+// API response type definitions
+interface NativeSynthesizeRequest {
+  text: string;
+  voice_id: string;
+  speed: number;
+  format: string;
+  sample_rate: number;
+}
+
+interface NativeSynthesizeResponse {
+  audio: string;
+  format: string;
+  duration_seconds: number;
+  characters_used: number;
+  cost_cents: number;
+}
+
+interface NativeVoicesResponse {
+  voices: TTSVoice[];
+}
+
+interface NativeValidateResponse {
+  valid: boolean;
+}
 
 // Default voices available in Native system
 const NATIVE_VOICES: TTSVoice[] = [
@@ -76,38 +103,65 @@ export class NativeProvider implements TTSProvider {
     this.apiKey = apiKey ?? process.env.NATIVE_VOICE_API_KEY ?? '';
   }
 
-  synthesize(
+  async synthesize(
     text: string,
     voiceId: string,
     settings?: TTSVoiceSettings
   ): Promise<TTSSynthesizeResponse> {
-    // In production, this would call the proprietary Native Voice API
-    // For now, return a placeholder response
-
     const effectiveSettings = {
       speed: settings?.speed ?? 1.0,
       format: settings?.format ?? 'mp3',
       sampleRate: settings?.sampleRate ?? 22050,
     };
 
-    // Simulate API call to Native Voice service
-    // In production:
-    // const response = await fetch(`${NATIVE_VOICE_URL}/synthesize`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${this.apiKey}`,
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     text,
-    //     voice_id: voiceId,
-    //     speed: effectiveSettings.speed,
-    //     format: effectiveSettings.format,
-    //     sample_rate: effectiveSettings.sampleRate,
-    //   }),
-    // });
+    // Try real API call if configured
+    if (this.apiKey) {
+      try {
+        const requestBody: NativeSynthesizeRequest = {
+          text,
+          voice_id: voiceId,
+          speed: effectiveSettings.speed,
+          format: effectiveSettings.format,
+          sample_rate: effectiveSettings.sampleRate,
+        };
 
-    // Calculate estimated duration and cost
+        const response = await fetch(`${NATIVE_VOICE_URL}/synthesize`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (response.ok) {
+          const data = await response.json() as NativeSynthesizeResponse;
+          return {
+            audio: data.audio,
+            format: data.format as AudioFormat,
+            durationSeconds: data.duration_seconds,
+            charactersUsed: data.characters_used,
+            engine: 'native',
+            estimatedCostCents: data.cost_cents,
+          };
+        }
+
+        logger.warn('Native Voice API returned error, using placeholder', {
+          status: response.status,
+          statusText: response.statusText,
+          voiceId,
+          textLength: text.length,
+        });
+      } catch (error) {
+        logger.warn('Native Voice API unavailable, using placeholder', {
+          error: error instanceof Error ? error.message : String(error),
+          voiceId,
+          textLength: text.length,
+        });
+      }
+    }
+
+    // Fallback to placeholder audio
     const charactersUsed = text.length;
     const wordsPerMinute = 150 * effectiveSettings.speed;
     const wordCount = text.split(/\s+/).length;
@@ -115,45 +169,76 @@ export class NativeProvider implements TTSProvider {
     const costPer1kChars = TTS_PROVIDER_INFO.native.pricing.costPer1kChars;
     const estimatedCostCents = (charactersUsed / 1000) * costPer1kChars;
 
-    // Return placeholder audio for now
-    // In production, this would be the actual synthesized audio
-    return Promise.resolve({
+    return {
       audio: PLACEHOLDER_AUDIO_BASE64,
       format: effectiveSettings.format,
       durationSeconds: Math.round(durationSeconds * 10) / 10,
       charactersUsed,
       engine: 'native',
       estimatedCostCents: Math.round(estimatedCostCents * 100) / 100,
-    });
+    };
   }
 
-  listVoices(): Promise<TTSVoice[]> {
-    // In production, fetch from API
-    // const response = await fetch(`${NATIVE_VOICE_URL}/voices`, {
-    //   headers: { 'Authorization': `Bearer ${this.apiKey}` },
-    // });
-    // return await response.json();
+  async listVoices(): Promise<TTSVoice[]> {
+    // Try to fetch from API if configured
+    if (this.apiKey) {
+      try {
+        const response = await fetch(`${NATIVE_VOICE_URL}/voices`, {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+          },
+        });
 
-    return Promise.resolve(NATIVE_VOICES);
+        if (response.ok) {
+          const data = await response.json() as NativeVoicesResponse;
+          return data.voices;
+        }
+
+        logger.warn('Native Voice API voices endpoint returned error, using hardcoded list', {
+          status: response.status,
+          statusText: response.statusText,
+        });
+      } catch (error) {
+        logger.warn('Native Voice API voices endpoint unavailable, using hardcoded list', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    // Fallback to hardcoded list
+    return NATIVE_VOICES;
   }
 
   getProviderInfo(): TTSProviderInfo {
     return TTS_PROVIDER_INFO.native;
   }
 
-  validateApiKey(apiKey: string): Promise<boolean> {
-    // In production, make a test API call
-    // try {
-    //   const response = await fetch(`${NATIVE_VOICE_URL}/validate`, {
-    //     headers: { 'Authorization': `Bearer ${apiKey}` },
-    //   });
-    //   return response.ok;
-    // } catch {
-    //   return false;
-    // }
+  async validateApiKey(apiKey: string): Promise<boolean> {
+    // If no API key provided, return false
+    if (!apiKey || apiKey.length === 0) {
+      return false;
+    }
 
-    // For now, accept any non-empty key
-    return Promise.resolve(apiKey.length > 0);
+    // Make a real validation call
+    try {
+      const response = await fetch(`${NATIVE_VOICE_URL}/validate`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json() as NativeValidateResponse;
+        return data.valid;
+      }
+
+      return false;
+    } catch (error) {
+      logger.warn('Native Voice API validation endpoint unavailable', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
   }
 
   async getVoice(voiceId: string): Promise<TTSVoice | null> {

@@ -4,6 +4,7 @@
  */
 
 import { WebClient } from '@slack/web-api';
+import { logger } from '@/lib/logger/logger';
 
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
@@ -265,26 +266,56 @@ export async function setChannelTopic(accessToken: string, channel: string, topi
 /**
  * Send Slack message using stored org credentials
  * Convenience wrapper for form triggers and workflows
- *
- * TODO: Implement org credential lookup from integrations collection
  */
-export function sendSlackMessage(params: {
+export async function sendSlackMessage(params: {
   orgId: string;
   channelId: string;
   message: string;
   metadata?: Record<string, unknown>;
-}): void {
-  // TODO: Look up Slack access token from org's integrations
-  // For now, this is a stub that logs the message
-  // eslint-disable-next-line no-console
-  console.log('[Slack] sendSlackMessage called:', {
-    orgId: params.orgId,
-    channelId: params.channelId,
-    messageLength: params.message.length,
-    hasMetadata: !!params.metadata,
-  });
+}): Promise<void> {
+  try {
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
-  // When implemented, this would:
-  // 1. Look up the org's Slack integration credentials from Firestore
-  // 2. Call sendMessage(accessToken, { channel: params.channelId, text: params.message })
+    // Look up the org's Slack integration credentials
+    const integration = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${params.orgId}/integrations`,
+      'slack'
+    );
+
+    if (!integration || typeof integration !== 'object') {
+      logger.warn('Slack integration not configured for organization', {
+        orgId: params.orgId,
+        file: 'slack-service.ts',
+      });
+      return;
+    }
+
+    const integrationData = integration as Record<string, unknown>;
+    const accessToken = integrationData.accessToken;
+
+    if (typeof accessToken !== 'string' || !accessToken) {
+      logger.warn('Slack access token not found for organization', {
+        orgId: params.orgId,
+        file: 'slack-service.ts',
+      });
+      return;
+    }
+
+    // Call the real sendMessage function
+    await sendMessage(accessToken, {
+      channel: params.channelId,
+      text: params.message,
+    });
+
+    logger.info('Slack message sent', {
+      orgId: params.orgId,
+      channelId: params.channelId,
+      file: 'slack-service.ts',
+    });
+  } catch (error) {
+    logger.error('Failed to send Slack message',
+      error instanceof Error ? error : new Error(String(error)),
+      { orgId: params.orgId, channelId: params.channelId, file: 'slack-service.ts' }
+    );
+  }
 }

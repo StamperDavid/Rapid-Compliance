@@ -10,6 +10,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,15 +78,56 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    // Twilio sends form-encoded data
-    const formData = await request.formData();
+    // Get raw body for signature verification
+    const rawBody = await request.text();
 
-    const messageSid = formData.get('MessageSid') as string;
-    const messageStatus = formData.get('MessageStatus') as string;
-    const _to = formData.get('To') as string;
-    const _from = formData.get('From') as string;
-    const errorCode = formData.get('ErrorCode') as string | null;
-    const errorMessage = formData.get('ErrorMessage') as string | null;
+    // Verify Twilio signature if auth token is configured
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (authToken) {
+      const signature = request.headers.get('x-twilio-signature');
+      if (!signature) {
+        logger.warn('Missing Twilio signature header', {
+          route: '/api/webhooks/sms'
+        });
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+
+      // Get the full URL - use request.url or construct from WEBHOOK_BASE_URL
+      const url = process.env.WEBHOOK_BASE_URL
+        ? `${process.env.WEBHOOK_BASE_URL}/api/webhooks/sms`
+        : request.url;
+
+      // Parse the form body to get params for verification
+      const params = parseFormBody(rawBody);
+
+      // Verify the signature
+      const isValid = verifyTwilioSignature(authToken, signature, url, params);
+      if (!isValid) {
+        logger.warn('Invalid Twilio webhook signature', {
+          route: '/api/webhooks/sms',
+          url
+        });
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+
+      logger.info('Twilio signature verified', {
+        route: '/api/webhooks/sms'
+      });
+    } else {
+      logger.warn('TWILIO_AUTH_TOKEN not configured - skipping signature verification', {
+        route: '/api/webhooks/sms'
+      });
+    }
+
+    // Parse form body into params
+    const params = parseFormBody(rawBody);
+
+    const messageSid = params['MessageSid'];
+    const messageStatus = params['MessageStatus'];
+    const _to = params['To'];
+    const _from = params['From'];
+    const errorCode = params['ErrorCode'] ?? null;
+    const errorMessage = params['ErrorMessage'] ?? null;
 
     logger.info('SMS webhook received', {
       route: '/api/webhooks/sms',

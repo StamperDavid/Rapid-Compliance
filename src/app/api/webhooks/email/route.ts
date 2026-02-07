@@ -13,6 +13,7 @@ import { parseSendGridWebhook } from '@/lib/email/sendgrid-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { verifySendGridSignature } from '@/lib/security/webhook-verification';
 
 // Raw SendGrid event interface matching the library's expected type
 interface RawSendGridEvent {
@@ -108,8 +109,50 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    // SendGrid sends an array of events
-    const body: unknown = await request.json();
+    // Get raw body for signature verification
+    const rawBody = await request.text();
+
+    // Verify SendGrid signature if verification key is configured
+    const verificationKey = process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY;
+    if (verificationKey) {
+      const signature = request.headers.get('x-twilio-email-event-webhook-signature');
+      const timestamp = request.headers.get('x-twilio-email-event-webhook-timestamp');
+
+      if (!signature || !timestamp) {
+        logger.warn('SendGrid webhook signature headers missing', {
+          route: '/api/webhooks/email',
+          hasSignature: !!signature,
+          hasTimestamp: !!timestamp,
+        });
+        return errors.unauthorized('Missing webhook signature headers');
+      }
+
+      const isValid = verifySendGridSignature(
+        verificationKey,
+        signature,
+        timestamp,
+        rawBody
+      );
+
+      if (!isValid) {
+        logger.warn('SendGrid webhook signature verification failed', {
+          route: '/api/webhooks/email',
+        });
+        return errors.unauthorized('Invalid webhook signature');
+      }
+
+      logger.debug('SendGrid webhook signature verified', {
+        route: '/api/webhooks/email',
+      });
+    } else {
+      logger.warn('SendGrid webhook verification key not configured - skipping signature verification', {
+        route: '/api/webhooks/email',
+        env: process.env.NODE_ENV,
+      });
+    }
+
+    // Parse the verified payload
+    const body: unknown = JSON.parse(rawBody);
 
     if (!Array.isArray(body)) {
       return errors.badRequest('Invalid webhook format');
