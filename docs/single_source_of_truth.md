@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 6, 2026 (Tier 2.4 Page Transition Polish — content-aware skeleton screens, navigation progress bar, optimistic delete with rollback, Toaster provider)
+**Last Updated:** February 6, 2026 (Tier 2.5 Scraper Distillation Preview — inline signal preview dialog, results API endpoint, View button on completed jobs)
 **Branches:** `dev` at commit `04367869`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -236,7 +236,7 @@ These tasks bring the UI to the level expected by users coming from HubSpot, Sal
 | 2.2 | **Form validation standardization** | Standardize all dashboard forms on react-hook-form + zod (already used on API side). Add field-level error messages, loading states on submit buttons. | ✅ DONE — Created `src/components/ui/form.tsx` (Form/FormField/FormItem/FormLabel/FormControl/FormMessage). 9 Zod form schemas in `src/lib/validation/`. All 9 creation forms converted: leads, contacts, deals, products, workflows, campaigns, ab-tests, nurture, fine-tuning. Field-level errors via `<FormMessage />`. Loading states via `formState.isSubmitting`. useFieldArray for dynamic arrays (workflows, nurture). watch() for leads duplicate detection + data quality. |
 | 2.3 | **Accessibility pass** | Add semantic HTML (`nav`, `main`, `section`), aria labels, keyboard navigation, focus management for modals. Target WCAG 2.1 AA. | ✅ DONE — Skip-to-main link, MotionConfig reduced motion, dialog/confirm-dialog focus trapping + ARIA roles, 30 loading.tsx with role="status" + aria-busy + sr-only, 30 error.tsx with role="alert", AdminSidebar aria-label/aria-expanded/aria-current, DataTable scope/aria-sort/tableLabel/button labels, dashboard heading hierarchy h1→h2 with sections, view toggle aria-pressed. 73 files changed. |
 | 2.4 | **Page transition polish** | Add loading states between page navigations, skeleton screens for data-heavy pages, optimistic UI for mutations. | ✅ DONE — Content-aware skeleton screens for 7 loading.tsx files (dashboard, leads, deals, contacts, forms, analytics, parent group). NavigationProgress bar via framer-motion in ClientProviders. Optimistic delete with rollback via `useOptimisticDelete` hook on leads/deals/contacts/forms. `usePagination` exposes `setData` for optimistic mutations. `<Toaster>` mounted in ClientProviders for toast feedback. |
-| 2.5 | **Scraper distillation preview** | Add inline preview of distillation results on the scraper page so users don't need to download to verify AI output. | PENDING |
+| 2.5 | **Scraper distillation preview** | Add inline preview of distillation results on the scraper page so users don't need to download to verify AI output. | COMPLETE |
 
 ### Tier 3 — Feature Completion
 

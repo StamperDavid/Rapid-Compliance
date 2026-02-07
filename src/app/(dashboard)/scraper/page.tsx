@@ -11,6 +11,7 @@ import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/firebase/config';
 import type { ScrapingPlatform } from '@/types/scraper-intelligence';
+import DistillationPreviewDialog from '@/components/scraper/DistillationPreviewDialog';
 
 // ============================================================================
 // TYPES
@@ -74,6 +75,9 @@ export default function ScraperDashboardPage() {
 
   // Jobs state
   const [jobs, setJobs] = useState<ScraperJob[]>([]);
+
+  // Preview dialog state
+  const [previewJob, setPreviewJob] = useState<ScraperJob | null>(null);
 
   // Stats
   const totalJobs = jobs.length;
@@ -400,7 +404,7 @@ export default function ScraperDashboardPage() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '2fr 1fr 1fr 1fr 100px',
+                  gridTemplateColumns: '2fr 1fr 1fr 1fr 80px 80px',
                   gap: '1rem',
                   padding: '0.75rem 1.5rem',
                   backgroundColor: 'var(--color-bg-paper)',
@@ -418,6 +422,7 @@ export default function ScraperDashboardPage() {
                 <div>Status</div>
                 <div>Started</div>
                 <div>Signals</div>
+                <div>Actions</div>
               </div>
 
               {/* Table Rows */}
@@ -428,7 +433,7 @@ export default function ScraperDashboardPage() {
                     key={job.id}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '2fr 1fr 1fr 1fr 100px',
+                      gridTemplateColumns: '2fr 1fr 1fr 1fr 80px 80px',
                       gap: '1rem',
                       padding: '1rem 1.5rem',
                       borderBottom: '1px solid var(--color-border-main)',
@@ -477,6 +482,28 @@ export default function ScraperDashboardPage() {
                     </div>
                     <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-cyan)' }}>
                       {job.signalsFound ?? '--'}
+                    </div>
+                    <div>
+                      {job.status === 'completed' ? (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewJob(job)}
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            color: 'var(--color-primary)',
+                            border: '1px solid rgba(99, 102, 241, 0.3)',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.6875rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          View
+                        </button>
+                      ) : (
+                        <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.6875rem' }}>--</span>
+                      )}
                     </div>
                   </div>
                 );
@@ -553,6 +580,15 @@ export default function ScraperDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Distillation Preview Dialog */}
+      <DistillationPreviewDialog
+        open={previewJob !== null}
+        onOpenChange={(open) => { if (!open) { setPreviewJob(null); } }}
+        jobId={previewJob?.id ?? ''}
+        jobUrl={previewJob?.url ?? ''}
+        jobPlatform={previewJob?.type ?? ''}
+      />
     </div>
   );
 }
