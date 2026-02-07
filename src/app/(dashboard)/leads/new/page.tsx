@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { leadFormSchema, type LeadFormValues } from '@/lib/validation/lead-form-schema';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { logger } from '@/lib/logger/logger';
 import DuplicateWarning from '@/components/DuplicateWarning';
 import { useToast } from '@/hooks/useToast';
@@ -11,12 +15,32 @@ import type { DataQualityScore } from '@/lib/crm/data-quality';
 export default function NewLeadPage() {
   const router = useRouter();
   const toast = useToast();
-  const [lead, setLead] = useState({ firstName: '', lastName: '', email: '', phone: '', company: '', title: '', source: '', status: 'new' as const });
-  const [saving, setSaving] = useState(false);
   const [duplicateResult, setDuplicateResult] = useState<DuplicateDetectionResult | null>(null);
   const [dataQuality, setDataQuality] = useState<DataQualityScore | null>(null);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  const form = useForm<LeadFormValues>({
+    resolver: zodResolver(leadFormSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      company: '',
+      title: '',
+      source: '',
+      status: 'new',
+    },
+  });
+
+  // Watch fields for duplicate detection & data quality
+  const watchedEmail = form.watch('email');
+  const watchedPhone = form.watch('phone');
+  const watchedFirstName = form.watch('firstName');
+  const watchedLastName = form.watch('lastName');
+  const watchedCompany = form.watch('company');
+  const allValues = form.watch();
 
   const checkDuplicates = useCallback(async () => {
     setCheckingDuplicates(true);
@@ -26,7 +50,7 @@ export default function NewLeadPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           entityType: 'lead',
-          record: lead,
+          record: { firstName: watchedFirstName, lastName: watchedLastName, email: watchedEmail, phone: watchedPhone, company: watchedCompany },
           workspaceId: 'default',
         }),
       });
@@ -40,92 +64,64 @@ export default function NewLeadPage() {
     } finally {
       setCheckingDuplicates(false);
     }
-  }, [lead]);
+  }, [watchedEmail, watchedPhone, watchedFirstName, watchedLastName, watchedCompany]);
 
   const calculateQuality = useCallback(async () => {
     try {
       const { calculateLeadDataQuality } = await import('@/lib/crm/data-quality');
-      const quality = calculateLeadDataQuality(lead);
+      const quality = calculateLeadDataQuality(allValues);
       setDataQuality(quality);
     } catch (error: unknown) {
       logger.error('Error calculating quality:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     }
-  }, [lead]);
+  }, [allValues]);
 
   // Check for duplicates when email or phone changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (lead.email || lead.phone) {
+      if (watchedEmail || watchedPhone) {
         void checkDuplicates();
       }
-    }, 1000); // Debounce 1 second
-
+    }, 1000);
     return () => clearTimeout(timer);
-  }, [lead.email, lead.phone, lead.firstName, lead.lastName, lead.company, checkDuplicates]);
+  }, [watchedEmail, watchedPhone, watchedFirstName, watchedLastName, watchedCompany, checkDuplicates]);
 
   // Calculate data quality in real-time
   useEffect(() => {
-    if (lead.firstName || lead.email) {
+    if (allValues.firstName || allValues.email) {
       void calculateQuality();
     }
-  }, [lead, calculateQuality]);
+  }, [allValues, calculateQuality]);
 
-  const proceedWithSubmit = useCallback(async () => {
+  const proceedWithSubmit = useCallback(async (data: LeadFormValues) => {
     try {
-      setSaving(true);
-
-      const response = await fetch(`/api/leads`, {
+      const response = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workspaceId: 'default',
-          leadData: { ...lead, autoEnrich: true }
-        })
+          leadData: { ...data, autoEnrich: true },
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to create lead');
       }
 
-      router.push(`/leads`);
+      router.push('/leads');
     } catch (error: unknown) {
       logger.error('Error creating lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       toast.error('Failed to create lead');
-    } finally {
-      setSaving(false);
     }
-  }, [lead, router, toast]);
+  }, [router, toast]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const onSubmit = async (data: LeadFormValues) => {
     // Warn about high-confidence duplicates
     if (duplicateResult?.hasDuplicates && duplicateResult.highestMatch?.confidence === 'high') {
       setShowConfirmDialog(true);
       return;
     }
-
-    await proceedWithSubmit();
-  };
-
-  const _handleMerge = async (keepId: string, mergeId: string) => {
-    try {
-      const response = await fetch('/api/crm/duplicates/merge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entityType: 'lead',
-          keepId: mergeId, // Existing record
-          mergeId: keepId, // This is placeholder, we haven't created yet
-          workspaceId: 'default',
-        }),
-      });
-      if (response.ok) {
-        router.push(`/leads/${mergeId}`);
-      }
-    } catch (error: unknown) {
-      logger.error('Error merging:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-    }
+    await proceedWithSubmit(data);
   };
 
   return (
@@ -151,7 +147,7 @@ export default function NewLeadPage() {
                 <button
                   onClick={() => {
                     setShowConfirmDialog(false);
-                    void proceedWithSubmit();
+                    void proceedWithSubmit(form.getValues());
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
@@ -201,117 +197,113 @@ export default function NewLeadPage() {
           </div>
         )}
 
-        <form onSubmit={(e) => void handleSubmit(e)}>
+        <Form form={form} onSubmit={onSubmit}>
           <div className="bg-gray-900 rounded-lg p-6 mb-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">First Name *</label>
-                  <input 
-                    type="text" 
-                    value={lead.firstName} 
-                    onChange={(e) => setLead({...lead, firstName: e.target.value})} 
-                    required 
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" 
-                  />
-                  {dataQuality?.suggestions.find(s => s.field === 'firstName') && (
-                    <div className="text-xs text-yellow-400 mt-1">
-                      💡 {dataQuality.suggestions.find(s => s.field === 'firstName')?.suggestion}
+                <FormField control={form.control} name="firstName" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name *</FormLabel>
+                    <FormControl>
+                      <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    </FormControl>
+                    {dataQuality?.suggestions.find(s => s.field === 'firstName') && (
+                      <div className="text-xs text-yellow-400 mt-1">
+                        {dataQuality.suggestions.find(s => s.field === 'firstName')?.suggestion}
+                      </div>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="lastName" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name *</FormLabel>
+                    <FormControl>
+                      <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email *</FormLabel>
+                  <FormControl>
+                    <input {...field} type="email" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                  </FormControl>
+                  {checkingDuplicates && <div className="text-xs text-gray-400 mt-1">Checking for duplicates...</div>}
+                  {dataQuality?.issues.find(i => i.field === 'email') && (
+                    <div className="text-xs text-red-400 mt-1">
+                      {dataQuality.issues.find(i => i.field === 'email')?.issue}
                     </div>
                   )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Last Name *</label>
-                  <input 
-                    type="text" 
-                    value={lead.lastName} 
-                    onChange={(e) => setLead({...lead, lastName: e.target.value})} 
-                    required 
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" 
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Email *</label>
-                <input 
-                  type="email" 
-                  value={lead.email} 
-                  onChange={(e) => setLead({...lead, email: e.target.value})} 
-                  required 
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" 
-                />
-                {checkingDuplicates && <div className="text-xs text-gray-400 mt-1">Checking for duplicates...</div>}
-                {dataQuality?.issues.find(i => i.field === 'email') && (
-                  <div className="text-xs text-red-400 mt-1">
-                    ⚠️ {dataQuality.issues.find(i => i.field === 'email')?.issue}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Phone</label>
-                <input 
-                  type="tel" 
-                  value={lead.phone} 
-                  onChange={(e) => setLead({...lead, phone: e.target.value})} 
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" 
-                />
-                {dataQuality?.suggestions.find(s => s.field === 'phone')?.suggestedValue && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const suggestion = dataQuality.suggestions.find(s => s.field === 'phone');
-                      if (suggestion?.suggestedValue) {
-                        setLead({...lead, phone: String(suggestion.suggestedValue)});
-                      }
-                    }}
-                    className="text-xs text-blue-400 mt-1 hover:text-blue-300"
-                  >
-                    💡 Format as: {dataQuality.suggestions.find(s => s.field === 'phone')?.suggestedValue}
-                  </button>
-                )}
-              </div>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="phone" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone</FormLabel>
+                  <FormControl>
+                    <input {...field} type="tel" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                  </FormControl>
+                  {dataQuality?.suggestions.find(s => s.field === 'phone')?.suggestedValue && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const suggestion = dataQuality.suggestions.find(s => s.field === 'phone');
+                        if (suggestion?.suggestedValue) {
+                          form.setValue('phone', String(suggestion.suggestedValue));
+                        }
+                      }}
+                      className="text-xs text-blue-400 mt-1 hover:text-blue-300"
+                    >
+                      Format as: {dataQuality.suggestions.find(s => s.field === 'phone')?.suggestedValue}
+                    </button>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )} />
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Company</label>
-                  <input 
-                    type="text" 
-                    value={lead.company} 
-                    onChange={(e) => setLead({...lead, company: e.target.value})} 
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" 
-                  />
-                  {lead.company && <div className="text-xs text-gray-400 mt-1">✨ Will auto-enrich company data on save</div>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Title</label>
-                  <input 
-                    type="text" 
-                    value={lead.title} 
-                    onChange={(e) => setLead({...lead, title: e.target.value})} 
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" 
-                  />
-                </div>
+                <FormField control={form.control} name="company" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company</FormLabel>
+                    <FormControl>
+                      <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    </FormControl>
+                    {field.value && <div className="text-xs text-gray-400 mt-1">Will auto-enrich company data on save</div>}
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="title" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Source</label>
-                <input 
-                  type="text" 
-                  value={lead.source} 
-                  onChange={(e) => setLead({...lead, source: e.target.value})} 
-                  placeholder="e.g., Website, Referral, LinkedIn" 
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" 
-                />
-              </div>
+              <FormField control={form.control} name="source" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Source</FormLabel>
+                  <FormControl>
+                    <input {...field} placeholder="e.g., Website, Referral, LinkedIn" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
             </div>
           </div>
 
           {/* Data Quality Issues */}
           {dataQuality && dataQuality.issues.length > 0 && (
             <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4 mb-4">
-              <div className="font-medium mb-2">⚠️ Data Quality Issues:</div>
+              <div className="font-medium mb-2">Data Quality Issues:</div>
               <div className="space-y-1 text-sm">
                 {dataQuality.issues.map((issue, idx) => (
                   <div key={idx}>
-                    • <span className="font-medium">{issue.field}:</span> {issue.issue}
+                    <span className="font-medium">{issue.field}:</span> {issue.issue}
                   </div>
                 ))}
               </div>
@@ -322,15 +314,15 @@ export default function NewLeadPage() {
             <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">
               Cancel
             </button>
-            <button 
-              type="submit" 
-              disabled={saving || checkingDuplicates} 
+            <button
+              type="submit"
+              disabled={form.formState.isSubmitting || checkingDuplicates}
               className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Creating...' : checkingDuplicates ? 'Checking duplicates...' : 'Create Lead'}
+              {form.formState.isSubmitting ? 'Creating...' : checkingDuplicates ? 'Checking duplicates...' : 'Create Lead'}
             </button>
           </div>
-        </form>
+        </Form>
       </div>
     </div>
   );

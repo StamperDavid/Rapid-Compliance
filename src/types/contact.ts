@@ -25,17 +25,9 @@ export interface Contact {
 }
 
 /**
- * New contact form data (subset of Contact)
+ * New contact form data — derived from Zod schema (single source of truth)
  */
-export interface NewContactFormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  company: string;
-  title: string;
-  linkedIn: string;
-}
+export type { ContactFormValues as NewContactFormData } from '@/lib/validation/contact-form-schema';
 
 /**
  * Type guard to check if lastActivity is a Firestore Timestamp
