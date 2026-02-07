@@ -2,23 +2,13 @@
   "audit": {
     "title": "Agent Service Backend Verification",
     "date": "2026-02-06",
-    "total_agents": 51,
+    "total_agents": 50,
     "real": 50,
     "stub": 0,
-    "missing": 1,
-    "summary": "50/51 agents have real execute() implementations with working backend services. 1 agent (SUBSCRIPTION_SPECIALIST) has a deleted file. AGENT_REGISTRY.json should be corrected."
+    "missing": 0,
+    "summary": "50/50 agents have real execute() implementations with working backend services. SUBSCRIPTION_SPECIALIST was removed (multi-tenant debt — not applicable to single-tenant architecture)."
   },
-  "missing_agents": [
-    {
-      "id": "SUBSCRIPTION_SPECIALIST",
-      "expected_path": "src/lib/agents/commerce/subscription/specialist.ts",
-      "status": "MISSING",
-      "reason": "File deleted — subscription features temporarily disabled",
-      "parent_manager": "COMMERCE_MANAGER",
-      "impact": "Subscription lifecycle (billing cycles, dunning, state transitions) is non-operational",
-      "registry_claim": "FUNCTIONAL (incorrect — should be updated)"
-    }
-  ],
+  "missing_agents": [],
   "agent_summary": {
     "orchestrator": { "MASTER_ORCHESTRATOR": "REAL — 2000+ LOC, Command/Saga patterns, intent-based routing to 9 managers" },
     "managers": {
@@ -60,7 +50,6 @@
       },
       "commerce": {
         "PAYMENT_SPECIALIST": "REAL — Stripe checkout sessions",
-        "SUBSCRIPTION_SPECIALIST": "MISSING — file deleted",
         "CATALOG_MANAGER": "REAL — Firestore product CRUD",
         "PRICING_STRATEGIST": "REAL — dynamic pricing algorithms",
         "INVENTORY_MANAGER": "REAL — stock tracking, reorder automation"
