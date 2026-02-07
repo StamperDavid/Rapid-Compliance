@@ -280,13 +280,13 @@ export function exportStepPerformanceToCSV(
 }
 
 // ============================================================================
-// HELPER FUNCTIONS
+// HELPER FUNCTIONS (exported for reuse by DataTable and other components)
 // ============================================================================
 
 /**
  * Escape CSV cell content
  */
-function escapeCsvCell(value: string): string {
+export function escapeCsvCell(value: string): string {
   // If value contains comma, newline, or quote, wrap in quotes and escape quotes
   if (value.includes(',') || value.includes('\n') || value.includes('"')) {
     return `"${value.replace(/"/g, '""')}"`;
@@ -297,7 +297,7 @@ function escapeCsvCell(value: string): string {
 /**
  * Format date for filename (YYYY-MM-DD)
  */
-function formatDateForFilename(date: Date): string {
+export function formatDateForFilename(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -307,10 +307,10 @@ function formatDateForFilename(date: Date): string {
 /**
  * Download CSV file
  */
-function downloadCSV(content: string, filename: string): void {
+export function downloadCSV(content: string, filename: string): void {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
-  
+
   if (link.download !== undefined) {
     // Feature detection for download attribute
     const url = URL.createObjectURL(blob);
@@ -322,4 +322,26 @@ function downloadCSV(content: string, filename: string): void {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
+}
+
+/**
+ * Generic table-to-CSV export for DataTable component
+ *
+ * @param headers - Column header labels
+ * @param rows - 2D array of string cell values
+ * @param filenamePrefix - Prefix for the downloaded filename (date is appended)
+ */
+export function exportTableToCSV(
+  headers: string[],
+  rows: string[][],
+  filenamePrefix: string
+): void {
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(cell => escapeCsvCell(cell)).join(','))
+    .join('\n');
+
+  downloadCSV(
+    csvContent,
+    `${filenamePrefix}-${formatDateForFilename(new Date())}.csv`
+  );
 }

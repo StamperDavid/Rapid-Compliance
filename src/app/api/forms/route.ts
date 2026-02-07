@@ -1,9 +1,14 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { listForms, createForm } from '@/lib/forms/form-service';
+import { listForms, createForm, deleteForm } from '@/lib/forms/form-service';
 import type { FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+
+const deleteBodySchema = z.object({
+  ids: z.array(z.string().min(1)).min(1, 'At least one ID is required'),
+  workspaceId: z.string().optional().default('default'),
+});
 
 const CreateFormBodySchema = z.object({
   workspaceId: z.string().optional(),
@@ -116,6 +121,45 @@ export async function POST(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create form';
     logger.error('Failed to create form:', error instanceof Error ? error : undefined);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/forms
+ * Bulk delete forms by IDs
+ */
+export async function DELETE(
+  request: NextRequest
+) {
+  try {
+    const body: unknown = await request.json();
+    const bodyResult = deleteBodySchema.safeParse(body);
+
+    if (!bodyResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: bodyResult.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { ids, workspaceId } = bodyResult.data;
+    const results = await Promise.allSettled(
+      ids.map(id => deleteForm(workspaceId, id))
+    );
+
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length > 0) {
+      logger.error(`Failed to delete ${failed.length}/${ids.length} forms`);
+    }
+
+    return NextResponse.json({
+      deleted: ids.length - failed.length,
+      failed: failed.length,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete forms';
+    logger.error('Failed to delete forms:', error instanceof Error ? error : undefined);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { usePagination } from '@/hooks/usePagination';
+import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Briefcase,
   Plus,
@@ -14,7 +16,8 @@ import {
   Loader2,
   AlertCircle,
   DollarSign,
-  Target
+  Target,
+  Trash2,
 } from 'lucide-react';
 
 const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
@@ -38,9 +41,25 @@ interface Deal {
   probability?: number;
 }
 
+const getCompanyName = (deal: Deal) => {
+  return deal.company ?? deal.companyName ?? '-';
+};
+
+const getStageBadge = (stage: string) => {
+  const colors = STAGE_COLORS[stage] || STAGE_COLORS.prospecting;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-gradient-to-r ${colors.bg} border ${colors.border} ${colors.text} capitalize`}>
+      {stage.replace('_', ' ')}
+    </span>
+  );
+};
+
 export default function DealsPage() {
   const router = useRouter();
   const [view, setView] = useState<'pipeline' | 'list'>('pipeline');
+  const [deleteIds, setDeleteIds] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchDeals = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
@@ -75,21 +94,108 @@ export default function DealsPage() {
   }, [refresh]);
 
   const getDealsByStage = (stage: string) => deals.filter(d => d.stage === stage);
-
   const totalPipelineValue = deals.reduce((sum, d) => sum + (d.value ?? 0), 0);
 
-  const getCompanyName = (deal: Deal) => {
-    return deal.company ?? deal.companyName ?? '-';
-  };
+  const columns: ColumnDef<Deal>[] = useMemo(() => [
+    {
+      key: 'name',
+      header: 'Deal',
+      accessor: (deal) => deal.name,
+      render: (deal) => <span className="font-medium text-white">{deal.name}</span>,
+    },
+    {
+      key: 'company',
+      header: 'Company',
+      accessor: (deal) => getCompanyName(deal),
+      render: (deal) => <span className="text-gray-400">{getCompanyName(deal)}</span>,
+    },
+    {
+      key: 'value',
+      header: 'Value',
+      accessor: (deal) => deal.value ?? 0,
+      render: (deal) => (
+        <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
+          <DollarSign className="w-4 h-4" />
+          {(deal.value ?? 0).toLocaleString()}
+        </span>
+      ),
+    },
+    {
+      key: 'stage',
+      header: 'Stage',
+      accessor: (deal) => deal.stage ?? 'prospecting',
+      render: (deal) => getStageBadge(deal.stage ?? 'prospecting'),
+    },
+    {
+      key: 'probability',
+      header: 'Probability',
+      accessor: (deal) => deal.probability ?? 0,
+      render: (deal) => (
+        <div className="flex items-center gap-2">
+          <div className="w-16 h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+              style={{ width: `${deal.probability ?? 0}%` }}
+            />
+          </div>
+          <span className="text-gray-400 text-sm">{deal.probability ?? 0}%</span>
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      sortable: false,
+      exportable: false,
+      render: (deal) => (
+        <button
+          onClick={() => router.push(`/deals/${deal.id}`)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/50 text-gray-400 hover:text-white rounded-lg transition-all text-sm"
+        >
+          <Eye className="w-4 h-4" />
+          View
+        </button>
+      ),
+    },
+  ], [router]);
 
-  const getStageBadge = (stage: string) => {
-    const colors = STAGE_COLORS[stage] || STAGE_COLORS.prospecting;
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-gradient-to-r ${colors.bg} border ${colors.border} ${colors.text} capitalize`}>
-        {stage.replace('_', ' ')}
-      </span>
-    );
-  };
+  const handleBulkDelete = useCallback((selectedIds: string[]) => {
+    setDeleteIds(selectedIds);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch('/api/deals', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: deleteIds }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete deals');
+      }
+
+      setDeleteDialogOpen(false);
+      setDeleteIds([]);
+      void refresh();
+    } catch {
+      // Error handling via dialog
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteIds, refresh]);
+
+  const bulkActions: BulkAction<Deal>[] = useMemo(() => [
+    {
+      key: 'delete',
+      label: 'Delete',
+      icon: <Trash2 className="w-4 h-4" />,
+      variant: 'destructive',
+      onAction: handleBulkDelete,
+    },
+  ], [handleBulkDelete]);
 
   if (loading && deals.length === 0) {
     return (
@@ -116,7 +222,7 @@ export default function DealsPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-white">Deals Pipeline</h1>
-            <p className="text-gray-400 text-sm">{deals.length} deals • ${totalPipelineValue.toLocaleString()} total value</p>
+            <p className="text-gray-400 text-sm">{deals.length} deals &bull; ${totalPipelineValue.toLocaleString()} total value</p>
           </div>
         </div>
 
@@ -171,7 +277,7 @@ export default function DealsPage() {
 
       {view === 'pipeline' ? (
         <>
-          {/* Pipeline View */}
+          {/* Pipeline View — unchanged from original */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -199,7 +305,7 @@ export default function DealsPage() {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-400">
                       <span>{stageDeals.length} deals</span>
-                      <span>•</span>
+                      <span>&bull;</span>
                       <span className="text-emerald-400 font-medium">${stageValue.toLocaleString()}</span>
                     </div>
                   </div>
@@ -263,120 +369,46 @@ export default function DealsPage() {
           )}
         </>
       ) : (
-        /* List View */
+        /* List View — DataTable */
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden"
         >
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left p-4 text-sm font-semibold text-gray-400">Deal</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-400">Company</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-400">Value</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-400">Stage</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-400">Probability</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deals.length === 0 && !loading ? (
-                  <tr>
-                    <td colSpan={6} className="p-12 text-center">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
-                          <Target className="w-8 h-8 text-gray-500" />
-                        </div>
-                        <div>
-                          <p className="text-gray-400 mb-1">No deals found</p>
-                          <p className="text-gray-500 text-sm">Click &quot;New Deal&quot; to create your first deal</p>
-                        </div>
-                        <button
-                          onClick={() => router.push(`/deals/new`)}
-                          className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium rounded-xl transition-all text-sm"
-                        >
-                          <Plus className="w-4 h-4" />
-                          New Deal
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  deals.map((deal, idx) => (
-                    <motion.tr
-                      key={deal.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.02 }}
-                      className="border-t border-white/5 hover:bg-white/5 transition-colors group"
-                    >
-                      <td className="p-4">
-                        <span className="font-medium text-white">{deal.name}</span>
-                      </td>
-                      <td className="p-4 text-gray-400">{getCompanyName(deal)}</td>
-                      <td className="p-4">
-                        <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
-                          <DollarSign className="w-4 h-4" />
-                          {(deal.value ?? 0).toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="p-4">{getStageBadge(deal.stage ?? 'prospecting')}</td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-2 bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
-                              style={{ width: `${deal.probability ?? 0}%` }}
-                            />
-                          </div>
-                          <span className="text-gray-400 text-sm">{deal.probability ?? 0}%</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => router.push(`/deals/${deal.id}`)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/50 text-gray-400 hover:text-white rounded-lg transition-all text-sm"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View
-                        </button>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {(hasMore || loading) && (
-            <div className="p-4 border-t border-white/10 flex justify-center">
-              <button
-                onClick={() => void loadMore()}
-                disabled={loading || !hasMore}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading...
-                  </>
-                ) : hasMore ? (
-                  <>
-                    <ChevronDown className="w-4 h-4" />
-                    Load More ({deals.length} shown)
-                  </>
-                ) : (
-                  'All deals loaded'
-                )}
-              </button>
-            </div>
-          )}
+          <DataTable
+            columns={columns}
+            data={deals}
+            loading={loading}
+            searchPlaceholder="Search deals..."
+            searchFilter={(deal, query) => {
+              const name = deal.name.toLowerCase();
+              const company = getCompanyName(deal).toLowerCase();
+              return name.includes(query) || company.includes(query);
+            }}
+            bulkActions={bulkActions}
+            enableCsvExport
+            csvFilename="deals"
+            hasMore={hasMore}
+            onLoadMore={() => void loadMore()}
+            itemCountLabel={`${deals.length} shown`}
+            emptyMessage="No deals found"
+            emptyIcon={<Target className="w-8 h-8 text-gray-500" />}
+            accentColor="emerald"
+          />
         </motion.div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Deals"
+        description={`Are you sure you want to delete ${deleteIds.length} deal${deleteIds.length === 1 ? '' : 's'}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleting}
+      />
     </div>
   );
 }

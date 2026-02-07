@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getLeads, createLead, type Lead } from '@/lib/crm/lead-service';
+import { getLeads, createLead, deleteLead, type Lead } from '@/lib/crm/lead-service';
+import { logger } from '@/lib/logger/logger';
 
 const getQuerySchema = z.object({
   workspaceId: z.string().optional().default('default'),
@@ -28,6 +29,11 @@ const leadDataSchema = z.object({
 const postBodySchema = z.object({
   workspaceId: z.string().optional().default('default'),
   leadData: leadDataSchema,
+});
+
+const deleteBodySchema = z.object({
+  ids: z.array(z.string().min(1)).min(1, 'At least one ID is required'),
+  workspaceId: z.string().optional().default('default'),
 });
 
 export async function GET(
@@ -87,6 +93,44 @@ export async function POST(
   } catch (error: unknown) {
     console.error('Failed to create lead:', error);
     const message = error instanceof Error ? error.message : 'Failed to create lead';
+    return NextResponse.json(
+      { error: message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest
+) {
+  try {
+    const body: unknown = await request.json();
+    const bodyResult = deleteBodySchema.safeParse(body);
+
+    if (!bodyResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: bodyResult.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { ids, workspaceId } = bodyResult.data;
+    const results = await Promise.allSettled(
+      ids.map(id => deleteLead(id, workspaceId))
+    );
+
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length > 0) {
+      logger.error(`Failed to delete ${failed.length}/${ids.length} leads`);
+    }
+
+    return NextResponse.json({
+      deleted: ids.length - failed.length,
+      failed: failed.length,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete leads';
+    logger.error('Failed to delete leads:', error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: message },
       { status: 500 }

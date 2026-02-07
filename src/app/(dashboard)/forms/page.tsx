@@ -5,15 +5,18 @@
  *
  * Lists all forms for the organization with status, analytics,
  * and quick actions. Includes create form modal with templates.
+ * Supports card and table views with bulk delete and CSV export.
  *
  * @route /forms
- * @version 2.0.0
+ * @version 3.0.0
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   FileText,
   Plus,
@@ -27,6 +30,9 @@ import {
   X,
   TrendingUp,
   Users,
+  LayoutGrid,
+  List,
+  Trash2,
 } from 'lucide-react';
 import type { FormDefinition, FormStatus } from '@/lib/forms/types';
 
@@ -138,6 +144,33 @@ function FormCardSkeleton() {
 }
 
 // ============================================================================
+// HELPERS
+// ============================================================================
+
+const getStatusBadgeClasses = (status: FormStatus) => {
+  switch (status) {
+    case 'published':
+      return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+    case 'archived':
+      return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
+    default:
+      return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
+  }
+};
+
+const formatDate = (timestamp: unknown) => {
+  if (!timestamp) { return 'N/A'; }
+  const date = (timestamp as { toDate?: () => Date }).toDate
+    ? (timestamp as { toDate: () => Date }).toDate()
+    : new Date(timestamp as string | number | Date);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -152,6 +185,10 @@ export default function FormsPage() {
   const [newFormName, setNewFormName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
   const [creating, setCreating] = useState(false);
+  const [view, setView] = useState<'cards' | 'table'>('cards');
+  const [deleteIds, setDeleteIds] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch forms
   const fetchForms = useCallback(async () => {
@@ -166,8 +203,8 @@ export default function FormsPage() {
       }
 
       const data: unknown = await response.json();
-      const forms = (data as { forms?: FormDefinition[] }).forms ?? [];
-      setForms(forms);
+      const formsList = (data as { forms?: FormDefinition[] }).forms ?? [];
+      setForms(formsList);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load forms');
     } finally {
@@ -181,17 +218,13 @@ export default function FormsPage() {
 
   // Filter forms
   const filteredForms = forms.filter((form) => {
-    if (activeFilter === 'all') {
-      return true;
-    }
+    if (activeFilter === 'all') { return true; }
     return form.status === activeFilter;
   });
 
   // Handle create form
   const handleCreateForm = async () => {
-    if (!newFormName.trim()) {
-      return;
-    }
+    if (!newFormName.trim()) { return; }
 
     try {
       setCreating(true);
@@ -223,32 +256,143 @@ export default function FormsPage() {
     }
   };
 
-  // Get status badge classes
-  const getStatusBadgeClasses = (status: FormStatus) => {
-    switch (status) {
-      case 'published':
-        return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
-      case 'archived':
-        return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
-      default:
-        return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
-    }
-  };
+  // DataTable columns
+  const columns: ColumnDef<FormDefinition>[] = useMemo(() => [
+    {
+      key: 'name',
+      header: 'Name',
+      accessor: (form) => form.name,
+      render: (form) => (
+        <div>
+          <span className="font-medium text-white">{form.name}</span>
+          {form.description && (
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{form.description}</p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      accessor: (form) => form.status,
+      render: (form) => (
+        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClasses(form.status)}`}>
+          {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
+        </span>
+      ),
+    },
+    {
+      key: 'submissions',
+      header: 'Submissions',
+      accessor: (form) => form.submissionCount || 0,
+      render: (form) => (
+        <span className="text-gray-300 font-medium">{form.submissionCount || 0}</span>
+      ),
+    },
+    {
+      key: 'views',
+      header: 'Views',
+      accessor: (form) => form.viewCount || 0,
+      render: (form) => (
+        <span className="text-gray-300 font-medium">{form.viewCount || 0}</span>
+      ),
+    },
+    {
+      key: 'conversion',
+      header: 'Conversion %',
+      accessor: (form) => form.viewCount > 0 ? Math.round((form.submissionCount / form.viewCount) * 100) : 0,
+      render: (form) => {
+        const rate = form.viewCount > 0
+          ? Math.round((form.submissionCount / form.viewCount) * 100)
+          : 0;
+        return (
+          <span className={`font-medium ${rate > 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
+            {rate}%
+          </span>
+        );
+      },
+    },
+    {
+      key: 'updatedAt',
+      header: 'Updated',
+      accessor: (form) => {
+        if (!form.updatedAt) { return ''; }
+        const date = (form.updatedAt as unknown as { toDate?: () => Date }).toDate
+          ? (form.updatedAt as unknown as { toDate: () => Date }).toDate()
+          : new Date(form.updatedAt as unknown as string | number | Date);
+        return date.toISOString();
+      },
+      render: (form) => (
+        <span className="text-gray-500 text-sm">{formatDate(form.updatedAt)}</span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      sortable: false,
+      exportable: false,
+      render: (form) => (
+        <div className="flex gap-2">
+          <button
+            onClick={() => router.push(`/forms/${form.id}/edit`)}
+            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+            title="Edit form"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          {form.status === 'published' && (
+            <Link
+              href={`/forms/${form.id}`}
+              target="_blank"
+              onClick={(e) => e.stopPropagation()}
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              title="View form"
+            >
+              <Eye className="w-4 h-4" />
+            </Link>
+          )}
+        </div>
+      ),
+    },
+  ], [router]);
 
-  // Format date
-  const formatDate = (timestamp: unknown) => {
-    if (!timestamp) {
-      return 'N/A';
+  const handleBulkDelete = useCallback((selectedIds: string[]) => {
+    setDeleteIds(selectedIds);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch('/api/forms', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: deleteIds }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete forms');
+      }
+
+      setDeleteDialogOpen(false);
+      setDeleteIds([]);
+      void fetchForms();
+    } catch {
+      // Error handling via dialog
+    } finally {
+      setDeleting(false);
     }
-    const date = (timestamp as { toDate?: () => Date }).toDate
-      ? (timestamp as { toDate: () => Date }).toDate()
-      : new Date(timestamp as string | number | Date);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+  }, [deleteIds, fetchForms]);
+
+  const bulkActions: BulkAction<FormDefinition>[] = useMemo(() => [
+    {
+      key: 'delete',
+      label: 'Delete',
+      icon: <Trash2 className="w-4 h-4" />,
+      variant: 'destructive',
+      onAction: handleBulkDelete,
+    },
+  ], [handleBulkDelete]);
 
   return (
     <div className="min-h-screen bg-black p-8">
@@ -270,15 +414,43 @@ export default function FormsPage() {
               </p>
             </div>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Create New Form</span>
-          </motion.button>
+          <div className="flex items-center gap-3">
+            {/* View Toggle */}
+            <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
+              <button
+                onClick={() => setView('cards')}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  view === 'cards'
+                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Cards
+              </button>
+              <button
+                onClick={() => setView('table')}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  view === 'table'
+                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                Table
+              </button>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Create New Form</span>
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* Filter Tabs */}
@@ -325,146 +497,180 @@ export default function FormsPage() {
           )}
         </AnimatePresence>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <FormCardSkeleton key={i} />
-            ))}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && filteredForms.length === 0 && (
+        {view === 'table' ? (
+          /* Table View */
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-16 px-8 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
           >
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mx-auto mb-6 opacity-50">
-              <FileText className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
-              {activeFilter === 'all' ? 'No forms yet' : `No ${activeFilter} forms`}
-            </h3>
-            <p className="text-sm text-gray-400 mb-6">
-              {activeFilter === 'all'
-                ? 'Create your first form to start capturing leads and collecting data.'
-                : `You don't have any ${activeFilter} forms.`}
-            </p>
-            {activeFilter === 'all' && (
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200"
-              >
-                <Plus className="w-5 h-5" />
-                Create New Form
-              </motion.button>
+            {loading ? (
+              <div className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-12 text-center">
+                <p className="text-gray-400">Loading forms...</p>
+              </div>
+            ) : (
+              <DataTable
+                columns={columns}
+                data={filteredForms}
+                loading={loading}
+                searchPlaceholder="Search forms..."
+                searchFilter={(form, query) => {
+                  return form.name.toLowerCase().includes(query) ||
+                    (form.description?.toLowerCase().includes(query) ?? false);
+                }}
+                bulkActions={bulkActions}
+                enableCsvExport
+                csvFilename="forms"
+                emptyMessage={activeFilter === 'all' ? 'No forms yet' : `No ${activeFilter} forms`}
+                emptyIcon={<FileText className="w-8 h-8 text-gray-500" />}
+                accentColor="violet"
+              />
             )}
           </motion.div>
-        )}
+        ) : (
+          <>
+            {/* Loading State */}
+            {loading && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <FormCardSkeleton key={i} />
+                ))}
+              </div>
+            )}
 
-        {/* Forms Grid */}
-        {!loading && filteredForms.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {filteredForms.map((form, index) => (
+            {/* Empty State */}
+            {!loading && filteredForms.length === 0 && (
               <motion.div
-                key={form.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -4, scale: 1.01 }}
-                onClick={() => router.push(`/forms/${form.id}/edit`)}
-                className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden cursor-pointer hover:border-white/20 transition-all duration-300 group"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-16 px-8 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl"
               >
-                {/* Card Header */}
-                <div className="p-5 border-b border-white/10">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-white truncate group-hover:text-violet-400 transition-colors">
-                        {form.name}
-                      </h3>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">
-                        {form.description ?? 'No description'}
-                      </p>
-                    </div>
-                  </div>
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mx-auto mb-6 opacity-50">
+                  <FileText className="w-8 h-8 text-white" />
                 </div>
-
-                {/* Card Body - Stats */}
-                <div className="p-5">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
-                        <Users className="w-4 h-4 text-violet-400" />
-                        {form.submissionCount || 0}
-                      </div>
-                      <div className="text-xs text-gray-400">Submissions</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
-                        <Eye className="w-4 h-4 text-purple-400" />
-                        {form.viewCount || 0}
-                      </div>
-                      <div className="text-xs text-gray-400">Views</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
-                        <TrendingUp className="w-4 h-4 text-emerald-400" />
-                        {form.viewCount > 0
-                          ? `${Math.round((form.submissionCount / form.viewCount) * 100)}%`
-                          : '0%'}
-                      </div>
-                      <div className="text-xs text-gray-400">Conversion</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Footer */}
-                <div className="flex justify-between items-center px-5 py-4 border-t border-white/10 bg-black/20">
-                  <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClasses(form.status)}`}>
-                      {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {formatDate(form.updatedAt)}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/forms/${form.id}/edit`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                      title="Edit form"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Link>
-                    {form.status === 'published' && (
-                      <Link
-                        href={`/forms/${form.id}`}
-                        target="_blank"
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                        title="View form"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                    )}
-                  </div>
-                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  {activeFilter === 'all' ? 'No forms yet' : `No ${activeFilter} forms`}
+                </h3>
+                <p className="text-sm text-gray-400 mb-6">
+                  {activeFilter === 'all'
+                    ? 'Create your first form to start capturing leads and collecting data.'
+                    : `You don't have any ${activeFilter} forms.`}
+                </p>
+                {activeFilter === 'all' && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create New Form
+                  </motion.button>
+                )}
               </motion.div>
-            ))}
-          </motion.div>
+            )}
+
+            {/* Forms Grid */}
+            {!loading && filteredForms.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              >
+                {filteredForms.map((form, index) => (
+                  <motion.div
+                    key={form.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ y: -4, scale: 1.01 }}
+                    onClick={() => router.push(`/forms/${form.id}/edit`)}
+                    className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden cursor-pointer hover:border-white/20 transition-all duration-300 group"
+                  >
+                    {/* Card Header */}
+                    <div className="p-5 border-b border-white/10">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base font-semibold text-white truncate group-hover:text-violet-400 transition-colors">
+                            {form.name}
+                          </h3>
+                          <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                            {form.description ?? 'No description'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Body - Stats */}
+                    <div className="p-5">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
+                            <Users className="w-4 h-4 text-violet-400" />
+                            {form.submissionCount || 0}
+                          </div>
+                          <div className="text-xs text-gray-400">Submissions</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
+                            <Eye className="w-4 h-4 text-purple-400" />
+                            {form.viewCount || 0}
+                          </div>
+                          <div className="text-xs text-gray-400">Views</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
+                            <TrendingUp className="w-4 h-4 text-emerald-400" />
+                            {form.viewCount > 0
+                              ? `${Math.round((form.submissionCount / form.viewCount) * 100)}%`
+                              : '0%'}
+                          </div>
+                          <div className="text-xs text-gray-400">Conversion</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Footer */}
+                    <div className="flex justify-between items-center px-5 py-4 border-t border-white/10 bg-black/20">
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClasses(form.status)}`}>
+                          {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {formatDate(form.updatedAt)}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Link
+                          href={`/forms/${form.id}/edit`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                          title="Edit form"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Link>
+                        {form.status === 'published' && (
+                          <Link
+                            href={`/forms/${form.id}`}
+                            target="_blank"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                            title="View form"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </>
         )}
 
         {/* Create Form Modal */}
@@ -596,6 +802,18 @@ export default function FormsPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Forms"
+        description={`Are you sure you want to delete ${deleteIds.length} form${deleteIds.length === 1 ? '' : 's'}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleting}
+      />
     </div>
   );
 }
