@@ -27,15 +27,16 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { CoachingAnalyticsEngine } from '@/lib/coaching/coaching-analytics-engine';
 import { TeamCoachingEngine } from '@/lib/coaching/team-coaching-engine';
-import { 
-  safeValidateGenerateTeamCoachingRequest 
+import {
+  safeValidateGenerateTeamCoachingRequest
 } from '@/lib/coaching/validation';
-import type { 
+import type {
   GenerateTeamCoachingRequest,
-  GenerateTeamCoachingResponse 
+  GenerateTeamCoachingResponse
 } from '@/lib/coaching/types';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RATE LIMITING
@@ -338,42 +339,90 @@ export function OPTIONS(_request: NextRequest) {
 
 /**
  * Gets team member IDs for a team
- * In a real implementation, this would query the database
+ * Queries Firestore for team membership, with fallback to org-wide sales reps
  * @param teamId - Team identifier
  * @returns Array of team member user IDs
  */
-function getTeamMembers(teamId: string): Promise<string[]> {
-  // TODO: Implement actual team member query
-  // For now, return mock data for development
-  logger.warn('Using mock team members - implement actual database query', { teamId });
+async function getTeamMembers(teamId: string): Promise<string[]> {
+  try {
+    if (!adminDal) {
+      logger.error('Admin DAL not initialized');
+      return [];
+    }
 
-  // In production, this would be something like:
-  // const teamDoc = await adminDal.getDocument(`teams/${teamId}`);
-  // return teamDoc?.memberIds || [];
+    // Query the team document from Firestore
+    const teamDoc = await adminDal.getNestedDocRef(
+      'organizations/{orgId}/teams/{teamId}',
+      { orgId: DEFAULT_ORG_ID, teamId }
+    ).get();
 
-  return Promise.resolve([
-    'rep_001',
-    'rep_002',
-    'rep_003',
-    'rep_004',
-    'rep_005'
-  ]);
+    if (teamDoc.exists) {
+      const data = teamDoc.data();
+      if (data && Array.isArray(data.memberIds)) {
+        logger.info('Retrieved team members from Firestore', {
+          teamId,
+          memberCount: data.memberIds.length,
+        });
+        return data.memberIds as string[];
+      }
+    }
+
+    // Fallback: if team not found, get all users with sales role in the organization
+    logger.warn('Team not found, falling back to org-wide user list', { teamId });
+    const usersSnapshot = await adminDal.getNestedCollection(
+      'organizations/{orgId}/users',
+      { orgId: DEFAULT_ORG_ID }
+    ).where('role', '==', 'sales_rep').get();
+
+    const memberIds = usersSnapshot.docs
+      .map(doc => doc.id)
+      .filter(id => id && id !== '');
+
+    logger.info('Retrieved sales reps as fallback', {
+      teamId,
+      memberCount: memberIds.length,
+    });
+
+    return memberIds;
+  } catch (error) {
+    logger.error('Failed to get team members', error instanceof Error ? error : new Error(String(error)), {
+      teamId,
+    });
+    return [];
+  }
 }
 
 /**
  * Gets team name for a team
- * In a real implementation, this would query the database
+ * Queries Firestore for team name with fallback
  * @param teamId - Team identifier
  * @returns Team name
  */
-function getTeamName(teamId: string): Promise<string> {
-  // TODO: Implement actual team name query
-  // For now, return mock data for development
-  logger.warn('Using mock team name - implement actual database query', { teamId });
+async function getTeamName(teamId: string): Promise<string> {
+  try {
+    if (!adminDal) {
+      logger.error('Admin DAL not initialized');
+      return `Team ${teamId}`;
+    }
 
-  // In production, this would be something like:
-  // const teamDoc = await adminDal.getDocument(`teams/${teamId}`);
-  // return teamDoc?.name || 'Unknown Team';
+    const teamDoc = await adminDal.getNestedDocRef(
+      'organizations/{orgId}/teams/{teamId}',
+      { orgId: DEFAULT_ORG_ID, teamId }
+    ).get();
 
-  return Promise.resolve(`Sales Team ${teamId}`);
+    if (teamDoc.exists) {
+      const data = teamDoc.data();
+      if (data && typeof data.name === 'string' && data.name.trim() !== '') {
+        return data.name;
+      }
+    }
+
+    logger.warn('Team name not found, using default', { teamId });
+    return `Team ${teamId}`;
+  } catch (error) {
+    logger.error('Failed to get team name', error instanceof Error ? error : new Error(String(error)), {
+      teamId,
+    });
+    return `Team ${teamId}`;
+  }
 }

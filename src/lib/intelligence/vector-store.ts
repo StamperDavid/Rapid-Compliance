@@ -73,29 +73,68 @@ interface EmbeddingProvider {
 }
 
 /**
- * Mock embedding provider for development/testing
- * Replace with actual OpenAI/Cohere embedding service
+ * Mock embedding provider fallback (hash-based)
+ */
+function generateMockEmbeddings(texts: ReadonlyArray<string>): ReadonlyArray<ReadonlyArray<number>> {
+  return texts.map((text) => {
+    const embedding: number[] = [];
+    for (let i = 0; i < 1536; i++) {
+      const hash = text.charCodeAt(i % text.length) / 255;
+      embedding.push(Math.sin(hash * i) * 0.5 + 0.5);
+    }
+    return embedding;
+  });
+}
+
+/**
+ * OpenAI-based embedding provider with fallback
+ * Uses OpenAI text-embedding-3-small model if OPENAI_API_KEY is configured,
+ * otherwise falls back to deterministic hash-based embeddings
  */
 const mockEmbeddingProvider: EmbeddingProvider = {
   model: 'text-embedding-3-small',
   dimensions: 1536,
 
   async embed(texts: ReadonlyArray<string>): Promise<ReadonlyArray<ReadonlyArray<number>>> {
-    // Simulate embedding latency
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 50);
-    });
+    const apiKey = process.env.OPENAI_API_KEY;
 
-    // Generate deterministic mock embeddings based on text content
-    return texts.map((text) => {
-      const embedding: number[] = [];
-      for (let i = 0; i < 1536; i++) {
-        // Simple hash-based embedding for consistency
-        const hash = text.charCodeAt(i % text.length) / 255;
-        embedding.push(Math.sin(hash * i) * 0.5 + 0.5);
+    if (apiKey) {
+      try {
+        const response = await fetch('https://api.openai.com/v1/embeddings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'text-embedding-3-small',
+            input: texts,
+          }),
+        });
+
+        if (!response.ok) {
+          logger.warn('OpenAI embeddings API failed, falling back to mock', {
+            status: response.status,
+          });
+          return generateMockEmbeddings(texts);
+        }
+
+        const data = await response.json() as {
+          data: Array<{ embedding: number[] }>;
+        };
+
+        return data.data.map((item) => item.embedding);
+      } catch (error) {
+        logger.warn('OpenAI embeddings error, falling back to mock', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return generateMockEmbeddings(texts);
       }
-      return embedding;
-    });
+    }
+
+    // No API key: use mock embeddings
+    logger.debug('Using mock embeddings (no OPENAI_API_KEY configured)');
+    return generateMockEmbeddings(texts);
   },
 };
 
