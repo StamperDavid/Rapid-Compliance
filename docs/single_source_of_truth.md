@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 6, 2026 (Tier 2.1 Data Table Upgrades — reusable DataTable component, column sorting, bulk select/delete, CSV export for Leads, Deals, Contacts, Forms)
+**Last Updated:** February 6, 2026 (Metrics refresh — route count 148→157, codebase stats updated, admin routes archived, Data tables marked resolved, worktree branches pushed to GitHub)
 **Branches:** `dev` at commit `1ef5dbb0`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -35,7 +35,7 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 148 | Verified (single-tenant flat routes) |
+| Physical Routes (page.tsx) | 157 | Verified (single-tenant flat routes) |
 | API Endpoints (route.ts) | 215 | Functional |
 | AI Agents | 51 | **51 FUNCTIONAL (47 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
@@ -53,36 +53,35 @@
 - **Voice:** VoiceEngineFactory (Native, ElevenLabs, Unreal)
 - **Payments:** Stripe
 
-### Codebase Scale (February 2, 2026 - Post Multi-Tenant Purge)
+### Codebase Scale (February 6, 2026)
 
 **Total Lines of Code Analysis (via `cloc src/`):**
 
-| Metric | Count | Change |
+| Metric | Count | Change vs. Pre-Purge |
 |--------|-------|--------|
-| **Total Files** | 1,106 | -185 files |
-| **Total Lines** | 433,362 | -80,709 lines |
-| **Code Lines** | **331,725** | -71,369 lines |
-| **Comment Lines** | 51,126 | -2,453 lines |
-| **Blank Lines** | 50,487 | -6,811 lines |
+| **Total Files** | 1,134 | -157 files |
+| **Total Lines** | 430,060 | -84,011 lines |
+| **Code Lines** | **329,557** | -73,537 lines |
+| **Comment Lines** | 50,397 | -3,182 lines |
+| **Blank Lines** | 50,106 | -7,192 lines |
 
 **Breakdown by Language:**
 
 | Language | Files | Code | Comments | Blank |
 |----------|-------|------|----------|-------|
-| TypeScript | 1,100 | 330,721 | 51,126 | 50,299 |
-| Markdown | 3 | 708 | 0 | 173 |
+| TypeScript | 1,129 | 328,704 | 50,372 | 49,951 |
+| Markdown | 2 | 551 | 0 | 139 |
 | JSON | 2 | 191 | 0 | 0 |
-| CSS | 1 | 105 | 24 | 15 |
+| CSS | 1 | 111 | 25 | 16 |
 
 **Breakdown by Directory (TypeScript LOC):**
 
 | Directory | Files | Code Lines | Purpose |
 |-----------|-------|------------|---------|
 | `src/lib/` | ~480 | ~190,000 | Core business logic, services, agents |
-| `src/components/` | ~175 | ~38,000 | UI components |
+| `src/components/` | ~185 | ~40,000 | UI components (incl. new DataTable system) |
 | `src/app/api/` | 215 | ~28,000 | API routes (flat structure) |
-| `src/app/admin/` | 92 | ~24,500 | Admin pages |
-| `src/app/(dashboard)/` | 108 | ~15,000 | Dashboard pages (flattened) |
+| `src/app/(dashboard)/` | 114 | ~18,000 | Dashboard pages (flattened, incl. former admin) |
 | `src/types/` | 39 | ~9,500 | TypeScript definitions |
 | `src/hooks/` | 14 | ~2,200 | React hooks |
 
@@ -173,7 +172,7 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 | **No error boundaries** | Zero `error.tsx` or `loading.tsx` files at route level — crashes show white screens | HIGH |
 | **76 files with mock data** | Social campaigns, form templates, deal scores use hardcoded sample data | HIGH |
 | **Accessibility** | 1 `aria-label` across 115+ pages, no semantic HTML, no keyboard navigation | MEDIUM |
-| **Data tables** | No column sorting, no bulk actions, no CSV export on any table | MEDIUM |
+| ~~**Data tables**~~ | ~~No column sorting, no bulk actions, no CSV export on any table~~ | ✅ RESOLVED — Tier 2.1 DataTable system with sorting, bulk select/delete, CSV export |
 | **Agent end-to-end testing** | No test validates full chain: user → orchestrator → manager → specialist → UI | MEDIUM |
 | **Mixed styling** | Some pages use inline styles, some Tailwind, some CSS variables | LOW |
 
@@ -538,7 +537,7 @@ function validateProjectId(): void {
 | `/workspace/abc123/settings/users` | `/settings/users` |
 
 **Implementation:**
-- Created `src/app/(dashboard)/` route group with 108 files (layout + 107 pages)
+- Created `src/app/(dashboard)/` route group with 114 pages (flattened single-tenant, includes former admin routes)
 - All pages use `DEFAULT_ORG_ID = 'rapid-compliance-root'` instead of `useParams()`
 - Legacy URLs redirect via middleware (`/workspace/*` → `/(dashboard)/*`)
 
@@ -562,119 +561,27 @@ Legacy workspace URLs are automatically redirected:
 
 ## Verified Live Route Map
 
-### Route Distribution (Post Multi-Tenant Purge)
+### Route Distribution (February 6, 2026)
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Admin (`/admin/*`) | 92 | 2 (`[id]`) | Admin support views |
-| Dashboard (`/(dashboard)/*`) | 108 | 5 | **Flattened** (no orgId) |
-| Public (`/(public)/*`) | 15 | 0 | All pages exist |
-| Sites (`/sites/[orgId]/*`) | 12 | 2 | Uses DEFAULT_ORG_ID internally |
-| Store (`/store/[orgId]/*`) | 5 | 2 | Uses DEFAULT_ORG_ID internally |
-| Onboarding (`/onboarding/*`) | 4 | 0 | All pages exist |
-| Other | 10 | 2 | All pages exist |
-| **TOTAL** | **148** | **13** | **Verified** |
+| Dashboard (`/(dashboard)/*`) | 114 | 8 | **Flattened** single-tenant (incl. former admin routes) |
+| Public (`/(public)/*`) | 16 | 0 | All pages exist |
+| Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
+| Store (`/store/*`) | 5 | 1 (`[productId]`) | E-commerce storefront |
+| Onboarding (`/onboarding/*`) | 2 | 0 | Account + industry setup |
+| Auth (`/(auth)/*`) | 1 | 0 | Admin login |
+| Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
+| **TOTAL** | **157** | **11** | **Verified** |
 
-**DELETED:** `src/app/workspace/[orgId]/*` (95 pages) - multi-tenant workspace routes removed
+**DELETED:** `src/app/workspace/[orgId]/*` (95 pages) and `src/app/admin/*` (92 pages) - multi-tenant and standalone admin routes removed/consolidated into `(dashboard)`
 
-### Admin Routes (92)
+### Admin Routes (ARCHIVED — Consolidated into Dashboard)
 
-```
-/admin                              # CEO Command Center [FULL - 395 lines]
-/admin/login                        # Firebase admin auth
-/admin/analytics                    # Platform-wide usage metrics
-/admin/analytics/pipeline           # Pipeline analytics
-/admin/analytics/usage              # Usage analytics by org
-/admin/billing                      # Subscription management
-/admin/command-center               # [DEPRECATED - redirects to /admin]
-/admin/customers                    # Customer management
-/admin/deals                        # Platform deals view
-/admin/email-campaigns              # Campaign management
-/admin/global-config                # Global platform config
-/admin/growth                       # Growth metrics
-/admin/jasper-lab                   # AI training laboratory
-/admin/leads                        # Platform leads view
-/admin/merchandiser                 # E-commerce management
-/admin/organizations                # Organization CRUD
-/admin/organizations/new            # Create organization
-/admin/organizations/[id]           # Organization detail
-/admin/organizations/[id]/edit      # Edit organization
-
-# Admin Support Views (45 org-level routes for admin access)
-/admin/organizations/[id]/dashboard         # Org dashboard
-/admin/organizations/[id]/leads             # Lead management
-/admin/organizations/[id]/deals             # Deal pipeline
-/admin/organizations/[id]/contacts          # Contact management
-/admin/organizations/[id]/analytics         # Analytics dashboard
-/admin/organizations/[id]/analytics-pipeline # Pipeline analytics
-/admin/organizations/[id]/analytics-revenue  # Revenue analytics
-/admin/organizations/[id]/calls             # Call management
-/admin/organizations/[id]/conversations     # Conversation tracking
-/admin/organizations/[id]/email-campaigns   # Email campaigns
-/admin/organizations/[id]/social-campaigns  # Social campaigns
-/admin/organizations/[id]/sequences         # Sequences
-/admin/organizations/[id]/nurture           # Nurture sequences
-/admin/organizations/[id]/forms             # Form management
-/admin/organizations/[id]/templates         # Templates
-/admin/organizations/[id]/products          # Product catalog
-/admin/organizations/[id]/orders            # Order management
-/admin/organizations/[id]/storefront        # Storefront
-/admin/organizations/[id]/proposals         # Proposals
-/admin/organizations/[id]/battlecards       # Sales battlecards
-/admin/organizations/[id]/lead-scoring      # Lead scoring
-/admin/organizations/[id]/workflows         # Workflow automation
-/admin/organizations/[id]/workforce         # AI workforce
-/admin/organizations/[id]/datasets          # Datasets
-/admin/organizations/[id]/fine-tuning       # Model fine-tuning
-/admin/organizations/[id]/agent-training    # Agent training
-/admin/organizations/[id]/custom-tools      # Custom tools
-/admin/organizations/[id]/ab-tests          # A/B tests
-/admin/organizations/[id]/living-ledger     # Living ledger
-/admin/organizations/[id]/website-pages     # Website pages
-/admin/organizations/[id]/website-blog      # Blog management
-/admin/organizations/[id]/website-seo       # SEO management
-/admin/organizations/[id]/website-domains   # Domain management
-/admin/organizations/[id]/video-studio      # Video studio
-/admin/organizations/[id]/voice-ai-lab      # Voice AI lab
-/admin/organizations/[id]/seo-ai-lab        # SEO AI lab
-/admin/organizations/[id]/social-ai-lab     # Social AI lab
-/admin/organizations/[id]/integrations      # Integration management
-/admin/organizations/[id]/settings          # Organization settings
-/admin/organizations/[id]/api-keys          # API key management
-/admin/organizations/[id]/webhooks          # Webhook management
-/admin/organizations/[id]/billing           # Billing management
-/admin/organizations/[id]/security          # Security settings
-/admin/pricing-tiers                # Pricing tier config
-/admin/recovery                     # Churn prevention
-/admin/revenue                      # Revenue analytics
-/admin/sales-agent                  # Golden Master AI config
-/admin/sales-agent/knowledge        # Knowledge base
-/admin/sales-agent/persona          # Agent persona
-/admin/sales-agent/training         # Agent training
-/admin/settings/integrations        # Integration cards
-/admin/social                       # Social composer
-/admin/specialists                  # Specialist config
-/admin/subscriptions                # Subscription management
-/admin/support/api-health           # API health monitoring
-/admin/support/bulk-ops             # Bulk operations
-/admin/support/exports              # Data exports
-/admin/support/impersonate          # User impersonation
-/admin/swarm                        # AI swarm control
-/admin/system/api-keys              # API key management
-/admin/system/flags                 # Feature flags
-/admin/system/health                # System health
-/admin/system/logs                  # Audit logs
-/admin/system/settings              # System settings
-/admin/templates                    # Email templates
-/admin/users                        # User management
-/admin/users/[id]                   # User detail
-/admin/voice                        # Voice settings
-/admin/voice-training               # Voice training
-/admin/website-editor               # Website editor
-/admin/advanced/compliance          # Compliance management
-```
-
-### Dashboard Routes (108 in /(dashboard)/* - Flattened Single-Tenant)
+> **Note:** The standalone `/admin/*` page routes (92 pages) were removed during the single-tenant consolidation. All administrative functionality now lives within the `/(dashboard)/*` route group, accessible via RBAC role-gating (`owner`/`admin` roles). Admin API routes (`/api/admin/*`) still exist for backend operations.
+>
+> **Admin Login:** `/(auth)/admin-login` — Firebase admin auth
+### Dashboard Routes (114 in /(dashboard)/* - Flattened Single-Tenant)
 
 > **Note:** These routes were migrated from `/workspace/[orgId]/*` to `/(dashboard)/*` as part of the single-tenant conversion. All routes now use `DEFAULT_ORG_ID = 'rapid-compliance-root'` internally.
 
@@ -711,10 +618,9 @@ Legacy workspace URLs are automatically redirected:
 - `/website/settings`, `/website/templates`, `/website/navigation`, `/website/audit-log`
 - `/website/blog`, `/website/blog/categories`, `/website/blog/editor`
 
-### Dashboard Routes (17)
+### Dashboard Sub-Routes (16 in /dashboard/*)
 
 ```
-/dashboard                          # Overview hub
 /dashboard/analytics                # Workspace analytics [FULL - 278 lines]
 /dashboard/coaching                 # Coaching hub
 /dashboard/coaching/team            # Team coaching
@@ -733,7 +639,7 @@ Legacy workspace URLs are automatically redirected:
 /dashboard/system                   # Admin hub [FULL - 203 lines]
 ```
 
-### Public Routes (15)
+### Public Routes (16)
 
 ```
 /(public)/                          # Landing page
@@ -742,6 +648,7 @@ Legacy workspace URLs are automatically redirected:
 /(public)/contact                   # Contact form
 /(public)/demo                      # Demo request
 /(public)/docs                      # Documentation
+/(public)/f/[formId]                # Public form submission
 /(public)/faq                       # FAQ
 /(public)/features                  # Features
 /(public)/forgot-password           # Password reset
@@ -757,8 +664,8 @@ Legacy workspace URLs are automatically redirected:
 
 | Issue | Location | Severity | Status |
 |-------|----------|----------|--------|
-| ~~Stub Page~~ | `/admin/command-center` | ~~LOW~~ | ✅ RESOLVED - Proper 308 redirect to `/admin` |
-| Duplicate Destination | `settingsEcommerce` + `settingsProducts` → `/admin/merchandiser` | INFO | Intentional (per design) |
+| ~~Stub Page~~ | `/admin/command-center` | ~~LOW~~ | ✅ RESOLVED — Admin routes consolidated into dashboard |
+| ~~Duplicate Destination~~ | `settingsEcommerce` + `settingsProducts` | ~~INFO~~ | ✅ RESOLVED — Admin routes removed |
 
 ---
 

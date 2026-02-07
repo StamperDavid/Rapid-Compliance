@@ -2,7 +2,7 @@
 
 > **Scope:** All Claude Code sessions in this project
 > **Branch:** dev
-> **Last Updated:** February 3, 2026
+> **Last Updated:** February 6, 2026
 
 ---
 
