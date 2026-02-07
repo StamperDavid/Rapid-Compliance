@@ -83,7 +83,13 @@ async function loadScoringWeights(): Promise<ScoringWeights> {
             modelVersion: typeof data.modelVersion === 'string' ? data.modelVersion : 'unknown',
             trainedAt: data.trainedAt instanceof Timestamp ? data.trainedAt.toDate().toISOString() : String(data.trainedAt ?? 'unknown'),
           });
-          return weights as ScoringWeights;
+          // Type-safe construction after validation
+          return {
+            demographics: weights.demographics,
+            firmographics: weights.firmographics,
+            engagement: weights.engagement,
+            behavioral: weights.behavioral,
+          };
         }
       }
     }
