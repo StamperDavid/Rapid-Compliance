@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 7, 2026 (Tier 3.2 LinkedIn Selector Update + Tier 3.3 E2E Agent Pipeline Tests — updated LinkedIn CSS selectors for 2026 UI, guest API endpoint, JSON-LD extraction, 38 integration tests covering full agent chain)
+**Last Updated:** February 7, 2026 (Tier 3.4 Webhook Signature Verification + Tier 3.5 Stub Implementations — added HMAC/ECDSA verification for SendGrid, Twilio, Stripe webhooks; replaced stubs in video service, native voice TTS, PDF generation, notification email/SMS delivery, sequence enrollment, Slack messaging)
 **Branches:** `dev` at commit `04367869`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -247,8 +247,8 @@ Only after Tiers 1 and 2 are verified complete.
 | 3.1 | **Owner impersonation tool** | Built `/system/impersonate` — owner can view the platform as any member. API at `/api/admin/impersonate` (POST/DELETE/GET). Full audit logging, session management, ImpersonationBanner component. | COMPLETE |
 | 3.2 | **LinkedIn selector update** | Update CSS selectors in scraper intelligence for recent LinkedIn UI changes. | PENDING |
 | 3.3 | **End-to-end agent testing** | Write integration tests that validate the full chain: user action → API → orchestrator → manager → specialist → result. | PENDING |
-| 3.4 | **Webhook signature verification** | Add HMAC validation to email, SMS, and voice webhook endpoints. | PENDING |
-| 3.5 | **Stub implementations** | Implement the stubbed features from the "What's Stubbed" table above, prioritized by user impact. | PENDING |
+| 3.4 | **Webhook signature verification** | Add HMAC validation to email, SMS, and voice webhook endpoints. | COMPLETE |
+| 3.5 | **Stub implementations** | Implement the stubbed features from the "What's Stubbed" table above, prioritized by user impact. | COMPLETE |
 
 ---
 

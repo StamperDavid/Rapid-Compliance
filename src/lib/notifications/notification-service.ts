@@ -354,15 +354,42 @@ export class NotificationService {
 
   /**
    * Deliver to Email
-   * (Placeholder - implement with SendGrid/AWS SES)
    */
-  private deliverToEmail(
-    _notification: Notification,
+  private async deliverToEmail(
+    notification: Notification,
     _preferences: NotificationPreferences
   ): Promise<void> {
-    // TODO: Implement email delivery with SendGrid/AWS SES
-    // For now, just throw error (replace with actual email service)
-    throw new Error('Email delivery not implemented');
+    const emailContent = notification.content.email;
+    if (!emailContent) {
+      throw new Error('No email content in notification');
+    }
+
+    const { sendEmail } = await import('@/lib/email/email-service');
+
+    const result = await sendEmail({
+      to: emailContent.to,
+      subject: emailContent.subject,
+      html: emailContent.htmlBody ?? emailContent.body,
+      text: emailContent.body,
+      metadata: {
+        notificationId: notification.id ?? '',
+        orgId: this.orgId,
+        category: notification.category,
+        priority: notification.priority,
+      },
+    });
+
+    if (!result.success) {
+      throw new Error(`Email delivery failed: ${result.error ?? 'Unknown error'}`);
+    }
+
+    // Store delivery response
+    if (notification.id) {
+      await this.storeDeliveryResponse(notification.id, 'email', {
+        messageId: result.messageId,
+        provider: result.provider,
+      });
+    }
   }
 
   /**
@@ -418,14 +445,48 @@ export class NotificationService {
 
   /**
    * Deliver to SMS
-   * (Placeholder - implement with Twilio)
    */
-  private deliverToSMS(
-    _notification: Notification,
-    _preferences: NotificationPreferences
+  private async deliverToSMS(
+    notification: Notification,
+    preferences: NotificationPreferences
   ): Promise<void> {
-    // TODO: Implement SMS delivery with Twilio
-    throw new Error('SMS delivery not implemented');
+    const smsContent = notification.content.sms;
+    // Fall back to in-app content body if no SMS-specific content
+    const message = smsContent?.text ?? notification.content.inApp?.body;
+    if (!message) {
+      throw new Error('No SMS content in notification');
+    }
+
+    // Get phone number from SMS content or preferences
+    const phoneNumber = smsContent?.phoneNumber ?? preferences.channels.sms?.phoneNumber;
+    if (!phoneNumber) {
+      throw new Error('SMS phone number not configured in preferences');
+    }
+
+    const { sendSMS } = await import('@/lib/sms/sms-service');
+
+    const result = await sendSMS({
+      to: phoneNumber,
+      message,
+      organizationId: this.orgId,
+      metadata: {
+        notificationId: notification.id ?? '',
+        category: notification.category,
+        priority: notification.priority,
+      },
+    });
+
+    if (!result.success) {
+      throw new Error(`SMS delivery failed: ${result.error ?? 'Unknown error'}`);
+    }
+
+    // Store delivery response
+    if (notification.id) {
+      await this.storeDeliveryResponse(notification.id, 'sms', {
+        messageId: result.messageId,
+        provider: result.provider,
+      });
+    }
   }
 
   /**
@@ -483,6 +544,15 @@ export class NotificationService {
         body: this.interpolateVariables(template.inApp.body, variables),
         icon: template.inApp.icon,
         actionUrl: template.inApp.actionUrl,
+      };
+    }
+
+    // Render SMS content
+    if (template.sms) {
+      const phoneNumber = preferences.channels.sms?.phoneNumber;
+      content.sms = {
+        text: this.interpolateVariables(template.sms.text, variables),
+        phoneNumber,
       };
     }
 
