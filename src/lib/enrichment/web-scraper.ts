@@ -53,6 +53,16 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
     $('[class*="banner"]').remove();
     $('[class*="popup"]').remove();
     $('[class*="modal"]').remove();
+
+    // LinkedIn-specific UI chrome (updated Feb 2026)
+    $('[class*="artdeco-"]').remove();
+    $('[class*="scaffold-"]').remove();
+    $('[class*="ember-"]').remove();
+    $('.authentication-outlet').remove();
+    $('.global-nav').remove();
+    $('.msg-overlay-list-bubble').remove();
+    $('.premium-upsell').remove();
+    $('.ad-banner-container').remove();
     
     // Extract metadata
     const metadata = {

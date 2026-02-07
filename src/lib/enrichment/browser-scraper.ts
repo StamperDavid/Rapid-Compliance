@@ -79,10 +79,19 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
           'script', 'style', 'nav', 'footer', 'header', 'iframe', 'noscript', 'svg',
           '[class*="ad-"]', '[class*="advertisement"]', '[id*="ad-"]',
           '[class*="cookie"]', '[class*="banner"]', '[class*="popup"]', '[class*="modal"]',
+          // LinkedIn-specific UI chrome selectors (updated Feb 2026)
+          '[class*="artdeco-"]', '[class*="scaffold-"]', '[class*="ember-"]',
+          '.authentication-outlet', '.global-nav', '.msg-overlay-list-bubble',
+          '.share-box-feed-entry', '.feed-shared-control-menu',
+          '.premium-upsell', '.ad-banner-container', '.jobs-premium-upsell',
         ];
-        
+
         selectorsToRemove.forEach(selector => {
-          document.querySelectorAll(selector).forEach(el => el.remove());
+          try {
+            document.querySelectorAll(selector).forEach(el => el.remove());
+          } catch (_e) {
+            // Invalid selector on non-LinkedIn pages, skip
+          }
         });
       });
       

@@ -101,19 +101,65 @@ async function getJobsFromRapidAPI(
 }
 
 /**
+ * LinkedIn CSS Selectors (Updated February 2026)
+ *
+ * LinkedIn's public job search uses these CSS class patterns:
+ * - Job card container: div.base-card / div.base-search-card / div.job-search-card
+ * - Job list items: li.jobs-search-results__list-item
+ * - Title: h3.base-search-card__title
+ * - Link: a.base-card__full-link
+ * - Company: h4.base-search-card__subtitle / a.hidden-nested-link
+ * - Location: span.job-search-card__location
+ * - Date: time.job-search-card__listdate (datetime attr)
+ * - Description: div.show-more-less-html__markup / div.jobs-description__content
+ *
+ * Authenticated/logged-in selectors (not used here):
+ * - div.job-card-container
+ * - h3.job-card-container__title
+ * - h4.job-card-container__company-name
+ * - span.job-card-container__location
+ */
+const LINKEDIN_SELECTORS = {
+  // Job card containers (regex patterns for HTML parsing)
+  jobCard: /<div[^>]*class="[^"]*(?:base-card|base-search-card|job-search-card)[^"]*"[^>]*>[\s\S]*?(?=<div[^>]*class="[^"]*(?:base-card|base-search-card|job-search-card)[^"]*"|$)/g,
+  jobCardAlt: /<li[^>]*class="[^"]*jobs-search-results__list-item[^"]*"[\s\S]*?<\/li>/g,
+  // Individual field selectors
+  title: /<h3[^>]*class="[^"]*base-search-card__title[^"]*"[^>]*>([\s\S]*?)<\/h3>/,
+  titleFallback: /<h3[^>]*>([\s\S]*?)<\/h3>/,
+  link: /<a[^>]*class="[^"]*base-card__full-link[^"]*"[^>]*href="([^"]*)"[^>]*>/,
+  linkFallback: /href="(https:\/\/[^"]*linkedin\.com\/jobs\/view\/[^"]*)"/,
+  location: /<span[^>]*class="[^"]*job-search-card__location[^"]*"[^>]*>([\s\S]*?)<\/span>/,
+  locationFallback: /<span[^>]*class="[^"]*job-result-card__location[^"]*"[^>]*>([\s\S]*?)<\/span>/,
+  date: /<time[^>]*class="[^"]*job-search-card__listdate[^"]*"[^>]*datetime="([^"]*)"/,
+  dateFallback: /<time[^>]*datetime="([^"]*)"/,
+  company: /<h4[^>]*class="[^"]*base-search-card__subtitle[^"]*"[^>]*>([\s\S]*?)<\/h4>/,
+  // JSON-LD structured data (most reliable when present)
+  jsonLd: /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g,
+} as const;
+
+/**
  * Get jobs from LinkedIn public job search (no API key needed)
+ * Uses LinkedIn's guest jobs API endpoint with updated CSS selectors (Feb 2026)
  */
 async function getJobsFromPublicSearch(
   companyName: string,
   maxResults: number
 ): Promise<LinkedInJob[]> {
   try {
-    // Use LinkedIn's public job search
+    // Strategy 1: Try the guest API endpoint (more reliable, returns cleaner HTML)
+    const guestApiJobs = await getJobsFromGuestApi(companyName, maxResults);
+    if (guestApiJobs.length > 0) {
+      return guestApiJobs;
+    }
+
+    // Strategy 2: Fall back to standard public search page with updated selectors
     const searchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(companyName)}&position=1&pageNum=0`;
-    
+
     const response = await fetch(searchUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
       },
     });
 
@@ -123,40 +169,162 @@ async function getJobsFromPublicSearch(
     }
 
     const html = await response.text();
-    
-    // Parse job listings from HTML
-    const jobs: LinkedInJob[] = [];
-    const jobRegex = /<li class="result-card[^"]*"[\s\S]*?<\/li>/g;
-    const matches = html.matchAll(jobRegex);
-    
-    for (const match of matches) {
-      if (jobs.length >= maxResults) {break;}
-      
-      const jobHtml = match[0];
-      
-      const titleMatch = jobHtml.match(/<h3[^>]*>([\s\S]*?)<\/h3>/);
-      const urlMatch = jobHtml.match(/href="([^"]*)"/);
-      const locationMatch = jobHtml.match(/<span class="job-result-card__location"[^>]*>([\s\S]*?)<\/span>/);
-      const dateMatch = jobHtml.match(/<time[^>]*datetime="([^"]*)"/);
-      
-      if (titleMatch && urlMatch) {
-        const title = cleanHtml(titleMatch[1]);
-        jobs.push({
-          title,
-          department: extractDepartment(title),
-          url: urlMatch[1],
-          postedDate: dateMatch ? dateMatch[1] : new Date().toISOString(),
-          location: locationMatch ? cleanHtml(locationMatch[1]) : undefined,
-          seniority: extractSeniority(title),
-        });
-      }
+
+    // Strategy 2a: Try JSON-LD structured data first (most reliable)
+    const jsonLdJobs = extractJobsFromJsonLd(html, maxResults);
+    if (jsonLdJobs.length > 0) {
+      return jsonLdJobs;
     }
 
-    return jobs;
+    // Strategy 2b: Parse with updated CSS selector patterns
+    return parseJobsFromHtml(html, maxResults);
   } catch (error) {
     logger.error('[LinkedIn] Public search error:', error instanceof Error ? error : new Error(String(error)), { file: 'linkedin-service.ts' });
     return generateFallbackJobs(companyName);
   }
+}
+
+/**
+ * LinkedIn guest API endpoint - returns job listings without auth
+ * Endpoint: /jobs-guest/jobs/api/seeMoreJobPostings/search
+ */
+async function getJobsFromGuestApi(
+  companyName: string,
+  maxResults: number
+): Promise<LinkedInJob[]> {
+  try {
+    const guestApiUrl = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(companyName)}&location=&start=0`;
+
+    const response = await fetch(guestApiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const html = await response.text();
+    return parseJobsFromHtml(html, maxResults);
+  } catch (_error) {
+    logger.info('[LinkedIn] Guest API unavailable, falling back to page scrape', { file: 'linkedin-service.ts' });
+    return [];
+  }
+}
+
+/**
+ * Extract jobs from JSON-LD structured data embedded in LinkedIn pages
+ */
+function extractJobsFromJsonLd(html: string, maxResults: number): LinkedInJob[] {
+  const jobs: LinkedInJob[] = [];
+  const jsonLdMatches = html.matchAll(LINKEDIN_SELECTORS.jsonLd);
+
+  for (const match of jsonLdMatches) {
+    if (jobs.length >= maxResults) {break;}
+
+    try {
+      const data: unknown = JSON.parse(match[1]);
+      const typed = data as Record<string, unknown>;
+
+      // Handle single JobPosting
+      if (typed['@type'] === 'JobPosting') {
+        const job = parseJsonLdJob(typed);
+        if (job) {jobs.push(job);}
+      }
+
+      // Handle ItemList containing JobPostings
+      if (typed['@type'] === 'ItemList') {
+        const items = typed.itemListElement as Array<Record<string, unknown>> | undefined;
+        if (items) {
+          for (const item of items) {
+            if (jobs.length >= maxResults) {break;}
+            const job = parseJsonLdJob(item);
+            if (job) {jobs.push(job);}
+          }
+        }
+      }
+    } catch (_parseError) {
+      // JSON-LD block wasn't valid job data, skip
+    }
+  }
+
+  return jobs;
+}
+
+/**
+ * Parse a single job from JSON-LD structured data
+ */
+function parseJsonLdJob(data: Record<string, unknown>): LinkedInJob | null {
+  const title = data.title as string | undefined;
+  if (!title) {return null;}
+
+  const location = data.jobLocation as Record<string, unknown> | undefined;
+  const address = location?.address as Record<string, unknown> | undefined;
+  const locationStr = address?.addressLocality as string | undefined;
+
+  return {
+    title,
+    department: extractDepartment(title),
+    url: (data.url as string) ?? '',
+    postedDate: (data.datePosted as string) ?? new Date().toISOString(),
+    location: locationStr,
+    seniority: extractSeniority(title),
+  };
+}
+
+/**
+ * Parse job listings from HTML using updated LinkedIn CSS selector patterns
+ */
+function parseJobsFromHtml(html: string, maxResults: number): LinkedInJob[] {
+  const jobs: LinkedInJob[] = [];
+
+  // Try primary selectors (base-card / base-search-card / job-search-card)
+  let cardMatches = Array.from(html.matchAll(LINKEDIN_SELECTORS.jobCard));
+
+  // Fall back to alternative list-item selectors
+  if (cardMatches.length === 0) {
+    cardMatches = Array.from(html.matchAll(LINKEDIN_SELECTORS.jobCardAlt));
+  }
+
+  for (const match of cardMatches) {
+    if (jobs.length >= maxResults) {break;}
+
+    const jobHtml = match[0];
+
+    // Extract title: try base-search-card__title first, then generic h3
+    const titleMatch = jobHtml.match(LINKEDIN_SELECTORS.title)
+      ?? jobHtml.match(LINKEDIN_SELECTORS.titleFallback);
+
+    // Extract URL: try base-card__full-link first, then LinkedIn job view URL
+    const urlMatch = jobHtml.match(LINKEDIN_SELECTORS.link)
+      ?? jobHtml.match(LINKEDIN_SELECTORS.linkFallback)
+      ?? jobHtml.match(/href="([^"]*)"/);
+
+    // Extract location: try job-search-card__location, then legacy job-result-card__location
+    const locationMatch = jobHtml.match(LINKEDIN_SELECTORS.location)
+      ?? jobHtml.match(LINKEDIN_SELECTORS.locationFallback);
+
+    // Extract date: try job-search-card__listdate, then generic time element
+    const dateMatch = jobHtml.match(LINKEDIN_SELECTORS.date)
+      ?? jobHtml.match(LINKEDIN_SELECTORS.dateFallback);
+
+    if (titleMatch && urlMatch) {
+      const title = cleanHtml(titleMatch[1]);
+      jobs.push({
+        title,
+        department: extractDepartment(title),
+        url: urlMatch[1],
+        postedDate: dateMatch ? dateMatch[1] : new Date().toISOString(),
+        location: locationMatch ? cleanHtml(locationMatch[1]) : undefined,
+        seniority: extractSeniority(title),
+      });
+    }
+  }
+
+  return jobs;
 }
 
 /**
