@@ -245,8 +245,8 @@ Only after Tiers 1 and 2 are verified complete.
 | # | Task | Description | Status |
 |---|------|-------------|--------|
 | 3.1 | **Owner impersonation tool** | Built `/system/impersonate` — owner can view the platform as any member. API at `/api/admin/impersonate` (POST/DELETE/GET). Full audit logging, session management, ImpersonationBanner component. | COMPLETE |
-| 3.2 | **LinkedIn selector update** | Update CSS selectors in scraper intelligence for recent LinkedIn UI changes. | PENDING |
-| 3.3 | **End-to-end agent testing** | Write integration tests that validate the full chain: user action → API → orchestrator → manager → specialist → result. | PENDING |
+| 3.2 | **LinkedIn selector update** | Update CSS selectors in scraper intelligence for recent LinkedIn UI changes. | COMPLETE |
+| 3.3 | **End-to-end agent testing** | Write integration tests that validate the full chain: user action → API → orchestrator → manager → specialist → result. | COMPLETE |
 | 3.4 | **Webhook signature verification** | Add HMAC validation to email, SMS, and voice webhook endpoints. | COMPLETE |
 | 3.5 | **Stub implementations** | Implement the stubbed features from the "What's Stubbed" table above, prioritized by user impact. | COMPLETE |
 
