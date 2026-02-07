@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { usePagination } from '@/hooks/usePagination';
+import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -55,9 +56,6 @@ const getLeadCompany = (lead: Lead) => {
 export default function LeadsPage() {
   const router = useRouter();
   const [filter, setFilter] = useState('all');
-  const [deleteIds, setDeleteIds] = useState<string[]>([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const fetchLeads = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
@@ -88,8 +86,23 @@ export default function LeadsPage() {
     error,
     hasMore,
     loadMore,
-    refresh
+    refresh,
+    setData: setLeads,
   } = usePagination<Lead>({ fetchFn: fetchLeads });
+
+  const {
+    deleteIds,
+    deleteDialogOpen,
+    deleting,
+    requestDelete: handleBulkDelete,
+    cancelDelete,
+    confirmDelete,
+  } = useOptimisticDelete({
+    data: leads,
+    setData: setLeads,
+    endpoint: '/api/leads',
+    entityName: 'leads',
+  });
 
   useEffect(() => {
     void refresh();
@@ -210,34 +223,6 @@ export default function LeadsPage() {
     },
   ], [router]);
 
-  const handleBulkDelete = useCallback((selectedIds: string[]) => {
-    setDeleteIds(selectedIds);
-    setDeleteDialogOpen(true);
-  }, []);
-
-  const confirmDelete = useCallback(async () => {
-    setDeleting(true);
-    try {
-      const response = await fetch('/api/leads', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: deleteIds }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete leads');
-      }
-
-      setDeleteDialogOpen(false);
-      setDeleteIds([]);
-      void refresh();
-    } catch {
-      // Error is shown via the dialog staying open
-    } finally {
-      setDeleting(false);
-    }
-  }, [deleteIds, refresh]);
-
   const bulkActions: BulkAction<Lead>[] = useMemo(() => [
     {
       key: 'delete',
@@ -352,7 +337,7 @@ export default function LeadsPage() {
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        onClose={cancelDelete}
         onConfirm={confirmDelete}
         title="Delete Leads"
         description={`Are you sure you want to delete ${deleteIds.length} lead${deleteIds.length === 1 ? '' : 's'}? This action cannot be undone.`}

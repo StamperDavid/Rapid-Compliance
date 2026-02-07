@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { usePagination } from '@/hooks/usePagination';
+import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -58,9 +59,6 @@ export default function ContactsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState<'cards' | 'table'>('cards');
-  const [deleteIds, setDeleteIds] = useState<string[]>([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const fetchContacts = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
@@ -87,8 +85,23 @@ export default function ContactsPage() {
     error,
     hasMore,
     loadMore,
-    refresh
+    refresh,
+    setData: setContacts,
   } = usePagination<Contact>({ fetchFn: fetchContacts });
+
+  const {
+    deleteIds,
+    deleteDialogOpen,
+    deleting,
+    requestDelete: handleBulkDelete,
+    cancelDelete,
+    confirmDelete,
+  } = useOptimisticDelete({
+    data: contacts,
+    setData: setContacts,
+    endpoint: '/api/contacts',
+    entityName: 'contacts',
+  });
 
   useEffect(() => {
     void refresh();
@@ -162,34 +175,6 @@ export default function ContactsPage() {
       ),
     },
   ], [router]);
-
-  const handleBulkDelete = useCallback((selectedIds: string[]) => {
-    setDeleteIds(selectedIds);
-    setDeleteDialogOpen(true);
-  }, []);
-
-  const confirmDelete = useCallback(async () => {
-    setDeleting(true);
-    try {
-      const response = await fetch('/api/contacts', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: deleteIds }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete contacts');
-      }
-
-      setDeleteDialogOpen(false);
-      setDeleteIds([]);
-      void refresh();
-    } catch {
-      // Error handling via dialog
-    } finally {
-      setDeleting(false);
-    }
-  }, [deleteIds, refresh]);
 
   const bulkActions: BulkAction<Contact>[] = useMemo(() => [
     {
@@ -454,7 +439,7 @@ export default function ContactsPage() {
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        onClose={cancelDelete}
         onConfirm={confirmDelete}
         title="Delete Contacts"
         description={`Are you sure you want to delete ${deleteIds.length} contact${deleteIds.length === 1 ? '' : 's'}? This action cannot be undone.`}
