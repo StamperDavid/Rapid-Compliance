@@ -244,7 +244,7 @@ Only after Tiers 1 and 2 are verified complete.
 
 | # | Task | Description | Status |
 |---|------|-------------|--------|
-| 3.1 | **Owner impersonation tool** | Build `/admin/support/impersonate` so the owner can see exactly what a member sees without logging out. | PENDING |
+| 3.1 | **Owner impersonation tool** | Built `/system/impersonate` — owner can view the platform as any member. API at `/api/admin/impersonate` (POST/DELETE/GET). Full audit logging, session management, ImpersonationBanner component. | COMPLETE |
 | 3.2 | **LinkedIn selector update** | Update CSS selectors in scraper intelligence for recent LinkedIn UI changes. | PENDING |
 | 3.3 | **End-to-end agent testing** | Write integration tests that validate the full chain: user action → API → orchestrator → manager → specialist → result. | PENDING |
 | 3.4 | **Webhook signature verification** | Add HMAC validation to email, SMS, and voice webhook endpoints. | PENDING |
@@ -2127,12 +2127,17 @@ Admin User → /admin/organizations → /admin/organizations/[id] → /admin/org
                                        Jasper remains mounted, Admin theme active
 ```
 
-**Tenant Impersonation Flow** (Exit Admin Context Intentionally):
+**Owner Impersonation Flow** (Tier 3.1 — Implemented):
 ```
-Platform Admin → /admin/support/impersonate → Select user → /workspace/[targetOrgId]/dashboard
-                                                            ↓
-                                        Admin deliberately exits to workspace context
-                                        Jasper unmounts, Workspace orchestrator activates
+Owner → /system/impersonate → Search & select user → Enter reason → POST /api/admin/impersonate
+                                                                      ↓
+                              ImpersonationBanner displays at top of viewport (all pages)
+                              Owner sees platform as the target user
+                              Session tracked in Firestore (impersonationSessions collection)
+                              Audit log entry created in auditLogs collection
+                                                                      ↓
+                              Owner clicks "End Session" → DELETE /api/admin/impersonate
+                              Banner removed, session marked as ended
 ```
 
 **Implementation Files:**

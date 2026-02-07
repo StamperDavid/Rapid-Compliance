@@ -4,6 +4,7 @@ import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { MerchantOrchestrator } from '@/components/orchestrator';
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
 
 /**
  * Penthouse Dashboard Layout
@@ -21,6 +22,7 @@ export default function PenthouseDashboardLayout({
   // If no user, still render children (auth guards on individual pages handle redirects)
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
+      {user && <ImpersonationBanner />}
       {user && <AdminSidebar />}
 
       {/* Main content area offset by sidebar width */}
