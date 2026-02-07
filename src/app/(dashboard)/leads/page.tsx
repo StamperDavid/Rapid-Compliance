@@ -1,21 +1,22 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { usePagination } from '@/hooks/usePagination';
+import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   Users,
   Plus,
-  Search,
   Eye,
   Flame,
   Sun,
   Snowflake,
   Loader2,
   AlertCircle,
-  ChevronDown,
-  UserPlus
+  UserPlus,
+  Trash2,
 } from 'lucide-react';
 
 interface Lead {
@@ -39,10 +40,24 @@ const STATUS_FILTERS = [
   { key: 'converted', label: 'Converted' },
 ];
 
+const getLeadName = (lead: Lead) => {
+  if (lead.name) { return lead.name; }
+  if (lead.firstName ?? lead.lastName) {
+    return `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim();
+  }
+  return 'Unknown';
+};
+
+const getLeadCompany = (lead: Lead) => {
+  return lead.company ?? lead.companyName ?? '-';
+};
+
 export default function LeadsPage() {
   const router = useRouter();
   const [filter, setFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [deleteIds, setDeleteIds] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchLeads = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
@@ -79,20 +94,6 @@ export default function LeadsPage() {
   useEffect(() => {
     void refresh();
   }, [filter, refresh]);
-
-  const getLeadName = (lead: Lead) => {
-    if (lead.name) {
-      return lead.name;
-    }
-    if (lead.firstName ?? lead.lastName) {
-      return `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim();
-    }
-    return 'Unknown';
-  };
-
-  const getLeadCompany = (lead: Lead) => {
-    return lead.company ?? lead.companyName ?? '-';
-  };
 
   const getTierBadge = (score: number) => {
     if (score >= 75) {
@@ -148,17 +149,115 @@ export default function LeadsPage() {
     );
   };
 
-  // Filter leads by search query
-  const filteredLeads = leads.filter(lead => {
-    if (!searchQuery) {
-      return true;
+  const columns: ColumnDef<Lead>[] = useMemo(() => [
+    {
+      key: 'name',
+      header: 'Name',
+      accessor: (lead) => getLeadName(lead),
+      render: (lead) => <span className="font-medium text-white">{getLeadName(lead)}</span>,
+    },
+    {
+      key: 'company',
+      header: 'Company',
+      accessor: (lead) => getLeadCompany(lead),
+      render: (lead) => <span className="text-gray-400">{getLeadCompany(lead)}</span>,
+    },
+    {
+      key: 'email',
+      header: 'Email',
+      accessor: (lead) => lead.email ?? '',
+      render: (lead) => <span className="text-gray-400">{lead.email ?? '-'}</span>,
+    },
+    {
+      key: 'phone',
+      header: 'Phone',
+      accessor: (lead) => lead.phone ?? '',
+      render: (lead) => <span className="text-gray-400">{lead.phone ?? '-'}</span>,
+    },
+    {
+      key: 'tier',
+      header: 'Tier',
+      sortable: false,
+      exportable: false,
+      render: (lead) => getTierBadge(lead.score ?? 50),
+    },
+    {
+      key: 'score',
+      header: 'Score',
+      accessor: (lead) => lead.score ?? 0,
+      render: (lead) => getScoreBadge(lead.score ?? 50),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      accessor: (lead) => lead.status ?? 'new',
+      render: (lead) => getStatusBadge(lead.status ?? 'new'),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      sortable: false,
+      exportable: false,
+      render: (lead) => (
+        <button
+          onClick={() => router.push(`/leads/${lead.id}`)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/50 text-gray-400 hover:text-white rounded-lg transition-all text-sm"
+        >
+          <Eye className="w-4 h-4" />
+          View
+        </button>
+      ),
+    },
+  ], [router]);
+
+  const handleBulkDelete = useCallback((selectedIds: string[]) => {
+    setDeleteIds(selectedIds);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch('/api/leads', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: deleteIds }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete leads');
+      }
+
+      setDeleteDialogOpen(false);
+      setDeleteIds([]);
+      void refresh();
+    } catch {
+      // Error is shown via the dialog staying open
+    } finally {
+      setDeleting(false);
     }
-    const query = searchQuery.toLowerCase();
-    const name = getLeadName(lead).toLowerCase();
-    const company = getLeadCompany(lead).toLowerCase();
-    const email = (lead.email ?? '').toLowerCase();
-    return name.includes(query) || company.includes(query) || email.includes(query);
-  });
+  }, [deleteIds, refresh]);
+
+  const bulkActions: BulkAction<Lead>[] = useMemo(() => [
+    {
+      key: 'delete',
+      label: 'Delete',
+      icon: <Trash2 className="w-4 h-4" />,
+      variant: 'destructive',
+      onAction: handleBulkDelete,
+    },
+  ], [handleBulkDelete]);
+
+  if (loading && leads.length === 0) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-400">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading leads...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black p-8">
@@ -187,41 +286,26 @@ export default function LeadsPage() {
         </button>
       </motion.div>
 
-      {/* Filters & Search */}
+      {/* Status Filters */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="flex flex-col md:flex-row gap-4 mb-6"
+        className="flex flex-wrap gap-2 mb-6"
       >
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search leads..."
-            className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
-          />
-        </div>
-
-        {/* Status Filters */}
-        <div className="flex flex-wrap gap-2">
-          {STATUS_FILTERS.map((status) => (
-            <button
-              key={status.key}
-              onClick={() => setFilter(status.key)}
-              className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                filter === status.key
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
-                  : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {status.label}
-            </button>
-          ))}
-        </div>
+        {STATUS_FILTERS.map((status) => (
+          <button
+            key={status.key}
+            onClick={() => setFilter(status.key)}
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              filter === status.key
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
+                : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            {status.label}
+          </button>
+        ))}
       </motion.div>
 
       {/* Error State */}
@@ -236,108 +320,46 @@ export default function LeadsPage() {
         </motion.div>
       )}
 
-      {/* Table */}
+      {/* DataTable */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden"
       >
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left p-4 text-sm font-semibold text-gray-400">Name</th>
-                <th className="text-left p-4 text-sm font-semibold text-gray-400">Company</th>
-                <th className="text-left p-4 text-sm font-semibold text-gray-400">Email</th>
-                <th className="text-left p-4 text-sm font-semibold text-gray-400">Phone</th>
-                <th className="text-left p-4 text-sm font-semibold text-gray-400">Tier</th>
-                <th className="text-left p-4 text-sm font-semibold text-gray-400">Score</th>
-                <th className="text-left p-4 text-sm font-semibold text-gray-400">Status</th>
-                <th className="text-left p-4 text-sm font-semibold text-gray-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLeads.length === 0 && !loading ? (
-                <tr>
-                  <td colSpan={8} className="p-12 text-center">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
-                        <UserPlus className="w-8 h-8 text-gray-500" />
-                      </div>
-                      <div>
-                        <p className="text-gray-400 mb-1">No leads found</p>
-                        <p className="text-gray-500 text-sm">Click &quot;Add Lead&quot; to create your first lead</p>
-                      </div>
-                      <button
-                        onClick={() => router.push(`/leads/new`)}
-                        className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl transition-all text-sm"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Lead
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredLeads.map((lead, idx) => (
-                  <motion.tr
-                    key={lead.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.02 }}
-                    className="border-t border-white/5 hover:bg-white/5 transition-colors group"
-                  >
-                    <td className="p-4">
-                      <span className="font-medium text-white">{getLeadName(lead)}</span>
-                    </td>
-                    <td className="p-4 text-gray-400">{getLeadCompany(lead)}</td>
-                    <td className="p-4 text-gray-400">{lead.email ?? '-'}</td>
-                    <td className="p-4 text-gray-400">{lead.phone ?? '-'}</td>
-                    <td className="p-4">{getTierBadge(lead.score ?? 50)}</td>
-                    <td className="p-4">{getScoreBadge(lead.score ?? 50)}</td>
-                    <td className="p-4">{getStatusBadge(lead.status ?? 'new')}</td>
-                    <td className="p-4">
-                      <button
-                        onClick={() => router.push(`/leads/${lead.id}`)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/50 text-gray-400 hover:text-white rounded-lg transition-all text-sm"
-                      >
-                        <Eye className="w-4 h-4" />
-                        View
-                      </button>
-                    </td>
-                  </motion.tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {(hasMore || loading) && (
-          <div className="p-4 border-t border-white/10 flex justify-center">
-            <button
-              onClick={() => void loadMore()}
-              disabled={loading || !hasMore}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading...
-                </>
-              ) : hasMore ? (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  Load More ({filteredLeads.length} shown)
-                </>
-              ) : (
-                'All leads loaded'
-              )}
-            </button>
-          </div>
-        )}
+        <DataTable
+          columns={columns}
+          data={leads}
+          loading={loading}
+          searchPlaceholder="Search leads..."
+          searchFilter={(lead, query) => {
+            const name = getLeadName(lead).toLowerCase();
+            const company = getLeadCompany(lead).toLowerCase();
+            const email = (lead.email ?? '').toLowerCase();
+            return name.includes(query) || company.includes(query) || email.includes(query);
+          }}
+          bulkActions={bulkActions}
+          enableCsvExport
+          csvFilename="leads"
+          hasMore={hasMore}
+          onLoadMore={() => void loadMore()}
+          itemCountLabel={`${leads.length} shown`}
+          emptyMessage="No leads found"
+          emptyIcon={<UserPlus className="w-8 h-8 text-gray-500" />}
+          accentColor="indigo"
+        />
       </motion.div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Leads"
+        description={`Are you sure you want to delete ${deleteIds.length} lead${deleteIds.length === 1 ? '' : 's'}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleting}
+      />
     </div>
   );
 }
