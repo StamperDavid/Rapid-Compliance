@@ -1,8 +1,8 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 7, 2026 (Gap closure: Voice AI TTS wired, PDF generation via Playwright, SendGrid Inbound Parse, video render pipeline, ML lead scoring, coaching team fix, 27 alert/confirm replaced, 236+ inline styles migrated to Tailwind, mock data replaced with production implementations)
-**Branches:** `dev` at commit `04367869`
+**Last Updated:** February 7, 2026 (Sophie Growth Engine: GROWTH_ANALYST agent, engagement metrics collector, intelligence signal wiring, LISTEN/ENGAGE capabilities, GROWTH_LOOP orchestration cycle. Gap closure: Voice AI TTS, PDF generation, SendGrid Inbound Parse, video render pipeline, ML lead scoring, mock data replaced with production implementations)
+**Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -37,7 +37,7 @@
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 157 | Verified (single-tenant flat routes) |
 | API Endpoints (route.ts) | 215 | Functional |
-| AI Agents | 51 | **51 FUNCTIONAL (47 swarm + 4 standalone)** |
+| AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 60+ | Active |
 
@@ -160,7 +160,7 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 |------|--------|----------|
 | Single-tenant architecture | **COMPLETE** | Firebase kill-switch, DEFAULT_ORG_ID everywhere, -71K lines purged |
 | 4-role RBAC | **ENFORCED** | `requireRole()` on API routes, sidebar permission filtering, 47 permissions |
-| Agent hierarchy | **STRUCTURALLY COMPLETE** | 51 agents defined with full config, manager orchestration logic implemented |
+| Agent hierarchy | **STRUCTURALLY COMPLETE** | 52 agents defined with full config, manager orchestration logic implemented |
 | Type safety | **CLEAN** | `tsc --noEmit` passes, zero `any` policy enforced |
 | Build pipeline | **CLEAN** | `npm run build` passes with pre-commit hooks |
 
@@ -169,7 +169,7 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 | Area | Issue | Severity |
 |------|-------|----------|
 | **~40 TODO comments** | Auth context TODOs reduced; 27 alert/confirm/prompt calls replaced with proper UI components | MEDIUM (down from HIGH) |
-| **No error boundaries** | Zero `error.tsx` or `loading.tsx` files at route level — crashes show white screens | HIGH |
+| ~~**No error boundaries**~~ | ✅ RESOLVED — Tier 1.2 added 30 error.tsx + 30 loading.tsx files across all route groups (dashboard, auth, store, onboarding) | ✅ RESOLVED |
 | ~~**Mock data isolation**~~ | ✅ RESOLVED — OpenAI embeddings replace mock provider; workflow triggers write to Firestore; demo data properly gated | ✅ RESOLVED |
 | ~~**Accessibility**~~ | ~~1 `aria-label` across 115+ pages, no semantic HTML, no keyboard navigation~~ | ✅ RESOLVED — Tier 2.3 skip-to-main, dialog focus trapping, ARIA on loading/error/nav/DataTable, semantic headings, reduced motion |
 | ~~**Data tables**~~ | ~~No column sorting, no bulk actions, no CSV export on any table~~ | ✅ RESOLVED — Tier 2.1 DataTable system with sorting, bulk select/delete, CSV export |
@@ -192,17 +192,9 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 
 ## Stabilization Roadmap
 
-> **Status:** ACTIVE — Tier 1 COMPLETE (commit `0d4c46fa`), Tier 2 IN PROGRESS.
+> **Status:** ✅ COMPLETE — All tiers (1, 2, 3) verified complete. Stabilization work has concluded.
 >
-> **Tier 1 Trigger (COMPLETE):**
-> ```
-> Execute Stabilization Roadmap. Read CLAUDE.md first, then docs/single_source_of_truth.md — focus on the "Stabilization Roadmap" section. Begin with the next incomplete Tier 1 task. Do not skip to Tier 2 until Tier 1 is verified complete.
-> ```
->
-> **Tier 2 Trigger (CURRENT):**
-> ```
-> Execute Stabilization Roadmap — Tier 2. Read CLAUDE.md first, then docs/single_source_of_truth.md — focus on the "Stabilization Roadmap" section. Tier 1 is verified complete. Begin with the next incomplete Tier 2 task. Reference docs/todo-audit-inventory.json and docs/agent-backend-audit.json for context from Tier 1 audits. Do not skip to Tier 3 until Tier 2 is verified complete.
-> ```
+> Tier 1 (Foundation): 5/5 tasks DONE. Tier 2 (UX Parity): 5/5 tasks DONE. Tier 3 (Feature Completion): 5/5 tasks DONE.
 
 ### Tier 1 — Foundation (Stop the Bleeding)
 
@@ -224,11 +216,6 @@ These tasks fix broken or missing fundamentals. No new features until these are 
 
 These tasks bring the UI to the level expected by users coming from HubSpot, Salesforce, Apollo, etc.
 
-> **Trigger Phrase:** To start Tier 2 in a new context window, paste:
->
-> ```
-> Execute Stabilization Roadmap — Tier 2. Read CLAUDE.md first, then docs/single_source_of_truth.md — focus on the "Stabilization Roadmap" section. Tier 1 is verified complete. Begin with the next incomplete Tier 2 task. Reference docs/todo-audit-inventory.json and docs/agent-backend-audit.json for context from Tier 1 audits. Do not skip to Tier 3 until Tier 2 is verified complete.
-> ```
 
 | # | Task | Description | Status |
 |---|------|-------------|--------|
@@ -249,6 +236,48 @@ Only after Tiers 1 and 2 are verified complete.
 | 3.3 | **End-to-end agent testing** | Write integration tests that validate the full chain: user action → API → orchestrator → manager → specialist → result. | COMPLETE |
 | 3.4 | **Webhook signature verification** | Add HMAC validation to email, SMS, and voice webhook endpoints. | COMPLETE |
 | 3.5 | **Stub implementations** | Implement the stubbed features from the "What's Stubbed" table above, prioritized by user impact. | COMPLETE |
+
+---
+
+## Sophie Growth Engine (Social Media Autonomy)
+
+> **Status:** ACTIVE — Phases 1-5 implemented (February 7, 2026). Full spec in `CONTINUATION_PROMPT.md`.
+
+**Goal:** Transform marketing specialists from passive content generators into autonomous account operators with a closed feedback loop: RESEARCH → CREATE → PUBLISH → ENGAGE → ANALYZE → MUTATE → REPEAT.
+
+**Reference Model:** Sophie from Sintra AI — autonomous social media employee.
+
+### Implementation Status
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| **1a** | Engagement Metrics Collector (`src/lib/social/engagement-metrics-collector.ts`) | COMPLETE |
+| **1b** | Cron endpoint `/api/cron/social-metrics-collector` | COMPLETE |
+| **1c** | Wire TREND_SCOUT → MARKETING_MANAGER (OPPORTUNISTIC mode) | COMPLETE |
+| **1d** | Wire SENTIMENT_ANALYST → MARKETING_MANAGER (CRISIS_RESPONSE / AMPLIFICATION modes) | COMPLETE |
+| **2** | GROWTH_ANALYST agent — 7 task types, registered in index + registry + Marketing Manager | COMPLETE |
+| **3** | LISTEN capabilities on all 4 platform specialists (FETCH_POST_METRICS, FETCH_MENTIONS, etc.) | COMPLETE |
+| **4** | ENGAGE capabilities on all specialists + Autonomous Posting Agent upgrade (REPLY, LIKE, FOLLOW, REPOST, RECYCLE) with compliance guardrails | COMPLETE |
+| **5** | GROWTH_LOOP orchestration cycle in Marketing Manager + content recycling with 30-day cooldown | COMPLETE |
+| **6** | Registry updates + SSOT sync | COMPLETE |
+
+### New Infrastructure
+
+| Component | Path | Purpose |
+|-----------|------|---------|
+| Engagement Metrics Collector | `src/lib/social/engagement-metrics-collector.ts` | Fetches engagement data via Twitter API, matches to stored posts, updates PostMetrics in Firestore |
+| Social Metrics Cron | `src/app/api/cron/social-metrics-collector/route.ts` | CRON_SECRET auth, triggers metrics collection + scheduled post processing |
+| Growth Analyst Agent | `src/lib/agents/marketing/growth-analyst/specialist.ts` | L3 specialist: KPIs, pattern analysis, mutation directives, content library, weekly reports |
+
+### Marketing Manager Orchestration Modes
+
+| Mode | Trigger | Behavior |
+|------|---------|----------|
+| `CAMPAIGN_SPRINT` | Default / human command | Standard single campaign execution |
+| `GROWTH_LOOP` | Growth objective set | Continuous: LISTEN → ANALYZE → MUTATE → CREATE → PUBLISH → ENGAGE → repeat |
+| `OPPORTUNISTIC` | TREND_SCOUT HIGH/CRITICAL signal | Interrupt flow, fast-track trending content |
+| `CRISIS_RESPONSE` | SENTIMENT_ANALYST negative spike | Pause publishing, deploy damage control |
+| `AMPLIFICATION` | SENTIMENT_ANALYST positive spike | Boost content frequency, share positive mentions |
 
 ---
 
@@ -280,7 +309,7 @@ Only after Tiers 1 and 2 are verified complete.
 
 ### Rule 2: Unified AI Workforce Registry
 
-**The 51 AI Agents are managed through a single global registry in Firestore, not per-user and not per-tenant.**
+**The 52 AI Agents are managed through a single global registry in Firestore, not per-user and not per-tenant.**
 
 | Aspect | Detail |
 |--------|--------|
@@ -295,10 +324,10 @@ Only after Tiers 1 and 2 are verified complete.
 ```
 MASTER_ORCHESTRATOR (L1 - Swarm CEO)
 ├── INTELLIGENCE_MANAGER (L2) → 5 Specialists
-├── MARKETING_MANAGER (L2) → 5 Specialists
+├── MARKETING_MANAGER (L2) → 6 Specialists
 ├── BUILDER_MANAGER (L2) → 4 Specialists
 ├── ARCHITECT_MANAGER (L2) → 3 Specialists
-├── COMMERCE_MANAGER (L2) → 5 Specialists
+├── COMMERCE_MANAGER (L2) → 4 Specialists
 ├── OUTREACH_MANAGER (L2) → 2 Specialists
 ├── CONTENT_MANAGER (L2) → 3 Specialists
 ├── REVENUE_DIRECTOR (L2) → 5 Specialists
@@ -308,7 +337,7 @@ Standalone: JASPER_GOLDEN_MASTER, VOICE_AGENT_HANDLER,
            AUTONOMOUS_POSTING_AGENT, CHAT_SESSION_SERVICE
 ```
 
-**Total: 47 Swarm (1 + 9 + 37) + 4 Standalone = 51 Agents**
+**Total: 48 Swarm (1 + 9 + 38) + 4 Standalone = 52 Agents**
 
 **Governance:** Agents are deployed, trained, and configured at the **platform level**. The `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) creates ephemeral session instances from Golden Masters — these are temporary runtime objects, not persistent per-user registries.
 
@@ -673,13 +702,13 @@ Legacy workspace URLs are automatically redirected:
 
 ### Agent Swarm Overview
 
-**Total Agents:** 51 (47 swarm + 4 standalone)
-- **Swarm Agents:** 47 (1 orchestrator + 9 managers + 37 specialists)
+**Total Agents:** 52 (48 swarm + 4 standalone)
+- **Swarm Agents:** 48 (1 orchestrator + 9 managers + 38 specialists)
 - **Standalone Agents:** 4 (outside swarm hierarchy)
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL (Swarm) | 47 | **100% SWARM COMPLETION** - All agents fully operational |
+| FUNCTIONAL (Swarm) | 48 | **100% SWARM COMPLETION** - All agents fully operational |
 | FUNCTIONAL (Standalone) | 4 | Jasper Golden Master, Voice Agent, Autonomous Posting Agent, Chat Session Service |
 | GHOST | 0 | All specialists have been implemented |
 
@@ -694,18 +723,18 @@ Legacy workspace URLs are automatically redirected:
 | Agent ID | Class Name | Domain | Status | Notes |
 |----------|------------|--------|--------|-------|
 | INTELLIGENCE_MANAGER | IntelligenceManager | Research & Analysis | FUNCTIONAL | Dynamic orchestration engine with parallel execution, graceful degradation |
-| MARKETING_MANAGER | MarketingManager | Social & Ads | FUNCTIONAL | **Industry-agnostic Cross-Channel Commander** - 850+ LOC with dynamic specialist resolution, Brand DNA integration, SEO-social feedback loop, parallel execution |
+| MARKETING_MANAGER | MarketingManager | Social & Ads | FUNCTIONAL | **Industry-agnostic Cross-Channel Commander** - 1200+ LOC with dynamic specialist resolution (6 specialists: TIKTOK_EXPERT, TWITTER_X_EXPERT, FACEBOOK_ADS_EXPERT, LINKEDIN_EXPERT, SEO_EXPERT, GROWTH_ANALYST), Brand DNA integration, SEO-social feedback loop, intelligence signal wiring (TREND_SCOUT, SENTIMENT_ANALYST), GROWTH_LOOP orchestration cycle, OPPORTUNISTIC/CRISIS_RESPONSE/AMPLIFICATION modes, parallel execution |
 | BUILDER_MANAGER | BuilderManager | Site Building | FUNCTIONAL | **Autonomous Construction Commander** - 1650+ LOC with dynamic specialist resolution (3 specialists: UX_UI_ARCHITECT, FUNNEL_ENGINEER, ASSET_GENERATOR), Blueprint-to-Deployment workflow, pixel injection (GA4, GTM, Meta Pixel, Hotjar), build state machine (PENDING_BLUEPRINT → ASSEMBLING → INJECTING_SCRIPTS → DEPLOYING → LIVE), Vercel deployment manifest generation, SignalBus `website.build_complete` broadcast, parallel execution, graceful degradation |
-| COMMERCE_MANAGER | CommerceManager | E-commerce | FUNCTIONAL | **Transactional Commerce Commander** - 1400+ LOC with dynamic specialist resolution (5 specialists: PAYMENT_SPECIALIST, SUBSCRIPTION_SPECIALIST, CATALOG_MANAGER, PRICING_STRATEGIST, INVENTORY_MANAGER), Product-to-Payment checkout orchestration, Subscription state machine (TRIAL → ACTIVE → PAST_DUE → CANCELLED), CommerceBrief revenue synthesis (MRR, Churn, Transaction Volume), TenantMemoryVault tax/currency settings, SignalBus dunning triggers for OUTREACH_MANAGER, parallel execution, graceful degradation |
+| COMMERCE_MANAGER | CommerceManager | E-commerce | FUNCTIONAL | **Transactional Commerce Commander** - 1400+ LOC with dynamic specialist resolution (4 specialists: PAYMENT_SPECIALIST, CATALOG_MANAGER, PRICING_STRATEGIST, INVENTORY_MANAGER), Product-to-Payment checkout orchestration, CommerceBrief revenue synthesis (Transaction Volume), TenantMemoryVault tax/currency settings, parallel execution, graceful degradation |
 | OUTREACH_MANAGER | OutreachManager | Email & SMS | FUNCTIONAL | **Omni-Channel Communication Commander** - 1900+ LOC with dynamic specialist resolution (EMAIL_SPECIALIST, SMS_SPECIALIST), Multi-Step Sequence execution, channel escalation (EMAIL → SMS → VOICE), sentiment-aware routing via INTELLIGENCE_MANAGER, DNC compliance via TenantMemoryVault, frequency throttling, quiet hours enforcement, SignalBus integration |
 | CONTENT_MANAGER | ContentManager | Content Creation | FUNCTIONAL | **Multi-Modal Production Commander** - 1600+ LOC with dynamic specialist resolution (4 specialists: COPYWRITER, CALENDAR_COORDINATOR, VIDEO_SPECIALIST, ASSET_GENERATOR), TechnicalBrief consumption from ARCHITECT_MANAGER, Brand DNA integration (avoidPhrases, toneOfVoice, keyPhrases), SEO-to-Copy keyword injection, ContentPackage synthesis, validateContent() quality gate, SignalBus `content.package_ready` broadcast, parallel execution, graceful degradation |
 | ARCHITECT_MANAGER | ArchitectManager | Site Architecture | FUNCTIONAL | **Strategic Infrastructure Commander** - 2100+ LOC with dynamic specialist resolution (3 specialists), Brand DNA integration, TenantMemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis, SignalBus `site.blueprint_ready` broadcast, parallel execution, graceful degradation |
 | REVENUE_DIRECTOR | RevenueDirector | Sales Ops | FUNCTIONAL | **Sales Ops Commander** - 1800+ LOC with dynamic specialist resolution (5 specialists), Golden Master persona tuning, RevenueBrief synthesis, objection library battlecards, cross-agent signal sharing |
-| REPUTATION_MANAGER | ReputationManager | Trust & Reviews | FUNCTIONAL | **Brand Defense Commander** - 2000+ LOC with dynamic specialist resolution (3 specialists: REVIEW_SPECIALIST, GMB_SPECIALIST, SENTIMENT_ANALYST), automated review solicitation from sale.completed signals, AI-powered response engine with star-rating strategies, GMB profile optimization coordination, ReputationBrief trust score synthesis, webhook.review.received signal handling, Review-to-Revenue feedback loop |
+| REPUTATION_MANAGER | ReputationManager | Trust & Reviews | FUNCTIONAL | **Brand Defense Commander** - 2000+ LOC with dynamic specialist resolution (4 specialists: REVIEW_SPECIALIST, GMB_SPECIALIST, REV_MGR, CASE_STUDY), automated review solicitation from sale.completed signals, AI-powered response engine with star-rating strategies, GMB profile optimization coordination, ReputationBrief trust score synthesis, webhook.review.received signal handling, Review-to-Revenue feedback loop |
 
 > **Note:** All 9 managers and the MASTER_ORCHESTRATOR are now FUNCTIONAL with complete specialist orchestration, cross-agent signal communication, and saga-based workflow coordination. **100% Swarm Completion achieved.**
 
-### Specialists (37) - L3 Workers
+### Specialists (38) - L3 Workers
 
 #### Intelligence Domain (5)
 
@@ -717,15 +746,16 @@ Legacy workspace URLs are automatically redirected:
 | SCRAPER_SPECIALIST | ScraperSpecialist | Web scraping, data extraction | FUNCTIONAL |
 | TREND_SCOUT | TrendScout | Market trends, emerging patterns | FUNCTIONAL |
 
-#### Marketing Domain (5)
+#### Marketing Domain (6)
 
 | Agent ID | Class Name | Capabilities | Status |
 |----------|------------|--------------|--------|
-| TIKTOK_EXPERT | TikTokExpert | Viral content, trends | FUNCTIONAL |
-| TWITTER_EXPERT | TwitterExpert | Threads, engagement | FUNCTIONAL |
-| FACEBOOK_EXPERT | FacebookAdsExpert | Ad copy, targeting | FUNCTIONAL |
-| LINKEDIN_EXPERT | LinkedInExpert | B2B posts, outreach | FUNCTIONAL |
+| TIKTOK_EXPERT | TikTokExpert | Viral content, trends, LISTEN/ENGAGE | FUNCTIONAL |
+| TWITTER_EXPERT | TwitterExpert | Threads, engagement, LISTEN/ENGAGE | FUNCTIONAL |
+| FACEBOOK_EXPERT | FacebookAdsExpert | Ad copy, targeting, LISTEN/ENGAGE | FUNCTIONAL |
+| LINKEDIN_EXPERT | LinkedInExpert | B2B posts, outreach, LISTEN/ENGAGE | FUNCTIONAL |
 | SEO_EXPERT | SEOExpert | Keywords, optimization | FUNCTIONAL |
+| GROWTH_ANALYST | GrowthAnalyst | Performance analytics, KPIs, mutation directives, content library, weekly reports | FUNCTIONAL |
 
 #### Builder Domain (4)
 
@@ -860,12 +890,11 @@ The CONTENT_MANAGER implements multi-modal content production from architectural
 - VIDEO_SPECIALIST: Script-to-storyboard, audio cues, video SEO, thumbnail strategy
 - ASSET_GENERATOR: Brand visuals, social graphics, hero images with hex-code palette
 
-#### Commerce Domain (5)
+#### Commerce Domain (4)
 
 | Agent ID | Class Name | Capabilities | Status |
 |----------|------------|--------------|--------|
 | PAYMENT_SPECIALIST | PaymentSpecialist | Checkout sessions, payment intents, refunds | FUNCTIONAL |
-| SUBSCRIPTION_SPECIALIST | SubscriptionSpecialist | State machine, billing cycles, dunning | FUNCTIONAL |
 | CATALOG_MANAGER | CatalogManagerSpecialist | Product CRUD, variants, search | FUNCTIONAL |
 | PRICING_STRATEGIST | PricingStrategist | Dynamic pricing, discounts, totals | FUNCTIONAL |
 | INVENTORY_MANAGER | InventoryManagerAgent | Stock management, demand forecasting | FUNCTIONAL |
@@ -882,34 +911,15 @@ The COMMERCE_MANAGER implements Product-to-Payment commerce orchestration:
 5. Handle webhook completion and update inventory
 6. Broadcast `commerce.checkout_complete` signal to BUILDER_MANAGER
 
-**Subscription State Machine:**
-- `TRIAL` → Initial state, 14-day default, $0 MRR
-- `ACTIVE` → Converted, billing active, MRR counted
-- `PAST_DUE` → Payment failed, dunning sequence triggered
-- `CANCELLED` → Terminal state, MRR removed
-
-**Dunning Sequence (PAST_DUE handling):**
-- Day 0: Immediate email (payment_failed_immediate)
-- Day 3: Reminder email (payment_failed_reminder)
-- Day 7: Urgent SMS (payment_urgent)
-- Day 10: Final warning email (payment_final_warning)
-- Day 14: Auto-cancel subscription
-
 **Revenue Reporting (CommerceBrief):**
-- MRR (Monthly Recurring Revenue) from active subscriptions
-- Churn Rate calculated from cancelled subscriptions
-- Trial Conversion Rate (TRIAL → ACTIVE)
 - Transaction Volume and Count
 - Inventory health metrics
 
 **Signal Broadcasting:**
 - `commerce.checkout_complete` → BUILDER_MANAGER, OUTREACH_MANAGER
-- `commerce.payment_failed` → OUTREACH_MANAGER (triggers dunning)
-- `commerce.subscription_cancelled` → OUTREACH_MANAGER, INTELLIGENCE_MANAGER
 
 **Specialist Orchestration:**
 - PAYMENT_SPECIALIST: Stripe checkout sessions, payment intents, webhooks, refunds
-- SUBSCRIPTION_SPECIALIST: Trial management, billing cycles, state transitions, dunning
 - CATALOG_MANAGER: Product fetching, catalog CRUD, variant management, search
 - PRICING_STRATEGIST: Price validation, discount application, totals calculation
 - INVENTORY_MANAGER: Stock analysis, demand forecasting, reorder alerts

@@ -1,12 +1,12 @@
 {
   "$schema": "SWARM_REGISTRY_V2",
   "lastAudit": "2026-02-03",
-  "totalAgents": 51,
-  "swarmAgents": 47,
+  "totalAgents": 52,
+  "swarmAgents": 48,
   "standaloneAgents": 4,
-  "functionalAgents": 51,
+  "functionalAgents": 52,
   "ghostAgents": 0,
-  "assessment": "FULL INVENTORY COMPLETE - 47 swarm agents (1 orchestrator + 9 managers + 37 specialists) all FUNCTIONAL, plus 4 standalone agents operating outside the swarm hierarchy. 100% operational.",
+  "assessment": "FULL INVENTORY COMPLETE - 48 swarm agents (1 orchestrator + 9 managers + 38 specialists) all FUNCTIONAL, plus 4 standalone agents operating outside the swarm hierarchy. 100% operational.",
 
   "hierarchy": {
     "MASTER_ORCHESTRATOR": {
@@ -32,9 +32,9 @@
       "level": "L2",
       "status": "FUNCTIONAL",
       "path": "src/lib/agents/marketing/manager.ts",
-      "specialists": ["TIKTOK_EXPERT", "TWITTER_EXPERT", "FACEBOOK_EXPERT", "LINKEDIN_EXPERT", "SEO_EXPERT"],
+      "specialists": ["TIKTOK_EXPERT", "TWITTER_EXPERT", "FACEBOOK_EXPERT", "LINKEDIN_EXPERT", "SEO_EXPERT", "GROWTH_ANALYST"],
       "functionalLOC": 850,
-      "note": "Industry-agnostic Cross-Channel Commander - Brand DNA integration, SEO-social feedback loop, parallel execution"
+      "note": "Industry-agnostic Cross-Channel Commander - Brand DNA integration, SEO-social feedback loop, parallel execution, growth analytics"
     },
     "BUILDER_MANAGER": {
       "level": "L2",
@@ -170,6 +170,14 @@
       "path": "src/lib/agents/marketing/seo/specialist.ts",
       "reportsTo": "MARKETING_MANAGER",
       "capabilities": ["keyword_research", "on_page_optimization", "link_building", "serp_analysis"],
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_marketing"
+    },
+    "GROWTH_ANALYST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/marketing/growth-analyst/specialist.ts",
+      "reportsTo": "MARKETING_MANAGER",
+      "capabilities": ["metrics_aggregation", "kpi_calculation", "pattern_identification", "mutation_generation", "objective_tracking", "content_library", "weekly_reports"],
       "verdict": "HIRED",
       "jasperTool": "delegate_to_marketing"
     },

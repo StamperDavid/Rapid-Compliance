@@ -621,19 +621,29 @@ export class GrowthAnalyst extends BaseSpecialist {
       const postEngagementRate = impressions > 0 ? engagements / impressions : 0;
       const isTopPerformer = postEngagementRate >= topPerformerThreshold;
 
+      const publishedAt = (post as Record<string, unknown>).publishedAt as string | undefined;
+      const publishDate = publishedAt ? new Date(publishedAt) : new Date();
+      const daysSincePublished = Math.floor((Date.now() - publishDate.getTime()) / (1000 * 60 * 60 * 24));
+      const meetsRecycleCooldown = daysSincePublished >= 30;
+      const isRecyclable = isTopPerformer && meetsRecycleCooldown;
+
       library.push({
         postId: post.postId,
         platform: post.platform,
-        publishedAt: new Date().toISOString(), // Would need actual publish date
-        content: '', // Would need to fetch from Firestore
+        publishedAt: publishDate.toISOString(),
+        content: '',
         metrics: {
           impressions,
           engagements,
           engagementRate: Math.round(postEngagementRate * 10000) / 100,
         },
         isTopPerformer,
-        isRecyclable: isTopPerformer, // Simplified — full check needs publishedAt
-        tags: isTopPerformer ? ['top-performer', 'recyclable'] : [],
+        isRecyclable,
+        tags: [
+          ...(isTopPerformer ? ['top-performer'] : []),
+          ...(isRecyclable ? ['recyclable'] : []),
+          ...(daysSincePublished < 30 ? ['cooldown-active'] : []),
+        ],
       });
     }
 

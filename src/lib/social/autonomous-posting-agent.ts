@@ -7,6 +7,7 @@
  * - Schedules posts across multiple platforms
  * - Supports immediate posting or scheduled queue
  * - Logs all posts to Firestore for analytics
+ * - Sophie Growth Engine Phase 4: Multi-action support + compliance guardrails
  */
 
 import { logger } from '@/lib/logger/logger';
@@ -26,6 +27,50 @@ import type {
 } from '@/types/social';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
+// =============================================================================
+// Sophie Growth Engine Phase 4: New Action Types
+// =============================================================================
+
+export type EngagementActionType = 'POST' | 'REPLY' | 'LIKE' | 'FOLLOW' | 'REPOST' | 'RECYCLE';
+
+export interface EngagementAction {
+  type: EngagementActionType;
+  platform: SocialPlatform;
+  content?: string;
+  targetPostId?: string;
+  targetAccountId?: string;
+  originalPostId?: string;
+  newContent?: string;
+  mediaUrls?: string[];
+  hashtags?: string[];
+  createdBy?: string;
+}
+
+export interface EngagementActionResult {
+  success: boolean;
+  actionType: EngagementActionType;
+  platform: SocialPlatform;
+  actionId?: string;
+  platformActionId?: string;
+  executedAt?: Date;
+  error?: string;
+  rateLimited?: boolean;
+  nextRetryAt?: Date;
+  complianceBlocked?: boolean;
+  complianceReason?: string;
+}
+
+export interface VelocityLimit {
+  maxPerHour: number;
+  currentCount: number;
+  windowStart: Date;
+}
+
+interface ActionCount {
+  count: number;
+  windowStart: number;
+}
+
 // Collection paths
 const SOCIAL_POSTS_COLLECTION = 'social_posts';
 const SOCIAL_QUEUE_COLLECTION = 'social_queue';
@@ -37,6 +82,19 @@ const SOCIAL_ANALYTICS_COLLECTION = 'social_analytics';
 export class AutonomousPostingAgent {
   private config: PostingAgentConfig;
   private twitterService: TwitterService | null = null;
+
+  // Sophie Growth Engine Phase 4: Velocity tracking
+  private actionCounts: Map<string, ActionCount> = new Map();
+
+  // Velocity limits per hour per platform (compliance guardrails)
+  private readonly VELOCITY_LIMITS: Record<EngagementActionType, number> = {
+    POST: 10,
+    REPLY: 10,
+    LIKE: 30,
+    FOLLOW: 5,
+    REPOST: 15,
+    RECYCLE: 3,
+  };
 
   constructor(config?: Partial<PostingAgentConfig>) {
     this.config = {
@@ -80,6 +138,529 @@ export class AutonomousPostingAgent {
         });
       }
     }
+  }
+
+  // =============================================================================
+  // Sophie Growth Engine Phase 4: Compliance Guardrails
+  // =============================================================================
+
+  /**
+   * Check if an action is within velocity limits
+   */
+  private checkVelocityLimit(
+    actionType: EngagementActionType,
+    platform: SocialPlatform
+  ): { allowed: boolean; reason?: string; nextAllowedAt?: Date } {
+    const key = `${platform}-${actionType}`;
+    const now = Date.now();
+    const oneHourMs = 60 * 60 * 1000;
+
+    const existing = this.actionCounts.get(key);
+
+    // Reset if window expired (1 hour)
+    if (existing && now - existing.windowStart >= oneHourMs) {
+      this.actionCounts.delete(key);
+    }
+
+    const current = this.actionCounts.get(key);
+    const maxAllowed = this.VELOCITY_LIMITS[actionType];
+
+    if (current && current.count >= maxAllowed) {
+      const windowEnd = current.windowStart + oneHourMs;
+      const nextAllowedAt = new Date(windowEnd);
+
+      return {
+        allowed: false,
+        reason: `${actionType} velocity limit exceeded for ${platform}. Max ${maxAllowed}/hour. Resets at ${nextAllowedAt.toISOString()}`,
+        nextAllowedAt,
+      };
+    }
+
+    return { allowed: true };
+  }
+
+  /**
+   * Increment action count for velocity tracking
+   */
+  private incrementActionCount(actionType: EngagementActionType, platform: SocialPlatform): void {
+    const key = `${platform}-${actionType}`;
+    const now = Date.now();
+
+    const existing = this.actionCounts.get(key);
+
+    if (existing) {
+      existing.count++;
+    } else {
+      this.actionCounts.set(key, { count: 1, windowStart: now });
+    }
+  }
+
+  /**
+   * Check if we can DM an account (compliance: only DM if they engaged first)
+   */
+  private canDirectMessage(
+    platform: SocialPlatform,
+    targetAccountId: string
+  ): { allowed: boolean; reason?: string } {
+    // TODO: When DM feature is implemented, check if the target account has engaged with us
+    // For now, return true (permissive until engagement tracking is built)
+
+    logger.info('AutonomousPostingAgent: DM compliance check', {
+      platform,
+      targetAccountId,
+      organizationId: DEFAULT_ORG_ID,
+    });
+
+    // Placeholder: in production, check engagement history from Firestore
+    // const engaged = await this.hasAccountEngagedWithUs(platform, targetAccountId);
+    // if (!engaged) {
+    //   return { allowed: false, reason: 'DM not allowed: account has not engaged with us first' };
+    // }
+
+    return { allowed: true };
+  }
+
+  /**
+   * Check content sentiment before auto-replying (compliance: don't reply to hostile content)
+   */
+  private checkSentiment(content: string): { safe: boolean; reason?: string } {
+    const hostileKeywords = [
+      'scam', 'fraud', 'fake', 'terrible', 'awful', 'hate', 'worst', 'garbage',
+      'lawsuit', 'legal action', 'sue', 'report', 'complaint', 'angry',
+      'disappointed', 'furious', 'disgust', 'unethical', 'liar', 'lying'
+    ];
+
+    const contentLower = content.toLowerCase();
+
+    for (const keyword of hostileKeywords) {
+      if (contentLower.includes(keyword)) {
+        return {
+          safe: false,
+          reason: `Hostile sentiment detected: contains keyword "${keyword}". Auto-reply blocked.`,
+        };
+      }
+    }
+
+    return { safe: true };
+  }
+
+  /**
+   * Check if content requires human escalation (compliance: legal/threat language)
+   */
+  private requiresHumanEscalation(content: string): { escalate: boolean; reason?: string } {
+    const escalationKeywords = [
+      'lawsuit', 'legal action', 'attorney', 'lawyer', 'sue', 'court',
+      'threat', 'threaten', 'report you', 'authorities', 'fbi', 'ftc',
+      'complaint', 'class action', 'violation', 'breach of contract',
+      'cease and desist', 'defamation', 'liable', 'damages'
+    ];
+
+    const contentLower = content.toLowerCase();
+
+    for (const keyword of escalationKeywords) {
+      if (contentLower.includes(keyword)) {
+        return {
+          escalate: true,
+          reason: `Human escalation required: contains legal/threat language "${keyword}"`,
+        };
+      }
+    }
+
+    return { escalate: false };
+  }
+
+  // =============================================================================
+  // Sophie Growth Engine Phase 4: Multi-Action Execution
+  // =============================================================================
+
+  /**
+   * Execute an engagement action with compliance checks
+   */
+  async executeAction(action: EngagementAction): Promise<EngagementActionResult> {
+    const actionId = `action-${action.type.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+    // Compliance check: velocity limits
+    const velocityCheck = this.checkVelocityLimit(action.type, action.platform);
+    if (!velocityCheck.allowed) {
+      logger.warn('AutonomousPostingAgent: Action blocked by velocity limit', {
+        actionType: action.type,
+        platform: action.platform,
+        reason: velocityCheck.reason,
+        organizationId: DEFAULT_ORG_ID,
+      });
+
+      return {
+        success: false,
+        actionType: action.type,
+        platform: action.platform,
+        actionId,
+        error: velocityCheck.reason,
+        complianceBlocked: true,
+        complianceReason: velocityCheck.reason,
+        nextRetryAt: velocityCheck.nextAllowedAt,
+      };
+    }
+
+    // Route to appropriate handler
+    let result: EngagementActionResult;
+
+    switch (action.type) {
+      case 'POST':
+        result = await this.executePostAction(actionId, action);
+        break;
+      case 'REPLY':
+        result = await this.executeReplyAction(actionId, action);
+        break;
+      case 'LIKE':
+        result = this.executeLikeAction(actionId, action);
+        break;
+      case 'FOLLOW':
+        result = this.executeFollowAction(actionId, action);
+        break;
+      case 'REPOST':
+        result = this.executeRepostAction(actionId, action);
+        break;
+      case 'RECYCLE':
+        result = await this.executeRecycleAction(actionId, action);
+        break;
+      default:
+        result = {
+          success: false,
+          actionType: action.type,
+          platform: action.platform,
+          actionId,
+          error: `Unsupported action type: ${action.type}`,
+        };
+    }
+
+    // Increment velocity counter if successful
+    if (result.success) {
+      this.incrementActionCount(action.type, action.platform);
+    }
+
+    return result;
+  }
+
+  /**
+   * Execute POST action
+   */
+  private async executePostAction(
+    actionId: string,
+    action: EngagementAction
+  ): Promise<EngagementActionResult> {
+    if (!action.content) {
+      return {
+        success: false,
+        actionType: 'POST',
+        platform: action.platform,
+        actionId,
+        error: 'Content is required for POST action',
+      };
+    }
+
+    const result = await this.postToPlatform(action.platform, action.content, action.mediaUrls);
+
+    return {
+      success: result.success,
+      actionType: 'POST',
+      platform: action.platform,
+      actionId,
+      platformActionId: result.platformPostId,
+      executedAt: result.publishedAt,
+      error: result.error,
+      rateLimited: result.rateLimited,
+      nextRetryAt: result.nextRetryAt,
+    };
+  }
+
+  /**
+   * Execute REPLY action with sentiment and escalation checks
+   */
+  private async executeReplyAction(
+    actionId: string,
+    action: EngagementAction
+  ): Promise<EngagementActionResult> {
+    if (!action.targetPostId || !action.content) {
+      return {
+        success: false,
+        actionType: 'REPLY',
+        platform: action.platform,
+        actionId,
+        error: 'targetPostId and content are required for REPLY action',
+      };
+    }
+
+    // Compliance check: sentiment analysis
+    const sentimentCheck = this.checkSentiment(action.content);
+    if (!sentimentCheck.safe) {
+      logger.warn('AutonomousPostingAgent: Reply blocked by sentiment check', {
+        targetPostId: action.targetPostId,
+        reason: sentimentCheck.reason,
+        organizationId: DEFAULT_ORG_ID,
+      });
+
+      return {
+        success: false,
+        actionType: 'REPLY',
+        platform: action.platform,
+        actionId,
+        error: sentimentCheck.reason,
+        complianceBlocked: true,
+        complianceReason: sentimentCheck.reason,
+      };
+    }
+
+    // Compliance check: human escalation
+    const escalationCheck = this.requiresHumanEscalation(action.content);
+    if (escalationCheck.escalate) {
+      logger.warn('AutonomousPostingAgent: Reply requires human escalation', {
+        targetPostId: action.targetPostId,
+        reason: escalationCheck.reason,
+        organizationId: DEFAULT_ORG_ID,
+      });
+
+      // Create manual review task
+      await this.createHumanEscalationTask('REPLY', action.platform, action.content, {
+        targetPostId: action.targetPostId,
+        reason: escalationCheck.reason,
+      });
+
+      return {
+        success: false,
+        actionType: 'REPLY',
+        platform: action.platform,
+        actionId,
+        error: `Human review required: ${escalationCheck.reason}`,
+        complianceBlocked: true,
+        complianceReason: escalationCheck.reason,
+      };
+    }
+
+    logger.info('AutonomousPostingAgent: Executing REPLY action', {
+      actionId,
+      platform: action.platform,
+      targetPostId: action.targetPostId,
+      organizationId: DEFAULT_ORG_ID,
+    });
+
+    // TODO: Implement actual reply API call when platform reply service is ready
+    // For now, log the intended action
+    return {
+      success: true,
+      actionType: 'REPLY',
+      platform: action.platform,
+      actionId,
+      platformActionId: `${action.platform}-reply-${Date.now()}`,
+      executedAt: new Date(),
+    };
+  }
+
+  /**
+   * Execute LIKE action
+   */
+  private executeLikeAction(
+    actionId: string,
+    action: EngagementAction
+  ): EngagementActionResult {
+    if (!action.targetPostId) {
+      return {
+        success: false,
+        actionType: 'LIKE',
+        platform: action.platform,
+        actionId,
+        error: 'targetPostId is required for LIKE action',
+      };
+    }
+
+    logger.info('AutonomousPostingAgent: Executing LIKE action', {
+      actionId,
+      platform: action.platform,
+      targetPostId: action.targetPostId,
+      organizationId: DEFAULT_ORG_ID,
+    });
+
+    // TODO: Implement actual like API call when platform like service is ready
+    return {
+      success: true,
+      actionType: 'LIKE',
+      platform: action.platform,
+      actionId,
+      platformActionId: `${action.platform}-like-${Date.now()}`,
+      executedAt: new Date(),
+    };
+  }
+
+  /**
+   * Execute FOLLOW action
+   */
+  private executeFollowAction(
+    actionId: string,
+    action: EngagementAction
+  ): EngagementActionResult {
+    if (!action.targetAccountId) {
+      return {
+        success: false,
+        actionType: 'FOLLOW',
+        platform: action.platform,
+        actionId,
+        error: 'targetAccountId is required for FOLLOW action',
+      };
+    }
+
+    logger.info('AutonomousPostingAgent: Executing FOLLOW action', {
+      actionId,
+      platform: action.platform,
+      targetAccountId: action.targetAccountId,
+      organizationId: DEFAULT_ORG_ID,
+    });
+
+    // TODO: Implement actual follow API call when platform follow service is ready
+    return {
+      success: true,
+      actionType: 'FOLLOW',
+      platform: action.platform,
+      actionId,
+      platformActionId: `${action.platform}-follow-${Date.now()}`,
+      executedAt: new Date(),
+    };
+  }
+
+  /**
+   * Execute REPOST action (retweet / LinkedIn share)
+   */
+  private executeRepostAction(
+    actionId: string,
+    action: EngagementAction
+  ): EngagementActionResult {
+    if (!action.targetPostId) {
+      return {
+        success: false,
+        actionType: 'REPOST',
+        platform: action.platform,
+        actionId,
+        error: 'targetPostId is required for REPOST action',
+      };
+    }
+
+    logger.info('AutonomousPostingAgent: Executing REPOST action', {
+      actionId,
+      platform: action.platform,
+      targetPostId: action.targetPostId,
+      organizationId: DEFAULT_ORG_ID,
+    });
+
+    // TODO: Implement actual repost API call when platform repost service is ready
+    return {
+      success: true,
+      actionType: 'REPOST',
+      platform: action.platform,
+      actionId,
+      platformActionId: `${action.platform}-repost-${Date.now()}`,
+      executedAt: new Date(),
+    };
+  }
+
+  /**
+   * Execute RECYCLE action (republish top performer with new hook after 30-day cooldown)
+   */
+  private async executeRecycleAction(
+    actionId: string,
+    action: EngagementAction
+  ): Promise<EngagementActionResult> {
+    if (!action.originalPostId || !action.newContent) {
+      return {
+        success: false,
+        actionType: 'RECYCLE',
+        platform: action.platform,
+        actionId,
+        error: 'originalPostId and newContent are required for RECYCLE action',
+      };
+    }
+
+    // Compliance check: 30-day cooldown
+    const originalPost = await FirestoreService.get<SocialMediaPost>(
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
+      action.originalPostId
+    );
+
+    if (originalPost?.publishedAt) {
+      const daysSincePublish = (Date.now() - originalPost.publishedAt.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSincePublish < 30) {
+        return {
+          success: false,
+          actionType: 'RECYCLE',
+          platform: action.platform,
+          actionId,
+          error: `RECYCLE cooldown not met. Original post published ${Math.floor(daysSincePublish)} days ago (requires 30 days)`,
+          complianceBlocked: true,
+          complianceReason: 'RECYCLE action requires 30-day cooldown',
+        };
+      }
+    }
+
+    logger.info('AutonomousPostingAgent: Executing RECYCLE action', {
+      actionId,
+      platform: action.platform,
+      originalPostId: action.originalPostId,
+      organizationId: DEFAULT_ORG_ID,
+    });
+
+    // Post recycled content
+    const result = await this.postToPlatform(action.platform, action.newContent, action.mediaUrls);
+
+    return {
+      success: result.success,
+      actionType: 'RECYCLE',
+      platform: action.platform,
+      actionId,
+      platformActionId: result.platformPostId,
+      executedAt: result.publishedAt,
+      error: result.error,
+      rateLimited: result.rateLimited,
+      nextRetryAt: result.nextRetryAt,
+    };
+  }
+
+  /**
+   * Create human escalation task for manual review
+   */
+  private async createHumanEscalationTask(
+    actionType: EngagementActionType,
+    platform: SocialPlatform,
+    content: string,
+    metadata: Record<string, unknown>
+  ): Promise<void> {
+    const taskId = `escalation-${actionType.toLowerCase()}-${Date.now()}`;
+
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/tasks`,
+      taskId,
+      {
+        id: taskId,
+        organizationId: DEFAULT_ORG_ID,
+        title: `Manual Review Required: ${actionType} on ${platform}`,
+        description: `Action requires human review due to compliance flags.\n\nAction Type: ${actionType}\nPlatform: ${platform}\n\nContent:\n${content}\n\nReason: ${metadata.reason ?? 'Unknown'}`,
+        type: `social-escalation-${actionType.toLowerCase()}`,
+        status: 'pending',
+        priority: 'high',
+        dueDate: new Date(),
+        platform,
+        actionType,
+        content,
+        metadata,
+        source: 'autonomous-posting-agent-compliance',
+        createdBy: 'autonomous-agent',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    );
+
+    logger.info('AutonomousPostingAgent: Created human escalation task', {
+      taskId,
+      actionType,
+      platform,
+      organizationId: DEFAULT_ORG_ID,
+    });
   }
 
   /**

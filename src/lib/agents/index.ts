@@ -4,7 +4,7 @@
  *
  * SWARM STATUS REPORT (Updated - 100% Swarm Completion)
  *
- * Total Agents: 47 (10 managers + 37 specialists)
+ * Total Agents: 48 (10 managers + 38 specialists)
  *
  * ORCHESTRATOR (1):
  * - MasterOrchestrator (Swarm CEO) - L1 orchestrator coordinating all managers
@@ -16,7 +16,7 @@
  *
  * SPECIALISTS (37):
  * - Intelligence: CompetitorResearcher, SentimentAnalyst, TechnographicScout, ScraperSpecialist, TrendScout
- * - Marketing: TikTokExpert, TwitterExpert, FacebookAdsExpert, LinkedInExpert, SEOExpert
+ * - Marketing: TikTokExpert, TwitterExpert, FacebookAdsExpert, LinkedInExpert, SEOExpert, GrowthAnalyst
  * - Builder: UxUiArchitect, FunnelEngineer, AssetGenerator, WorkflowOptimizer
  * - Architect: UXUISpecialist, FunnelPathologist, CopySpecialist
  * - Commerce: PricingStrategist, InventoryManagerAgent
@@ -26,7 +26,7 @@
  * - Trust: GMBSpecialist, ReviewSpecialist, ReviewManagerSpecialist, CaseStudyBuilderSpecialist
  *
  * Status Breakdown:
- * - FUNCTIONAL: 47 (100% Swarm Completion Achieved!)
+ * - FUNCTIONAL: 48 (100% Swarm Completion Achieved!)
  * - SHELL: 0 (All agents fully operational)
  * - GHOST: 0 (All specialists implemented)
  */
@@ -121,6 +121,7 @@ export { FacebookAdsExpert } from './marketing/facebook/specialist';
 export { LinkedInExpert } from './marketing/linkedin/specialist';
 export { SEOExpert } from './marketing/seo/specialist';
 export { TwitterExpert, TwitterExpert as XExpert } from './marketing/twitter/specialist';
+export { GrowthAnalyst } from './marketing/growth-analyst/specialist';
 
 // Builder Specialists
 export { UxUiArchitect } from './builder/ux-ui/specialist';
@@ -194,6 +195,7 @@ export const AGENT_IDS = {
   FACEBOOK_EXPERT: 'FACEBOOK_EXPERT',
   LINKEDIN_EXPERT: 'LINKEDIN_EXPERT',
   SEO_EXPERT: 'SEO_EXPERT',
+  GROWTH_ANALYST: 'GROWTH_ANALYST',
 
   // Builder Specialists
   UX_UI_ARCHITECT: 'UX_UI_ARCHITECT',
