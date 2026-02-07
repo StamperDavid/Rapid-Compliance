@@ -221,9 +221,10 @@ export default function ContactsPage() {
 
         <div className="flex items-center gap-3">
           {/* View Toggle */}
-          <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
+          <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl" role="group" aria-label="View options">
             <button
               onClick={() => setView('cards')}
+              aria-pressed={view === 'cards'}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 view === 'cards'
                   ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/25'
@@ -235,6 +236,7 @@ export default function ContactsPage() {
             </button>
             <button
               onClick={() => setView('table')}
+              aria-pressed={view === 'table'}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 view === 'table'
                   ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/25'

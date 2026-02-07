@@ -352,8 +352,8 @@ export default function WorkspaceDashboardPage() {
         {/* Main Content Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', marginBottom: '2rem' }} className="lg:grid-cols-2">
           {/* Sales Pipeline */}
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Sales Pipeline</h3>
+          <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="pipeline-heading">
+            <h2 id="pipeline-heading" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Sales Pipeline</h2>
             {loading ? (
               <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>Loading...</div>
             ) : pipeline.length === 0 ? (
@@ -386,11 +386,11 @@ export default function WorkspaceDashboardPage() {
             >
               View All Deals →
             </Link>
-          </div>
+          </section>
 
           {/* Recent Activity */}
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Recent Activity</h3>
+          <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="activity-heading">
+            <h2 id="activity-heading" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Recent Activity</h2>
             {loading ? (
               <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>Loading...</div>
             ) : recentActivity.length === 0 ? (
@@ -411,14 +411,14 @@ export default function WorkspaceDashboardPage() {
                 ))}
               </div>
             )}
-          </div>
+          </section>
         </div>
 
         {/* Bottom Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }} className="lg:grid-cols-[2fr_1fr]">
           {/* Quick Actions */}
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Quick Actions</h3>
+          <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="actions-heading">
+            <h2 id="actions-heading" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Quick Actions</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
               <QuickAction href={`/entities/leads`} icon="🎯" label="Leads" count={stats.totalLeads} />
               <QuickAction href={`/entities/deals`} icon="💼" label="Deals" count={stats.activeDeals} />
@@ -427,11 +427,11 @@ export default function WorkspaceDashboardPage() {
               <QuickAction href={`/conversations`} icon="💬" label="Conversations" count={stats.conversations} />
               <QuickAction href={`/analytics`} icon="📊" label="Analytics" />
             </div>
-          </div>
+          </section>
 
           {/* Tasks */}
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Upcoming Tasks</h3>
+          <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="tasks-heading">
+            <h2 id="tasks-heading" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Upcoming Tasks</h2>
             {loading ? (
               <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>Loading...</div>
             ) : tasks.length === 0 ? (
@@ -469,7 +469,7 @@ export default function WorkspaceDashboardPage() {
             >
               View All Tasks →
             </Link>
-          </div>
+          </section>
         </div>
       </div>
     </div>

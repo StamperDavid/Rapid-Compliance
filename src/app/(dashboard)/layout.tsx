@@ -25,10 +25,13 @@ export default function PenthouseDashboardLayout({
 
       {/* Main content area offset by sidebar width */}
       <main
+        id="main-content"
+        tabIndex={-1}
         className={user ? 'md:ml-[280px]' : ''}
         style={{
           minHeight: '100vh',
           transition: 'margin-left 0.3s ease',
+          outline: 'none',
         }}
       >
         {children}

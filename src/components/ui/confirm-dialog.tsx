@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useId, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { focusManagement } from '@/lib/accessibility/aria-utils';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -26,6 +28,38 @@ export function ConfirmDialog({
   variant = 'destructive',
   loading = false,
 }: ConfirmDialogProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!open) { return; }
+
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    const el = contentRef.current;
+    if (!el) { return; }
+
+    requestAnimationFrame(() => {
+      const firstFocusable = focusManagement.getFirstFocusable(el);
+      if (firstFocusable) { firstFocusable.focus(); }
+    });
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      focusManagement.trapFocus(el, e);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      focusManagement.returnFocus(previousFocusRef.current);
+    };
+  }, [open, onClose]);
+
   const handleConfirm = () => {
     void onConfirm();
   };
@@ -41,6 +75,10 @@ export function ConfirmDialog({
           className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
         >
           <motion.div
+            ref={contentRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -55,7 +93,7 @@ export function ConfirmDialog({
                   </div>
                 )}
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{title}</h3>
+                  <h3 id={titleId} className="text-lg font-semibold text-white">{title}</h3>
                   <p className="mt-2 text-sm text-gray-400">{description}</p>
                 </div>
               </div>

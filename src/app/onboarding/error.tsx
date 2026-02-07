@@ -15,7 +15,7 @@ export default function OnboardingError({
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-5 py-10">
+    <div className="flex flex-col items-center justify-center min-h-screen px-5 py-10" role="alert">
       <div className="text-center max-w-md">
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">
           Setup Error

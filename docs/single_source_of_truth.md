@@ -1,8 +1,8 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 6, 2026 (Tier 2.2 Form Validation Standardization complete — 9 forms migrated to react-hook-form + Zod, form.tsx primitives, field-level errors)
-**Branches:** `dev` at commit `1ef5dbb0`
+**Last Updated:** February 6, 2026 (Tier 2.3 Accessibility Pass complete — skip-to-main, dialog focus trapping, 60 loading/error ARIA states, AdminSidebar ARIA, DataTable accessibility, heading hierarchy, view toggle states, reduced motion)
+**Branches:** `dev` at commit `e9c1bbbe`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
@@ -171,7 +171,7 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 | **100 TODO comments** | 15 services have `"TODO: Get from auth context"`, multiple services return mock/empty data | HIGH |
 | **No error boundaries** | Zero `error.tsx` or `loading.tsx` files at route level — crashes show white screens | HIGH |
 | **76 files with mock data** | Social campaigns, form templates, deal scores use hardcoded sample data | HIGH |
-| **Accessibility** | 1 `aria-label` across 115+ pages, no semantic HTML, no keyboard navigation | MEDIUM |
+| ~~**Accessibility**~~ | ~~1 `aria-label` across 115+ pages, no semantic HTML, no keyboard navigation~~ | ✅ RESOLVED — Tier 2.3 skip-to-main, dialog focus trapping, ARIA on loading/error/nav/DataTable, semantic headings, reduced motion |
 | ~~**Data tables**~~ | ~~No column sorting, no bulk actions, no CSV export on any table~~ | ✅ RESOLVED — Tier 2.1 DataTable system with sorting, bulk select/delete, CSV export |
 | **Agent end-to-end testing** | No test validates full chain: user → orchestrator → manager → specialist → UI | MEDIUM |
 | **Mixed styling** | Some pages use inline styles, some Tailwind, some CSS variables | LOW |
@@ -234,7 +234,7 @@ These tasks bring the UI to the level expected by users coming from HubSpot, Sal
 |---|------|-------------|--------|
 | 2.1 | **Data table upgrades** | Add column sorting, filtering, bulk select/delete, and CSV export to: Leads, Deals, Contacts, Forms tables. Custom DataTable component at `src/components/ui/data-table/`. Orders entity N/A (does not exist). | ✅ DONE — Reusable DataTable with sorting, selection, CSV export. Checkbox + ConfirmDialog primitives. DELETE endpoints for leads/deals/contacts/forms. View toggles on Contacts + Forms. |
 | 2.2 | **Form validation standardization** | Standardize all dashboard forms on react-hook-form + zod (already used on API side). Add field-level error messages, loading states on submit buttons. | ✅ DONE — Created `src/components/ui/form.tsx` (Form/FormField/FormItem/FormLabel/FormControl/FormMessage). 9 Zod form schemas in `src/lib/validation/`. All 9 creation forms converted: leads, contacts, deals, products, workflows, campaigns, ab-tests, nurture, fine-tuning. Field-level errors via `<FormMessage />`. Loading states via `formState.isSubmitting`. useFieldArray for dynamic arrays (workflows, nurture). watch() for leads duplicate detection + data quality. |
-| 2.3 | **Accessibility pass** | Add semantic HTML (`nav`, `main`, `section`), aria labels, keyboard navigation, focus management for modals. Target WCAG 2.1 AA. | PENDING |
+| 2.3 | **Accessibility pass** | Add semantic HTML (`nav`, `main`, `section`), aria labels, keyboard navigation, focus management for modals. Target WCAG 2.1 AA. | ✅ DONE — Skip-to-main link, MotionConfig reduced motion, dialog/confirm-dialog focus trapping + ARIA roles, 30 loading.tsx with role="status" + aria-busy + sr-only, 30 error.tsx with role="alert", AdminSidebar aria-label/aria-expanded/aria-current, DataTable scope/aria-sort/tableLabel/button labels, dashboard heading hierarchy h1→h2 with sections, view toggle aria-pressed. 73 files changed. |
 | 2.4 | **Page transition polish** | Add loading states between page navigations, skeleton screens for data-heavy pages, optimistic UI for mutations. | PENDING |
 | 2.5 | **Scraper distillation preview** | Add inline preview of distillation results on the scraper page so users don't need to download to verify AI output. | PENDING |
 

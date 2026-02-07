@@ -42,6 +42,7 @@ export function DataTableToolbar<T extends { id: string }>({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={searchPlaceholder}
+          aria-label={searchPlaceholder}
           className={`w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 ${ringClass} transition-all`}
         />
       </div>
@@ -76,6 +77,7 @@ export function DataTableToolbar<T extends { id: string }>({
               onClick={onClearSelection}
               className="p-2 text-gray-500 hover:text-white transition-colors"
               title="Clear selection"
+              aria-label="Clear selection"
             >
               <X className="w-4 h-4" />
             </button>
@@ -87,6 +89,7 @@ export function DataTableToolbar<T extends { id: string }>({
             onClick={onCsvExport}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-lg transition-all text-sm"
             title="Export to CSV"
+            aria-label="Export to CSV"
           >
             <Download className="w-4 h-4" />
             Export CSV

@@ -37,7 +37,7 @@ export function DataTableHeader<T>({
     <thead>
       <tr className="border-b border-white/10">
         {showSelection && (
-          <th className="w-12 p-4">
+          <th scope="col" className="w-12 p-4">
             <Checkbox
               checked={allSelected}
               indeterminate={someSelected}
@@ -51,6 +51,12 @@ export function DataTableHeader<T>({
           return (
             <th
               key={column.key}
+              scope="col"
+              aria-sort={
+                sortState.columnKey === column.key && sortState.direction
+                  ? sortState.direction === 'asc' ? 'ascending' : 'descending'
+                  : undefined
+              }
               className={`text-left p-4 text-sm font-semibold text-gray-400 ${column.className ?? ''}`}
             >
               {sortable ? (

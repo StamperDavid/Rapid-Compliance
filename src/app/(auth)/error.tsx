@@ -15,7 +15,7 @@ export default function AuthError({
   }, [error]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-5 py-10 bg-gray-50">
+    <div className="flex flex-col items-center justify-center min-h-screen px-5 py-10 bg-gray-50" role="alert">
       <div className="text-center max-w-sm">
         <h2 className="text-xl font-semibold text-gray-900 mb-2">
           Authentication Error

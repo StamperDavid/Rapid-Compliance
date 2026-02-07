@@ -416,9 +416,10 @@ export default function FormsPage() {
           </div>
           <div className="flex items-center gap-3">
             {/* View Toggle */}
-            <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
+            <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl" role="group" aria-label="View options">
               <button
                 onClick={() => setView('cards')}
+                aria-pressed={view === 'cards'}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   view === 'cards'
                     ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25'
@@ -430,6 +431,7 @@ export default function FormsPage() {
               </button>
               <button
                 onClick={() => setView('table')}
+                aria-pressed={view === 'table'}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   view === 'table'
                     ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25'

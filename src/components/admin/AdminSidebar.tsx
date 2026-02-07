@@ -451,6 +451,7 @@ export default function AdminSidebar() {
 
         {/* Navigation */}
         <nav
+          aria-label="Main navigation"
           style={{
             flex: 1,
             overflowY: 'auto',
@@ -468,6 +469,7 @@ export default function AdminSidebar() {
                   <button
                     type="button"
                     onClick={() => toggleSection(section.id)}
+                    aria-expanded={!isSectionCollapsed}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -517,6 +519,7 @@ export default function AdminSidebar() {
                       <Link
                         key={item.id}
                         href={item.href}
+                        aria-current={active ? 'page' : undefined}
                         title={isCollapsed ? item.label : undefined}
                         onClick={handleMobileClose}
                         style={{
