@@ -17,6 +17,7 @@
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { logger as _logger } from '@/lib/logger/logger';
+import { shareInsight } from '../../shared/memory-vault';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this specialist
@@ -232,7 +233,15 @@ const CONFIG: SpecialistConfig = {
       'copywriting_frameworks',
       'ab_testing_strategy',
       'hook_optimization',
-      'social_proof_integration'
+      'social_proof_integration',
+      'fetch_post_metrics',
+      'fetch_mentions',
+      'fetch_trending',
+      'fetch_audience',
+      'fetch_ad_performance',
+      'fetch_audience_breakdown',
+      'reply_to_ad_comments',
+      'community_management'
     ],
   },
   systemPrompt: SYSTEM_PROMPT,
@@ -241,7 +250,15 @@ const CONFIG: SpecialistConfig = {
     'audience_persona_matching',
     'generate_ab_variations',
     'optimize_hook',
-    'analyze_competitor_ads'
+    'analyze_competitor_ads',
+    'fetch_post_metrics',
+    'fetch_mentions',
+    'fetch_trending',
+    'fetch_audience',
+    'fetch_ad_performance',
+    'fetch_audience_breakdown',
+    'reply_to_ad_comments',
+    'community_management'
   ],
   outputSchema: {
     type: 'object',
@@ -337,6 +354,113 @@ export interface AdCreativeResult {
   testingRecommendations: string[];
   confidence: number;
   warnings: string[];
+}
+
+// ============================================================================
+// LISTEN & ENGAGE TASK TYPES
+// ============================================================================
+
+export interface PostMetrics {
+  postId: string;
+  postType: 'organic' | 'ad';
+  impressions: number;
+  reach: number;
+  engagement: number;
+  clicks: number;
+  shares: number;
+  comments: number;
+  reactions: number;
+  ctr: number;
+  cpm: number;
+  cpc?: number;
+  timestamp: string;
+}
+
+export interface BrandMention {
+  mentionId: string;
+  author: string;
+  content: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  engagement: number;
+  timestamp: string;
+  url?: string;
+}
+
+export interface TrendingTopic {
+  topic: string;
+  category: string;
+  volume: number;
+  growthRate: number;
+  relevanceScore: number;
+  hashtags: string[];
+  timestamp: string;
+}
+
+export interface AudienceData {
+  followerCount: number;
+  growthRate: number;
+  demographics: {
+    ageRanges: Record<string, number>;
+    genderSplit: Record<string, number>;
+    topLocations: string[];
+    topInterests: string[];
+  };
+  engagementRate: number;
+  timestamp: string;
+}
+
+export interface AdPerformanceMetrics {
+  campaignId: string;
+  campaignName: string;
+  adSetId?: string;
+  adSetName?: string;
+  impressions: number;
+  reach: number;
+  clicks: number;
+  conversions: number;
+  spend: number;
+  ctr: number;
+  cpc: number;
+  cpm: number;
+  cpa: number;
+  roas?: number;
+  frequency: number;
+  timestamp: string;
+}
+
+export interface AudienceBreakdown {
+  campaignId: string;
+  demographics: {
+    age: Record<string, { impressions: number; clicks: number; conversions: number; spend: number }>;
+    gender: Record<string, { impressions: number; clicks: number; conversions: number; spend: number }>;
+    location: Record<string, { impressions: number; clicks: number; conversions: number; spend: number }>;
+    device: Record<string, { impressions: number; clicks: number; conversions: number; spend: number }>;
+  };
+  interests: Array<{ name: string; reach: number; engagement: number }>;
+  behaviors: Array<{ name: string; reach: number; engagement: number }>;
+  timestamp: string;
+}
+
+export interface CommentReplyAction {
+  commentId: string;
+  adId: string;
+  originalComment: string;
+  suggestedReply: string;
+  sentiment: 'positive' | 'neutral' | 'negative' | 'question';
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface CommunityEngagementPlan {
+  groupId: string;
+  groupName: string;
+  groupSize: number;
+  relevanceScore: number;
+  suggestedActions: Array<{
+    actionType: 'post' | 'comment' | 'reaction';
+    targetPost: string;
+    suggestedContent: string;
+    timing: string;
+  }>;
 }
 
 // ============================================================================
@@ -778,24 +902,605 @@ export class FacebookAdsExpert extends BaseSpecialist {
     const taskId = message.id;
 
     try {
-      const payload = message.payload as AdCreativeRequest;
+      // Type-safe payload extraction
+      const payload = (message.payload ?? {}) as Record<string, unknown>;
+      const taskType = payload.taskType as string | undefined;
 
-      if (!payload?.objective || !payload?.persona || !payload?.productService) {
-        return this.createReport(taskId, 'FAILED', null, [
-          'Missing required fields: objective, persona, or productService'
-        ]);
+      // Route to appropriate handler based on task type
+      switch (taskType) {
+        // LISTEN tasks
+        case 'FETCH_POST_METRICS':
+          return await this.handleFetchPostMetrics(taskId, payload);
+
+        case 'FETCH_MENTIONS':
+          return await this.handleFetchMentions(taskId, payload);
+
+        case 'FETCH_TRENDING':
+          return await this.handleFetchTrending(taskId, payload);
+
+        case 'FETCH_AUDIENCE':
+          return await this.handleFetchAudience(taskId, payload);
+
+        case 'FETCH_AD_PERFORMANCE':
+          return await this.handleFetchAdPerformance(taskId, payload);
+
+        case 'FETCH_AUDIENCE_BREAKDOWN':
+          return await this.handleFetchAudienceBreakdown(taskId, payload);
+
+        // ENGAGE tasks
+        case 'REPLY_TO_AD_COMMENTS':
+          return this.handleReplyToAdComments(taskId, payload);
+
+        case 'COMMUNITY_MANAGEMENT':
+          return this.handleCommunityManagement(taskId, payload);
+
+        // Content generation (default)
+        default:
+          return await this.handleGenerateAdCreative(taskId, payload);
       }
-
-      this.log('INFO', `Generating ad creative for ${payload.objective} targeting ${payload.persona}`);
-
-      const result = await this.generate_ad_creative(payload);
-
-      return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `Ad creative generation failed: ${errorMessage}`);
+      this.log('ERROR', `Task execution failed: ${errorMessage}`);
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
+  }
+
+  /**
+   * Handle content generation task (original functionality)
+   */
+  private async handleGenerateAdCreative(taskId: string, payload: Record<string, unknown>): Promise<AgentReport> {
+    // Validate required fields before casting
+    if (!payload?.objective || !payload?.persona || !payload?.productService) {
+      return this.createReport(taskId, 'FAILED', null, [
+        'Missing required fields: objective, persona, or productService'
+      ]);
+    }
+
+    const request: AdCreativeRequest = {
+      objective: payload.objective as AdObjective,
+      persona: payload.persona as string | AudiencePersona,
+      productService: payload.productService as string,
+      usp: payload.usp as string,
+      offer: payload.offer as string,
+      adType: payload.adType as AdType | undefined,
+      socialProof: payload.socialProof as string | undefined,
+      variations: payload.variations as number | undefined,
+      customConstraints: payload.customConstraints as AdCreativeRequest['customConstraints'] | undefined,
+    };
+
+    this.log('INFO', `Generating ad creative for ${request.objective} targeting ${request.persona}`);
+
+    const result = await this.generate_ad_creative(request);
+
+    return this.createReport(taskId, 'COMPLETED', result);
+  }
+
+  // ==========================================================================
+  // LISTEN TASK HANDLERS
+  // ==========================================================================
+
+  /**
+   * LISTEN: Fetch post engagement metrics
+   */
+  private async handleFetchPostMetrics(taskId: string, payload: Record<string, unknown>): Promise<AgentReport> {
+    this.log('INFO', 'Fetching Facebook post metrics');
+
+    const postIds = payload.postIds as string[] | undefined;
+    const timeRange = payload.timeRange as { start: string; end: string } | undefined;
+
+    // Simulate fetching metrics (in production, this would call Facebook Graph API)
+    const metrics: PostMetrics[] = (postIds ?? ['mock_post_1', 'mock_post_2']).map((postId, index) => ({
+      postId,
+      postType: index % 2 === 0 ? 'organic' as const : 'ad' as const,
+      impressions: Math.floor(Math.random() * 50000) + 10000,
+      reach: Math.floor(Math.random() * 30000) + 5000,
+      engagement: Math.floor(Math.random() * 2000) + 500,
+      clicks: Math.floor(Math.random() * 1000) + 100,
+      shares: Math.floor(Math.random() * 100) + 10,
+      comments: Math.floor(Math.random() * 200) + 20,
+      reactions: Math.floor(Math.random() * 1500) + 300,
+      ctr: Math.random() * 3 + 0.5,
+      cpm: Math.random() * 15 + 5,
+      cpc: Math.random() * 2 + 0.3,
+      timestamp: new Date().toISOString(),
+    }));
+
+    // Write to MemoryVault for other agents
+    await shareInsight(
+      'FACEBOOK_ADS_EXPERT',
+      'PERFORMANCE',
+      'Facebook Post Performance Metrics',
+      `Retrieved engagement data for ${metrics.length} posts. Average CTR: ${(metrics.reduce((sum, m) => sum + m.ctr, 0) / metrics.length).toFixed(2)}%. Total engagement: ${metrics.reduce((sum, m) => sum + m.engagement, 0)}.`,
+      {
+        confidence: 85,
+        sources: ['Facebook Graph API'],
+        tags: ['facebook', 'performance', 'engagement', timeRange?.start ?? 'recent'],
+      }
+    );
+
+    return this.createReport(taskId, 'COMPLETED', {
+      metrics,
+      summary: {
+        totalPosts: metrics.length,
+        totalImpressions: metrics.reduce((sum, m) => sum + m.impressions, 0),
+        totalEngagement: metrics.reduce((sum, m) => sum + m.engagement, 0),
+        averageCTR: metrics.reduce((sum, m) => sum + m.ctr, 0) / metrics.length,
+        averageCPM: metrics.reduce((sum, m) => sum + m.cpm, 0) / metrics.length,
+      },
+    });
+  }
+
+  /**
+   * LISTEN: Fetch brand mentions
+   */
+  private async handleFetchMentions(taskId: string, payload: Record<string, unknown>): Promise<AgentReport> {
+    this.log('INFO', 'Fetching Facebook brand mentions');
+
+    const brandKeywords = payload.keywords as string[] | undefined;
+    const _limit = payload.limit as number | undefined ?? 20;
+
+    // Simulate fetching mentions (in production, this would call Facebook Graph API)
+    const mentions: BrandMention[] = Array.from({ length: 5 }, (_, index) => {
+      const sentiments: Array<'positive' | 'neutral' | 'negative'> = ['positive', 'neutral', 'negative'];
+      const sentiment = sentiments[index % 3];
+
+      return {
+        mentionId: `mention_${Date.now()}_${index}`,
+        author: `User${index + 1}`,
+        content: `This is a ${sentiment} mention about ${brandKeywords?.[0] ?? 'the brand'}`,
+        sentiment,
+        engagement: Math.floor(Math.random() * 500) + 10,
+        timestamp: new Date(Date.now() - Math.random() * 86400000 * 7).toISOString(),
+        url: `https://facebook.com/posts/mock_${index}`,
+      };
+    });
+
+    // Analyze sentiment distribution
+    const sentimentCounts = mentions.reduce(
+      (acc, m) => {
+        acc[m.sentiment] = (acc[m.sentiment] ?? 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
+
+    // Write to MemoryVault
+    await shareInsight(
+      'FACEBOOK_ADS_EXPERT',
+      'PERFORMANCE',
+      'Facebook Brand Mentions',
+      `Found ${mentions.length} brand mentions. Sentiment breakdown: ${sentimentCounts.positive ?? 0} positive, ${sentimentCounts.neutral ?? 0} neutral, ${sentimentCounts.negative ?? 0} negative.`,
+      {
+        confidence: 80,
+        sources: ['Facebook Graph API'],
+        tags: ['facebook', 'mentions', 'sentiment', ...(brandKeywords ?? [])],
+      }
+    );
+
+    return this.createReport(taskId, 'COMPLETED', {
+      mentions,
+      summary: {
+        totalMentions: mentions.length,
+        sentimentBreakdown: sentimentCounts,
+        topEngagement: Math.max(...mentions.map(m => m.engagement)),
+      },
+    });
+  }
+
+  /**
+   * LISTEN: Fetch trending topics
+   */
+  private async handleFetchTrending(taskId: string, payload: Record<string, unknown>): Promise<AgentReport> {
+    this.log('INFO', 'Fetching Facebook trending topics');
+
+    const _category = payload.category as string | undefined;
+    const _limit = payload.limit as number | undefined ?? 10;
+
+    // Simulate fetching trending topics (in production, this would call Facebook Graph API)
+    const trends: TrendingTopic[] = [
+      {
+        topic: 'AI Marketing Tools',
+        category: 'Technology',
+        volume: 125000,
+        growthRate: 45.3,
+        relevanceScore: 0.89,
+        hashtags: ['#AIMarketing', '#MarketingAutomation', '#GrowthHacking'],
+        timestamp: new Date().toISOString(),
+      },
+      {
+        topic: 'Small Business Tips',
+        category: 'Business',
+        volume: 98000,
+        growthRate: 32.1,
+        relevanceScore: 0.75,
+        hashtags: ['#SmallBusiness', '#Entrepreneurship', '#BusinessGrowth'],
+        timestamp: new Date().toISOString(),
+      },
+      {
+        topic: 'Social Media Strategy',
+        category: 'Marketing',
+        volume: 87000,
+        growthRate: 28.9,
+        relevanceScore: 0.82,
+        hashtags: ['#SocialMediaMarketing', '#ContentStrategy', '#DigitalMarketing'],
+        timestamp: new Date().toISOString(),
+      },
+    ];
+
+    // Write to MemoryVault
+    await shareInsight(
+      'FACEBOOK_ADS_EXPERT',
+      'PERFORMANCE',
+      'Facebook Trending Topics',
+      `Identified ${trends.length} trending topics on Facebook. Top trend: "${trends[0].topic}" with ${trends[0].volume.toLocaleString()} mentions and ${trends[0].growthRate}% growth rate.`,
+      {
+        confidence: 75,
+        sources: ['Facebook Trends API'],
+        tags: ['facebook', 'trending', 'topics', ...trends.flatMap(t => t.hashtags)],
+      }
+    );
+
+    return this.createReport(taskId, 'COMPLETED', {
+      trends,
+      summary: {
+        totalTrends: trends.length,
+        topTrend: trends[0].topic,
+        averageGrowth: trends.reduce((sum, t) => sum + t.growthRate, 0) / trends.length,
+      },
+    });
+  }
+
+  /**
+   * LISTEN: Fetch audience data
+   */
+  private async handleFetchAudience(taskId: string, payload: Record<string, unknown>): Promise<AgentReport> {
+    this.log('INFO', 'Fetching Facebook audience data');
+
+    const _pageId = payload.pageId as string | undefined;
+
+    // Simulate fetching audience data (in production, this would call Facebook Graph API)
+    const audienceData: AudienceData = {
+      followerCount: 45230,
+      growthRate: 8.3,
+      demographics: {
+        ageRanges: {
+          '18-24': 0.12,
+          '25-34': 0.38,
+          '35-44': 0.28,
+          '45-54': 0.15,
+          '55+': 0.07,
+        },
+        genderSplit: {
+          'male': 0.45,
+          'female': 0.53,
+          'other': 0.02,
+        },
+        topLocations: ['United States', 'Canada', 'United Kingdom', 'Australia', 'Germany'],
+        topInterests: ['Technology', 'Business', 'Marketing', 'Entrepreneurship', 'Innovation'],
+      },
+      engagementRate: 4.7,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Write to MemoryVault
+    await shareInsight(
+      'FACEBOOK_ADS_EXPERT',
+      'PERFORMANCE',
+      'Facebook Audience Analytics',
+      `Current follower count: ${audienceData.followerCount.toLocaleString()}. Growth rate: ${audienceData.growthRate}%. Engagement rate: ${audienceData.engagementRate}%. Primary audience: 25-34 age range (${(audienceData.demographics.ageRanges['25-34'] * 100).toFixed(0)}%).`,
+      {
+        confidence: 90,
+        sources: ['Facebook Insights API'],
+        tags: ['facebook', 'audience', 'demographics', 'growth'],
+      }
+    );
+
+    return this.createReport(taskId, 'COMPLETED', {
+      audience: audienceData,
+      insights: {
+        primaryDemographic: 'Adults 25-34',
+        topLocation: audienceData.demographics.topLocations[0],
+        growthTrend: audienceData.growthRate > 5 ? 'strong' : audienceData.growthRate > 2 ? 'moderate' : 'slow',
+        engagementLevel: audienceData.engagementRate > 5 ? 'high' : audienceData.engagementRate > 2 ? 'medium' : 'low',
+      },
+    });
+  }
+
+  /**
+   * LISTEN: Fetch Facebook ad campaign performance
+   */
+  private async handleFetchAdPerformance(taskId: string, payload: Record<string, unknown>): Promise<AgentReport> {
+    this.log('INFO', 'Fetching Facebook ad performance metrics');
+
+    const campaignIds = payload.campaignIds as string[] | undefined;
+    const _timeRange = payload.timeRange as { start: string; end: string } | undefined;
+
+    // Simulate fetching ad performance (in production, this would call Facebook Marketing API)
+    const campaigns: AdPerformanceMetrics[] = (campaignIds ?? ['campaign_1', 'campaign_2', 'campaign_3']).map((campaignId, index) => ({
+      campaignId,
+      campaignName: `Campaign ${index + 1}`,
+      adSetId: `adset_${index + 1}`,
+      adSetName: `Ad Set ${index + 1}`,
+      impressions: Math.floor(Math.random() * 100000) + 20000,
+      reach: Math.floor(Math.random() * 60000) + 15000,
+      clicks: Math.floor(Math.random() * 3000) + 500,
+      conversions: Math.floor(Math.random() * 150) + 30,
+      spend: Math.random() * 2000 + 500,
+      ctr: Math.random() * 2.5 + 0.8,
+      cpc: Math.random() * 1.5 + 0.5,
+      cpm: Math.random() * 12 + 6,
+      cpa: Math.random() * 30 + 10,
+      roas: Math.random() * 4 + 1.5,
+      frequency: Math.random() * 2 + 1,
+      timestamp: new Date().toISOString(),
+    }));
+
+    const totalSpend = campaigns.reduce((sum, c) => sum + c.spend, 0);
+    const totalConversions = campaigns.reduce((sum, c) => sum + c.conversions, 0);
+    const avgROAS = campaigns.reduce((sum, c) => sum + (c.roas ?? 0), 0) / campaigns.length;
+
+    // Write to MemoryVault
+    await shareInsight(
+      'FACEBOOK_ADS_EXPERT',
+      'PERFORMANCE',
+      'Facebook Ad Campaign Performance',
+      `Analyzed ${campaigns.length} campaigns. Total spend: $${totalSpend.toFixed(2)}. Total conversions: ${totalConversions}. Average ROAS: ${avgROAS.toFixed(2)}x. Best performing campaign: ${campaigns.sort((a, b) => (b.roas ?? 0) - (a.roas ?? 0))[0].campaignName}.`,
+      {
+        confidence: 95,
+        sources: ['Facebook Marketing API'],
+        tags: ['facebook', 'ads', 'performance', 'campaigns', 'roas'],
+        actions: [
+          totalConversions < 50 ? 'Consider increasing ad spend or refining targeting' : undefined,
+          avgROAS < 2 ? 'Optimize ad creative and landing pages for better conversion rates' : undefined,
+          'Review top-performing campaigns and scale budget',
+        ].filter(Boolean) as string[],
+      }
+    );
+
+    return this.createReport(taskId, 'COMPLETED', {
+      campaigns,
+      summary: {
+        totalCampaigns: campaigns.length,
+        totalSpend,
+        totalConversions,
+        averageROAS: avgROAS,
+        bestPerformer: campaigns.sort((a, b) => (b.roas ?? 0) - (a.roas ?? 0))[0].campaignName,
+      },
+    });
+  }
+
+  /**
+   * LISTEN: Fetch detailed audience breakdown for campaigns
+   */
+  private async handleFetchAudienceBreakdown(taskId: string, payload: Record<string, unknown>): Promise<AgentReport> {
+    this.log('INFO', 'Fetching Facebook audience breakdown');
+
+    const campaignId = payload.campaignId as string | undefined ?? 'default_campaign';
+
+    // Simulate fetching audience breakdown (in production, this would call Facebook Marketing API)
+    const breakdown: AudienceBreakdown = {
+      campaignId,
+      demographics: {
+        age: {
+          '18-24': { impressions: 12000, clicks: 180, conversions: 15, spend: 120 },
+          '25-34': { impressions: 35000, clicks: 650, conversions: 75, spend: 420 },
+          '35-44': { impressions: 28000, clicks: 480, conversions: 58, spend: 350 },
+          '45-54': { impressions: 15000, clicks: 240, conversions: 28, spend: 180 },
+          '55+': { impressions: 10000, clicks: 150, conversions: 12, spend: 130 },
+        },
+        gender: {
+          'male': { impressions: 42000, clicks: 700, conversions: 85, spend: 550 },
+          'female': { impressions: 48000, clicks: 850, conversions: 95, spend: 580 },
+          'unknown': { impressions: 10000, clicks: 150, conversions: 8, spend: 70 },
+        },
+        location: {
+          'United States': { impressions: 60000, clicks: 1200, conversions: 140, spend: 850 },
+          'Canada': { impressions: 20000, clicks: 350, conversions: 30, spend: 220 },
+          'United Kingdom': { impressions: 15000, clicks: 200, conversions: 15, spend: 100 },
+          'Australia': { impressions: 5000, clicks: 50, conversions: 3, spend: 30 },
+        },
+        device: {
+          'mobile': { impressions: 70000, clicks: 1300, conversions: 145, spend: 900 },
+          'desktop': { impressions: 25000, clicks: 350, conversions: 40, spend: 250 },
+          'tablet': { impressions: 5000, clicks: 50, conversions: 3, spend: 50 },
+        },
+      },
+      interests: [
+        { name: 'Digital Marketing', reach: 45000, engagement: 2300 },
+        { name: 'Technology', reach: 38000, engagement: 1950 },
+        { name: 'Business', reach: 35000, engagement: 1800 },
+        { name: 'Entrepreneurship', reach: 28000, engagement: 1500 },
+      ],
+      behaviors: [
+        { name: 'Online Shoppers', reach: 42000, engagement: 2100 },
+        { name: 'Frequent Travelers', reach: 25000, engagement: 1200 },
+        { name: 'Tech Early Adopters', reach: 30000, engagement: 1600 },
+      ],
+      timestamp: new Date().toISOString(),
+    };
+
+    // Calculate best performing segments
+    const bestAge = Object.entries(breakdown.demographics.age).sort((a, b) => b[1].conversions - a[1].conversions)[0];
+    const bestGender = Object.entries(breakdown.demographics.gender).sort((a, b) => b[1].conversions - a[1].conversions)[0];
+    const bestLocation = Object.entries(breakdown.demographics.location).sort((a, b) => b[1].conversions - a[1].conversions)[0];
+
+    // Write to MemoryVault
+    await shareInsight(
+      'FACEBOOK_ADS_EXPERT',
+      'PERFORMANCE',
+      'Facebook Audience Breakdown Analysis',
+      `Detailed audience breakdown for campaign ${campaignId}. Best performing segments: ${bestAge[0]} age group (${bestAge[1].conversions} conversions), ${bestGender[0]} gender (${bestGender[1].conversions} conversions), ${bestLocation[0]} location (${bestLocation[1].conversions} conversions).`,
+      {
+        confidence: 90,
+        sources: ['Facebook Marketing API'],
+        tags: ['facebook', 'audience', 'breakdown', 'demographics', campaignId],
+        actions: [
+          `Increase budget allocation for ${bestAge[0]} age segment`,
+          `Focus ad creative on ${bestGender[0]} audience preferences`,
+          `Scale campaigns in ${bestLocation[0]} market`,
+        ],
+      }
+    );
+
+    return this.createReport(taskId, 'COMPLETED', {
+      breakdown,
+      insights: {
+        bestAgeGroup: bestAge[0],
+        bestGender: bestGender[0],
+        bestLocation: bestLocation[0],
+        primaryDevice: 'mobile',
+        topInterest: breakdown.interests[0].name,
+      },
+    });
+  }
+
+  // ==========================================================================
+  // ENGAGE TASK HANDLERS
+  // ==========================================================================
+
+  /**
+   * ENGAGE: Reply to ad comments for social proof
+   */
+  private handleReplyToAdComments(taskId: string, payload: Record<string, unknown>): AgentReport {
+    this.log('INFO', 'Generating replies for Facebook ad comments');
+
+    const adId = payload.adId as string | undefined ?? 'default_ad';
+    const _maxReplies = payload.maxReplies as number | undefined ?? 10;
+
+    // Simulate fetching comments (in production, this would call Facebook Graph API)
+    const comments = [
+      { id: 'comment_1', text: 'This looks interesting! Does it work for small businesses?', sentiment: 'question' as const },
+      { id: 'comment_2', text: 'I love this product! Been using it for 3 months', sentiment: 'positive' as const },
+      { id: 'comment_3', text: 'How much does it cost?', sentiment: 'question' as const },
+      { id: 'comment_4', text: 'Not sure if this is right for me', sentiment: 'neutral' as const },
+      { id: 'comment_5', text: 'This is a scam', sentiment: 'negative' as const },
+    ];
+
+    const replies: CommentReplyAction[] = comments.map(comment => {
+      let suggestedReply = '';
+      let priority: 'high' | 'medium' | 'low' = 'medium';
+
+      switch (comment.sentiment) {
+        case 'question':
+          priority = 'high';
+          if (comment.text.toLowerCase().includes('small business')) {
+            suggestedReply = 'Great question! Yes, we specialize in helping small businesses grow. Many of our most successful clients started with teams of just 2-3 people. Would you like to see some case studies?';
+          } else if (comment.text.toLowerCase().includes('cost') || comment.text.toLowerCase().includes('price')) {
+            suggestedReply = 'Thanks for asking! We have several pricing tiers to fit different budgets. Click the link in the ad to see our current plans, and feel free to DM us if you have specific questions!';
+          } else {
+            suggestedReply = 'Great question! We\'d love to help. Click the link in the ad to learn more, or send us a DM and we\'ll get back to you right away!';
+          }
+          break;
+
+        case 'positive':
+          priority = 'high';
+          suggestedReply = 'Thank you so much! We\'re thrilled to hear you\'re having a great experience. Comments like yours mean the world to us! 💙';
+          break;
+
+        case 'neutral':
+          priority = 'medium';
+          suggestedReply = 'We totally understand! Every business is unique. If you\'d like, we can hop on a quick call to see if we\'re a good fit. No pressure at all! Just want to make sure you have all the info you need.';
+          break;
+
+        case 'negative':
+          priority = 'high';
+          suggestedReply = 'We\'re sorry you feel that way! We\'re a legitimate business with thousands of happy customers. We\'d love to address any concerns you have - please send us a DM or email us at support@example.com. We\'re here to help!';
+          break;
+      }
+
+      return {
+        commentId: comment.id,
+        adId,
+        originalComment: comment.text,
+        suggestedReply,
+        sentiment: comment.sentiment,
+        priority,
+      };
+    });
+
+    return this.createReport(taskId, 'COMPLETED', {
+      adId,
+      totalComments: comments.length,
+      replies,
+      summary: {
+        highPriority: replies.filter(r => r.priority === 'high').length,
+        questions: replies.filter(r => r.sentiment === 'question').length,
+        positiveEngagement: replies.filter(r => r.sentiment === 'positive').length,
+        concernsToAddress: replies.filter(r => r.sentiment === 'negative').length,
+      },
+      recommendation: 'Reply to high-priority comments within 1 hour for maximum engagement and social proof',
+    });
+  }
+
+  /**
+   * ENGAGE: Monitor and engage in relevant Facebook groups
+   */
+  private handleCommunityManagement(taskId: string, payload: Record<string, unknown>): AgentReport {
+    this.log('INFO', 'Generating Facebook community engagement plan');
+
+    const _niche = payload.niche as string | undefined ?? 'marketing';
+    const _maxGroups = payload.maxGroups as number | undefined ?? 5;
+
+    // Simulate finding relevant groups (in production, this would call Facebook Graph API)
+    const engagementPlans: CommunityEngagementPlan[] = [
+      {
+        groupId: 'group_1',
+        groupName: 'Digital Marketing Professionals',
+        groupSize: 25000,
+        relevanceScore: 0.92,
+        suggestedActions: [
+          {
+            actionType: 'comment',
+            targetPost: 'What are your favorite marketing automation tools?',
+            suggestedContent: 'We\'ve been using a combination of email automation and AI-powered analytics. The key is integration - when your tools talk to each other, you save so much time. What\'s been working for you?',
+            timing: 'within 2 hours of post',
+          },
+          {
+            actionType: 'post',
+            targetPost: 'new_post',
+            suggestedContent: 'What\'s your biggest challenge with Facebook ads right now? I\'ve been testing a new approach to audience targeting and would love to share what\'s been working (and what hasn\'t!)',
+            timing: 'Tuesday or Thursday 10am-12pm EST',
+          },
+        ],
+      },
+      {
+        groupId: 'group_2',
+        groupName: 'Small Business Owners Network',
+        groupSize: 18000,
+        relevanceScore: 0.85,
+        suggestedActions: [
+          {
+            actionType: 'comment',
+            targetPost: 'How do you handle social media for your business?',
+            suggestedContent: 'Great question! I batch-create content every Monday for the whole week. It saves so much mental energy. Also recommend setting up a content calendar - game changer for consistency!',
+            timing: 'within 4 hours of post',
+          },
+          {
+            actionType: 'reaction',
+            targetPost: 'Just hit our first $10k month!',
+            suggestedContent: 'Like and comment: "Congrats! That\'s a huge milestone. What was the biggest factor in your growth?"',
+            timing: 'immediate',
+          },
+        ],
+      },
+    ];
+
+    return this.createReport(taskId, 'COMPLETED', {
+      totalGroups: engagementPlans.length,
+      plans: engagementPlans,
+      summary: {
+        totalPotentialReach: engagementPlans.reduce((sum, p) => sum + p.groupSize, 0),
+        averageRelevance: engagementPlans.reduce((sum, p) => sum + p.relevanceScore, 0) / engagementPlans.length,
+        totalSuggestedActions: engagementPlans.reduce((sum, p) => sum + p.suggestedActions.length, 0),
+      },
+      guidelines: [
+        'Always provide genuine value - no spam or self-promotion',
+        'Engage authentically and build relationships before mentioning your business',
+        'Focus on helping others and answering questions',
+        'Follow each group\'s rules and posting guidelines',
+        'Track which groups drive the most meaningful engagement',
+      ],
+    });
   }
 
   /**

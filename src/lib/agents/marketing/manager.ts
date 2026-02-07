@@ -18,6 +18,7 @@
  * - FACEBOOK_ADS_EXPERT: Paid ads, lead generation, retargeting
  * - LINKEDIN_EXPERT: B2B content, professional networking
  * - SEO_EXPERT: Keyword research, content optimization
+ * - GROWTH_ANALYST: Performance analytics, mutation directives, growth tracking
  *
  * @module agents/marketing/manager
  */
@@ -30,10 +31,14 @@ import { getTwitterExpert } from './twitter/specialist';
 import { getFacebookAdsExpert } from './facebook/specialist';
 import { getLinkedInExpert } from './linkedin/specialist';
 import { getSEOExpert } from './seo/specialist';
+import { getGrowthAnalyst } from './growth-analyst/specialist';
 import {
   getMemoryVault,
   shareInsight,
+  checkPendingSignals,
+  broadcastSignal,
   type InsightData,
+  type SignalEntry,
 } from '../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
@@ -58,7 +63,7 @@ interface _BrandDNA {
 const SYSTEM_PROMPT = `You are the Marketing Manager, an industry-agnostic L2 orchestrator for cross-channel marketing campaigns.
 
 ## YOUR ROLE
-You coordinate 5 platform specialists to execute unified marketing campaigns for ANY business type.
+You coordinate 6 specialists to execute unified marketing campaigns for ANY business type.
 All industry context, brand voice, and messaging guidelines are loaded dynamically from the organization's Brand DNA.
 
 SPECIALISTS YOU ORCHESTRATE:
@@ -67,6 +72,7 @@ SPECIALISTS YOU ORCHESTRATE:
 - FACEBOOK_ADS_EXPERT: Paid ads, lead generation, retargeting, older demographics
 - LINKEDIN_EXPERT: B2B content, professional networking, executive thought leadership
 - SEO_EXPERT: Keyword research, content optimization, search visibility
+- GROWTH_ANALYST: Performance analytics, pattern identification, strategy mutations, growth tracking
 
 ## INDUSTRY-AGNOSTIC APPROACH
 - NEVER assume a specific industry (trucking, SaaS, retail, etc.)
@@ -234,6 +240,7 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     'FACEBOOK_ADS_EXPERT',
     'LINKEDIN_EXPERT',
     'SEO_EXPERT',
+    'GROWTH_ANALYST',
   ],
   delegationRules: [
     // TikTok - Viral, short-form video
@@ -428,6 +435,28 @@ export interface CampaignBrief {
  */
 export type CampaignPlan = CampaignBrief;
 
+/**
+ * Orchestration modes for the Marketing Manager
+ * Controls behavior based on intelligence signals
+ */
+export type OrchestrationMode =
+  | 'CAMPAIGN_SPRINT'   // Default — single campaign execution
+  | 'GROWTH_LOOP'       // Continuous: LISTEN → ANALYZE → CREATE → PUBLISH → ENGAGE → repeat
+  | 'OPPORTUNISTIC'     // Triggered by TREND_SCOUT — fast-track trending content
+  | 'CRISIS_RESPONSE'   // Triggered by SENTIMENT_ANALYST — pause publishing, deploy damage control
+  | 'AMPLIFICATION';    // Triggered by positive sentiment — boost frequency
+
+/**
+ * Intelligence signal from TREND_SCOUT or SENTIMENT_ANALYST
+ */
+interface IntelligenceSignalAction {
+  mode: OrchestrationMode;
+  reason: string;
+  signalId: string;
+  urgency: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  payload: Record<string, unknown>;
+}
+
 // ============================================================================
 // IMPLEMENTATION - Industry-Agnostic Cross-Channel Commander
 // ============================================================================
@@ -435,6 +464,7 @@ export type CampaignPlan = CampaignBrief;
 export class MarketingManager extends BaseManager {
   private specialistsRegistered = false;
   private brandContextCache: Map<string, BrandContext> = new Map();
+  private currentMode: OrchestrationMode = 'CAMPAIGN_SPRINT';
 
   constructor() {
     super(MARKETING_MANAGER_CONFIG);
@@ -467,6 +497,7 @@ export class MarketingManager extends BaseManager {
       { name: 'FACEBOOK_ADS_EXPERT', factory: getFacebookAdsExpert },
       { name: 'LINKEDIN_EXPERT', factory: getLinkedInExpert },
       { name: 'SEO_EXPERT', factory: getSEOExpert },
+      { name: 'GROWTH_ANALYST', factory: getGrowthAnalyst },
     ];
 
     for (const { name, factory } of specialistFactories) {
@@ -497,6 +528,30 @@ export class MarketingManager extends BaseManager {
     }
 
     try {
+      // Check intelligence signals before processing
+      const intelligenceActions = await this.checkIntelligenceSignals();
+
+      // If a mode-switching signal was detected, handle it instead of normal execution
+      if (intelligenceActions.length > 0) {
+        const topAction = intelligenceActions[0];
+        if (topAction.mode === 'CRISIS_RESPONSE') {
+          return await this.executeCrisisResponse(topAction, taskId);
+        }
+        if (topAction.mode === 'OPPORTUNISTIC') {
+          // Only intercept if the current message isn't already an opportunistic execution
+          const isRecursive = (message.payload as CampaignGoal)?.message?.includes('Fast-track for immediate publication');
+          if (!isRecursive) {
+            return await this.executeOpportunisticMode(topAction, taskId);
+          }
+        }
+        if (topAction.mode === 'AMPLIFICATION') {
+          const isRecursive = (message.payload as CampaignGoal)?.message?.includes('Capitalize on positive sentiment wave');
+          if (!isRecursive) {
+            return await this.executeAmplificationMode(topAction, taskId);
+          }
+        }
+      }
+
       const payload = message.payload as CampaignGoal;
 
       // Penthouse model system: uses DEFAULT_ORG_ID internally where needed
@@ -529,6 +584,7 @@ export class MarketingManager extends BaseManager {
 
   /**
    * Handle signals from the Signal Bus
+   * Processes intelligence signals from TREND_SCOUT and SENTIMENT_ANALYST
    */
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
@@ -538,6 +594,423 @@ export class MarketingManager extends BaseManager {
     }
 
     return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
+  }
+
+  /**
+   * Check for pending intelligence signals and determine orchestration mode
+   * Called before campaign execution to adapt behavior based on real-time intelligence
+   */
+  async checkIntelligenceSignals(): Promise<IntelligenceSignalAction[]> {
+    const actions: IntelligenceSignalAction[] = [];
+
+    try {
+      const pendingSignals = await checkPendingSignals('MARKETING_MANAGER');
+
+      for (const signal of pendingSignals) {
+        const action = this.classifySignal(signal);
+        if (action) {
+          actions.push(action);
+        }
+      }
+
+      // Determine the highest-priority mode
+      if (actions.length > 0) {
+        const priorityOrder: OrchestrationMode[] = ['CRISIS_RESPONSE', 'OPPORTUNISTIC', 'AMPLIFICATION', 'GROWTH_LOOP', 'CAMPAIGN_SPRINT'];
+        for (const mode of priorityOrder) {
+          const match = actions.find(a => a.mode === mode);
+          if (match) {
+            this.currentMode = mode;
+            this.log('INFO', `Switching to ${mode} mode: ${match.reason}`);
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.log('ERROR', `Failed to check intelligence signals: ${errorMsg}`);
+    }
+
+    return actions;
+  }
+
+  /**
+   * Classify a MemoryVault signal into an orchestration mode action
+   */
+  private classifySignal(signal: SignalEntry): IntelligenceSignalAction | null {
+    const signalType = signal.value.signalType;
+    const urgency = signal.value.urgency;
+
+    // TREND_SCOUT signals: TREND_EMERGING with HIGH/CRITICAL urgency → OPPORTUNISTIC
+    if (signalType === 'TREND_EMERGING' && (urgency === 'CRITICAL' || urgency === 'HIGH')) {
+      return {
+        mode: 'OPPORTUNISTIC',
+        reason: `Trending topic detected: ${signal.key}`,
+        signalId: signal.id,
+        urgency,
+        payload: signal.value.payload,
+      };
+    }
+
+    // SENTIMENT_ANALYST signals: negative crisis → CRISIS_RESPONSE
+    if (signalType === 'BRAND_SENTIMENT_SHIFT' || signalType === 'CRISIS_DETECTED') {
+      const sentiment = signal.value.payload.sentiment as number | undefined;
+      const severity = signal.value.payload.severity as string | undefined;
+
+      if (severity === 'critical' || severity === 'warning' || (sentiment !== undefined && sentiment < -0.3)) {
+        return {
+          mode: 'CRISIS_RESPONSE',
+          reason: `Negative sentiment detected: ${signal.key} (severity: ${severity ?? 'unknown'})`,
+          signalId: signal.id,
+          urgency: 'CRITICAL',
+          payload: signal.value.payload,
+        };
+      }
+
+      // Positive sentiment spike → AMPLIFICATION
+      if (sentiment !== undefined && sentiment > 0.5) {
+        return {
+          mode: 'AMPLIFICATION',
+          reason: `Positive sentiment spike: ${signal.key}`,
+          signalId: signal.id,
+          urgency: 'MEDIUM',
+          payload: signal.value.payload,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Execute in OPPORTUNISTIC mode — fast-track trending content
+   * Triggered by TREND_SCOUT TREND_EMERGING signals
+   */
+  private async executeOpportunisticMode(
+    trendSignal: IntelligenceSignalAction,
+    taskId: string
+  ): Promise<AgentReport> {
+    this.log('INFO', `OPPORTUNISTIC MODE: Fast-tracking content for trend — ${trendSignal.reason}`);
+
+    const trendTopic = trendSignal.payload.title as string ?? trendSignal.reason;
+
+    // Create an urgent campaign goal based on the trend
+    const trendGoal: CampaignGoal = {
+      objective: 'awareness',
+      message: `Create timely content capitalizing on trending topic: ${trendTopic}. Fast-track for immediate publication.`,
+      contentType: 'mixed',
+      kpis: ['engagement_rate', 'share_velocity', 'trending_participation'],
+    };
+
+    // Share insight about the mode switch
+    await shareInsight(
+      'MARKETING_MANAGER',
+      'TREND',
+      `Entered OPPORTUNISTIC mode for trend: ${trendTopic}`,
+      `Marketing Manager switching to OPPORTUNISTIC mode to capitalize on trending topic.`,
+      { confidence: 90, tags: ['trend', 'opportunistic', 'fast-track'] }
+    );
+
+    // Execute as a standard campaign but with trend context
+    return this.execute({
+      id: taskId,
+      from: 'MARKETING_MANAGER',
+      to: 'MARKETING_MANAGER',
+      payload: trendGoal,
+      timestamp: new Date(),
+      type: 'COMMAND',
+      priority: 'HIGH',
+      requiresResponse: true,
+      traceId: `opportunistic-${taskId}`,
+    });
+  }
+
+  /**
+   * Execute in CRISIS_RESPONSE mode — pause publishing, deploy damage control
+   * Triggered by SENTIMENT_ANALYST negative sentiment signals
+   */
+  private async executeCrisisResponse(
+    crisisSignal: IntelligenceSignalAction,
+    taskId: string
+  ): Promise<AgentReport> {
+    this.log('WARN', `CRISIS_RESPONSE MODE: ${crisisSignal.reason}`);
+
+    // Broadcast pause signal to all publishing agents
+    await broadcastSignal(
+      'MARKETING_MANAGER',
+      'PUBLISHING_PAUSE',
+      'CRITICAL',
+      {
+        reason: crisisSignal.reason,
+        pausedAt: new Date().toISOString(),
+        resumeCondition: 'Manual review required — sentiment must stabilize',
+      },
+      ['AUTONOMOUS_POSTING_AGENT', 'CONTENT_MANAGER']
+    );
+
+    // Share crisis insight for cross-agent visibility
+    await shareInsight(
+      'MARKETING_MANAGER',
+      'PERFORMANCE',
+      `CRISIS RESPONSE ACTIVATED: ${crisisSignal.reason}`,
+      `Publishing paused. Preparing damage control content. Reason: ${crisisSignal.reason}`,
+      { confidence: 95, tags: ['crisis', 'pause', 'damage-control'] }
+    );
+
+    return this.createReport(taskId, 'COMPLETED', {
+      mode: 'CRISIS_RESPONSE',
+      action: 'publishing_paused',
+      reason: crisisSignal.reason,
+      signalId: crisisSignal.signalId,
+      recommendation: 'Review situation before resuming content publishing',
+    });
+  }
+
+  /**
+   * Execute in AMPLIFICATION mode — boost content frequency on positive sentiment
+   * Triggered by SENTIMENT_ANALYST positive sentiment spikes
+   */
+  private async executeAmplificationMode(
+    amplifySignal: IntelligenceSignalAction,
+    taskId: string
+  ): Promise<AgentReport> {
+    this.log('INFO', `AMPLIFICATION MODE: ${amplifySignal.reason}`);
+
+    const amplifyGoal: CampaignGoal = {
+      objective: 'engagement',
+      message: `Capitalize on positive sentiment wave. Increase posting frequency and share positive mentions. Context: ${amplifySignal.reason}`,
+      contentType: 'mixed',
+      kpis: ['engagement_rate', 'follower_growth', 'positive_sentiment_ratio'],
+    };
+
+    await shareInsight(
+      'MARKETING_MANAGER',
+      'PERFORMANCE',
+      `AMPLIFICATION mode activated: ${amplifySignal.reason}`,
+      `Boosting content frequency due to positive sentiment spike.`,
+      { confidence: 85, tags: ['amplification', 'positive-sentiment', 'boost'] }
+    );
+
+    return this.execute({
+      id: taskId,
+      from: 'MARKETING_MANAGER',
+      to: 'MARKETING_MANAGER',
+      payload: amplifyGoal,
+      timestamp: new Date(),
+      type: 'COMMAND',
+      priority: 'HIGH',
+      requiresResponse: true,
+      traceId: `amplification-${taskId}`,
+    });
+  }
+
+  /**
+   * Get the current orchestration mode
+   */
+  getCurrentMode(): OrchestrationMode {
+    return this.currentMode;
+  }
+
+  /**
+   * Create a properly typed AgentMessage for internal delegation
+   */
+  private createDelegationMessage(
+    id: string,
+    to: string,
+    payload: unknown
+  ): AgentMessage {
+    return {
+      id,
+      from: 'MARKETING_MANAGER',
+      to,
+      payload,
+      timestamp: new Date(),
+      type: 'COMMAND',
+      priority: 'NORMAL',
+      requiresResponse: true,
+      traceId: `mm-${id}`,
+    };
+  }
+
+  // ==========================================================================
+  // GROWTH LOOP ORCHESTRATION - Autonomous Continuous Growth Cycle
+  // ==========================================================================
+
+  /**
+   * Execute a single GROWTH_LOOP cycle
+   * Implements the 7-step cycle: LISTEN → ANALYZE → MUTATE → CREATE → PUBLISH → ENGAGE → Wait
+   *
+   * This is designed to be called by a cron job or external trigger.
+   * Each call executes one complete cycle.
+   */
+  async executeGrowthLoopCycle(taskId: string): Promise<AgentReport> {
+    this.currentMode = 'GROWTH_LOOP';
+    this.log('INFO', 'Starting GROWTH_LOOP cycle');
+
+    // Ensure specialists are registered
+    if (!this.specialistsRegistered) {
+      await this.registerAllSpecialists();
+    }
+
+    const cycleResults: Record<string, unknown> = {};
+
+    try {
+      // Step 1: LISTEN — Dispatch LISTEN tasks to specialists in parallel
+      const listenResults = await this.growthLoopListen(taskId);
+      cycleResults.listen = listenResults;
+
+      // Step 2: ANALYZE — Send data to GROWTH_ANALYST for pattern analysis
+      const analyzeResults = await this.growthLoopAnalyze(taskId);
+      cycleResults.analyze = analyzeResults;
+
+      // Step 3: MUTATE — Read mutation directives from GROWTH_ANALYST
+      const mutationResults = await this.growthLoopMutate(taskId);
+      cycleResults.mutate = mutationResults;
+
+      // Step 4: CREATE — Dispatch content creation (informed by mutations)
+      const createResults = await this.growthLoopCreate(taskId, mutationResults);
+      cycleResults.create = createResults;
+
+      // Steps 5 (PUBLISH) and 6 (ENGAGE) are handled by the AUTONOMOUS_POSTING_AGENT
+      // and per-specialist ENGAGE tasks respectively — triggered async
+
+      // Record cycle completion
+      await shareInsight(
+        'MARKETING_MANAGER',
+        'PERFORMANCE',
+        `GROWTH_LOOP cycle completed`,
+        `Listen: ${listenResults.specialistsPolled} specialists polled. Analyze: ${analyzeResults.patternsFound} patterns found. Mutations: ${mutationResults.directivesGenerated} directives generated.`,
+        { confidence: 80, tags: ['growth-loop', 'cycle-complete'] }
+      );
+
+      this.log('INFO', 'GROWTH_LOOP cycle completed successfully');
+
+      return this.createReport(taskId, 'COMPLETED', {
+        mode: 'GROWTH_LOOP',
+        cycle: cycleResults,
+        nextCycleRecommendation: 'Schedule next cycle in 12-24 hours',
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.log('ERROR', `GROWTH_LOOP cycle failed: ${errorMsg}`);
+      return this.createReport(taskId, 'FAILED', null, [errorMsg]);
+    }
+  }
+
+  /**
+   * GROWTH_LOOP Step 1: LISTEN
+   * Dispatch FETCH_POST_METRICS tasks to all social specialists in parallel
+   */
+  private async growthLoopListen(
+    taskId: string
+  ): Promise<{ specialistsPolled: number; results: Array<{ specialist: string; status: string }> }> {
+    const socialSpecialists = ['TIKTOK_EXPERT', 'TWITTER_X_EXPERT', 'FACEBOOK_ADS_EXPERT', 'LINKEDIN_EXPERT'];
+    const results: Array<{ specialist: string; status: string }> = [];
+
+    const listenPromises = socialSpecialists.map(async (specialistId) => {
+      try {
+        const specialist = this.specialists.get(specialistId);
+        if (specialist) {
+          const listenMessage = this.createDelegationMessage(
+            `${taskId}_listen_${specialistId}`,
+            specialistId,
+            { action: 'FETCH_POST_METRICS' }
+          );
+          await specialist.execute(listenMessage);
+          results.push({ specialist: specialistId, status: 'completed' });
+        } else {
+          results.push({ specialist: specialistId, status: 'not_registered' });
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        results.push({ specialist: specialistId, status: `failed: ${errorMsg}` });
+      }
+    });
+
+    await Promise.all(listenPromises);
+    return { specialistsPolled: results.filter(r => r.status === 'completed').length, results };
+  }
+
+  /**
+   * GROWTH_LOOP Step 2: ANALYZE
+   * Send aggregated data to GROWTH_ANALYST for pattern analysis and KPI calculation
+   */
+  private async growthLoopAnalyze(
+    taskId: string
+  ): Promise<{ patternsFound: number; kpisCalculated: boolean }> {
+    const growthAnalyst = this.specialists.get('GROWTH_ANALYST');
+    if (!growthAnalyst) {
+      this.log('WARN', 'GROWTH_ANALYST not registered, skipping analysis step');
+      return { patternsFound: 0, kpisCalculated: false };
+    }
+
+    // Aggregate metrics
+    await growthAnalyst.execute(
+      this.createDelegationMessage(`${taskId}_aggregate`, 'GROWTH_ANALYST', { action: 'AGGREGATE_METRICS' })
+    );
+
+    // Calculate KPIs
+    await growthAnalyst.execute(
+      this.createDelegationMessage(`${taskId}_kpis`, 'GROWTH_ANALYST', { action: 'CALCULATE_KPIS' })
+    );
+
+    // Identify patterns
+    const patternReport = await growthAnalyst.execute(
+      this.createDelegationMessage(`${taskId}_patterns`, 'GROWTH_ANALYST', { action: 'IDENTIFY_PATTERNS' })
+    );
+
+    const patternData = patternReport?.data as Record<string, unknown> | undefined;
+    const patternsFound = (patternData?.insights as Array<unknown>)?.length ?? 0;
+
+    return { patternsFound, kpisCalculated: true };
+  }
+
+  /**
+   * GROWTH_LOOP Step 3: MUTATE
+   * Read mutation directives from GROWTH_ANALYST and distribute to specialists
+   */
+  private async growthLoopMutate(
+    taskId: string
+  ): Promise<{ directivesGenerated: number; directives: Array<Record<string, unknown>> }> {
+    const growthAnalyst = this.specialists.get('GROWTH_ANALYST');
+    if (!growthAnalyst) {
+      return { directivesGenerated: 0, directives: [] };
+    }
+
+    const mutationReport = await growthAnalyst.execute(
+      this.createDelegationMessage(`${taskId}_mutations`, 'GROWTH_ANALYST', { action: 'GENERATE_MUTATIONS' })
+    );
+
+    const mutationData = mutationReport?.data as Record<string, unknown> | undefined;
+    const directives = (mutationData?.mutations as Array<Record<string, unknown>>) ?? [];
+
+    return { directivesGenerated: directives.length, directives };
+  }
+
+  /**
+   * GROWTH_LOOP Step 4: CREATE
+   * Dispatch content creation to specialists, informed by mutation directives
+   */
+  private async growthLoopCreate(
+    taskId: string,
+    mutations: { directives: Array<Record<string, unknown>> }
+  ): Promise<{ contentPieces: number }> {
+    // Build a campaign goal informed by mutation directives
+    const mutationContext = mutations.directives
+      .map(d => `${d.type as string}: ${d.rationale as string}`)
+      .join('; ');
+
+    const growthGoal: CampaignGoal = {
+      objective: 'engagement',
+      message: `Create content for growth loop cycle. Apply these strategy mutations: ${mutationContext || 'No mutations — continue current strategy.'}`,
+      contentType: 'mixed',
+      kpis: ['engagement_rate', 'follower_growth', 'content_velocity'],
+    };
+
+    // Use existing campaign orchestration for content creation
+    const result = await this.orchestrateCampaign(growthGoal, `${taskId}_create`, Date.now());
+    const successCount = result?.execution?.successfulSpecialists ?? 0;
+
+    return { contentPieces: successCount };
   }
 
   /**
@@ -558,7 +1031,7 @@ export class MarketingManager extends BaseManager {
    * Lines of code assessment
    */
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 850, boilerplate: 100 };
+    return { functional: 1200, boilerplate: 120 };
   }
 
   // ==========================================================================

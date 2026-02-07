@@ -53,6 +53,7 @@ import { getTwitterExpert } from './marketing/twitter/specialist';
 import { getFacebookAdsExpert } from './marketing/facebook/specialist';
 import { getLinkedInExpert } from './marketing/linkedin/specialist';
 import { getSEOExpert } from './marketing/seo/specialist';
+import { getGrowthAnalyst } from './marketing/growth-analyst/specialist';
 
 // Builder Specialists (L3)
 import { getUxUiArchitect } from './builder/ux-ui/specialist';
@@ -132,6 +133,7 @@ const AGENT_FACTORY_REGISTRY: Record<AgentId, AgentGetter> = {
   [AGENT_IDS.FACEBOOK_EXPERT]: getFacebookAdsExpert,
   [AGENT_IDS.LINKEDIN_EXPERT]: getLinkedInExpert,
   [AGENT_IDS.SEO_EXPERT]: getSEOExpert,
+  [AGENT_IDS.GROWTH_ANALYST]: getGrowthAnalyst,
 
   // Builder Specialists (L3)
   [AGENT_IDS.UX_UI_ARCHITECT]: getUxUiArchitect,
