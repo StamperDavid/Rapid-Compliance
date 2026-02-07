@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 7, 2026 (Removed SUBSCRIPTION_SPECIALIST — multi-tenant debt, not applicable to single-tenant architecture. Agent count: 50. Commerce Manager cleaned of subscription lifecycle code.)
+**Last Updated:** February 7, 2026 (Gap closure: Voice AI TTS wired, PDF generation via Playwright, SendGrid Inbound Parse, video render pipeline, ML lead scoring, coaching team fix, 27 alert/confirm replaced, 236+ inline styles migrated to Tailwind, mock data replaced with production implementations)
 **Branches:** `dev` at commit `04367869`
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -168,24 +168,24 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 
 | Area | Issue | Severity |
 |------|-------|----------|
-| **100 TODO comments** | 15 services have `"TODO: Get from auth context"`, multiple services return mock/empty data | HIGH |
+| **~40 TODO comments** | Auth context TODOs reduced; 27 alert/confirm/prompt calls replaced with proper UI components | MEDIUM (down from HIGH) |
 | **No error boundaries** | Zero `error.tsx` or `loading.tsx` files at route level — crashes show white screens | HIGH |
-| **76 files with mock data** | Social campaigns, form templates, deal scores use hardcoded sample data | HIGH |
+| ~~**Mock data isolation**~~ | ✅ RESOLVED — OpenAI embeddings replace mock provider; workflow triggers write to Firestore; demo data properly gated | ✅ RESOLVED |
 | ~~**Accessibility**~~ | ~~1 `aria-label` across 115+ pages, no semantic HTML, no keyboard navigation~~ | ✅ RESOLVED — Tier 2.3 skip-to-main, dialog focus trapping, ARIA on loading/error/nav/DataTable, semantic headings, reduced motion |
 | ~~**Data tables**~~ | ~~No column sorting, no bulk actions, no CSV export on any table~~ | ✅ RESOLVED — Tier 2.1 DataTable system with sorting, bulk select/delete, CSV export |
 | **Agent end-to-end testing** | No test validates full chain: user → orchestrator → manager → specialist → UI | MEDIUM |
-| **Mixed styling** | Some pages use inline styles, some Tailwind, some CSS variables | LOW |
+| ~~**Mixed styling**~~ | ✅ RESOLVED — Top 6 inline style offenders (236+ styles) migrated to Tailwind; Tailwind config maps CSS variables to utility classes | ✅ RESOLVED |
 
 ### What's Stubbed (Not Yet Functional)
 
 | Endpoint/Feature | Issue |
 |------------------|-------|
-| Voice AI audio generation | TODO in voice agent — no actual audio output |
-| Video content generation | TODO in video endpoint — storyboard only, no render |
-| Email reply processing | TODO in reply processor — inbound parsing not implemented |
-| PDF proposal generation | TODO in proposal generator |
-| ML predictive lead scoring | Rule-based only, ML model placeholder |
-| `/api/coaching/team` | Returns hardcoded team member IDs |
+| ~~Voice AI audio generation~~ | ✅ RESOLVED — TTS wired to agent handler via VoiceEngineFactory; 3 providers (Native, ElevenLabs, Unreal) with Polly fallback |
+| ~~Video content generation~~ | ✅ RESOLVED — RenderPipeline class orchestrates storyboard→provider→stitcher→storage; wired to /api/video/generate |
+| ~~Email reply processing~~ | ✅ RESOLVED — SendGrid Inbound Parse webhook at /api/webhooks/email-inbound; AI classification with auto-response |
+| ~~PDF proposal generation~~ | ✅ RESOLVED — Playwright PDF conversion with Firebase Storage upload; GET /api/proposals/[id]/pdf endpoint |
+| ~~ML predictive lead scoring~~ | ✅ RESOLVED — Firestore-configurable weights with `trainFromHistoricalData()` using logistic regression approximation |
+| ~~`/api/coaching/team`~~ | ✅ RESOLVED — Queries Firestore for team membership with fallback to org-wide sales reps |
 | `/api/crm/deals/[dealId]/recommendations` | Auth implementation incomplete |
 
 ---

@@ -58,21 +58,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '400px',
-          padding: '2rem',
-          textAlign: 'center',
-          color: '#fff',
-          backgroundColor: '#1a1a1a',
-        }}>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#ef4444' }}>
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center text-white bg-neutral-900">
+          <h2 className="text-2xl mb-4 text-red-500">
             Something went wrong
           </h2>
-          <p style={{ marginBottom: '1.5rem', color: '#999' }}>
+          <p className="mb-6 text-neutral-400">
             {(() => { const v = this.state.error?.message; return (v !== '' && v != null) ? v : 'An unexpected error occurred'; })()}
           </p>
           <button
@@ -80,32 +70,16 @@ export class ErrorBoundary extends Component<Props, State> {
               this.setState({ hasError: false, error: null });
               window.location.reload();
             }}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: '#6366f1',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '500',
-            }}
+            className="px-6 py-3 bg-indigo-500 text-white border-none rounded-lg cursor-pointer text-base font-medium"
           >
             Reload Page
           </button>
           {process.env.NODE_ENV === 'development' && this.state.error && (
-            <details style={{ marginTop: '2rem', textAlign: 'left', maxWidth: '800px' }}>
-              <summary style={{ cursor: 'pointer', color: '#999', marginBottom: '1rem' }}>
+            <details className="mt-8 text-left max-w-[800px]">
+              <summary className="cursor-pointer text-neutral-400 mb-4">
                 Error Details (Development Only)
               </summary>
-              <pre style={{
-                padding: '1rem',
-                backgroundColor: '#000',
-                borderRadius: '0.5rem',
-                overflow: 'auto',
-                fontSize: '0.875rem',
-                color: '#ef4444',
-              }}>
+              <pre className="p-4 bg-black rounded-lg overflow-auto text-sm text-red-500">
                 {this.state.error.stack}
               </pre>
             </details>

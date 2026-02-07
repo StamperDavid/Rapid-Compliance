@@ -311,52 +311,80 @@ function replaceVariables(content: string, variables: Record<string, string | nu
 }
 
 /**
- * Generate PDF from HTML (uploads to Firebase Storage)
+ * Generate PDF from HTML using Playwright (uploads to Firebase Storage)
  *
- * Saves the HTML content to Firebase Storage as a PDF-ready document.
- * Falls back to placeholder URL if Firebase Storage is unavailable.
+ * Converts HTML content to PDF using Playwright's Chromium browser.
+ * Falls back to HTML upload if PDF generation fails.
  *
- * @param htmlContent - The HTML content to upload
- * @returns Public download URL or placeholder URL
+ * @param htmlContent - The HTML content to convert to PDF
+ * @returns Public download URL for the PDF or fallback HTML
  */
 async function generatePDF(htmlContent: string): Promise<string> {
   try {
-    // Use Firebase Admin Storage to upload the HTML as a PDF-ready document
-    const { admin } = await import('@/lib/firebase-admin');
-    const bucket = admin.storage().bucket();
+    const { chromium } = await import('playwright');
+    const browser = await chromium.launch({ headless: true });
 
-    const pdfId = `pdf-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-    const filePath = `proposals/${DEFAULT_ORG_ID}/${pdfId}.html`;
-    const file = bucket.file(filePath);
+    try {
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: 'networkidle' });
 
-    await file.save(htmlContent, {
-      metadata: {
-        contentType: 'text/html',
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' },
+        printBackground: true,
+        displayHeaderFooter: false,
+      });
+
+      // Upload to Firebase Storage as actual PDF
+      const { admin } = await import('@/lib/firebase-admin');
+      const bucket = admin.storage().bucket();
+      const pdfId = `pdf-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      const filePath = `proposals/${DEFAULT_ORG_ID}/${pdfId}.pdf`;
+      const file = bucket.file(filePath);
+
+      await file.save(pdfBuffer, {
         metadata: {
-          generatedAt: new Date().toISOString(),
-          organizationId: DEFAULT_ORG_ID,
+          contentType: 'application/pdf',
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            organizationId: DEFAULT_ORG_ID,
+          },
         },
-      },
-    });
+      });
 
-    // Make the file publicly readable
-    await file.makePublic();
+      await file.makePublic();
+      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
-    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+      logger.info('PDF generated and uploaded to storage', {
+        organizationId: DEFAULT_ORG_ID,
+        filePath,
+        sizeBytes: pdfBuffer.length,
+      });
 
-    logger.info('PDF HTML uploaded to storage', {
-      organizationId: DEFAULT_ORG_ID,
-      filePath,
-    });
-
-    return publicUrl;
+      return publicUrl;
+    } finally {
+      await browser.close();
+    }
   } catch (error) {
-    logger.warn('Firebase Storage upload failed, using placeholder URL', {
-      error: error instanceof Error ? error.message : String(error),
+    logger.error('PDF generation failed', error instanceof Error ? error : new Error(String(error)), {
+      organizationId: DEFAULT_ORG_ID,
     });
-    // Fallback to placeholder
-    const pdfId = `pdf-${Date.now()}.pdf`;
-    return `/api/proposals/pdf/${pdfId}`;
+    // Fallback: upload HTML and return URL (graceful degradation)
+    try {
+      const { admin } = await import('@/lib/firebase-admin');
+      const bucket = admin.storage().bucket();
+      const fallbackId = `proposal-${Date.now()}.html`;
+      const filePath = `proposals/${DEFAULT_ORG_ID}/${fallbackId}`;
+      const file = bucket.file(filePath);
+      await file.save(htmlContent, { metadata: { contentType: 'text/html' } });
+      await file.makePublic();
+      return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+    } catch (fallbackError) {
+      logger.error('PDF fallback also failed', fallbackError instanceof Error ? fallbackError : new Error(String(fallbackError)), {
+        organizationId: DEFAULT_ORG_ID,
+      });
+      throw new Error('PDF generation failed');
+    }
   }
 }
 

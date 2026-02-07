@@ -51,6 +51,7 @@ export default function TeamMembersPage() {
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [_activePermissionTab, _setActivePermissionTab] = useState<'preset' | 'custom'>('preset');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const [_inviteData, _setInviteData] = useState({
     email: '',
@@ -341,6 +342,14 @@ export default function TeamMembersPage() {
               </button>
             </div>
 
+            {/* Notification */}
+            {notification && (
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: notification.type === 'success' ? '#0f4c0f' : '#2a0a0a', border: `1px solid ${notification.type === 'success' ? '#4ade80' : '#4a0a0a'}`, borderRadius: '0.5rem', color: notification.type === 'success' ? '#4ade80' : '#ff6b6b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>{notification.message}</span>
+                <button onClick={() => setNotification(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.25rem', opacity: 0.7 }}>&times;</button>
+              </div>
+            )}
+
             {error && (
               <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#2a0a0a', border: '1px solid #4a0a0a', borderRadius: '0.5rem', color: '#ff6b6b' }}>
                 {error}
@@ -497,8 +506,7 @@ export default function TeamMembersPage() {
               </button>
               <button
                 onClick={() => {
-                  // eslint-disable-next-line no-alert
-                  alert(`Invitation sent to ${inviteEmail}`);
+                  setNotification({ message: `Invitation sent to ${inviteEmail}`, type: 'success' });
                   setShowInviteModal(false);
                   setInviteEmail('');
                 }}

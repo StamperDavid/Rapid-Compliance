@@ -100,42 +100,44 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-      <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '2rem', minWidth: '700px', maxWidth: '900px', maxHeight: '80vh', overflowY: 'auto' }}>
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+      <div className="bg-neutral-950 rounded-2xl border border-neutral-700 p-8 min-w-[700px] max-w-[900px] max-h-[80vh] overflow-y-auto">
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-bold text-white m-0">
             🔍 Filter Records
           </h3>
           <button
             onClick={onClose}
-            style={{ color: '#999', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', padding: '0.25rem' }}
+            className="text-neutral-400 bg-transparent border-none cursor-pointer text-2xl p-1"
           >
             ×
           </button>
         </div>
 
         {/* Main Logic Toggle */}
-        <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.875rem', color: '#999' }}>Show records that match</span>
+        <div className="mb-6 p-3 px-4 bg-neutral-900 border border-neutral-700 rounded-lg flex items-center gap-2">
+          <span className="text-sm text-neutral-400">Show records that match</span>
           <button
             onClick={() => setFilter(prev => ({ ...prev, logic: prev.logic === 'AND' ? 'OR' : 'AND' }))}
-            style={{ padding: '0.375rem 0.75rem', backgroundColor: filter.logic === 'AND' ? '#6366f1' : '#8b5cf6', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+            className="px-3 py-1.5 text-white border-none rounded-md cursor-pointer text-xs font-semibold"
+            style={{ backgroundColor: filter.logic === 'AND' ? '#6366f1' : '#8b5cf6' }}
           >
             {filter.logic}
           </button>
-          <span style={{ fontSize: '0.875rem', color: '#999' }}>of the following</span>
+          <span className="text-sm text-neutral-400">of the following</span>
         </div>
 
         {/* Filter Groups */}
         {filter.groups.map((group, _groupIndex) => (
-          <div key={group.id} style={{ marginBottom: '1rem' }}>
+          <div key={group.id} className="mb-4">
             {/* Group Logic */}
             {group.conditions.length > 1 && (
-              <div style={{ marginBottom: '0.5rem', paddingLeft: '1rem' }}>
+              <div className="mb-2 pl-4">
                 <button
                   onClick={() => toggleGroupLogic(group.id)}
-                  style={{ padding: '0.25rem 0.5rem', backgroundColor: '#222', color: group.logic === 'AND' ? '#6366f1' : '#8b5cf6', border: '1px solid #333', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                  className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded cursor-pointer text-xs font-semibold"
+                  style={{ color: group.logic === 'AND' ? '#6366f1' : '#8b5cf6' }}
                 >
                   {group.logic}
                 </button>
@@ -149,20 +151,24 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
               const needsValue = !['is_empty', 'is_not_empty', 'is_checked', 'is_not_checked'].includes(condition.operator);
 
               return (
-                <div key={condition.id} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center', paddingLeft: group.conditions.length > 1 ? '2rem' : '0' }}>
+                <div
+                  key={condition.id}
+                  className="flex gap-2 mb-2 items-center"
+                  style={{ paddingLeft: group.conditions.length > 1 ? '2rem' : '0' }}
+                >
                   {/* Field Select */}
                   <select
                     value={condition.field}
                     onChange={(e) => {
                       const newField = e.target.value;
                       const newOperators = getOperators(newField);
-                      updateCondition(group.id, condition.id, { 
+                      updateCondition(group.id, condition.id, {
                         field: newField,
                         operator: newOperators[0].value,
                         value: ''
                       });
                     }}
-                    style={{ flex: '0 0 180px', padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                    className="flex-[0_0_180px] p-2 bg-neutral-900 text-white border border-neutral-700 rounded-md text-sm"
                   >
                     {fields.map(f => (
                       <option key={f.key} value={f.key}>{f.label}</option>
@@ -173,7 +179,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                   <select
                     value={condition.operator}
                     onChange={(e) => updateCondition(group.id, condition.id, { operator: e.target.value as FilterOperator })}
-                    style={{ flex: '0 0 150px', padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                    className="flex-[0_0_150px] p-2 bg-neutral-900 text-white border border-neutral-700 rounded-md text-sm"
                   >
                     {operators.map(op => (
                       <option key={op.value} value={op.value}>{op.label}</option>
@@ -186,7 +192,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                       <select
                         value={condition.value as string}
                         onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
-                        style={{ flex: 1, padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                        className="flex-1 p-2 bg-neutral-900 text-white border border-neutral-700 rounded-md text-sm"
                       >
                         <option value="">Select...</option>
                         {field.options?.map(opt => (
@@ -198,14 +204,14 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                         type="date"
                         value={condition.value as string}
                         onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
-                        style={{ flex: 1, padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                        className="flex-1 p-2 bg-neutral-900 text-white border border-neutral-700 rounded-md text-sm"
                       />
                     ) : field?.type === 'number' || field?.type === 'currency' ? (
                       <input
                         type="number"
                         value={condition.value as string}
                         onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
-                        style={{ flex: 1, padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                        className="flex-1 p-2 bg-neutral-900 text-white border border-neutral-700 rounded-md text-sm"
                         placeholder="Enter value..."
                       />
                     ) : (
@@ -213,7 +219,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                         type="text"
                         value={condition.value as string}
                         onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
-                        style={{ flex: 1, padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                        className="flex-1 p-2 bg-neutral-900 text-white border border-neutral-700 rounded-md text-sm"
                         placeholder="Enter value..."
                       />
                     )
@@ -222,7 +228,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                   {/* Remove Button */}
                   <button
                     onClick={() => removeCondition(group.id, condition.id)}
-                    style={{ padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#dc2626', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                    className="p-2 bg-neutral-900 text-red-600 border border-neutral-700 rounded-md cursor-pointer text-sm"
                   >
                     ×
                   </button>
@@ -233,7 +239,8 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
             {/* Add Condition */}
             <button
               onClick={() => addCondition(group.id)}
-              style={{ marginLeft: group.conditions.length > 1 ? '2rem' : '0', padding: '0.5rem 1rem', backgroundColor: '#1a1a1a', color: '#6366f1', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+              className="p-2 px-4 bg-neutral-900 text-indigo-500 border border-neutral-700 rounded-md cursor-pointer text-sm font-medium"
+              style={{ marginLeft: group.conditions.length > 1 ? '2rem' : '0' }}
             >
               + Add condition
             </button>
@@ -241,10 +248,10 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
         ))}
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #333' }}>
+        <div className="flex gap-4 mt-8 pt-6 border-t border-neutral-700">
           <button
             onClick={onClose}
-            style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem' }}
+            className="flex-1 p-3 bg-neutral-900 text-neutral-400 border border-neutral-700 rounded-lg cursor-pointer font-semibold text-sm"
           >
             Cancel
           </button>
@@ -264,7 +271,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                 }]
               }));
             }}
-            style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem' }}
+            className="flex-1 p-3 bg-neutral-900 text-white border border-neutral-700 rounded-lg cursor-pointer font-semibold text-sm"
           >
             Clear All
           </button>
@@ -274,7 +281,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
               onApply(filter);
               onClose();
             }}
-            style={{ flex: 1, padding: '0.75rem', backgroundColor: '#6366f1', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem' }}
+            className="flex-1 p-3 bg-indigo-500 text-white border-none rounded-lg cursor-pointer font-semibold text-sm"
           >
             Apply Filter
           </button>

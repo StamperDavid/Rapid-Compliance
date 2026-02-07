@@ -6,7 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
-import { v4 as uuidv4 } from 'uuid';
+import { executeRenderPipeline } from '@/lib/video/engine/render-pipeline';
 
 const VideoGenerateSchema = z.object({
   organizationId: z.string().min(1, 'Organization ID required'),
@@ -32,19 +32,13 @@ export async function POST(request: NextRequest) {
       storyboardId,
     });
 
-    // Create project and queue generation job
-    const projectId = uuidv4();
-
-    // In production, this would:
-    // 1. Load the storyboard from database
-    // 2. Queue each shot for generation via Multi-Model Picker
-    // 3. Track progress in real-time
-    // 4. Trigger Stitcher when all shots complete
+    // Execute the render pipeline
+    const result = await executeRenderPipeline(storyboardId);
 
     return NextResponse.json({
       success: true,
-      projectId,
-      status: 'queued',
+      jobId: result.jobId,
+      status: result.status,
       message: 'Video generation started. You will be notified when complete.',
       estimatedCompletion: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes estimate
     });

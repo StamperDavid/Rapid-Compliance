@@ -130,67 +130,53 @@ export default function AdminLoginPage() {
     }
   };
 
-  const bgPaper = 'var(--color-bg-elevated)';
   const borderColor = 'var(--color-border-light)';
   const primaryColor = 'var(--color-primary)';
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      backgroundColor: 'var(--color-bg-main)',
-      padding: '2rem'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '400px',
-        backgroundColor: bgPaper,
-        border: `1px solid ${borderColor}`,
-        borderRadius: '0.75rem',
-        padding: '2rem'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+    <div className="flex justify-center items-center min-h-screen bg-surface-main p-8">
+      <div
+        className="w-full max-w-[400px] bg-surface-elevated rounded-xl p-8"
+        style={{ border: `1px solid ${borderColor}` }}
+      >
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-text-primary mb-2">
             Admin Login
           </h1>
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
+          <p className="text-sm text-text-disabled">
             Platform administration access
           </p>
         </div>
 
         {!isFirebaseReady && (
-          <div style={{
-            padding: '0.75rem',
-            backgroundColor: 'color-mix(in srgb, var(--color-warning) 15%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--color-warning) 30%, transparent)',
-            borderRadius: '0.5rem',
-            color: 'var(--color-warning-light)',
-            fontSize: '0.875rem',
-            marginBottom: '1rem'
-          }}>
+          <div
+            className="p-3 rounded-lg text-sm mb-4"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--color-warning) 15%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-warning) 30%, transparent)',
+              color: 'var(--color-warning-light)',
+            }}
+          >
             ⚠️ Firebase Auth is initializing...
           </div>
         )}
 
         {error && (
-          <div style={{
-            padding: '0.75rem',
-            backgroundColor: 'color-mix(in srgb, var(--color-error) 15%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--color-error) 30%, transparent)',
-            borderRadius: '0.5rem',
-            color: 'var(--color-error-light)',
-            fontSize: '0.875rem',
-            marginBottom: '1rem'
-          }}>
+          <div
+            className="p-3 rounded-lg text-sm mb-4"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--color-error) 15%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-error) 30%, transparent)',
+              color: 'var(--color-error-light)',
+            }}
+          >
             {error}
           </div>
         )}
 
-        <form onSubmit={(e) => { void handleLogin(e); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={(e) => { void handleLogin(e); }} className="flex flex-col gap-4">
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
+            <label className="block text-sm font-semibold mb-2 text-text-secondary">
               Email
             </label>
             <input
@@ -199,14 +185,9 @@ export default function AdminLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
+              className="w-full py-2.5 px-4 bg-surface-paper rounded-lg text-text-primary text-sm"
               style={{
-                width: '100%',
-                padding: '0.625rem 1rem',
-                backgroundColor: 'var(--color-bg-paper)',
                 border: `1px solid ${borderColor}`,
-                borderRadius: '0.5rem',
-                color: 'var(--color-text-primary)',
-                fontSize: '0.875rem',
                 opacity: loading ? 0.5 : 1
               }}
               placeholder="admin@platform.com"
@@ -214,7 +195,7 @@ export default function AdminLoginPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
+            <label className="block text-sm font-semibold mb-2 text-text-secondary">
               Password
             </label>
             <input
@@ -223,14 +204,9 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
+              className="w-full py-2.5 px-4 bg-surface-paper rounded-lg text-text-primary text-sm"
               style={{
-                width: '100%',
-                padding: '0.625rem 1rem',
-                backgroundColor: 'var(--color-bg-paper)',
                 border: `1px solid ${borderColor}`,
-                borderRadius: '0.5rem',
-                color: 'var(--color-text-primary)',
-                fontSize: '0.875rem',
                 opacity: loading ? 0.5 : 1
               }}
               placeholder="••••••••"
@@ -240,25 +216,18 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading || !isFirebaseReady}
+            className="w-full py-3 px-6 text-text-primary border-none rounded-lg text-sm font-semibold mt-2"
             style={{
-              width: '100%',
-              padding: '0.75rem 1.5rem',
               backgroundColor: loading || !isFirebaseReady ? 'var(--color-neutral-600)' : primaryColor,
-              color: 'var(--color-text-primary)',
-              border: 'none',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
-              fontWeight: '600',
               cursor: loading || !isFirebaseReady ? 'not-allowed' : 'pointer',
-              marginTop: '0.5rem'
             }}
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
-        <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', lineHeight: '1.5' }}>
+        <div className="mt-6 p-4 bg-surface-paper rounded-lg">
+          <div className="text-xs text-text-disabled leading-6">
             <strong>Admin Access:</strong> This login requires an admin account.
             Contact your system administrator if you need access.
           </div>

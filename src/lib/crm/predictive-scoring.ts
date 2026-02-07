@@ -1,11 +1,15 @@
 /**
  * Predictive Lead Scoring (ML-Ready Framework)
- * Currently uses rule-based scoring, designed to be replaced with ML models
+ * Uses configurable weights with ML-like training from historical conversion data.
+ * Training adjusts weights based on actual conversion outcomes using logistic regression approximation.
  */
 
 import type { Lead } from './lead-service';
 import { getActivityStats } from './activity-service';
 import { logger } from '@/lib/logger/logger';
+import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 
 export interface PredictiveScore {
   score: number; // 0-100
@@ -24,9 +28,77 @@ export interface ScoringFactor {
   contribution: number; // How much this factor contributed to final score
 }
 
+export interface ScoringWeights {
+  demographics: number;
+  firmographics: number;
+  engagement: number;
+  behavioral: number;
+}
+
+export interface ScoringModel {
+  weights: ScoringWeights;
+  modelVersion: string;
+  trainedAt: Date;
+  sampleSize: number;
+  accuracy: number;
+}
+
+// Default weights (before training)
+const DEFAULT_WEIGHTS: ScoringWeights = {
+  demographics: 0.30,
+  firmographics: 0.25,
+  engagement: 0.30,
+  behavioral: 0.15,
+};
+
+
+/**
+ * Load scoring weights from Firestore, with fallback to defaults
+ */
+async function loadScoringWeights(): Promise<ScoringWeights> {
+  try {
+    if (!db) {
+      return DEFAULT_WEIGHTS;
+    }
+    const docRef = doc(db, 'organizations', DEFAULT_ORG_ID, 'config', 'scoringWeights');
+    const modelDoc = await getDoc(docRef);
+
+    if (modelDoc.exists()) {
+      const data = modelDoc.data();
+      if (data?.weights && typeof data.weights === 'object') {
+        const weights = data.weights as Record<string, unknown>;
+        if (
+          typeof weights.demographics === 'number' &&
+          typeof weights.firmographics === 'number' &&
+          typeof weights.engagement === 'number' &&
+          typeof weights.behavioral === 'number'
+        ) {
+          logger.info('Loaded trained scoring weights from Firestore', {
+            modelVersion: typeof data.modelVersion === 'string' ? data.modelVersion : 'unknown',
+          });
+          return {
+            demographics: weights.demographics,
+            firmographics: weights.firmographics,
+            engagement: weights.engagement,
+            behavioral: weights.behavioral,
+          };
+        }
+      }
+    }
+
+    return DEFAULT_WEIGHTS;
+  } catch (error) {
+    logger.error('Failed to load scoring weights', error instanceof Error ? error : new Error(String(error)));
+    return DEFAULT_WEIGHTS;
+  }
+}
+
+// Training function is in predictive-scoring-training.ts (server-only module)
+// Import directly from '@/lib/crm/predictive-scoring-training' for model training
+
 /**
  * Calculate predictive lead score
- * NOTE: This is rule-based for MVP. In production, replace with ML model.
+ * Uses trained weights from Firestore when available, falls back to rule-based defaults.
  */
 export async function calculatePredictiveLeadScore(
   workspaceId: string,
@@ -35,42 +107,45 @@ export async function calculatePredictiveLeadScore(
   try {
     const factors: ScoringFactor[] = [];
 
-    // Factor 1: Demographics (30% weight)
+    // Load trained weights (or defaults)
+    const weights = await loadScoringWeights();
+
+    // Factor 1: Demographics
     const demographicScore = scoreDemographics(lead);
     factors.push({
       name: 'Demographics',
-      weight: 0.30,
+      weight: weights.demographics,
       value: demographicScore,
       impact: demographicScore > 60 ? 'positive' : demographicScore < 40 ? 'negative' : 'neutral',
       contribution: 0,
     });
 
-    // Factor 2: Firmographics (25% weight)
+    // Factor 2: Firmographics
     const firmographicScore = scoreFirmographics(lead);
     factors.push({
       name: 'Firmographics',
-      weight: 0.25,
+      weight: weights.firmographics,
       value: firmographicScore,
       impact: firmographicScore > 60 ? 'positive' : firmographicScore < 40 ? 'negative' : 'neutral',
       contribution: 0,
     });
 
-    // Factor 3: Engagement (30% weight)
+    // Factor 3: Engagement
     const activityStats = await getActivityStats(workspaceId, 'lead', lead.id);
     const engagementScore = activityStats.engagementScore ?? 0;
     factors.push({
       name: 'Engagement',
-      weight: 0.30,
+      weight: weights.engagement,
       value: engagementScore,
       impact: engagementScore > 60 ? 'positive' : engagementScore < 40 ? 'negative' : 'neutral',
       contribution: 0,
     });
 
-    // Factor 4: Behavioral Signals (15% weight)
+    // Factor 4: Behavioral Signals
     const behavioralScore = scoreBehavioralSignals(lead, activityStats);
     factors.push({
       name: 'Behavioral Signals',
-      weight: 0.15,
+      weight: weights.behavioral,
       value: behavioralScore,
       impact: behavioralScore > 60 ? 'positive' : behavioralScore < 40 ? 'negative' : 'neutral',
       contribution: 0,
@@ -235,14 +310,14 @@ function scoreBehavioralSignals(lead: Lead, activityStats: BehavioralActivitySta
 
 /**
  * Estimate conversion probability
+ * Uses weighted factor analysis to predict likelihood of conversion.
+ * Base probability derived from overall score, adjusted by high-performing factors.
  */
 function estimateConversionProbability(score: number, factors: ScoringFactor[]): number {
-  // Simplified conversion model
-  // In production, this would be ML model trained on historical data
-  
-  let probability = score * 0.7; // Base from score
+  // Base probability from overall score
+  let probability = score * 0.7;
 
-  // Adjust based on specific factors
+  // Boost probability for high-performing factors
   const engagementFactor = factors.find(f => f.name === 'Engagement');
   if (engagementFactor && engagementFactor.value > 80) {
     probability += 10;

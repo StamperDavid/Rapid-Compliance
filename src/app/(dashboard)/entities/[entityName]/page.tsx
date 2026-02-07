@@ -136,6 +136,8 @@ export default function EntityTablePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<EntityRecord>(getDefaultFormData());
   const [searchTerm, setSearchTerm] = useState('');
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // Reset form data when entity changes
   useEffect(() => {
@@ -197,15 +199,15 @@ export default function EntityTablePage() {
 
   const handleAdd = async () => {
     try {
-       
+
       const { id: _id, ...data } = formData;
       await createRecord(data);
       setIsAdding(false);
       setFormData(getDefaultFormData());
+      setNotification({ message: 'Record created successfully', type: 'success' });
     } catch (err: unknown) {
       logger.error('Error creating record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert
-      alert('Failed to create record.');
+      setNotification({ message: 'Failed to create record.', type: 'error' });
     }
   };
 
@@ -224,31 +226,35 @@ export default function EntityTablePage() {
   const handleUpdate = async () => {
     if (!editingId) {return;}
     try {
-       
+
       const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = formData;
       await updateRecord(editingId, updateData);
       setEditingId(null);
       setFormData(getDefaultFormData());
+      setNotification({ message: 'Record updated successfully', type: 'success' });
     } catch (err: unknown) {
       logger.error('Error updating record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert
-      alert('Failed to update record.');
+      setNotification({ message: 'Failed to update record.', type: 'error' });
     }
   };
 
   const handleDelete = (id: string) => {
-    // eslint-disable-next-line no-alert
-    if (confirm('Delete this record?')) {
-      void (async () => {
-        try {
-          await deleteRecord(id);
-        } catch (err: unknown) {
-          logger.error('Error deleting record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
-          // eslint-disable-next-line no-alert
-          alert('Failed to delete record.');
-        }
-      })();
-    }
+    setConfirmDialog({
+      message: 'Delete this record?',
+      onConfirm: () => {
+        void (async () => {
+          try {
+            await deleteRecord(id);
+            setConfirmDialog(null);
+            setNotification({ message: 'Record deleted successfully', type: 'success' });
+          } catch (err: unknown) {
+            logger.error('Error deleting record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+            setConfirmDialog(null);
+            setNotification({ message: 'Failed to delete record.', type: 'error' });
+          }
+        })();
+      },
+    });
   };
 
   const closeModal = () => {
@@ -433,6 +439,14 @@ export default function EntityTablePage() {
       {/* Header */}
       <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 2rem' }}>
+          {/* Notification */}
+          {notification && (
+            <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', backgroundColor: notification.type === 'success' ? '#065f46' : '#7f1d1d', border: `1px solid ${notification.type === 'success' ? '#10b981' : '#dc2626'}`, borderRadius: '0.5rem', color: notification.type === 'success' ? '#6ee7b7' : '#fca5a5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{notification.message}</span>
+              <button onClick={() => setNotification(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.25rem', opacity: 0.8 }}>&times;</button>
+            </div>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <Link href={`/schemas`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
@@ -617,6 +631,19 @@ export default function EntityTablePage() {
                     {isAdding ? 'Add' : 'Update'}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Dialog */}
+        {confirmDialog && (
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 60 }}>
+            <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '1.5rem', maxWidth: '400px', width: '100%' }}>
+              <p style={{ color: '#fff', marginBottom: '1rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button onClick={() => setConfirmDialog(null)} style={{ padding: '0.5rem 1rem', border: '1px solid #333', color: '#999', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>Cancel</button>
+                <button onClick={confirmDialog.onConfirm} style={{ padding: '0.5rem 1rem', backgroundColor: '#dc2626', color: 'white', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', border: 'none' }}>Delete</button>
               </div>
             </div>
           </div>

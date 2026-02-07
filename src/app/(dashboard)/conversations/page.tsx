@@ -42,6 +42,7 @@ export default function ConversationsPage() {
   const [selectedMessages, setSelectedMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Subscribe to real-time active sessions
   useEffect(() => {
@@ -107,18 +108,15 @@ export default function ConversationsPage() {
   const handleTakeOver = async (conversationId: string) => {
     try {
       if (!user?.id) {
-        // eslint-disable-next-line no-alert
-        window.alert('You must be logged in to take over a conversation.');
+        setNotification({ message: 'You must be logged in to take over a conversation.', type: 'error' });
         return;
       }
       await ChatSessionService.requestTakeover(conversationId, user.id, 'Manual takeover');
-      // eslint-disable-next-line no-alert
-      window.alert('Taking over conversation. You are now connected to the customer chat.');
+      setNotification({ message: 'Taking over conversation. You are now connected to the customer chat.', type: 'success' });
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       logger.error('Failed to take over:', error, { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert
-      window.alert('Failed to take over conversation. Please try again.');
+      setNotification({ message: 'Failed to take over conversation. Please try again.', type: 'error' });
     }
   };
 
@@ -131,13 +129,11 @@ export default function ConversationsPage() {
         prev.map(c => c.id === conversationId ? { ...c, flaggedForTraining: true, trainingIssue: issue } : c)
       );
 
-      // eslint-disable-next-line no-alert
-      window.alert('Conversation sent to Training Center for improvement.');
+      setNotification({ message: 'Conversation sent to Training Center for improvement.', type: 'success' });
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       logger.error('Failed to flag for training:', error, { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert
-      window.alert('Failed to send to training. Please try again.');
+      setNotification({ message: 'Failed to send to training. Please try again.', type: 'error' });
     }
   };
 
@@ -170,6 +166,22 @@ export default function ConversationsPage() {
 
   return (
     <div className="flex flex-col min-h-0 h-full bg-black">
+      {/* Notification */}
+      {notification && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed top-4 right-4 z-50"
+        >
+          <div className={`p-3 rounded-lg text-sm shadow-lg ${notification.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+            <div className="flex items-center justify-between">
+              <span>{notification.message}</span>
+              <button onClick={() => setNotification(null)} className="ml-2 text-current opacity-60 hover:opacity-100">&times;</button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

@@ -52,6 +52,7 @@ export default function VersionHistory({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<number | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     void loadVersions();
@@ -82,30 +83,28 @@ export default function VersionHistory({
   }
 
   function handleRestore(version: PageVersion) {
-    // eslint-disable-next-line no-alert
-    const confirmed = window.confirm(`Restore to Version ${version.version}? Current changes will become a new version.`);
-    if (!confirmed) {
-      return;
-    }
+    setConfirmDialog({
+      message: `Restore to Version ${version.version}? Current changes will become a new version.`,
+      onConfirm: () => {
+        try {
+          setRestoring(version.version);
 
-    try {
-      setRestoring(version.version);
+          // Call the parent's restore handler
+          onRestore(version);
 
-      // Call the parent's restore handler
-      onRestore(version);
-
-      // Close the panel after successful restore
-      setTimeout(() => {
-        onClose();
-      }, 500);
-    } catch (err) {
-      console.error('[Version History] Restore error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      // eslint-disable-next-line no-alert
-      window.alert(`Failed to restore version: ${errorMessage}`);
-    } finally {
-      setRestoring(null);
-    }
+          // Close the panel after successful restore
+          setTimeout(() => {
+            onClose();
+          }, 500);
+          setConfirmDialog(null);
+        } catch (err) {
+          console.error('[Version History] Restore error:', err);
+          setConfirmDialog(null);
+        } finally {
+          setRestoring(null);
+        }
+      },
+    });
   }
 
   function formatDate(timestamp: FirebaseTimestamp | Date | string): string {
@@ -294,6 +293,64 @@ export default function VersionHistory({
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '400px',
+              margin: '1rem',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            }}
+          >
+            <p style={{ color: '#111827', marginBottom: '1rem', fontSize: '1rem' }}>
+              {confirmDialog.message}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                onClick={() => setConfirmDialog(null)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  color: '#6b7280',
+                  background: '#f3f4f6',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  backgroundColor: '#3498db',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Restore
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

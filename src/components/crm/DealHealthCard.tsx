@@ -57,20 +57,10 @@ export function DealHealthCard({
 
   if (compact) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          padding: '0.75rem',
-          backgroundColor: 'var(--color-bg-paper)',
-          borderRadius: '0.5rem',
-          border: `1px solid ${getStatusColor(health.status)}`,
-        }}
-      >
+      <div className="flex items-center gap-3 p-3 bg-surface-paper rounded-lg" style={{ border: `1px solid ${getStatusColor(health.status)}` }}>
         {/* Score Circle */}
-        <div style={{ position: 'relative', width: '40px', height: '40px' }}>
-          <svg width="40" height="40" style={{ transform: 'rotate(-90deg)' }}>
+        <div className="relative w-10 h-10">
+          <svg width="40" height="40" className="-rotate-90">
             <circle
               cx="20"
               cy="20"
@@ -88,38 +78,21 @@ export function DealHealthCard({
               strokeWidth="3"
               strokeDasharray={circumference}
               strokeDashoffset={offset}
-              style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+              className="transition-all duration-500 ease-in-out"
             />
           </svg>
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              fontSize: '0.75rem',
-              fontWeight: '700',
-              color: getStatusColor(health.status),
-            }}
-          >
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs font-bold" style={{ color: getStatusColor(health.status) }}>
             {health.overall}
           </div>
         </div>
 
         {/* Status */}
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: '600',
-              color: getStatusColor(health.status),
-              textTransform: 'uppercase',
-            }}
-          >
+        <div className="flex-1">
+          <div className="text-xs font-semibold uppercase" style={{ color: getStatusColor(health.status) }}>
             {health.status}
           </div>
           {dealName && (
-            <div style={{ fontSize: '0.625rem', color: 'var(--color-text-secondary)', marginTop: '0.125rem' }}>
+            <div className="text-[0.625rem] text-text-secondary mt-0.5">
               {dealName}
             </div>
           )}
@@ -129,47 +102,30 @@ export function DealHealthCard({
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: '#0a0a0a',
-        border: `1px solid ${getStatusColor(health.status)}`,
-        borderRadius: '0.75rem',
-        padding: '1.5rem',
-      }}
-    >
+    <div className="bg-surface-main rounded-xl p-6" style={{ border: `1px solid ${getStatusColor(health.status)}` }}>
       {/* Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="mb-6">
+        <div className="flex justify-between items-start">
           <div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--color-text-primary)', margin: 0 }}>
+            <h3 className="text-lg font-bold text-text-primary m-0">
               Deal Health
             </h3>
             {dealName && (
-              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem', margin: 0 }}>
+              <p className="text-sm text-text-secondary mt-1 m-0">
                 {dealName}
               </p>
             )}
           </div>
-          <div
-            style={{
-              padding: '0.375rem 0.75rem',
-              backgroundColor: getStatusBg(health.status),
-              color: getStatusColor(health.status),
-              borderRadius: '9999px',
-              fontSize: '0.75rem',
-              fontWeight: '600',
-              textTransform: 'uppercase',
-            }}
-          >
+          <div className="px-3 py-1.5 rounded-full text-xs font-semibold uppercase" style={{ backgroundColor: getStatusBg(health.status), color: getStatusColor(health.status) }}>
             {health.status}
           </div>
         </div>
       </div>
 
       {/* Score Circle */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-        <div style={{ position: 'relative', width: '120px', height: '120px' }}>
-          <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
+      <div className="flex justify-center mb-6">
+        <div className="relative w-[120px] h-[120px]">
+          <svg width="120" height="120" className="-rotate-90">
             <circle
               cx="60"
               cy="60"
@@ -188,50 +144,36 @@ export function DealHealthCard({
               strokeDasharray={circumference}
               strokeDashoffset={offset}
               strokeLinecap="round"
-              style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+              className="transition-all duration-500 ease-in-out"
             />
           </svg>
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              textAlign: 'center',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '2rem',
-                fontWeight: '800',
-                color: getStatusColor(health.status),
-              }}
-            >
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+            <div className="text-3xl font-extrabold" style={{ color: getStatusColor(health.status) }}>
               {health.overall}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>out of 100</div>
+            <div className="text-xs text-text-secondary">out of 100</div>
           </div>
         </div>
       </div>
 
       {/* Health Factors */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-neutral-300)', marginBottom: '0.75rem', margin: 0 }}>
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold text-neutral-300 mb-3 m-0">
           Health Factors
         </h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className="flex flex-col gap-2">
           {health.factors.map((factor, idx) => (
-            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-primary)' }}>{factor.name}</span>
-                  <span style={{ fontSize: '0.625rem', color: factor.impact === 'positive' ? 'var(--color-success)' : factor.impact === 'negative' ? 'var(--color-error)' : 'var(--color-text-secondary)' }}>
+            <div key={idx} className="flex justify-between items-center">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs text-text-primary">{factor.name}</span>
+                  <span className={`text-[0.625rem] ${factor.impact === 'positive' ? 'text-success' : factor.impact === 'negative' ? 'text-error' : 'text-text-secondary'}`}>
                     {factor.impact === 'positive' ? '↑' : factor.impact === 'negative' ? '↓' : '→'}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>{factor.description}</div>
+                <div className="text-[0.625rem] text-text-secondary">{factor.description}</div>
               </div>
-              <div style={{ fontSize: '0.875rem', fontWeight: '700', color: getStatusColor(health.status) }}>
+              <div className="text-sm font-bold" style={{ color: getStatusColor(health.status) }}>
                 {factor.score}
               </div>
             </div>

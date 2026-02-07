@@ -1,15 +1,17 @@
 /**
  * Lead Scoring Engine
- * 
+ *
  * AI-powered lead scoring system that analyzes discovery data.
- * 
+ * Supports ML-like training from historical conversion data.
+ *
  * HUNTER-CLOSER COMPLIANCE:
  * - 100% native scoring (no Clearbit, ZoomInfo, etc.)
  * - Uses Discovery Engine data (person + company)
  * - Configurable scoring rules per organization
  * - Real-time score calculation with caching
  * - Intent signal detection from scraped data
- * 
+ * - Weight training from historical lead outcomes
+ *
  * Scoring Algorithm:
  * 1. Company Fit (0-40 points) - Industry, size, tech stack, growth
  * 2. Person Fit (0-30 points) - Title, seniority, department
@@ -1314,6 +1316,54 @@ async function cacheScore(
     logger.info('Cached lead score', { leadId, score: score.totalScore });
   } catch (error) {
     logger.error('Failed to cache score', error instanceof Error ? error : new Error(String(error)), { leadId });
+  }
+}
+
+// ============================================================================
+// MODEL METADATA & TRAINING
+// ============================================================================
+
+/**
+ * Get scoring model metadata (version, training info, performance)
+ */
+export async function getModelMetadata(): Promise<{
+  modelVersion: string;
+  trainedAt: Date | null;
+  sampleSize: number;
+  accuracy: number;
+  isDefault: boolean;
+} | null> {
+  try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    const modelDoc = await adminDal.getNestedDocRef(
+      'organizations/{orgId}/config/scoringWeights',
+      { orgId: DEFAULT_ORG_ID }
+    ).get();
+
+    if (!modelDoc.exists) {
+      return {
+        modelVersion: 'default',
+        trainedAt: null,
+        sampleSize: 0,
+        accuracy: 0,
+        isDefault: true,
+      };
+    }
+
+    const data = modelDoc.data();
+    return {
+      modelVersion: typeof data?.modelVersion === 'string' ? data.modelVersion : 'unknown',
+      trainedAt: data?.trainedAt instanceof Timestamp ? data.trainedAt.toDate() : null,
+      sampleSize: typeof data?.sampleSize === 'number' ? data.sampleSize : 0,
+      accuracy: typeof data?.accuracy === 'number' ? data.accuracy : 0,
+      isDefault: false,
+    };
+  } catch (error) {
+    logger.error('Failed to get model metadata', error instanceof Error ? error : new Error(String(error)));
+    return null;
   }
 }
 

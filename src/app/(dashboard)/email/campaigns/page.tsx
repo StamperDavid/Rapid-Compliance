@@ -6,7 +6,7 @@
  * Admin page for viewing and managing email campaigns
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Mail, Plus, Send, Eye, Trash2, Calendar, TrendingUp } from 'lucide-react';
@@ -17,6 +17,8 @@ import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function EmailCampaignsPage() {
   const router = useRouter();
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // Fetch function with pagination using service layer
   const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
@@ -40,20 +42,24 @@ export default function EmailCampaignsPage() {
     void refresh();
   }, [refresh]);
 
-  const handleDelete = async (campaignId: string) => {
-    // eslint-disable-next-line no-alert
-    if (!window.confirm('Delete this campaign?')) {
-      return;
-    }
-
-    try {
-      await deleteCampaign(campaignId);
-      await refresh();
-    } catch (err: unknown) {
-      logger.error('Error deleting campaign:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert
-      window.alert('Failed to delete campaign');
-    }
+  const handleDelete = (campaignId: string) => {
+    setConfirmDialog({
+      message: 'Delete this campaign?',
+      onConfirm: () => {
+        void (async () => {
+          try {
+            await deleteCampaign(campaignId);
+            await refresh();
+            setConfirmDialog(null);
+            setNotification({ message: 'Campaign deleted successfully', type: 'success' });
+          } catch (err: unknown) {
+            logger.error('Error deleting campaign:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
+            setConfirmDialog(null);
+            setNotification({ message: 'Failed to delete campaign', type: 'error' });
+          }
+        })();
+      },
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -116,6 +122,20 @@ export default function EmailCampaignsPage() {
           Create Campaign
         </motion.button>
       </motion.div>
+
+      {/* Notification */}
+      {notification && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mb-6 p-3 rounded-lg text-sm ${notification.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}
+        >
+          <div className="flex items-center justify-between">
+            <span>{notification.message}</span>
+            <button onClick={() => setNotification(null)} className="ml-2 text-current opacity-60 hover:opacity-100">&times;</button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Error Message */}
       {error && (
@@ -247,6 +267,19 @@ export default function EmailCampaignsPage() {
             </motion.div>
           )}
         </>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-surface-paper rounded-xl p-6 max-w-md mx-4 border border-border-light shadow-xl">
+            <p className="text-text-primary mb-4">{confirmDialog.message}</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-text-secondary hover:bg-surface-elevated">Cancel</button>
+              <button onClick={confirmDialog.onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirm</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
