@@ -26,8 +26,7 @@
 import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
 import { getPaymentSpecialist } from './payment/specialist';
-// REMOVED: import { getSubscriptionSpecialist, type SubscriptionState } from './subscription/specialist';
-// Subscription specialist file has been deleted - subscription features temporarily disabled
+import { getSubscriptionSpecialist } from './subscription/specialist';
 import { getCatalogManager } from './catalog/specialist';
 import { PricingStrategist } from './pricing/specialist';
 import {
@@ -332,8 +331,7 @@ export class CommerceManager extends BaseManager {
 
     const specialistFactories = [
       { name: 'PAYMENT_SPECIALIST', factory: getPaymentSpecialist },
-      // REMOVED: { name: 'SUBSCRIPTION_SPECIALIST', factory: getSubscriptionSpecialist },
-      // Subscription specialist file deleted - subscription features temporarily disabled
+      { name: 'SUBSCRIPTION_SPECIALIST', factory: getSubscriptionSpecialist },
       { name: 'CATALOG_MANAGER', factory: getCatalogManager },
       { name: 'PRICING_STRATEGIST', factory: () => new PricingStrategist() },
       // INVENTORY_MANAGER uses existing inventory specialist
