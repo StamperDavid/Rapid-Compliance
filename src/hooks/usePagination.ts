@@ -14,6 +14,8 @@ export interface PaginationState<T> {
   hasMore: boolean;
   loadMore: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Direct setter for optimistic UI mutations (e.g., optimistic delete) */
+  setData: (updater: (prev: T[]) => T[]) => void;
 }
 
 interface UsePaginationOptions<T, C = unknown> {
@@ -85,6 +87,7 @@ export function usePagination<T, C = unknown>({
     hasMore,
     loadMore,
     refresh,
+    setData,
   };
 }
 

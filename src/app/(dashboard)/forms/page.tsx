@@ -15,6 +15,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -186,9 +187,6 @@ export default function FormsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
   const [creating, setCreating] = useState(false);
   const [view, setView] = useState<'cards' | 'table'>('cards');
-  const [deleteIds, setDeleteIds] = useState<string[]>([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   // Fetch forms
   const fetchForms = useCallback(async () => {
@@ -215,6 +213,20 @@ export default function FormsPage() {
   useEffect(() => {
     void fetchForms();
   }, [fetchForms]);
+
+  const {
+    deleteIds,
+    deleteDialogOpen,
+    deleting,
+    requestDelete: handleBulkDelete,
+    cancelDelete,
+    confirmDelete,
+  } = useOptimisticDelete({
+    data: forms,
+    setData: setForms,
+    endpoint: '/api/forms',
+    entityName: 'forms',
+  });
 
   // Filter forms
   const filteredForms = forms.filter((form) => {
@@ -355,34 +367,6 @@ export default function FormsPage() {
       ),
     },
   ], [router]);
-
-  const handleBulkDelete = useCallback((selectedIds: string[]) => {
-    setDeleteIds(selectedIds);
-    setDeleteDialogOpen(true);
-  }, []);
-
-  const confirmDelete = useCallback(async () => {
-    setDeleting(true);
-    try {
-      const response = await fetch('/api/forms', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: deleteIds }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete forms');
-      }
-
-      setDeleteDialogOpen(false);
-      setDeleteIds([]);
-      void fetchForms();
-    } catch {
-      // Error handling via dialog
-    } finally {
-      setDeleting(false);
-    }
-  }, [deleteIds, fetchForms]);
 
   const bulkActions: BulkAction<FormDefinition>[] = useMemo(() => [
     {
@@ -808,7 +792,7 @@ export default function FormsPage() {
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        onClose={cancelDelete}
         onConfirm={confirmDelete}
         title="Delete Forms"
         description={`Are you sure you want to delete ${deleteIds.length} form${deleteIds.length === 1 ? '' : 's'}? This action cannot be undone.`}

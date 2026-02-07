@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { usePagination } from '@/hooks/usePagination';
+import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -57,9 +58,6 @@ const getStageBadge = (stage: string) => {
 export default function DealsPage() {
   const router = useRouter();
   const [view, setView] = useState<'pipeline' | 'list'>('pipeline');
-  const [deleteIds, setDeleteIds] = useState<string[]>([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const fetchDeals = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
@@ -86,8 +84,23 @@ export default function DealsPage() {
     error,
     hasMore,
     loadMore,
-    refresh
+    refresh,
+    setData: setDeals,
   } = usePagination<Deal>({ fetchFn: fetchDeals });
+
+  const {
+    deleteIds,
+    deleteDialogOpen,
+    deleting,
+    requestDelete: handleBulkDelete,
+    cancelDelete,
+    confirmDelete,
+  } = useOptimisticDelete({
+    data: deals,
+    setData: setDeals,
+    endpoint: '/api/deals',
+    entityName: 'deals',
+  });
 
   useEffect(() => {
     void refresh();
@@ -158,34 +171,6 @@ export default function DealsPage() {
       ),
     },
   ], [router]);
-
-  const handleBulkDelete = useCallback((selectedIds: string[]) => {
-    setDeleteIds(selectedIds);
-    setDeleteDialogOpen(true);
-  }, []);
-
-  const confirmDelete = useCallback(async () => {
-    setDeleting(true);
-    try {
-      const response = await fetch('/api/deals', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: deleteIds }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete deals');
-      }
-
-      setDeleteDialogOpen(false);
-      setDeleteIds([]);
-      void refresh();
-    } catch {
-      // Error handling via dialog
-    } finally {
-      setDeleting(false);
-    }
-  }, [deleteIds, refresh]);
 
   const bulkActions: BulkAction<Deal>[] = useMemo(() => [
     {
@@ -401,7 +386,7 @@ export default function DealsPage() {
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        onClose={cancelDelete}
         onConfirm={confirmDelete}
         title="Delete Deals"
         description={`Are you sure you want to delete ${deleteIds.length} deal${deleteIds.length === 1 ? '' : 's'}? This action cannot be undone.`}
