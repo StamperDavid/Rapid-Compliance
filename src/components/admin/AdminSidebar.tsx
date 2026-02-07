@@ -78,6 +78,7 @@ import {
   BookOpenText,
   Cog,
   Monitor,
+  Eye,
 } from 'lucide-react';
 
 // ============================================================================
@@ -201,6 +202,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'compliance-reports', label: 'Compliance Reports', href: '/compliance-reports', icon: ShieldCheck, iconColor: 'var(--color-success)', requiredPermission: 'canViewAuditLogs' },
       { id: 'audit-log', label: 'Audit Log', href: '/website/audit-log', icon: ScrollText, iconColor: 'var(--color-warning)', requiredPermission: 'canViewAuditLogs' },
+      { id: 'impersonate', label: 'Impersonate User', href: '/system/impersonate', icon: Eye, iconColor: 'var(--color-error)', requiredPermission: 'canImpersonateUsers' },
     ],
   },
   // ── Analytics ───────────────────────────────────────────────────────
