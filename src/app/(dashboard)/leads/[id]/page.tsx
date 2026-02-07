@@ -28,6 +28,8 @@ export default function LeadDetailPage() {
   const [loading, setLoading] = useState(true);
   const [predictiveScore, setPredictiveScore] = useState<PredictiveScore | null>(null);
   const [dataQuality, setDataQuality] = useState<DataQualityScore | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   useEffect(() => {
     void loadLead();
@@ -133,6 +135,17 @@ export default function LeadDetailPage() {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-6">
         <button onClick={() => router.back()} className="text-blue-400 hover:text-blue-300 mb-4">← Back to Leads</button>
+
+        {/* Notification */}
+        {notification && (
+          <div className={`mb-4 p-3 rounded-lg text-sm ${notification.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+            <div className="flex items-center justify-between">
+              <span>{notification.message}</span>
+              <button onClick={() => setNotification(null)} className="ml-2 text-current opacity-60 hover:opacity-100">&times;</button>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold mb-2">{getDisplayName()}</h1>
@@ -153,8 +166,8 @@ export default function LeadDetailPage() {
             )}
             {dataQuality && (
               <span className={`px-3 py-1 rounded text-sm font-medium ${
-                dataQuality.overall >= 80 ? 'bg-green-900 text-green-300' : 
-                dataQuality.overall >= 60 ? 'bg-yellow-900 text-yellow-300' : 
+                dataQuality.overall >= 80 ? 'bg-green-900 text-green-300' :
+                dataQuality.overall >= 60 ? 'bg-yellow-900 text-yellow-300' :
                 'bg-red-900 text-red-300'
               }`}>
                 Quality: {dataQuality.overall}%
@@ -327,8 +340,7 @@ export default function LeadDetailPage() {
                   const emailAddress = getEmailValue();
 
                   if (!emailAddress) {
-                    // eslint-disable-next-line no-alert
-                    alert('No email address available for this lead');
+                    setNotification({ message: 'No email address available for this lead', type: 'error' });
                     return;
                   }
 
@@ -344,8 +356,7 @@ export default function LeadDetailPage() {
                 onClick={() => {
                   const phoneNumber = getPhoneNumber();
                   if (!phoneNumber) {
-                    // eslint-disable-next-line no-alert
-                    alert('No phone number available for this lead');
+                    setNotification({ message: 'No phone number available for this lead', type: 'error' });
                     return;
                   }
                   router.push(`/calls/make?phone=${encodeURIComponent(phoneNumber)}&contactId=${leadId}`);
@@ -362,43 +373,42 @@ export default function LeadDetailPage() {
               </button>
               <button
                 onClick={() => {
-                  // eslint-disable-next-line no-alert
-                  if (!confirm('Convert this lead to a deal?')) {return;}
+                  setConfirmDialog({
+                    message: 'Convert this lead to a deal?',
+                    onConfirm: () => {
+                      void (async () => {
+                        try {
+                          const dealId = `deal-${Date.now()}`;
+                          const companyName = getCompanyName();
+                          const displayName = getDisplayName();
 
-                  // Async handler wrapped properly
-                  const convertToDeal = async (): Promise<void> => {
-                    try {
-                      const dealId = `deal-${Date.now()}`;
-                      const companyName = getCompanyName();
-                      const displayName = getDisplayName();
-
-                      await FirestoreService.set(
-                        `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`,
-                        dealId,
-                        {
-                          id: dealId,
-                          name: `Deal - ${companyName}`,
-                          company: companyName,
-                          contactName: displayName,
-                          value: 0,
-                          stage: 'qualification',
-                          probability: 50,
-                          sourceLeadId: leadId,
-                          createdAt: Timestamp.now(),
-                        },
-                        false
-                      );
-                      // eslint-disable-next-line no-alert
-                      alert('Lead converted to deal!');
-                      router.push(`/deals/${dealId}`);
-                    } catch (error: unknown) {
-                      logger.error('Error converting lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-                      // eslint-disable-next-line no-alert
-                      alert('Failed to convert lead');
-                    }
-                  };
-
-                  void convertToDeal();
+                          await FirestoreService.set(
+                            `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`,
+                            dealId,
+                            {
+                              id: dealId,
+                              name: `Deal - ${companyName}`,
+                              company: companyName,
+                              contactName: displayName,
+                              value: 0,
+                              stage: 'qualification',
+                              probability: 50,
+                              sourceLeadId: leadId,
+                              createdAt: Timestamp.now(),
+                            },
+                            false
+                          );
+                          setConfirmDialog(null);
+                          setNotification({ message: 'Lead converted to deal!', type: 'success' });
+                          setTimeout(() => router.push(`/deals/${dealId}`), 1500);
+                        } catch (error: unknown) {
+                          logger.error('Error converting lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+                          setConfirmDialog(null);
+                          setNotification({ message: 'Failed to convert lead', type: 'error' });
+                        }
+                      })();
+                    },
+                  });
                 }}
                 className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-left font-medium"
               >
@@ -408,6 +418,19 @@ export default function LeadDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-gray-900 rounded-xl p-6 max-w-md mx-4 border border-gray-700 shadow-xl">
+            <p className="text-white mb-4">{confirmDialog.message}</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-gray-400 hover:bg-gray-800">Cancel</button>
+              <button onClick={confirmDialog.onConfirm} className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

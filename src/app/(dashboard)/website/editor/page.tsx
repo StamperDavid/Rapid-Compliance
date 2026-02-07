@@ -80,30 +80,7 @@ function isVersionData(data: unknown): data is VersionData {
   );
 }
 
-// User feedback helpers (replacing alert/prompt/confirm)
-function showSuccess(message: string): void {
-  // TODO: Replace with toast notification system
-  // eslint-disable-next-line no-alert
-  alert(message);
-}
-
-function showError(message: string): void {
-  // TODO: Replace with toast notification system
-  // eslint-disable-next-line no-alert
-  alert(message);
-}
-
-function askConfirm(message: string): boolean {
-  // TODO: Replace with modal confirmation system
-  // eslint-disable-next-line no-alert
-  return confirm(message);
-}
-
-function askInput(message: string, defaultValue?: string): string | null {
-  // TODO: Replace with modal input system
-  // eslint-disable-next-line no-alert
-  return prompt(message, defaultValue);
-}
+// These helper functions are now replaced with state-based dialogs in the component
 
 export default function PageEditorPage() {
   const searchParams = useSearchParams();
@@ -124,7 +101,11 @@ export default function PageEditorPage() {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [promptDialog, setPromptDialog] = useState<{ message: string; defaultValue: string; onSubmit: (value: string) => void } | null>(null);
+  const [promptValue, setPromptValue] = useState('');
+
   // Undo/Redo history
   const {
     canUndo,
@@ -153,7 +134,7 @@ export default function PageEditorPage() {
       }
     } catch (error: unknown) {
       console.error('[Editor] Load error:', error);
-      showError('Failed to load page');
+      setNotification({ message: 'Failed to load page', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -219,12 +200,12 @@ export default function PageEditorPage() {
       if (!response.ok) {throw new Error('Failed to save page');}
 
       if (!isAutoSave) {
-        showSuccess('Page saved successfully!');
+        setNotification({ message: 'Page saved successfully!', type: 'success' });
       }
     } catch (error: unknown) {
       console.error('[Editor] Save error:', error);
       if (!isAutoSave) {
-        showError('Failed to save page');
+        setNotification({ message: 'Failed to save page', type: 'error' });
       }
     } finally {
       setSaving(false);
@@ -273,44 +254,61 @@ export default function PageEditorPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [canUndo, canRedo, page, undo, redo, savePageStable]);
 
-  async function saveAsTemplate(): Promise<void> {
+  function saveAsTemplate(): void {
     if (!page) {return;}
 
-    const templateName = askInput('Enter a name for this template:', page.title);
-    if (!templateName) {return;}
+    setPromptDialog({
+      message: 'Enter a name for this template:',
+      defaultValue: page.title,
+      onSubmit: (templateName: string) => {
+        if (!templateName) {
+          setPromptDialog(null);
+          return;
+        }
 
-    const templateDescription = askInput('Enter a description (optional):', '');
+        setPromptDialog({
+          message: 'Enter a description (optional):',
+          defaultValue: '',
+          onSubmit: (templateDescription: string) => {
+            setPromptDialog(null);
+            void (async () => {
+              try {
+                const response = await fetch('/api/website/templates', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    organizationId: DEFAULT_ORG_ID,
+                    template: {
+                      name: templateName,
+                      description:(templateDescription !== '' && templateDescription != null) ? templateDescription : `Custom template based on ${page.title}`,
+                      category: 'other',
+                      thumbnail: `https://via.placeholder.com/400x300/6c757d/ffffff?text=${encodeURIComponent(templateName)}`,
+                      content: page.content,
+                      isPublic: false,
+                      createdBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
+                    },
+                  }),
+                });
 
-    try {
-      const response = await fetch('/api/website/templates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
-          template: {
-            name: templateName,
-            description:(templateDescription !== '' && templateDescription != null) ? templateDescription : `Custom template based on ${page.title}`,
-            category: 'other',
-            thumbnail: `https://via.placeholder.com/400x300/6c757d/ffffff?text=${encodeURIComponent(templateName)}`,
-            content: page.content,
-            isPublic: false,
-            createdBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
+                if (!response.ok) {throw new Error('Failed to save template');}
+
+                setNotification({ message: 'Template saved successfully! You can find it in the Templates page.', type: 'success' });
+              } catch (error: unknown) {
+                console.error('[Editor] Save as template error:', error);
+                setNotification({ message: 'Failed to save template', type: 'error' });
+              }
+            })();
           },
-        }),
-      });
-
-      if (!response.ok) {throw new Error('Failed to save template');}
-
-      showSuccess('Template saved successfully! You can find it in the Templates page.');
-    } catch (error: unknown) {
-      console.error('[Editor] Save as template error:', error);
-      showError('Failed to save template');
-    }
+        });
+        setPromptValue('');
+      },
+    });
+    setPromptValue(page.title);
   }
 
   async function publishPage(scheduledFor?: string): Promise<void> {
     if (!page || !pageId) {
-      showError('Please save the page first before publishing.');
+      setNotification({ message: 'Please save the page first before publishing.', type: 'error' });
       return;
     }
 
@@ -334,11 +332,11 @@ export default function PageEditorPage() {
       // Update local page state
       if (scheduledFor) {
         setPage({ ...page, status: 'scheduled', scheduledFor });
-        showSuccess(`Page scheduled for ${new Date(scheduledFor).toLocaleString()}!`);
+        setNotification({ message: `Page scheduled for ${new Date(scheduledFor).toLocaleString()}!`, type: 'success' });
       } else {
         if (isPublishResponse(result)) {
           setPage({ ...page, status: 'published', publishedAt: result.publishedAt });
-          showSuccess('Page published successfully!');
+          setNotification({ message: 'Page published successfully!', type: 'success' });
         } else {
           throw new Error('Invalid publish response');
         }
@@ -346,7 +344,7 @@ export default function PageEditorPage() {
     } catch (error: unknown) {
       console.error('[Editor] Publish error:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
-      showError(`Failed to publish page: ${message}`);
+      setNotification({ message: `Failed to publish page: ${message}`, type: 'error' });
     } finally {
       setPublishing(false);
     }
@@ -366,7 +364,7 @@ export default function PageEditorPage() {
 
     // Type guard and restore the version content
     if (!isVersionData(version)) {
-      showError('Invalid version data');
+      setNotification({ message: 'Invalid version data', type: 'error' });
       return;
     }
 
@@ -383,43 +381,49 @@ export default function PageEditorPage() {
     setPage(restoredPage);
     pushState(restoredPage);
 
-    showSuccess(`Restored to Version ${version.version}. Don't forget to save your changes!`);
+    setNotification({ message: `Restored to Version ${version.version}. Don't forget to save your changes!`, type: 'success' });
   }
 
-  async function unpublishPage(): Promise<void> {
+  function unpublishPage(): void {
     if (!page || !pageId) {return;}
 
-    if (!askConfirm('Unpublish this page? It will revert to draft status.')) {return;}
+    setConfirmDialog({
+      message: 'Unpublish this page? It will revert to draft status.',
+      onConfirm: () => {
+        void (async () => {
+          try {
+            setPublishing(true);
 
-    try {
-      setPublishing(true);
+            const response = await fetch(`/api/website/pages/${pageId}/publish`, {
+              method: 'DELETE',
+            });
 
-      const response = await fetch(`/api/website/pages/${pageId}/publish`, {
-        method: 'DELETE',
-      });
+            if (!response.ok) {
+              const errorData: unknown = await response.json();
+              const errorMessage = isErrorResponse(errorData) ? errorData.error : 'Failed to unpublish page';
+              throw new Error(errorMessage);
+            }
 
-      if (!response.ok) {
-        const errorData: unknown = await response.json();
-        const errorMessage = isErrorResponse(errorData) ? errorData.error : 'Failed to unpublish page';
-        throw new Error(errorMessage);
-      }
-
-      // Update local page state
-      setPage({ ...page, status: 'draft' });
-
-      showSuccess('Page unpublished successfully.');
-    } catch (error: unknown) {
-      console.error('[Editor] Unpublish error:', error);
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      showError(`Failed to unpublish page: ${message}`);
-    } finally {
-      setPublishing(false);
-    }
+            // Update local page state
+            setPage({ ...page, status: 'draft' });
+            setConfirmDialog(null);
+            setNotification({ message: 'Page unpublished successfully.', type: 'success' });
+          } catch (error: unknown) {
+            console.error('[Editor] Unpublish error:', error);
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            setConfirmDialog(null);
+            setNotification({ message: `Failed to unpublish page: ${message}`, type: 'error' });
+          } finally {
+            setPublishing(false);
+          }
+        })();
+      },
+    });
   }
 
   async function generatePreview(): Promise<void> {
     if (!page || !pageId) {
-      showError('Please save the page first before generating a preview.');
+      setNotification({ message: 'Please save the page first before generating a preview.', type: 'error' });
       return;
     }
 
@@ -445,12 +449,19 @@ export default function PageEditorPage() {
       // Open preview in new tab
       window.open(result.previewUrl, '_blank');
 
-      // Also show the URL so user can copy it
-      askInput('Preview link (valid for 24 hours):', result.previewUrl);
+      // Show the URL so user can copy it
+      setPromptDialog({
+        message: 'Preview link (valid for 24 hours):',
+        defaultValue: result.previewUrl,
+        onSubmit: () => {
+          setPromptDialog(null);
+        },
+      });
+      setPromptValue(result.previewUrl);
     } catch (error: unknown) {
       console.error('[Editor] Preview error:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
-      showError(`Failed to generate preview: ${message}`);
+      setNotification({ message: `Failed to generate preview: ${message}`, type: 'error' });
     }
   }
 
@@ -496,16 +507,21 @@ export default function PageEditorPage() {
 
   function deleteSection(sectionId: string): void {
     if (!page) {return;}
-    if (!askConfirm('Delete this section?')) {return;}
 
-    updatePage({
-      content: page.content.filter(s => s.id !== sectionId),
+    setConfirmDialog({
+      message: 'Delete this section?',
+      onConfirm: () => {
+        updatePage({
+          content: page.content.filter(s => s.id !== sectionId),
+        });
+
+        // Clear selection if deleting selected element
+        if (selectedElement?.sectionId === sectionId) {
+          setSelectedElement(null);
+        }
+        setConfirmDialog(null);
+      },
     });
-
-    // Clear selection if deleting selected element
-    if (selectedElement?.sectionId === sectionId) {
-      setSelectedElement(null);
-    }
   }
 
   function addWidget(sectionId: string, widget: Widget, columnIndex: number = 0): void {
@@ -688,6 +704,56 @@ export default function PageEditorPage() {
           onSchedule={handleScheduleConfirm}
           onCancel={() => setShowScheduleModal(false)}
         />
+      )}
+
+      {/* Notification */}
+      {notification && (
+        <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 9999, maxWidth: '400px' }}>
+          <div className={`p-3 rounded-lg text-sm shadow-lg ${notification.type === 'success' ? 'bg-green-500/90 text-white' : 'bg-red-500/90 text-white'}`}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>{notification.message}</span>
+              <button onClick={() => setNotification(null)} style={{ marginLeft: '0.5rem', color: 'white', opacity: 0.8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}>&times;</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', maxWidth: '400px', margin: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <p style={{ color: '#111827', marginBottom: '1rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button onClick={() => setConfirmDialog(null)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', color: '#6b7280', background: '#f3f4f6', border: 'none', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={confirmDialog.onConfirm} style={{ padding: '0.5rem 1rem', borderRadius: '8px', backgroundColor: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prompt Dialog */}
+      {promptDialog && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', maxWidth: '400px', width: '100%', margin: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <p style={{ color: '#111827', marginBottom: '1rem', fontSize: '1rem' }}>{promptDialog.message}</p>
+            <input
+              type="text"
+              value={promptValue}
+              onChange={(e) => setPromptValue(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  promptDialog.onSubmit(promptValue);
+                }
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button onClick={() => setPromptDialog(null)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', color: '#6b7280', background: '#f3f4f6', border: 'none', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => promptDialog.onSubmit(promptValue)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', cursor: 'pointer' }}>Submit</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

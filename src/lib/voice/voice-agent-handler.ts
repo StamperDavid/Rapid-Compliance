@@ -24,6 +24,8 @@ import {
 } from './ai-conversation-service';
 import type { VoiceCall, VoiceProvider } from './types';
 import { logger } from '@/lib/logger/logger';
+import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
+import type { TTSEngineType } from '@/lib/voice/tts/types';
 
 export type VoiceAgentMode = 'prospector' | 'closer';
 
@@ -62,6 +64,8 @@ export interface VoiceAgentConfig {
   // Voice settings
   voiceSettings?: {
     voice?: string;
+    engine?: TTSEngineType;
+    voiceId?: string;
     language?: string;
     speakingSpeed?: number;
   };
@@ -228,7 +232,7 @@ class VoiceAgentHandler {
     });
 
     // Generate TwiML with speech gathering
-    const twiml = this.generateConversationTwiML(greeting, call.callId);
+    const twiml = await this.generateConversationTwiML(greeting, call.callId);
 
     return {
       text: greeting,
@@ -281,7 +285,7 @@ class VoiceAgentHandler {
             action: 'continue',
             state: aiResponse.newState,
             qualificationScore: aiConversationService.getConversationContext(callId)?.qualificationScore,
-            twiml: this.generateConversationTwiML(aiResponse.text, callId),
+            twiml: await this.generateConversationTwiML(aiResponse.text, callId),
           };
       }
     } catch (error: unknown) {
@@ -342,7 +346,7 @@ class VoiceAgentHandler {
     }
 
     // Generate transfer TwiML
-    const twiml = this.generateTransferTwiML(aiResponse.text);
+    const twiml = await this.generateTransferTwiML(aiResponse.text);
 
     return {
       text: aiResponse.text,
@@ -361,7 +365,6 @@ class VoiceAgentHandler {
   /**
    * Handle deal closing (Closer mode)
    */
-  // eslint-disable-next-line @typescript-eslint/require-await -- Method must be async for consistent interface with other handlers
   private async handleClose(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
     const context = aiConversationService.getConversationContext(callId);
     const closingConfig = this.config?.closingConfig;
@@ -372,7 +375,7 @@ class VoiceAgentHandler {
         text: aiResponse.text,
         action: 'end_call',
         state: 'ENDED',
-        twiml: this.generateEndCallTwiML(aiResponse.text),
+        twiml: await this.generateEndCallTwiML(aiResponse.text),
       };
     }
 
@@ -387,7 +390,7 @@ class VoiceAgentHandler {
         description: 'Product/Service Purchase',
         customerId: context?.customerInfo.phone ?? callId,
       },
-      twiml: this.generateConversationTwiML(aiResponse.text, callId),
+      twiml: await this.generateConversationTwiML(aiResponse.text, callId),
     };
   }
 
@@ -417,7 +420,7 @@ class VoiceAgentHandler {
       action: 'end_call',
       state: 'ENDED',
       qualificationScore: context?.qualificationScore,
-      twiml: this.generateEndCallTwiML(aiResponse.text),
+      twiml: await this.generateEndCallTwiML(aiResponse.text),
     };
   }
 
@@ -460,7 +463,7 @@ class VoiceAgentHandler {
         text: "I apologize for the inconvenience. Please call back and we'll be happy to help you. Goodbye.",
         action: 'end_call',
         state: 'ENDED',
-        twiml: this.generateEndCallTwiML("I apologize for the inconvenience. Please call back and we'll be happy to help you. Goodbye."),
+        twiml: await this.generateEndCallTwiML("I apologize for the inconvenience. Please call back and we'll be happy to help you. Goodbye."),
       };
     }
 
@@ -468,20 +471,79 @@ class VoiceAgentHandler {
       text: fallbackMessage,
       action: 'transfer',
       state: 'TRANSFER',
-      twiml: this.generateTransferTwiML(fallbackMessage),
+      twiml: await this.generateTransferTwiML(fallbackMessage),
     };
   }
 
   // ===== TwiML GENERATION =====
 
   /**
+   * Synthesize speech using configured TTS engine and store audio for Twilio playback
+   * Falls back to null if TTS fails (caller should use <Say> fallback)
+   */
+  private async synthesizeAndStore(text: string): Promise<string | null> {
+    try {
+      const response = await VoiceEngineFactory.getAudio({
+        text,
+        organizationId: this.config?.organizationId ?? '',
+        engine: this.config?.voiceSettings?.engine,
+        voiceId: this.config?.voiceSettings?.voiceId,
+      });
+
+      if (!response.audio) {
+        return null;
+      }
+
+      // Upload audio to Firebase Storage with 1-hour expiry for Twilio to fetch
+      const { admin } = await import('@/lib/firebase-admin');
+      const bucket = admin.storage().bucket();
+      const audioId = `tts-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const filePath = `voice-audio/${audioId}.${response.format || 'mp3'}`;
+      const file = bucket.file(filePath);
+
+      const audioBuffer = Buffer.from(response.audio, 'base64');
+      await file.save(audioBuffer, {
+        metadata: {
+          contentType: `audio/${response.format || 'mp3'}`,
+          metadata: { expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() },
+        },
+      });
+
+      await file.makePublic();
+      return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+    } catch (error) {
+      logger.warn('[VoiceAgent] TTS synthesis failed, will fall back to Polly', {
+        error: error instanceof Error ? error.message : String(error),
+        file: 'voice-agent-handler.ts',
+      });
+      return null;
+    }
+  }
+
+  /**
    * Generate TwiML for conversation with speech recognition
    */
-  generateConversationTwiML(message: string, callId: string): string {
+  async generateConversationTwiML(message: string, callId: string): Promise<string> {
     const voice = this.config?.voiceSettings?.voice ?? 'Polly.Joanna';
     const language = this.config?.voiceSettings?.language ?? 'en-US';
     const actionUrl = `/api/voice/ai-agent/speech?callId=${encodeURIComponent(callId)}`;
 
+    // Try TTS synthesis first
+    const audioUrl = await this.synthesizeAndStore(message);
+
+    if (audioUrl) {
+      // Use synthesized audio with Play tag
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech" action="${actionUrl}" method="POST" language="${language}" timeout="5" speechTimeout="auto" enhanced="true">
+    <Play>${audioUrl}</Play>
+  </Gather>
+  <Say voice="${voice}">I didn't hear anything. Let me transfer you to someone who can help.</Say>
+  <Redirect>/api/voice/ai-agent/fallback?callId=${encodeURIComponent(callId)}</Redirect>
+</Response>`;
+    }
+
+    // Fall back to Polly Say tag
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Gather input="speech" action="${actionUrl}" method="POST" language="${language}" timeout="5" speechTimeout="auto" enhanced="true">
@@ -495,11 +557,28 @@ class VoiceAgentHandler {
   /**
    * Generate TwiML for transfer
    */
-  private generateTransferTwiML(message: string): string {
+  private async generateTransferTwiML(message: string): Promise<string> {
     const voice = this.config?.voiceSettings?.voice ?? 'Polly.Joanna';
     const language = this.config?.voiceSettings?.language ?? 'en-US';
     const transferToNumber = process.env.HUMAN_AGENT_QUEUE_NUMBER ?? '+15551234567';
 
+    // Try TTS synthesis first
+    const audioUrl = await this.synthesizeAndStore(message);
+
+    if (audioUrl) {
+      // Use synthesized audio with Play tag
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Play>${audioUrl}</Play>
+  <Dial timeout="30">
+    <Number>${transferToNumber}</Number>
+  </Dial>
+  <Say voice="${voice}">I'm sorry, but all of our agents are currently busy. Please try again later. Goodbye.</Say>
+  <Hangup/>
+</Response>`;
+    }
+
+    // Fall back to Polly Say tag
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="${voice}" language="${language}">${this.escapeXML(message)}</Say>
@@ -514,10 +593,23 @@ class VoiceAgentHandler {
   /**
    * Generate TwiML for end call
    */
-  private generateEndCallTwiML(message: string): string {
+  private async generateEndCallTwiML(message: string): Promise<string> {
     const voice = this.config?.voiceSettings?.voice ?? 'Polly.Joanna';
     const language = this.config?.voiceSettings?.language ?? 'en-US';
 
+    // Try TTS synthesis first
+    const audioUrl = await this.synthesizeAndStore(message);
+
+    if (audioUrl) {
+      // Use synthesized audio with Play tag
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Play>${audioUrl}</Play>
+  <Hangup/>
+</Response>`;
+    }
+
+    // Fall back to Polly Say tag
     return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="${voice}" language="${language}">${this.escapeXML(message)}</Say>
