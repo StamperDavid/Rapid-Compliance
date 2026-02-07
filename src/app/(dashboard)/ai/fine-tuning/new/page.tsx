@@ -2,29 +2,41 @@
 
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { fineTuningFormSchema, type FineTuningFormValues } from '@/lib/validation/fine-tuning-form-schema';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { showErrorToast } from '@/components/ErrorToast';
+import { useToast } from '@/hooks/useToast';
 
 export default function NewFineTuningPage() {
   const router = useRouter();
-  const [job, setJob] = useState({ modelName: '', baseModel: 'gpt-3.5-turbo', datasetId: '' });
-  const [creating, setCreating] = useState(false);
+  const toast = useToast();
+  const form = useForm<FineTuningFormValues>({
+    resolver: zodResolver(fineTuningFormSchema),
+    defaultValues: {
+      modelName: '',
+      baseModel: 'gpt-3.5-turbo',
+      datasetId: '',
+    },
+  });
 
-  const handleSubmit = async () => {
+  const onSubmit = async (data: FineTuningFormValues) => {
     try {
-      setCreating(true);
       const jobId = `finetune-${Date.now()}`;
-      await FirestoreService.set(`organizations/${DEFAULT_ORG_ID}/fineTuningJobs`, jobId, { ...job, id: jobId, status: 'pending', createdAt: Timestamp.now() }, false);
-      router.push(`/ai/fine-tuning`);
+      await FirestoreService.set(
+        `organizations/${DEFAULT_ORG_ID}/fineTuningJobs`,
+        jobId,
+        { ...data, id: jobId, status: 'pending', createdAt: Timestamp.now() },
+        false
+      );
+      router.push('/ai/fine-tuning');
     } catch (error: unknown) {
       logger.error('Error creating job:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      showErrorToast(error, 'Failed to create fine-tuning job');
-    } finally {
-      setCreating(false);
+      toast.error('Failed to create fine-tuning job');
     }
   };
 
@@ -32,22 +44,54 @@ export default function NewFineTuningPage() {
     <div className="p-8">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Start Fine-Tuning</h1>
-        <div className="bg-gray-900 rounded-lg p-6 mb-4">
-          <div className="space-y-4">
-            <div><label className="block text-sm font-medium mb-2">Model Name *</label><input type="text" value={job.modelName} onChange={(e) => setJob({...job, modelName: e.target.value})} required className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
-            <div><label className="block text-sm font-medium mb-2">Base Model</label><select value={job.baseModel} onChange={(e) => setJob({...job, baseModel: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg"><option value="gpt-3.5-turbo">GPT-3.5 Turbo</option><option value="gpt-4">GPT-4</option><option value="claude-3-opus">Claude 3 Opus</option></select></div>
-            <div><label className="block text-sm font-medium mb-2">Dataset</label><input type="text" value={job.datasetId} onChange={(e) => setJob({...job, datasetId: e.target.value})} placeholder="Dataset ID" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+        <Form form={form} onSubmit={onSubmit}>
+          <div className="bg-gray-900 rounded-lg p-6 mb-4">
+            <div className="space-y-4">
+              <FormField control={form.control} name="modelName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Model Name *</FormLabel>
+                  <FormControl>
+                    <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="baseModel" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Base Model</FormLabel>
+                  <FormControl>
+                    <select {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none">
+                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                      <option value="gpt-4">GPT-4</option>
+                      <option value="claude-3-opus">Claude 3 Opus</option>
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="datasetId" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dataset</FormLabel>
+                  <FormControl>
+                    <input {...field} placeholder="Dataset ID" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
           </div>
-        </div>
-        <div className="flex gap-3">
-          <button onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
-          <button onClick={() => void handleSubmit()} disabled={creating} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{creating ? 'Starting...' : 'Start Fine-Tuning'}</button>
-        </div>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
+            <button
+              type="submit"
+              disabled={form.formState.isSubmitting}
+              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {form.formState.isSubmitting ? 'Starting...' : 'Start Fine-Tuning'}
+            </button>
+          </div>
+        </Form>
       </div>
     </div>
   );
 }
-
-
-
-
