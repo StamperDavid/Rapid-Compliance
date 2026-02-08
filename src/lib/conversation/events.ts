@@ -321,7 +321,6 @@ export function createConversationAnalyzedEvent(
   return {
     type: 'conversation.analyzed',
     leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-    orgId: analysis.organizationId,
     workspaceId: analysis.workspaceId,
     confidence: analysis.confidence / 100,
     priority: 'Low',
@@ -370,7 +369,6 @@ export function createLowScoreEvent(
   return {
     type: 'conversation.low_score',
     leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-    orgId: analysis.organizationId,
     workspaceId: analysis.workspaceId,
     confidence: analysis.confidence / 100,
     priority: analysis.scores.overall < 30 ? 'High' : 'Medium',
@@ -400,7 +398,6 @@ export function createRedFlagEvents(
     .map(flag => ({
       type: 'conversation.red_flag' as const,
       leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-      orgId: analysis.organizationId,
       workspaceId: analysis.workspaceId,
       confidence: 0.9,
       priority: flag.severity === 'critical' ? 'High' as const : 'Medium' as const,
@@ -431,7 +428,6 @@ export function createCoachingNeededEvents(
     .map(insight => ({
       type: 'conversation.coaching_needed' as const,
       leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-      orgId: analysis.organizationId,
       workspaceId: analysis.workspaceId,
       confidence: 0.85,
       priority: insight.priority === 'critical' ? 'High' as const : 'Medium' as const,
@@ -463,7 +459,6 @@ export function createCompetitorMentionedEvents(
     .map(competitor => ({
       type: 'conversation.competitor_mentioned' as const,
       leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-      orgId: analysis.organizationId,
       workspaceId: analysis.workspaceId,
       confidence: 0.9,
       priority: competitor.concernLevel === 'high' ? 'High' as const : 'Medium' as const,
@@ -499,7 +494,6 @@ export function createObjectionRaisedEvents(
     .map(objection => ({
       type: 'conversation.objection_raised' as const,
       leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-      orgId: analysis.organizationId,
       workspaceId: analysis.workspaceId,
       confidence: 0.85,
       priority: objection.severity === 'critical' ? 'High' as const : 'Medium' as const,
@@ -531,7 +525,6 @@ export function createPositiveSignalEvents(
     .map(signal => ({
       type: 'conversation.positive_signal' as const,
       leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-      orgId: analysis.organizationId,
       workspaceId: analysis.workspaceId,
       confidence: 0.85,
       priority: 'Medium' as const,
@@ -566,7 +559,6 @@ export function createFollowUpRequiredEvents(
     .map(action => ({
       type: 'conversation.follow_up_required' as const,
       leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-      orgId: analysis.organizationId,
       workspaceId: analysis.workspaceId,
       confidence: 0.8,
       priority: action.priority === 'critical' ? 'High' as const : 'Medium' as const,
@@ -605,7 +597,6 @@ export function createNegativeSentimentEvent(
   return {
     type: 'conversation.sentiment_negative',
     leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-    orgId: analysis.organizationId,
     workspaceId: analysis.workspaceId,
     confidence: sentiment.confidence / 100,
     priority: sentiment.polarity === 'very_negative' ? 'High' : 'Medium',
@@ -696,7 +687,6 @@ export async function emitConversationEvents(
         {
           eventType: event.type,
           conversationId: conversation.id,
-          organizationId: analysis.organizationId,
         }
       );
     }

@@ -26,10 +26,7 @@ import type { DealHealthScore } from '@/lib/crm/deal-health';
 export interface DealRiskPrediction {
   /** Deal ID */
   dealId: string;
-  
-  /** Organization ID */
-  organizationId: string;
-  
+
   /** Workspace ID */
   workspaceId: string;
   
@@ -311,10 +308,7 @@ export interface RiskMetadata {
 export interface RiskPredictionRequest {
   /** Deal ID */
   dealId: string;
-  
-  /** Organization ID */
-  organizationId: string;
-  
+
   /** Workspace ID */
   workspaceId?: string;
   
@@ -334,10 +328,7 @@ export interface RiskPredictionRequest {
 export interface BatchRiskPredictionRequest {
   /** Deal IDs */
   dealIds: string[];
-  
-  /** Organization ID */
-  organizationId: string;
-  
+
   /** Workspace ID */
   workspaceId?: string;
   

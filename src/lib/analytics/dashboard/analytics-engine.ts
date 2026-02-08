@@ -42,7 +42,7 @@ import type {
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Workflow, WorkflowExecution } from '@/lib/workflow/types';
 import { emitDashboardGenerated } from './events';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CACHE CONFIGURATION
@@ -96,7 +96,7 @@ export async function getDashboardAnalytics(
   const startTime = Date.now();
 
   // Check cache
-  const cacheKey = `${DEFAULT_ORG_ID}:${period}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
+  const cacheKey = `${PLATFORM_ID}:${period}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
   const cached = analyticsCache.get(cacheKey);
 
   if (cached) {

@@ -20,7 +20,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { createBrowserController } from './BrowserController';
 import {
   saveToDiscoveryArchive,
@@ -226,7 +226,6 @@ export async function discoverCompany(
   try {
     logger.info('Starting company discovery', {
       domain,
-      organizationId: DEFAULT_ORG_ID,
       source: 'native-discovery-engine',
     });
 
@@ -235,7 +234,6 @@ export async function discoverCompany(
     if (cached) {
       logger.info('Discovery archive HIT - serving from cache', {
         domain,
-        organizationId: DEFAULT_ORG_ID,
         cacheAge: Date.now() - cached.scrape.createdAt.getTime(),
         message: 'Cost savings achieved - no scraping needed',
       });
@@ -256,7 +254,6 @@ export async function discoverCompany(
     // Step 2: Cache MISS - perform native scraping
     logger.info('Discovery archive MISS - initiating scrape', {
       domain,
-      organizationId: DEFAULT_ORG_ID,
       message: 'Building proprietary moat',
     });
 
@@ -270,7 +267,6 @@ export async function discoverCompany(
 
     logger.info('Company discovery complete', {
       domain,
-      organizationId: DEFAULT_ORG_ID,
       teamMembersFound: company.teamMembers.length,
       techStackFound: company.techStack.length,
       fromCache: false,
@@ -289,7 +285,6 @@ export async function discoverCompany(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to discover company', errorObj, {
       domain,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -875,7 +870,6 @@ async function saveToArchive(
 
     logger.info('Saved to discovery archive', {
       domain,
-      organizationId: DEFAULT_ORG_ID,
       scrapeId: result.scrape.id,
       isNew: result.isNew,
       expiresAt: result.scrape.expiresAt.toISOString(),
@@ -886,7 +880,6 @@ async function saveToArchive(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to save to discovery archive', errorObj, {
       domain,
-      organizationId: DEFAULT_ORG_ID,
     });
     throw error;
   }
@@ -898,11 +891,10 @@ async function saveToArchive(
 
 /**
  * Discover multiple companies in batch
- * 
+ *
  * Rate-limited to avoid overwhelming target sites.
- * 
+ *
  * @param domains - Array of domains to discover
- * @param organizationId - Organization requesting discovery
  * @param options - Batch options
  * @returns Array of discovery results
  */
@@ -918,7 +910,6 @@ export async function discoverCompaniesBatch(
   logger.info('Starting batch discovery', {
     domainsCount: domains.length,
     concurrency,
-    organizationId: DEFAULT_ORG_ID,
   });
 
   const results: DiscoveryResult[] = [];
@@ -985,7 +976,6 @@ export async function discoverPerson(
   try {
     logger.info('Starting person discovery', {
       email,
-      organizationId: DEFAULT_ORG_ID,
       source: 'person-discovery',
     });
 
@@ -1002,7 +992,6 @@ export async function discoverPerson(
     if (cached && cached.expiresAt > new Date()) {
       logger.info('Person discovery archive HIT', {
         email,
-        organizationId: DEFAULT_ORG_ID,
         cacheAge: Date.now() - cached.createdAt.getTime(),
       });
 
@@ -1021,10 +1010,9 @@ export async function discoverPerson(
     // Step 2: Cache MISS - perform discovery
     logger.info('Person discovery archive MISS - initiating search', {
       email,
-      organizationId: DEFAULT_ORG_ID,
     });
 
-    const person = await discoverPersonData(email, DEFAULT_ORG_ID);
+    const person = await discoverPersonData(email);
 
     // Step 3: Save to discoveryArchive (30-day TTL)
     const scrapeResult = await saveToDiscoveryArchive({
@@ -1040,7 +1028,6 @@ export async function discoverPerson(
 
     logger.info('Person discovery complete', {
       email,
-      organizationId: DEFAULT_ORG_ID,
       fullName: person.fullName,
       title: person.title,
       fromCache: false,
@@ -1058,7 +1045,6 @@ export async function discoverPerson(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to discover person', errorObj, {
       email,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -1077,8 +1063,7 @@ export async function discoverPerson(
  * 5. Synthesize with LLM
  */
 async function discoverPersonData(
-  email: string,
-  _organizationId: string
+  email: string
 ): Promise<DiscoveredPerson> {
   const controller = createBrowserController({ headless: true });
   const discoveryMethods: string[] = [];
@@ -1387,7 +1372,6 @@ export async function discoverPeopleBatch(
   logger.info('Starting batch person discovery', {
     emailsCount: emails.length,
     concurrency,
-    organizationId: DEFAULT_ORG_ID,
   });
 
   const results: PersonDiscoveryResult[] = [];
@@ -1444,7 +1428,6 @@ async function emitDiscoverySignals(
     // Signal 1: website.discovered - Always emit when company is discovered
     await coordinator.emitSignal({
       type: 'website.discovered',
-      orgId: DEFAULT_ORG_ID,
       confidence: company.metadata.confidence,
       priority: fromCache ? 'Low' : 'Medium',
       metadata: {
@@ -1466,7 +1449,6 @@ async function emitDiscoverySignals(
     if (company.techStack.length > 0) {
       await coordinator.emitSignal({
         type: 'website.technology.detected',
-        orgId: DEFAULT_ORG_ID,
         confidence: 0.9, // Tech stack detection is usually accurate
         priority: 'Medium',
         metadata: {
@@ -1491,7 +1473,6 @@ async function emitDiscoverySignals(
           await coordinator.emitSignal({
             type: 'lead.discovered',
             leadId: member.email, // Use email as temporary leadId
-            orgId: DEFAULT_ORG_ID,
             confidence: member.email ? 0.8 : 0.5,
             priority: member.email ? 'Medium' : 'Low',
             metadata: {
@@ -1514,7 +1495,6 @@ async function emitDiscoverySignals(
 
     logger.info('Discovery signals emitted', {
       domain: company.domain,
-      organizationId: DEFAULT_ORG_ID,
       fromCache,
       websiteDiscovered: 1,
       technologyDetected: company.techStack.length > 0 ? 1 : 0,
@@ -1525,7 +1505,6 @@ async function emitDiscoverySignals(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to emit discovery signals', errorObj, {
       domain: company.domain,
-      organizationId: DEFAULT_ORG_ID,
     });
   }
 }
@@ -1546,7 +1525,6 @@ async function emitPersonDiscoverySignals(
     await coordinator.emitSignal({
       type: 'lead.discovered',
       leadId: person.email,
-      orgId: DEFAULT_ORG_ID,
       confidence: person.metadata.confidence,
       priority: fromCache ? 'Low' : 'Medium',
       metadata: {
@@ -1572,7 +1550,6 @@ async function emitPersonDiscoverySignals(
 
     logger.info('Person discovery signal emitted', {
       email: person.email,
-      organizationId: DEFAULT_ORG_ID,
       fullName: person.fullName,
       fromCache,
     });
@@ -1581,7 +1558,6 @@ async function emitPersonDiscoverySignals(
     const errorObj = error instanceof Error ? error : new Error('Unknown error');
     logger.error('Failed to emit person discovery signal', errorObj, {
       email: person.email,
-      organizationId: DEFAULT_ORG_ID,
     });
   }
 }

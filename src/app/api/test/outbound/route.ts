@@ -1,6 +1,6 @@
 /**
  * Test Outbound Features
- * GET /api/test/outbound?orgId=xxx
+ * GET /api/test/outbound
  * Verifies all outbound features are configured correctly
  */
 
@@ -43,9 +43,6 @@ export async function GET(request: NextRequest) {
   if (rateLimitResponse) {
     return rateLimitResponse;
   }
-
-  const { searchParams } = new URL(request.url);
-  const _orgId = searchParams.get('orgId'); // Prefixed with _ to indicate intentionally unused
 
   const results: TestResults = {
     timestamp: new Date().toISOString(),

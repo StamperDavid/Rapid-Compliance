@@ -3,20 +3,20 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Commit: `155a1032` — "fix: resolve all tests/lib/ failures with full lint compliance"
+Last Commit: Pending — "refactor: complete organizationId purge + fix all type errors"
 
-## Current State (February 7, 2026)
+## Current State (February 8, 2026)
 
 ### Architecture
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **158 physical routes**, **219 API endpoints**, **433K+ lines of TypeScript**
+- **158 physical routes**, **219 API endpoints**, **430K+ lines of TypeScript**
 - **NOT yet deployed to production** — everything is dev branch only
 
 ### Code Health
-- `tsc --noEmit` — PASSES (zero errors)
-- `npm run lint` — PASSES (zero warnings)
+- `tsc --noEmit` — **PASSES (zero errors)**
+- `npm run lint` — **158 unused-import errors** (all `PLATFORM_ID`/`DEFAULT_ORG_ID` imports left from purge — cosmetic, next task)
 - `npm run build` — PASSES (production build succeeds)
 - **510 `tests/lib/` tests** — ALL PASS (19/19 suites)
 - **126 safe unit tests** — ALL PASS (event-router 49, jasper-command-authority 21, mutation-engine 9, analytics-helpers 47)
@@ -24,7 +24,8 @@ Last Commit: `155a1032` — "fix: resolve all tests/lib/ failures with full lint
 - **3 service tests failing** — infrastructure issue only (missing Firestore composite indexes, not code bugs)
 
 ### What's Complete
-- Single-tenant conversion (-71K lines, -185 files)
+- **organizationId purge — FULLY COMPLETE** (zero references in src/ and tests/, all cascade type errors fixed, 564 files changed)
+- Single-tenant conversion (-80K+ lines total across all purge phases)
 - SalesVelocity.ai rebrand + CSS variable theme system
 - Agent hierarchy with full manager orchestration
 - 4-role RBAC with API gating and sidebar filtering
@@ -32,13 +33,16 @@ Last Commit: `155a1032` — "fix: resolve all tests/lib/ failures with full lint
 - Social Media Growth Engine (Phases 1-6)
 - **Autonomous Business Operations (ALL 8 PHASES)** — Event Router, Operations Cycle Cron, Event Emitters, Manager Authority, Revenue Pipeline Automation, Outreach Autonomy, Content Production Hub, Intelligence Always-On, Builder/Commerce Reactive Loops, Contextual Artifact Generation, Jasper Command Authority
 - Post-Phase 8 Stabilization — integration tests, production cron scheduling, executive briefing dashboard
-- Database Hygiene Verification — 72 test files audited, production DB protected
-- Test Cleanup Hardening — all tests/lib/ suites fixed, jest teardown hardened
+- Pre-existing type errors fixed (brand-dna-service duplicate properties, claims-validator shorthand, director-service missing field, orchestrator LogContext type)
+
+### Immediate Next Task
+**Remove ~120 unused `PLATFORM_ID`/`DEFAULT_ORG_ID` imports** — These are cosmetic lint errors (158 total) left behind after the organizationId purge removed the usages but not the imports. All in `src/`. Pattern: remove `import { PLATFORM_ID } from '@/lib/constants/platform'` where PLATFORM_ID is no longer used in the file. This will bring `npm run lint` to zero errors.
 
 ### Known Issues
 | Issue | Details |
 |-------|---------|
-| 3 service tests failing | Missing Firestore composite indexes (status+createdAt, stage+createdAt on `records` and `workflows`). Indexes defined in `firestore.indexes.json` but not deployed. Fix: `firebase deploy --only firestore:indexes` |
+| 158 unused-import lint errors | Cosmetic — `PLATFORM_ID`/`DEFAULT_ORG_ID` imports left from purge. Next task. |
+| 3 service tests failing | Missing Firestore composite indexes (status+createdAt, stage+createdAt on `records` and `workflows`). Fix: `firebase deploy --only firestore:indexes` |
 | MemoryVault is in-memory only | Agents lose all knowledge on server restart / Vercel cold start. Async method stubs already exist for Firestore persistence — needs wiring |
 | Outbound webhooks are scaffolding | Settings UI exists with event list but backend dispatch system is not implemented |
 
@@ -48,12 +52,13 @@ Last Commit: `155a1032` — "fix: resolve all tests/lib/ failures with full lint
 
 | Step | Task | Time Est. | Why |
 |------|------|-----------|-----|
-| **1** | Deploy Firestore indexes | 15 min | `firebase deploy --only firestore:indexes`. Fixes 3 failing service tests. Unlocks composite queries that managers need. |
-| **2** | MemoryVault Firestore persistence | 3-4 hrs | Without this, every Vercel cold start wipes agent memory. Async stubs already in `memory-vault.ts`. Straight Firestore read/write — no hooks, no plugin system. |
+| **0** | Remove unused imports | 30 min | 158 lint errors from orgId purge leftovers. Brings `npm run lint` to zero. |
+| **1** | Deploy Firestore indexes | 15 min | `firebase deploy --only firestore:indexes`. Fixes 3 failing service tests. |
+| **2** | MemoryVault Firestore persistence | 3-4 hrs | Without this, every Vercel cold start wipes agent memory. Async stubs already in `memory-vault.ts`. |
 | **3** | Production deploy to Vercel | 2-3 hrs | 7 cron jobs already defined in `vercel.json`. OAuth flows, webhooks, Stripe — none work until deployed with real env vars. |
-| **4** | Smoke test the OODA loop | 2-3 hrs | Feed a real lead through the system. Verify event router fires, Revenue Director picks it up, sequence engine enrolls. First real end-to-end validation. |
+| **4** | Smoke test the OODA loop | 2-3 hrs | Feed a real lead through the system. Verify event router fires, Revenue Director picks it up, sequence engine enrolls. |
 | **5** | Fix what breaks | Variable | Something will break in production. Budget time for env var issues, cold start timing, external API rate limits. |
-| **6** | Wire up outbound webhook dispatch | 3-4 hrs | Settings page exists, event list is there, UI is built — backend just doesn't send webhooks. Makes platform useful for basic automation. |
+| **6** | Wire up outbound webhook dispatch | 3-4 hrs | Settings page exists, event list is there, UI is built — backend just doesn't send webhooks. |
 
 ### What We Are NOT Building Right Now
 - **No plugin/hook registry** — the internal infrastructure (EventRouter, SignalBus, MemoryVault, PluginManager) is powerful but intentionally closed. No external API surface for third-party tools.

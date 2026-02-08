@@ -148,9 +148,8 @@ async function cleanupTestData(): Promise<void> {
     // Delete research intelligence
     const researchDocs = await db
       .collection('research_intelligence')
-      .where('organizationId', '==', TEST_ORG_ID)
       .get();
-    
+
     const batch1 = db.batch();
     researchDocs.docs.forEach((doc) => batch1.delete(doc.ref));
     await batch1.commit();
@@ -158,9 +157,8 @@ async function cleanupTestData(): Promise<void> {
     // Delete extracted signals
     const signalDocs = await db
       .collection('extracted_signals')
-      .where('organizationId', '==', TEST_ORG_ID)
       .get();
-    
+
     const batch2 = db.batch();
     signalDocs.docs.forEach((doc) => batch2.delete(doc.ref));
     await batch2.commit();
@@ -168,9 +166,8 @@ async function cleanupTestData(): Promise<void> {
     // Delete temporary scrapes (from previous tests)
     const scrapeDocs = await db
       .collection('temporary_scrapes')
-      .where('organizationId', '==', TEST_ORG_ID)
       .get();
-    
+
     const batch3 = db.batch();
     scrapeDocs.docs.forEach((doc) => batch3.delete(doc.ref));
     await batch3.commit();

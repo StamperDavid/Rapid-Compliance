@@ -24,7 +24,7 @@ import {
 } from '@/lib/ai/persona-mapper';
 import { ImplementationGuide, type ImplementationContext } from '@/lib/orchestrator/implementation-guide';
 import { SystemHealthService, type SystemHealthReport } from '@/lib/orchestrator/system-health-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface MerchantProfile {
   industry?: string;
@@ -53,7 +53,7 @@ export function MerchantOrchestrator() {
   useEffect(() => {
     async function fetchSystemHealth() {
       try {
-        const report = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
+        const report = await SystemHealthService.generateHealthReport();
         setHealthReport(report);
       } catch (error) {
         console.error('Error fetching system health:', error);
@@ -90,7 +90,7 @@ export function MerchantOrchestrator() {
       }
 
       try {
-        const orgDoc = await getDoc(doc(db, 'organizations', DEFAULT_ORG_ID));
+        const orgDoc = await getDoc(doc(db, 'organizations', PLATFORM_ID));
         if (orgDoc.exists()) {
           const data = orgDoc.data() as MerchantProfile;
           setProfile({
@@ -164,7 +164,7 @@ ${recommendation} What would you like to focus on?`;
     let currentHealth = healthReport;
     if (!currentHealth) {
       try {
-        currentHealth = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
+        currentHealth = await SystemHealthService.generateHealthReport();
       } catch (e) {
         console.error('Failed to fetch health report for briefing:', e);
       }
@@ -251,7 +251,6 @@ When hiding features, use this exact response format:
     <>
       <OrchestratorBase config={config} />
       <FeedbackModal
-        orgId={DEFAULT_ORG_ID}
         userId={user?.id}
         userEmail={user?.email ?? undefined}
       />

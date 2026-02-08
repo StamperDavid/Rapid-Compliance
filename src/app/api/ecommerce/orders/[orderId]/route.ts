@@ -5,7 +5,7 @@ import type { Order } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * GET /api/ecommerce/orders/[orderId] - Get order
@@ -26,7 +26,7 @@ export async function GET(
     }
 
     const order = await FirestoreService.get<Order>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/default/orders`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/orders`,
       params.orderId
     );
 
@@ -36,7 +36,7 @@ export async function GET(
 
     // Verify user has access (customer email or organization member)
     const user = authResult.user;
-    // In penthouse model, authenticated users belong to DEFAULT_ORG_ID
+    // In penthouse model, authenticated users belong to PLATFORM_ID
     if (order.customerEmail !== user?.email) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/slack-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Zod schema for OAuth callback validation
 const oauthCallbackSchema = z.object({
@@ -13,7 +14,6 @@ const oauthCallbackSchema = z.object({
 // Interface for decoded state
 interface SlackOAuthState {
   userId: string;
-  orgId: string;
 }
 
 export async function GET(request: NextRequest) {
@@ -35,12 +35,12 @@ export async function GET(request: NextRequest) {
 
   try {
     // Parse and type the state properly
-    let parsedState: SlackOAuthState = { userId: 'default', orgId: 'default' };
+    let parsedState: SlackOAuthState = { userId: 'default' };
     if (state) {
       const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8')) as SlackOAuthState;
       parsedState = decoded;
     }
-    const { userId, orgId } = parsedState;
+    const { userId } = parsedState;
     const tokens = await getTokensFromCode(validation.data.code);
 
     await FirestoreService.set(
@@ -49,7 +49,6 @@ export async function GET(request: NextRequest) {
       {
         id: `slack_${tokens.team_id}`,
         userId,
-        organizationId: orgId,
         provider: 'slack',
         type: 'messaging',
         status: 'active',

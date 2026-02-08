@@ -8,11 +8,10 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getClientSignalCoordinator } from '@/lib/orchestration/coordinator-factory-client';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface Deal {
   id: string;
-  organizationId: string;
   workspaceId: string;
   name: string;
   company?: string;
@@ -76,15 +75,14 @@ export async function getDeals(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Deal>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
     );
 
     logger.info('Deals retrieved', {
-      organizationId: DEFAULT_ORG_ID,
-      workspaceId,
+            workspaceId,
       count: result.data.length,
       filters: filters ? JSON.stringify(filters) : undefined,
     });
@@ -92,7 +90,7 @@ export async function getDeals(
     return result;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get deals', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, filters: filters ? JSON.stringify(filters) : undefined });
+    logger.error('Failed to get deals', error instanceof Error ? error : new Error(String(error)), { workspaceId, filters: filters ? JSON.stringify(filters) : undefined });
     throw new Error(`Failed to retrieve deals: ${errorMessage}`);
   }
 }
@@ -106,20 +104,20 @@ export async function getDeal(
 ): Promise<Deal | null> {
   try {
     const deal = await FirestoreService.get<Deal>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
       dealId
     );
 
     if (!deal) {
-      logger.warn('Deal not found', { organizationId: DEFAULT_ORG_ID, dealId });
+      logger.warn('Deal not found', { workspaceId, dealId });
       return null;
     }
 
-    logger.info('Deal retrieved', { organizationId: DEFAULT_ORG_ID, dealId, value: deal.value });
+    logger.info('Deal retrieved', { workspaceId, dealId, value: deal.value });
     return deal;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get deal', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, dealId });
+    logger.error('Failed to get deal', error instanceof Error ? error : new Error(String(error)), { workspaceId, dealId });
     throw new Error(`Failed to retrieve deal: ${errorMessage}`);
   }
 }
@@ -128,7 +126,7 @@ export async function getDeal(
  * Create a new deal
  */
 export async function createDeal(
-  data: Omit<Deal, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>,
+  data: Omit<Deal, 'id' | 'workspaceId' | 'createdAt'>,
   workspaceId: string = 'default'
 ): Promise<Deal> {
   try {
@@ -138,8 +136,7 @@ export async function createDeal(
     const deal: Deal = {
       ...data,
       id: dealId,
-      organizationId: DEFAULT_ORG_ID,
-      workspaceId,
+            workspaceId,
       currency: data.currency ?? 'USD',
       stage: data.stage || 'prospecting',
       probability: data.probability || 10,
@@ -148,15 +145,14 @@ export async function createDeal(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
       dealId,
       deal,
       false
     );
 
     logger.info('Deal created', {
-      organizationId: DEFAULT_ORG_ID,
-      dealId,
+            dealId,
       value: deal.value,
       stage: deal.stage,
     });
@@ -171,7 +167,7 @@ export async function createDeal(
     return deal;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to create deal', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, dealName: data.name, value: data.value });
+    logger.error('Failed to create deal', error instanceof Error ? error : new Error(String(error)), { workspaceId, dealName: data.name, value: data.value });
     throw new Error(`Failed to create deal: ${errorMessage}`);
   }
 }
@@ -181,7 +177,7 @@ export async function createDeal(
  */
 export async function updateDeal(
   dealId: string,
-  updates: Partial<Omit<Deal, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>>,
+  updates: Partial<Omit<Deal, 'id' | 'workspaceId' | 'createdAt'>>,
   workspaceId: string = 'default'
 ): Promise<Deal> {
   try {
@@ -191,14 +187,13 @@ export async function updateDeal(
     };
 
     await FirestoreService.update(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
       dealId,
       updatedData
     );
 
     logger.info('Deal updated', {
-      organizationId: DEFAULT_ORG_ID,
-      dealId,
+            dealId,
       updatedFields: Object.keys(updates),
     });
 
@@ -210,7 +205,7 @@ export async function updateDeal(
     return deal;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to update deal', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, dealId });
+    logger.error('Failed to update deal', error instanceof Error ? error : new Error(String(error)), { workspaceId, dealId });
     throw new Error(`Failed to update deal: ${errorMessage}`);
   }
 }
@@ -253,8 +248,7 @@ export async function moveDealToStage(
     }
 
     logger.info('Deal moved to new stage', {
-      organizationId: DEFAULT_ORG_ID,
-      dealId,
+            dealId,
       oldStage,
       newStage,
       value: deal.value,
@@ -288,7 +282,7 @@ export async function moveDealToStage(
     return deal;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to move deal', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, dealId, newStage });
+    logger.error('Failed to move deal', error instanceof Error ? error : new Error(String(error)), { workspaceId, dealId, newStage });
     throw new Error(`Failed to move deal: ${errorMessage}`);
   }
 }
@@ -302,14 +296,14 @@ export async function deleteDeal(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
       dealId
     );
 
-    logger.info('Deal deleted', { organizationId: DEFAULT_ORG_ID, dealId });
+    logger.info('Deal deleted', { workspaceId, dealId });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to delete deal', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, dealId });
+    logger.error('Failed to delete deal', error instanceof Error ? error : new Error(String(error)), { workspaceId, dealId });
     throw new Error(`Failed to delete deal: ${errorMessage}`);
   }
 }
@@ -334,12 +328,12 @@ export async function getPipelineSummary(
       };
     });
 
-    logger.info('Pipeline summary generated', { organizationId: DEFAULT_ORG_ID, stageCount: Object.keys(summary).length });
+    logger.info('Pipeline summary generated', { workspaceId, stageCount: Object.keys(summary).length });
 
     return summary;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get pipeline summary', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to get pipeline summary', error instanceof Error ? error : new Error(String(error)), { workspaceId });
     throw new Error(`Failed to get pipeline summary: ${errorMessage}`);
   }
 }
@@ -376,7 +370,6 @@ async function emitDealSignal(params: {
     await coordinator.emitSignal({
       type,
       leadId: deal.contactId, // Link to contact if available
-      orgId: DEFAULT_ORG_ID,
       workspaceId,
       confidence: 1.0, // CRM events are always certain
       priority,
@@ -401,8 +394,7 @@ async function emitDealSignal(params: {
     logger.info('Deal signal emitted', {
       type,
       dealId: deal.id,
-      organizationId: DEFAULT_ORG_ID,
-      value: deal.value,
+            value: deal.value,
     });
   } catch (error) {
     // Don't fail deal operations if signal emission fails

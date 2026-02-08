@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -23,7 +23,6 @@ import { logger } from '@/lib/logger/logger';;
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
-  const _orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [integrations, setIntegrations] = useState<Record<string, ConnectedIntegration | null>>({});
@@ -38,7 +37,7 @@ export default function IntegrationsPage() {
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         const integrationsData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.INTEGRATIONS}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.INTEGRATIONS}`,
           'all'
         );
         
@@ -71,7 +70,7 @@ export default function IntegrationsPage() {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.INTEGRATIONS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.INTEGRATIONS}`,
         'all',
         updated,
         false
@@ -94,7 +93,7 @@ export default function IntegrationsPage() {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.INTEGRATIONS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.INTEGRATIONS}`,
         'all',
         updated,
         false
@@ -119,7 +118,7 @@ export default function IntegrationsPage() {
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.INTEGRATIONS}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.INTEGRATIONS}`,
           'all',
           updated,
           false

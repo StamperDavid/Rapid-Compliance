@@ -18,7 +18,6 @@ import type { LeadScoreRequest, BatchLeadScoreRequest, LeadScore } from '@/types
 const leadScoringRequestSchema = z.object({
   leadId: z.string().optional(),
   leadIds: z.array(z.string()).optional(),
-  organizationId: z.string().min(1),
   scoringRulesId: z.string().optional(),
   forceRescore: z.boolean().optional(),
   discoveryData: z.record(z.unknown()).optional(),
@@ -62,13 +61,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { leadId, leadIds, organizationId, scoringRulesId, forceRescore, discoveryData } = validation.data;
+    const { leadId, leadIds, scoringRulesId, forceRescore, discoveryData } = validation.data;
 
     // Batch scoring
     if (leadIds && leadIds.length > 0) {
       logger.info('Batch lead scoring request', {
         userId,
-        organizationId,
         leadsCount: leadIds.length,
       });
 
@@ -104,7 +102,6 @@ export async function POST(req: NextRequest) {
     logger.info('Lead scoring request', {
       userId,
       leadId,
-      organizationId,
       forceRescore,
     });
 

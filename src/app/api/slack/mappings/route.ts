@@ -9,6 +9,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   createChannelMappingSchema,
   updateChannelMappingSchema,
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
     // Get mappings
     const snapshot = await db
       .collection('organizations')
-      .doc(workspace.organizationId)
+      .doc(PLATFORM_ID)
       .collection('slack_channel_mappings')
       .get();
     
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest) {
     // Check for existing mapping
     const existingSnapshot = await db
       .collection('organizations')
-      .doc(workspace.organizationId)
+      .doc(PLATFORM_ID)
       .collection('slack_channel_mappings')
       .where('category', '==', data.category)
       .limit(1)
@@ -189,7 +190,6 @@ export async function POST(request: NextRequest) {
     const mapping: SlackChannelMapping = {
       id: mappingId,
       workspaceId: data.workspaceId,
-      organizationId: workspace.organizationId,
       category: data.category,
       channelId: data.channelId,
       channelName: data.channelName,
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
     
     await db
       .collection('organizations')
-      .doc(workspace.organizationId)
+      .doc(PLATFORM_ID)
       .collection('slack_channel_mappings')
       .doc(mappingId)
       .set(mapping);

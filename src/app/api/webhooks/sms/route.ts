@@ -6,7 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -188,7 +188,7 @@ async function updateSMSRecord(
 ): Promise<void> {
   try {
     const smsMessages = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
       []
     );
 
@@ -201,7 +201,7 @@ async function updateSMSRecord(
 
     if (smsRecord && isSMSMessage(smsRecord)) {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
         smsRecord.id,
         {
           ...updates,
@@ -243,7 +243,7 @@ async function handleSMSFailure(
     });
 
     const smsMessages = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
       []
     );
 
@@ -256,7 +256,7 @@ async function handleSMSFailure(
 
     if (smsRecord && isSMSMessage(smsRecord) && smsRecord.enrollmentId) {
       const enrollment = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
         smsRecord.enrollmentId
       );
 
@@ -269,7 +269,7 @@ async function handleSMSFailure(
           action.updatedAt = new Date().toISOString();
 
           await FirestoreService.update(
-            `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+            `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
             smsRecord.enrollmentId,
             {
               stepActions,

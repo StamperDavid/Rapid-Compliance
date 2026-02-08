@@ -17,7 +17,6 @@ describe('SlackMessageBuilder', () => {
   describe('buildDealRiskAlert', () => {
     it('should build critical risk alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         dealId: 'deal-1',
         dealName: 'Acme Corp Deal',
         dealValue: 100000,
@@ -38,7 +37,6 @@ describe('SlackMessageBuilder', () => {
     
     it('should build high risk alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         dealId: 'deal-1',
         dealName: 'Test Deal',
         dealValue: 50000,
@@ -55,7 +53,6 @@ describe('SlackMessageBuilder', () => {
     
     it('should include action buttons', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         dealId: 'deal-1',
         dealName: 'Test Deal',
         dealValue: 100000,
@@ -74,7 +71,6 @@ describe('SlackMessageBuilder', () => {
   describe('buildConversationAlert', () => {
     it('should build low score alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         conversationId: 'conv-1',
         conversationScore: 42,
         userId: 'user-1',
@@ -90,7 +86,6 @@ describe('SlackMessageBuilder', () => {
     
     it('should build red flag alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         conversationId: 'conv-1',
         redFlagType: 'Competitor Mentioned',
         redFlagDetails: 'Customer mentioned evaluating competitor X',
@@ -114,7 +109,6 @@ describe('SlackMessageBuilder', () => {
   describe('buildPerformanceAlert', () => {
     it('should build top performer alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         userId: 'user-1',
         userName: 'Sarah Johnson',
         performanceScore: 95,
@@ -130,7 +124,6 @@ describe('SlackMessageBuilder', () => {
     
     it('should build improvement alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         userId: 'user-1',
         userName: 'Bob Williams',
         skillGap: 'Objection Handling',
@@ -147,7 +140,6 @@ describe('SlackMessageBuilder', () => {
   describe('buildLeadRoutingAlert', () => {
     it('should build lead assignment alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         leadId: 'lead-1',
         leadName: 'Alice Cooper',
         leadCompany: 'Acme Inc',
@@ -172,7 +164,6 @@ describe('SlackMessageBuilder', () => {
   describe('buildWorkflowAlert', () => {
     it('should build successful workflow alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         workflowId: 'workflow-1',
         workflowName: 'Deal Follow-up',
         actionsExecuted: 3,
@@ -188,7 +179,6 @@ describe('SlackMessageBuilder', () => {
     
     it('should build failed workflow alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         workflowId: 'workflow-1',
         workflowName: 'Email Sequence',
         actionsExecuted: 1,
@@ -205,7 +195,6 @@ describe('SlackMessageBuilder', () => {
   describe('buildForecastingAlert', () => {
     it('should build quota at risk alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         userId: 'user-1',
         userName: 'Tom Brady',
         quota: 100000,
@@ -224,7 +213,6 @@ describe('SlackMessageBuilder', () => {
     
     it('should build quota achieved alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         userId: 'user-1',
         userName: 'Lisa Anderson',
         quota: 100000,
@@ -242,7 +230,6 @@ describe('SlackMessageBuilder', () => {
   describe('buildPlaybookAlert', () => {
     it('should build playbook generated alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         playbookId: 'playbook-1',
         playbookName: 'Enterprise Sales Playbook',
         patternsCount: 12,
@@ -261,7 +248,6 @@ describe('SlackMessageBuilder', () => {
   describe('buildSequenceAlert', () => {
     it('should build underperforming sequence alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         sequenceId: 'seq-1',
         sequenceName: 'Cold Outreach',
         performanceScore: 35,
@@ -275,7 +261,6 @@ describe('SlackMessageBuilder', () => {
     
     it('should build optimization alert', () => {
       const variables: NotificationVariables = {
-        orgId: 'org-1',
         sequenceId: 'seq-1',
         sequenceName: 'Product Demo',
         optimizationCount: 5,

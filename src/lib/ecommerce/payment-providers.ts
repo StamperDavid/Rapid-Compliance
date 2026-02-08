@@ -6,7 +6,7 @@
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import type { PaymentRequest, PaymentResult } from './payment-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // API Key Configuration Interfaces
 interface AuthorizeNetKeys {
@@ -69,8 +69,7 @@ export async function processAuthorizeNetPayment(
   _providerConfig: unknown
 ): Promise<PaymentResult> {
   try {
-    const orgId = DEFAULT_ORG_ID;
-    const authNetKeysResponse = await apiKeyService.getServiceKey(orgId, 'authorizenet');
+    const authNetKeysResponse = await apiKeyService.getServiceKey(PLATFORM_ID, 'authorizenet');
 
     if (!authNetKeysResponse) {
       return {
@@ -195,8 +194,7 @@ export async function process2CheckoutPayment(
   _providerConfig: unknown
 ): Promise<PaymentResult> {
   try {
-    const orgId = DEFAULT_ORG_ID;
-    const tcoKeysResponse = await apiKeyService.getServiceKey(orgId, '2checkout');
+    const tcoKeysResponse = await apiKeyService.getServiceKey(PLATFORM_ID, '2checkout');
 
     if (!tcoKeysResponse) {
       return {
@@ -316,8 +314,7 @@ export async function processMolliePayment(
   _providerConfig: unknown
 ): Promise<PaymentResult> {
   try {
-    const orgId = DEFAULT_ORG_ID;
-    const mollieKeysResponse = await apiKeyService.getServiceKey(orgId, 'mollie');
+    const mollieKeysResponse = await apiKeyService.getServiceKey(PLATFORM_ID, 'mollie');
 
     if (!mollieKeysResponse) {
       return {

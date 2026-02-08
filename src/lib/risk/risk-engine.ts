@@ -65,7 +65,6 @@ export async function predictDealRisk(
   try {
     logger.info('Predicting deal risk', {
       dealId: request.dealId,
-      organizationId: request.organizationId,
       includeInterventions: request.includeInterventions,
     });
     
@@ -81,7 +80,6 @@ export async function predictDealRisk(
     
     // 2. Get deal score and health
     const dealScore = calculateDealScore({
-      organizationId: request.organizationId,
       workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       dealId: request.dealId,
       deal,
@@ -160,7 +158,6 @@ export async function predictDealRisk(
     
     const prediction: DealRiskPrediction = {
       dealId: request.dealId,
-      organizationId: request.organizationId,
       workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       riskLevel,
       slippageProbability,
@@ -204,7 +201,6 @@ export async function predictDealRisk(
   } catch (error: unknown) {
     logger.error('Risk prediction failed', error instanceof Error ? error : new Error(String(error)), {
       dealId: request.dealId,
-      organizationId: request.organizationId,
     });
     throw new Error(`Risk prediction failed: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -222,7 +218,6 @@ export async function predictBatchDealRisk(
   try {
     logger.info('Batch risk prediction started', {
       dealCount: request.dealIds.length,
-      organizationId: request.organizationId,
       highRiskOnly: request.highRiskOnly,
     });
     
@@ -234,7 +229,6 @@ export async function predictBatchDealRisk(
         const prediction = await predictDealRisk(
           {
             dealId,
-            organizationId: request.organizationId,
             workspaceId: request.workspaceId,
             includeInterventions: request.includeInterventions,
             forceRefresh: false,
@@ -273,9 +267,7 @@ export async function predictBatchDealRisk(
     };
     
   } catch (error: unknown) {
-    logger.error('Batch risk prediction failed', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: request.organizationId,
-    });
+    logger.error('Batch risk prediction failed', error instanceof Error ? error : new Error(String(error)));
     throw new Error(`Batch risk prediction failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -1111,7 +1103,6 @@ async function emitRiskSignal(
     await coordinator.emitSignal({
       type: 'deal.risk.detected',
       leadId: deal.contactId,
-      orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',

@@ -15,7 +15,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   VideoGenerationProvider,
   ProviderCapabilities,
@@ -326,7 +326,6 @@ export class MultiModelPicker {
       id: uuidv4(),
       storyboardId: context.storyboardId,
       shotId: context.shot.id,
-      organizationId: DEFAULT_ORG_ID,
       targetProvider: decision.selectedProvider,
       fallbackProviders: decision.alternatives.map((a) => a.provider),
       visualPrompt: context.shot.visualPrompt,

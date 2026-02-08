@@ -162,7 +162,6 @@ export interface QueueEscalatedEventMetadata {
  * Create lead routed signal
  */
 export function createLeadRoutedSignal(
-  orgId: string,
   lead: Lead,
   assignment: LeadAssignment,
   qualityScore: number,
@@ -194,7 +193,6 @@ export function createLeadRoutedSignal(
   return {
     type: 'lead.discovered', // Using existing signal type (would add custom type in production)
     leadId: lead.id,
-    orgId,
     confidence: assignment.confidence,
     priority,
     metadata: metadata as unknown as Record<string, unknown>,
@@ -207,7 +205,6 @@ export function createLeadRoutedSignal(
  * Create lead assigned signal
  */
 export function createLeadAssignedSignal(
-  orgId: string,
   lead: Lead,
   assignment: LeadAssignment,
   repName: string,
@@ -230,7 +227,6 @@ export function createLeadAssignedSignal(
   return {
     type: 'lead.qualified', // Using existing signal type
     leadId: lead.id,
-    orgId,
     confidence: expectedConversion,
     priority: lead.priority === 'hot' ? 'High' : 'Medium',
     metadata: metadata as unknown as Record<string, unknown>,
@@ -243,7 +239,6 @@ export function createLeadAssignedSignal(
  * Create lead reassigned signal
  */
 export function createLeadReassignedSignal(
-  orgId: string,
   lead: Lead,
   assignment: LeadAssignment,
   previousRepId: string,
@@ -265,7 +260,6 @@ export function createLeadReassignedSignal(
   return {
     type: 'lead.status.changed', // Using existing signal type
     leadId: lead.id,
-    orgId,
     confidence: 0.7,
     priority: 'Medium',
     metadata: metadata as unknown as Record<string, unknown>,
@@ -278,7 +272,6 @@ export function createLeadReassignedSignal(
  * Create routing failed signal
  */
 export function createRoutingFailedSignal(
-  orgId: string,
   lead: Lead,
   failureReason: string,
   eligibleRepsCount: number,
@@ -298,7 +291,6 @@ export function createRoutingFailedSignal(
   return {
     type: 'system.error', // Using existing signal type
     leadId: lead.id,
-    orgId,
     confidence: 1.0, // High confidence in the error
     priority: lead.priority === 'hot' ? 'High' : 'Medium',
     metadata: metadata as unknown as Record<string, unknown>,
@@ -311,7 +303,6 @@ export function createRoutingFailedSignal(
  * Create assignment accepted signal
  */
 export function createAssignmentAcceptedSignal(
-  orgId: string,
   lead: Lead,
   assignment: LeadAssignment,
   repName: string,
@@ -330,7 +321,6 @@ export function createAssignmentAcceptedSignal(
   return {
     type: 'lead.engaged', // Using existing signal type
     leadId: lead.id,
-    orgId,
     confidence: 0.8,
     priority: 'Medium',
     metadata: metadata as unknown as Record<string, unknown>,
@@ -343,7 +333,6 @@ export function createAssignmentAcceptedSignal(
  * Create assignment rejected signal
  */
 export function createAssignmentRejectedSignal(
-  orgId: string,
   lead: Lead,
   assignment: LeadAssignment,
   repName: string,
@@ -363,7 +352,6 @@ export function createAssignmentRejectedSignal(
   return {
     type: 'lead.status.changed', // Using existing signal type
     leadId: lead.id,
-    orgId,
     confidence: 0.9,
     priority: lead.priority === 'hot' ? 'High' : 'Medium',
     metadata: metadata as unknown as Record<string, unknown>,
@@ -376,7 +364,6 @@ export function createAssignmentRejectedSignal(
  * Create assignment expired signal
  */
 export function createAssignmentExpiredSignal(
-  orgId: string,
   lead: Lead,
   assignment: LeadAssignment,
   hoursUntilExpiry: number,
@@ -394,7 +381,6 @@ export function createAssignmentExpiredSignal(
   return {
     type: 'lead.status.changed', // Using existing signal type
     leadId: lead.id,
-    orgId,
     confidence: 0.9,
     priority: 'High', // Expired assignments are high priority
     metadata: metadata as unknown as Record<string, unknown>,
@@ -407,7 +393,6 @@ export function createAssignmentExpiredSignal(
  * Create lead queued signal
  */
 export function createLeadQueuedSignal(
-  orgId: string,
   lead: Lead,
   queueReason: string,
   estimatedQueueTime: number
@@ -423,7 +408,6 @@ export function createLeadQueuedSignal(
   return {
     type: 'lead.status.changed', // Using existing signal type
     leadId: lead.id,
-    orgId,
     confidence: 0.8,
     priority: lead.priority === 'hot' ? 'High' : 'Low',
     metadata: metadata as unknown as Record<string, unknown>,
@@ -436,7 +420,6 @@ export function createLeadQueuedSignal(
  * Create queue escalated signal
  */
 export function createQueueEscalatedSignal(
-  orgId: string,
   lead: Lead,
   hoursInQueue: number,
   escalationReason: string
@@ -452,7 +435,6 @@ export function createQueueEscalatedSignal(
   return {
     type: 'system.error', // Using existing signal type for escalations
     leadId: lead.id,
-    orgId,
     confidence: 1.0,
     priority: 'High', // Always high priority
     metadata: metadata as unknown as Record<string, unknown>,

@@ -10,7 +10,7 @@
 
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { type AccountRole } from '@/types/unified-rbac';
 
 // ============================================================================
@@ -192,10 +192,10 @@ export function isAdminClaims(claims: AuthClaims): boolean {
 
 /**
  * Get the effective organization ID.
- * Penthouse model: Always returns DEFAULT_ORG_ID.
+ * Penthouse model: Always returns PLATFORM_ID.
  */
 export function getEffectiveOrgId(): string {
-  return DEFAULT_ORG_ID;
+  return PLATFORM_ID;
 }
 
 // ============================================================================

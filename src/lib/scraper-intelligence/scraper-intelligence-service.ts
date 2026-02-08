@@ -25,7 +25,7 @@ import {
   ExtractedSignalSchema
 } from '@/types/scraper-intelligence';
 import { distillScrape, calculateLeadScore } from './distillation-engine';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS
@@ -112,11 +112,11 @@ class RateLimiter {
 
   check(maxRequests: number = RATE_LIMIT_MAX_REQUESTS): boolean {
     const now = Date.now();
-    const entry = this.limits.get(DEFAULT_ORG_ID);
+    const entry = this.limits.get(PLATFORM_ID);
 
     // No entry or window expired - create new window
     if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-      this.limits.set(DEFAULT_ORG_ID, {
+      this.limits.set(PLATFORM_ID, {
         count: 1,
         windowStart: now,
       });
@@ -126,7 +126,6 @@ class RateLimiter {
     // Within window - check if limit exceeded
     if (entry.count >= maxRequests) {
       logger.warn('Rate limit exceeded', {
-        organizationId: DEFAULT_ORG_ID,
         count: entry.count,
         maxRequests,
       });
@@ -139,7 +138,7 @@ class RateLimiter {
   }
 
   reset(): void {
-    this.limits.delete(DEFAULT_ORG_ID);
+    this.limits.delete(PLATFORM_ID);
   }
 
   cleanup(): void {
@@ -220,23 +219,22 @@ export async function getResearchIntelligence(
       throw new ScraperIntelligenceError(
         'Rate limit exceeded',
         'RATE_LIMIT_EXCEEDED',
-        429,
-        { organizationId: DEFAULT_ORG_ID }
+        429
       );
     }
 
     // Check cache
-    const cacheKey = `research:${DEFAULT_ORG_ID}:${industryId}`;
+    const cacheKey = `research:${PLATFORM_ID}:${industryId}`;
     const cached = researchCache.get(cacheKey);
     if (cached) {
-      logger.debug('Research intelligence cache hit', { organizationId: DEFAULT_ORG_ID, industryId });
+      logger.debug('Research intelligence cache hit', { industryId });
       return cached;
     }
 
     // Fetch from Firestore
     const doc = await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
-      .doc(`${DEFAULT_ORG_ID}_${industryId}`)
+      .doc(`${PLATFORM_ID}_${industryId}`)
       .get();
 
     if (!doc.exists) {
@@ -266,12 +264,11 @@ export async function getResearchIntelligence(
     // Cache for future requests (use original typed object, not Zod result)
     researchCache.set(cacheKey, research);
 
-    logger.info('Research intelligence fetched', { organizationId: DEFAULT_ORG_ID, industryId });
+    logger.info('Research intelligence fetched', { industryId });
 
     return research;
   } catch (error) {
     return handleFirestoreError(error, 'getResearchIntelligence', {
-      organizationId: DEFAULT_ORG_ID,
       industryId,
     });
   }
@@ -294,8 +291,7 @@ export async function saveResearchIntelligence(
       throw new ScraperIntelligenceError(
         'Rate limit exceeded',
         'RATE_LIMIT_EXCEEDED',
-        429,
-        { organizationId: DEFAULT_ORG_ID }
+        429
       );
     }
 
@@ -303,20 +299,19 @@ export async function saveResearchIntelligence(
     const validated = ResearchIntelligenceSchema.parse(research);
 
     // Save to Firestore
-    const docId = `${DEFAULT_ORG_ID}_${industryId}`;
+    const docId = `${PLATFORM_ID}_${industryId}`;
     await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
       .doc(docId)
       .set(validated, { merge: true });
 
     // Invalidate cache
-    const cacheKey = `research:${DEFAULT_ORG_ID}:${industryId}`;
+    const cacheKey = `research:${PLATFORM_ID}:${industryId}`;
     researchCache.invalidate(cacheKey);
 
-    logger.info('Research intelligence saved', { organizationId: DEFAULT_ORG_ID, industryId });
+    logger.info('Research intelligence saved', { industryId });
   } catch (error) {
     return handleFirestoreError(error, 'saveResearchIntelligence', {
-      organizationId: DEFAULT_ORG_ID,
       industryId,
     });
   }
@@ -332,20 +327,19 @@ export async function deleteResearchIntelligence(
   industryId: string
 ): Promise<void> {
   try {
-    const docId = `${DEFAULT_ORG_ID}_${industryId}`;
+    const docId = `${PLATFORM_ID}_${industryId}`;
     await db
       .collection(RESEARCH_INTELLIGENCE_COLLECTION)
       .doc(docId)
       .delete();
 
     // Invalidate cache
-    const cacheKey = `research:${DEFAULT_ORG_ID}:${industryId}`;
+    const cacheKey = `research:${PLATFORM_ID}:${industryId}`;
     researchCache.invalidate(cacheKey);
 
-    logger.info('Research intelligence deleted', { organizationId: DEFAULT_ORG_ID, industryId });
+    logger.info('Research intelligence deleted', { industryId });
   } catch (error) {
     return handleFirestoreError(error, 'deleteResearchIntelligence', {
-      organizationId: DEFAULT_ORG_ID,
       industryId,
     });
   }
@@ -365,7 +359,7 @@ export async function listResearchIntelligence(): Promise<Array<{ industryId: st
 
     const results = snapshot.docs.map((doc) => {
       const data = doc.data() as Record<string, unknown>;
-      const industryId = doc.id.replace(`${DEFAULT_ORG_ID}_`, '');
+      const industryId = doc.id.replace(`${PLATFORM_ID}_`, '');
       const rawMetadata = data.metadata as { lastUpdated?: unknown; version?: number; updatedBy?: 'system' | 'user'; notes?: string } | undefined;
 
       return {
@@ -383,15 +377,12 @@ export async function listResearchIntelligence(): Promise<Array<{ industryId: st
     });
 
     logger.info('Listed research intelligence', {
-      organizationId: DEFAULT_ORG_ID,
       count: results.length
     });
 
     return results;
   } catch (error) {
-    return handleFirestoreError(error, 'listResearchIntelligence', {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    return handleFirestoreError(error, 'listResearchIntelligence', {});
   }
 }
 
@@ -418,8 +409,7 @@ export async function saveExtractedSignals(
       throw new ScraperIntelligenceError(
         'Rate limit exceeded',
         'RATE_LIMIT_EXCEEDED',
-        429,
-        { organizationId: DEFAULT_ORG_ID }
+        429
       );
     }
 
@@ -430,7 +420,7 @@ export async function saveExtractedSignals(
     await db.runTransaction(async (transaction) => {
       const docRef = db
         .collection(EXTRACTED_SIGNALS_COLLECTION)
-        .doc(`${DEFAULT_ORG_ID}_${recordId}`);
+        .doc(`${PLATFORM_ID}_${recordId}`);
 
       const doc = await transaction.get(docRef);
 
@@ -445,7 +435,6 @@ export async function saveExtractedSignals(
       } else {
         // Create new document
         transaction.set(docRef, {
-          organizationId: DEFAULT_ORG_ID,
           recordId,
           signals: validated,
           createdAt: new Date(),
@@ -455,16 +444,14 @@ export async function saveExtractedSignals(
     });
 
     // Invalidate cache
-    signalsCache.invalidatePattern(`signals:${DEFAULT_ORG_ID}:${recordId}`);
+    signalsCache.invalidatePattern(`signals:${PLATFORM_ID}:${recordId}`);
 
     logger.info('Extracted signals saved', {
-      organizationId: DEFAULT_ORG_ID,
       recordId,
       signalCount: signals.length,
     });
   } catch (error) {
     return handleFirestoreError(error, 'saveExtractedSignals', {
-      organizationId: DEFAULT_ORG_ID,
       recordId,
       signalCount: signals.length,
     });
@@ -483,17 +470,17 @@ export async function getExtractedSignals(
 ): Promise<ExtractedSignal[]> {
   try {
     // Check cache
-    const cacheKey = `signals:${DEFAULT_ORG_ID}:${recordId}`;
+    const cacheKey = `signals:${PLATFORM_ID}:${recordId}`;
     const cached = signalsCache.get(cacheKey);
     if (cached) {
-      logger.debug('Signals cache hit', { organizationId: DEFAULT_ORG_ID, recordId });
+      logger.debug('Signals cache hit', { recordId });
       return cached;
     }
 
     // Fetch from Firestore
     const doc = await db
       .collection(EXTRACTED_SIGNALS_COLLECTION)
-      .doc(`${DEFAULT_ORG_ID}_${recordId}`)
+      .doc(`${PLATFORM_ID}_${recordId}`)
       .get();
 
     if (!doc.exists) {
@@ -511,7 +498,6 @@ export async function getExtractedSignals(
     signalsCache.set(cacheKey, signals);
 
     logger.info('Extracted signals fetched', {
-      organizationId: DEFAULT_ORG_ID,
       recordId,
       signalCount: signals.length,
     });
@@ -519,7 +505,6 @@ export async function getExtractedSignals(
     return signals;
   } catch (error) {
     return handleFirestoreError(error, 'getExtractedSignals', {
-      organizationId: DEFAULT_ORG_ID,
       recordId,
     });
   }
@@ -562,7 +547,6 @@ export async function querySignalsByPlatform(
     }
 
     logger.info('Queried signals by platform', {
-      organizationId: DEFAULT_ORG_ID,
       platform,
       resultCount: results.length,
     });
@@ -570,7 +554,6 @@ export async function querySignalsByPlatform(
     return results;
   } catch (error) {
     return handleFirestoreError(error, 'querySignalsByPlatform', {
-      organizationId: DEFAULT_ORG_ID,
       platform,
     });
   }
@@ -588,16 +571,15 @@ export async function deleteExtractedSignals(
   try {
     await db
       .collection(EXTRACTED_SIGNALS_COLLECTION)
-      .doc(`${DEFAULT_ORG_ID}_${recordId}`)
+      .doc(`${PLATFORM_ID}_${recordId}`)
       .delete();
 
     // Invalidate cache
-    signalsCache.invalidatePattern(`signals:${DEFAULT_ORG_ID}:${recordId}`);
+    signalsCache.invalidatePattern(`signals:${PLATFORM_ID}:${recordId}`);
 
-    logger.info('Extracted signals deleted', { organizationId: DEFAULT_ORG_ID, recordId });
+    logger.info('Extracted signals deleted', { recordId });
   } catch (error) {
     return handleFirestoreError(error, 'deleteExtractedSignals', {
-      organizationId: DEFAULT_ORG_ID,
       recordId,
     });
   }
@@ -649,13 +631,12 @@ export async function processAndStoreScrape(params: {
         `Research intelligence not found for industry: ${industryId}`,
         'RESEARCH_NOT_FOUND',
         404,
-        { organizationId: DEFAULT_ORG_ID, industryId }
+        { industryId }
       );
     }
 
     // Step 2: Distill scrape
     const distillResult = await distillScrape({
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       url,
       rawHtml,
@@ -679,7 +660,6 @@ export async function processAndStoreScrape(params: {
     }
 
     logger.info('Scrape processed and stored', {
-      organizationId: DEFAULT_ORG_ID,
       recordId,
       url,
       signalsDetected: distillResult.signals.length,
@@ -695,7 +675,6 @@ export async function processAndStoreScrape(params: {
     };
   } catch (error) {
     return handleFirestoreError(error, 'processAndStoreScrape', {
-      organizationId: DEFAULT_ORG_ID,
       url: params.url,
     });
   }
@@ -781,7 +760,6 @@ export async function getSignalAnalytics(
     };
   } catch (error) {
     return handleFirestoreError(error, 'getSignalAnalytics', {
-      organizationId: DEFAULT_ORG_ID,
       recordId,
     });
   }
@@ -820,7 +798,6 @@ export async function batchProcessScrapes(
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error('Batch processing item failed', err, {
         url: scrape.url,
-        organizationId: DEFAULT_ORG_ID,
       });
       // Continue with next item
     }
@@ -862,12 +839,12 @@ export function getCacheStats(): {
 }
 
 /**
- * Invalidate caches for an organization
+ * Invalidate caches for the platform
  */
 export function invalidateOrganizationCaches(): void {
-  researchCache.invalidatePattern(`research:${DEFAULT_ORG_ID}:`);
-  signalsCache.invalidatePattern(`signals:${DEFAULT_ORG_ID}:`);
-  logger.info('Organization caches invalidated', { organizationId: DEFAULT_ORG_ID });
+  researchCache.invalidatePattern(`research:${PLATFORM_ID}:`);
+  signalsCache.invalidatePattern(`signals:${PLATFORM_ID}:`);
+  logger.info('Platform caches invalidated');
 }
 
 // ============================================================================

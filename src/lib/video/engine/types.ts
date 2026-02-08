@@ -97,7 +97,6 @@ export interface ProviderCapabilities {
 
 export interface MasterStoryboard {
   id: string;
-  organizationId: string;
   projectId?: string;
 
   // Metadata
@@ -429,7 +428,6 @@ export interface VisualStyleConfig {
 
 export interface TrendReport {
   id: string;
-  organizationId: string;
 
   // Analysis period
   periodStart: Date;
@@ -485,7 +483,6 @@ export interface CompetitorInsight {
 
 export interface SiteMimicryStyleGuide {
   id: string;
-  organizationId: string;
   sourceUrl: string;
 
   // Extracted colors
@@ -552,7 +549,6 @@ export interface SiteMimicryStyleGuide {
 export interface PostProductionJob {
   id: string;
   storyboardId: string;
-  organizationId: string;
 
   // Input clips
   clips: GeneratedClip[];
@@ -636,7 +632,6 @@ export interface GenerationQueueItem {
   id: string;
   storyboardId: string;
   shotId: string;
-  organizationId: string;
 
   // Routing
   targetProvider: VideoGenerationProvider;
@@ -684,7 +679,6 @@ export interface ProviderRoutingDecision {
 // ============================================================================
 
 export interface DirectorRequest {
-  organizationId: string;
   projectId?: string;
 
   // Source inputs

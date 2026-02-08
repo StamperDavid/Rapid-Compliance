@@ -13,7 +13,6 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 // Type Interfaces
 interface RequestBody {
   reportId: string;
-  orgId: string;
   parameters?: ReportParameters;
 }
 
@@ -180,15 +179,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = (await request.json()) as RequestBody;
-    const { reportId, orgId, parameters } = body;
+    const { reportId, parameters } = body;
 
-    if (!reportId || !orgId) {
-      return errors.badRequest('reportId and orgId are required');
+    if (!reportId) {
+      return errors.badRequest('reportId is required');
     }
+
+    // Penthouse model: use PLATFORM_ID
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
     // Get report configuration
     const reportDoc = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/reports`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/reports`,
       reportId
     );
 
@@ -197,10 +199,10 @@ export async function POST(request: NextRequest) {
     }
 
     const report = reportDoc as Report;
-    logger.info('Executing report', { reportId, orgId, type: report.type });
+    logger.info('Executing report', { reportId, type: report.type });
 
     // Execute report based on type
-    const results = await executeReport(report, orgId, parameters);
+    const results = await executeReport(report, parameters);
 
     return NextResponse.json({
       success: true,
@@ -219,30 +221,29 @@ export async function POST(request: NextRequest) {
  */
 async function executeReport(
   report: Report,
-  orgId: string,
   parameters: ReportParameters = {}
 ): Promise<ReportResult> {
   const { type, config } = report;
 
   switch (type) {
     case 'revenue':
-      return executeRevenueReport(orgId, config, parameters);
-    
+      return executeRevenueReport(config, parameters);
+
     case 'pipeline':
-      return executePipelineReport(orgId, config, parameters);
-    
+      return executePipelineReport(config, parameters);
+
     case 'leads':
-      return executeLeadsReport(orgId, config, parameters);
-    
+      return executeLeadsReport(config, parameters);
+
     case 'deals':
-      return executeDealsReport(orgId, config, parameters);
-    
+      return executeDealsReport(config, parameters);
+
     case 'contacts':
-      return executeContactsReport(orgId, config, parameters);
-    
+      return executeContactsReport(config, parameters);
+
     case 'custom':
-      return executeCustomReport(orgId, config, parameters);
-    
+      return executeCustomReport(config, parameters);
+
     default:
       throw new Error(`Unsupported report type: ${type}`);
   }
@@ -252,7 +253,6 @@ async function executeReport(
  * Revenue Report
  */
 async function executeRevenueReport(
-  orgId: string,
   config: ReportConfig,
   parameters: ReportParameters
 ): Promise<RevenueReportResult> {
@@ -263,7 +263,7 @@ async function executeRevenueReport(
 
   // Call analytics service
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL as string}/api/analytics/revenue?orgId=${orgId}&period=${period}`
+    `${process.env.NEXT_PUBLIC_APP_URL as string}/api/analytics/revenue?period=${period}`
   );
   const analytics = (await response.json()) as AnalyticsResponse;
 
@@ -296,12 +296,11 @@ async function executeRevenueReport(
  * Pipeline Report
  */
 async function executePipelineReport(
-  orgId: string,
   _config: ReportConfig,
   _parameters: ReportParameters
 ): Promise<PipelineReportResult> {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL as string}/api/analytics/pipeline?orgId=${orgId}`
+    `${process.env.NEXT_PUBLIC_APP_URL as string}/api/analytics/pipeline`
   );
   const analytics = (await response.json()) as AnalyticsResponse;
 
@@ -328,11 +327,11 @@ async function executePipelineReport(
  * Leads Report
  */
 async function executeLeadsReport(
-  orgId: string,
   _config: ReportConfig,
   _parameters: ReportParameters
 ): Promise<LeadsReportResult> {
-  const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/leads/records`;
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
+  const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/leads/records`;
   const allLeadsData = await FirestoreService.getAll(leadsPath, []);
   const allLeads = allLeadsData as LeadData[];
 
@@ -371,11 +370,11 @@ async function executeLeadsReport(
  * Deals Report
  */
 async function executeDealsReport(
-  orgId: string,
   _config: ReportConfig,
   _parameters: ReportParameters
 ): Promise<DealsReportResult> {
-  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals/records`;
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
+  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals/records`;
   const allDealsData = await FirestoreService.getAll(dealsPath, []);
   const allDeals = allDealsData as DealData[];
 
@@ -427,11 +426,11 @@ async function executeDealsReport(
  * Contacts Report
  */
 async function executeContactsReport(
-  orgId: string,
   _config: ReportConfig,
   _parameters: ReportParameters
 ): Promise<ContactsReportResult> {
-  const contactsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/contacts/records`;
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
+  const contactsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/contacts/records`;
   const allContactsData = await FirestoreService.getAll(contactsPath, []);
   const allContacts = allContactsData as ContactData[];
 
@@ -454,10 +453,10 @@ async function executeContactsReport(
  * Custom Report (SQL-like queries)
  */
 async function executeCustomReport(
-  orgId: string,
   config: ReportConfig,
   _parameters: ReportParameters
 ): Promise<CustomReportResult> {
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   // For custom reports, execute the configured query
   const { entity, filters, groupBy, aggregations } = config;
 
@@ -465,7 +464,7 @@ async function executeCustomReport(
     throw new Error('Entity is required for custom reports');
   }
 
-  const entityPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/${entity}/records`;
+  const entityPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/${entity}/records`;
   const recordsData = await FirestoreService.getAll(entityPath, []);
   const records = recordsData as Array<Record<string, unknown>>;
 

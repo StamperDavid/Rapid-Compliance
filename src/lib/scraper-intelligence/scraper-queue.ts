@@ -565,10 +565,6 @@ export function validateJobConfig(config: ScrapeJobConfig): {
     errors.push('Job ID is required');
   }
 
-  if (!config.organizationId) {
-    errors.push('Organization ID is required');
-  }
-
   if (!config.industryId) {
     errors.push('Industry ID is required');
   }

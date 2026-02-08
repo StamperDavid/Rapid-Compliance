@@ -4,7 +4,7 @@ import { COLLECTIONS, getMerchantCouponsCollection } from '@/lib/firebase/collec
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import type { CouponRedemption, MerchantCoupon } from '@/types/pricing';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * GET: Get coupon analytics for SalesVelocity.ai
@@ -22,10 +22,10 @@ export async function GET(
     const couponsPath = getMerchantCouponsCollection();
     const coupons = await FirestoreService.getAll<MerchantCoupon>(couponsPath) ?? [];
 
-    // Get redemptions for this org
+    // Get redemptions for merchant coupons
     const allRedemptions = await FirestoreService.getAll<CouponRedemption>(COLLECTIONS.COUPON_REDEMPTIONS) ?? [];
     const redemptions = allRedemptions.filter(
-      r => r.organization_id === DEFAULT_ORG_ID && r.coupon_type === 'merchant'
+      r => r.coupon_type === 'merchant'
     );
 
     // Calculate total discount given
@@ -59,7 +59,7 @@ export async function GET(
       analytics,
     });
   } catch (error: unknown) {
-    logger.error('Error fetching coupon analytics', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Error fetching coupon analytics', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to fetch analytics' },
       { status: 500 }

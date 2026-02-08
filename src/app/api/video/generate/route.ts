@@ -9,7 +9,6 @@ import { logger } from '@/lib/logger/logger';
 import { executeRenderPipeline } from '@/lib/video/engine/render-pipeline';
 
 const VideoGenerateSchema = z.object({
-  organizationId: z.string().min(1, 'Organization ID required'),
   storyboardId: z.string().min(1, 'Storyboard ID required'),
 });
 
@@ -25,10 +24,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { organizationId, storyboardId } = parseResult.data;
+    const { storyboardId } = parseResult.data;
 
     logger.info('Video API: Starting video generation', {
-      organizationId,
       storyboardId,
     });
 

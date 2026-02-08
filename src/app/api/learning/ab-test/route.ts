@@ -16,7 +16,6 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 interface CreateABTestRequestBody {
-  organizationId?: string;
   controlModel?: string;
   treatmentModel?: string;
   trafficSplit?: number;
@@ -25,7 +24,6 @@ interface CreateABTestRequestBody {
 }
 
 interface UpdateABTestRequestBody {
-  organizationId?: string;
   action?: string;
   testId?: string;
   autoDeploy?: boolean;
@@ -76,7 +74,6 @@ export async function POST(request: NextRequest) {
     }
 
     const {
-      organizationId,
       controlModel,
       treatmentModel,
       trafficSplit,
@@ -84,9 +81,9 @@ export async function POST(request: NextRequest) {
       confidenceThreshold,
     } = body;
 
-    if (!organizationId || !controlModel || !treatmentModel) {
+    if (!controlModel || !treatmentModel) {
       return NextResponse.json(
-        { error: 'organizationId, controlModel, and treatmentModel are required' },
+        { error: 'controlModel and treatmentModel are required' },
         { status: 400 }
       );
     }
@@ -131,14 +128,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { organizationId, action, testId, autoDeploy } = body;
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: 'Organization ID required' },
-        { status: 400 }
-      );
-    }
+    const { action, testId, autoDeploy } = body;
 
     if (action === 'evaluate') {
       // Force evaluation of current test

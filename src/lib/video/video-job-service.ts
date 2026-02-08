@@ -7,14 +7,14 @@
  * - Tracking job status (pending, processing, completed, failed)
  * - Persisting job data to Firestore for worker execution
  *
- * Collection: organizations/{orgId}/videoJobs
+ * Collection: organizations/rapid-compliance-root/videoJobs
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
 import type { VideoStatus, VideoAspectRatio, VideoResolution, VideoProvider } from '@/types/video';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // =============================================================================
 // TYPES
@@ -99,7 +99,7 @@ export class VideoJobService {
    * Get the collection path for video jobs
    */
   private getCollectionPath(): string {
-    return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${VIDEO_JOBS_COLLECTION}`;
+    return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${VIDEO_JOBS_COLLECTION}`;
   }
 
   /**
@@ -149,7 +149,6 @@ export class VideoJobService {
 
       logger.info('VideoJobService: Created video job', {
         jobId,
-        organizationId: DEFAULT_ORG_ID,
         storyboardId: request.storyboardId,
         file: 'video-job-service.ts',
       });
@@ -160,7 +159,6 @@ export class VideoJobService {
         'VideoJobService: Failed to create job',
         error instanceof Error ? error : new Error(String(error)),
         {
-          organizationId: DEFAULT_ORG_ID,
           storyboardId: request.storyboardId,
           file: 'video-job-service.ts',
         }
@@ -185,7 +183,6 @@ export class VideoJobService {
         error instanceof Error ? error : new Error(String(error)),
         {
           jobId,
-          organizationId: DEFAULT_ORG_ID,
           file: 'video-job-service.ts',
         }
       );
@@ -213,7 +210,6 @@ export class VideoJobService {
 
       logger.info('VideoJobService: Updated video job', {
         jobId,
-        organizationId: DEFAULT_ORG_ID,
         status: updates.status,
         file: 'video-job-service.ts',
       });
@@ -223,7 +219,6 @@ export class VideoJobService {
         error instanceof Error ? error : new Error(String(error)),
         {
           jobId,
-          organizationId: DEFAULT_ORG_ID,
           file: 'video-job-service.ts',
         }
       );
@@ -245,7 +240,6 @@ export class VideoJobService {
         'VideoJobService: Failed to get all jobs',
         error instanceof Error ? error : new Error(String(error)),
         {
-          organizationId: DEFAULT_ORG_ID,
           file: 'video-job-service.ts',
         }
       );
@@ -269,7 +263,6 @@ export class VideoJobService {
         'VideoJobService: Failed to get pending jobs',
         error instanceof Error ? error : new Error(String(error)),
         {
-          organizationId: DEFAULT_ORG_ID,
           file: 'video-job-service.ts',
         }
       );

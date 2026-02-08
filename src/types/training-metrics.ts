@@ -239,9 +239,8 @@ export const SCENARIO_TYPES: ScenarioType[] = [
  */
 export interface TrainingSession {
   id: string;
-  orgId: string;
   baseModelId: string;
-  
+
   // Session Info
   startedAt: string;
   completedAt?: string;
@@ -290,7 +289,6 @@ export interface MetricScore {
  * Scenario Coverage Tracking
  */
 export interface ScenarioCoverage {
-  orgId: string;
   baseModelId: string;
   coverage: Record<string, number>; // scenarioTypeId → count of sessions
   totalSessions: number;

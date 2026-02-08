@@ -6,10 +6,8 @@ import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 const entityChangeSchema = z.object({
-  organizationId: z.string(),
   workspaceId: z.string(),
   schemaId: z.string(),
   changeType: z.enum(['created', 'updated', 'deleted']),
@@ -48,15 +46,7 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { organizationId, workspaceId, schemaId, changeType, recordId, recordData } = validation.data;
-
-    // Verify user has access (penthouse model - verify against DEFAULT_ORG_ID)
-    if (DEFAULT_ORG_ID !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      );
-    }
+    const { workspaceId, schemaId, changeType, recordId, recordData } = validation.data;
 
     // Handle entity change (triggers workflows)
     await handleEntityChange(

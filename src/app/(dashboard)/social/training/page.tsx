@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -146,7 +146,7 @@ export default function SocialMediaTrainingPage() {
 
       // Load social training settings
       const socialSettingsData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/toolTraining`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/toolTraining`,
         'social'
       );
       const socialSettings = socialSettingsData as SocialTrainingSettings | null | undefined;
@@ -170,7 +170,7 @@ export default function SocialMediaTrainingPage() {
       }
 
       // Load Brand DNA
-      const orgDataRaw = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+      const orgDataRaw = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
       const orgData = orgDataRaw as { brandDNA?: BrandDNA } | null | undefined;
       if (orgData?.brandDNA) {
         setBrandDNA(orgData.brandDNA);
@@ -179,7 +179,7 @@ export default function SocialMediaTrainingPage() {
       // Load generation history
       const { orderBy } = await import('firebase/firestore');
       const historyResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/socialGenerationHistory`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/socialGenerationHistory`,
         [orderBy('generatedAt', 'desc')],
         50
       );
@@ -187,7 +187,7 @@ export default function SocialMediaTrainingPage() {
 
       // Load knowledge items
       const knowledgeResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/socialKnowledge`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/socialKnowledge`,
         [orderBy('uploadedAt', 'desc')],
         50
       );
@@ -282,7 +282,7 @@ export default function SocialMediaTrainingPage() {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/toolTraining`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/toolTraining`,
         'social',
         {
           ...settings,
@@ -292,7 +292,7 @@ export default function SocialMediaTrainingPage() {
         true
       );
 
-      logger.info('Social training settings saved', { file: 'social/training/page.tsx', DEFAULT_ORG_ID });
+      logger.info('Social training settings saved', { file: 'social/training/page.tsx', PLATFORM_ID });
       toast.success('Settings saved successfully!');
 
     } catch (error) {
@@ -425,7 +425,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
       if (isFirebaseConfigured) {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/socialGenerationHistory`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/socialGenerationHistory`,
           post.id,
           {
             ...post,

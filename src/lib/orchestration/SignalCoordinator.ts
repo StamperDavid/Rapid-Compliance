@@ -16,14 +16,14 @@
  * ✅ Circuit Breaker to prevent runaway AI costs
  * ✅ Throttler to prevent event loops
  * ✅ Full audit trail via signal_logs sub-collection
- * ✅ Organization isolation via DEFAULT_ORG_ID
+ * ✅ Organization isolation via PLATFORM_ID
  * ✅ TTL-based signal expiration
  *
  * SAFETY CONTROLS:
  * - Circuit Breaker opens after 5 consecutive failures (configurable)
  * - Throttler limits to 100 signals per minute per org (configurable)
  * - All signals logged to signal_logs for compliance
- * - Firestore security rules enforce DEFAULT_ORG_ID isolation
+ * - Firestore security rules enforce PLATFORM_ID isolation
  */
 
 import {
@@ -41,7 +41,7 @@ import {
   type QueryConstraint
 } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   SalesSignal,
   SignalObserver,
@@ -98,7 +98,7 @@ export interface SignalCoordinatorConfig {
  * const result = await coordinator.emitSignal({
  *   type: 'lead.intent.high',
  *   leadId: 'lead_123',
- *   DEFAULT_ORG_ID: 'org_acme',
+ *   PLATFORM_ID: 'org_acme',
  *   confidence: 0.94,
  *   priority: 'High',
  *   metadata: {
@@ -110,7 +110,7 @@ export interface SignalCoordinatorConfig {
  * // Observe signals
  * const unsubscribe = coordinator.observeSignals(
  *   {
- *     DEFAULT_ORG_ID: 'org_acme',
+ *     PLATFORM_ID: 'org_acme',
  *     types: ['lead.intent.high'],
  *     minConfidence: 0.8
  *   },
@@ -192,7 +192,7 @@ export class SignalCoordinator {
    * await coordinator.emitSignal({
    *   type: 'lead.discovered',
    *   leadId: 'lead_123',
-   *   DEFAULT_ORG_ID: 'org_acme',
+   *   PLATFORM_ID: 'org_acme',
    *   confidence: 0.85,
    *   priority: 'Medium',
    *   metadata: { source: 'linkedin-scraper' }
@@ -210,7 +210,6 @@ export class SignalCoordinator {
       // Check circuit breaker
       if (this.isCircuitBreakerOpen()) {
         logger.warn('🚨 Circuit breaker OPEN - signal emission blocked', {
-          orgId: signalData.orgId,
           type: signalData.type,
           file: 'SignalCoordinator.ts'
         });
@@ -225,7 +224,6 @@ export class SignalCoordinator {
       // Check throttler
       if (this.isThrottled()) {
         logger.warn('⏱️ Throttler active - signal emission blocked', {
-          orgId: signalData.orgId,
           type: signalData.type,
           file: 'SignalCoordinator.ts'
         });
@@ -247,10 +245,7 @@ export class SignalCoordinator {
       };
 
       // Get signals collection with environment awareness
-      const signalsCollection = this.dal.getOrgSubCollection(
-        signalData.orgId,
-        'signals'
-      );
+      const signalsCollection = this.dal.getOrgSubCollection('signals');
 
       // Emit to Firestore
       const docRef = await addDoc(signalsCollection, enrichedSignal);
@@ -259,7 +254,7 @@ export class SignalCoordinator {
       this.incrementThrottler();
 
       // Log to signal_logs sub-collection for audit trail
-      await this.logSignal(signalData.orgId, docRef.id, enrichedSignal);
+      await this.logSignal(docRef.id, enrichedSignal);
 
       // Reset circuit breaker on success
       this.resetCircuitBreaker();
@@ -269,7 +264,6 @@ export class SignalCoordinator {
       logger.info('📡 Signal emitted successfully', {
         signalId: docRef.id,
         type: signalData.type,
-        orgId: signalData.orgId,
         leadId: signalData.leadId,
         priority: signalData.priority,
         confidence: signalData.confidence,
@@ -290,7 +284,6 @@ export class SignalCoordinator {
       const errorObj = error instanceof Error ? error : undefined;
 
       logger.error('❌ Signal emission failed', errorObj, {
-        organizationId: signalData.orgId,
         file: 'SignalCoordinator.ts'
       });
       
@@ -312,7 +305,7 @@ export class SignalCoordinator {
    * are created or updated. This is the real-time reactivity that powers
    * the "Sovereign Corporate Brain."
    * 
-   * MULTI-TENANCY: All queries are scoped to DEFAULT_ORG_ID
+   * MULTI-TENANCY: All queries are scoped to PLATFORM_ID
    * FILTERING: Supports type, priority, and confidence filters
    * CLEANUP: Returns unsubscribe function - MUST be called to prevent memory leaks
    * 
@@ -324,7 +317,7 @@ export class SignalCoordinator {
    * // Observe high-priority unprocessed signals
    * const unsubscribe = coordinator.observeSignals(
    *   {
-   *     DEFAULT_ORG_ID: 'org_acme',
+   *     PLATFORM_ID: 'org_acme',
    *     types: ['lead.intent.high', 'deal.won'],
    *     minPriority: 'High',
    *     minConfidence: 0.9,
@@ -335,7 +328,7 @@ export class SignalCoordinator {
    *     await processSignal(signal);
    *     
    *     // Mark as processed
-   *     await coordinator.markSignalProcessed(signal.orgId, signal.id!, {
+   *     await coordinator.markSignalProcessed(signal.signal.id!, {
    *       success: true,
    *       action: 'sent-email',
    *       module: 'email-sequencer'
@@ -376,16 +369,12 @@ export class SignalCoordinator {
 
 
     // Get signals collection with environment awareness
-    const signalsCollection = this.dal.getOrgSubCollection(
-      subscription.orgId,
-      'signals'
-    );
+    const signalsCollection = this.dal.getOrgSubCollection('signals');
 
     // Build query
     const q = query(signalsCollection, ...constraints);
     
     logger.info('👂 Signal observer registered', {
-      DEFAULT_ORG_ID: subscription.orgId,
       types: subscription.types,
       minPriority: subscription.minPriority,
       minConfidence: subscription.minConfidence,
@@ -422,7 +411,6 @@ export class SignalCoordinator {
             logger.debug('📨 Signal received', {
               signalId: signal.id,
               type: signal.type,
-              DEFAULT_ORG_ID: signal.orgId,
               priority: signal.priority,
               confidence: signal.confidence,
               file: 'SignalCoordinator.ts'
@@ -441,7 +429,6 @@ export class SignalCoordinator {
       (error) => {
         const errorObj = error instanceof Error ? error : undefined;
         logger.error('❌ Signal observation error', errorObj, {
-          organizationId: subscription.orgId,
           file: 'SignalCoordinator.ts'
         });
       }
@@ -454,9 +441,8 @@ export class SignalCoordinator {
     return () => {
       unsubscribe();
       this.activeSubscriptions.delete(unsubscribe);
-      
+
       logger.info('🔌 Signal observer unsubscribed', {
-        DEFAULT_ORG_ID: subscription.orgId,
         file: 'SignalCoordinator.ts'
       });
     };
@@ -464,15 +450,13 @@ export class SignalCoordinator {
   
   /**
    * Mark a signal as processed
-   * 
+   *
    * This prevents duplicate processing and records the outcome for audit purposes.
-   * 
-   * @param DEFAULT_ORG_ID - Organization ID
+   *
    * @param signalId - Signal ID
    * @param result - Processing result
    */
   async markSignalProcessed(
-    DEFAULT_ORG_ID: string,
     signalId: string,
     result: {
       success: boolean;
@@ -482,9 +466,9 @@ export class SignalCoordinator {
     }
   ): Promise<void> {
     try {
-      const signalsCollection = this.dal.getOrgSubCollection(DEFAULT_ORG_ID, 'signals');
+      const signalsCollection = this.dal.getOrgSubCollection('signals');
       const signalRef = doc(signalsCollection, signalId);
-      
+
       await updateDoc(signalRef, {
         processed: true,
         processedAt: Timestamp.now(),
@@ -492,14 +476,12 @@ export class SignalCoordinator {
       });
 
       logger.info('✅ Signal marked as processed', {
-        organizationId: DEFAULT_ORG_ID,
         file: 'SignalCoordinator.ts'
       });
-      
+
     } catch (error) {
       const errorObj = error instanceof Error ? error : undefined;
       logger.error('❌ Failed to mark signal as processed', errorObj, {
-        organizationId: DEFAULT_ORG_ID,
         file: 'SignalCoordinator.ts'
       });
 
@@ -515,7 +497,7 @@ export class SignalCoordinator {
    * Check if circuit breaker is open for an organization
    */
   private isCircuitBreakerOpen(): boolean {
-    const breaker = this.circuitBreakers.get(DEFAULT_ORG_ID);
+    const breaker = this.circuitBreakers.get(PLATFORM_ID);
     
     if (!breaker?.isOpen) {
       return false;
@@ -530,7 +512,7 @@ export class SignalCoordinator {
       if (elapsed >= this.config.circuitBreakerResetTimeout) {
         // Attempt to close circuit breaker
         logger.info('🔄 Circuit breaker reset attempt', {
-          DEFAULT_ORG_ID: DEFAULT_ORG_ID,
+          PLATFORM_ID: PLATFORM_ID,
           file: 'SignalCoordinator.ts'
         });
         
@@ -547,7 +529,7 @@ export class SignalCoordinator {
    * Record a failure in the circuit breaker
    */
   private recordCircuitBreakerFailure(): void {
-    let breaker = this.circuitBreakers.get(DEFAULT_ORG_ID);
+    let breaker = this.circuitBreakers.get(PLATFORM_ID);
     
     if (!breaker) {
       breaker = {
@@ -557,7 +539,7 @@ export class SignalCoordinator {
         lastOpenedAt: null,
         resetTimeout: this.config.circuitBreakerResetTimeout,
       };
-      this.circuitBreakers.set(DEFAULT_ORG_ID, breaker);
+      this.circuitBreakers.set(PLATFORM_ID, breaker);
     }
     
     breaker.failureCount++;
@@ -568,12 +550,10 @@ export class SignalCoordinator {
       breaker.lastOpenedAt = Timestamp.now();
 
       logger.error('🚨 Circuit breaker OPENED', undefined, {
-        organizationId: DEFAULT_ORG_ID,
         file: 'SignalCoordinator.ts'
       });
     } else {
       logger.warn('⚠️ Circuit breaker failure recorded', {
-        organizationId: DEFAULT_ORG_ID,
         file: 'SignalCoordinator.ts'
       });
     }
@@ -583,11 +563,10 @@ export class SignalCoordinator {
    * Reset circuit breaker on successful emission
    */
   private resetCircuitBreaker(): void {
-    const breaker = this.circuitBreakers.get(DEFAULT_ORG_ID);
-    
+    const breaker = this.circuitBreakers.get(PLATFORM_ID);
+
     if (breaker && breaker.failureCount > 0) {
       logger.info('✅ Circuit breaker reset', {
-        DEFAULT_ORG_ID: DEFAULT_ORG_ID,
         previousFailures: breaker.failureCount,
         file: 'SignalCoordinator.ts'
       });
@@ -605,7 +584,7 @@ export class SignalCoordinator {
    * Check if organization is currently throttled
    */
   private isThrottled(): boolean {
-    const throttler = this.throttlers.get(DEFAULT_ORG_ID);
+    const throttler = this.throttlers.get(PLATFORM_ID);
     
     if (!throttler) {
       return false;
@@ -636,7 +615,7 @@ export class SignalCoordinator {
    * Increment throttler counter
    */
   private incrementThrottler(): void {
-    let throttler = this.throttlers.get(DEFAULT_ORG_ID);
+    let throttler = this.throttlers.get(PLATFORM_ID);
     
     if (!throttler) {
       throttler = {
@@ -646,7 +625,7 @@ export class SignalCoordinator {
         maxSignalsPerWindow: this.config.throttlerMaxSignals,
         isThrottled: false,
       };
-      this.throttlers.set(DEFAULT_ORG_ID, throttler);
+      this.throttlers.set(PLATFORM_ID, throttler);
     }
     
     throttler.signalCount++;
@@ -655,7 +634,6 @@ export class SignalCoordinator {
     const percentUsed = (throttler.signalCount / throttler.maxSignalsPerWindow) * 100;
     if (percentUsed >= 80 && percentUsed < 100) {
       logger.warn('⏱️ Approaching throttle limit', {
-        DEFAULT_ORG_ID: DEFAULT_ORG_ID,
         signalCount: throttler.signalCount,
         limit: throttler.maxSignalsPerWindow,
         percentUsed: `${percentUsed.toFixed(1)}%`,
@@ -670,16 +648,15 @@ export class SignalCoordinator {
   
   /**
    * Log signal to signal_logs sub-collection
-   * 
+   *
    * This creates an immutable audit trail for compliance.
    */
   private async logSignal(
-    DEFAULT_ORG_ID: string,
     signalId: string,
     signal: Omit<SalesSignal, 'id'>
   ): Promise<void> {
     try {
-      const logsCollection = this.dal.getOrgSubCollection(DEFAULT_ORG_ID, 'signal_logs');
+      const logsCollection = this.dal.getOrgSubCollection('signal_logs');
 
       const logEntry = {
         signalId,
@@ -693,21 +670,19 @@ export class SignalCoordinator {
         ttl: signal.ttl,
         environment:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       };
-      
+
       await addDoc(logsCollection, logEntry);
-      
+
       logger.debug('📋 Signal logged to audit trail', {
         signalId,
-        DEFAULT_ORG_ID: DEFAULT_ORG_ID,
         type: signal.type,
         file: 'SignalCoordinator.ts'
       });
-      
+
     } catch (error) {
       // Log errors but don't fail signal emission
       const errorObj = error instanceof Error ? error : undefined;
       logger.error('❌ Failed to log signal to audit trail', errorObj, {
-        organizationId: DEFAULT_ORG_ID,
         file: 'SignalCoordinator.ts'
       });
     }
@@ -727,9 +702,7 @@ export class SignalCoordinator {
       throw new Error('Signal must have a type');
     }
     
-    if (!signalData.orgId) {
-      throw new Error('Signal must have an DEFAULT_ORG_ID (multi-tenancy requirement)');
-    }
+    // No orgId validation needed - single-tenant system uses PLATFORM_ID
     
     if (typeof signalData.confidence !== 'number' || signalData.confidence < 0 || signalData.confidence > 1) {
       throw new Error('Signal confidence must be a number between 0 and 1');

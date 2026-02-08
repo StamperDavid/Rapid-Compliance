@@ -31,7 +31,7 @@ import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SalesSignal, SignalType } from '@/lib/orchestration/types';
 import { WorkflowEngine, type WorkflowExecutionContext } from './workflow-engine';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   Workflow,
   WorkflowExecution,
@@ -105,7 +105,6 @@ export class WorkflowCoordinator {
       logger.debug('Processing signal for workflows', {
         signalId: signal.id,
         signalType: signal.type,
-        orgId: signal.orgId,
         dealId: (signal.metadata.dealId as string) || undefined,
       });
       
@@ -128,7 +127,6 @@ export class WorkflowCoordinator {
       if (workflows.length === 0) {
         logger.debug('No workflows found for trigger types', {
           triggerTypes,
-          orgId: signal.orgId,
         });
         return;
       }
@@ -349,8 +347,7 @@ export class WorkflowCoordinator {
     }
     
     return {
-      organizationId: signal.orgId,
-      workspaceId:(signal.workspaceId !== '' && signal.workspaceId != null) ? signal.workspaceId : 'default',
+      workspaceId: (signal.workspaceId !== '' && signal.workspaceId != null) ? signal.workspaceId : 'default',
       dealId: (metadata.dealId as string) || undefined,
       deal: (metadata.deal as Record<string, unknown>) || undefined,
       dealScore,
@@ -369,15 +366,13 @@ export class WorkflowCoordinator {
    * Find workflows that match the trigger types
    */
   private findMatchingWorkflows(
-    workspaceId: string,
+    _workspaceId: string,
     triggerTypes: WorkflowTriggerType[]
   ): Promise<Workflow[]> {
     try {
       // In production, this would query Firestore with proper filters
       // For now, return empty array (workflows will be stored/retrieved in API layer)
       logger.debug('Querying workflows', {
-        organizationId: DEFAULT_ORG_ID,
-        workspaceId,
         triggerTypes,
       });
 
@@ -395,10 +390,7 @@ export class WorkflowCoordinator {
     } catch (error) {
       logger.error(
         'Failed to find matching workflows',
-        error instanceof Error ? error : new Error(String(error)),
-        {
-          organizationId: DEFAULT_ORG_ID,
-        }
+        error instanceof Error ? error : new Error(String(error))
       );
       return Promise.resolve([]);
     }
@@ -448,7 +440,6 @@ export class WorkflowCoordinator {
         if (this.config.dryRun) {
           logger.info('[DRY RUN] Would execute workflow', {
             workflowId: workflow.id,
-            organizationId: context.organizationId,
             workspaceId: context.workspaceId,
             dealId: context.dealId,
             triggeredBy: context.triggeredBy,
@@ -549,7 +540,6 @@ export class WorkflowCoordinator {
       const execution: WorkflowExecution = {
         id: executionId,
         workflowId: workflow.id,
-        organizationId: context.organizationId,
         workspaceId: context.workspaceId,
         dealId: context.dealId,
         triggeredBy: context.triggeredBy,
@@ -564,7 +554,7 @@ export class WorkflowCoordinator {
       };
       
       // Save to Firestore
-      const executionsPath = `${this.dal.getColPath('organizations')}/${context.organizationId}/${this.dal.getSubColPath('workflow_executions')}`;
+      const executionsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflow_executions')}`;
       
       await this.dal.safeSetDoc(
         executionsPath,
@@ -618,7 +608,7 @@ export class WorkflowCoordinator {
       statsRecord['averageExecutionTimeMs'] = Math.round(newAverage);
       
       // Update workflow in Firestore
-      const workflowsPath = `${this.dal.getColPath('organizations')}/${workflow.organizationId}/${this.dal.getSubColPath('workflows')}`;
+      const workflowsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflows')}`;
       
       await this.dal.safeUpdateDoc(
         workflowsPath,
@@ -657,12 +647,11 @@ export class WorkflowCoordinator {
   ): Promise<Awaited<ReturnType<typeof WorkflowEngine.executeWorkflow>>> {
     logger.info('Executing workflow manually', {
       workflowId,
-      organizationId: context.organizationId,
       dealId: context.dealId,
     });
     
     // Fetch workflow
-    const workflowsPath = `${this.dal.getColPath('organizations')}/${context.organizationId}/${this.dal.getSubColPath('workflows')}`;
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflows')}`;
     
     const workflowSnap = await this.dal.safeGetDoc<Workflow>(
       workflowsPath,

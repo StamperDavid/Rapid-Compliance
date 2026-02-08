@@ -22,7 +22,7 @@ import type {
   ShotType,
   BrandDNASnapshot,
 } from './types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // STYLE EXTRACTION CONFIGURATION
@@ -117,7 +117,6 @@ export class StyleGuideIntegrator {
     crawledData: CrawledWebsiteData
   ): SiteMimicryStyleGuide {
     logger.info('StyleGuideIntegrator: Extracting style guide', {
-      organizationId: DEFAULT_ORG_ID,
       sourceUrl,
     });
 
@@ -145,7 +144,6 @@ export class StyleGuideIntegrator {
 
     const styleGuide: SiteMimicryStyleGuide = {
       id: uuidv4(),
-      organizationId: DEFAULT_ORG_ID,
       sourceUrl,
       colorPalette,
       typography,
@@ -158,7 +156,6 @@ export class StyleGuideIntegrator {
     };
 
     logger.info('StyleGuideIntegrator: Style guide extracted', {
-      organizationId: DEFAULT_ORG_ID,
       styleGuideId: styleGuide.id,
       confidence: extractionConfidence.overall,
     });

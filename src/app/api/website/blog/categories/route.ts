@@ -1,21 +1,20 @@
 /**
  * Blog Categories API
  * Manage blog categories
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const postBodySchema = z.object({
   categories: z.array(z.string()),
 });
 
 interface CategoriesDocData {
-  organizationId?: string;
   categories?: string[];
 }
 
@@ -31,8 +30,7 @@ export async function GET(_request: NextRequest) {
 
     // Get categories document
     const categoriesRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/blog-categories',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/blog-categories'
     );
 
     const categoriesDoc = await categoriesRef.get();
@@ -81,12 +79,10 @@ export async function POST(request: NextRequest) {
 
     // Save categories
     const categoriesRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/blog-categories',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/blog-categories'
     );
 
     const categoriesData = {
-      organizationId: DEFAULT_ORG_ID,
       categories,
       updatedAt: new Date().toISOString(),
     };

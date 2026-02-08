@@ -8,7 +8,7 @@
  * this type-safe, auditable pipeline.
  * 
  * CRITICAL FEATURES:
- * - Organization isolation via orgId
+ * - Platform-scoped signal routing
  * - TTL-based signal expiration (default 30 days)
  * - Priority-based signal handling (High/Med/Low)
  * - Confidence scoring for AI-driven decisions
@@ -234,12 +234,6 @@ export interface SalesSignal {
   leadId?: string;
   
   /**
-   * Organization ID - CRITICAL for organization isolation
-   * All signals MUST have an orgId to prevent cross-org data leakage
-   */
-  orgId: string;
-  
-  /**
    * Workspace ID (optional) - for workspace-scoped signals
    */
   workspaceId?: string;
@@ -338,12 +332,6 @@ export interface SignalSubscription {
    * Only signals with confidence >= this value are delivered
    */
   minConfidence?: number;
-  
-  /**
-   * Organization ID to scope the subscription
-   * REQUIRED for organization isolation
-   */
-  orgId: string;
   
   /**
    * Optional workspace ID for workspace-scoped subscriptions

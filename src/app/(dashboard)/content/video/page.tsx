@@ -155,7 +155,6 @@ export default function VideoStudioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           brief,
           constraints,
           creativeDirection: creative,
@@ -195,7 +194,6 @@ export default function VideoStudioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           storyboardId: generatedStoryboard.id,
         }),
       });

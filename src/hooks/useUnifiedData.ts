@@ -11,14 +11,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { type QueryConstraint } from 'firebase/firestore';
 import {
   FirestoreService,
-  OrganizationService,
   WorkspaceService,
   RecordService,
   COLLECTIONS,
 } from '@/lib/db/firestore-service';
 import { useUnifiedAuth } from './useUnifiedAuth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Hook options for data fetching
@@ -95,8 +94,8 @@ export function useCollectionData<T>(
         );
         setData(result);
       } else if (collectionName === COLLECTIONS.ORGANIZATIONS) {
-        const org = await OrganizationService.get(DEFAULT_ORG_ID);
-        setData(org ? [org as T] : []);
+        const org = await FirestoreService.get<T>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
+        setData(org ? [org] : []);
       } else if (collectionName === COLLECTIONS.WORKSPACES) {
         const workspaces = await WorkspaceService.getAll();
         setData(workspaces as T[]);
@@ -131,9 +130,13 @@ export function useCollectionData<T>(
     }
 
     if (collectionName === COLLECTIONS.ORGANIZATIONS) {
-      const unsubscribe = OrganizationService.subscribe(DEFAULT_ORG_ID, (org) => {
-        setData(org ? [org as T] : []);
-      });
+      const unsubscribe = FirestoreService.subscribe<T>(
+        COLLECTIONS.ORGANIZATIONS,
+        PLATFORM_ID,
+        (org) => {
+          setData(org ? [org] : []);
+        }
+      );
       return unsubscribe;
     }
 
@@ -195,8 +198,8 @@ export function useDocData<T>(
       setError(null);
 
       if (collectionName === COLLECTIONS.ORGANIZATIONS) {
-        const org = await OrganizationService.get(docId);
-        setData(org as T | null);
+        const org = await FirestoreService.get<T>(COLLECTIONS.ORGANIZATIONS, docId);
+        setData(org);
       } else if (collectionName === COLLECTIONS.WORKSPACES) {
         const workspace = await WorkspaceService.get(docId);
         setData(workspace as T | null);
@@ -228,9 +231,13 @@ export function useDocData<T>(
     }
 
     if (collectionName === COLLECTIONS.ORGANIZATIONS) {
-      const unsubscribe = OrganizationService.subscribe(docId, (org) => {
-        setData(org as T | null);
-      });
+      const unsubscribe = FirestoreService.subscribe<T>(
+        COLLECTIONS.ORGANIZATIONS,
+        docId,
+        (org) => {
+          setData(org);
+        }
+      );
       return unsubscribe;
     }
 

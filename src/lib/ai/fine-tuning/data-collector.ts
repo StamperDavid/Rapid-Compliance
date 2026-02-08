@@ -7,13 +7,12 @@ import type { TrainingExample } from '@/types/fine-tuning';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { where } from 'firebase/firestore';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Collect training example from a conversation
  */
 export async function collectTrainingExample(params: {
-  organizationId: string;
   conversationId: string;
   messages: Array<{ role: string; content: string }>;
   confidence: number;
@@ -22,7 +21,6 @@ export async function collectTrainingExample(params: {
   userFeedback?: string;
 }): Promise<TrainingExample> {
   const {
-    organizationId,
     conversationId,
     messages,
     confidence,
@@ -63,13 +61,13 @@ export async function collectTrainingExample(params: {
   
   // Save to Firestore
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
     example.id,
     example,
     false
   );
   
-  logger.info('Data Collector Collected example: example.id}', { file: 'data-collector.ts' });
+  logger.info('[Data Collector] Collected example', { file: 'data-collector.ts' });
   
   return example;
 }
@@ -78,14 +76,13 @@ export async function collectTrainingExample(params: {
  * Collect from training scenario
  */
 export async function collectFromTrainingScenario(params: {
-  organizationId: string;
   scenario: {
     userMessage: string;
     expectedResponse: string;
     systemPrompt: string;
   };
 }): Promise<TrainingExample> {
-  const { organizationId, scenario } = params;
+  const { scenario } = params;
   
   const example: TrainingExample = {
     id: `example_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -102,12 +99,12 @@ export async function collectFromTrainingScenario(params: {
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
     example.id,
     example,
     false
   );
-  
+
   return example;
 }
 
@@ -115,7 +112,6 @@ export async function collectFromTrainingScenario(params: {
  * Collect from human correction
  */
 export async function collectFromHumanCorrection(params: {
-  organizationId: string;
   conversationId: string;
   originalResponse: string;
   correctedResponse: string;
@@ -123,7 +119,6 @@ export async function collectFromHumanCorrection(params: {
   userMessage: string;
 }): Promise<TrainingExample> {
   const {
-    organizationId,
     conversationId,
     originalResponse: _originalResponse,
     correctedResponse,
@@ -148,13 +143,13 @@ export async function collectFromHumanCorrection(params: {
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
     example.id,
     example,
     false
   );
-  
-  logger.info('Data Collector Collected human correction: example.id}', { file: 'data-collector.ts' });
+
+  logger.info('[Data Collector] Collected human correction', { file: 'data-collector.ts' });
   
   return example;
 }
@@ -195,7 +190,7 @@ export async function getTrainingExamples(
     : [];
 
   const examples = await FirestoreService.getAll<TrainingExample>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
     filters
   );
 
@@ -210,7 +205,7 @@ export async function approveTrainingExample(
   approvedBy: string
 ): Promise<void> {
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
     exampleId,
     {
       status: 'approved',
@@ -219,7 +214,7 @@ export async function approveTrainingExample(
     }
   );
 
-  logger.info('Data Collector Approved example: exampleId}', { file: 'data-collector.ts' });
+  logger.info('[Data Collector] Approved example', { file: 'data-collector.ts' });
 }
 
 /**
@@ -229,7 +224,7 @@ export async function rejectTrainingExample(
   exampleId: string
 ): Promise<void> {
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
     exampleId,
     {
       status: 'rejected',

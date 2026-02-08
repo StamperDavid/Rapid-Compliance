@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -49,12 +49,11 @@ export default function WorkflowBuilderPage() {
       const now = Timestamp.now();
 
       await FirestoreService.set(
-        `organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`,
+        `organizations/${PLATFORM_ID}/workspaces/default/workflows`,
         workflowId,
         {
           ...data,
           id: workflowId,
-          organizationId: DEFAULT_ORG_ID,
           workspaceId: 'default',
           trigger: { ...data.trigger, id: `trigger-${Date.now()}`, name: 'Main Trigger' },
           settings: { stopOnError: false, parallel: false },

@@ -31,7 +31,6 @@ export default function NewCampaignPage() {
       await createCampaign({
         ...data,
         scheduledFor: data.scheduledFor ? new Date(data.scheduledFor) : new Date(),
-        organizationId: DEFAULT_ORG_ID,
         createdBy: user?.id ?? 'anonymous',
       });
       router.push('/email/campaigns');

@@ -5,7 +5,7 @@
 // Auth middleware tests - framework ready
 
 // Mock authentication check
-const requireAuth = (request: { headers: Headers }): { userId: string; organizationId: string } | null => {
+const requireAuth = (request: { headers: Headers }): { userId: string; } | null => {
   const authHeader = request.headers.get('authorization');
   
   if (!authHeader?.startsWith('Bearer ')) {
@@ -18,8 +18,7 @@ const requireAuth = (request: { headers: Headers }): { userId: string; organizat
   if (token === 'valid-token') {
     return {
       userId: 'user-123',
-      organizationId: 'org-123',
-    };
+      };
   }
   
   return null;
@@ -63,11 +62,10 @@ describe('Authentication Middleware', () => {
         'authorization': 'Bearer valid-token',
       }),
     };
-    
+
     const result = requireAuth(request);
     expect(result).not.toBeNull();
     expect(result?.userId).toBe('user-123');
-    expect(result?.organizationId).toBe('org-123');
   });
 });
 

@@ -9,11 +9,10 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface EmailTemplate {
   id: string;
-  organizationId: string;
   name: string;
   subject: string;
   preheader?: string;
@@ -58,7 +57,6 @@ export interface EmailVariable {
 
 export interface ABTest {
   id: string;
-  organizationId: string;
   name: string;
   testType: 'subject' | 'content' | 'send_time';
   variantA: {
@@ -242,19 +240,19 @@ export async function createABTest(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/abTests`,
+      `organizations/${PLATFORM_ID}/abTests`,
       testId,
       abTest,
       false
     );
 
-    logger.info('A/B test created', { organizationId: DEFAULT_ORG_ID, testId, testType: test.testType });
+    logger.info('A/B test created', { testId, testType: test.testType });
 
     return abTest;
 
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to create A/B test', err, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to create A/B test', err);
     throw err;
   }
 }
@@ -268,7 +266,7 @@ export async function getABTestVariant(
 ): Promise<'A' | 'B'> {
   try {
     const test = await FirestoreService.get<ABTest>(
-      `organizations/${DEFAULT_ORG_ID}/abTests`,
+      `organizations/${PLATFORM_ID}/abTests`,
       testId
     );
 
@@ -337,7 +335,7 @@ export async function calculateABTestResults(
 
     // Determine winner based on configured metric
     const test = await FirestoreService.get<ABTest>(
-      `organizations/${DEFAULT_ORG_ID}/abTests`,
+      `organizations/${PLATFORM_ID}/abTests`,
       testId
     );
 

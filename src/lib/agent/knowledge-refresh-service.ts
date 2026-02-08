@@ -6,7 +6,7 @@
 import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
 import { where } from 'firebase/firestore';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Schema types that are relevant to AI agent knowledge
@@ -40,7 +40,7 @@ export async function handleSchemaChangeForAgent(
     
     // Get schema to check if it's relevant to agent
     const schema = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/${COLLECTIONS.SCHEMAS}`,
       event.schemaId
     );
     
@@ -138,14 +138,13 @@ export async function recompileAgentKnowledge(
   try {
     logger.info('[AI Agent Refresh] Starting knowledge recompilation', {
       file: 'knowledge-refresh-service.ts',
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
     });
 
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
     // Get current Golden Master
-    const goldenMastersPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/goldenMasters`;
+    const goldenMastersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasters`;
     const goldenMasters = await FirestoreService.getAll<GoldenMasterData>(goldenMastersPath, [
       where('status', '==', 'active'),
     ]);
@@ -153,7 +152,6 @@ export async function recompileAgentKnowledge(
     if (goldenMasters.length === 0) {
       logger.warn('[AI Agent Refresh] No active Golden Master found', {
         file: 'knowledge-refresh-service.ts',
-        organizationId: DEFAULT_ORG_ID,
       });
       return;
     }
@@ -161,7 +159,7 @@ export async function recompileAgentKnowledge(
     const goldenMaster = goldenMasters[0];
 
     // Get all schemas for this workspace
-    const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
+    const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
     const schemas = await FirestoreService.getAll<SchemaRecord>(schemasPath, [
       where('status', '==', 'active'),
     ]);
@@ -196,7 +194,6 @@ export async function recompileAgentKnowledge(
   } catch (error) {
     logger.error('[AI Agent Refresh] Failed to recompile knowledge', error instanceof Error ? error : new Error(String(error)), {
       file: 'knowledge-refresh-service.ts',
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
     });
     throw error;
@@ -277,7 +274,7 @@ async function notifySchemaChange(
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
-    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notifications`;
+    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`;
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     await FirestoreService.set(
@@ -285,7 +282,6 @@ async function notifySchemaChange(
       notificationId,
       {
         id: notificationId,
-        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         title: notification.title,
         message: notification.message,
@@ -328,7 +324,7 @@ export async function getSchemaChangeImpactOnAgent(
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     
     const schema = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/${COLLECTIONS.SCHEMAS}`,
       event.schemaId
     );
     
@@ -438,7 +434,6 @@ export async function manuallyRefreshAgentKnowledge(
   } catch (error) {
     logger.error('[AI Agent Refresh] Manual refresh failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'knowledge-refresh-service.ts',
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
     });
 

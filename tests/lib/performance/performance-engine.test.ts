@@ -23,7 +23,6 @@ const _createMockConversationAnalysis = (
   scores: Partial<ConversationScores> = {}
 ): ConversationAnalysis => ({
   conversationId: `conv_${Math.random()}`,
-  organizationId: 'org_test',
   workspaceId: 'workspace_test',
   sentiment: {
     overall: {

@@ -9,10 +9,10 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Zod schema for lead feedback request
 const leadFeedbackSchema = z.object({
-  organizationId: z.string().min(1),
   leadDomain: z.string().min(1),
   isGoodLead: z.boolean(),
   timestamp: z.string().optional(),
@@ -32,12 +32,12 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Missing required fields');
     }
 
-    const { organizationId, leadDomain, isGoodLead, timestamp } = validation.data;
+    const { leadDomain, isGoodLead, timestamp } = validation.data;
 
     // Store feedback in Firestore
     const feedbackId = `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/lead-feedback`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/lead-feedback`,
       feedbackId,
       {
         leadDomain,

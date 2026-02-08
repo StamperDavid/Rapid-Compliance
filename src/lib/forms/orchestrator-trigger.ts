@@ -57,7 +57,6 @@ export interface TriggerResult {
 export interface OrchestratorSignal {
   type: string;
   priority: 'High' | 'Medium' | 'Low';
-  orgId: string;
   workspaceId: string;
   leadId?: string;
   formId: string;
@@ -100,7 +99,6 @@ async function emitSignal(
   const result = await coordinator.emitSignal({
     type: signal.type as Parameters<typeof coordinator.emitSignal>[0]['type'],
     priority: signal.priority,
-    orgId: signal.orgId,
     workspaceId: signal.workspaceId,
     leadId: signal.leadId,
     confidence: signal.confidence,
@@ -124,7 +122,6 @@ function createSubmissionSignal(
   return {
     type: 'lead.discovered',
     priority: 'Medium',
-    orgId: submission.organizationId,
     workspaceId: submission.workspaceId,
     formId: submission.formId,
     submissionId: submission.id,
@@ -173,7 +170,6 @@ async function _executeEmitSignal(
     const signalId = await emitSignal({
       type: signalType as string,
       priority: signalPriority as 'High' | 'Medium' | 'Low',
-      orgId: submission.organizationId,
       workspaceId: submission.workspaceId,
       formId: submission.formId,
       submissionId: submission.id,
@@ -236,7 +232,6 @@ async function executeTriggerSequence(
       sequenceId,
       leadId: submission.linkedLeadId ?? submission.id,
       email,
-      orgId: submission.organizationId,
       workspaceId: submission.workspaceId,
       source: 'form_submission',
       sourceId: submission.id,
@@ -271,7 +266,6 @@ async function _executeRouteLead(
     await emitSignal({
       type: 'lead.routed',
       priority: 'High',
-      orgId: submission.organizationId,
       workspaceId: submission.workspaceId,
       leadId: submission.linkedLeadId,
       formId: submission.formId,
@@ -336,7 +330,6 @@ async function executeNotifySlack(
     const { sendSlackMessage } = await import('@/lib/integrations/slack-service');
 
     await sendSlackMessage({
-      orgId: submission.organizationId,
       channelId,
       message,
       metadata: {
@@ -467,7 +460,6 @@ async function executeWorkflow(
     await emitSignal({
       type: 'workflow.executed',
       priority: 'Medium',
-      orgId: submission.organizationId,
       workspaceId: submission.workspaceId,
       formId: submission.formId,
       submissionId: submission.id,
@@ -708,11 +700,10 @@ export async function onFormSubmit(
  * Register form submission handler with signal coordinator
  */
 export async function registerFormSubmissionHandler(
-  orgId: string,
   workspaceId: string
 ): Promise<void> {
   // This can be called during workspace initialization
   // to set up signal handlers for form-related events
-  logger.info('Form submission handler registered', { orgId, workspaceId });
+  logger.info('Form submission handler registered', { workspaceId });
   return Promise.resolve();
 }

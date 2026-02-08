@@ -5,7 +5,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, Timestamp } from 'firebase/firestore';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   RevenueReport,
   PipelineReport,
@@ -300,7 +300,7 @@ interface OrderItem {
 async function getDealsInPeriod(workspaceId: string, startDate: Date, endDate: Date): Promise<DealRecord[]> {
   // Get deals from CRM
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('closedDate', '>=', Timestamp.fromDate(startDate)),
       where('closedDate', '<=', Timestamp.fromDate(endDate)),
@@ -312,7 +312,7 @@ async function getDealsInPeriod(workspaceId: string, startDate: Date, endDate: D
 
 async function getOrdersInPeriod(workspaceId: string, startDate: Date, endDate: Date): Promise<OrderRecord[]> {
   const orders = await FirestoreService.getAll<OrderRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/orders`,
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
@@ -507,7 +507,7 @@ function getIntervalForPeriod(period: string): number {
 
 async function getOpenDeals(workspaceId: string): Promise<DealRecord[]> {
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('status', 'in', ['open', 'qualified', 'proposal', 'negotiation']),
     ]
@@ -570,7 +570,7 @@ async function calculatePipelineVelocity(workspaceId: string): Promise<PipelineV
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   const closedDeals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('status', 'in', ['won', 'lost']),
       where('closedDate', '>=', Timestamp.fromDate(ninetyDaysAgo)),
@@ -666,7 +666,7 @@ interface ConversionRateItem {
 async function calculateConversionRates(workspaceId: string): Promise<ConversionRateItem[]> {
   // Get all deals with stage history
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
     []
   );
   
@@ -709,7 +709,7 @@ async function calculatePipelineTrends(workspaceId: string, _period: string): Pr
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('createdAt', '>=', Timestamp.fromDate(thirtyDaysAgo)),
     ]

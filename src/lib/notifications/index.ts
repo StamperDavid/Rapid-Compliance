@@ -17,15 +17,14 @@
  *
  * @example Basic Usage
  * ```typescript
- * import { NotificationService, DEFAULT_ORG_ID } from '@/lib/notifications';
+ * import { NotificationService, PLATFORM_ID } from '@/lib/notifications';
  *
  * // Send a notification
- * const service = new NotificationService(DEFAULT_ORG_ID);
+ * const service = new NotificationService(PLATFORM_ID);
  * const notification = await service.sendNotification(
  *   'user_456',
  *   'deal_risk_critical',
  *   {
- *     orgId: DEFAULT_ORG_ID,
  *     dealId: 'deal_789',
  *     dealName: 'Acme Corp',
  *     riskLevel: 'critical',
@@ -51,7 +50,7 @@
  * ```
  */
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Core Service
 export { NotificationService } from './notification-service';
@@ -153,7 +152,7 @@ export async function seedNotificationTemplates(): Promise<number> {
   
   const createPromises = templates.map((template) =>
     FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notification_templates`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_templates`,
       template.id,
       template
     )

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     const calls = await FirestoreService.getAll(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/default/calls`,
+      `organizations/${PLATFORM_ID}/workspaces/default/calls`,
       []
     );
 
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     if (call && isCallRecord(call)) {
       await FirestoreService.update(
-        `organizations/${DEFAULT_ORG_ID}/workspaces/default/calls`,
+        `organizations/${PLATFORM_ID}/workspaces/default/calls`,
         call.id,
         {
           status: callStatus,

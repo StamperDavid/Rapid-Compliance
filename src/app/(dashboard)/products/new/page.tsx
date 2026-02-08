@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -33,7 +33,7 @@ export default function NewProductPage() {
     try {
       const productId = `prod-${Date.now()}`;
       await FirestoreService.set(
-        `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/products/records`,
+        `organizations/${PLATFORM_ID}/workspaces/default/entities/products/records`,
         productId,
         {
           ...data,

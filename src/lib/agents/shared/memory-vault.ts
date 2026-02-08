@@ -14,7 +14,9 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { adminDb } from '@/lib/firebase/admin';
+import { getOrgSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -44,7 +46,6 @@ export type MemoryPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
  */
 export interface MemoryEntry<T = unknown> {
   id: string;
-  orgId: string;
   category: MemoryCategory;
   key: string;
   value: T;
@@ -203,6 +204,12 @@ const PRIORITY_ORDER: Record<MemoryPriority, number> = {
 export class MemoryVault {
   private static instance: MemoryVault | null = null;
 
+  /** Field names that contain Date values — used for deserialization from Firestore */
+  private static readonly DATE_FIELDS = new Set([
+    'createdAt', 'updatedAt', 'expiresAt', 'lastAccessedAt',
+    'acknowledgedAt', 'responseDeadline', 'publishedAt',
+  ]);
+
   // In-memory storage - flat global store (PENTHOUSE: no org scoping)
   private store: Map<string, MemoryEntry> = new Map();
 
@@ -215,8 +222,13 @@ export class MemoryVault {
   // Access metrics - flat (no org scoping)
   private accessMetrics = { reads: 0, writes: 0 };
 
+  // Firestore persistence state
+  private hydrated = false;
+  private hydrationPromise: Promise<void> | null = null;
+
   private constructor() {
     logger.info('[MemoryVault] Initialized - Cross-agent memory active');
+    this.startHydration();
   }
 
   /**
@@ -232,6 +244,182 @@ export class MemoryVault {
    */
   static resetInstance(): void {
     MemoryVault.instance = null;
+  }
+
+  // ==========================================================================
+  // FIRESTORE PERSISTENCE
+  // ==========================================================================
+
+  /**
+   * Get the Firestore collection path for MemoryVault storage.
+   * Uses the standard org sub-collection pattern with environment-aware prefix.
+   */
+  private getCollectionPath(): string {
+    return getOrgSubCollection('memoryVault');
+  }
+
+  /**
+   * Begin background hydration from Firestore.
+   * Called once in the constructor — subsequent calls are no-ops.
+   */
+  private startHydration(): void {
+    if (this.hydrationPromise) {return;}
+    this.hydrationPromise = this.hydrateFromFirestore();
+  }
+
+  /**
+   * Load all persisted entries from Firestore into the in-memory Map.
+   * Entries already in memory (written before hydration completes) take precedence.
+   */
+  private async hydrateFromFirestore(): Promise<void> {
+    if (this.hydrated) {return;}
+
+    if (!adminDb) {
+      logger.warn('[MemoryVault] adminDb not available — running in-memory only');
+      this.hydrated = true;
+      return;
+    }
+
+    try {
+      const collectionPath = this.getCollectionPath();
+      const snapshot = await adminDb.collection(collectionPath).get();
+      let loaded = 0;
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const entry = this.deserializeFromFirestore(data);
+        const mapKey = `${entry.category}:${entry.key}`;
+
+        // Don't overwrite entries already in memory — they're newer
+        if (!this.store.has(mapKey)) {
+          this.store.set(mapKey, entry);
+          loaded += 1;
+        }
+      }
+
+      this.hydrated = true;
+      logger.info('[MemoryVault] Hydrated from Firestore', {
+        loaded,
+        total: this.store.size,
+        collection: collectionPath,
+      });
+    } catch (error) {
+      logger.error(
+        '[MemoryVault] Firestore hydration failed — falling back to in-memory only',
+        error instanceof Error ? error : new Error(String(error))
+      );
+      this.hydrated = true; // Prevent retry loops — in-memory fallback
+    }
+  }
+
+  /**
+   * Await hydration completion. Used by all async read methods to
+   * guarantee the Map is populated before returning results.
+   */
+  async ensureHydrated(): Promise<void> {
+    if (this.hydrated) {return;}
+    if (!this.hydrationPromise) {
+      this.startHydration();
+    }
+    await this.hydrationPromise;
+  }
+
+  /**
+   * Persist a single entry to Firestore (fire-and-forget).
+   * Called after every write() to keep Firestore in sync.
+   */
+  private persistToFirestore(mapKey: string, entry: MemoryEntry): void {
+    if (!adminDb) {return;}
+
+    const docId = this.sanitizeDocId(mapKey);
+    const data = this.serializeForFirestore(entry);
+
+    void adminDb.collection(this.getCollectionPath()).doc(docId).set(data)
+      .catch((error: unknown) => {
+        logger.error(
+          '[MemoryVault] Firestore persist failed',
+          error instanceof Error ? error : new Error(String(error)),
+          { mapKey }
+        );
+      });
+  }
+
+  /**
+   * Delete a single entry from Firestore (fire-and-forget).
+   * Called when entries expire or are explicitly removed.
+   */
+  private deleteFromFirestore(mapKey: string): void {
+    if (!adminDb) {return;}
+
+    const docId = this.sanitizeDocId(mapKey);
+
+    void adminDb.collection(this.getCollectionPath()).doc(docId).delete()
+      .catch((error: unknown) => {
+        logger.error(
+          '[MemoryVault] Firestore delete failed',
+          error instanceof Error ? error : new Error(String(error)),
+          { mapKey }
+        );
+      });
+  }
+
+  /**
+   * Sanitize a Map key for use as a Firestore document ID.
+   * Firestore doc IDs cannot contain forward slashes.
+   */
+  private sanitizeDocId(key: string): string {
+    return key.replace(/\//g, '__');
+  }
+
+  /**
+   * Serialize a MemoryEntry for Firestore storage.
+   * Converts Date objects to ISO strings and strips undefined values.
+   */
+  private serializeForFirestore(entry: MemoryEntry): Record<string, unknown> {
+    return JSON.parse(JSON.stringify(entry)) as Record<string, unknown>;
+  }
+
+  /**
+   * Deserialize a Firestore document back into a MemoryEntry.
+   * Revives ISO date strings in known Date fields back to Date objects.
+   */
+  private deserializeFromFirestore(data: Record<string, unknown>): MemoryEntry {
+    return this.deepReviveDates(data) as MemoryEntry;
+  }
+
+  /**
+   * Recursively convert known Date fields from ISO strings (or Firestore
+   * Timestamps) back to JavaScript Date objects.
+   */
+  private deepReviveDates(obj: unknown): unknown {
+    if (obj === null || obj === undefined) {return obj;}
+
+    // Handle Firestore Timestamp objects (have a toDate() method)
+    if (
+      typeof obj === 'object' &&
+      'toDate' in (obj as Record<string, unknown>) &&
+      typeof (obj as Record<string, (...args: unknown[]) => unknown>).toDate === 'function'
+    ) {
+      return (obj as { toDate(): Date }).toDate();
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.deepReviveDates(item));
+    }
+
+    if (typeof obj === 'object') {
+      const result: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
+        if (MemoryVault.DATE_FIELDS.has(key) && typeof val === 'string') {
+          result[key] = new Date(val);
+        } else {
+          result[key] = this.deepReviveDates(val);
+        }
+      }
+      return result;
+    }
+
+    return obj;
   }
 
   // ==========================================================================
@@ -264,6 +452,7 @@ export class MemoryVault {
       };
 
       this.store.set(existingKey, updated);
+      this.persistToFirestore(existingKey, updated);
       this.notifySubscribers(updated);
       this.trackWrite();
 
@@ -281,7 +470,6 @@ export class MemoryVault {
     const now = new Date();
     const entry: MemoryEntry<T> = {
       id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      orgId: DEFAULT_ORG_ID,
       category,
       key,
       value,
@@ -297,6 +485,7 @@ export class MemoryVault {
     };
 
     this.store.set(existingKey, entry);
+    this.persistToFirestore(existingKey, entry);
     this.notifySubscribers(entry);
     this.trackWrite();
 
@@ -319,7 +508,7 @@ export class MemoryVault {
     agentId: string,
     options: WriteOptions = {}
   ): Promise<InsightEntry> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     return this.write<InsightData>(
       'INSIGHT',
       key,
@@ -338,7 +527,7 @@ export class MemoryVault {
     agentId: string,
     options: WriteOptions = {}
   ): Promise<SignalEntry> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     return this.write<SignalData>(
       'SIGNAL',
       key,
@@ -361,7 +550,7 @@ export class MemoryVault {
     agentId: string,
     options: WriteOptions = {}
   ): Promise<ContentEntry> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     return this.write<ContentData>(
       'CONTENT',
       key,
@@ -385,7 +574,7 @@ export class MemoryVault {
     body: Record<string, unknown>,
     options: { requiresResponse?: boolean; responseDeadline?: Date; priority?: MemoryPriority } = {}
   ): Promise<CrossAgentEntry> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     const message: CrossAgentData = {
       fromAgent,
       toAgent,
@@ -524,7 +713,7 @@ export class MemoryVault {
     agentId: string,
     filter?: { type?: InsightData['type']; minConfidence?: number }
   ): Promise<InsightEntry[]> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     const entries = this.query(agentId, {
       category: 'INSIGHT',
       sortBy: 'createdAt',
@@ -551,7 +740,7 @@ export class MemoryVault {
   async getPendingSignals(
     agentId: string
   ): Promise<SignalEntry[]> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     const entries = this.query(agentId, {
       category: 'SIGNAL',
       sortBy: 'priority',
@@ -571,7 +760,7 @@ export class MemoryVault {
     agentId: string,
     options?: { unrespondedOnly?: boolean }
   ): Promise<CrossAgentEntry[]> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     const entries = this.query(agentId, {
       category: 'CROSS_AGENT',
       sortBy: 'createdAt',
@@ -596,7 +785,7 @@ export class MemoryVault {
     agentId: string,
     contentType?: ContentData['contentType']
   ): Promise<ContentEntry[]> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     const entries = this.query(agentId, {
       category: 'CONTENT',
       tags: contentType ? [contentType] : undefined,
@@ -674,7 +863,7 @@ export class MemoryVault {
     signalKey: string,
     agentId: string
   ): Promise<boolean> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     const entry = this.read<SignalData>('SIGNAL', signalKey, agentId);
     if (!entry) {return false;}
 
@@ -694,7 +883,7 @@ export class MemoryVault {
     responseId: string,
     agentId: string
   ): Promise<boolean> {
-    await Promise.resolve();
+    await this.ensureHydrated();
     const entry = this.read<CrossAgentData>('CROSS_AGENT', messageKey, agentId);
     if (!entry) {return false;}
 
@@ -739,6 +928,7 @@ export class MemoryVault {
     for (const [key, entry] of this.store) {
       if (entry.expiresAt && entry.expiresAt < now) {
         this.store.delete(key);
+        this.deleteFromFirestore(key);
         cleaned += 1;
       }
     }

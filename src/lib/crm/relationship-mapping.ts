@@ -5,11 +5,10 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface Relationship {
   id: string;
-  organizationId: string;
   workspaceId: string;
   fromEntityType: 'contact' | 'company' | 'lead';
   fromEntityId: string;
@@ -76,7 +75,7 @@ export interface BuyingCommitteeAnalysis {
  */
 export async function createRelationship(
   workspaceId: string,
-  data: Omit<Relationship, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>
+  data: Omit<Relationship, 'id' | 'workspaceId' | 'createdAt'>
 ): Promise<Relationship> {
   try {
     const relationshipId = `rel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -85,14 +84,13 @@ export async function createRelationship(
     const relationship: Relationship = {
       ...data,
       id: relationshipId,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       createdAt: now,
       updatedAt: now,
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/relationships`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/relationships`,
       relationshipId,
       relationship,
       false
@@ -120,7 +118,7 @@ export async function getEntityRelationships(
 ): Promise<Relationship[]> {
   try {
     const allRels = await FirestoreService.getAll<Relationship>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/relationships`
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/relationships`
     );
 
     const filtered = allRels.filter(

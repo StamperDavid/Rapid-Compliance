@@ -14,7 +14,6 @@ import { logger } from '@/lib/logger/logger';
 function extractUserContext(request: NextRequest): {
   id?: string;
   email?: string;
-  organizationId?: string;
 } {
   try {
     // Try to get user from auth header
@@ -70,7 +69,6 @@ export function withSentryMonitoring<T = Record<string, unknown>>(
         Sentry.setUser({
           id: userContext.id,
           email: userContext.email,
-          organizationId: userContext.organizationId,
         });
       }
 
@@ -160,7 +158,7 @@ export function trackEvent(
     extra: data,
   });
 
-  logger.info(`Event tracked: ${eventName}`, {});
+  logger.info(`Event tracked: ${eventName}`);
 }
 
 /**

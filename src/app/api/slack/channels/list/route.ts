@@ -9,6 +9,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { listChannelsSchema } from '@/lib/slack/validation';
 import { db } from '@/lib/firebase-admin';
@@ -91,14 +92,13 @@ export async function GET(request: NextRequest) {
     // Cache channels in Firestore
     const channelsCollection = db
       .collection('organizations')
-      .doc(workspace.organizationId)
+      .doc(PLATFORM_ID)
       .collection('slack_channels');
     
     const cachePromises = result.channels.map(async (channel) => {
       const slackChannel: SlackChannel = {
         id: channel.id,
         workspaceId: workspace.id,
-        organizationId: workspace.organizationId,
         name: channel.name,
         type: channel.type,
         isArchived: channel.isArchived,
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error: unknown) {
-    logger.error('Failed to list Slack channels', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Failed to list Slack channels', error instanceof Error ? error : new Error(String(error)));
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to list channels';
 

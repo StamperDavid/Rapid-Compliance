@@ -7,6 +7,7 @@ import type { OnboardingData } from '@/types/agent-memory';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Interfaces for type safety
 interface ValidationErrorDetail {
@@ -58,7 +59,6 @@ type _ApiResponse = ApiSuccessResponse | ApiErrorResponse;
 
 // Schema for onboarding request validation
 const processOnboardingSchema = z.object({
-  organizationId: z.string(),
   onboardingData: z.record(z.unknown()),
 });
 
@@ -97,14 +97,14 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { organizationId, onboardingData } = validation.data;
+    const { onboardingData } = validation.data;
 
     // Import Admin SDK services for auth security check
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { COLLECTIONS } = await import('@/lib/db/firestore-service');
 
     try {
-      const orgData: unknown = await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
+      const orgData: unknown = await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
 
       if (orgData && typeof orgData === 'object') {
         const org = orgData as OrganizationRecord;
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       } else {
         // Organization doesn't exist yet - user is creating it during onboarding
         // This is allowed, but we'll set them as the owner
-        logger.debug('Creating new organization during onboarding', { organizationId, userId: user.uid, route: '/api/agent/process-onboarding' });
+        logger.debug('Creating new organization during onboarding', { userId: user.uid, route: '/api/agent/process-onboarding' });
       }
     } catch (error: unknown) {
       logger.error('Error checking organization access', error instanceof Error ? error : new Error(String(error)), { route: '/api/agent/process-onboarding' });
@@ -133,12 +133,11 @@ export async function POST(request: NextRequest) {
 
     // Save onboarding data first (using Admin SDK)
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/onboarding`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/onboarding`,
       'current',
       {
         ...onboardingData,
         completedAt: new Date().toISOString(),
-        organizationId,
       },
       false
     );
@@ -172,18 +171,17 @@ export async function POST(request: NextRequest) {
       orgUpdate.ownerName = typedOnboardingData.ownerName;
     }
 
-    await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, organizationId, orgUpdate as unknown as Record<string, unknown>);
+    await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, orgUpdate as unknown as Record<string, unknown>);
 
     // Process onboarding
     const result = await processOnboarding({
       onboardingData: onboardingData as unknown as OnboardingData,
-      organizationId,
       userId: user.uid,
     });
 
     if (result.success) {
-      // In penthouse model, user is always associated with DEFAULT_ORG_ID
-      // No need to update user.organizationId (it no longer exists on the user object)
+      // In penthouse model, user is always associated with PLATFORM_ID
+      // In penthouse model, all users belong to the single platform org
 
       return NextResponse.json<ApiSuccessResponse>({
         success: true,

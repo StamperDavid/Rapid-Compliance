@@ -16,7 +16,7 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { shareInsight } from '../../shared/memory-vault';
 
 // ============================================================================
@@ -1239,8 +1239,8 @@ export class LinkedInExpert extends BaseSpecialist {
   // ==========================================================================
 
   private async fetchPlaybook(): Promise<Playbook> {
-    // In production, this would fetch from Firestore: organizations/${DEFAULT_ORG_ID}/playbook
-    this.log('INFO', `Fetching playbook for organization: ${DEFAULT_ORG_ID}`);
+    // In production, this would fetch from Firestore: organizations/${PLATFORM_ID}/playbook
+    this.log('INFO', `Fetching playbook for organization: ${PLATFORM_ID}`);
 
     // Default playbook structure - would be overridden by organization-specific data
     return Promise.resolve({

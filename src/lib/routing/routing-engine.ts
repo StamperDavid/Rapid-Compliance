@@ -851,7 +851,6 @@ export class LeadRoutingEngine {
       id: `assignment_${lead.id}_${Date.now()}`,
       leadId: lead.id,
       repId: recommendation.repId,
-      orgId: lead.orgId,
       assignmentMethod: method,
       strategy,
       matchedRules: [], // Will be populated by caller

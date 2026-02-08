@@ -7,13 +7,13 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface GlobalDomainData {
-  organizationId: string;
+  domain?: string;
 }
 
 interface DomainData {
-  organizationId: string;
   verified: boolean;
   sslEnabled: boolean;
 }
@@ -46,9 +46,8 @@ export async function GET(
     }
 
     const globalData = globalDomainDoc.data() as GlobalDomainData | undefined;
-    const organizationId = globalData?.organizationId;
 
-    if (!organizationId) {
+    if (!globalData?.domain) {
       return NextResponse.json(
         { error: 'Domain not configured' },
         { status: 404 }
@@ -57,8 +56,8 @@ export async function GET(
 
     // Verify domain is verified
     const domainRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/custom-domains/{domain}',
-      { orgId: organizationId, domain }
+      'organizations/rapid-compliance-root/website/config/custom-domains/{domain}',
+      { domain }
     );
 
     const domainDoc = await domainRef.get();
@@ -85,7 +84,6 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      organizationId,
       domain,
       verified,
       sslEnabled,

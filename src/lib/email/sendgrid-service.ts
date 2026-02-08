@@ -29,7 +29,6 @@ export interface SendEmailOptions {
 export interface EmailTrackingData {
   enrollmentId?: string;
   stepId?: string;
-  organizationId?: string;
   prospectId?: string;
   campaignId?: string;
 }

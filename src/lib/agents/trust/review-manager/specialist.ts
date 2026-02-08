@@ -13,19 +13,18 @@
  * - Brand voice consistency
  * - Reputation trend analysis
  *
- * PENTHOUSE: All operations use DEFAULT_ORG_ID
+ * PENTHOUSE: All operations use PLATFORM_ID
  */
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CORE TYPES & INTERFACES
 // ============================================================================
 
 interface BusinessContext {
-  organizationId: string;
   brandName: string;
   industry: string;
   keywords: string[];
@@ -108,7 +107,6 @@ interface OptimizedResponse {
 
 interface ResponseMetadata {
   generatedAt: Date;
-  organizationId: string;
   reviewId: string;
   platform: ReviewPlatform;
   requiresApproval: boolean;
@@ -117,7 +115,6 @@ interface ResponseMetadata {
 
 interface ReviewRequestCampaign {
   campaignId: string;
-  organizationId: string;
   name: string;
   targetAudience: CampaignAudience;
   channels: CampaignChannel[];
@@ -345,11 +342,11 @@ const SYSTEM_PROMPT = `You are the Review Manager Specialist, an expert in reput
 You analyze incoming reviews, perform sentiment analysis, and generate brand-consistent, SEO-optimized responses. You also create review request campaigns to build positive reputation.
 
 ## PENTHOUSE AWARENESS
-All operations use the default organization (DEFAULT_ORG_ID):
+All operations use the default organization (PLATFORM_ID):
 - Brand name and voice must match the organization
 - SEO keywords are organization-specific
 - Response tone matches the organization's brand personality
-- All data queries use DEFAULT_ORG_ID
+- All data queries use PLATFORM_ID
 
 ## SENTIMENT ANALYSIS
 - Analyze text for emotional indicators
@@ -453,7 +450,7 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
         return this.createReport(taskId, 'FAILED', null, ['Missing business context']);
       }
 
-      this.log('INFO', `Processing ${request.action} for organization: ${DEFAULT_ORG_ID}`);
+      this.log('INFO', `Processing ${request.action} for organization: ${PLATFORM_ID}`);
 
       let result: unknown;
 
@@ -813,7 +810,6 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
       callToAction: businessContext.responseSettings.includeCallToAction ? callToAction : undefined,
       metadata: {
         generatedAt: new Date(),
-        organizationId: DEFAULT_ORG_ID,
         reviewId: review.id,
         platform: review.platform,
         requiresApproval,
@@ -1151,7 +1147,6 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
 
     return {
       campaignId,
-      organizationId: DEFAULT_ORG_ID,
       name: config.name ?? `Review Campaign - ${new Date().toLocaleDateString()}`,
       targetAudience: audience,
       channels,
@@ -1205,9 +1200,9 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
   private buildReviewLinks(_businessContext: BusinessContext): ReviewLinkConfig[] {
     // In production, these would come from organization configuration
     return [
-      { platform: 'google', url: `https://g.page/${DEFAULT_ORG_ID}/review`, priority: 1 },
-      { platform: 'facebook', url: `https://facebook.com/${DEFAULT_ORG_ID}/reviews`, priority: 2 },
-      { platform: 'yelp', url: `https://yelp.com/biz/${DEFAULT_ORG_ID}`, priority: 3 },
+      { platform: 'google', url: `https://g.page/${PLATFORM_ID}/review`, priority: 1 },
+      { platform: 'facebook', url: `https://facebook.com/${PLATFORM_ID}/reviews`, priority: 2 },
+      { platform: 'yelp', url: `https://yelp.com/biz/${PLATFORM_ID}`, priority: 3 },
     ];
   }
 
@@ -1236,7 +1231,6 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     // For now, return a structured template
 
     return {
-      organizationId: DEFAULT_ORG_ID,
       dateRange,
       generatedAt: new Date(),
       metrics: {
@@ -1270,7 +1264,6 @@ interface BulkAnalysisSummary {
 }
 
 interface TrendReport {
-  organizationId: string;
   dateRange: { start: Date; end: Date };
   generatedAt: Date;
   metrics: {

@@ -106,7 +106,6 @@ describe('SlackService', () => {
     beforeEach(() => {
       mockWorkspace = {
         id: 'workspace-1',
-        organizationId: 'org-1',
         teamId: 'T123',
         teamName: 'Test Team',
         botToken: 'xoxb-test-token',

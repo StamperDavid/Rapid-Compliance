@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /* eslint-disable no-alert -- Admin UI uses native dialogs for quick user confirmations */
 
@@ -20,7 +20,6 @@ interface SmsTemplate {
 
 export default function SmsMessagesPage() {
   const { user: _user } = useAuth();
-  const _orgId = DEFAULT_ORG_ID;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useOrgTheme();
   const [smsTemplates, setSmsTemplates] = useState<SmsTemplate[]>([]);
@@ -303,7 +302,6 @@ export default function SmsMessagesPage() {
                                 const result = await sendSMS({
                                   to: testPhoneNumber,
                                   message: smsContent || 'Test SMS message',
-                                  organizationId: 'demo-org',
                                 });
 
                                 if (result.success) {

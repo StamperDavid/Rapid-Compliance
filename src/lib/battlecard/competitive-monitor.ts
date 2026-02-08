@@ -23,7 +23,7 @@
 import { logger } from '@/lib/logger/logger';
 import { discoverCompetitor, type CompetitorProfile } from './battlecard-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -35,7 +35,6 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 export interface CompetitorMonitorConfig {
   competitorId: string;
   domain: string;
-  DEFAULT_ORG_ID: string;
   priority: 'high' | 'medium' | 'low';
   checkFrequency: 'daily' | 'weekly' | 'monthly';
   alertOn: {
@@ -57,9 +56,8 @@ export interface CompetitorChange {
   competitorId: string;
   competitorName: string;
   domain: string;
-  organizationId: string;
 
-  changeType: 
+  changeType:
     | 'pricing_update'
     | 'new_feature'
     | 'removed_feature'
@@ -69,9 +67,9 @@ export interface CompetitorChange {
     | 'expansion'
     | 'weakness_detected'
     | 'strength_improved';
-  
+
   severity: 'critical' | 'high' | 'medium' | 'low';
-  
+
   details: {
     field: string;
     oldValue: string;
@@ -79,7 +77,7 @@ export interface CompetitorChange {
     impact: string;
     recommendedAction: string;
   };
-  
+
   detectedAt: Date;
   alertSent: boolean;
 }
@@ -106,13 +104,11 @@ export interface MonitoringStats {
  * Manages real-time competitor monitoring and change detection
  */
 export class CompetitiveMonitor {
-  private DEFAULT_ORG_ID: string;
   private monitoringConfigs: Map<string, CompetitorMonitorConfig>;
   private isRunning: boolean = false;
   private checkInterval?: NodeJS.Timeout;
 
-  constructor(DEFAULT_ORG_ID: string) {
-    this.DEFAULT_ORG_ID = DEFAULT_ORG_ID;
+  constructor() {
     this.monitoringConfigs = new Map();
   }
 
@@ -121,14 +117,11 @@ export class CompetitiveMonitor {
    */
   async start(): Promise<void> {
     if (this.isRunning) {
-      logger.warn('Competitive monitor already running', {
-        DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
-      });
+      logger.warn('Competitive monitor already running');
       return;
     }
 
     logger.info('Starting competitive monitor', {
-      DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
       competitorsTracked: this.monitoringConfigs.size,
     });
 
@@ -146,7 +139,6 @@ export class CompetitiveMonitor {
     );
 
     logger.info('Competitive monitor started', {
-      DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
       checkIntervalMs: 60 * 60 * 1000,
     });
   }
@@ -159,9 +151,7 @@ export class CompetitiveMonitor {
       return;
     }
 
-    logger.info('Stopping competitive monitor', {
-      DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
-    });
+    logger.info('Stopping competitive monitor');
 
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
@@ -182,7 +172,6 @@ export class CompetitiveMonitor {
     });
 
     logger.info('Competitor added to monitoring', {
-      DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
       competitorId: config.competitorId,
       domain: config.domain,
       priority: config.priority,
@@ -197,7 +186,6 @@ export class CompetitiveMonitor {
     this.monitoringConfigs.delete(competitorId);
 
     logger.info('Competitor removed from monitoring', {
-      DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
       competitorId,
     });
   }
@@ -231,14 +219,12 @@ export class CompetitiveMonitor {
 
     if (competitorsToCheck.length === 0) {
       logger.debug('No competitors due for checking', {
-        DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
         totalCompetitors: this.monitoringConfigs.size,
       });
       return;
     }
 
     logger.info('Performing scheduled competitor checks', {
-      DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
       competitorsToCheck: competitorsToCheck.length,
     });
 
@@ -248,7 +234,6 @@ export class CompetitiveMonitor {
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         logger.error('Failed to check competitor', err, {
-          DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
           competitorId: config.competitorId,
           domain: config.domain,
         });
@@ -261,7 +246,6 @@ export class CompetitiveMonitor {
    */
   private async checkCompetitor(config: CompetitorMonitorConfig): Promise<void> {
     logger.info('Checking competitor for changes', {
-      DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
       competitorId: config.competitorId,
       domain: config.domain,
     });
@@ -273,8 +257,7 @@ export class CompetitiveMonitor {
       // TODO: Load previous profile from database for comparison
       // For now, just log that we checked
       logger.info('Competitor check complete', {
-        DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
-        competitorId: config.competitorId,
+                competitorId: config.competitorId,
         domain: config.domain,
         featuresFound: newProfile.productOffering.keyFeatures.length,
         strengthsFound: newProfile.analysis.strengths.length,
@@ -298,8 +281,7 @@ export class CompetitiveMonitor {
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error('Competitor check failed', err, {
-        DEFAULT_ORG_ID: this.DEFAULT_ORG_ID,
-        competitorId: config.competitorId,
+                competitorId: config.competitorId,
         domain: config.domain,
       });
 
@@ -391,8 +373,7 @@ export class CompetitiveMonitor {
         competitorId: newProfile.id,
         competitorName: newProfile.companyName,
         domain: newProfile.domain,
-        organizationId: newProfile.organizationId,
-        changeType: 'pricing_update',
+                changeType: 'pricing_update',
         severity: 'high',
         details: {
           field: 'pricing_model',
@@ -413,8 +394,7 @@ export class CompetitiveMonitor {
         competitorId: newProfile.id,
         competitorName: newProfile.companyName,
         domain: newProfile.domain,
-        organizationId: newProfile.organizationId,
-        changeType: 'pricing_update',
+                changeType: 'pricing_update',
         severity: 'medium',
         details: {
           field: 'pricing_tiers',
@@ -451,8 +431,7 @@ export class CompetitiveMonitor {
           competitorId: newProfile.id,
           competitorName: newProfile.companyName,
           domain: newProfile.domain,
-          organizationId: newProfile.organizationId,
-          changeType: 'new_feature',
+                    changeType: 'new_feature',
           severity: 'medium',
           details: {
             field: 'features',
@@ -475,8 +454,7 @@ export class CompetitiveMonitor {
           competitorId: newProfile.id,
           competitorName: newProfile.companyName,
           domain: newProfile.domain,
-          organizationId: newProfile.organizationId,
-          changeType: 'removed_feature',
+                    changeType: 'removed_feature',
           severity: 'low',
           details: {
             field: 'features',
@@ -510,8 +488,7 @@ export class CompetitiveMonitor {
         competitorId: newProfile.id,
         competitorName: newProfile.companyName,
         domain: newProfile.domain,
-        organizationId: newProfile.organizationId,
-        changeType: 'positioning_shift',
+                changeType: 'positioning_shift',
         severity: 'medium',
         details: {
           field: 'tagline',
@@ -545,8 +522,7 @@ export class CompetitiveMonitor {
         competitorId: newProfile.id,
         competitorName: newProfile.companyName,
         domain: newProfile.domain,
-        organizationId: newProfile.organizationId,
-        changeType: 'hiring_surge',
+                changeType: 'hiring_surge',
         severity: 'high',
         details: {
           field: 'job_count',
@@ -567,8 +543,7 @@ export class CompetitiveMonitor {
         competitorId: newProfile.id,
         competitorName: newProfile.companyName,
         domain: newProfile.domain,
-        organizationId: newProfile.organizationId,
-        changeType: 'funding_announced',
+                changeType: 'funding_announced',
         severity: 'critical',
         details: {
           field: 'funding_stage',
@@ -606,8 +581,7 @@ export class CompetitiveMonitor {
             competitorId: newProfile.id,
             competitorName: newProfile.companyName,
             domain: newProfile.domain,
-            organizationId: newProfile.organizationId,
-            changeType: 'weakness_detected',
+                        changeType: 'weakness_detected',
             severity: weaknessData.impact === 'high' ? 'high' : 'medium',
             details: {
               field: 'weaknesses',
@@ -635,7 +609,6 @@ export class CompetitiveMonitor {
 
       await coordinator.emitSignal({
         type: 'competitor.updated',
-        orgId: change.organizationId,
         confidence: 0.9,
         priority: change.severity === 'critical' ? 'High' : change.severity === 'high' ? 'High' : 'Medium',
         metadata: {
@@ -655,7 +628,6 @@ export class CompetitiveMonitor {
       });
 
       logger.info('Competitor change alert sent', {
-        DEFAULT_ORG_ID: change.organizationId,
         competitorName: change.competitorName,
         changeType: change.changeType,
         severity: change.severity,
@@ -663,7 +635,6 @@ export class CompetitiveMonitor {
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error('Failed to send competitor change alert', err, {
-        DEFAULT_ORG_ID: change.organizationId,
         competitorId: change.competitorId,
       });
     }
@@ -680,11 +651,11 @@ const monitors = new Map<string, CompetitiveMonitor>();
  * Get or create competitive monitor for organization
  */
 export function getCompetitiveMonitor(): CompetitiveMonitor {
-  let monitor = monitors.get(DEFAULT_ORG_ID);
+  let monitor = monitors.get(PLATFORM_ID);
 
   if (!monitor) {
-    monitor = new CompetitiveMonitor(DEFAULT_ORG_ID);
-    monitors.set(DEFAULT_ORG_ID, monitor);
+    monitor = new CompetitiveMonitor();
+    monitors.set(PLATFORM_ID, monitor);
   }
 
   return monitor;
@@ -702,7 +673,7 @@ export async function startCompetitiveMonitoring(): Promise<void> {
  * Stop monitoring for organization
  */
 export function stopCompetitiveMonitoring(): void {
-  const monitor = monitors.get(DEFAULT_ORG_ID);
+  const monitor = monitors.get(PLATFORM_ID);
   if (monitor) {
     monitor.stop();
   }

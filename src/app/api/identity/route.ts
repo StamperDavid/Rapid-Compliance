@@ -4,7 +4,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface OrgData {
   brandDNA?: BrandDNA;
@@ -51,17 +51,17 @@ export async function GET(
     }
 
     // Load workforce identity
-    const identityDocRef = adminDb.collection('organizations').doc(DEFAULT_ORG_ID)
+    const identityDocRef = adminDb.collection('organizations').doc(PLATFORM_ID)
       .collection('settings').doc('workforceIdentity');
     const identityDoc = await identityDocRef.get();
 
     // Load brand DNA from organization
-    const orgDocRef = adminDb.collection('organizations').doc(DEFAULT_ORG_ID);
+    const orgDocRef = adminDb.collection('organizations').doc(PLATFORM_ID);
     const orgDoc = await orgDocRef.get();
     const orgData = orgDoc.exists ? (orgDoc.data() as OrgData | undefined) : null;
 
     // Load onboarding data for pre-population if needed
-    const onboardingDocRef = adminDb.collection('organizations').doc(DEFAULT_ORG_ID)
+    const onboardingDocRef = adminDb.collection('organizations').doc(PLATFORM_ID)
       .collection('onboarding').doc('current');
     const onboardingDoc = await onboardingDocRef.get();
     const onboardingData = onboardingDoc.exists ? onboardingDoc.data() : null;
@@ -124,7 +124,7 @@ export async function POST(
     const batch = adminDb.batch();
 
     // Save workforce identity
-    const identityDocRef = adminDb.collection('organizations').doc(DEFAULT_ORG_ID)
+    const identityDocRef = adminDb.collection('organizations').doc(PLATFORM_ID)
       .collection('settings').doc('workforceIdentity');
 
     batch.set(identityDocRef, {
@@ -136,7 +136,7 @@ export async function POST(
 
     // Update organization Brand DNA if provided
     if (brandDNA) {
-      const orgDocRef = adminDb.collection('organizations').doc(DEFAULT_ORG_ID);
+      const orgDocRef = adminDb.collection('organizations').doc(PLATFORM_ID);
       batch.update(orgDocRef, {
         brandDNA: {
           ...brandDNA,
@@ -148,7 +148,7 @@ export async function POST(
     }
 
     // Mark identity refinement as complete
-    const progressDocRef = adminDb.collection('organizations').doc(DEFAULT_ORG_ID)
+    const progressDocRef = adminDb.collection('organizations').doc(PLATFORM_ID)
       .collection('settings').doc('onboardingProgress');
 
     batch.set(progressDocRef, {
@@ -158,7 +158,7 @@ export async function POST(
     }, { merge: true });
 
     // Also update the agent persona with the new identity
-    const personaDocRef = adminDb.collection('organizations').doc(DEFAULT_ORG_ID)
+    const personaDocRef = adminDb.collection('organizations').doc(PLATFORM_ID)
       .collection('agentPersona').doc('current');
 
     batch.set(personaDocRef, {
@@ -182,7 +182,6 @@ export async function POST(
     await batch.commit();
 
     logger.info('Identity saved successfully', {
-      orgId: DEFAULT_ORG_ID,
       workforceName: identity.workforceName,
       route: '/api/identity'
     });

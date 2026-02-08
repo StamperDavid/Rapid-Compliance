@@ -15,7 +15,6 @@ export const dynamic = 'force-dynamic';
 
 // Zod schemas for OAuth responses
 const OAuthStateSchema = z.object({
-  organizationId: z.string().min(1),
   provider: z.string().optional(),
   userId: z.string().optional(),
 });
@@ -94,10 +93,10 @@ export async function GET(
       const stateValidation = OAuthStateSchema.safeParse(stateData);
 
       if (!stateValidation.success) {
-        throw new Error('Invalid state: missing organizationId');
+        throw new Error('Invalid state');
       }
 
-      const { organizationId: _organizationId, userId } = stateValidation.data;
+      const { userId } = stateValidation.data;
 
       // Exchange code for access token
       let credentials: ProviderCredentials;

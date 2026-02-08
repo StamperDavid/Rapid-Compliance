@@ -12,11 +12,10 @@ import type { TrainingSession } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const CreateUpdateRequestSchema = z.object({
   sessionIds: z.array(z.string().min(1)).min(1, 'At least one session ID is required'),
-  organizationId: z.string().min(1, 'Organization ID is required'),
   goldenMasterId: z.string().min(1, 'Golden Master ID is required'),
   minConfidence: z.number().min(0).max(1).optional(),
 });
@@ -39,21 +38,13 @@ export async function POST(request: NextRequest) {
     if (!parseResult.success) {
       return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid request body');
     }
-    const { sessionIds, organizationId, goldenMasterId, minConfidence } = parseResult.data;
-
-    // Verify access
-    if (DEFAULT_ORG_ID !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      );
-    }
+    const { sessionIds, goldenMasterId, minConfidence } = parseResult.data;
 
     // Get all training sessions
     const sessions: TrainingSession[] = [];
     for (const sessionId of sessionIds) {
       const session = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingSessions`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingSessions`,
         sessionId
       ) as TrainingSession;
       

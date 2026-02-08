@@ -25,12 +25,12 @@ export async function calculateTax(
   billingAddress: Address,
   shippingAddress: Address
 ): Promise<TaxCalculation> {
-  // Import DEFAULT_ORG_ID
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  // Import PLATFORM_ID
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   // Get e-commerce config
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
   

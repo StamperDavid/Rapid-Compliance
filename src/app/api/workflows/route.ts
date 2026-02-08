@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     const { workspaceId, workflow } = bodyResult.data;
 
     // Cast to the expected type - the service layer will perform full validation
-    const workflowData = workflow as unknown as Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>;
+    const workflowData = workflow as unknown as Omit<Workflow, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>;
 
     const newWorkflow = await createWorkflow(
       workflowData,

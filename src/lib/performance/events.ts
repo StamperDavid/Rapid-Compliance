@@ -21,7 +21,7 @@
 import type { SalesSignal } from '@/lib/orchestration';
 import type { CoachingCategory } from '@/lib/conversation/types';
 import type { PerformanceTier } from './types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // EVENT INTERFACES
@@ -187,7 +187,6 @@ export function createPerformanceAnalyzedEvent(
 ): Omit<PerformanceAnalyzedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.analyzed' as const,
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.95,
     priority: 'Medium',
@@ -222,7 +221,6 @@ export function createTopPerformerIdentifiedEvent(
 ): Omit<TopPerformerIdentifiedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.top_performer_identified' as const,
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.9,
     priority: 'High',
@@ -258,7 +256,6 @@ export function createImprovementOpportunityDetectedEvent(
 
   return {
     type: 'performance.improvement_opportunity' as const,
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.85,
     priority: hasCriticalGap ? 'High' : 'Medium',
@@ -291,7 +288,6 @@ export function createCoachingPriorityCreatedEvent(
 ): Omit<CoachingPriorityCreatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.coaching_priority_created' as const,
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.9,
     priority: priority === 'critical' ? 'High' : 'Medium',
@@ -324,7 +320,6 @@ export function createBestPracticeExtractedEvent(
 ): Omit<BestPracticeExtractedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.best_practice_extracted' as const,
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.85,
     priority: 'Medium',
@@ -360,7 +355,6 @@ export function createTrendDetectedEvent(
 
   return {
     type: 'performance.trend_detected' as const,
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.8,
     priority: isNegative ? 'High' : 'Medium',
@@ -390,7 +384,6 @@ export function createLeaderboardUpdatedEvent(
 ): Omit<LeaderboardUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.leaderboard_updated' as const,
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 1.0,
     priority: 'Low',
@@ -421,7 +414,6 @@ export function createBenchmarkChangedEvent(
 
   return {
     type: 'performance.benchmark_changed' as const,
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 1.0,
     priority: 'Low',
@@ -452,7 +444,6 @@ export function createPerformanceAlertTriggeredEvent(
 ): Omit<PerformanceAlertTriggeredEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.alert_triggered' as const,
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     confidence: 0.9,
     priority: severity === 'critical' || severity === 'high' ? 'High' : 'Medium',

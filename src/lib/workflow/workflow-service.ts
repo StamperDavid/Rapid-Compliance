@@ -23,7 +23,7 @@ import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import { type WorkflowExecutionContext, type WorkflowExecutionResult } from './workflow-engine';
 import { WorkflowCoordinator } from './workflow-coordinator';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   Workflow,
   WorkflowStatus,
@@ -67,7 +67,6 @@ export class WorkflowService {
     userId: string
   ): Promise<Workflow> {
     logger.info('Creating workflow', {
-      organizationId: input.organizationId,
       workflowName: input.name,
       userId,
     });
@@ -76,7 +75,6 @@ export class WorkflowService {
     
     const workflow: Workflow = {
       id: '', // Will be set by Firestore
-      organizationId: input.organizationId,
       workspaceId: input.workspaceId,
       name: input.name,
       description: input.description,
@@ -92,7 +90,7 @@ export class WorkflowService {
     };
     
     // Save to Firestore (use collection path as string)
-    const workflowsPath = `${this.dal.getColPath('organizations')}/${input.organizationId}/${this.dal.getSubColPath('workflows')}`;
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflows')}`;
     
     const docRef = await this.dal.safeAddDoc(
       workflowsPath,
@@ -103,7 +101,6 @@ export class WorkflowService {
     
     logger.info('Workflow created successfully', {
       workflowId: createdWorkflow.id,
-      organizationId: input.organizationId,
     });
     
     return createdWorkflow;
@@ -115,7 +112,7 @@ export class WorkflowService {
   async getWorkflow(
     workflowId: string
   ): Promise<Workflow | null> {
-    const workflowsPath = `${this.dal.getColPath('organizations')}/${DEFAULT_ORG_ID}/${this.dal.getSubColPath('workflows')}`;
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflows')}`;
 
     const docSnap = await this.dal.safeGetDoc<Workflow>(
       workflowsPath,
@@ -134,12 +131,11 @@ export class WorkflowService {
    * Note: Returns Promise for API consistency - will use await when Firestore queries are implemented
    */
   getWorkflows(
-    filters: Omit<WorkflowFilterInput, 'organizationId'>
+    filters: WorkflowFilterInput
   ): Promise<{ workflows: Workflow[]; total: number }> {
     logger.debug('Querying workflows', filters);
 
     const _workflowsCollection = this.dal.getOrgSubCollection(
-      DEFAULT_ORG_ID,
       'workflows'
     );
 
@@ -161,7 +157,6 @@ export class WorkflowService {
     updates: UpdateWorkflowInput
   ): Promise<Workflow> {
     logger.info('Updating workflow', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
       updateFields: Object.keys(updates).join(', '),
     });
@@ -172,7 +167,7 @@ export class WorkflowService {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
 
-    const workflowsPath = `${this.dal.getColPath('organizations')}/${DEFAULT_ORG_ID}/${this.dal.getSubColPath('workflows')}`;
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflows')}`;
 
     const updatedData = {
       ...updates,
@@ -191,7 +186,6 @@ export class WorkflowService {
 
     logger.info('Workflow updated successfully', {
       workflowId,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     return updatedWorkflow;
@@ -205,7 +199,6 @@ export class WorkflowService {
     status: WorkflowStatus
   ): Promise<Workflow> {
     logger.info('Updating workflow status', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
       status,
     });
@@ -220,17 +213,15 @@ export class WorkflowService {
     workflowId: string
   ): Promise<void> {
     logger.info('Deleting workflow', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
     });
 
-    const workflowsPath = `${this.dal.getColPath('organizations')}/${DEFAULT_ORG_ID}/${this.dal.getSubColPath('workflows')}`;
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflows')}`;
 
     await this.dal.safeDeleteDoc(workflowsPath, workflowId);
 
     logger.info('Workflow deleted successfully', {
       workflowId,
-      organizationId: DEFAULT_ORG_ID,
     });
   }
   
@@ -239,17 +230,15 @@ export class WorkflowService {
    */
   async executeWorkflow(
     workflowId: string,
-    context: Omit<WorkflowExecutionContext, 'organizationId'>
+    context: WorkflowExecutionContext
   ): Promise<WorkflowExecutionResult> {
     logger.info('Manually executing workflow', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
       dealId: context.dealId,
     });
 
     const fullContext: WorkflowExecutionContext = {
       ...context,
-      organizationId: DEFAULT_ORG_ID,
       triggeredBy: 'manual',
     };
 
@@ -265,13 +254,11 @@ export class WorkflowService {
     limit = 50
   ): Promise<WorkflowExecution[]> {
     logger.debug('Getting workflow executions', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
       limit,
     });
 
     const _executionsCollection = this.dal.getOrgSubCollection(
-      DEFAULT_ORG_ID,
       'workflow_executions'
     );
 
@@ -288,7 +275,7 @@ export class WorkflowService {
   async getWorkflowExecution(
     executionId: string
   ): Promise<WorkflowExecution | null> {
-    const executionsPath = `${this.dal.getColPath('organizations')}/${DEFAULT_ORG_ID}/${this.dal.getSubColPath('workflow_executions')}`;
+    const executionsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflow_executions')}`;
 
     const docSnap = await this.dal.safeGetDoc<WorkflowExecution>(
       executionsPath,
@@ -383,7 +370,7 @@ export function getWorkflowService(dal?: BaseAgentDAL): WorkflowService {
  * Create workflow
  */
 export async function createWorkflow(
-  workflowData: Omit<CreateWorkflowInput, 'organizationId'>,
+  workflowData: CreateWorkflowInput,
   userId: string,
   workspaceId?: string
 ): Promise<Workflow> {
@@ -393,7 +380,6 @@ export async function createWorkflow(
 
   const input: CreateWorkflowInput = {
     ...workflowData,
-    organizationId: DEFAULT_ORG_ID,
     workspaceId:workspaceId ?? workflowData.workspaceId,
   };
 
@@ -414,7 +400,7 @@ export async function getWorkflows(
   const result = await service.getWorkflows({
     workspaceId,
     ...filters,
-  } as Omit<WorkflowFilterInput, 'organizationId'>);
+  } as WorkflowFilterInput);
 
   return {
     data: result.workflows,

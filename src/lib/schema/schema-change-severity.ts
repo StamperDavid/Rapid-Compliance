@@ -5,6 +5,7 @@
 
 import type { SchemaChangeEvent } from './schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low';
 
@@ -295,7 +296,7 @@ export class SchemaChangeUXHandler {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       
-      const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/notifications`;
+      const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`;
       const notificationId = `notif_severity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       await FirestoreService.set(
@@ -303,7 +304,6 @@ export class SchemaChangeUXHandler {
         notificationId,
         {
           id: notificationId,
-          organizationId: event.organizationId,
           workspaceId: event.workspaceId,
           title: `Schema Change: ${options.level.toUpperCase()}`,
           message: options.userMessage,
@@ -342,7 +342,7 @@ export class SchemaChangeUXHandler {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       
-      const issuesPath = `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/schemaIssues`;
+      const issuesPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/schemaIssues`;
       const issueId = `issue_${event.id}`;
       
       await FirestoreService.set(
@@ -351,7 +351,6 @@ export class SchemaChangeUXHandler {
         {
           id: issueId,
           eventId: event.id,
-          organizationId: event.organizationId,
           workspaceId: event.workspaceId,
           schemaId: event.schemaId,
           

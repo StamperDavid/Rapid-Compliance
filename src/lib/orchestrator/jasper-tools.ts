@@ -13,7 +13,7 @@ import { SPECIALISTS, getSpecialist, type SpecialistPlatform } from './feature-m
 import { SystemHealthService } from './system-health-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // ORGANIZATION TYPE (for type-safe Firestore queries)
@@ -46,7 +46,7 @@ interface UserRecord {
   id: string;
   email: string;
   role: string;
-  DEFAULT_ORG_ID: string;
+  PLATFORM_ID: string;
   name?: string;
   createdAt?: string;
 }
@@ -73,7 +73,7 @@ interface UpdatePricingArgs {
 }
 
 interface ListUsersArgs {
-  DEFAULT_ORG_ID?: string;
+  PLATFORM_ID?: string;
   role?: string;
   limit?: string;
 }
@@ -89,7 +89,7 @@ interface QueryDocsArgs {
 
 interface GetPlatformStatsArgs {
   metric?: 'all' | 'organizations' | 'agents' | 'health' | 'trials' | 'errors';
-  DEFAULT_ORG_ID?: string;
+  PLATFORM_ID?: string;
 }
 
 interface DelegateToAgentArgs {
@@ -101,7 +101,7 @@ interface DelegateToAgentArgs {
 interface InspectAgentLogsArgs {
   source: 'provisioner' | 'agents' | 'errors' | 'all';
   limit?: number;
-  DEFAULT_ORG_ID?: string;
+  PLATFORM_ID?: string;
 }
 
 // ============================================================================
@@ -137,7 +137,7 @@ function parseInspectAgentLogsArgs(args: Record<string, unknown>): InspectAgentL
   return {
     source: args.source as InspectAgentLogsArgs['source'],
     limit: typeof args.limit === 'number' ? args.limit : undefined,
-    DEFAULT_ORG_ID: typeof args.DEFAULT_ORG_ID === 'string' ? args.DEFAULT_ORG_ID : undefined,
+    PLATFORM_ID: typeof args.PLATFORM_ID === 'string' ? args.PLATFORM_ID : undefined,
   };
 }
 
@@ -247,7 +247,6 @@ export interface SystemState {
   provisioner: {
     recentErrors: Array<{
       timestamp: string;
-      orgId: string;
       error: string;
     }>;
     lastSuccessfulProvision: string | null;
@@ -340,7 +339,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             description: 'Specific metric to retrieve',
             enum: ['all', 'organizations', 'agents', 'health', 'trials', 'errors'],
           },
-          DEFAULT_ORG_ID: {
+          PLATFORM_ID: {
             type: 'string',
             description: 'Optional: Get stats for a specific organization',
           },
@@ -358,7 +357,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          DEFAULT_ORG_ID: {
+          PLATFORM_ID: {
             type: 'string',
             description: 'Optional: Get state for a specific organization context',
           },
@@ -408,12 +407,12 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          DEFAULT_ORG_ID: {
+          PLATFORM_ID: {
             type: 'string',
             description: 'The organization ID to retrieve',
           },
         },
-        required: ['DEFAULT_ORG_ID'],
+        required: ['PLATFORM_ID'],
       },
     },
   },
@@ -426,7 +425,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          DEFAULT_ORG_ID: {
+          PLATFORM_ID: {
             type: 'string',
             description: 'The organization ID to update',
           },
@@ -435,7 +434,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             description: 'JSON object with fields to update (plan, status, name, features)',
           },
         },
-        required: ['DEFAULT_ORG_ID', 'updates'],
+        required: ['PLATFORM_ID', 'updates'],
       },
     },
   },
@@ -666,7 +665,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          DEFAULT_ORG_ID: {
+          PLATFORM_ID: {
             type: 'string',
             description: 'Organization context for scoring model',
           },
@@ -760,7 +759,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       parameters: {
         type: 'object',
         properties: {
-          DEFAULT_ORG_ID: {
+          PLATFORM_ID: {
             type: 'string',
             description: 'Filter by organization',
           },
@@ -858,7 +857,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             type: 'string',
             description: 'Maximum number of log entries (default: 10)',
           },
-          DEFAULT_ORG_ID: {
+          PLATFORM_ID: {
             type: 'string',
             description: 'Optional: Filter logs by organization',
           },
@@ -885,7 +884,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             description: 'Type of analytics report',
             enum: ['overview', 'revenue', 'engagement', 'conversion', 'churn', 'growth'],
           },
-          DEFAULT_ORG_ID: {
+          PLATFORM_ID: {
             type: 'string',
             description: 'Specific organization (omit for platform-wide)',
           },
@@ -918,7 +917,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             description: 'Output format',
             enum: ['summary', 'detailed', 'presentation'],
           },
-          DEFAULT_ORG_ID: {
+          PLATFORM_ID: {
             type: 'string',
             description: 'Organization scope',
           },
@@ -1355,7 +1354,7 @@ PROCESS:
 5. Initial navigation structure built
 
 ERROR HANDLING:
-- Logs stored in organizations/{orgId}/provisionerLogs
+- Logs stored in organizations/rapid-compliance-root/provisionerLogs
 - Failed provisions retry up to 3 times
 - Admin notified of persistent failures
       `.trim(),
@@ -1402,7 +1401,7 @@ PENTHOUSE MODEL:
  */
 export async function executeGetPlatformStats(
   metric: 'all' | 'organizations' | 'agents' | 'health' | 'trials' | 'errors',
-  DEFAULT_ORG_ID?: string
+  PLATFORM_ID?: string
 ): Promise<PlatformStats> {
   try {
     const stats: PlatformStats = {
@@ -1436,8 +1435,8 @@ export async function executeGetPlatformStats(
     }
 
     if (metric === 'all' || metric === 'health') {
-      if (DEFAULT_ORG_ID) {
-        const healthReport = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
+      if (PLATFORM_ID) {
+        const healthReport = await SystemHealthService.generateHealthReport();
         stats.health = {
           readinessScore: healthReport.readinessScore,
           configuredFeatures: healthReport.features.filter((f) => f.status === 'configured').length,
@@ -1446,7 +1445,7 @@ export async function executeGetPlatformStats(
         };
       } else {
         stats.health = {
-          note: 'Provide DEFAULT_ORG_ID for detailed health report',
+          note: 'Provide PLATFORM_ID for detailed health report',
         };
       }
     }
@@ -1539,7 +1538,7 @@ export function executeDelegateToAgent(
 export function executeInspectAgentLogs(
   source: 'provisioner' | 'agents' | 'errors' | 'all',
   limit: number = 10,
-  _DEFAULT_ORG_ID?: string
+  _PLATFORM_ID?: string
 ): Promise<AgentLog[]> {
   const logs: AgentLog[] = [];
 
@@ -1640,8 +1639,8 @@ export async function executeGetSystemState(): Promise<SystemState> {
     };
 
     // Get feature configuration for specific org
-    if (DEFAULT_ORG_ID) {
-      const healthReport = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
+    if (PLATFORM_ID) {
+      const healthReport = await SystemHealthService.generateHealthReport();
       state.features = {
         configured: healthReport.features
           .filter((f) => f.status === 'configured')
@@ -1695,7 +1694,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
 
       case 'get_platform_stats': {
         const typedArgs = args as GetPlatformStatsArgs;
-        const stats = await executeGetPlatformStats(typedArgs.metric ?? 'all', typedArgs.DEFAULT_ORG_ID);
+        const stats = await executeGetPlatformStats(typedArgs.metric ?? 'all', typedArgs.PLATFORM_ID);
         content = JSON.stringify(stats);
         break;
       }
@@ -1734,7 +1733,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       }
 
       case 'get_organization': {
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, args.DEFAULT_ORG_ID as string);
+        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, args.PLATFORM_ID as string);
         content = JSON.stringify(org ?? { error: 'Organization not found' });
         break;
       }
@@ -1746,8 +1745,8 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         } catch {
           updates = { note: args.updates };
         }
-        await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, args.DEFAULT_ORG_ID as string, updates);
-        content = JSON.stringify({ success: true, DEFAULT_ORG_ID: args.DEFAULT_ORG_ID, updates });
+        await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, args.PLATFORM_ID as string, updates);
+        content = JSON.stringify({ success: true, PLATFORM_ID: args.PLATFORM_ID, updates });
         break;
       }
 
@@ -1859,7 +1858,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       case 'score_leads': {
         content = JSON.stringify({
           status: 'scoring',
-          DEFAULT_ORG_ID: args.DEFAULT_ORG_ID ?? 'default',
+          PLATFORM_ID: args.PLATFORM_ID ?? 'default',
           leadIds: args.leadIds ?? 'all',
           message: 'Lead scoring model applied',
         });
@@ -1900,8 +1899,8 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         const typedArgs = args as unknown as ListUsersArgs;
         const users = await FirestoreService.getAll('users');
         let filtered = (users ?? []) as UserRecord[];
-        if (typedArgs.DEFAULT_ORG_ID) {
-          filtered = filtered.filter((u) => u.DEFAULT_ORG_ID === typedArgs.DEFAULT_ORG_ID);
+        if (typedArgs.PLATFORM_ID) {
+          filtered = filtered.filter((u) => u.PLATFORM_ID === typedArgs.PLATFORM_ID);
         }
         if (typedArgs.role && typedArgs.role !== 'all') {
           filtered = filtered.filter((u) => u.role === typedArgs.role);
@@ -1912,7 +1911,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
             id: u.id,
             email: u.email,
             role: u.role,
-            DEFAULT_ORG_ID: u.DEFAULT_ORG_ID,
+            PLATFORM_ID: u.PLATFORM_ID,
           })),
         });
         break;
@@ -1951,7 +1950,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         const logs = await executeInspectAgentLogs(
           parsedArgs.source,
           parsedArgs.limit ?? 10,
-          parsedArgs.DEFAULT_ORG_ID
+          parsedArgs.PLATFORM_ID
         );
         content = JSON.stringify(logs);
         break;
@@ -1986,7 +1985,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           status: 'generating',
           reportType: args.reportType,
           format: args.format ?? 'summary',
-          DEFAULT_ORG_ID: args.DEFAULT_ORG_ID ?? 'platform',
+          PLATFORM_ID: args.PLATFORM_ID ?? 'platform',
           message: `${args.reportType} report generation initiated`,
           estimatedCompletion: '30 seconds',
         });

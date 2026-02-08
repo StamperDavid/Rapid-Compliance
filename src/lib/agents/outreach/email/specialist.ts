@@ -60,7 +60,6 @@ interface SendEmailPayload {
   from?: string;
   fromName?: string;
   replyTo?: string;
-  organizationId: string;
   workspaceId?: string;
   trackOpens?: boolean;
   trackClicks?: boolean;
@@ -75,20 +74,17 @@ interface SendBulkEmailPayload {
   text?: string;
   from?: string;
   fromName?: string;
-  organizationId: string;
   metadata?: Record<string, unknown>;
 }
 
 interface GetTrackingPayload {
   action: 'get_tracking';
   messageId: string;
-  organizationId: string;
 }
 
 interface RecordOpenPayload {
   action: 'record_open';
   messageId: string;
-  organizationId: string;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -96,7 +92,6 @@ interface RecordOpenPayload {
 interface RecordClickPayload {
   action: 'record_click';
   messageId: string;
-  organizationId: string;
   url: string;
   ipAddress?: string;
   userAgent?: string;
@@ -122,14 +117,12 @@ interface DripCampaignPayload {
     caseStudies?: string[];
   };
   goal: 'meeting' | 'demo' | 'trial' | 'purchase' | 'referral';
-  organizationId: string;
 }
 
 interface SpamCheckPayload {
   action: 'spam_check';
   content: string;
   subjectLine?: string;
-  organizationId: string;
 }
 
 interface PersonalizeEmailPayload {
@@ -144,7 +137,6 @@ interface PersonalizeEmailPayload {
     painPoint?: string;
     recentNews?: string;
   };
-  organizationId: string;
 }
 
 interface SubjectLineABPayload {
@@ -152,7 +144,6 @@ interface SubjectLineABPayload {
   emailContent: string;
   targetAudience: string;
   variants?: number;
-  organizationId: string;
 }
 
 type EmailPayload =
@@ -470,7 +461,6 @@ export class EmailSpecialist extends BaseSpecialist {
       },
       metadata: {
         ...payload.metadata,
-        organizationId: payload.organizationId,
         workspaceId: payload.workspaceId,
       },
     };
@@ -530,7 +520,6 @@ export class EmailSpecialist extends BaseSpecialist {
       },
       metadata: {
         ...payload.metadata,
-        organizationId: payload.organizationId,
       },
     };
 
@@ -554,11 +543,11 @@ export class EmailSpecialist extends BaseSpecialist {
    * Handle get_tracking action
    */
   private async handleGetTracking(payload: GetTrackingPayload): Promise<EmailExecutionResult> {
-    if (!payload.messageId || !payload.organizationId) {
+    if (!payload.messageId) {
       return {
         success: false,
         action: 'get_tracking',
-        error: 'messageId and organizationId are required',
+        error: 'messageId is required',
       };
     }
 
@@ -576,11 +565,11 @@ export class EmailSpecialist extends BaseSpecialist {
    * Handle record_open action
    */
   private async handleRecordOpen(payload: RecordOpenPayload): Promise<EmailExecutionResult> {
-    if (!payload.messageId || !payload.organizationId) {
+    if (!payload.messageId) {
       return {
         success: false,
         action: 'record_open',
-        error: 'messageId and organizationId are required',
+        error: 'messageId is required',
       };
     }
 
@@ -599,11 +588,11 @@ export class EmailSpecialist extends BaseSpecialist {
    * Handle record_click action
    */
   private async handleRecordClick(payload: RecordClickPayload): Promise<EmailExecutionResult> {
-    if (!payload.messageId || !payload.organizationId || !payload.url) {
+    if (!payload.messageId || !payload.url) {
       return {
         success: false,
         action: 'record_click',
-        error: 'messageId, organizationId, and url are required',
+        error: 'messageId and url are required',
       };
     }
 
@@ -631,9 +620,9 @@ export class EmailSpecialist extends BaseSpecialist {
    * Build a complete 5-stage drip campaign with spam checking
    */
   private handleDripCampaign(payload: DripCampaignPayload): DripCampaignResult {
-    const { campaignName, targetAudience, senderProfile, goal, organizationId } = payload;
+    const { campaignName, targetAudience, senderProfile, goal } = payload;
 
-    this.log('INFO', `Building 5-stage drip campaign: ${campaignName} for organization ${organizationId}`);
+    this.log('INFO', `Building 5-stage drip campaign: ${campaignName}`);
 
     const stages: Array<{ name: string; dayDelay: number; purpose: string }> = [
       { name: 'Opening', dayDelay: 0, purpose: 'Initial introduction and hook' },
@@ -670,7 +659,7 @@ export class EmailSpecialist extends BaseSpecialist {
     const abTestVariants = this.generateABVariants(emails, targetAudience.industry);
 
     return {
-      campaignId: `drip_${organizationId}_${Date.now()}`,
+      campaignId: `drip_${Date.now()}`,
       campaignName,
       totalEmails: emails.length,
       estimatedDuration: '14 days',

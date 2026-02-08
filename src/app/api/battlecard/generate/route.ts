@@ -13,7 +13,6 @@ import { logger } from '@/lib/logger/logger';
 /** Request body interface for battlecard generation */
 interface GenerateBattlecardRequestBody {
   competitorDomain: string;
-  organizationId: string;
   options: BattlecardOptions;
 }
 
@@ -25,7 +24,6 @@ function isValidRequestBody(body: unknown): body is GenerateBattlecardRequestBod
   const b = body as Record<string, unknown>;
   return (
     typeof b.competitorDomain === 'string' &&
-    typeof b.organizationId === 'string' &&
     typeof b.options === 'object' && b.options !== null
   );
 }
@@ -36,16 +34,15 @@ export async function POST(request: NextRequest) {
 
     if (!isValidRequestBody(body)) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: competitorDomain, organizationId, options' },
+        { success: false, error: 'Missing required fields: competitorDomain, options' },
         { status: 400 }
       );
     }
 
-    const { competitorDomain, organizationId, options } = body;
+    const { competitorDomain, options } = body;
 
     logger.info('API: Generate battlecard request', {
       competitorDomain,
-      organizationId,
       ourProduct: options.ourProduct,
     });
 

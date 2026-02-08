@@ -1,14 +1,14 @@
 /**
  * Domain Verification API
  * Verify DNS records and activate domain
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { promises as dns } from 'dns';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface DNSRecord {
   type: string;
@@ -18,7 +18,6 @@ interface DNSRecord {
 }
 
 interface DomainData {
-  organizationId: string;
   verificationMethod: string;
   dnsRecords: DNSRecord[];
 }
@@ -46,8 +45,8 @@ export async function POST(
     const domainId = decodeURIComponent(params.domainId);
 
     const domainRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/custom-domains/{domainId}',
-      { orgId: DEFAULT_ORG_ID, domainId }
+      'organizations/rapid-compliance-root/website/config/custom-domains/{domainId}',
+      { domainId }
     );
 
     const doc = await domainRef.get();
@@ -80,8 +79,7 @@ export async function POST(
 
       // Create audit log
       const auditRef = adminDal.getNestedCollection(
-        'organizations/{orgId}/website/audit-log/entries',
-        { orgId: DEFAULT_ORG_ID }
+        'organizations/rapid-compliance-root/website/audit-log/entries'
       );
 
       await auditRef.add({
@@ -89,7 +87,6 @@ export async function POST(
         domainId,
         performedBy: 'system',
         performedAt: now,
-        organizationId: DEFAULT_ORG_ID,
       });
 
       // Add domain to Vercel and provision SSL
@@ -114,7 +111,6 @@ export async function POST(
         logger.error('Vercel integration error during domain verification', vercelError instanceof Error ? vercelError : new Error(String(vercelError)), {
           route: '/api/website/domains/[domainId]/verify',
           domainId,
-          organizationId: DEFAULT_ORG_ID
         });
         // Continue even if Vercel API fails
       }

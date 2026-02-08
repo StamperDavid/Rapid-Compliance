@@ -33,16 +33,12 @@ export default function PerformanceDashboardPage() {
       setLoading(true);
       setError(null);
 
-      // Get organization ID from context (you would get this from your auth/context)
-      const organizationId = 'org_demo';
-
       const response = await fetch('/api/performance/analytics', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          organizationId,
           periodType: selectedPeriod,
           includeTrends: true,
         }),

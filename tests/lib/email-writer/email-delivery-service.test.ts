@@ -41,8 +41,7 @@ jest.mock('@/lib/firebase/admin', () => {
     data: () => ({
       id: 'delivery_123',
       status: 'sent',
-      organizationId: 'rapid-compliance-root',
-    }),
+      }),
   });
   const mockDoc = jest.fn(() => ({
     set: mockSet,
@@ -102,7 +101,6 @@ describe('Email Delivery Service', () => {
     it('should send email successfully', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
         workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
@@ -150,7 +148,6 @@ describe('Email Delivery Service', () => {
     it('should handle SendGrid errors', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
         workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
@@ -173,7 +170,6 @@ describe('Email Delivery Service', () => {
     it('should include tracking settings', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
         workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
@@ -211,7 +207,6 @@ describe('Email Delivery Service', () => {
     it('should include custom args for tracking', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
         workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
@@ -235,7 +230,6 @@ describe('Email Delivery Service', () => {
       expect(mockSgMail.send).toHaveBeenCalledWith(
         expect.objectContaining({
           customArgs: expect.objectContaining({
-            organizationId: 'org_123',
             workspaceId: 'workspace_123',
             userId: 'user_123',
             dealId: 'deal_123',
@@ -249,7 +243,6 @@ describe('Email Delivery Service', () => {
     it('should emit email.sent signal on success', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
         workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
@@ -267,11 +260,10 @@ describe('Email Delivery Service', () => {
       // Act
       await sendEmail(options);
 
-      // Assert — source emits with orgId (from DEFAULT_ORG_ID) and capitalized priority
+      // Assert — source emits with orgId (from PLATFORM_ID) and capitalized priority
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'email.sent',
-          orgId: 'rapid-compliance-root',
           priority: 'Medium',
           metadata: expect.objectContaining({
             to: 'recipient@example.com',
@@ -285,7 +277,6 @@ describe('Email Delivery Service', () => {
     it('should emit email.delivery.failed signal on error', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
         workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
@@ -299,11 +290,10 @@ describe('Email Delivery Service', () => {
       // Act
       await sendEmail(options);
 
-      // Assert — source emits with orgId (from DEFAULT_ORG_ID) and capitalized priority
+      // Assert — source emits with orgId (from PLATFORM_ID) and capitalized priority
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'email.delivery.failed',
-          orgId: 'rapid-compliance-root',
           priority: 'High',
           metadata: expect.objectContaining({
             to: 'recipient@example.com',
@@ -335,7 +325,6 @@ describe('Email Delivery Service', () => {
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'email.opened',
-          orgId: 'rapid-compliance-root',
           priority: 'Low',
         })
       );
@@ -351,7 +340,6 @@ describe('Email Delivery Service', () => {
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'email.clicked',
-          orgId: 'rapid-compliance-root',
           priority: 'Medium',
         })
       );
@@ -407,7 +395,6 @@ describe('Email Delivery Service', () => {
       process.env.SENDGRID_API_KEY = '';
 
       const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
         workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
@@ -429,7 +416,6 @@ describe('Email Delivery Service', () => {
       process.env.FROM_EMAIL = '';
 
       const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
         workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',

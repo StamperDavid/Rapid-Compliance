@@ -1,14 +1,14 @@
 /**
  * Navigation API
  * Manage site navigation (header menu, footer)
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Navigation } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface RequestBody {
   navigation?: Partial<Navigation>;
@@ -26,8 +26,7 @@ export async function GET(_request: NextRequest) {
 
     // Get navigation document
     const navRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/navigation',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/navigation'
     );
 
     const navDoc = await navRef.get();
@@ -78,14 +77,12 @@ export async function POST(request: NextRequest) {
     const navigationData: Navigation = {
       ...navigation,
       id: 'navigation',
-      organizationId: DEFAULT_ORG_ID,
       updatedAt: new Date().toISOString(),
     } as Navigation;
 
     // Save to Firestore
     const navRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/navigation',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/navigation'
     );
 
     await navRef.set(navigationData);

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -13,7 +13,6 @@ import { useToast } from '@/hooks/useToast';
 
 interface CustomDomain {
   id: string;
-  organizationId: string;
   verified: boolean;
   verificationMethod: 'cname' | 'a-record' | 'txt';
   verificationValue: string;
@@ -114,7 +113,6 @@ export default function CustomDomainsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           domain: newDomain.toLowerCase().trim(),
         }),
       });
@@ -146,7 +144,7 @@ export default function CustomDomainsPage() {
       const response = await fetch(`/api/website/domains/${domainId}/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId: DEFAULT_ORG_ID }),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {

@@ -113,7 +113,6 @@ describe('Workflow UI Integration', () => {
         trigger: { type: 'manual', id: 'trigger-1', name: 'Manual', requireConfirmation: false },
         actions: [],
         status: 'draft',
-        organizationId: testOrgId,
         workspaceId: testWorkspaceId,
       },
       false
@@ -161,7 +160,7 @@ describe('Workflow UI Integration', () => {
     };
     
     const execution = await executeWorkflow(workflow, {});
-    
+
     expect(execution).toBeDefined();
     expect(execution.status).toBe('completed');
   }, 15000);
@@ -175,7 +174,6 @@ describe('Email Campaign UI Integration', () => {
 
   it('should create campaign (campaign builder → campaign service)', async () => {
     const campaign = await createCampaign({
-      organizationId: testOrgId,
       name: 'Test Campaign',
       subject: 'Test Subject',
       htmlContent: 'Test email body',
@@ -189,7 +187,7 @@ describe('Email Campaign UI Integration', () => {
   }, 10000);
 
   it('should list campaigns (campaigns page → campaign service)', async () => {
-    const result = await listCampaigns();
+    const result = await listCampaigns(50);
 
     expect(result).toBeDefined();
     expect(result.campaigns).toBeDefined();

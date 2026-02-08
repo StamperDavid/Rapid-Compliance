@@ -10,12 +10,11 @@ import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/google-calendar-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Zod schema for OAuth state validation
 const OAuthStateSchema = z.object({
   userId: z.string().min(1),
-  orgId: z.string().min(1),
 });
 
 function getRedirectUrl(request: NextRequest, path: string): string {
@@ -84,7 +83,7 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date().toISOString(),
       });
 
-    logger.info('Gmail integration saved', { route: '/api/integrations/google/callback', DEFAULT_ORG_ID });
+    logger.info('Gmail integration saved', { route: '/api/integrations/google/callback', PLATFORM_ID });
 
     return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?success=gmail'));
   } catch (error: unknown) {

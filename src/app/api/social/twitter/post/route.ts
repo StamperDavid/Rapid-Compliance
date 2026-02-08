@@ -14,7 +14,6 @@ import { z } from 'zod';
 
 // Request validation schema
 const postTweetSchema = z.object({
-  organizationId: z.string().min(1, 'Organization ID is required'),
   text: z.string().min(1, 'Tweet text is required').max(280, 'Tweet exceeds 280 character limit'),
   mediaIds: z.array(z.string()).optional(),
   pollOptions: z.array(z.string().min(1).max(25)).min(2).max(4).optional(),
@@ -55,7 +54,6 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
 
     logger.info('Twitter Post API: Posting tweet', {
-      organizationId: data.organizationId,
       textLength: data.text.length,
       hasMedia: !!(data.mediaIds && data.mediaIds.length > 0),
       hasPoll: !!(data.pollOptions && data.pollOptions.length > 0),
@@ -65,9 +63,7 @@ export async function POST(request: NextRequest) {
     const twitterService = await createTwitterService();
 
     if (!twitterService) {
-      logger.warn('Twitter Post API: Service not configured', {
-        organizationId: data.organizationId,
-      });
+      logger.warn('Twitter Post API: Service not configured');
       return NextResponse.json(
         {
           success: false,
@@ -102,7 +98,6 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       logger.warn('Twitter Post API: Tweet failed', {
-        organizationId: data.organizationId,
         error: result.error,
       });
 
@@ -134,7 +129,6 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Twitter Post API: Tweet posted successfully', {
-      organizationId: data.organizationId,
       tweetId: result.tweetId,
     });
 
@@ -163,21 +157,8 @@ export async function POST(request: NextRequest) {
  * GET /api/social/twitter/post
  * Get Twitter integration status for organization
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-
-    if (!organizationId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Organization ID is required',
-        },
-        { status: 400 }
-      );
-    }
-
     // Check Twitter service status
     const twitterService = await createTwitterService();
 

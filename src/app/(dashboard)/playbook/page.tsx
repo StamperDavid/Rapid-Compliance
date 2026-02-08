@@ -21,7 +21,7 @@ import { PatternsCard } from '@/components/playbook/PatternsCard';
 import { TalkTracksCard } from '@/components/playbook/TalkTracksCard';
 import { AdoptionMetricsCard } from '@/components/playbook/AdoptionMetricsCard';
 import { auth } from '@/lib/firebase/config';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import type {
   Playbook,
@@ -35,7 +35,6 @@ interface PlaybooksApiResponse {
 
 interface PlaybookRecord {
   id: string;
-  organizationId?: string;
   workspaceId?: string;
   name?: string;
   description?: string;
@@ -79,7 +78,7 @@ export default function PlaybookDashboardPage() {
 
       const token = await auth?.currentUser?.getIdToken();
       const headers: Record<string, string> = {
-        'x-organization-id': DEFAULT_ORG_ID,
+        'x-organization-id': PLATFORM_ID,
       };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -93,7 +92,6 @@ export default function PlaybookDashboardPage() {
         const rawPlaybooks = data.data ?? data.playbooks ?? [];
         const fetchedPlaybooks: Playbook[] = rawPlaybooks.map((pb) => ({
           id: pb.id,
-          organizationId: pb.organizationId ?? DEFAULT_ORG_ID,
           workspaceId: pb.workspaceId ?? 'default',
           name: pb.name ?? '',
           description: pb.description ?? '',
@@ -166,7 +164,7 @@ export default function PlaybookDashboardPage() {
       try {
         const token = await auth?.currentUser?.getIdToken();
         const headers: Record<string, string> = {
-          'x-organization-id': DEFAULT_ORG_ID,
+          'x-organization-id': PLATFORM_ID,
         };
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;

@@ -5,7 +5,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import type { MerchantCoupon } from '@/types/pricing';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface RouteContext {
   params: Promise<{ couponId: string }>;
@@ -61,7 +61,6 @@ export async function PATCH(
 
     logger.info('Merchant coupon status updated', {
       userId: user.uid,
-      orgId: DEFAULT_ORG_ID,
       couponId,
       code: existingCoupon.code,
       oldStatus: existingCoupon.status,
@@ -75,7 +74,7 @@ export async function PATCH(
       status,
     });
   } catch (error: unknown) {
-    logger.error('Error updating coupon status', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Error updating coupon status', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to update coupon status' },
       { status: 500 }

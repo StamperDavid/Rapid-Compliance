@@ -5,7 +5,7 @@
 
 import { cacheService, CacheTTL } from '../cache/redis-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface ABTest {
   id: string;
@@ -67,7 +67,7 @@ export async function createABTest(
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
     testId,
     fullTest,
     false

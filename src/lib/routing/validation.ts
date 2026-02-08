@@ -310,7 +310,6 @@ export const routingPreferencesSchema = z.object({
  */
 export const leadSchema = z.object({
   id: z.string(),
-  orgId: z.string(),
   companyName: z.string().min(1).max(200),
   companyDomain: z.string().optional(),
   companySize: companySizeSchema.optional(),
@@ -342,7 +341,6 @@ export const leadSchema = z.object({
  */
 export const salesRepSchema = z.object({
   id: z.string(),
-  orgId: z.string(),
   name: z.string().min(1).max(200),
   email: z.string().email(),
   performanceTier: performanceTierSchema,
@@ -381,7 +379,6 @@ export const routingActionSchema = z.object({
  */
 export const routingRuleSchema = z.object({
   id: z.string(),
-  orgId: z.string(),
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
   type: routingRuleTypeSchema,
@@ -398,7 +395,6 @@ export const routingRuleSchema = z.object({
  * Routing configuration validation
  */
 export const routingConfigurationSchema = z.object({
-  orgId: z.string(),
   defaultStrategy: routingStrategySchema,
   strategyWeights: z.object({
     performance: z.number().min(0).max(1),
@@ -461,7 +457,6 @@ export const leadAssignmentSchema = z.object({
   id: z.string(),
   leadId: z.string(),
   repId: z.string(),
-  orgId: z.string(),
   assignmentMethod: assignmentMethodSchema,
   strategy: routingStrategySchema,
   matchedRules: z.array(z.string()),
@@ -597,7 +592,6 @@ export const routeLeadResponseSchema = z.object({
  * Routing analytics request validation
  */
 export const routingAnalyticsRequestSchema = z.object({
-  orgId: z.string().min(1, 'Organization ID is required'),
   startDate: z.date(),
   endDate: z.date(),
   filters: z.object({
@@ -611,7 +605,6 @@ export const routingAnalyticsRequestSchema = z.object({
  * Update routing config request validation
  */
 export const updateRoutingConfigRequestSchema = z.object({
-  orgId: z.string().min(1, 'Organization ID is required'),
   config: routingConfigurationSchema.partial(),
 });
 
@@ -619,7 +612,6 @@ export const updateRoutingConfigRequestSchema = z.object({
  * Create routing rule request validation
  */
 export const createRoutingRuleRequestSchema = z.object({
-  orgId: z.string().min(1, 'Organization ID is required'),
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
   type: routingRuleTypeSchema,

@@ -8,7 +8,6 @@ import { analyzeCompanyKnowledge } from './knowledge-analyzer'
 import { logger } from '@/lib/logger/logger';
 
 export interface KnowledgeProcessorOptions {
-  organizationId: string;
   uploadedFiles?: File[];
   urls?: string[];
   faqPageUrl?: string;
@@ -24,7 +23,6 @@ export async function processKnowledgeBase(
   options: KnowledgeProcessorOptions
 ): Promise<KnowledgeBase> {
   const { 
-    organizationId, 
     uploadedFiles = [], 
     urls = [], 
     faqPageUrl,
@@ -42,7 +40,7 @@ export async function processKnowledgeBase(
   // Process uploaded files
   if (uploadedFiles.length > 0) {
     const processedDocs = await Promise.all(
-      uploadedFiles.map(file => processFile(file, organizationId))
+      uploadedFiles.map(file => processFile(file))
     );
     knowledgeBase.documents = processedDocs.filter(doc => doc !== null);
   }
@@ -126,7 +124,6 @@ export async function processKnowledgeBase(
  */
 async function processFile(
   file: File,
-  organizationId: string
 ): Promise<KnowledgeDocument | null> {
   try {
     const fileType = getFileType(file.name);
@@ -148,7 +145,7 @@ async function processFile(
       // Extract structured data if it looks like a product catalog
       if (pdfResult.text.toLowerCase().includes('product') || pdfResult.text.toLowerCase().includes('price')) {
         const { extractStructuredDataFromPDF } = await import('./parsers/pdf-parser');
-        const structured = await extractStructuredDataFromPDF(pdfResult.text, organizationId);
+        const structured = await extractStructuredDataFromPDF(pdfResult.text);
         metadata.structuredData = structured;
       }
     } else if (fileType === 'excel') {

@@ -212,7 +212,6 @@ export async function emitRiskAssessed(
     await coordinator.emitSignal({
       type: 'risk.assessed' as SignalType,
       leadId: deal.contactId,
-      orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',
@@ -255,7 +254,6 @@ export async function emitRiskDetected(
     await coordinator.emitSignal({
       type: 'risk.detected' as SignalType,
       leadId: deal.contactId,
-      orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',
@@ -289,7 +287,7 @@ export async function emitRiskLevelChanged(
   workspaceId: string,
   contactId?: string
 ): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
     
@@ -313,7 +311,6 @@ export async function emitRiskLevelChanged(
     await coordinator.emitSignal({
       type: 'risk.level.changed' as SignalType,
       leadId: contactId,
-      orgId: DEFAULT_ORG_ID,
       workspaceId,
       confidence: 0.9,
       priority: newLevel === 'critical' ? 'High' : 'Medium',
@@ -374,7 +371,6 @@ export async function emitCriticalRisk(
     await coordinator.emitSignal({
       type: 'risk.critical' as SignalType,
       leadId: deal.contactId,
-      orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: 'High',
@@ -404,7 +400,7 @@ export async function emitInterventionRecommended(
   workspaceId: string,
   contactId?: string
 ): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
     
@@ -426,7 +422,6 @@ export async function emitInterventionRecommended(
     await coordinator.emitSignal({
       type: 'risk.intervention.recommended' as SignalType,
       leadId: contactId,
-      orgId: DEFAULT_ORG_ID,
       workspaceId,
       confidence: 0.85,
       priority: intervention.priority === 'critical' ? 'High' : 'Medium',
@@ -458,7 +453,7 @@ export async function emitInterventionStarted(
   workspaceId: string,
   contactId?: string
 ): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
     
@@ -474,7 +469,6 @@ export async function emitInterventionStarted(
     await coordinator.emitSignal({
       type: 'risk.intervention.started' as SignalType,
       leadId: contactId,
-      orgId: DEFAULT_ORG_ID,
       workspaceId,
       confidence: 1.0,
       priority: 'Medium',
@@ -509,7 +503,7 @@ export async function emitInterventionCompleted(
   contactId?: string,
   notes?: string
 ): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
     
@@ -528,7 +522,6 @@ export async function emitInterventionCompleted(
     await coordinator.emitSignal({
       type: 'risk.intervention.completed' as SignalType,
       leadId: contactId,
-      orgId: DEFAULT_ORG_ID,
       workspaceId,
       confidence: 1.0,
       priority: 'Low',
@@ -583,7 +576,6 @@ export async function emitSlippagePredicted(
     await coordinator.emitSignal({
       type: 'risk.slippage.predicted' as SignalType,
       leadId: deal.contactId,
-      orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: 'High',
@@ -617,7 +609,7 @@ export async function emitRiskMitigated(
   workspaceId: string,
   contactId?: string
 ): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
     
@@ -638,7 +630,6 @@ export async function emitRiskMitigated(
     await coordinator.emitSignal({
       type: 'risk.mitigated' as SignalType,
       leadId: contactId,
-      orgId: DEFAULT_ORG_ID,
       workspaceId,
       confidence: 0.9,
       priority: 'Low',

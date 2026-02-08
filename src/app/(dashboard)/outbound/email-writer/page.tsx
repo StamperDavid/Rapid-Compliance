@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -68,7 +68,7 @@ export default function EmailWriterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          DEFAULT_ORG_ID,
+          PLATFORM_ID,
           prospect,
           template,
           tone,

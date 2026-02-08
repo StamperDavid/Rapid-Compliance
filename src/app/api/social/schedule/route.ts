@@ -16,7 +16,6 @@ import { z } from 'zod';
 
 // Request validation schemas
 const schedulePostSchema = z.object({
-  organizationId: z.string().min(1, 'Organization ID is required'),
   content: z.string().min(1, 'Content is required'),
   platforms: z.array(z.enum(['twitter', 'linkedin'])).min(1, 'At least one platform is required'),
   scheduledAt: z.string().datetime('Invalid datetime format'),
@@ -25,12 +24,10 @@ const schedulePostSchema = z.object({
 });
 
 const getScheduledSchema = z.object({
-  organizationId: z.string().min(1),
   platform: z.enum(['twitter', 'linkedin']).optional(),
 });
 
 const cancelPostSchema = z.object({
-  organizationId: z.string().min(1),
   postId: z.string().min(1),
 });
 
@@ -90,7 +87,6 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Schedule API: Scheduling post', {
-      organizationId: data.organizationId,
       platforms: data.platforms,
       scheduledAt: scheduledAt.toISOString(),
     });
@@ -121,7 +117,6 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Schedule API: Post scheduled successfully', {
-      organizationId: data.organizationId,
       postId: result.postId,
       scheduledAt: scheduledAt.toISOString(),
     });
@@ -160,11 +155,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
     const platform = searchParams.get('platform') as SocialPlatform | null;
 
     // Validate query params
-    const validation = getScheduledSchema.safeParse({ organizationId, platform: platform ?? undefined });
+    const validation = getScheduledSchema.safeParse({ platform: platform ?? undefined });
 
     if (!validation.success) {
       return NextResponse.json(
@@ -180,7 +174,6 @@ export async function GET(request: NextRequest) {
     const data = validation.data;
 
     logger.info('Schedule API: Getting scheduled posts', {
-      organizationId: data.organizationId,
       platform: data.platform,
     });
 
@@ -247,7 +240,6 @@ export async function DELETE(request: NextRequest) {
     const data = validation.data;
 
     logger.info('Schedule API: Cancelling scheduled post', {
-      organizationId: data.organizationId,
       postId: data.postId,
     });
 
@@ -268,7 +260,6 @@ export async function DELETE(request: NextRequest) {
     }
 
     logger.info('Schedule API: Post cancelled successfully', {
-      organizationId: data.organizationId,
       postId: data.postId,
     });
 

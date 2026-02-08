@@ -4,7 +4,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface Embedding {
   values: number[];
@@ -26,7 +26,7 @@ export async function generateEmbedding(
   try {
     // Get API key
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-    const geminiKey = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'gemini') as string | { apiKey: string } | null;
+    const geminiKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'gemini') as string | { apiKey: string } | null;
     
     if (!geminiKey) {
       throw new Error('Gemini API key not configured');

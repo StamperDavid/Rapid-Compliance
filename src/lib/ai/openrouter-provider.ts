@@ -6,13 +6,12 @@
 import type { ModelName, ChatResponse } from '@/types/ai-models';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface OpenRouterConfig {
   apiKey?: string;
   model?: ModelName;
   baseURL?: string;
-  organizationId?: string;
 }
 
 /** JSON Schema property definition - compatible with ToolParameter */
@@ -370,7 +369,7 @@ export class OpenRouterProvider {
       logger.debug(`[OpenRouter] Using cached API key: ${this.apiKey.slice(0, 8)}...`, { file: 'openrouter-provider.ts' });
       return this.apiKey;
     }
-    logger.debug(`[OpenRouter] Fetching API key for org: ${DEFAULT_ORG_ID}`, { file: 'openrouter-provider.ts' });
+    logger.debug(`[OpenRouter] Fetching API key for org: ${PLATFORM_ID}`, { file: 'openrouter-provider.ts' });
     const keys = await apiKeyService.getKeys();
     const key = keys?.ai?.openrouterApiKey;
     if (!key) {
@@ -380,7 +379,7 @@ export class OpenRouterProvider {
         hasAiSection: !!keys?.ai,
         aiKeys: keys?.ai ? Object.keys(keys.ai) : [],
       });
-      throw new Error(`OpenRouter API key not configured for organization ${DEFAULT_ORG_ID}. Please add it in the API Keys settings.`);
+      throw new Error(`OpenRouter API key not configured for organization ${PLATFORM_ID}. Please add it in the API Keys settings.`);
     }
     logger.debug(`[OpenRouter] API key loaded: ${key.slice(0, 8)}...`, { file: 'openrouter-provider.ts' });
     this.apiKey = key;

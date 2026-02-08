@@ -41,9 +41,6 @@ export const ANALYTICS_EVENTS = {
  * Dashboard viewed event payload
  */
 export interface DashboardViewedPayload {
-  /** Organization ID */
-  organizationId: string;
-
   /** Time period selected */
   period: TimePeriod;
 
@@ -58,9 +55,6 @@ export interface DashboardViewedPayload {
  * Dashboard generated event payload
  */
 export interface DashboardGeneratedPayload {
-  /** Organization ID */
-  organizationId: string;
-
   /** Time period */
   period: TimePeriod;
 
@@ -100,9 +94,6 @@ export interface CacheClearedPayload {
  * Export requested event payload
  */
 export interface ExportRequestedPayload {
-  /** Organization ID */
-  organizationId: string;
-
   /** Export format */
   format: 'csv' | 'pdf' | 'excel';
 
@@ -123,9 +114,6 @@ export interface ErrorOccurredPayload {
   /** Error code */
   code: string;
 
-  /** Organization ID (if available) */
-  organizationId?: string;
-
   /** Additional context */
   context?: Record<string, unknown>;
 
@@ -145,11 +133,10 @@ export async function emitDashboardViewed(
   userId?: string
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     const payload: DashboardViewedPayload = {
-      organizationId: DEFAULT_ORG_ID,
       period,
       userId,
       timestamp: new Date(),
@@ -157,7 +144,6 @@ export async function emitDashboardViewed(
 
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.DASHBOARD_VIEWED as SignalType,
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Low',
       metadata: payload as unknown as Record<string, unknown>,
@@ -177,11 +163,10 @@ export async function emitDashboardGenerated(
   data: DashboardOverview
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     const payload: DashboardGeneratedPayload = {
-      organizationId: DEFAULT_ORG_ID,
       period,
       generationTime,
       cached,
@@ -196,7 +181,6 @@ export async function emitDashboardGenerated(
 
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.DASHBOARD_GENERATED as SignalType,
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Low',
       metadata: payload as unknown as Record<string, unknown>,
@@ -224,7 +208,6 @@ export async function emitCacheCleared(
     
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.CACHE_CLEARED as SignalType,
-      orgId: 'system',
       confidence: 1.0,
       priority: 'Low',
       metadata: payload as unknown as Record<string, unknown>,
@@ -242,11 +225,10 @@ export async function emitExportRequested(
   userId?: string
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     const payload: ExportRequestedPayload = {
-      organizationId: DEFAULT_ORG_ID,
       format,
       userId,
       timestamp: new Date(),
@@ -254,7 +236,6 @@ export async function emitExportRequested(
 
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.EXPORT_REQUESTED as SignalType,
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Low',
       metadata: payload as unknown as Record<string, unknown>,
@@ -270,7 +251,6 @@ export async function emitExportRequested(
 export async function emitAnalyticsError(
   error: string,
   code: string,
-  organizationId?: string,
   context?: Record<string, unknown>
 ): Promise<void> {
   try {
@@ -279,14 +259,12 @@ export async function emitAnalyticsError(
     const payload: ErrorOccurredPayload = {
       error,
       code,
-      organizationId,
       context,
       timestamp: new Date(),
     };
 
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.ERROR_OCCURRED as SignalType,
-      orgId: (organizationId !== '' && organizationId != null) ? organizationId : 'system',
       confidence: 1.0,
       priority: 'Medium',
       metadata: payload as unknown as Record<string, unknown>,
@@ -307,7 +285,6 @@ export async function emitAnalyticsError(
 export function handleDashboardViewed(payload: DashboardViewedPayload): void {
   // Log to analytics service
   logger.info('Dashboard viewed', {
-    org: payload.organizationId,
     period: payload.period,
     user: payload.userId,
     file: 'events.ts',
@@ -327,7 +304,6 @@ export function handleDashboardViewed(payload: DashboardViewedPayload): void {
 export function handleDashboardGenerated(payload: DashboardGeneratedPayload): void {
   // Log performance metrics
   logger.info('Dashboard generated', {
-    org: payload.organizationId,
     generationTime: payload.generationTime,
     cached: payload.cached,
     totalWorkflows: payload.summary.totalWorkflows,
@@ -358,7 +334,6 @@ export function handleAnalyticsError(payload: ErrorOccurredPayload): void {
   // Log error
   logger.error('Analytics error', new Error(payload.error), {
     code: payload.code,
-    org: payload.organizationId,
     file: 'events.ts',
   });
 

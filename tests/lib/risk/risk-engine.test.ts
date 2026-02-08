@@ -30,7 +30,6 @@ describe('Deal Risk Predictor', () => {
   // Mock data
   const mockDeal = {
     id: 'deal_test_123',
-    organizationId: 'org_test',
     workspaceId: 'default',
     name: 'Test Enterprise Deal',
     company: 'Test Corp',
@@ -206,7 +205,6 @@ describe('Deal Risk Predictor', () => {
     it('should predict risk for a deal', async () => {
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
         workspaceId: 'default',
         includeInterventions: true,
         forceRefresh: false,
@@ -216,7 +214,6 @@ describe('Deal Risk Predictor', () => {
 
       expect(prediction).toBeDefined();
       expect(prediction.dealId).toBe('deal_test_123');
-      expect(prediction.organizationId).toBe('org_test');
       expect(prediction.riskLevel).toMatch(/critical|high|medium|low|minimal/);
       expect(prediction.slippageProbability).toBeGreaterThanOrEqual(0);
       expect(prediction.slippageProbability).toBeLessThanOrEqual(100);
@@ -229,7 +226,6 @@ describe('Deal Risk Predictor', () => {
     it('should identify risk factors', async () => {
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
         includeInterventions: false,
       };
 
@@ -265,8 +261,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -278,7 +273,6 @@ describe('Deal Risk Predictor', () => {
     it('should generate AI interventions when requested', async () => {
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
         includeInterventions: true,
       };
 
@@ -304,7 +298,6 @@ describe('Deal Risk Predictor', () => {
     it('should skip interventions when not requested', async () => {
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
         includeInterventions: false,
       };
 
@@ -317,8 +310,7 @@ describe('Deal Risk Predictor', () => {
     it('should calculate slippage timeline for at-risk deals', async () => {
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -332,8 +324,7 @@ describe('Deal Risk Predictor', () => {
     it('should include metadata', async () => {
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -350,8 +341,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'nonexistent',
-        organizationId: 'org_test',
-      };
+        };
 
       await expect(predictDealRisk(request)).rejects.toThrow();
     });
@@ -361,7 +351,6 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
         includeInterventions: true,
       };
 
@@ -390,8 +379,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -419,8 +407,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -433,7 +420,6 @@ describe('Deal Risk Predictor', () => {
     it('should predict risk for multiple deals', async () => {
       const request: BatchRiskPredictionRequest = {
         dealIds: ['deal_1', 'deal_2', 'deal_3'],
-        organizationId: 'org_test',
         workspaceId: 'default',
         includeInterventions: false,
       };
@@ -449,8 +435,7 @@ describe('Deal Risk Predictor', () => {
     it('should calculate summary statistics', async () => {
       const request: BatchRiskPredictionRequest = {
         dealIds: ['deal_1', 'deal_2'],
-        organizationId: 'org_test',
-      };
+        };
 
       const result = await predictBatchDealRisk(request);
 
@@ -464,7 +449,6 @@ describe('Deal Risk Predictor', () => {
     it('should filter high risk only when requested', async () => {
       const request: BatchRiskPredictionRequest = {
         dealIds: ['deal_1', 'deal_2', 'deal_3'],
-        organizationId: 'org_test',
         highRiskOnly: true,
       };
 
@@ -485,8 +469,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: BatchRiskPredictionRequest = {
         dealIds: ['deal_1', 'deal_2', 'deal_3'],
-        organizationId: 'org_test',
-      };
+        };
 
       const result = await predictBatchDealRisk(request);
 
@@ -500,8 +483,7 @@ describe('Deal Risk Predictor', () => {
     it('should analyze risk trend', async () => {
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -525,8 +507,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request, customConfig);
 
@@ -541,7 +522,6 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
         includeInterventions: true,
       };
 
@@ -557,7 +537,6 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
         includeInterventions: true,
       };
 
@@ -576,8 +555,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -593,8 +571,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -610,8 +587,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -627,8 +603,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -644,8 +619,7 @@ describe('Deal Risk Predictor', () => {
 
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
-      };
+        };
 
       const prediction = await predictDealRisk(request);
 
@@ -659,7 +633,6 @@ describe('Deal Risk Predictor', () => {
     it('should complete prediction in reasonable time', async () => {
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        organizationId: 'org_test',
         includeInterventions: true,
       };
 

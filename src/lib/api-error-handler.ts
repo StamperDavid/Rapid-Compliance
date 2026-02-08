@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export class APIError extends Error {
   constructor(
@@ -156,34 +156,19 @@ export function validateParams(
 }
 
 /**
- * In single-tenant mode, always returns DEFAULT_ORG_ID
+ * In single-tenant mode, always returns PLATFORM_ID
  */
-export function validateOrgId(_organizationId?: unknown): string {
-  return DEFAULT_ORG_ID;
+export function validateOrgId(): string {
+  return PLATFORM_ID;
 }
 
 /**
  * Verify organization ownership of a resource
+ * No-op in single-tenant mode - all resources belong to the single tenant
  */
-export function verifyOrgOwnership(
-  resourceOrgId: string,
-  requestedOrgId: string,
-  resourceType: string = 'resource'
-): void {
-  if (resourceOrgId !== requestedOrgId) {
-    console.error('[SECURITY] Cross-org access attempt:', {
-      resourceOrgId,
-      requestedOrgId,
-      resourceType,
-    });
-    
-    throw new APIError(
-      `Access denied: ${resourceType} belongs to a different organization`,
-      403,
-      'CROSS_ORG_ACCESS_DENIED',
-      { resourceType }
-    );
-  }
+export function verifyOrgOwnership(): void {
+  // Single-tenant system: no cross-org access possible
+  return;
 }
 
 /**

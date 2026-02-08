@@ -1,12 +1,11 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useEffect, useState } from 'react';
 import type { LeaderboardEntry } from '@/lib/team/collaboration';
 
 export default function TeamLeaderboardPage() {
-  const _orgId = DEFAULT_ORG_ID as string;
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month');
   const [loading, setLoading] = useState(true);

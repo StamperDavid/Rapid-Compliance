@@ -194,8 +194,8 @@ async function createOrder(
   const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const orderNumber = generateOrderNumber(checkoutData.workspaceId);
 
-  // Import DEFAULT_ORG_ID
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  // Import PLATFORM_ID
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   // Build order items
   const orderItems = cart.items.map(item => ({
@@ -275,7 +275,7 @@ async function createOrder(
 
   // Save order
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${checkoutData.workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${checkoutData.workspaceId}/orders`,
     orderId,
     {
       ...order,
@@ -318,13 +318,13 @@ function generateOrderNumber(_workspaceId: string): string {
 /**
  * Get product (helper)
  */
-async function getProduct(workspaceId: string, productId: string, _organizationId?: string): Promise<Record<string, unknown> | null> {
-  // Import DEFAULT_ORG_ID
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+async function getProduct(workspaceId: string, productId: string): Promise<Record<string, unknown> | null> {
+  // Import PLATFORM_ID
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   // Similar to cart-service implementation
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
 
@@ -334,7 +334,7 @@ async function getProduct(workspaceId: string, productId: string, _organizationI
 
   const productSchema = (ecommerceConfig as unknown as EcommerceConfig).productSchema;
   const product = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
     productId
   );
   
@@ -356,10 +356,10 @@ async function getProduct(workspaceId: string, productId: string, _organizationI
  * Update inventory
  */
 async function updateInventory(workspaceId: string, items: Array<{ productId: string; quantity: number }>): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
 
@@ -377,14 +377,14 @@ async function updateInventory(workspaceId: string, items: Array<{ productId: st
 
   for (const item of items) {
     const product = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
       item.productId
     );
 
     if (product?.[inventoryField] !== undefined) {
       const newStock = Math.max(0, product[inventoryField] - item.quantity);
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
         item.productId,
         {
           [inventoryField]: newStock,
@@ -399,10 +399,10 @@ async function updateInventory(workspaceId: string, items: Array<{ productId: st
  * Create customer entity
  */
 async function createCustomerEntity(workspaceId: string, customer: { firstName: string; lastName: string; email: string; phone?: string }, orderId: string): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
 
@@ -419,7 +419,7 @@ async function createCustomerEntity(workspaceId: string, customer: { firstName: 
   // Check if customer already exists
   const { where } = await import('firebase/firestore');
   const existing = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/${customerSchema}/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${customerSchema}/records`,
     [where('email', '==', customer.email)]
   );
 
@@ -430,7 +430,7 @@ async function createCustomerEntity(workspaceId: string, customer: { firstName: 
   // Create customer
   const customerId = `contact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/${customerSchema}/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${customerSchema}/records`,
     customerId,
     {
       firstName: customer.firstName,
@@ -449,10 +449,10 @@ async function createCustomerEntity(workspaceId: string, customer: { firstName: 
  * Create order entity
  */
 async function createOrderEntity(workspaceId: string, order: Order): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
 
@@ -467,7 +467,7 @@ async function createOrderEntity(workspaceId: string, order: Order): Promise<voi
     : 'orders';
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/${orderSchema}/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${orderSchema}/records`,
     order.id,
     {
       orderNumber: order.orderNumber,
@@ -484,10 +484,10 @@ async function createOrderEntity(workspaceId: string, order: Order): Promise<voi
  * Trigger order workflows
  */
 async function triggerOrderWorkflows(workspaceId: string, order: Order): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
 
@@ -511,10 +511,10 @@ async function triggerOrderWorkflows(workspaceId: string, order: Order): Promise
  * Send order confirmation email
  */
 async function sendOrderConfirmation(workspaceId: string, order: Order): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
 

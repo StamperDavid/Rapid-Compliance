@@ -4,14 +4,14 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
-const ORG_ID = 'test-org-001';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 test.describe('Website Builder E2E', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to website builder
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/settings`);
+    // Navigate to website builder (single-tenant, no workspace routing)
+    await page.goto(`${BASE_URL}/website/settings`);
   });
 
   test('should configure site settings', async ({ page }) => {
@@ -30,7 +30,7 @@ test.describe('Website Builder E2E', () => {
 
   test('should create a new page', async ({ page }) => {
     // Navigate to pages
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/pages`);
+    await page.goto(`${BASE_URL}/website/pages`);
 
     // Create new page
     await page.click('button:has-text("Create Page")');
@@ -48,7 +48,7 @@ test.describe('Website Builder E2E', () => {
 
   test('should add widgets to page using visual editor', async ({ page }) => {
     // Navigate to editor
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/editor?pageId=test-page`);
+    await page.goto(`${BASE_URL}/website/editor?pageId=test-page`);
 
     // Wait for editor to load
     await expect(page.locator('[data-testid="editor-canvas"]')).toBeVisible();
@@ -74,7 +74,7 @@ test.describe('Website Builder E2E', () => {
 
   test('should apply template to page', async ({ page }) => {
     // Navigate to templates
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/templates`);
+    await page.goto(`${BASE_URL}/website/templates`);
 
     // Select business template
     await page.click('[data-template="business-landing"]');
@@ -94,7 +94,7 @@ test.describe('Website Builder E2E', () => {
 
   test('should publish a page', async ({ page }) => {
     // Navigate to page editor
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/editor?pageId=test-page`);
+    await page.goto(`${BASE_URL}/website/editor?pageId=test-page`);
 
     // Click publish button
     await page.click('button:has-text("Publish")');
@@ -110,7 +110,7 @@ test.describe('Website Builder E2E', () => {
   });
 
   test('should schedule page for future publishing', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/editor?pageId=test-page`);
+    await page.goto(`${BASE_URL}/website/editor?pageId=test-page`);
 
     // Click schedule button
     await page.click('button:has-text("Schedule")');
@@ -128,7 +128,7 @@ test.describe('Website Builder E2E', () => {
   });
 
   test('should generate and view preview link', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/editor?pageId=test-page`);
+    await page.goto(`${BASE_URL}/website/editor?pageId=test-page`);
 
     // Click preview button
     await page.click('button:has-text("Preview")');
@@ -151,7 +151,7 @@ test.describe('Website Builder E2E', () => {
   });
 
   test('should add and verify custom domain', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/domains`);
+    await page.goto(`${BASE_URL}/website/domains`);
 
     // Add custom domain
     await page.click('button:has-text("Add Domain")');
@@ -167,7 +167,7 @@ test.describe('Website Builder E2E', () => {
   });
 
   test('should create and publish blog post', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/blog`);
+    await page.goto(`${BASE_URL}/website/blog`);
 
     // Create new post
     await page.click('button:has-text("New Post")');
@@ -192,7 +192,7 @@ test.describe('Website Builder E2E', () => {
   });
 
   test('should manage navigation menu', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/navigation`);
+    await page.goto(`${BASE_URL}/website/navigation`);
 
     // Add menu item
     await page.click('button:has-text("Add Item")');
@@ -216,7 +216,7 @@ test.describe('Website Builder E2E', () => {
   });
 
   test('should view audit log', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/website/settings`);
+    await page.goto(`${BASE_URL}/website/settings`);
 
     // Navigate to audit log
     await page.click('text=Audit Log');
@@ -232,7 +232,7 @@ test.describe('Website Builder E2E', () => {
   });
 
   test('should test responsive design', async ({ page }) => {
-    await page.goto(`${BASE_URL}/sites/${ORG_ID}/home`);
+    await page.goto(`${BASE_URL}/sites/${PLATFORM_ID}/home`);
 
     // Test desktop view
     await page.setViewportSize({ width: 1920, height: 1080 });
@@ -252,7 +252,7 @@ test.describe('Website Builder E2E', () => {
   });
 
   test('should test accessibility features', async ({ page }) => {
-    await page.goto(`${BASE_URL}/sites/${ORG_ID}/home`);
+    await page.goto(`${BASE_URL}/sites/${PLATFORM_ID}/home`);
 
     // Test skip to main content
     await page.keyboard.press('Tab');
@@ -272,26 +272,9 @@ test.describe('Website Builder E2E', () => {
   });
 });
 
-test.describe('Multi-tenant Isolation', () => {
-  test('should not allow access to other org data', async ({ page }) => {
-    const ORG_A = 'org-a';
-    const ORG_B = 'org-b';
-
-    // Create page in Org A
-    await page.goto(`${BASE_URL}/workspace/${ORG_A}/website/pages`);
-    await page.click('button:has-text("Create Page")');
-    await page.fill('[name="title"]', 'Org A Page');
-    await page.fill('[name="slug"]', 'org-a-page');
-    await page.click('button:has-text("Create")');
-
-    // Try to access Org A's page from Org B
-    const response = await page.request.get(
-      `${BASE_URL}/api/website/pages?organizationId=${ORG_B}&slug=org-a-page`
-    );
-
-    // Verify page not found (isolated)
-    const data = await response.json();
-    expect(data.pages).toHaveLength(0);
+test.describe('Single-Tenant Architecture', () => {
+  test.skip('OBSOLETE: Multi-tenant isolation tests not applicable', async () => {
+    // Single-tenant system - no multi-org isolation needed
   });
 });
 
@@ -299,7 +282,7 @@ test.describe('Performance', () => {
   test('should load pages quickly', async ({ page }) => {
     const startTime = Date.now();
 
-    await page.goto(`${BASE_URL}/sites/${ORG_ID}/home`);
+    await page.goto(`${BASE_URL}/sites/${PLATFORM_ID}/home`);
     await page.waitForLoadState('networkidle');
 
     const loadTime = Date.now() - startTime;
@@ -309,7 +292,7 @@ test.describe('Performance', () => {
   });
 
   test('should optimize images', async ({ page }) => {
-    await page.goto(`${BASE_URL}/sites/${ORG_ID}/home`);
+    await page.goto(`${BASE_URL}/sites/${PLATFORM_ID}/home`);
 
     // Check that images have proper attributes
     const images = await page.locator('img').all();

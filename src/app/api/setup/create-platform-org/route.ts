@@ -3,7 +3,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Create platform-admin organization
@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
     // Create organization document
     await FirestoreService.set(
       COLLECTIONS.ORGANIZATIONS,
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
       {
-        id: DEFAULT_ORG_ID,
+        id: PLATFORM_ID,
         name: 'SalesVelocity.ai',
         industry: 'AI Sales Automation',
         plan: 'enterprise',
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Enable chat widget
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/settings`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/settings`,
       'chatWidget',
       {
         enabled: true,
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Set default agent config
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentConfig`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
       'default',
       {
         selectedModel: 'openrouter/anthropic/claude-3.5-sonnet',
@@ -71,8 +71,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Platform organization created successfully!',
-      orgId: DEFAULT_ORG_ID
+      message: 'Platform organization created successfully!'
     });
 
   } catch (error: unknown) {

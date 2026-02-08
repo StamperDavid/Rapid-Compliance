@@ -22,7 +22,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getNotificationsRequestSchema } from '@/lib/notifications/validation';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { Notification } from '@/lib/notifications/types';
 
 /**
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
     ];
 
     let notifications = await FirestoreService.getAll<Notification>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notifications`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
       constraints
     );
 
@@ -266,7 +266,7 @@ export async function POST(request: NextRequest) {
     // Mark as read
     const updatePromises = validIds.map((id) =>
       FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notifications`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
         id,
         {
           'metadata.read': true,

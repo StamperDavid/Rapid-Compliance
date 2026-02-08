@@ -18,6 +18,7 @@ import type { NotificationVariables, NotificationCategory } from '@/lib/notifica
 import type { SlackService } from './slack-service';
 import { SlackMessageBuilder } from './message-builder';
 import { db } from '@/lib/firebase-admin';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   SlackWorkspace,
   SlackChannelMapping,
@@ -50,16 +51,13 @@ export class SlackSignalHandler {
     try {
       logger.debug('Processing signal for Slack notifications', {
         signalType: signal.type,
-        orgId: signal.orgId,
       });
-      
+
       // Get workspace for organization
-      const workspace = await this.getWorkspace(signal.orgId);
+      const workspace = await this.getWorkspace();
       
       if (!workspace) {
-        logger.debug('No Slack workspace connected for organization', {
-          orgId: signal.orgId,
-        });
+        logger.debug('No Slack workspace connected for organization');
         return;
       }
       
@@ -85,7 +83,6 @@ export class SlackSignalHandler {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error('Failed to handle signal for Slack', err, {
         signalType: signal.type,
-        orgId: signal.orgId,
       });
     }
   }
@@ -184,7 +181,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       dealId: signal.metadata.dealId as string,
       dealName: signal.metadata.dealName as string,
       dealValue: signal.metadata.dealValue as number,
@@ -208,7 +204,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       dealId: signal.metadata.dealId as string,
       dealName: signal.metadata.dealName as string,
       dealValue: signal.metadata.dealValue as number,
@@ -236,7 +231,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       conversationId: signal.metadata.conversationId as string,
       conversationScore: signal.metadata.score as number,
       userId: signal.metadata.repId as string,
@@ -258,7 +252,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       conversationId: signal.metadata.conversationId as string,
       redFlagType: signal.metadata.redFlagType as string,
       redFlagDetails: signal.metadata.redFlagDetails as string,
@@ -285,7 +278,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       userId: signal.metadata.repId as string,
       userName: signal.metadata.repName as string,
       insightsCount: signal.metadata.insightsCount as number,
@@ -310,7 +302,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       userId: signal.metadata.repId as string,
       userName: signal.metadata.repName as string,
       performanceScore: signal.metadata.score as number,
@@ -332,7 +323,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       userId: signal.metadata.repId as string,
       userName: signal.metadata.repName as string,
       skillGap: signal.metadata.skillGap as string,
@@ -358,7 +348,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       playbookId: signal.metadata.playbookId as string,
       playbookName: signal.metadata.playbookName as string,
       patternsCount: signal.metadata.patternsCount as number,
@@ -383,7 +372,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       sequenceId: signal.metadata.sequenceId as string,
       sequenceName: signal.metadata.sequenceName as string,
       performanceScore: signal.metadata.score as number,
@@ -404,7 +392,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       sequenceId: signal.metadata.sequenceId as string,
       sequenceName: signal.metadata.sequenceName as string,
       optimizationCount: signal.metadata.optimizationCount as number,
@@ -429,7 +416,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       leadId: signal.metadata.leadId as string,
       leadName: signal.metadata.leadName as string,
       leadCompany: signal.metadata.leadCompany as string,
@@ -457,7 +443,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       emailId: signal.metadata.emailId as string,
       emailType: signal.metadata.emailType as string,
       userId: signal.metadata.userId as string,
@@ -484,7 +469,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       workflowId: signal.metadata.workflowId as string,
       workflowName: signal.metadata.workflowName as string,
       actionsExecuted: signal.metadata.actionsExecuted as number,
@@ -510,7 +494,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       userId: signal.metadata.repId as string,
       userName: signal.metadata.repName as string,
       quota: signal.metadata.quota as number,
@@ -533,7 +516,6 @@ export class SlackSignalHandler {
     workspace: SlackWorkspace
   ): Promise<void> {
     const variables: NotificationVariables = {
-      orgId: signal.orgId,
       userId: signal.metadata.repId as string,
       userName: signal.metadata.repName as string,
       quota: signal.metadata.quota as number,
@@ -590,7 +572,6 @@ export class SlackSignalHandler {
       message.priority = priority;
       message.category = category as NotificationCategory;
       message.workspaceId = workspace.id;
-      message.organizationId = workspace.organizationId;
       
       // Send message
       const result = await this.slackService.sendMessage(
@@ -617,12 +598,12 @@ export class SlackSignalHandler {
   /**
    * Get workspace for organization
    */
-  private async getWorkspace(orgId: string): Promise<SlackWorkspace | null> {
+  private async getWorkspace(): Promise<SlackWorkspace | null> {
     try {
       // Get first active workspace
       const snapshot = await db
         .collection('organizations')
-        .doc(orgId)
+        .doc(PLATFORM_ID)
         .collection('slack_workspaces')
         .where('status', '==', 'connected')
         .limit(1)
@@ -637,9 +618,7 @@ export class SlackSignalHandler {
 
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('Failed to get Slack workspace', err, {
-        orgId,
-      });
+      logger.error('Failed to get Slack workspace', err);
       return null;
     }
   }
@@ -662,7 +641,7 @@ export class SlackSignalHandler {
       
       const snapshot = await db
         .collection('organizations')
-        .doc(workspaceData.organizationId)
+        .doc(PLATFORM_ID)
         .collection('slack_channel_mappings')
         .where('workspaceId', '==', workspaceId)
         .where('category', '==', category)

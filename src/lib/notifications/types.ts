@@ -76,7 +76,6 @@ export type NotificationCategory =
  */
 export interface NotificationVariables {
   // Organization context
-  orgId: string;
   orgName?: string;
   workspaceId?: string;
   
@@ -334,12 +333,7 @@ export interface NotificationPreferences {
    * User ID
    */
   userId: string;
-  
-  /**
-   * Organization ID
-   */
-  orgId: string;
-  
+
   /**
    * Global notification toggle
    */
@@ -434,12 +428,7 @@ export interface Notification {
    * Unique notification ID
    */
   id?: string;
-  
-  /**
-   * Organization ID
-   */
-  orgId: string;
-  
+
   /**
    * User ID (recipient)
    */
@@ -615,12 +604,7 @@ export interface NotificationBatch {
    * Batch ID
    */
   id?: string;
-  
-  /**
-   * Organization ID
-   */
-  orgId: string;
-  
+
   /**
    * User ID
    */
@@ -670,11 +654,6 @@ export interface NotificationBatch {
  * Analytics for notification delivery
  */
 export interface NotificationStats {
-  /**
-   * Organization ID
-   */
-  orgId: string;
-  
   /**
    * Time period
    */

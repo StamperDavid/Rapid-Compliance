@@ -1,12 +1,11 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useEffect, useState } from 'react';
 import type { RoutingRule } from '@/lib/crm/lead-routing';
 
 export default function LeadRoutingPage() {
-  const _orgId = DEFAULT_ORG_ID as string;
   const [rules, setRules] = useState<RoutingRule[]>([]);
   const [_loading, setLoading] = useState(true);
 

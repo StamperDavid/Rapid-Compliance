@@ -102,14 +102,12 @@ export async function syncProductToShopify(
     const data = await response.json() as ShopifyProductResponse;
     const productId = data.product.id.toString();
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.info('Product synced to Shopify', { organizationId: DEFAULT_ORG_ID, productId });
+    logger.info('Product synced to Shopify', { productId });
 
     return productId;
 
   } catch (error) {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to sync product to Shopify', error as Error, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to sync product to Shopify', error as Error);
     throw error;
   }
 }
@@ -204,17 +202,14 @@ export async function fetchShopifyOrders(
       financialStatus: order.financial_status === 'paid' || order.financial_status === 'refunded' ? order.financial_status : 'pending',
     }));
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     logger.info('Shopify orders fetched', {
-      organizationId: DEFAULT_ORG_ID,
       count: orders.length,
     });
 
     return orders;
 
   } catch (error) {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to fetch Shopify orders', error as Error, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to fetch Shopify orders', error as Error);
     throw error;
   }
 }
@@ -272,14 +267,12 @@ export async function syncShopifyOrdersToCRM(
       }
     }
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.info('Shopify orders synced to CRM', { organizationId: DEFAULT_ORG_ID, synced });
+    logger.info('Shopify orders synced to CRM', { synced });
 
     return synced;
 
   } catch (error) {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to sync Shopify orders to CRM', error as Error, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to sync Shopify orders to CRM', error as Error);
     throw error;
   }
 }

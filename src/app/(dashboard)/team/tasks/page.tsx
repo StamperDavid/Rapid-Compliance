@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useEffect, useState, useCallback } from 'react';
 import type { TeamTask } from '@/lib/team/collaboration';
@@ -11,7 +11,6 @@ interface TaskResponse {
 }
 
 export default function TasksPage() {
-  const _orgId = DEFAULT_ORG_ID as string;
   const [tasks, setTasks] = useState<TeamTask[]>([]);
   const [filter, setFilter] = useState<'all' | 'todo' | 'in_progress' | 'completed'>('all');
   const [_loading, setLoading] = useState(true);

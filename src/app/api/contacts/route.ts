@@ -41,7 +41,7 @@ export async function GET(
     return NextResponse.json(result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch contacts';
-    logger.error('Failed to fetch contacts', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Failed to fetch contacts', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: message },
       { status: 500 }

@@ -6,7 +6,7 @@
 import { generateEmbedding, type EmbeddingResult } from './embeddings-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface SearchResult {
   text: string;
@@ -100,7 +100,7 @@ export async function searchKnowledgeBase(
     
     // Get all knowledge base embeddings from Firestore
     const knowledgeBase = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBase`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBase`,
       'current'
     );
     
@@ -110,7 +110,7 @@ export async function searchKnowledgeBase(
     
     // Get all embeddings
     const embeddings: KnowledgeEmbeddingDoc[] = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeEmbeddings`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeEmbeddings`,
       []
     );
 
@@ -161,7 +161,7 @@ export async function storeEmbedding(
     const embeddingId = `emb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeEmbeddings`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeEmbeddings`,
       embeddingId,
       {
         embedding: embedding.embedding.values,
@@ -187,7 +187,7 @@ export async function indexKnowledgeBase(): Promise<void> {
   try {
     // Get knowledge base
     const knowledgeBaseData: KnowledgeBase | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBase`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBase`,
       'current'
     );
 

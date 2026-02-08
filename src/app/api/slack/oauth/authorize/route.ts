@@ -14,7 +14,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { db } from '@/lib/firebase-admin';
 import crypto from 'crypto';
 import type { SlackOAuthState } from '@/lib/slack/types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * GET /api/slack/oauth/authorize
@@ -47,7 +47,6 @@ export async function GET(request: NextRequest) {
     // Store state in Firestore (expires in 10 minutes)
     const oauthState: SlackOAuthState = {
       state,
-      organizationId: DEFAULT_ORG_ID,
       userId,
       redirectUrl:(redirectUrl !== '' && redirectUrl != null) ? redirectUrl : `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations`,
       createdAt: Timestamp.now(),
@@ -62,7 +61,7 @@ export async function GET(request: NextRequest) {
     const authUrl = slackService.getAuthorizationUrl(state, callbackUrl);
     
     logger.info('Slack OAuth flow initiated', {
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
       userId,
       state,
     });
@@ -71,7 +70,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(authUrl);
     
   } catch (error: unknown) {
-    logger.error('Failed to start Slack OAuth flow', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Failed to start Slack OAuth flow', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {

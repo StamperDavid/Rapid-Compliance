@@ -9,7 +9,7 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyStripeSignature } from '@/lib/security/webhook-verification';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
 async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
   // Store event in Firestore for audit trail
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/stripe_events`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_events`,
     event.id,
     {
       id: event.id,
@@ -180,7 +180,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
         const orderId = metadata.orderId;
         if (typeof orderId === 'string') {
           await FirestoreService.update(
-            `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/orders`,
+            `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
             orderId,
             {
               status: 'completed',

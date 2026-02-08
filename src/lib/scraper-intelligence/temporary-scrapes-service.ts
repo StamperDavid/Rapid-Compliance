@@ -15,7 +15,7 @@ import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
 import crypto from 'crypto';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS
@@ -124,7 +124,6 @@ export async function saveTemporaryScrape(params: {
         url,
         contentHash,
         scrapeCount: existingData.scrapeCount + 1,
-        organizationId: DEFAULT_ORG_ID,
       });
 
       return {
@@ -165,13 +164,11 @@ export async function saveTemporaryScrape(params: {
       url,
       sizeBytes: newScrape.sizeBytes,
       expiresAt: newScrape.expiresAt.toISOString(),
-      organizationId: DEFAULT_ORG_ID,
     });
 
     return { scrape: newScrape, isNew: true };
   } catch (error) {
     logger.error('Failed to save temporary scrape', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
       url: params.url,
     });
     
@@ -253,15 +250,12 @@ export async function deleteFlaggedScrapes(): Promise<number> {
     if (deletedCount > 0) {
       logger.info('Deleted flagged temporary scrapes', {
         deletedCount,
-        organizationId: DEFAULT_ORG_ID,
       });
     }
 
     return deletedCount;
   } catch (error) {
-    logger.error('Failed to delete flagged scrapes', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Failed to delete flagged scrapes', error instanceof Error ? error : new Error(String(error)));
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to delete flagged scrapes: ${errorMessage}`);
@@ -300,15 +294,12 @@ export async function deleteExpiredScrapes(): Promise<number> {
     if (deletedCount > 0) {
       logger.info('Deleted expired temporary scrapes', {
         deletedCount,
-        organizationId: DEFAULT_ORG_ID,
       });
     }
 
     return deletedCount;
   } catch (error) {
-    logger.error('Failed to delete expired scrapes', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Failed to delete expired scrapes', error instanceof Error ? error : new Error(String(error)));
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to delete expired scrapes: ${errorMessage}`);
@@ -384,7 +375,6 @@ export async function getTemporaryScrapeByHash(
     } as TemporaryScrape;
   } catch (error) {
     logger.error('Failed to get temporary scrape by hash', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
       contentHash: contentHash.substring(0, 16),
     });
     
@@ -425,7 +415,6 @@ export async function getTemporaryScrapesByUrl(
     });
   } catch (error) {
     logger.error('Failed to get temporary scrapes by URL', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
       url,
     });
     
@@ -488,9 +477,7 @@ export async function calculateStorageCost(): Promise<{
       projectedSavingsWithTTL,
     };
   } catch (error) {
-    logger.error('Failed to calculate storage cost', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Failed to calculate storage cost', error instanceof Error ? error : new Error(String(error)));
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to calculate storage cost: ${errorMessage}`);
@@ -571,9 +558,7 @@ export async function getStorageStats(): Promise<{
       newestScrape,
     };
   } catch (error) {
-    logger.error('Failed to get storage stats', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Failed to get storage stats', error instanceof Error ? error : new Error(String(error)));
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to get storage stats: ${errorMessage}`);

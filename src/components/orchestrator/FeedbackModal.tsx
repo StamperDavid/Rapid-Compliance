@@ -28,9 +28,9 @@ import {
   Send,
   ArrowLeft,
 } from 'lucide-react';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface FeedbackModalProps {
-  orgId: string;
   userId?: string;
   userEmail?: string;
 }
@@ -41,7 +41,7 @@ const SEVERITY_OPTIONS = [
   { value: 'critical', label: 'Critical', icon: AlertCircle, color: 'text-red-400', bg: 'bg-red-500/20', description: 'Blocking issue, needs immediate attention' },
 ] as const;
 
-export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) {
+export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
   const {
     feedbackModalOpen,
     feedbackPath,
@@ -72,7 +72,7 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
         throw new Error('Database not initialized');
       }
       const ticketId = `ticket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      await setDoc(doc(db, 'organizations', orgId, 'support_tickets', ticketId), {
+      await setDoc(doc(db, 'organizations', PLATFORM_ID, 'support_tickets', ticketId), {
         ...pendingSupportTicket,
         status: 'open',
         userId: userId ?? null,
@@ -109,7 +109,7 @@ export function FeedbackModal({ orgId, userId, userEmail }: FeedbackModalProps) 
         throw new Error('Database not initialized');
       }
       const requestId = `feature_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      await setDoc(doc(db, 'organizations', orgId, 'feature_requests', requestId), {
+      await setDoc(doc(db, 'organizations', PLATFORM_ID, 'feature_requests', requestId), {
         ...pendingFeatureRequest,
         status: 'pending',
         votes: 0,

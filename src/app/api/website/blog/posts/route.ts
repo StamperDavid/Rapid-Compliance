@@ -1,7 +1,7 @@
 /**
  * Blog Posts API
  * Manage blog posts
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { BlogPost, PageSection, PageSEO } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const getQuerySchema = z.object({
   status: z.enum(['draft', 'published', 'scheduled']).optional(),
@@ -73,8 +73,7 @@ export async function GET(request: NextRequest) {
 
     // Get posts collection
     const postsRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/config/blog-posts',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/config/blog-posts'
     );
 
     // Get all posts and filter
@@ -165,8 +164,8 @@ export async function POST(request: NextRequest) {
 
     // Save to Firestore
     const postRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: DEFAULT_ORG_ID, postId: postData.id }
+      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      { postId: postData.id }
     );
 
     await postRef.set(postData);

@@ -44,7 +44,7 @@ import {
   broadcastSignal,
 } from '../../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Minimal BrandDNA type for this manager
 interface BrandDNA {
@@ -1500,7 +1500,6 @@ export class ReputationManager extends BaseManager {
           action: 'analyze_sentiment',
           text: reviewData.content,
           context: `${reviewData.platform} review`,
-          organizationId: DEFAULT_ORG_ID,
         },
         timestamp: new Date(),
         priority: 'NORMAL',
@@ -1689,7 +1688,7 @@ export class ReputationManager extends BaseManager {
       payload: {
         action: gmbData.action ?? 'draftLocalUpdate',
         business: {
-          id: DEFAULT_ORG_ID,
+          id: PLATFORM_ID,
           name: 'Business', // Business name should come from org settings, not Brand DNA
           description: (brandContext as Record<string, unknown>).businessDescription,
           location: { address: gmbData.location, city: '', state: '', zip: '' },
@@ -1749,7 +1748,7 @@ export class ReputationManager extends BaseManager {
     taskId: string,
     startTime: number
   ): Promise<ReputationBrief> {
-    this.log('INFO', `Generating Reputation Brief for organization: ${DEFAULT_ORG_ID}`);
+    this.log('INFO', `Generating Reputation Brief for organization: ${PLATFORM_ID}`);
 
     const specialistResults: Array<{
       specialistId: string;
@@ -1939,7 +1938,7 @@ export class ReputationManager extends BaseManager {
       type: 'COMMAND',
       from: this.identity.id,
       to: 'REVIEW_SPECIALIST',
-      payload: { action: 'getMetrics', organizationId: DEFAULT_ORG_ID },
+      payload: { action: 'getMetrics' },
       timestamp: new Date(),
       priority: 'NORMAL',
       requiresResponse: true,
@@ -1980,7 +1979,7 @@ export class ReputationManager extends BaseManager {
       type: 'COMMAND',
       from: this.identity.id,
       to: 'SENTIMENT_ANALYST',
-      payload: { action: 'track_brand', brandName: DEFAULT_ORG_ID, texts: [], organizationId: DEFAULT_ORG_ID },
+      payload: { action: 'track_brand', brandName: PLATFORM_ID, texts: [] },
       timestamp: new Date(),
       priority: 'NORMAL',
       requiresResponse: true,
@@ -2017,7 +2016,7 @@ export class ReputationManager extends BaseManager {
       type: 'COMMAND',
       from: this.identity.id,
       to: 'GMB_SPECIALIST',
-      payload: { action: 'getProfileMetrics', business: { id: DEFAULT_ORG_ID } },
+      payload: { action: 'getProfileMetrics', business: { id: PLATFORM_ID } },
       timestamp: new Date(),
       priority: 'NORMAL',
       requiresResponse: true,

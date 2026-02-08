@@ -10,11 +10,11 @@ import { where, type QueryConstraint } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { ViewFilter } from '@/types/filters';
 
 /** Request body interface for counting contacts */
 interface CountContactsRequestBody {
-  organizationId: string;
   workspaceId?: string;
   filters?: ViewFilter[];
 }
@@ -24,8 +24,7 @@ function isValidRequestBody(body: unknown): body is CountContactsRequestBody {
   if (typeof body !== 'object' || body === null) {
     return false;
   }
-  const b = body as Record<string, unknown>;
-  return typeof b.organizationId === 'string';
+  return true;
 }
 
 /**
@@ -139,16 +138,16 @@ export async function POST(request: NextRequest) {
     const body: unknown = await request.json();
 
     if (!isValidRequestBody(body)) {
-      return errors.badRequest('Missing organizationId');
+      return errors.badRequest('Invalid request body');
     }
 
-    const { organizationId, workspaceId = 'default', filters = [] } = body;
+    const { workspaceId = 'default', filters = [] } = body;
 
     // Build Firestore query constraints from filters
     const constraints = buildQueryConstraints(filters);
 
     // Query contacts collection
-    const collectionPath = `organizations/${organizationId}/workspaces/${workspaceId}/entities/contacts/records`;
+    const collectionPath = `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`;
     
     let count = 0;
     
@@ -164,7 +163,6 @@ export async function POST(request: NextRequest) {
 
     logger.info('Counted contacts with filters', {
       route: '/api/contacts/count',
-      organizationId,
       workspaceId,
       filterCount: filters.length,
       count,
@@ -173,7 +171,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       count,
-      organizationId,
       workspaceId,
     });
 

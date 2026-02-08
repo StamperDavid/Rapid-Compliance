@@ -41,32 +41,31 @@ import { EMAIL_TEMPLATES, type EmailTemplate, type EmailType } from './email-tem
  * Email Generation Options
  */
 export interface EmailGenerationOptions {
-  organizationId: string;
   workspaceId: string;
   userId: string; // Sales rep generating the email
-  
+
   // Email configuration
   emailType: EmailType;
-  
+
   // Deal context
   dealId: string;
   deal?: Deal; // Optional if you already have the deal
   dealScore?: DealScore; // Optional if you already have the score
-  
+
   // Recipient context
   recipientName?: string;
   recipientEmail?: string;
   recipientTitle?: string;
   companyName?: string;
-  
+
   // Competitive context
   competitorDomain?: string; // Optional competitor for battlecard positioning
   battlecard?: Battlecard; // Optional if you already have the battlecard
-  
+
   // Template context
   templateId?: string; // Industry template for best practices
   industryTemplate?: SalesIndustryTemplate; // Optional if you already have it
-  
+
   // Customization
   tone?: 'professional' | 'casual' | 'consultative' | 'urgent' | 'friendly';
   length?: 'short' | 'medium' | 'long'; // Email length preference
@@ -80,15 +79,14 @@ export interface EmailGenerationOptions {
  */
 export interface GeneratedEmail {
   id: string; // Unique email ID
-  organizationId: string;
   workspaceId: string;
   userId: string;
-  
+
   // Email content
   subject: string;
   body: string; // HTML email body
   bodyPlain: string; // Plain text version
-  
+
   // Context used for generation
   emailType: EmailType;
   dealId: string;
@@ -96,23 +94,23 @@ export interface GeneratedEmail {
   dealTier?: 'hot' | 'warm' | 'cold' | 'at-risk';
   templateId?: string;
   competitorDomain?: string;
-  
+
   // Metadata
   tone: string;
   length: string;
   includeCompetitive: boolean;
   includeSocialProof: boolean;
-  
+
   // AI metadata
   model: string; // AI model used
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
-  
+
   // Versioning (for A/B testing)
   version: number;
   variants?: GeneratedEmail[]; // Alternative versions for testing
-  
+
   // Timestamps
   generatedAt: Date;
   sentAt?: Date;
@@ -147,26 +145,26 @@ export async function generateSalesEmail(
   options: EmailGenerationOptions
 ): Promise<EmailGenerationResult> {
   const startTime = Date.now();
-  
+
   try {
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+
     logger.info('Generating sales email', {
-      organizationId: options.organizationId,
       dealId: options.dealId,
       emailType: options.emailType,
       includeCompetitive: options.includeCompetitive,
     });
-    
+
     // 1. Get email template
     const template = EMAIL_TEMPLATES[options.emailType];
     if (!template) {
       throw new Error(`Email template not found: ${options.emailType}`);
     }
-    
+
     // 2. Get deal score (for personalization)
     let dealScore: DealScore | undefined = options.dealScore;
     if (!dealScore && options.deal) {
       dealScore = calculateDealScore({
-        organizationId: options.organizationId,
         workspaceId: options.workspaceId,
         dealId: options.dealId,
         deal: options.deal,
@@ -238,39 +236,37 @@ export async function generateSalesEmail(
     // 8. Create generated email object
     const generatedEmail: GeneratedEmail = {
       id: `email_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      organizationId: options.organizationId,
       workspaceId: options.workspaceId,
       userId: options.userId,
-      
+
       subject,
       body,
       bodyPlain,
-      
+
       emailType: options.emailType,
       dealId: options.dealId,
       dealScore: dealScore?.score,
       dealTier: dealScore?.tier,
       templateId: options.templateId,
       competitorDomain: options.competitorDomain,
-      
+
       tone: options.tone ?? determineToneFromScore(dealScore),
       length:(options.length ?? 'medium'),
       includeCompetitive: options.includeCompetitive ?? false,
       includeSocialProof: options.includeSocialProof ?? false,
-      
+
       model: 'gpt-4o',
       promptTokens: llmResponse.usage?.promptTokens ?? 0,
       completionTokens: llmResponse.usage?.completionTokens ?? 0,
       totalTokens: llmResponse.usage?.totalTokens ?? 0,
-      
+
       version: 1,
-      
+
       generatedAt: new Date(),
     };
-    
+
     // 9. Emit signal to Signal Bus
     await emitEmailGeneratedSignal({
-      organizationId: options.organizationId,
       workspaceId: options.workspaceId,
       email: generatedEmail,
       dealScore,
@@ -294,7 +290,6 @@ export async function generateSalesEmail(
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to generate email', err, {
-      organizationId: options.organizationId,
       dealId: options.dealId,
       emailType: options.emailType,
     });
@@ -608,17 +603,16 @@ function extractImprovementSuggestions(response: string): string[] {
  * Emit email.generated signal to Signal Bus
  */
 async function emitEmailGeneratedSignal(params: {
-  organizationId: string;
   workspaceId: string;
   email: GeneratedEmail;
   dealScore?: DealScore;
 }): Promise<void> {
   try {
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
       type: 'email.generated',
-      orgId: params.organizationId,
       priority: 'Medium',
       confidence: 0.85, // High confidence in email generation
       metadata: {
@@ -636,10 +630,9 @@ async function emitEmailGeneratedSignal(params: {
         generatedAt: params.email.generatedAt.toISOString(),
       },
     });
-    
+
     logger.info('Email generated signal emitted', {
       emailId: params.email.id,
-      organizationId: params.organizationId,
     });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
@@ -667,7 +660,6 @@ async function generateEmailVariantsAsync(
 ): Promise<EmailGenerationResult> {
   try {
     logger.info('Generating email variants', {
-      organizationId: options.organizationId,
       dealId: options.dealId,
       variantCount,
     });
@@ -708,7 +700,6 @@ async function generateEmailVariantsAsync(
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to generate email variants', err, {
-      organizationId: options.organizationId,
       dealId: options.dealId,
     });
 

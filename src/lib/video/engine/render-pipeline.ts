@@ -14,7 +14,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { VideoJobService } from '@/lib/video/video-job-service';
@@ -53,7 +53,6 @@ export class RenderPipeline {
   async execute(storyboardId: string): Promise<{ jobId: string; status: string }> {
     logger.info('RenderPipeline: Starting execution', {
       storyboardId,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     try {
@@ -107,7 +106,7 @@ export class RenderPipeline {
   private async loadStoryboard(storyboardId: string): Promise<MasterStoryboard | null> {
     try {
       const storyboard = await FirestoreService.get<MasterStoryboard>(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/storyboards`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/storyboards`,
         storyboardId
       );
       return storyboard;

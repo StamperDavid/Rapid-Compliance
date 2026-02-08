@@ -14,7 +14,6 @@ interface AuditLogEntry {
   pageTitle?: string;
   performedBy: string;
   performedAt: { toDate?: () => Date; seconds?: number } | Date | string;
-  organizationId: string;
   version?: number;
   scheduledFor?: string;
   domain?: string;

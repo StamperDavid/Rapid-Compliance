@@ -44,7 +44,7 @@ import {
   readAgentInsights,
   type InsightEntry,
 } from '../shared/memory-vault';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // COMMAND PATTERN - Task Dispatching
@@ -407,7 +407,6 @@ interface SwarmStatus {
  * User goal input
  */
 interface UserGoal {
-  orgId: string;
   goal: string;
   context?: Record<string, unknown>;
   priority?: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
@@ -657,29 +656,19 @@ export class MasterOrchestrator extends BaseManager {
 
     try {
       const payload = message.payload as Record<string, unknown>;
-      const orgId = DEFAULT_ORG_ID;
-
-      if (!orgId) {
-        return this.createReport(
-          taskId,
-          'FAILED',
-          null,
-          ['orgId is REQUIRED - organization scoping is mandatory']
-        );
-      }
 
       // Determine the type of request
       const requestType = this.determineRequestType(payload);
 
       switch (requestType) {
         case 'GOAL':
-          return await this.handleGoalRequest(taskId, orgId, payload, startTime);
+          return await this.handleGoalRequest(taskId, payload, startTime);
         case 'STATUS':
-          return await this.handleStatusRequest(taskId, orgId, startTime);
+          return await this.handleStatusRequest(taskId, startTime);
         case 'SAGA_EXECUTE':
-          return await this.handleSagaExecuteRequest(taskId, orgId, payload, startTime);
+          return await this.handleSagaExecuteRequest(taskId, payload, startTime);
         case 'COMMAND':
-          return await this.handleCommandRequest(taskId, orgId, payload, startTime);
+          return await this.handleCommandRequest(taskId, payload, startTime);
         default:
           return this.createReport(
             taskId,
@@ -726,7 +715,7 @@ export class MasterOrchestrator extends BaseManager {
     const goalId = `goal_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const startTime = Date.now();
 
-    this.log('INFO', `Processing goal: "${userGoal.goal}" for organization ${userGoal.orgId}`);
+    this.log('INFO', `Processing goal: "${userGoal.goal}"`);
 
     // Step 1: Classify intent
     const { intent, confidence, matchedRule } = this.classifyIntent(userGoal.goal);
@@ -743,7 +732,7 @@ export class MasterOrchestrator extends BaseManager {
     if (matchedRule?.sagaTemplate && tasks.length > 1) {
       const template = SAGA_TEMPLATES[matchedRule.sagaTemplate];
       if (template) {
-        saga = this.createSagaFromTemplate(goalId, userGoal.orgId, template, userGoal);
+        saga = this.createSagaFromTemplate(goalId, template, userGoal);
         this.activeSagas.set(saga.id, saga);
         this.log('INFO', `Created saga: ${template.name} with ${template.steps.length} steps`);
       } else {
@@ -752,7 +741,7 @@ export class MasterOrchestrator extends BaseManager {
     }
 
     // Step 4: Store goal insight in MemoryVault
-    await this.storeGoalInsight(userGoal.orgId, goalId, userGoal.goal, intent, confidence);
+    await this.storeGoalInsight(goalId, userGoal.goal, intent, confidence);
 
     // Calculate estimated duration
     const estimatedTotalDurationMs = tasks.reduce((sum, t) => sum + t.estimatedDurationMs, 0);
@@ -849,7 +838,7 @@ export class MasterOrchestrator extends BaseManager {
           description: `${step.name} - ${step.action}`,
           manager: step.manager,
           action: step.action,
-          payload: { goal: userGoal.goal, context: userGoal.context, orgId: userGoal.orgId },
+          payload: { goal: userGoal.goal, context: userGoal.context },
           dependencies: step.dependsOn.map(dep => {
             const depTask = tasks.find(t => t.id.includes(dep));
             return depTask?.id ?? '';
@@ -866,7 +855,7 @@ export class MasterOrchestrator extends BaseManager {
         description: `Execute ${intent} via ${matchedRule.primaryManager}`,
         manager: matchedRule.primaryManager,
         action: intent,
-        payload: { goal: userGoal.goal, context: userGoal.context, orgId: userGoal.orgId },
+        payload: { goal: userGoal.goal, context: userGoal.context },
         dependencies: [],
         priority: 100,
         estimatedDurationMs: 60000,
@@ -881,7 +870,7 @@ export class MasterOrchestrator extends BaseManager {
           description: `Supporting ${intent} via ${supportManager}`,
           manager: supportManager,
           action: `SUPPORT_${intent}`,
-          payload: { goal: userGoal.goal, context: userGoal.context, orgId: userGoal.orgId },
+          payload: { goal: userGoal.goal, context: userGoal.context },
           dependencies: [tasks[0].id],
           priority: 60,
           estimatedDurationMs: 30000,
@@ -919,7 +908,6 @@ export class MasterOrchestrator extends BaseManager {
    */
   private createSagaFromTemplate(
     goalId: string,
-    orgId: string,
     template: SagaTemplate,
     userGoal: UserGoal
   ): Saga {
@@ -936,8 +924,7 @@ export class MasterOrchestrator extends BaseManager {
           action: step.action,
           goal: userGoal.goal,
           context: userGoal.context,
-          orgId,
-        },
+          },
         priority: step.required ? 'HIGH' : 'NORMAL',
         dependencies: step.dependsOn.map(dep => {
           const depIndex = template.steps.findIndex(s => s.id === dep);
@@ -1168,7 +1155,6 @@ export class MasterOrchestrator extends BaseManager {
         priority: command.priority,
         payload: {
           ...command.payload,
-          orgId: DEFAULT_ORG_ID,
           commandId: command.id,
         },
         requiresResponse: true,
@@ -1352,12 +1338,10 @@ export class MasterOrchestrator extends BaseManager {
    */
   private async handleGoalRequest(
     taskId: string,
-    orgId: string,
     payload: Record<string, unknown>,
     startTime: number
   ): Promise<AgentReport> {
     const userGoal: UserGoal = {
-      orgId,
       goal: payload.goal as string,
       context: payload.context as Record<string, unknown> | undefined,
       priority: payload.priority as UserGoal['priority'],
@@ -1387,7 +1371,6 @@ export class MasterOrchestrator extends BaseManager {
    */
   private async handleStatusRequest(
     taskId: string,
-    orgId: string,
     startTime: number
   ): Promise<AgentReport> {
     const status = await this.getSwarmStatus();
@@ -1403,7 +1386,6 @@ export class MasterOrchestrator extends BaseManager {
    */
   private async handleSagaExecuteRequest(
     taskId: string,
-    orgId: string,
     payload: Record<string, unknown>,
     startTime: number
   ): Promise<AgentReport> {
@@ -1415,12 +1397,11 @@ export class MasterOrchestrator extends BaseManager {
     }
 
     const userGoal: UserGoal = {
-      orgId,
       goal: payload.goal as string ?? `Execute ${templateName}`,
       context: payload.context as Record<string, unknown>,
     };
 
-    const saga = this.createSagaFromTemplate(`goal_${Date.now()}`, orgId, template, userGoal);
+    const saga = this.createSagaFromTemplate(`goal_${Date.now()}`, template, userGoal);
     this.activeSagas.set(saga.id, saga);
 
     const result = await this.executeSaga(saga);
@@ -1436,7 +1417,6 @@ export class MasterOrchestrator extends BaseManager {
    */
   private async handleCommandRequest(
     taskId: string,
-    orgId: string,
     payload: Record<string, unknown>,
     startTime: number
   ): Promise<AgentReport> {
@@ -1493,7 +1473,6 @@ export class MasterOrchestrator extends BaseManager {
    * Store goal insight in MemoryVault
    */
   private async storeGoalInsight(
-    orgId: string,
     goalId: string,
     goal: string,
     intent: IntentCategory,

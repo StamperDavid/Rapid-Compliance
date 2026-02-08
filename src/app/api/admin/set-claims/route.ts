@@ -22,7 +22,7 @@ import {
 } from '@/lib/api/admin-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -45,7 +45,6 @@ interface SetClaimsRequestBody {
  * Custom claims object structure
  */
 interface CustomClaims {
-  readonly organizationId: string;
   readonly admin: boolean;
   readonly role: RoleType;
 }
@@ -169,7 +168,6 @@ export async function POST(request: NextRequest) {
     }
 
     const claims: CustomClaims = {
-      organizationId: DEFAULT_ORG_ID,
       admin: true,
       role: body.role,
     };

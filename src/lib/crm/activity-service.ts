@@ -4,7 +4,7 @@
  * Foundation for timeline, insights, and recommendations
  */
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot} from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
@@ -64,22 +64,21 @@ export async function createActivity(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/activities`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/activities`,
       activityId,
       activity,
       false
     );
 
     logger.info('Activity created', {
-      organizationId: DEFAULT_ORG_ID,
-      activityId,
+            activityId,
       type: activity.type,
       relatedEntities: activity.relatedTo.length,
     });
 
     return activity;
   } catch (error: unknown) {
-    logger.error('Failed to create activity', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to create activity', error instanceof Error ? error : new Error(String(error)));
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to create activity: ${errorMessage}`);
   }
@@ -125,7 +124,7 @@ export async function getActivities(
     constraints.push(orderBy('occurredAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Activity>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/activities`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/activities`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -152,8 +151,7 @@ export async function getActivities(
     }
 
     logger.info('Activities retrieved', {
-      organizationId: DEFAULT_ORG_ID,
-      count: filteredData.length,
+            count: filteredData.length,
       filters: filters ? JSON.stringify(filters) : undefined,
     });
 
@@ -163,7 +161,7 @@ export async function getActivities(
       hasMore: result.hasMore,
     };
   } catch (error: unknown) {
-    logger.error('Failed to get activities', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, filters: filters ? JSON.stringify(filters) : undefined });
+    logger.error('Failed to get activities', error instanceof Error ? error : new Error(String(error)), { filters: filters ? JSON.stringify(filters) : undefined });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to retrieve activities: ${errorMessage}`);
   }
@@ -214,8 +212,7 @@ export async function getEntityTimeline(
       .sort((a, b) => b.date.localeCompare(a.date));
 
     logger.info('Timeline generated', {
-      organizationId: DEFAULT_ORG_ID,
-      entityType,
+            entityType,
       entityId,
       days: timeline.length,
       totalActivities: result.data.length,
@@ -223,7 +220,7 @@ export async function getEntityTimeline(
 
     return timeline;
   } catch (error: unknown) {
-    logger.error('Failed to get timeline', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, entityType, entityId });
+    logger.error('Failed to get timeline', error instanceof Error ? error : new Error(String(error)), { entityType, entityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to retrieve timeline: ${errorMessage}`);
   }
@@ -290,8 +287,7 @@ export async function getActivityStats(
     };
 
     logger.info('Activity stats calculated', {
-      organizationId: DEFAULT_ORG_ID,
-      entityType,
+            entityType,
       entityId,
       totalActivities: stats.totalActivities,
       engagementScore: stats.engagementScore,
@@ -299,7 +295,7 @@ export async function getActivityStats(
 
     return stats;
   } catch (error: unknown) {
-    logger.error('Failed to calculate activity stats', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, entityType, entityId });
+    logger.error('Failed to calculate activity stats', error instanceof Error ? error : new Error(String(error)), { entityType, entityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to calculate stats: ${errorMessage}`);
   }
@@ -411,15 +407,14 @@ export async function getActivityInsights(
     }
 
     logger.info('Activity insights generated', {
-      organizationId: DEFAULT_ORG_ID,
-      entityType,
+            entityType,
       entityId,
       insightCount: insights.length,
     });
 
     return insights;
   } catch (error: unknown) {
-    logger.error('Failed to generate insights', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, entityType, entityId });
+    logger.error('Failed to generate insights', error instanceof Error ? error : new Error(String(error)), { entityType, entityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to generate insights: ${errorMessage}`);
   }
@@ -531,7 +526,7 @@ export async function getNextBestAction(
     };
 
   } catch (error: unknown) {
-    logger.error('Failed to get next best action', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, entityType, entityId });
+    logger.error('Failed to get next best action', error instanceof Error ? error : new Error(String(error)), { entityType, entityId });
     return null;
   }
 }
@@ -556,15 +551,14 @@ export async function bulkCreateActivities(
     }
 
     logger.info('Bulk activity creation completed', {
-      organizationId: DEFAULT_ORG_ID,
-      total: activities.length,
+            total: activities.length,
       successful: successCount,
       failed: activities.length - successCount,
     });
 
     return successCount;
   } catch (error: unknown) {
-    logger.error('Bulk activity creation failed', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
+    logger.error('Bulk activity creation failed', error instanceof Error ? error : new Error(String(error)));
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Bulk creation failed: ${errorMessage}`);
   }
@@ -579,13 +573,13 @@ export async function deleteActivity(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/activities`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/activities`,
       activityId
     );
 
-    logger.info('Activity deleted', { organizationId: DEFAULT_ORG_ID, activityId });
+    logger.info('Activity deleted', { activityId });
   } catch (error: unknown) {
-    logger.error('Failed to delete activity', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, activityId });
+    logger.error('Failed to delete activity', error instanceof Error ? error : new Error(String(error)), { activityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to delete activity: ${errorMessage}`);
   }

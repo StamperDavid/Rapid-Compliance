@@ -6,7 +6,7 @@
 
 import { VoiceProviderFactory } from './voice-factory';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface TransferAgent {
   id: string;
@@ -21,7 +21,6 @@ export interface TransferAgent {
 
 export interface TransferRequest {
   callId: string;
-  organizationId: string;
   fromAgentId?: string;
   toAgentId?: string;
   toPhone?: string;
@@ -47,7 +46,6 @@ export interface TransferResult {
 
 export interface AIHandoffContext {
   callId: string;
-  organizationId: string;
   aiAgentId: string;
   conversationSummary: string;
   customerSentiment: 'positive' | 'neutral' | 'negative';
@@ -313,7 +311,6 @@ class CallTransferService {
       // Perform warm transfer
       const result = await this.warmTransfer({
         callId: context.callId,
-        organizationId: context.organizationId,
         fromAgentId: context.aiAgentId,
         toAgentId: agent.id,
         transferType: 'warm',
@@ -405,7 +402,6 @@ class CallTransferService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           agentId,
           ...context,
           timestamp: new Date().toISOString(),
@@ -430,7 +426,6 @@ class CallTransferService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: request.organizationId,
           callId: request.callId,
           type: 'transfer',
           subType: type,
@@ -461,7 +456,6 @@ class CallTransferService {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: context.organizationId,
           entityType: 'call',
           action: 'ai_handoff',
           details: {

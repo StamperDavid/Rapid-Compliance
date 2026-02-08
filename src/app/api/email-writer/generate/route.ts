@@ -53,13 +53,11 @@ export async function POST(request: NextRequest) {
 
     // 3. Generate email
     logger.info('Generating sales email', {
-      organizationId: validData.organizationId,
       dealId: validData.dealId,
       emailType: validData.emailType,
     });
 
     const result = await generateSalesEmail({
-      organizationId: validData.organizationId,
       workspaceId: validData.workspaceId,
       userId: validData.userId,
       emailType: validData.emailType,
@@ -82,7 +80,6 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       logger.error('Email generation failed', undefined, {
         error: result.error,
-        organizationId: validData.organizationId,
         dealId: validData.dealId,
         duration,
       });
@@ -98,7 +95,6 @@ export async function POST(request: NextRequest) {
 
     logger.info('Email generated successfully', {
       emailId: result.email?.id,
-      organizationId: validData.organizationId,
       dealId: validData.dealId,
       emailType: validData.emailType,
       duration,

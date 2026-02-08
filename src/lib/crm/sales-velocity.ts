@@ -5,7 +5,7 @@
 
 import { getDeals, type Deal } from './deal-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface SalesVelocityMetrics {
   // Overall velocity
@@ -155,8 +155,7 @@ export async function calculateSalesVelocity(
     };
 
     logger.info('Sales velocity calculated', {
-      organizationId: DEFAULT_ORG_ID,
-      velocity,
+            velocity,
       avgSalesCycle,
       winRate,
     });
@@ -165,7 +164,7 @@ export async function calculateSalesVelocity(
 
   } catch (error: unknown) {
     const errorInstance = error instanceof Error ? error : new Error(String(error));
-    logger.error('Sales velocity calculation failed', errorInstance, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Sales velocity calculation failed', errorInstance);
     throw new Error(`Sales velocity calculation failed: ${errorInstance.message}`);
   }
 }
@@ -383,15 +382,14 @@ export async function getPipelineInsights(
     }
 
     logger.info('Pipeline insights generated', {
-      organizationId: DEFAULT_ORG_ID,
-      insightCount: insights.length,
+            insightCount: insights.length,
     });
 
     return insights;
 
   } catch (error: unknown) {
     const errorInstance = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to generate pipeline insights', errorInstance, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to generate pipeline insights', errorInstance);
     return [];
   }
 }

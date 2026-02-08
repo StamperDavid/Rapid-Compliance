@@ -7,7 +7,7 @@ import { getActivityStats } from './activity-service';
 import { getDeal, type Deal } from './deal-service';
 import { logger } from '@/lib/logger/logger';
 import type { ActivityStats } from '@/types/activity';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Type guard to check if value has a toDate method (Firestore Timestamp)
@@ -143,8 +143,7 @@ export async function calculateDealHealth(
     };
 
     logger.info('Deal health calculated', {
-      organizationId: DEFAULT_ORG_ID,
-      dealId,
+            dealId,
       overall,
       status,
       factorCount: factors.length,
@@ -153,7 +152,7 @@ export async function calculateDealHealth(
     return healthScore;
 
   } catch (error: unknown) {
-    logger.error('Failed to calculate deal health', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID, dealId });
+    logger.error('Failed to calculate deal health', error instanceof Error ? error : new Error(String(error)), { dealId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Deal health calculation failed: ${errorMessage}`);
   }

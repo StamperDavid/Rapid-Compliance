@@ -190,6 +190,7 @@ export class DirectorService {
         audioConfig,
         visualStyle,
         status: 'draft',
+        createdBy: 'system',
         createdAt: new Date(),
         updatedAt: new Date(),
       };

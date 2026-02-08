@@ -2,12 +2,12 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface RequestPayload {
   linkId: string;
   messageId: string;
   originalUrl: string;
-  organizationId: string;
 }
 
 /**
@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as RequestPayload;
-    const { linkId, messageId, originalUrl, organizationId } = body;
+    const { linkId, messageId, originalUrl } = body;
 
-    if (!linkId || !messageId || !originalUrl || !organizationId) {
+    if (!linkId || !messageId || !originalUrl) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     // Store link mapping in Firestore
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trackedLinks`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trackedLinks`,
       linkId,
       {
         messageId,

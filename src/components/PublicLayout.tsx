@@ -64,7 +64,6 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
-          orgId: 'platform', // Platform's own sales agent
           customerId: `visitor_${Date.now()}`,
         }),
       });

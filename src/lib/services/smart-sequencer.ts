@@ -30,7 +30,6 @@ import type { LeadScore } from '@/types/lead-scoring';
  * Firestore document data for sequence enrollment with smart metadata
  */
 interface EnrollmentDocumentData {
-  organizationId: string;
   status: 'active' | 'paused' | 'completed' | 'stopped' | 'failed';
   leadId: string;
   nextExecutionAt?: FirebaseFirestore.Timestamp;
@@ -115,10 +114,9 @@ export interface PrioritizedLead {
 export async function smartEnrollInSequence(params: {
   sequenceId: string;
   leadId: string;
-  organizationId: string;
   options?: SmartEnrollmentOptions;
 }): Promise<PrioritizedLead> {
-  const { sequenceId, leadId, organizationId, options = {} } = params;
+  const { sequenceId, leadId, options = {} } = params;
   
   const {
     minScore = 0,
@@ -134,7 +132,6 @@ export async function smartEnrollInSequence(params: {
     logger.info('Smart enrollment started', {
       sequenceId,
       leadId,
-      organizationId,
       minScore,
     });
 
@@ -196,7 +193,6 @@ export async function smartEnrollInSequence(params: {
     const enrollment = await enrollInSequence({
       sequenceId,
       leadId,
-      organizationId,
       metadata: {
         ...metadata,
         leadScore: score.totalScore,
@@ -246,14 +242,12 @@ export async function smartEnrollInSequence(params: {
 export async function smartEnrollBatch(params: {
   sequenceId: string;
   leadIds: string[];
-  organizationId: string;
   options?: SmartEnrollmentOptions;
 }): Promise<PrioritizedLead[]> {
-  const { sequenceId, leadIds, organizationId, options } = params;
+  const { sequenceId, leadIds, options } = params;
 
   logger.info('Batch smart enrollment started', {
     sequenceId,
-    organizationId,
     leadsCount: leadIds.length,
   });
 
@@ -269,7 +263,6 @@ export async function smartEnrollBatch(params: {
         smartEnrollInSequence({
           sequenceId,
           leadId,
-          organizationId,
           options,
         })
       )
@@ -310,11 +303,9 @@ export async function smartEnrollBatch(params: {
  * Hot leads are processed first, then warm, then cold.
  */
 export async function processSequenceStepsWithPriority(
-  organizationId: string
 ): Promise<number> {
   try {
     logger.info('Processing sequences with priority ordering', {
-      organizationId,
     });
 
     const now = new Date();
@@ -380,7 +371,6 @@ export async function processSequenceStepsWithPriority(
     }
 
     logger.info('Priority-based processing complete', {
-      organizationId,
       processed,
       total: orderedIds.length,
     });
@@ -407,10 +397,9 @@ export async function processSequenceStepsWithPriority(
  * and updates enrollment metadata.
  */
 export async function rescoreActiveSequenceLeads(
-  organizationId: string
 ): Promise<number> {
   try {
-    logger.info('Rescoring active sequence leads', { organizationId });
+    logger.info('Rescoring active sequence leads');
 
     // Get all active enrollments (using environment-aware collection path)
     const { COLLECTIONS } = await import('@/lib/firebase/collections');
@@ -468,7 +457,6 @@ export async function rescoreActiveSequenceLeads(
     }
 
     logger.info('Automatic rescoring complete', {
-      organizationId,
       rescored,
       total: snapshot.size,
     });
@@ -544,10 +532,9 @@ async function adjustEnrollmentTiming(
  */
 export async function getRecommendedSequence(params: {
   leadId: string;
-  organizationId: string;
   availableSequences?: Sequence[];
 }): Promise<Sequence | null> {
-  const { leadId, organizationId: _organizationId, availableSequences } = params;
+  const { leadId, availableSequences } = params;
 
   try {
     // Calculate lead score (for future smart matching implementation)

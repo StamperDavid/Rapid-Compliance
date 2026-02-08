@@ -63,7 +63,6 @@ export default function LeadDetailPage() {
       const { calculatePredictiveLeadScore } = await import('@/lib/crm/predictive-scoring');
       const leadForScoring: Lead = {
         id: leadData.id,
-        organizationId: leadData.organizationId,
         workspaceId: leadData.workspaceId,
         firstName: leadData.firstName,
         lastName: leadData.lastName,

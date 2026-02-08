@@ -27,7 +27,6 @@ export type AIConversationMode = 'prospector' | 'closer';
 
 export interface ConversationConfig {
   mode: AIConversationMode;
-  organizationId: string;
   agentId: string;
 
   // Company/product context

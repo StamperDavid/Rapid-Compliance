@@ -10,7 +10,7 @@ import { createVertexAIFineTuningJob } from '../fine-tuning/vertex-tuner';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { where, type Timestamp } from 'firebase/firestore';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface OrganizationPreferences {
   preferredModel?: string;
@@ -29,7 +29,6 @@ function toDate(value: Timestamp | string): Date {
  * Process conversation feedback and trigger learning
  */
 export async function processConversationFeedback(params: {
-  organizationId: string;
   conversationId: string;
   messages: Array<{ role: string; content: string }>;
   confidence: number;
@@ -139,11 +138,11 @@ async function shouldTriggerFineTuning(
 async function triggerFineTuning(
   _config: ContinuousLearningConfig
 ): Promise<string> {
-  logger.info('Continuous Learning Triggering fine-tuning for organizationId}', { file: 'continuous-learning-engine.ts' });
+  logger.info('[Continuous Learning] Triggering fine-tuning', { file: 'continuous-learning-engine.ts' });
 
   // Get approved examples
   const examples = await FirestoreService.getAll<TrainingExample>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/trainingExamples`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
     [where('status', '==', 'approved')]
   );
 
@@ -154,7 +153,7 @@ async function triggerFineTuning(
   // Get organization's model preferences
   const orgConfig = await FirestoreService.get<OrganizationPreferences>(
     COLLECTIONS.ORGANIZATIONS,
-    DEFAULT_ORG_ID
+    PLATFORM_ID
   );
 
   // Extract preferred model - empty string is invalid model name (Explicit Ternary for STRING)
@@ -165,13 +164,11 @@ async function triggerFineTuning(
   let job;
   if (preferredModel === 'gpt-4' || preferredModel === 'gpt-3.5-turbo') {
     job = await createOpenAIFineTuningJob({
-      organizationId: DEFAULT_ORG_ID,
       baseModel: preferredModel,
       examples,
     });
   } else if (preferredModel === 'gemini-1.5-pro' || preferredModel === 'gemini-1.0-pro') {
     job = await createVertexAIFineTuningJob({
-      organizationId: DEFAULT_ORG_ID,
       baseModel: preferredModel,
       examples,
     });
@@ -188,7 +185,7 @@ async function triggerFineTuning(
 async function getLearningConfig(): Promise<ContinuousLearningConfig | null> {
   try {
     const config = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/config`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/config`,
       'continuousLearning'
     );
     return config as ContinuousLearningConfig;
@@ -217,7 +214,7 @@ async function getLearningConfig(): Promise<ContinuousLearningConfig | null> {
  */
 async function getLastFineTuningJob(): Promise<FineTuningJob | null> {
   const jobs = await FirestoreService.getAll<FineTuningJob>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
     []
   );
 
@@ -236,7 +233,7 @@ async function getLastFineTuningJob(): Promise<FineTuningJob | null> {
  */
 async function getMonthlyTrainingSpend(): Promise<number> {
   const jobs = await FirestoreService.getAll<FineTuningJob>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
     []
   );
 
@@ -297,7 +294,7 @@ export async function evaluateAndDeployModel(
   // Get organization's current model
   const orgConfig = await FirestoreService.get<OrganizationPreferences>(
     COLLECTIONS.ORGANIZATIONS,
-    DEFAULT_ORG_ID
+    PLATFORM_ID
   );
 
   // Extract current model - empty string is invalid model name (Explicit Ternary for STRING)
@@ -313,8 +310,8 @@ export async function evaluateAndDeployModel(
     confidenceThreshold: 95,
   });
   
-  logger.info('Continuous Learning Started A/B test: test.id}', { file: 'continuous-learning-engine.ts' });
-  logger.info('Continuous Learning Control: currentModel}, Treatment: fineTunedModelId}', { file: 'continuous-learning-engine.ts' });
+  logger.info(`[Continuous Learning] Started A/B test: ${test.id}`, { file: 'continuous-learning-engine.ts' });
+  logger.info(`[Continuous Learning] Control: ${currentModel}, Treatment: ${fineTunedModelId}`, { file: 'continuous-learning-engine.ts' });
   
   return {
     deployed: false,
@@ -335,7 +332,7 @@ export async function processCompletedFineTuningJob(
 }> {
   // Get the job
   const job = await FirestoreService.get<FineTuningJob>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
     jobId
   );
 
@@ -352,7 +349,7 @@ export async function processCompletedFineTuningJob(
   
   // Update job with test info
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
     jobId,
     {
       abTestId: result.testId,

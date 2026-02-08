@@ -1,6 +1,6 @@
 /**
  * Website Pages API
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -8,7 +8,7 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface PageSEO {
   title?: string;
@@ -18,7 +18,6 @@ interface PageSEO {
 
 interface PageData {
   id: string;
-  organizationId: string;
   title: string;
   slug: string;
   status: string;
@@ -56,8 +55,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status'); // Filter by status
 
     const pagesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/pages/items',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/pages/items'
     );
 
     // Build query with optional status filter
@@ -128,7 +126,6 @@ export async function POST(request: NextRequest) {
       id: pageId,
       title: page.title,
       slug: page.slug,
-      organizationId: DEFAULT_ORG_ID,
       status: (page.status !== '' && page.status != null) ? page.status : 'draft',
       content: page.content ?? [],
       seo: page.seo ?? {},
@@ -141,8 +138,7 @@ export async function POST(request: NextRequest) {
 
     // Check if slug already exists for this org
     const pagesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/pages/items',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/pages/items'
     );
     const existingPageQuery = await pagesRef
       .where('slug', '==', page.slug)

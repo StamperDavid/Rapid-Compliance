@@ -6,7 +6,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface IntegrationCredentials {
   integrationId: string; // 'zoom', 'quickbooks', 'shopify', etc.
@@ -36,16 +36,16 @@ export async function saveIntegrationCredentials(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/integrations`,
+      `organizations/${PLATFORM_ID}/integrations`,
       integrationId,
       credentialsDoc,
       true // Merge to preserve metadata
     );
 
-    logger.info('Integration credentials saved', { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.info('Integration credentials saved', { integrationId });
 
   } catch (error) {
-    logger.error('Failed to save integration credentials', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.error('Failed to save integration credentials', error instanceof Error ? error : undefined, { integrationId });
     throw error;
   }
 }
@@ -58,7 +58,7 @@ export async function getIntegrationCredentials(
 ): Promise<IntegrationCredentials | null> {
   try {
     const credentials = await FirestoreService.get<IntegrationCredentials>(
-      `organizations/${DEFAULT_ORG_ID}/integrations`,
+      `organizations/${PLATFORM_ID}/integrations`,
       integrationId
     );
 
@@ -90,7 +90,7 @@ export async function getIntegrationCredentials(
     return credentials;
 
   } catch (error) {
-    logger.error('Failed to get integration credentials', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.error('Failed to get integration credentials', error instanceof Error ? error : undefined, { integrationId });
     return null;
   }
 }
@@ -215,14 +215,14 @@ export async function disconnectIntegration(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${DEFAULT_ORG_ID}/integrations`,
+      `organizations/${PLATFORM_ID}/integrations`,
       integrationId
     );
 
-    logger.info('Integration disconnected', { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.info('Integration disconnected', { integrationId });
 
   } catch (error) {
-    logger.error('Failed to disconnect integration', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.error('Failed to disconnect integration', error instanceof Error ? error : undefined, { integrationId });
     throw error;
   }
 }
@@ -233,13 +233,13 @@ export async function disconnectIntegration(
 export async function listConnectedIntegrations(): Promise<IntegrationCredentials[]> {
   try {
     const result = await FirestoreService.getAll<IntegrationCredentials>(
-      `organizations/${DEFAULT_ORG_ID}/integrations`
+      `organizations/${PLATFORM_ID}/integrations`
     );
 
     return result;
 
   } catch (error) {
-    logger.error('Failed to list integrations', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to list integrations', error instanceof Error ? error : undefined);
     return [];
   }
 }
@@ -262,7 +262,7 @@ export async function updateIntegration(
 ): Promise<void> {
   try {
     await FirestoreService.update(
-      `organizations/${DEFAULT_ORG_ID}/integrations`,
+      `organizations/${PLATFORM_ID}/integrations`,
       integrationId,
       {
         ...updates,
@@ -270,10 +270,10 @@ export async function updateIntegration(
       }
     );
 
-    logger.info('Integration updated', { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.info('Integration updated', { integrationId });
 
   } catch (error) {
-    logger.error('Failed to update integration', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.error('Failed to update integration', error instanceof Error ? error : undefined, { integrationId });
     throw error;
   }
 }
@@ -294,7 +294,7 @@ export function syncIntegration(
   integrationId: string
 ): { success: boolean; synced?: number; error?: string } {
   try {
-    logger.info('Syncing integration', { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.info('Syncing integration', { integrationId });
 
     // Implementation would depend on the integration type
     // For now, return success
@@ -304,7 +304,7 @@ export function syncIntegration(
     };
 
   } catch (error) {
-    logger.error('Failed to sync integration', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.error('Failed to sync integration', error instanceof Error ? error : undefined, { integrationId });
     const syncErrorMsg = error instanceof Error && error.message ? error.message : 'Sync failed';
     return {
       success: false,
@@ -344,7 +344,7 @@ export async function testIntegration(
     };
 
   } catch (error) {
-    logger.error('Failed to test integration', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, integrationId });
+    logger.error('Failed to test integration', error instanceof Error ? error : undefined, { integrationId });
     const testErrorMsg = error instanceof Error && error.message ? error.message : 'Test failed';
     return {
       success: false,

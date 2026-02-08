@@ -7,7 +7,6 @@ import type { AgentPersona, OnboardingData } from '@/types/agent-memory';
 
 export interface PersonaBuilderOptions {
   onboardingData: OnboardingData;
-  organizationId: string;
   userId: string;
 }
 

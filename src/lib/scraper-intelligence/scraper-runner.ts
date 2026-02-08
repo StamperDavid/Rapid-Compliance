@@ -136,7 +136,6 @@ export class ProductionScraperRunner implements ScraperRunner {
       jobId: jobConfig.jobId,
       url: jobConfig.url,
       priority: jobConfig.priority,
-      organizationId: jobConfig.organizationId,
     });
 
     return jobConfig.jobId;
@@ -378,9 +377,9 @@ export class ProductionScraperRunner implements ScraperRunner {
    * Process a single job
    */
   private async processJob(config: ScrapeJobConfig): Promise<void> {
-    const { jobId, url, organizationId, industryId, platform } = config;
+    const { jobId, url, industryId, platform } = config;
 
-    logger.info('Processing job', { jobId, url, organizationId, industryId });
+    logger.info('Processing job', { jobId, url, industryId });
 
     // Emit started event
     if (this.config.enableProgressTracking) {
@@ -443,7 +442,7 @@ export class ProductionScraperRunner implements ScraperRunner {
       // Step 4: Cache result (if enabled)
       if (this.config.enableCaching) {
         const ttl = calculateCacheTTL(platform);
-        const cacheKey = getScrapeCacheKey(url, platform, organizationId);
+        const cacheKey = getScrapeCacheKey(url, platform);
 
         const resultToCache: ScrapeJobResult = {
           config,
@@ -504,8 +503,8 @@ export class ProductionScraperRunner implements ScraperRunner {
       reductionPercent: number;
     };
   } | null> {
-    const { url, platform, organizationId } = config;
-    const cacheKey = getScrapeCacheKey(url, platform, organizationId);
+    const { url, platform } = config;
+    const cacheKey = getScrapeCacheKey(url, platform);
 
     const cached = await this.cache.get(cacheKey);
 

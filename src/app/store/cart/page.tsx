@@ -13,7 +13,7 @@ import { getOrCreateCart, removeFromCart, updateCartItemQuantity } from '@/lib/e
 import { useTheme } from '@/contexts/ThemeContext'
 import { logger } from '@/lib/logger/logger';
 import type { Cart } from '@/types/ecommerce';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export default function ShoppingCartPage() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function ShoppingCartPage() {
       const sessionId = localStorage.getItem('cartSessionId') ?? `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
 
-      const cartData = await getOrCreateCart(sessionId, 'default', DEFAULT_ORG_ID);
+      const cartData = await getOrCreateCart(sessionId, 'default', PLATFORM_ID);
       setCart(cartData);
     } catch (error) {
       logger.error('Error loading cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

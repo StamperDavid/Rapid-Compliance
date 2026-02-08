@@ -13,13 +13,12 @@ import { processKnowledgeBase, type KnowledgeProcessorOptions } from './knowledg
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
 import { COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Dynamic import of AdminFirestoreService to prevent client-side bundling
 
 export interface OnboardingProcessorOptions {
   onboardingData: OnboardingData;
-  organizationId: string;
   userId: string;
   workspaceId?: string;
 }
@@ -41,8 +40,8 @@ export async function processOnboarding(
   options: OnboardingProcessorOptions
 ): Promise<OnboardingProcessResult> {
   try {
-    const { onboardingData, organizationId, userId, workspaceId } = options;
-    
+    const { onboardingData, userId, workspaceId } = options;
+
     // Step 1: Build persona from onboarding data
     const persona = buildPersonaFromOnboarding(onboardingData);
     
@@ -56,7 +55,6 @@ export async function processOnboarding(
     const extendedData = onboardingData as OnboardingData & Partial<ExtendedOnboardingFields>;
 
     const knowledgeOptions: KnowledgeProcessorOptions = {
-      organizationId,
       uploadedFiles: extendedData.uploadedDocs ?? [],
       urls: extendedData.urls ?? [],
       faqPageUrl: onboardingData.faqPageUrl, // Now properly typed
@@ -71,7 +69,6 @@ export async function processOnboarding(
     const baseModel = await buildBaseModel({
       onboardingData,
       knowledgeBase,
-      organizationId,
       userId,
       workspaceId,
       industryTemplateId: onboardingData.industryTemplateId, // Now properly wired!
@@ -82,11 +79,10 @@ export async function processOnboarding(
     
     // Save persona
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentPersona`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentPersona`,
       'current',
       {
         ...persona,
-        organizationId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -95,11 +91,10 @@ export async function processOnboarding(
     
     // Save knowledge base
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBase`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBase`,
       'current',
       {
         ...knowledgeBase,
-        organizationId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -164,18 +159,18 @@ export async function getProcessingStatus(): Promise<{
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     const personaResult: unknown = await AdminFirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentPersona`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentPersona`,
       'current'
     );
 
     const knowledgeBaseResult: unknown = await AdminFirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBase`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBase`,
       'current'
     );
 
     // Check for Base Model
     const baseModelsResult: unknown = await AdminFirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.BASE_MODELS}`
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.BASE_MODELS}`
     );
 
     // Type guard for base models array
@@ -190,7 +185,7 @@ export async function getProcessingStatus(): Promise<{
 
     // Check for Golden Master
     const goldenMastersResult: unknown = await AdminFirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_MASTERS}`
     );
 
     // Type guard for golden masters array

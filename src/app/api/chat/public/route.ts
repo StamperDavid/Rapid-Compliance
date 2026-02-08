@@ -20,7 +20,8 @@ export const dynamic = 'force-dynamic';
 /**
  * Public Chat API
  * This endpoint is designed for embedded chat widgets on customer websites.
- * It doesn't require user authentication but validates orgId and customerId.
+ * It doesn't require user authentication but validates customerId.
+ * Penthouse model: Always uses PLATFORM_ID.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -31,11 +32,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    const { customerId, orgId, message } = body as { customerId?: string; orgId?: string; message?: string };
+    const { customerId, message } = body as { customerId?: string; message?: string };
 
     // Validate required fields
-    if (!customerId || !orgId || !message) {
-      return errors.badRequest('Missing required fields: customerId, orgId, message');
+    if (!customerId || !message) {
+      return errors.badRequest('Missing required fields: customerId, message');
     }
 
     // Validate message length
@@ -43,9 +44,8 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Message too long. Maximum 2000 characters.');
     }
 
-    // Note: The 'platform-admin' organization is for the landing page demo
-    // It uses the trained golden master from /admin/sales-agent/training
-    // and spawns ephemeral agents the same way as regular organizations
+    // Penthouse model: use PLATFORM_ID
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
     // Verify organization exists and has chat enabled (prefer Admin SDK, fallback to client SDK)
     let organization: Organization | null = null;
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       const { adminDb } = await import('@/lib/firebase/admin');
       const { getOrgSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
-        const orgSnap = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).doc(orgId).get();
+        const orgSnap = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).doc(PLATFORM_ID).get();
         if (orgSnap.exists) {
           organization = { id: orgSnap.id, ...orgSnap.data() } as Organization;
         }
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       // Ignore and fallback
     }
 
-    organization ??= await FirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, orgId);
+    organization ??= await FirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     if (!organization) {
       return NextResponse.json(
         { success: false, error: 'Invalid organization' },
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     chatConfig ??= await FirestoreService.get<{ enabled?: boolean }>(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/settings`,
       'chatWidget'
     );
 
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
       // Ignore and fallback
     }
     agentConfig ??= await FirestoreService.get<AgentConfigData>(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
       'default'
     );
 
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
     // Track conversation for analytics
     try {
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/chatSessions/${customerId}/messages`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions/${customerId}/messages`,
         `msg_${Date.now()}`,
         {
           customerId,

@@ -15,7 +15,7 @@
  * 
  * REQUEST BODY:
  * - dealId (required): Deal ID to analyze
- * - DEFAULT_ORG_ID (required): Organization ID
+ * - PLATFORM_ID (required): Organization ID
  * - workspaceId (optional): Workspace ID (default: 'default')
  * - includeInterventions (optional): Include AI interventions (default: true)
  * - forceRefresh (optional): Skip cache (default: false)
@@ -37,12 +37,11 @@ import type {
   DealRiskPrediction,
 } from '@/lib/risk/types';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface RawRequestBody {
   dealIds?: string[];
   dealId?: string;
-  DEFAULT_ORG_ID?: string;
   [key: string]: unknown;
 }
 
@@ -122,8 +121,8 @@ function cacheResponse(cacheKey: string, data: DealRiskPrediction): void {
  * Generate cache key from request
  */
 function getCacheKey(request: RiskPredictionRequest): string {
-  const { dealId, organizationId, workspaceId, includeInterventions } = request;
-  return `risk:${organizationId}:${workspaceId}:${dealId}:${includeInterventions}`;
+  const { dealId, workspaceId, includeInterventions } = request;
+  return `risk:${PLATFORM_ID}:${workspaceId}:${dealId}:${includeInterventions}`;
 }
 
 // ============================================================================
@@ -168,15 +167,14 @@ export async function POST(request: NextRequest) {
     }
     
     const validatedRequest = validationResult.data as RiskPredictionRequest;
-    
-    // Rate limiting (use DEFAULT_ORG_ID as user identifier)
-    const rateLimit = checkRateLimit(validatedRequest.organizationId);
+
+    // Rate limiting (use PLATFORM_ID as user identifier)
+    const rateLimit = checkRateLimit(PLATFORM_ID);
     
     if (!rateLimit.allowed) {
       const retryAfter = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
       
       logger.warn('Rate limit exceeded for risk prediction', {
-        organizationId: validatedRequest.organizationId,
         retryAfter,
       });
       
@@ -206,7 +204,6 @@ export async function POST(request: NextRequest) {
       if (cached) {
         logger.info('Risk prediction cache hit', {
           dealId: validatedRequest.dealId,
-          organizationId: validatedRequest.organizationId,
         });
         
         return NextResponse.json(
@@ -231,7 +228,6 @@ export async function POST(request: NextRequest) {
     // Predict risk
     logger.info('Predicting deal risk', {
       dealId: validatedRequest.dealId,
-      organizationId: validatedRequest.organizationId,
       includeInterventions: validatedRequest.includeInterventions,
     });
     
@@ -325,9 +321,9 @@ async function handleBatchRequest(
     }
     
     const validatedRequest = validationResult.data as BatchRiskPredictionRequest;
-    
+
     // Rate limiting (batch requests count as 2x)
-    const rateLimit = checkRateLimit(validatedRequest.organizationId);
+    const rateLimit = checkRateLimit(PLATFORM_ID);
     
     if (!rateLimit.allowed) {
       const retryAfter = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
@@ -346,7 +342,6 @@ async function handleBatchRequest(
     // Predict risk for batch
     logger.info('Batch risk prediction started', {
       dealCount: validatedRequest.dealIds.length,
-      organizationId: validatedRequest.organizationId,
     });
     
     const batchResult = await predictBatchDealRisk(validatedRequest);
@@ -427,14 +422,13 @@ export async function GET(request: NextRequest) {
     // Convert to POST request format and call prediction directly
     const riskRequest: RiskPredictionRequest = {
       dealId,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       includeInterventions,
       forceRefresh: false,
     };
 
     // Rate limiting
-    const rateLimit = checkRateLimit(DEFAULT_ORG_ID);
+    const rateLimit = checkRateLimit(PLATFORM_ID);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { success: false, error: 'Rate limit exceeded' },

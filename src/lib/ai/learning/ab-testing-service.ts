@@ -5,12 +5,11 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface ABTest {
   id: string;
-  organizationId: string;
-  
+
   // Models being compared
   controlModel: string; // Base model (e.g., gpt-4)
   treatmentModel: string; // Fine-tuned model ID
@@ -75,7 +74,6 @@ export async function createABTest(params: {
   
   const test: ABTest = {
     id: testId,
-    organizationId: DEFAULT_ORG_ID,
     controlModel,
     treatmentModel,
     trafficSplit,
@@ -99,7 +97,7 @@ export async function createABTest(params: {
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
     testId,
     test,
     false
@@ -108,14 +106,14 @@ export async function createABTest(params: {
   // Update organization to use this test
   await FirestoreService.update(
     COLLECTIONS.ORGANIZATIONS,
-    DEFAULT_ORG_ID,
+    PLATFORM_ID,
     {
       activeABTest: testId,
       updatedAt: now,
     }
   );
   
-  logger.info('A/B Testing Created test testId}: controlModel} vs treatmentModel}', { file: 'ab-testing-service.ts' });
+  logger.info(`[A/B Testing] Created test ${testId}: ${controlModel} vs ${treatmentModel}`, { file: 'ab-testing-service.ts' });
   
   return test;
 }
@@ -137,7 +135,7 @@ export async function getModelForConversation(
   testId?: string;
 }> {
   // Check if there's an active A/B test
-  const org = await FirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+  const org = await FirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
 
   if (!org?.activeABTest) {
     // No active test, use default model
@@ -151,7 +149,7 @@ export async function getModelForConversation(
 
   // Get the test
   const test = await FirestoreService.get<ABTest>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
     org.activeABTest
   );
 
@@ -190,7 +188,7 @@ export async function recordConversationResult(params: {
   const { testId, isTestGroup, converted, rating, confidence, tokensUsed } = params;
   
   const test = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
     testId
   ) as ABTest;
   
@@ -236,7 +234,7 @@ export async function recordConversationResult(params: {
   }
   
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
     testId,
     {
       metrics,
@@ -260,7 +258,7 @@ export async function evaluateABTest(
   testId: string
 ): Promise<ABTest['results']> {
   const test = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
     testId
   ) as ABTest;
   
@@ -317,7 +315,7 @@ export async function evaluateABTest(
   
   // Update test with results
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
     testId,
     {
       results,
@@ -342,14 +340,14 @@ export async function evaluateABTest(
  * Get active A/B test for organization
  */
 export async function getActiveABTest(): Promise<ABTest | null> {
-  const org = await FirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+  const org = await FirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
 
   if (!org?.activeABTest) {
     return null;
   }
 
   const test = await FirestoreService.get<ABTest>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
     org.activeABTest
   );
   return test ?? null;
@@ -367,7 +365,7 @@ export async function completeABTestAndDeploy(
   reason: string;
 }> {
   const test = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
     testId
   ) as ABTest;
   
@@ -380,7 +378,7 @@ export async function completeABTestAndDeploy(
     await evaluateABTest(testId);
     // Re-fetch
     const updatedTest = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/abTests`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
       testId
     ) as ABTest;
     Object.assign(test, updatedTest);
@@ -402,7 +400,7 @@ export async function completeABTestAndDeploy(
     // Deploy fine-tuned model as the new default
     await FirestoreService.update(
       COLLECTIONS.ORGANIZATIONS,
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
       {
         preferredModel: winningModel,
         activeABTest: null, // Clear active test
@@ -412,7 +410,7 @@ export async function completeABTestAndDeploy(
       }
     );
     
-    logger.info('A/B Testing Deployed fine-tuned model: winningModel}', { file: 'ab-testing-service.ts' });
+    logger.info(`[A/B Testing] Deployed fine-tuned model: ${winningModel}`, { file: 'ab-testing-service.ts' });
     
     return {
       deployed: true,
@@ -424,7 +422,7 @@ export async function completeABTestAndDeploy(
   // Clear active test without deploying
   await FirestoreService.update(
     COLLECTIONS.ORGANIZATIONS,
-    DEFAULT_ORG_ID,
+    PLATFORM_ID,
     {
       activeABTest: null,
       updatedAt: new Date().toISOString(),

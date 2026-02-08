@@ -36,7 +36,6 @@ describe('Analytics Dashboard Validation', () => {
   describe('AnalyticsRequestSchema', () => {
     it('should accept valid request', () => {
       const validRequest = {
-        organizationId: 'org123',
         workspaceId: 'ws456',
         period: '30d',
       };
@@ -44,18 +43,8 @@ describe('Analytics Dashboard Validation', () => {
       expect(() => AnalyticsRequestSchema.parse(validRequest)).not.toThrow();
     });
 
-    it('should require organizationId', () => {
-      const invalidRequest = {
-        workspaceId: 'ws456',
-        period: '30d',
-      };
-
-      expect(() => AnalyticsRequestSchema.parse(invalidRequest)).toThrow(ZodError);
-    });
-
     it('should require period', () => {
       const invalidRequest = {
-        organizationId: 'org123',
         // Missing period
       };
 
@@ -64,7 +53,6 @@ describe('Analytics Dashboard Validation', () => {
 
     it('should require startDate and endDate for custom period', () => {
       const invalidRequest = {
-        organizationId: 'org123',
         workspaceId: 'ws456',
         period: 'custom',
       };
@@ -72,7 +60,6 @@ describe('Analytics Dashboard Validation', () => {
       expect(() => AnalyticsRequestSchema.parse(invalidRequest)).toThrow(ZodError);
 
       const validRequest = {
-        organizationId: 'org123',
         workspaceId: 'ws456',
         period: 'custom',
         startDate: new Date('2024-01-01'),
@@ -84,7 +71,6 @@ describe('Analytics Dashboard Validation', () => {
 
     it('should validate that endDate is after startDate', () => {
       const invalidRequest = {
-        organizationId: 'org123',
         workspaceId: 'ws456',
         period: 'custom',
         startDate: new Date('2024-01-31'),
@@ -96,7 +82,6 @@ describe('Analytics Dashboard Validation', () => {
 
     it('should accept optional metrics array', () => {
       const validRequest = {
-        organizationId: 'org123',
         workspaceId: 'ws456',
         period: '30d',
         metrics: ['workflows', 'emails'],
@@ -107,7 +92,6 @@ describe('Analytics Dashboard Validation', () => {
 
     it('should coerce date strings to Date objects', () => {
       const request = {
-        organizationId: 'org123',
         workspaceId: 'ws456',
         period: 'custom',
         startDate: '2024-01-01',

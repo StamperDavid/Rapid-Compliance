@@ -300,26 +300,26 @@ export const cacheService = new RedisService();
 // Cache key builders for common patterns
 export const CacheKeys = {
   // Agent caching
-  agentConfig: (orgId: string, agentId: string) => `agent:config:${orgId}:${agentId}`,
+  agentConfig: (agentId: string) => `agent:config:${agentId}`,
   agentResponse: (agentId: string, messageHash: string) => `agent:response:${agentId}:${messageHash}`,
-  
+
   // Customer caching
-  customer: (orgId: string, customerId: string) => `customer:${orgId}:${customerId}`,
-  customerList: (orgId: string, page: number) => `customer:list:${orgId}:${page}`,
-  
+  customer: (customerId: string) => `customer:${customerId}`,
+  customerList: (page: number) => `customer:list:${page}`,
+
   // Custom object schema caching
-  objectSchema: (orgId: string, objectId: string) => `schema:${orgId}:${objectId}`,
-  
+  objectSchema: (objectId: string) => `schema:${objectId}`,
+
   // E-commerce caching
   product: (workspaceId: string, productId: string) => `product:${workspaceId}:${productId}`,
   productList: (workspaceId: string, page: number) => `product:list:${workspaceId}:${page}`,
   cart: (customerId: string) => `cart:${customerId}`,
-  
+
   // Analytics caching
-  analytics: (orgId: string, metric: string, period: string) => `analytics:${orgId}:${metric}:${period}`,
-  
+  analytics: (metric: string, period: string) => `analytics:${metric}:${period}`,
+
   // Integration caching
-  integration: (orgId: string, provider: string) => `integration:${orgId}:${provider}`,
+  integration: (provider: string) => `integration:${provider}`,
 };
 
 // Cache TTLs (in seconds)

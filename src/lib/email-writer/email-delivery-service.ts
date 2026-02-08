@@ -45,29 +45,28 @@ function ensureAdminDb() {
  * Email delivery options
  */
 export interface EmailDeliveryOptions {
-  organizationId: string;
   workspaceId: string;
   userId: string;
-  
+
   // Email content
   to: string; // Recipient email
   toName?: string; // Recipient name
   subject: string;
   html: string; // HTML body
   text: string; // Plain text body
-  
+
   // Tracking
   trackOpens?: boolean; // Default: true
   trackClicks?: boolean; // Default: true
-  
+
   // Context
   dealId?: string;
   emailId?: string; // Generated email ID if from email writer
   campaignId?: string; // Optional campaign ID
-  
+
   // Custom headers
   customArgs?: Record<string, string>; // Custom data for tracking
-  
+
   // Reply-to
   replyTo?: string;
   replyToName?: string;
@@ -103,19 +102,18 @@ export type EmailDeliveryStatus =
  */
 export interface EmailDeliveryRecord {
   id: string;
-  organizationId: string;
   workspaceId: string;
   userId: string;
-  
+
   // Recipients
   to: string;
   toName?: string;
-  
+
   // Content
   subject: string;
   html: string;
   text: string;
-  
+
   // Delivery
   status: EmailDeliveryStatus;
   messageId?: string; // SendGrid message ID
@@ -125,23 +123,23 @@ export interface EmailDeliveryRecord {
   clickedAt?: Timestamp;
   bouncedAt?: Timestamp;
   failedAt?: Timestamp;
-  
+
   // Tracking
   opens: number; // Number of opens
   clicks: number; // Number of clicks
   uniqueOpens: number;
   uniqueClicks: number;
-  
+
   // Context
   dealId?: string;
   emailId?: string;
   campaignId?: string;
-  
+
   // Error handling
   error?: string;
   retryCount: number;
   lastRetryAt?: Timestamp;
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -184,20 +182,21 @@ export async function sendEmail(
   options: EmailDeliveryOptions
 ): Promise<EmailDeliveryResult> {
   const startTime = Date.now();
-  
+
   try {
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+
     // Initialize SendGrid
     initializeSendGrid();
-    
+
     // Get from address
     const from = getFromAddress();
-    
+
     // Create delivery record
-    const deliveryId = `delivery_${options.organizationId}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    
+    const deliveryId = `delivery_${PLATFORM_ID}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
     // Prepare custom args for tracking
     const customArgs = {
-      organizationId: options.organizationId,
       workspaceId: options.workspaceId,
       userId: options.userId,
       deliveryId,
@@ -256,7 +255,6 @@ export async function sendEmail(
     // Save delivery record
     await saveDeliveryRecord({
       id: deliveryId,
-      organizationId: options.organizationId,
       workspaceId: options.workspaceId,
       userId: options.userId,
       to: options.to,
@@ -312,10 +310,10 @@ export async function sendEmail(
     });
     
     // Create failed delivery record
-    const deliveryId = `delivery_${options.organizationId}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const { PLATFORM_ID: platformIdFail } = await import('@/lib/constants/platform');
+    const deliveryId = `delivery_${platformIdFail}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     await saveDeliveryRecord({
       id: deliveryId,
-      organizationId: options.organizationId,
       workspaceId: options.workspaceId,
       userId: options.userId,
       to: options.to,
@@ -554,11 +552,10 @@ async function emitEmailSentSignal(
   }
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.sent',
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Medium',
       metadata: {
@@ -578,11 +575,10 @@ async function emitEmailOpenedSignal(
   deliveryId: string
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.opened',
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Low',
       metadata: {
@@ -601,11 +597,10 @@ async function emitEmailClickedSignal(
   deliveryId: string
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.clicked',
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Medium',
       metadata: {
@@ -629,11 +624,10 @@ async function emitEmailFailedSignal(
   }
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.delivery.failed',
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'High',
       metadata: {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface Message {
   id: string;
@@ -12,7 +13,6 @@ interface Message {
 }
 
 interface ChatWidgetProps {
-  orgId: string;
   customerId?: string;
   apiEndpoint?: string;
   // Appearance
@@ -35,7 +35,6 @@ interface ChatWidgetProps {
 }
 
 export function ChatWidget({
-  orgId,
   customerId: initialCustomerId,
   apiEndpoint = '/api/chat/public',
   position = 'bottom-right',
@@ -64,16 +63,16 @@ export function ChatWidget({
   // Generate customer ID on first load
   useEffect(() => {
     if (!customerId) {
-      const storedId = localStorage.getItem(`chat_customer_${orgId}`);
+      const storedId = localStorage.getItem(`chat_customer_${PLATFORM_ID}`);
       if (storedId) {
         setCustomerId(storedId);
       } else {
         const newId = `cust_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        localStorage.setItem(`chat_customer_${orgId}`, newId);
+        localStorage.setItem(`chat_customer_${PLATFORM_ID}`, newId);
         setCustomerId(newId);
       }
     }
-  }, [orgId, customerId]);
+  }, [customerId]);
 
   // Add welcome message on first open
   useEffect(() => {
@@ -134,7 +133,6 @@ export function ChatWidget({
         },
         body: JSON.stringify({
           customerId,
-          orgId,
           message: userMessage.content,
         }),
       });

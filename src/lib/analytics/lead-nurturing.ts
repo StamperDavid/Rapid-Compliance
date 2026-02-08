@@ -8,12 +8,11 @@
 // Reserved for future use: lead scoring integration
 // import { calculateLeadScore, LeadScoringFactors } from './lead-scoring'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface LeadNurtureSequence {
   id: string;
   name: string;
-  organizationId: string;
   workspaceId?: string;
   
   // Sequence configuration
@@ -91,8 +90,6 @@ export interface NurtureEmail {
 
 export interface LeadEnrichment {
   leadId: string;
-  organizationId: string;
-  
   // Enrichment sources
   sources: {
     clearbit?: boolean;
@@ -162,16 +159,11 @@ export interface LeadActivity {
  * Create lead nurture sequence
  */
 export async function createNurtureSequence(sequence: Partial<LeadNurtureSequence>): Promise<LeadNurtureSequence> {
-  if (!sequence.organizationId) {
-    throw new Error('organizationId is required to create a nurture sequence');
-  }
-
   const sequenceId = `nurture_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   const fullSequence: LeadNurtureSequence = {
     id: sequenceId,
     name: (sequence.name !== '' && sequence.name != null) ? sequence.name : 'Untitled Sequence',
-    organizationId: sequence.organizationId,
     workspaceId: sequence.workspaceId,
     trigger: sequence.trigger ?? 'new_lead',
     triggerConditions: sequence.triggerConditions,
@@ -267,7 +259,6 @@ export async function enrichLead(
 
   const enrichment: LeadEnrichment = {
     leadId,
-    organizationId: DEFAULT_ORG_ID,
     sources,
     enrichedData: {
       // Mock enriched data - would come from APIs
@@ -415,7 +406,6 @@ export function getLeadAttribution(
 export interface LeadSegment {
   id: string;
   name: string;
-  organizationId: string;
   criteria: {
     scoreRange?: { min: number; max: number };
     status?: string[];
@@ -430,16 +420,11 @@ export interface LeadSegment {
 }
 
 export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<LeadSegment> {
-  if (!segment.organizationId) {
-    throw new Error('organizationId is required to create a lead segment');
-  }
-
   const segmentId = `segment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   const fullSegment: LeadSegment = {
     id: segmentId,
     name: (segment.name !== '' && segment.name != null) ? segment.name : 'Untitled Segment',
-    organizationId: segment.organizationId,
     criteria: segment.criteria ?? {},
     leadCount: 0,
     createdAt: new Date(),
@@ -449,7 +434,7 @@ export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${fullSegment.organizationId}/${COLLECTIONS.LEAD_SEGMENTS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.LEAD_SEGMENTS}`,
       segmentId,
       {
         ...fullSegment,

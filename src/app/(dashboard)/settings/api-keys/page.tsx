@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -36,7 +36,7 @@ export default function APIKeysPage() {
 
   const loadKeys = async () => {
     try {
-      const response = await fetch(`/api/settings/api-keys?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}`);
+      const response = await fetch(`/api/settings/api-keys?PLATFORM_ID=${PLATFORM_ID}`);
       const data = await response.json() as APIKeyLoadResponse;
       if (data.success) {
         setKeys(data.keys ?? {});
@@ -51,7 +51,7 @@ export default function APIKeysPage() {
       const response = await fetch('/api/settings/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ DEFAULT_ORG_ID, service, key: value }),
+        body: JSON.stringify({ PLATFORM_ID, service, key: value }),
       });
 
       const data = await response.json() as APIKeySaveResponse;
@@ -72,7 +72,7 @@ export default function APIKeysPage() {
   const testKey = async (service: string) => {
     setTesting(service);
     try {
-      const response = await fetch(`/api/settings/api-keys/test?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&service=${service}`);
+      const response = await fetch(`/api/settings/api-keys/test?PLATFORM_ID=${PLATFORM_ID}&service=${service}`);
       const data = await response.json() as APIKeyTestResponse;
 
       setTestResults({ ...testResults, [service]: data });

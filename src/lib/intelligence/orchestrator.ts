@@ -44,7 +44,7 @@ import {
   LLMReasoningOutputSchema,
   parseOpenAIResponse,
 } from './validation';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RESULT HELPERS
@@ -91,7 +91,6 @@ function createInitialAgentState(
 
   return {
     id: `agent_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-    organizationId: DEFAULT_ORG_ID,
     workspaceId,
     role,
     name: `${role}_agent`,
@@ -587,7 +586,7 @@ OUTPUT FORMAT (JSON):
 }
 
 Current context:
-- Organization: ${state.organizationId}
+- Organization: ${PLATFORM_ID}
 - Workspace: ${state.workspaceId}
 - Previous steps: ${state.reasoningSteps.length}
 - Available knowledge chunks: ${state.memory.relevantKnowledge.length}`;
@@ -650,7 +649,6 @@ export class IntelligenceOrchestrator {
     // Log orchestration start (void pattern for telemetry)
     void this.logTelemetry('orchestration_started', {
       traceId,
-      organizationId: validatedRequest.organizationId,
       taskType: validatedRequest.task.type,
     });
 
@@ -814,9 +812,7 @@ export class IntelligenceOrchestrator {
   ): Promise<void> {
     return Promise.resolve().then(() => {
       try {
-        logger.info(`[Telemetry] ${event}`, {
-          organizationId: typeof data.organizationId === 'string' ? data.organizationId : undefined,
-        });
+        logger.info(`[Telemetry] ${event}`, data as Record<string, string | number | boolean | undefined | null | string[] | number[]>);
         // In production, send to telemetry service
       } catch {
         // Silently ignore telemetry errors - don't affect main flow

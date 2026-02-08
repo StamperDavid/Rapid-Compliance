@@ -40,7 +40,7 @@ import type {
   SiteArchitecture,
   PageDefinition,
 } from '../architect/manager';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this manager
@@ -661,7 +661,7 @@ export class BuilderManager extends BaseManager {
 
       const payload = message.payload as BuildRequest;
 
-      this.log('INFO', `Starting build execution for organization: ${DEFAULT_ORG_ID}`);
+      this.log('INFO', `Starting build execution for organization: ${PLATFORM_ID}`);
 
       // Reset state machine
       this.resetStateMachine();
@@ -833,7 +833,7 @@ export class BuilderManager extends BaseManager {
   private async loadBlueprintFromVault(
     blueprintId?: string
   ): Promise<SiteArchitecture | null> {
-    this.log('INFO', `Loading blueprint from MemoryVault for organization: ${DEFAULT_ORG_ID}`);
+    this.log('INFO', `Loading blueprint from MemoryVault for organization: ${PLATFORM_ID}`);
 
     try {
       // Read insights from ARCHITECT_MANAGER
@@ -1102,7 +1102,7 @@ export class BuilderManager extends BaseManager {
         message: this.createSpecialistMessage(taskId, 'ASSET_GENERATOR', {
           method: 'generate_asset_package',
           assetType: 'asset_package',
-          brandName: DEFAULT_ORG_ID,
+          brandName: PLATFORM_ID,
           brandStyle: this.mapBrandStyle(blueprint.designDirection),
           industry: blueprint.brandContext.industry,
         }),
@@ -1527,7 +1527,7 @@ export class BuilderManager extends BaseManager {
         },
       ],
       environment: {
-        NEXT_PUBLIC_ORG_ID: DEFAULT_ORG_ID,
+        NEXT_PUBLIC_ORG_ID: PLATFORM_ID,
         NEXT_PUBLIC_BLUEPRINT_ID: blueprintId,
       },
       buildConfig: {

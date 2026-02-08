@@ -15,6 +15,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { SPECIALISTS, type SpecialistPlatform } from './feature-manifest';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -384,7 +385,7 @@ export class SystemHealthService {
 
   private static async getOrganization() {
     try {
-      return await FirestoreService.get<Record<string, unknown>>('organizations', orgId);
+      return await FirestoreService.get<Record<string, unknown>>('organizations', PLATFORM_ID);
     } catch {
       return null;
     }

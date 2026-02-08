@@ -59,7 +59,6 @@ export default function BattlecardsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           domain: competitorDomain,
-          organizationId: DEFAULT_ORG_ID,
         }),
       });
 
@@ -108,7 +107,6 @@ export default function BattlecardsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           competitorDomain: competitorProfile.domain,
-          organizationId: DEFAULT_ORG_ID,
           options,
         }),
       });

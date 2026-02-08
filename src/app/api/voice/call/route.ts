@@ -3,11 +3,11 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import twilio from 'twilio';
 
 interface CallRequestBody {
   to: string;
-  organizationId: string;
   contactId?: string;
 }
 
@@ -33,10 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as CallRequestBody;
-    const { to, organizationId, contactId } = body;
+    const { to, contactId } = body;
 
-    if (!to || !organizationId) {
-      return errors.badRequest('Phone number and organizationId are required');
+    if (!to) {
+      return errors.badRequest('Phone number is required');
     }
 
     // Initialize Twilio client
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const callId = `call-${Date.now()}`;
 
     await FirestoreService.set(
-      `organizations/${organizationId}/workspaces/default/calls`,
+      `organizations/${PLATFORM_ID}/workspaces/default/calls`,
       callId,
       {
         id: callId,

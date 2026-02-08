@@ -53,7 +53,6 @@ interface SeoData {
 
 interface PageData {
   id: string;
-  organizationId: string;
   title: string;
   slug: string;
   content: Section[];
@@ -68,7 +67,6 @@ interface ErrorResponse {
 
 interface TokenValidationResponse {
   pageId: string;
-  organizationId: string;
 }
 
 interface PageDataResponse {
@@ -86,9 +84,7 @@ function isTokenValidationResponse(data: unknown): data is TokenValidationRespon
     typeof data === 'object' &&
     data !== null &&
     'pageId' in data &&
-    'organizationId' in data &&
-    typeof (data as TokenValidationResponse).pageId === 'string' &&
-    typeof (data as TokenValidationResponse).organizationId === 'string'
+    typeof (data as TokenValidationResponse).pageId === 'string'
   );
 }
 

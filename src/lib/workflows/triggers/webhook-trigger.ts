@@ -7,7 +7,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, WebhookTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import crypto from 'crypto';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Verify webhook signature
@@ -86,7 +86,6 @@ export async function handleWebhook(
         
         // Execute workflow
         const triggerData: Record<string, unknown> = {
-          organizationId: org.id,
           workspaceId: workspace.id,
           method,
           headers,
@@ -131,13 +130,12 @@ export async function registerWebhookTrigger(
 
   // Store webhook configuration
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/webhookTriggers`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/webhookTriggers`,
     workflow.id,
     {
       workflowId: workflow.id,
       webhookUrl: trigger.webhookUrl,
       secret: trigger.secret,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       registeredAt: new Date().toISOString(),
     },

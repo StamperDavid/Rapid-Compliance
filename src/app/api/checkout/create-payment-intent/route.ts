@@ -6,10 +6,9 @@ import { paymentIntentSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export async function POST(request: NextRequest) {
-  let requestOrganizationId: string | undefined;
   try {
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/checkout/create-payment-intent');
@@ -49,20 +48,14 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { organizationId, amount, currency, metadata } = validation.data;
-    requestOrganizationId = organizationId;
+    const { amount, currency, metadata } = validation.data;
 
     if (!currency) {
       return errors.badRequest('Currency is required');
     }
 
-    // Verify user has access to this organization (penthouse model - verify against DEFAULT_ORG_ID)
-    if (DEFAULT_ORG_ID !== organizationId) {
-      return errors.forbidden('Access denied to this organization');
-    }
-
     // Get Stripe keys from API key service
-    const stripeKeys = await apiKeyService.getServiceKey(organizationId, 'stripe') as { secretKey?: string } | null;
+    const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as { secretKey?: string } | null;
 
     if (!stripeKeys?.secretKey) {
       return errors.badRequest('Stripe not configured. Please add Stripe API keys in settings.');
@@ -70,7 +63,6 @@ export async function POST(request: NextRequest) {
 
     logger.info('Creating payment intent', {
       route: '/api/checkout/create-payment-intent',
-      organizationId,
       amount,
       currency,
     });
@@ -84,7 +76,6 @@ export async function POST(request: NextRequest) {
       amount: Math.round(amount * 100), // Convert to cents
       currency: currency.toLowerCase(),
       metadata: {
-        organizationId,
         userId: user.uid,
         ...metadata,
       },
@@ -107,7 +98,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Payment intent creation error', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/checkout/create-payment-intent',
-      organizationId: requestOrganizationId,
     });
     return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }

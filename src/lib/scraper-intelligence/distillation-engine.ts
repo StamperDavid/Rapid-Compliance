@@ -273,7 +273,6 @@ export function removeFluffPatterns(
  * ```
  */
 export async function distillScrape(params: {
-  organizationId: string;
   workspaceId?: string;
   url: string;
   rawHtml: string;
@@ -363,7 +362,6 @@ export async function distillScrape(params: {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Distillation failed', err, {
       url: params.url,
-      organizationId: params.organizationId,
     });
 
     const errorMessage = err.message;
@@ -493,7 +491,6 @@ function evaluateCondition(
  */
 export async function distillBatch(
   scrapes: Array<{
-    organizationId: string;
     workspaceId?: string;
     url: string;
     rawHtml: string;

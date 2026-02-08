@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import type { StripeIntegration as StripeType } from '@/types/integrations';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface StripeIntegrationProps {
   integration: StripeType | null;
@@ -45,7 +45,6 @@ export default function StripeIntegration({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           service: 'stripe',
           apiKey: apiKey,
         }),

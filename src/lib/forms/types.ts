@@ -4,13 +4,13 @@
  * Optimized for Firestore structure
  *
  * COLLECTION STRUCTURE:
- * organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}
- * organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
- * organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
- * organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
- * organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
- * organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
- * organizations/{orgId}/workspaces/{workspaceId}/formTemplates/{templateId}
+ * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}
+ * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
+ * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
+ * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
+ * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
+ * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
+ * organizations/rapid-compliance-root/workspaces/{workspaceId}/formTemplates/{templateId}
  *
  * @module forms/types
  * @version 2.0.0
@@ -121,7 +121,6 @@ export interface FieldMappingRule {
 export interface FormFieldConfig {
   id: string;
   formId: string;
-  organizationId: string;
   workspaceId: string;
 
   // Field definition
@@ -237,7 +236,7 @@ export interface FormBehavior {
 
 /**
  * Form definition document
- * Path: organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}
+ * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}
  *
  * INDEX STRATEGY:
  * - Composite: (status, createdAt DESC) - List published forms
@@ -247,7 +246,6 @@ export interface FormBehavior {
  */
 export interface FormDefinition {
   id: string;
-  organizationId: string;
   workspaceId: string;
 
   // Basic info
@@ -378,7 +376,7 @@ export interface SubmissionMetadata {
 
 /**
  * Form submission document
- * Path: organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
+ * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
  *
  * INDEX STRATEGY:
  * - Composite: (status, submittedAt DESC) - Filter by status
@@ -393,7 +391,6 @@ export interface FormSubmission {
   id: string;
   formId: string;
   formVersion: number;          // Indexed
-  organizationId: string;
   workspaceId: string;
 
   // Status
@@ -468,7 +465,7 @@ export interface OrchestratorAction {
 
 /**
  * Form view event - short-lived for analytics aggregation
- * Path: organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
+ * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
  *
  * These documents should have TTL cleanup (7-30 days)
  * Analytics are aggregated into FormAnalyticsSummary documents
@@ -480,7 +477,6 @@ export interface OrchestratorAction {
 export interface FormView {
   id: string;
   formId: string;
-  organizationId: string;
 
   // Timing
   viewedAt: Timestamp;          // Indexed
@@ -507,7 +503,7 @@ export interface FormView {
 
 /**
  * Daily analytics aggregation
- * Path: organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
+ * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
  *
  * Document ID format: YYYY-MM-DD for easy range queries
  *
@@ -517,7 +513,6 @@ export interface FormView {
 export interface FormAnalyticsSummary {
   id: string;                   // Format: YYYY-MM-DD
   formId: string;
-  organizationId: string;
   workspaceId: string;
   date: string;                 // Indexed - YYYY-MM-DD format
 
@@ -568,7 +563,7 @@ export interface FormAnalyticsSummary {
 
 /**
  * Field-level analytics
- * Path: organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
+ * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
  *
  * Document ID format: {fieldId}_{YYYY-MM-DD}
  */
@@ -577,7 +572,6 @@ export interface FormFieldAnalytics {
   formId: string;
   fieldId: string;
   fieldName: string;
-  organizationId: string;
   workspaceId: string;
   date: string;                 // YYYY-MM-DD
 
@@ -607,11 +601,10 @@ export interface FormFieldAnalytics {
 
 /**
  * Form template for reusable form structures
- * Path: organizations/{orgId}/workspaces/{workspaceId}/formTemplates/{templateId}
+ * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/formTemplates/{templateId}
  */
 export interface FormTemplate {
   id: string;
-  organizationId: string;
   workspaceId: string;
 
   name: string;
@@ -628,7 +621,7 @@ export interface FormTemplate {
   };
 
   // Fields stored as array in template (not subcollection)
-  fields: Omit<FormFieldConfig, 'formId' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt'>[];
+  fields: Omit<FormFieldConfig, 'formId' | 'workspaceId' | 'createdAt' | 'updatedAt'>[];
 
   // Template metadata
   isSystem: boolean;

@@ -12,7 +12,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -47,7 +47,6 @@ interface NativeSequenceStep {
 }
 
 interface NativeSequenceData {
-  organizationId?: string;
   name: string;
   isActive: boolean;
   stats?: NativeSequenceStats;
@@ -211,7 +210,7 @@ export async function GET(request: NextRequest) {
 
     // If specific sequence requested, return detailed analytics
     if (sequenceId) {
-      const performance = await getSequencePerformance(DEFAULT_ORG_ID, sequenceId, dateRange);
+      const performance = await getSequencePerformance(sequenceId, dateRange);
       if (!performance) {
         return NextResponse.json(
           { error: 'Sequence not found' },
@@ -224,8 +223,8 @@ export async function GET(request: NextRequest) {
 
     // Otherwise, return summary analytics for all sequences
     const [performances, summary] = await Promise.all([
-      getAllSequencePerformances(DEFAULT_ORG_ID, dateRange),
-      getAnalyticsSummary(DEFAULT_ORG_ID, dateRange),
+      getAllSequencePerformances(dateRange),
+      getAnalyticsSummary(dateRange),
     ]);
 
     return NextResponse.json({
@@ -299,7 +298,6 @@ function parseDateRange(startDate: string | null, endDate: string | null): { sta
  * Get performance metrics for a specific sequence
  */
 async function getSequencePerformance(
-  organizationId: string,
   sequenceId: string,
   _dateRange?: { start: Date; end: Date } | null
 ): Promise<SequencePerformance | null> {
@@ -314,9 +312,6 @@ async function getSequencePerformance(
 
     if (nativeSeqDoc.exists) {
       const data = nativeSeqDoc.data();
-      if (data?.organizationId !== organizationId) {
-        return null;
-      }
 
       if (!isNativeSequenceData(data)) {
         logger.error('[Analytics] Invalid native sequence data structure', undefined, { sequenceId });
@@ -328,8 +323,8 @@ async function getSequencePerformance(
 
     // Fallback to legacy OutboundSequence system
     const legacySeqRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/sequences/{sequenceId}',
-      { orgId: organizationId, sequenceId }
+      'organizations/rapid-compliance-root/sequences/{sequenceId}',
+      { sequenceId }
     );
     const legacySeqDoc = await legacySeqRef.get();
 
@@ -359,7 +354,6 @@ async function getSequencePerformance(
  * Get performance for all sequences in an organization
  */
 async function getAllSequencePerformances(
-  organizationId: string,
   _dateRange?: { start: Date; end: Date } | null
 ): Promise<SequencePerformance[]> {
   if (!adminDal) {
@@ -383,8 +377,7 @@ async function getAllSequencePerformances(
 
     // Fetch legacy OutboundSequences
     const legacySeqsRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/sequences',
-      { orgId: organizationId }
+      'organizations/rapid-compliance-root/sequences'
     );
     const legacySeqsSnap = await legacySeqsRef.get();
 
@@ -569,11 +562,10 @@ function mapLegacyStepType(type: string): 'email' | 'linkedin' | 'phone' | 'sms'
  * Get summary analytics across all sequences
  */
 async function getAnalyticsSummary(
-  organizationId: string,
   dateRange?: { start: Date; end: Date } | null
 ): Promise<AnalyticsSummary> {
   try {
-    const performances = await getAllSequencePerformances(organizationId, dateRange);
+    const performances = await getAllSequencePerformances(dateRange);
 
     const activeSequences = performances.filter(p => p.isActive).length;
     

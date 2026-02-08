@@ -6,13 +6,12 @@
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface SMSOptions {
   to: string | string[];
   message: string;
   from?: string; // Phone number or sender ID
-  organizationId: string;
   workspaceId?: string;
   metadata?: Record<string, unknown>;
 }
@@ -29,7 +28,6 @@ export interface SMSTemplate {
   name: string;
   message: string;
   variables?: string[]; // e.g., ['{{name}}', '{{orderNumber}}']
-  organizationId: string;
 }
 
 interface TwilioCredentials {
@@ -86,10 +84,10 @@ function isVonageCredentials(credentials: SMSCredentials): credentials is Vonage
  */
 export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
   // Validate required fields
-  if (!options.to || !options.message || !options.organizationId) {
+  if (!options.to || !options.message) {
     return {
       success: false,
-      error: 'Missing required fields: to, message, organizationId',
+      error: 'Missing required fields: to, message',
     };
   }
 
@@ -112,7 +110,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
   let credentials: SMSCredentials | null = null;
 
   // Try Twilio first
-  const twilioKeysRaw: unknown = await apiKeyService.getServiceKey(options.organizationId, 'twilio');
+  const twilioKeysRaw: unknown = await apiKeyService.getServiceKey(PLATFORM_ID, 'twilio');
   if (twilioKeysRaw != null && typeof twilioKeysRaw === 'object' && 'accountSid' in twilioKeysRaw && 'authToken' in twilioKeysRaw) {
     const twilioKeys = twilioKeysRaw as Record<string, unknown>;
     const twilioCredentials: TwilioCredentials = {
@@ -124,7 +122,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
     credentials = twilioCredentials;
   } else {
     // Try Vonage
-    const vonageKeysRaw: unknown = await apiKeyService.getServiceKey(options.organizationId, 'vonage');
+    const vonageKeysRaw: unknown = await apiKeyService.getServiceKey(PLATFORM_ID, 'vonage');
     if (vonageKeysRaw != null && typeof vonageKeysRaw === 'object' && 'apiKey' in vonageKeysRaw && 'apiSecret' in vonageKeysRaw) {
       const vonageKeys = vonageKeysRaw as Record<string, unknown>;
       const vonageCredentials: VonageCredentials = {
@@ -278,10 +276,10 @@ async function sendViaVonage(options: SMSOptions, credentials: VonageCredentials
       const messageId = data.messages[0]['message-id'];
 
       // Store SMS record in Firestore
-      if (options.organizationId) {
+      try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${options.organizationId}/smsMessages`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
           messageId,
           {
             messageId,
@@ -291,13 +289,12 @@ async function sendViaVonage(options: SMSOptions, credentials: VonageCredentials
             status: 'sent',
             sentAt: new Date().toISOString(),
             provider: 'vonage',
-            organizationId: options.organizationId,
           },
           false
-        ).catch((error: unknown) => {
-          logger.error('Failed to save SMS to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'sms-service.ts' });
-          // Don't fail the send if Firestore save fails
-        });
+        );
+      } catch (error: unknown) {
+        logger.error('Failed to save SMS to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'sms-service.ts' });
+        // Don't fail the send if Firestore save fails
       }
 
       results.push({
@@ -375,7 +372,7 @@ export async function sendSMSFromTemplate(
   // Load template from Firestore
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const templateData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${options.organizationId}/smsTemplates`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsTemplates`,
     templateId
   );
 
@@ -414,17 +411,12 @@ export interface SMSDeliveryStatus {
 }
 
 export async function getSMSDeliveryStatus(
-  messageId: string,
-  organizationId?: string
+  messageId: string
 ): Promise<SMSDeliveryStatus | null> {
-  if (!organizationId) {
-    return null;
-  }
-
   // Load from Firestore
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const smsData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
     messageId
   );
 

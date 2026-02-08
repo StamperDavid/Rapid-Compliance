@@ -15,7 +15,6 @@ export enum LogLevel {
 
 export interface LogContext {
   userId?: string;
-  organizationId?: string;
   requestId?: string;
   route?: string;
   method?: string;
@@ -144,7 +143,6 @@ class Logger {
       tags: {
         route: context?.route,
         userId: context?.userId,
-        organizationId: context?.organizationId,
       },
       extra: context,
     });

@@ -70,7 +70,6 @@ function _createMockDeal(overrides: Partial<Deal> = {}): Deal {
   
   return {
     id: `deal-${Math.random().toString(36).substring(2, 9)}`,
-    organizationId: TEST_ORG_ID,
     workspaceId: TEST_WORKSPACE_ID,
     name: 'Test Deal',
     value: 50000,

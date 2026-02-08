@@ -156,7 +156,6 @@ describe('E-Commerce Checkout E2E', () => {
       
       const checkoutData = {
         cartId: testCartId,
-        organizationId: testOrgId,
         workspaceId: testWorkspaceId,
         customer: {
           email: 'test@example.com',

@@ -24,7 +24,7 @@ import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import { discoverCompany, discoverPerson, type DiscoveredCompany, type DiscoveredPerson } from './discovery-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { emitBusinessEvent } from '@/lib/orchestration/event-router';
 import {
   DEFAULT_SCORING_RULES,
@@ -101,7 +101,7 @@ export async function calculateLeadScore(
 
     // Step 1: Check cache (unless force rescore)
     if (!forceRescore) {
-      const cached = await getCachedScore(leadId, DEFAULT_ORG_ID);
+      const cached = await getCachedScore(leadId);
       if (cached) {
         logger.info('Lead score cache HIT', {
           leadId,
@@ -183,7 +183,7 @@ export async function calculateLeadScore(
     });
 
     // Step 10: Emit business event to Event Router
-    const previousScore = !forceRescore ? (await getCachedScore(leadId, DEFAULT_ORG_ID))?.totalScore : undefined;
+    const previousScore = !forceRescore ? (await getCachedScore(leadId))?.totalScore : undefined;
     void emitBusinessEvent('lead.bant_score.updated', 'service/lead-scoring-engine', {
       leadId,
       score: score.totalScore,
@@ -1033,7 +1033,7 @@ async function getDiscoveryData(
   }
 
   // Otherwise, fetch lead data and run discovery
-  const leadData = await getLeadData(leadId, DEFAULT_ORG_ID);
+  const leadData = await getLeadData(leadId);
   if (!leadData) {
     return { company: null, person: null };
   }
@@ -1080,7 +1080,7 @@ interface LeadData {
 /**
  * Get lead data from database
  */
-async function getLeadData(leadId: string, organizationId: string): Promise<LeadData | null> {
+async function getLeadData(leadId: string): Promise<LeadData | null> {
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
@@ -1088,18 +1088,17 @@ async function getLeadData(leadId: string, organizationId: string): Promise<Lead
 
     // Get all workspaces for this organization
     const workspacesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/workspaces',
-      { orgId: organizationId }
+      'organizations/rapid-compliance-root/workspaces'
     );
     const workspacesSnapshot = await workspacesRef.get();
 
     for (const workspaceDoc of workspacesSnapshot.docs) {
       // Check leads collection
       const leadRef = adminDal.getNestedCollection(
-        'organizations/{orgId}/workspaces/{wsId}/entities/leads/records',
-        { orgId: organizationId, wsId: workspaceDoc.id }
+        'organizations/rapid-compliance-root/workspaces/{wsId}/entities/leads/records',
+        { wsId: workspaceDoc.id }
       ).doc(leadId);
-      
+
       const leadDoc = await leadRef.get();
       if (leadDoc.exists) {
         const data = leadDoc.data();
@@ -1114,10 +1113,10 @@ async function getLeadData(leadId: string, organizationId: string): Promise<Lead
 
       // Also check contacts
       const contactRef = adminDal.getNestedCollection(
-        'organizations/{orgId}/workspaces/{wsId}/entities/contacts/records',
-        { orgId: organizationId, wsId: workspaceDoc.id }
+        'organizations/rapid-compliance-root/workspaces/{wsId}/entities/contacts/records',
+        { wsId: workspaceDoc.id }
       ).doc(leadId);
-      
+
       const contactDoc = await contactRef.get();
       if (contactDoc.exists) {
         const data = contactDoc.data();
@@ -1150,8 +1149,7 @@ async function getScoringRules(
     }
 
     const scoringRulesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/scoringRules',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/scoringRules'
     );
 
     // If specific rules requested
@@ -1187,9 +1185,9 @@ async function getScoringRules(
     }
 
     // If no rules exist, create default
-    return await createDefaultScoringRules(DEFAULT_ORG_ID);
+    return await createDefaultScoringRules();
   } catch (error) {
-    logger.error('Failed to get scoring rules', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to get scoring rules', error instanceof Error ? error : new Error(String(error)));
     return null;
   }
 }
@@ -1197,7 +1195,7 @@ async function getScoringRules(
 /**
  * Create default scoring rules for organization
  */
-async function createDefaultScoringRules(organizationId: string): Promise<ScoringRules> {
+async function createDefaultScoringRules(): Promise<ScoringRules> {
   if (!adminDal) {
     throw new Error('Admin DAL not initialized');
   }
@@ -1214,8 +1212,7 @@ async function createDefaultScoringRules(organizationId: string): Promise<Scorin
   };
 
   const scoringRulesRef = adminDal.getNestedCollection(
-    'organizations/{orgId}/scoringRules',
-    { orgId: organizationId }
+    'organizations/rapid-compliance-root/scoringRules'
   );
 
   await scoringRulesRef.doc(rulesId).set({
@@ -1224,7 +1221,7 @@ async function createDefaultScoringRules(organizationId: string): Promise<Scorin
     updatedAt: Timestamp.fromDate(now),
   });
 
-  logger.info('Created default scoring rules', { organizationId, rulesId });
+  logger.info('Created default scoring rules', { rulesId });
 
   return rules;
 }
@@ -1233,8 +1230,7 @@ async function createDefaultScoringRules(organizationId: string): Promise<Scorin
  * Get cached score
  */
 async function getCachedScore(
-  leadId: string,
-  organizationId: string
+  leadId: string
 ): Promise<LeadScore | null> {
   try {
     if (!adminDal) {
@@ -1242,8 +1238,7 @@ async function getCachedScore(
     }
 
     const leadScoresRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/leadScores',
-      { orgId: organizationId }
+      'organizations/rapid-compliance-root/leadScores'
     );
     
     const doc = await leadScoresRef.doc(leadId).get();
@@ -1309,8 +1304,7 @@ async function cacheScore(
     };
 
     const leadScoresRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/leadScores',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/leadScores'
     );
 
     await leadScoresRef.doc(leadId).set({
@@ -1352,8 +1346,7 @@ export async function getModelMetadata(): Promise<{
     }
 
     const modelDoc = await adminDal.getNestedDocRef(
-      'organizations/{orgId}/config/scoringWeights',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/config/scoringWeights'
     ).get();
 
     if (!modelDoc.exists) {
@@ -1404,7 +1397,6 @@ async function emitScoringSignals(
       await coordinator.emitSignal({
         type: 'lead.qualified',
         leadId,
-        orgId: DEFAULT_ORG_ID,
         confidence: score.metadata.confidence,
         priority: score.grade === 'A' ? 'High' : 'Medium',
         metadata: {
@@ -1435,7 +1427,6 @@ async function emitScoringSignals(
       await coordinator.emitSignal({
         type: 'lead.intent.high',
         leadId,
-        orgId: DEFAULT_ORG_ID,
         confidence: Math.max(...highIntentSignals.map(s => s.confidence)),
         priority: 'High',
         metadata: {
@@ -1461,7 +1452,6 @@ async function emitScoringSignals(
       await coordinator.emitSignal({
         type: 'lead.intent.low',
         leadId,
-        orgId: DEFAULT_ORG_ID,
         confidence: score.metadata.confidence,
         priority: 'Low',
         metadata: {
@@ -1479,7 +1469,6 @@ async function emitScoringSignals(
 
     logger.info('Lead scoring signals emitted', {
       leadId,
-      organizationId: DEFAULT_ORG_ID,
       grade: score.grade,
       intentScore: score.breakdown.intentSignals,
       signalsEmitted: [
@@ -1492,7 +1481,6 @@ async function emitScoringSignals(
     // Don't fail scoring if signal emission fails
     logger.error('Failed to emit scoring signals', error instanceof Error ? error : new Error(String(error)), {
       leadId,
-      organizationId: DEFAULT_ORG_ID,
     });
   }
 }

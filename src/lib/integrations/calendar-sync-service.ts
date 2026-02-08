@@ -6,7 +6,7 @@
 import { google, type calendar_v3 } from 'googleapis';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface CalendarEvent {
   id: string;
@@ -42,7 +42,6 @@ export interface CalendarEvent {
 }
 
 export interface CalendarSyncStatus {
-  organizationId: string;
   lastSyncAt: string;
   syncToken?: string;
   eventsSynced: number;
@@ -141,7 +140,6 @@ async function fullSync(
     } while (pageToken);
 
     const status: CalendarSyncStatus = {
-      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       syncToken,
       eventsSynced,
@@ -207,7 +205,6 @@ async function incrementalSync(
     } while (pageToken);
 
     const status: CalendarSyncStatus = {
-      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       syncToken,
       eventsSynced,
@@ -299,7 +296,6 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
 
     const eventData = {
       id: event.id,
-      organizationId: DEFAULT_ORG_ID,
       calendarId: event.calendarId,
       title: event.summary,
       description: event.description,
@@ -324,7 +320,7 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/calendarEvents`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/calendarEvents`,
       event.id,
       eventData
     );
@@ -332,7 +328,7 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
     // Update contacts with last interaction
     for (const contactId of contactIds) {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`,
         contactId,
         {
           lastContactDate: eventData.startTime,
@@ -353,7 +349,7 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
 async function deleteEventFromCRM(eventId: string): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/calendarEvents`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/calendarEvents`,
       eventId
     );
   } catch (error) {
@@ -481,7 +477,7 @@ export async function deleteCalendarEvent(
 async function findContactByEmail(email: string): Promise<ContactWithId | null> {
   try {
     const contacts = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`
     );
     const contactsFiltered = contacts.filter((c: unknown): c is ContactWithId => {
       if (typeof c !== 'object' || c === null) {return false;}
@@ -502,7 +498,7 @@ async function findContactByEmail(email: string): Promise<ContactWithId | null> 
 async function getLastSyncStatus(calendarId: string): Promise<CalendarSyncStatus | null> {
   try {
     const status = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       `calendar-sync-${calendarId}`
     );
     return status as CalendarSyncStatus | null;
@@ -517,7 +513,7 @@ async function getLastSyncStatus(calendarId: string): Promise<CalendarSyncStatus
 async function saveSyncStatus(calendarId: string, status: CalendarSyncStatus): Promise<void> {
   try {
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       `calendar-sync-${calendarId}`,
       status
     );

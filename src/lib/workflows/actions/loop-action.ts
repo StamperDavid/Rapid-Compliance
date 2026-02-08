@@ -43,7 +43,6 @@ export async function executeLoopAction(
   action: LoopActionConfig,
   triggerData: WorkflowTriggerData,
   workflow: Workflow,
-  organizationId: string
 ): Promise<LoopResult> {
   const {
     arrayField,
@@ -102,8 +101,7 @@ export async function executeLoopAction(
         const actionResults = await executeWorkflowActions(
           actions,
           itemContext,
-          workflow,
-          organizationId
+          workflow
         );
 
         const itemSuccess = actionResults.every(r => r.status === 'success');
@@ -170,7 +168,6 @@ async function executeWorkflowActions(
   actions: WorkflowAction[],
   triggerData: WorkflowTriggerData,
   workflow: Workflow,
-  organizationId: string
 ): Promise<Array<{ actionId: string; status: string; result?: unknown; error?: string }>> {
   // Import action executors
   const { executeEmailAction } = await import('./email-action');
@@ -189,9 +186,9 @@ async function executeWorkflowActions(
       let result: unknown;
 
       if (action.type === 'send_email') {
-        result = await executeEmailAction(action, triggerData, organizationId);
+        result = await executeEmailAction(action, triggerData);
       } else if (action.type === 'send_sms') {
-        result = await executeSMSAction(action, triggerData, organizationId);
+        result = await executeSMSAction(action, triggerData);
       } else if (action.type === 'create_entity' || action.type === 'update_entity' || action.type === 'delete_entity') {
         result = await executeEntityAction(action, triggerData);
       } else if (action.type === 'http_request') {
@@ -199,11 +196,11 @@ async function executeWorkflowActions(
       } else if (action.type === 'delay') {
         result = await executeDelayAction(action, triggerData);
       } else if (action.type === 'conditional_branch') {
-        result = await executeConditionalAction(action, triggerData, workflow, organizationId);
+        result = await executeConditionalAction(action, triggerData, workflow);
       } else if (action.type === 'ai_agent') {
-        result = await executeAIAgentAction(convertToAIAgentConfig(action), triggerData, organizationId);
+        result = await executeAIAgentAction(convertToAIAgentConfig(action), triggerData);
       } else if (action.type === 'send_slack') {
-        result = await executeSlackAction(convertToSlackConfig(action), triggerData, organizationId);
+        result = await executeSlackAction(convertToSlackConfig(action), triggerData);
       } else {
         throw new Error(`Unknown action type: ${action.type}`);
       }

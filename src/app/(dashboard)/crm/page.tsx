@@ -387,7 +387,6 @@ function CRMContent() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            organizationId: DEFAULT_ORG_ID,
             additionalRecords: totalRows,
           }),
         });

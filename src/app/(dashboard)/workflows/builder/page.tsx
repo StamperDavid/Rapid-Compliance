@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Visual Workflow Builder Page
@@ -62,7 +62,7 @@ export default function WorkflowBuilderPage() {
     try {
       setIsLoading(true);
       const data = await FirestoreService.get(
-        `organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`,
+        `organizations/${PLATFORM_ID}/workspaces/default/workflows`,
         id
       );
 
@@ -233,7 +233,6 @@ export default function WorkflowBuilderPage() {
 
       const workflowData = {
         id,
-        organizationId: DEFAULT_ORG_ID,
         workspaceId: 'default',
         name: workflow.name,
         description: workflow.description,
@@ -277,13 +276,13 @@ export default function WorkflowBuilderPage() {
 
       if (workflowId) {
         await FirestoreService.update(
-          `organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`,
+          `organizations/${PLATFORM_ID}/workspaces/default/workflows`,
           id,
           workflowData
         );
       } else {
         await FirestoreService.set(
-          `organizations/${DEFAULT_ORG_ID}/workspaces/default/workflows`,
+          `organizations/${PLATFORM_ID}/workspaces/default/workflows`,
           id,
           workflowData,
           false

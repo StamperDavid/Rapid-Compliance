@@ -63,10 +63,9 @@ export async function prefillOnboardingData(
   websiteUrl: string
 ): Promise<PrefillResult> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     logger.info('Starting onboarding prefill', {
       websiteUrl,
-      organizationId: DEFAULT_ORG_ID,
       source: 'prefill-engine',
     });
 
@@ -79,7 +78,6 @@ export async function prefillOnboardingData(
 
     logger.info('Discovery complete for onboarding prefill', {
       websiteUrl,
-      organizationId: DEFAULT_ORG_ID,
       fromCache: discoveryResult.fromCache,
       discoveryConfidence: company.metadata.confidence,
     });
@@ -109,7 +107,6 @@ export async function prefillOnboardingData(
 
     logger.info('Onboarding prefill complete', {
       websiteUrl,
-      organizationId: DEFAULT_ORG_ID,
       overallConfidence,
       highConfidenceFields: Object.values(prefillResult.fieldConfidences).filter(
         fc => fc.confidence >= CONFIDENCE_THRESHOLDS.HIGH
@@ -121,10 +118,9 @@ export async function prefillOnboardingData(
 
     return result;
   } catch (error) {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     logger.error('Failed to prefill onboarding data', error instanceof Error ? error : new Error(String(error)), {
       websiteUrl,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     // Return empty prefill on error (don't block onboarding)
@@ -459,12 +455,11 @@ async function emitOnboardingStartedSignal(
   websiteUrl: string
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
       type: 'onboarding.started',
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Medium',
       metadata: {
@@ -475,15 +470,12 @@ async function emitOnboardingStartedSignal(
     });
 
     logger.info('Emitted onboarding.started signal', {
-      organizationId: DEFAULT_ORG_ID,
       websiteUrl,
     });
   } catch (error) {
     // Don't fail prefill if signal emission fails
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to emit onboarding.started signal', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to emit onboarding.started signal', error instanceof Error ? error : new Error(String(error)));
   }
 }
 
@@ -496,12 +488,11 @@ async function emitOnboardingPrefilledSignal(
   fromCache: boolean
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
       type: 'onboarding.prefilled',
-      orgId: DEFAULT_ORG_ID,
       confidence: overallConfidence,
       priority: overallConfidence >= CONFIDENCE_THRESHOLDS.HIGH ? 'High' : 'Medium',
       metadata: {
@@ -519,17 +510,14 @@ async function emitOnboardingPrefilledSignal(
     });
 
     logger.info('Emitted onboarding.prefilled signal', {
-      organizationId: DEFAULT_ORG_ID,
       websiteUrl,
       overallConfidence,
       fromCache,
     });
   } catch (error) {
     // Don't fail prefill if signal emission fails
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to emit onboarding.prefilled signal', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to emit onboarding.prefilled signal', error instanceof Error ? error : new Error(String(error)));
   }
 }
 
@@ -547,12 +535,11 @@ export async function emitOnboardingCompletedSignal(
   }
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
       type: 'onboarding.completed',
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'High',
       metadata: {
@@ -563,15 +550,12 @@ export async function emitOnboardingCompletedSignal(
     });
 
     logger.info('Emitted onboarding.completed signal', {
-      organizationId: DEFAULT_ORG_ID,
       ...completedData,
     });
   } catch (error) {
     // Don't fail onboarding completion if signal emission fails
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to emit onboarding.completed signal', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    logger.error('Failed to emit onboarding.completed signal', error instanceof Error ? error : new Error(String(error)));
   }
 }
 
@@ -589,12 +573,11 @@ export async function emitOnboardingAbandonedSignal(
   }
 ): Promise<void> {
   try {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
       type: 'onboarding.abandoned',
-      orgId: DEFAULT_ORG_ID,
       confidence: 1.0,
       priority: 'Low',
       metadata: {
@@ -605,14 +588,12 @@ export async function emitOnboardingAbandonedSignal(
     });
     
     logger.info('Emitted onboarding.abandoned signal', {
-      organizationId: DEFAULT_ORG_ID,
       ...abandonedData,
     });
   } catch (error) {
     // Don't fail on signal emission
-    const { DEFAULT_ORG_ID: DEFAULT_ORG_ID_ERROR } = await import('@/lib/constants/platform');
     logger.error('Failed to emit onboarding.abandoned signal', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID_ERROR,
+      file: 'prefill-engine.ts',
     });
   }
 }

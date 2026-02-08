@@ -130,8 +130,7 @@ function isValidExtractedData(data: unknown): data is ExtractedPDFData {
  * Uses AI to identify and extract structured information
  */
 export async function extractStructuredDataFromPDF(
-  pdfText: string,
-  _organizationId: string
+  pdfText: string
 ): Promise<ExtractedPDFData> {
   // Use Gemini to extract structured data
   try {

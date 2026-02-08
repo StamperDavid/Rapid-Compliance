@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -10,7 +10,6 @@ import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 export default function SecuritySettingsPage() {
   const { user: _user } = useAuth();
-  const _orgId = DEFAULT_ORG_ID;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useOrgTheme();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);

@@ -14,7 +14,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { ErrorBoundary, InlineErrorFallback } from '@/components/common/ErrorBoundary';
 
 interface TemplateSelectorProps {
-  organizationId: string;
   onTemplateSelect?: (templateId: string) => void;
   selectedTemplateId?: string;
 }
@@ -35,7 +34,6 @@ interface TemplatesApiResponse {
 }
 
 function TemplateSelectorInner({
-  organizationId: _organizationId,
   onTemplateSelect,
   selectedTemplateId
 }: TemplateSelectorProps) {

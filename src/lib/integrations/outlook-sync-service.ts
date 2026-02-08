@@ -6,7 +6,7 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface OutlookMessage {
   id: string;
@@ -51,7 +51,6 @@ export interface OutlookMessage {
 }
 
 export interface OutlookSyncStatus {
-  organizationId: string;
   lastSyncAt: string;
   deltaLink?: string;
   messagesSynced: number;
@@ -148,7 +147,6 @@ async function fullSync(
     deltaLink = response['@odata.deltaLink'];
 
     const status: OutlookSyncStatus = {
-      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       deltaLink,
       messagesSynced,
@@ -204,7 +202,6 @@ async function incrementalSync(
     }
 
     const status: OutlookSyncStatus = {
-      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       deltaLink,
       messagesSynced,
@@ -239,7 +236,6 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
     // Save email record
     const emailData = {
       id: message.id,
-      organizationId: DEFAULT_ORG_ID,
       conversationId: message.conversationId,
       contactId: contact?.id,
       from: `${message.from.emailAddress.name} <${message.from.emailAddress.address}>`,
@@ -264,7 +260,7 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
     };
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
       message.id,
       emailData
     );
@@ -272,7 +268,7 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
     // Update contact with last interaction
     if (contact) {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`,
         contact.id,
         {
           lastContactDate: new Date(message.receivedDateTime),
@@ -293,7 +289,7 @@ async function saveMessageToCRM(message: OutlookMessage): Promise<void> {
 async function deleteMessageFromCRM(messageId: string): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
       messageId
     );
   } catch (error) {
@@ -358,7 +354,7 @@ export async function sendOutlookEmail(
 async function findContactByEmail(email: string): Promise<OutlookContact | null> {
   try {
     const contacts = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`
     );
     const contactsFiltered = contacts.filter((c: unknown) => {
       const contact = c as OutlookContact;
@@ -378,7 +374,7 @@ async function findContactByEmail(email: string): Promise<OutlookContact | null>
 async function getLastSyncStatus(): Promise<OutlookSyncStatus | null> {
   try {
     const status = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       'outlook-sync'
     );
     return status as OutlookSyncStatus | null;
@@ -393,7 +389,7 @@ async function getLastSyncStatus(): Promise<OutlookSyncStatus | null> {
 async function saveSyncStatus(status: OutlookSyncStatus): Promise<void> {
   try {
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${status.organizationId}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       'outlook-sync',
       status
     );

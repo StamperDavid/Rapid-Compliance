@@ -432,7 +432,6 @@ export function FormBuilder({
       const newField: FormFieldConfig = {
         id: newFieldId,
         formId: form.id,
-        organizationId: form.organizationId,
         workspaceId: form.workspaceId,
         type: defaultConfig.type ?? type,
         label: defaultConfig.label ?? '',

@@ -45,10 +45,9 @@ const DEFAULT_CONFIGS: AlertConfig[] = [
  */
 export function trackEvent(
   type: AlertConfig['type'],
-  details: Record<string, unknown> = {},
-  orgId?: string
+  details: Record<string, unknown> = {}
 ): void {
-  const key = `${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`;
+  const key = `${type}:platform`;
   const config = DEFAULT_CONFIGS.find(c => c.type === type);
   
   if (!config?.enabled) {
@@ -75,7 +74,7 @@ export function trackEvent(
       
       // Check if threshold exceeded
       if (existing.count >= config.threshold && !activeAlerts.has(key)) {
-        triggerAlert(type, existing.count, config.threshold, details, orgId);
+        triggerAlert(type, existing.count, config.threshold, details);
       }
     }
   } else {
@@ -91,11 +90,10 @@ function triggerAlert(
   type: AlertConfig['type'],
   count: number,
   threshold: number,
-  details: Record<string, unknown>,
-  orgId?: string
+  details: Record<string, unknown>
 ): void {
-  const alertId = `${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}:${Date.now()}`;
-  const counter = alertCounters.get(`${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`);
+  const alertId = `${type}:platform:${Date.now()}`;
+  const counter = alertCounters.get(`${type}:platform`);
   
   if (!counter) {return;}
 
@@ -108,15 +106,14 @@ function triggerAlert(
     threshold,
     firstOccurrence: counter.firstSeen,
     lastOccurrence: counter.lastSeen,
-    details: { ...details, orgId },
+    details,
   };
 
   // Store alert
-  activeAlerts.set(`${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`, alert);
+  activeAlerts.set(`${type}:platform`, alert);
 
   // Log to Sentry
   logger.error(`🚨 ALERT: ${alert.message}`, new Error('Alert triggered'), {
-    organizationId: orgId,
     error: `Alert ${type}: ${count} occurrences (threshold: ${threshold})`,
   });
 
@@ -125,7 +122,6 @@ function triggerAlert(
     level: alert.severity === 'critical' ? 'error' : 'warning',
     tags: {
       alert_type: type,
-      organization_id:(orgId !== '' && orgId != null) ? orgId : 'platform',
       severity: alert.severity,
     },
     extra: {
@@ -212,11 +208,11 @@ export function clearAlert(alertId: string): void {
  * Helper functions for common events
  */
 export const alerts = {
-  trackError: (error: Error, orgId?: string) => trackEvent('error_rate', { error: error.message }, orgId),
-  trackTimeout: (route: string, duration: number, orgId?: string) => trackEvent('timeout', { route, duration }, orgId),
-  trackPaymentFailure: (reason: string, amount: number, orgId?: string) => trackEvent('payment_failure', { reason, amount }, orgId),
-  trackWorkflowFailure: (workflowId: string, error: string, orgId?: string) => trackEvent('workflow_failure', { workflowId, error }, orgId),
-  trackIntegrationFailure: (integration: string, error: string, orgId?: string) => trackEvent('integration_failure', { integration, error }, orgId),
+  trackError: (error: Error) => trackEvent('error_rate', { error: error.message }),
+  trackTimeout: (route: string, duration: number) => trackEvent('timeout', { route, duration }),
+  trackPaymentFailure: (reason: string, amount: number) => trackEvent('payment_failure', { reason, amount }),
+  trackWorkflowFailure: (workflowId: string, error: string) => trackEvent('workflow_failure', { workflowId, error }),
+  trackIntegrationFailure: (integration: string, error: string) => trackEvent('integration_failure', { integration, error }),
 };
 
 /**

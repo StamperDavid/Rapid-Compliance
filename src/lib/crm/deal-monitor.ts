@@ -18,7 +18,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { calculateDealHealth, type DealHealthScore } from './deal-health';
 import { generateNextBestActions, type ActionRecommendations } from './next-best-action-engine';
@@ -30,7 +30,6 @@ import type { Deal } from './deal-service';
 // ============================================================================
 
 export interface DealMonitorConfig {
-  organizationId: string;
   workspaceId: string;
   autoGenerateRecommendations?: boolean; // Default: true
   autoRecalculateHealth?: boolean; // Default: true
@@ -64,7 +63,6 @@ export function startDealMonitor(
   config: DealMonitorConfig
 ): () => void {
   const {
-    organizationId,
     workspaceId,
     autoGenerateRecommendations = true,
     autoRecalculateHealth = true,
@@ -72,7 +70,6 @@ export function startDealMonitor(
   } = config;
 
   logger.info('Starting deal monitor', {
-    organizationId,
     workspaceId,
     autoGenerateRecommendations,
     autoRecalculateHealth,
@@ -90,7 +87,6 @@ export function startDealMonitor(
           'deal.won',
           'deal.lost',
         ],
-        orgId: organizationId,
         workspaceId,
       },
       async (signal: SalesSignal) => {
@@ -105,14 +101,12 @@ export function startDealMonitor(
     );
 
     logger.info('Deal monitor started successfully', {
-      organizationId,
       workspaceId,
     });
 
     return unsubscribe;
   } catch (error) {
     logger.error('Failed to start deal monitor', error instanceof Error ? error : new Error(String(error)), {
-      organizationId,
       workspaceId,
     });
     throw error;
@@ -139,8 +133,7 @@ async function handleDealSignal(
     logger.info('Processing deal signal', {
       signalType: signal.type,
       dealId,
-      organizationId: DEFAULT_ORG_ID,
-    });
+          });
 
     // Step 1: Recalculate health score
     let healthScore;
@@ -227,8 +220,7 @@ async function handleSpecificSignalType(
       await coordinator.emitSignal({
         type: 'deal.action.recommended',
         leadId: signal.metadata?.contactId as string,
-        orgId: DEFAULT_ORG_ID,
-        workspaceId,
+                workspaceId,
         confidence: 0.9,
         priority: signalPriority,
         metadata: {
@@ -256,8 +248,7 @@ async function handleSpecificSignalType(
       if (newStage === 'negotiation') {
         await coordinator.emitSignal({
           type: 'deal.action.recommended',
-          orgId: DEFAULT_ORG_ID,
-          workspaceId,
+                    workspaceId,
           confidence: 0.95,
           priority: 'High',
           metadata: {
@@ -276,8 +267,7 @@ async function handleSpecificSignalType(
       // Deal won - emit onboarding signal
       await coordinator.emitSignal({
         type: 'deal.action.recommended',
-        orgId: DEFAULT_ORG_ID,
-        workspaceId,
+                workspaceId,
         confidence: 1.0,
         priority: 'High',
         metadata: {
@@ -294,8 +284,7 @@ async function handleSpecificSignalType(
       // Deal lost - emit post-mortem signal
       await coordinator.emitSignal({
         type: 'deal.action.recommended',
-        orgId: DEFAULT_ORG_ID,
-        workspaceId,
+                workspaceId,
         confidence: 0.7,
         priority: 'Low',
         metadata: {
@@ -325,8 +314,7 @@ async function emitHealthScoreSignal(
 
     await coordinator.emitSignal({
       type: 'deal.health.updated',
-      orgId: DEFAULT_ORG_ID,
-      workspaceId,
+            workspaceId,
       confidence: 0.8, // Health score is deterministic
       priority:
         healthScore.status === 'critical'
@@ -373,8 +361,7 @@ async function emitRecommendationsSignal(
 
     await coordinator.emitSignal({
       type: 'deal.recommendations.generated',
-      orgId: DEFAULT_ORG_ID,
-      workspaceId,
+            workspaceId,
       confidence: recommendations.confidence,
       priority:
         recommendations.urgency === 'critical'
@@ -441,8 +428,7 @@ export async function runDealHealthCheck(
 }> {
   try {
     logger.info('Running deal health check', {
-      organizationId: DEFAULT_ORG_ID,
-      workspaceId,
+            workspaceId,
     });
 
     // Get all active deals
@@ -506,8 +492,7 @@ export async function runDealHealthCheck(
     return summary;
   } catch (error) {
     logger.error('Failed to run deal health check', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-      workspaceId,
+            workspaceId,
     });
     throw error;
   }

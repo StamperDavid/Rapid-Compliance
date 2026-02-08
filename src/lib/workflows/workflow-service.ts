@@ -7,7 +7,7 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type Timestamp, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type { Workflow } from '@/types/workflow';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Helper to extract error message from unknown error
@@ -69,14 +69,13 @@ export async function getWorkflows(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Workflow>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
     );
 
     logger.info('Workflows retrieved', {
-      organizationId: DEFAULT_ORG_ID,
       count: result.data.length,
       filterStatus: filters?.status,
       filterTriggerType: filters?.triggerType,
@@ -85,7 +84,6 @@ export async function getWorkflows(
     return result;
   } catch (error: unknown) {
     logger.error('Failed to get workflows', error instanceof Error ? error : undefined, {
-      organizationId: DEFAULT_ORG_ID,
       filterStatus: filters?.status,
       filterTriggerType: filters?.triggerType,
     });
@@ -102,19 +100,19 @@ export async function getWorkflow(
 ): Promise<Workflow | null> {
   try {
     const workflow = await FirestoreService.get<Workflow>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
       workflowId
     );
 
     if (!workflow) {
-      logger.warn('Workflow not found', { organizationId: DEFAULT_ORG_ID, workflowId });
+      logger.warn('Workflow not found', { workflowId });
       return null;
     }
 
-    logger.info('Workflow retrieved', { organizationId: DEFAULT_ORG_ID, workflowId });
+    logger.info('Workflow retrieved', { workflowId });
     return workflow;
   } catch (error: unknown) {
-    logger.error('Failed to get workflow', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
+    logger.error('Failed to get workflow', error instanceof Error ? error : undefined, { workflowId });
     throw new Error(`Failed to retrieve workflow: ${getErrorMessage(error)}`);
   }
 }
@@ -123,7 +121,7 @@ export async function getWorkflow(
  * Create a new workflow
  */
 export async function createWorkflow(
-  data: Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>,
+  data: Omit<Workflow, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>,
   createdBy: string,
   workspaceId: string = 'default'
 ): Promise<Workflow> {
@@ -148,14 +146,13 @@ export async function createWorkflow(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
       workflowId,
       workflow,
       false
     );
 
     logger.info('Workflow created', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
       name: workflow.name,
       triggerType: workflow.trigger?.type,
@@ -164,7 +161,6 @@ export async function createWorkflow(
     return workflow;
   } catch (error: unknown) {
     logger.error('Failed to create workflow', error instanceof Error ? error : undefined, {
-      organizationId: DEFAULT_ORG_ID,
       workflowName: data.name,
       triggerType: data.trigger?.type,
     });
@@ -177,7 +173,7 @@ export async function createWorkflow(
  */
 export async function updateWorkflow(
   workflowId: string,
-  updates: Partial<Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'stats'>>,
+  updates: Partial<Omit<Workflow, 'id' | 'workspaceId' | 'createdAt' | 'stats'>>,
   workspaceId: string = 'default'
 ): Promise<Workflow> {
   try {
@@ -187,13 +183,12 @@ export async function updateWorkflow(
     };
 
     await FirestoreService.update(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
       workflowId,
       updatedData
     );
 
     logger.info('Workflow updated', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
       updatedFields: Object.keys(updates),
     });
@@ -205,7 +200,7 @@ export async function updateWorkflow(
 
     return workflow;
   } catch (error: unknown) {
-    logger.error('Failed to update workflow', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
+    logger.error('Failed to update workflow', error instanceof Error ? error : undefined, { workflowId });
     throw new Error(`Failed to update workflow: ${getErrorMessage(error)}`);
   }
 }
@@ -219,13 +214,13 @@ export async function deleteWorkflow(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflows`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
       workflowId
     );
 
-    logger.info('Workflow deleted', { organizationId: DEFAULT_ORG_ID, workflowId });
+    logger.info('Workflow deleted', { workflowId });
   } catch (error: unknown) {
-    logger.error('Failed to delete workflow', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
+    logger.error('Failed to delete workflow', error instanceof Error ? error : undefined, { workflowId });
     throw new Error(`Failed to delete workflow: ${getErrorMessage(error)}`);
   }
 }
@@ -242,14 +237,13 @@ export async function setWorkflowStatus(
     const workflow = await updateWorkflow(workflowId, { status }, workspaceId);
 
     logger.info('Workflow status changed', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
       newStatus: status,
     });
 
     return workflow;
   } catch (error: unknown) {
-    logger.error('Failed to change workflow status', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId, status });
+    logger.error('Failed to change workflow status', error instanceof Error ? error : undefined, { workflowId, status });
     throw new Error(`Failed to change workflow status: ${getErrorMessage(error)}`);
   }
 }
@@ -274,7 +268,6 @@ export async function executeWorkflow(
     const result = await runEngine(workflow, context);
 
     logger.info('Workflow executed', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
       executionId: result.id,
       status: result.status,
@@ -285,7 +278,7 @@ export async function executeWorkflow(
       executionId: result.id,
     };
   } catch (error: unknown) {
-    logger.error('Workflow execution failed', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
+    logger.error('Workflow execution failed', error instanceof Error ? error : undefined, { workflowId });
     return {
       success: false,
       executionId: '',
@@ -309,21 +302,20 @@ export async function getWorkflowRuns(
     ];
 
     const result = await FirestoreService.getAllPaginated<WorkflowExecution>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/workflowExecutions`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflowExecutions`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
     );
 
     logger.info('Workflow runs retrieved', {
-      organizationId: DEFAULT_ORG_ID,
       workflowId,
       count: result.data.length,
     });
 
     return result;
   } catch (error: unknown) {
-    logger.error('Failed to get workflow runs', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workflowId });
+    logger.error('Failed to get workflow runs', error instanceof Error ? error : undefined, { workflowId });
     throw new Error(`Failed to retrieve workflow runs: ${getErrorMessage(error)}`);
   }
 }

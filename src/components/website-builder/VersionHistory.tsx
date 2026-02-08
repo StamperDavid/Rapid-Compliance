@@ -37,14 +37,12 @@ interface VersionsResponse {
 
 interface VersionHistoryProps {
   pageId: string;
-  organizationId: string;
   onRestore: (version: PageVersion) => void;
   onClose: () => void;
 }
 
 export default function VersionHistory({
   pageId,
-  organizationId,
   onRestore,
   onClose,
 }: VersionHistoryProps) {
@@ -57,7 +55,7 @@ export default function VersionHistory({
   useEffect(() => {
     void loadVersions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageId, organizationId]);
+  }, [pageId]);
 
   async function loadVersions() {
     try {

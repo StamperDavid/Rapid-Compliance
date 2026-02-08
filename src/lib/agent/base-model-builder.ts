@@ -5,7 +5,7 @@ import { getIndustryTemplate } from '@/lib/persona/industry-templates';
 import { getMutationRules } from '@/lib/persona/templates/mutation-rules';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
 import type { UpdateData } from 'firebase/firestore';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Check if running on server or client
 const isServer = typeof window === 'undefined';
@@ -26,12 +26,11 @@ const isServer = typeof window === 'undefined';
 export async function buildBaseModel(params: {
   onboardingData: OnboardingData;
   knowledgeBase: KnowledgeBase;
-  organizationId: string;
   userId: string;
   workspaceId?: string;
   industryTemplateId?: string; // NEW: Optional industry template for intelligent defaults
 }): Promise<BaseModel> {
-  const { onboardingData, knowledgeBase, organizationId: _organizationId, userId, industryTemplateId } = params;
+  const { onboardingData, knowledgeBase, userId, industryTemplateId } = params;
 
   // NEW: Load and mutate industry template if provided
   let mutatedTemplate: IndustryTemplate | null = null;
@@ -180,7 +179,6 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
     }, {
       audit: true,
       userId: baseModel.createdBy,
-      organizationId: DEFAULT_ORG_ID,
     });
     logger.info('[saveBaseModel] Successfully saved to baseModels collection (client)', { file: 'base-model-builder.ts' });
   }
@@ -190,14 +188,14 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
  * Get Base Model for an organization
  */
 export async function getBaseModel(): Promise<BaseModel | null> {
-  logger.info('[getBaseModel] Looking for base model', { orgId: DEFAULT_ORG_ID, file: 'base-model-builder.ts' });
+  logger.info('[getBaseModel] Looking for base model', { file: 'base-model-builder.ts' });
 
   if (isServer) {
     // Server-side: Use Admin SDK
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { where } = await import('firebase/firestore');
     const baseModels = await AdminFirestoreService.getAll('baseModels', [
-      where('orgId', '==', DEFAULT_ORG_ID)
+      where('orgId', '==', PLATFORM_ID)
     ]);
 
     logger.info('[getBaseModel] Found base models', { count: baseModels.length, file: 'base-model-builder.ts' });
@@ -208,7 +206,7 @@ export async function getBaseModel(): Promise<BaseModel | null> {
     const { where } = await import('firebase/firestore');
 
     const snapshot = await dal.safeGetDocs('BASE_MODELS',
-      where('orgId', '==', DEFAULT_ORG_ID)
+      where('orgId', '==', PLATFORM_ID)
     );
 
     logger.info('[getBaseModel] Client query found base models', {
@@ -263,7 +261,6 @@ export async function updateBaseModel(
     } as UpdateData<BaseModel>, {
       audit: true,
       userId: 'system-update', // No userId available in this context
-      organizationId: DEFAULT_ORG_ID,
     });
   }
 }
@@ -322,7 +319,6 @@ export async function addTrainingScenario(
     }, {
       audit: true,
       userId: 'system-training', // No userId available in this context
-      organizationId: DEFAULT_ORG_ID,
     });
   }
 }

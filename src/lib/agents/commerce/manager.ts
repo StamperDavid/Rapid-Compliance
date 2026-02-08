@@ -32,7 +32,7 @@ import {
   type InsightData,
 } from '../shared/memory-vault';
 import { logger as _logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // SYSTEM PROMPT - Transactional Commerce Orchestration
@@ -131,7 +131,6 @@ interface SpecialistResult {
  * Commerce settings from MemoryVault
  */
 interface CommerceSettings {
-  orgId: string;
   currency: string;
   taxEnabled: boolean;
   taxRate?: number;
@@ -145,7 +144,6 @@ interface CommerceSettings {
  */
 export interface CommerceBrief {
   taskId: string;
-  orgId: string;
   generatedAt: string;
   executionTimeMs: number;
   revenue: {
@@ -500,7 +498,6 @@ export class CommerceManager extends BaseManager {
     const errors: string[] = [];
 
     try {
-      const organizationId = (payload?.organizationId as string) ?? DEFAULT_ORG_ID;
       const workspaceId = (payload?.workspaceId as string) ?? 'default';
       const items = payload?.items as CheckoutItem[] | undefined;
       const customer = payload?.customer as Record<string, unknown> | undefined;
@@ -522,8 +519,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'fetch_products',
-          orgId: DEFAULT_ORG_ID,
-          organizationId,
           workspaceId,
           filters: { status: 'active' },
         },
@@ -540,7 +535,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'calculate_total',
-          organizationId,
           workspaceId,
           items: items.map(item => ({
             productId: item.productId,
@@ -568,8 +562,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'initialize_checkout',
-          orgId: DEFAULT_ORG_ID,
-          organizationId,
           workspaceId,
           items,
           customer,
@@ -647,7 +639,6 @@ export class CommerceManager extends BaseManager {
 
     try {
       const sessionId = payload?.sessionId as string;
-      const organizationId = (payload?.organizationId as string) ?? DEFAULT_ORG_ID;
       const workspaceId = (payload?.workspaceId as string) ?? 'default';
 
       // Validate payment completion
@@ -656,7 +647,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'validate_payment',
-          orgId: DEFAULT_ORG_ID,
           sessionId,
         },
         specialistResults
@@ -678,7 +668,6 @@ export class CommerceManager extends BaseManager {
         'HIGH',
         {
           sessionId,
-          organizationId,
           workspaceId,
           completedAt: new Date().toISOString(),
         },
@@ -717,8 +706,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'fetch_products',
-          orgId: DEFAULT_ORG_ID,
-          organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           workspaceId: (payload?.workspaceId as string) ?? 'default',
           filters: payload?.filters,
           pagination: payload?.pagination,
@@ -757,8 +744,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action,
-          orgId: DEFAULT_ORG_ID,
-          organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           workspaceId: (payload?.workspaceId as string) ?? 'default',
           product: payload?.product,
           productId: payload?.productId,
@@ -795,7 +780,6 @@ export class CommerceManager extends BaseManager {
     const recommendations: string[] = [];
 
     try {
-      const organizationId = (payload?.organizationId as string) ?? DEFAULT_ORG_ID;
       const workspaceId = (payload?.workspaceId as string) ?? 'default';
 
       // Parallel execution for efficiency
@@ -805,9 +789,7 @@ export class CommerceManager extends BaseManager {
           taskId,
           {
             action: 'get_catalog_summary',
-            orgId: DEFAULT_ORG_ID,
-            organizationId,
-            workspaceId,
+              workspaceId,
           },
           specialistResults
         ),
@@ -862,7 +844,6 @@ export class CommerceManager extends BaseManager {
       // Build CommerceBrief
       const brief: CommerceBrief = {
         taskId,
-        orgId: DEFAULT_ORG_ID,
         generatedAt: new Date().toISOString(),
         executionTimeMs: Date.now() - startTime,
         revenue: {
@@ -972,7 +953,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'validate_pricing',
-          organizationId: (payload?.organizationId as string) ?? DEFAULT_ORG_ID,
           items: payload?.items,
           discountCode: payload?.discountCode,
         },
@@ -1091,11 +1071,10 @@ export class CommerceManager extends BaseManager {
 
       const orgData = await FirestoreService.get(
         COLLECTIONS.ORGANIZATIONS,
-        DEFAULT_ORG_ID
+        PLATFORM_ID
       );
 
       const settings: CommerceSettings = {
-        orgId: DEFAULT_ORG_ID,
         currency: (typeof orgData?.currency === 'string' ? orgData.currency : 'USD'),
         taxEnabled: true,
         taxRate: 0, // Would be fetched from tax config
@@ -1116,7 +1095,6 @@ export class CommerceManager extends BaseManager {
     } catch {
       // Return defaults on error
       return {
-        orgId: DEFAULT_ORG_ID,
         currency: 'USD',
         taxEnabled: false,
         taxInclusive: false,

@@ -7,6 +7,7 @@
 
 import { describe, it, expect, afterAll } from '@jest/globals';
 import { enrichCompany } from '@/lib/enrichment/enrichment-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Import Firestore admin instance
 import admin from 'firebase-admin';
@@ -22,14 +23,13 @@ if (!admin.apps.length) {
 const db = getFirestore();
 
 describe('Enrichment + Distillation Integration', () => {
-  const TEST_ORG_ID = 'test-org-distillation';
+  const TEST_ORG_ID = PLATFORM_ID;
   
   // Cleanup after tests
   afterAll(async () => {
     // Clean up temporary_scrapes
     const scrapes = await db
       .collection('temporary_scrapes')
-      .where('organizationId', '==', TEST_ORG_ID)
       .get();
 
     for (const doc of scrapes.docs) {
@@ -61,9 +61,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://testhvac.com',
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       // Basic enrichment should work
       expect(result.success).toBe(true);
@@ -90,16 +88,13 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://hvacttl.com',
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
 
       // Query for temporary scrape
       const scrapes = await db
         .collection('temporary_scrapes')
-        .where('organizationId', '==', TEST_ORG_ID)
         .where('url', '==', 'https://hvacttl.com')
         .limit(1)
         .get();
@@ -139,9 +134,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://testsaas.com',
           industryTemplateId: 'saas-software',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       
@@ -169,16 +162,13 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://storagetest.com',
           industryTemplateId: 'saas-software',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
 
       // Get the temporary scrape to check sizes
       const scrapes = await db
         .collection('temporary_scrapes')
-        .where('organizationId', '==', TEST_ORG_ID)
         .where('url', '==', 'https://storagetest.com')
         .limit(1)
         .get();
@@ -212,9 +202,7 @@ describe('Enrichment + Distillation Integration', () => {
           domain: 'nodistill.com',
           website: 'https://nodistill.com',
           enableDistillation: false,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       
@@ -237,9 +225,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://nonresearch.com',
           industryTemplateId: 'construction', // Template exists but has no research
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       // Should still enrich successfully (just without signals)
       expect(result.success).toBe(true);
@@ -264,16 +250,13 @@ describe('Enrichment + Distillation Integration', () => {
           website: testUrl,
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result1.success).toBe(true);
 
       // Get first scrape
       const scrapes1 = await db
         .collection('temporary_scrapes')
-        .where('organizationId', '==', TEST_ORG_ID)
         .where('url', '==', testUrl)
         .limit(1)
         .get();
@@ -295,16 +278,13 @@ describe('Enrichment + Distillation Integration', () => {
           website: testUrl,
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result2.success).toBe(true);
 
       // Get updated scrape
       const scrapes2 = await db
         .collection('temporary_scrapes')
-        .where('organizationId', '==', TEST_ORG_ID)
         .where('url', '==', testUrl)
         .limit(1)
         .get();
@@ -343,9 +323,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://costtest.com',
           industryTemplateId: 'saas-software',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       expect(result.cost).toBeDefined();
@@ -371,9 +349,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://storagemetrics.com',
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       expect(result.metrics).toBeDefined();
@@ -411,9 +387,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: testUrl,
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result1.success).toBe(true);
       
@@ -433,9 +407,7 @@ describe('Enrichment + Distillation Integration', () => {
             website: testUrl,
             industryTemplateId: 'hvac',
             enableDistillation: true,
-          },
-          TEST_ORG_ID
-        );
+          });
 
         expect(result2.success).toBe(true);
         
@@ -463,9 +435,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://storagecostlog.com',
           industryTemplateId: 'saas-software',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
 
@@ -506,9 +476,7 @@ describe('Enrichment + Distillation Integration', () => {
           domain: 'notemplate.com',
           website: 'https://notemplate.com',
           // No industryTemplateId - should use standard enrichment
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
@@ -535,9 +503,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://nodistill2.com',
           industryTemplateId: 'hvac', // Template provided
           enableDistillation: false, // But explicitly disabled
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       
@@ -565,9 +531,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://nohtml.com',
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       // Should still succeed (graceful degradation)
       expect(result.success).toBe(true);
@@ -588,9 +552,7 @@ describe('Enrichment + Distillation Integration', () => {
           website: 'https://perftest.com',
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       const duration = Date.now() - startTime;
       

@@ -11,7 +11,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /** Telnyx webhook data structure */
 interface TelnyxWebhookData {
@@ -50,20 +50,18 @@ export async function POST(request: NextRequest) {
 
     // Get agent config from query params or use defaults
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId') ?? DEFAULT_ORG_ID;
     const agentId = searchParams.get('agentId') ?? 'ai-prospector';
     const mode = (searchParams.get('mode') ?? 'prospector') as 'prospector' | 'closer';
 
     logger.info('[AI-Agent] Incoming call', {
       callId,
       from,
-      organizationId,
       mode,
       file: 'ai-agent/route.ts',
     });
 
     // Load agent configuration from Firestore (or use defaults)
-    const config = await loadAgentConfig(organizationId, agentId, mode);
+    const config = await loadAgentConfig(agentId, mode);
 
     // Initialize the voice agent
     await voiceAgentHandler.initialize(config);
@@ -82,7 +80,7 @@ export async function POST(request: NextRequest) {
     const response = await voiceAgentHandler.startConversation(call);
 
     // Log conversation training data
-    await logConversationData(organizationId, callId, 'start', {
+    await logConversationData(callId, 'start', {
       mode,
       greeting: response.text,
       responseTime: Date.now() - startTime,
@@ -155,7 +153,6 @@ export function GET(request: NextRequest) {
  * Load agent configuration from Firestore
  */
 async function loadAgentConfig(
-  organizationId: string,
   agentId: string,
   mode: 'prospector' | 'closer'
 ): Promise<VoiceAgentConfig> {
@@ -164,14 +161,13 @@ async function loadAgentConfig(
 
     // Try to load custom config
     const customConfig = await FirestoreService.get(
-      `organizations/${organizationId}/voiceAgents`,
+      `organizations/${PLATFORM_ID}/voiceAgents`,
       agentId
     );
 
     if (customConfig) {
       return {
         mode,
-        organizationId,
         agentId,
         ...customConfig,
       } as VoiceAgentConfig;
@@ -183,7 +179,6 @@ async function loadAgentConfig(
   // Return default config
   return {
     mode,
-    organizationId,
     agentId,
     companyName: 'Our Company',
     productName: 'Our Solution',
@@ -213,7 +208,6 @@ async function loadAgentConfig(
  * Log conversation data for training
  */
 async function logConversationData(
-  organizationId: string,
   callId: string,
   event: string,
   data: Record<string, unknown>
@@ -223,7 +217,7 @@ async function logConversationData(
 
     const logId = `${callId}-${event}-${Date.now()}`;
     await FirestoreService.set(
-      `organizations/${organizationId}/conversationLogs`,
+      `organizations/${PLATFORM_ID}/conversationLogs`,
       logId,
       {
         callId,

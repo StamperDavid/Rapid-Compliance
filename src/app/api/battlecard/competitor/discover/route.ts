@@ -9,7 +9,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { discoverCompetitor, type CompetitorProfile } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Request body structure for competitor discovery
@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
 
     logger.info('API: Discover competitor request', {
       domain,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     const profile: CompetitorProfile = await discoverCompetitor(domain);

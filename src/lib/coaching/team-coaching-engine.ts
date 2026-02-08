@@ -183,7 +183,6 @@ export class TeamCoachingEngine {
       // Convert the coaching event to a SalesSignal format
       const signalData: Omit<SalesSignal, 'id' | 'createdAt' | 'processed' | 'processedAt' | 'ttl'> = {
         type: 'coaching.insights.generated',
-        orgId: teamInsights.teamId,
         confidence: 0.85,
         priority: 'Medium',
         metadata: event.data

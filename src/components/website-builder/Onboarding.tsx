@@ -8,11 +8,10 @@
 import { useState } from 'react';
 
 interface OnboardingProps {
-  organizationId: string;
   onComplete: () => void;
 }
 
-export function WebsiteBuilderOnboarding({ organizationId, onComplete }: OnboardingProps) {
+export function WebsiteBuilderOnboarding({ onComplete }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [siteData, setSiteData] = useState({
     siteName: '',
@@ -180,7 +179,6 @@ export function WebsiteBuilderOnboarding({ organizationId, onComplete }: Onboard
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId,
           settings: {
             siteName: siteData.siteName,
             subdomain: siteData.subdomain,
@@ -194,7 +192,6 @@ export function WebsiteBuilderOnboarding({ organizationId, onComplete }: Onboard
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            organizationId,
             templateId: siteData.template.toLowerCase(),
           }),
         });

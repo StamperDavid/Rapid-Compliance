@@ -16,7 +16,7 @@ import type {
 } from '@/types/workflow';
 import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface WorkflowEngineExecution {
   id: string;
@@ -115,12 +115,11 @@ export async function executeWorkflowImpl(
 
     // Store execution in Firestore
     const workspaceId = triggerData?.workspaceId ?? workflow.workspaceId;
-    const organizationId = triggerData?.organizationId as string | undefined;
 
-    if (organizationId && workspaceId) {
+    if (workspaceId) {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
         execution.id,
         {
           ...execution,
@@ -198,11 +197,6 @@ async function executeAction(
   triggerData: WorkflowTriggerData,
   workflow: Workflow
 ): Promise<unknown> {
-  const organizationId = triggerData?.organizationId as string | undefined;
-
-  if (!organizationId) {
-    throw new Error('Organization ID required for workflow execution');
-  }
 
   // Import action executors
   const { executeEmailAction } = await import('./actions/email-action');
@@ -217,10 +211,10 @@ async function executeAction(
 
   switch (action.type) {
     case 'send_email':
-      return executeEmailAction(action, triggerData, DEFAULT_ORG_ID);
+      return executeEmailAction(action, triggerData);
 
     case 'send_sms':
-      return executeSMSAction(action, triggerData, DEFAULT_ORG_ID);
+      return executeSMSAction(action, triggerData);
 
     case 'create_entity':
     case 'update_entity':
@@ -237,16 +231,16 @@ async function executeAction(
       return executeDelayAction(action, triggerData);
 
     case 'conditional_branch':
-      return executeConditionalAction(action, triggerData, workflow, DEFAULT_ORG_ID);
+      return executeConditionalAction(action, triggerData, workflow);
 
     case 'send_slack':
-      return executeSlackAction(convertToSlackConfig(action), triggerData, DEFAULT_ORG_ID);
+      return executeSlackAction(convertToSlackConfig(action), triggerData);
 
     case 'loop':
-      return executeLoopAction(convertToLoopConfig(action), triggerData, workflow, DEFAULT_ORG_ID);
+      return executeLoopAction(convertToLoopConfig(action), triggerData, workflow);
 
     case 'ai_agent':
-      return executeAIAgentAction(convertToAIAgentConfig(action), triggerData, DEFAULT_ORG_ID);
+      return executeAIAgentAction(convertToAIAgentConfig(action), triggerData);
 
     case 'cloud_function':
       // Cloud functions are called via HTTP action with the function URL
@@ -494,7 +488,7 @@ export async function getWorkflowExecutions(
   // Load executions from Firestore
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const executions = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
     [
       where('workflowId', '==', workflowId),
       orderBy('startedAt', 'desc'),

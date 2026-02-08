@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React from 'react';
 import Link from 'next/link';
@@ -9,7 +9,6 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const _orgId = DEFAULT_ORG_ID;
   const { theme } = useOrgTheme();
   
   const canManageAPIKeys = usePermission('canManageAPIKeys');

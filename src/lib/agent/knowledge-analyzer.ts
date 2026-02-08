@@ -6,7 +6,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface KnowledgeAnalysisResult {
   companyInfo: {
@@ -170,12 +170,11 @@ export async function analyzeCompanyKnowledge(
     socialMediaUrls,
     result: mockResult,
     analyzedAt: new Date().toISOString(),
-    organizationId: DEFAULT_ORG_ID,
     workspaceId,
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeAnalyses`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeAnalyses`,
     analysisId,
     analysisResult,
     false
@@ -445,7 +444,7 @@ async function scanCRMForProducts(): Promise<KnowledgeAnalysisResult['crmProduct
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const products = await FirestoreService.getAll<CRMProductRecord>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/products`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/products`,
       []
     );
 
@@ -499,7 +498,7 @@ async function scanCRMForServices(): Promise<KnowledgeAnalysisResult['crmService
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const services = await FirestoreService.getAll<CRMServiceRecord>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/services`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/services`,
       []
     );
 
@@ -619,11 +618,10 @@ export async function buildKnowledgeBase(
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/knowledgeBases`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBases`,
       knowledgeBaseId,
       {
         id: knowledgeBaseId,
-        organizationId: DEFAULT_ORG_ID,
         documents,
         createdAt: new Date().toISOString(),
         documentCount: documents.length

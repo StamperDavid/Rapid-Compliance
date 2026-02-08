@@ -7,7 +7,6 @@
 
 export interface TrainingSession {
   id: string;
-  orgId: string;
   scenario: string;
   userMessage: string;
   agentResponse: string;

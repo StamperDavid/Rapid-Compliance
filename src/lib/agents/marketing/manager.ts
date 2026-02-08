@@ -25,7 +25,7 @@
 
 import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getTikTokExpert } from './tiktok/specialist';
 import { getTwitterExpert } from './twitter/specialist';
 import { getFacebookAdsExpert } from './facebook/specialist';
@@ -304,7 +304,6 @@ export interface CampaignGoal {
   };
   kpis?: string[];
   contentType?: 'video' | 'image' | 'text' | 'mixed';
-  orgId?: string; // For Brand DNA lookup
 }
 
 /**
@@ -312,7 +311,6 @@ export interface CampaignGoal {
  * Provides industry-specific customization at runtime
  */
 export interface BrandContext {
-  orgId: string;
   companyDescription: string;
   uniqueValue: string;
   targetAudience: string;
@@ -554,7 +552,7 @@ export class MarketingManager extends BaseManager {
 
       const payload = message.payload as CampaignGoal;
 
-      // Penthouse model system: uses DEFAULT_ORG_ID internally where needed
+      // Penthouse model system: uses PLATFORM_ID internally where needed
 
       if (!payload?.message && !payload?.objective) {
         return this.createReport(
@@ -1043,8 +1041,8 @@ export class MarketingManager extends BaseManager {
    */
   private async loadBrandContext(): Promise<BrandContext> {
     // Check cache first
-    if (this.brandContextCache.has(DEFAULT_ORG_ID)) {
-      const cached = this.brandContextCache.get(DEFAULT_ORG_ID);
+    if (this.brandContextCache.has(PLATFORM_ID)) {
+      const cached = this.brandContextCache.get(PLATFORM_ID);
       if (cached) {return cached;}
     }
 
@@ -1052,12 +1050,11 @@ export class MarketingManager extends BaseManager {
       const brandDNA = await getBrandDNA();
 
       if (!brandDNA) {
-        this.log('WARN', `No Brand DNA found for organization ${DEFAULT_ORG_ID}, using defaults`);
+        this.log('WARN', `No Brand DNA found for organization ${PLATFORM_ID}, using defaults`);
         return this.createDefaultBrandContext();
       }
 
       const brandContext: BrandContext = {
-        orgId: DEFAULT_ORG_ID,
         companyDescription: brandDNA.companyDescription ?? '',
         uniqueValue: brandDNA.uniqueValue ?? '',
         targetAudience: brandDNA.targetAudience ?? '',
@@ -1071,8 +1068,8 @@ export class MarketingManager extends BaseManager {
       };
 
       // Cache for performance
-      this.brandContextCache.set(DEFAULT_ORG_ID, brandContext);
-      this.log('INFO', `Loaded Brand DNA for organization ${DEFAULT_ORG_ID} (Industry: ${brandContext.industry})`);
+      this.brandContextCache.set(PLATFORM_ID, brandContext);
+      this.log('INFO', `Loaded Brand DNA for organization ${PLATFORM_ID} (Industry: ${brandContext.industry})`);
 
       return brandContext;
     } catch (error) {
@@ -1086,7 +1083,6 @@ export class MarketingManager extends BaseManager {
    */
   private createDefaultBrandContext(): BrandContext {
     return {
-      orgId: DEFAULT_ORG_ID,
       companyDescription: '',
       uniqueValue: '',
       targetAudience: '',
@@ -1316,7 +1312,6 @@ export class MarketingManager extends BaseManager {
           seed: this.extractKeywordSeed(goal, brandContext),
           industry: brandContext.industry,
           targetCount: 15,
-          organizationId: brandContext.orgId,
         },
         timestamp: new Date(),
         priority: 'HIGH',
@@ -1899,7 +1894,6 @@ export class MarketingManager extends BaseManager {
         secondary: seoGuidance.secondaryKeywords,
         recommendations: seoGuidance.contentRecommendations,
       } : null,
-      organizationId: brandContext.orgId,
     };
 
     // Platform-specific payload structure
@@ -2418,7 +2412,7 @@ Budget: ${budget}`;
         }
       );
 
-      this.log('INFO', `Campaign insights stored for organization ${DEFAULT_ORG_ID}`);
+      this.log('INFO', `Campaign insights stored for organization ${PLATFORM_ID}`);
     } catch (error) {
       this.log('ERROR', `Failed to store campaign insights: ${error instanceof Error ? error.message : String(error)}`);
       // Non-fatal - don't throw

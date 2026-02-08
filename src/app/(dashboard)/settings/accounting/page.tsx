@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -82,7 +82,6 @@ const PLATFORMS = [
 
 export default function AccountingPage() {
   const { user } = useAuth();
-  const _orgId = DEFAULT_ORG_ID;
   const [config, setConfig] = useState<AccountingConfig>(DEFAULT_CONFIG);
   const [isSaving, setIsSaving] = useState(false);
   const [_showConnectionModal, setShowConnectionModal] = useState(false);
@@ -94,7 +93,7 @@ export default function AccountingPage() {
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         const configData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/accountingConfig`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/accountingConfig`,
           'default'
         );
 
@@ -116,7 +115,7 @@ export default function AccountingPage() {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/accountingConfig`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/accountingConfig`,
         'default',
         {
           ...config,

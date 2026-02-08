@@ -36,7 +36,6 @@ export interface DiscoveryTask {
   id: string;
   type: 'company' | 'person';
   target: string; // domain for company, email for person
-  organizationId: string;
   workspaceId: string;
   workflow: WorkflowState;
   priority?: number; // Optional: higher = process first
@@ -60,7 +59,6 @@ export interface DispatcherConfig {
   delayMs: number;
   
   /** Organization ID filter (optional) */
-  organizationId?: string;
 }
 
 const DEFAULT_CONFIG: DispatcherConfig = {
@@ -299,7 +297,6 @@ async function findIdleTasks(
         id: doc.id,
         type: data.type as 'company' | 'person',
         target: data.target as string,
-        organizationId: '',
         workspaceId: data.workspaceId as string,
         workflow: {
           ...workflowData,
@@ -494,14 +491,13 @@ export async function queueDiscoveryTask(
   workspaceId: string,
   priority: number = 0
 ): Promise<string> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const taskRef = db.collection('discoveryQueue').doc();
     
     const task: Omit<DiscoveryTask, 'id'> = {
       type,
       target,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       workflow: {
         stage: 'discovery',

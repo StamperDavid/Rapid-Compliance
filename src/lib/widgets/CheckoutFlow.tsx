@@ -15,14 +15,12 @@ import type { CartItem } from './ShoppingCart';
 interface Cart {
   items: CartItem[];
   total: number;
-  organizationId: string;
 }
 
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 export interface CheckoutFlowProps {
-  organizationId: string;
   onComplete?: (orderId: string) => void;
   theme?: {
     primaryColor?: string;
@@ -31,7 +29,7 @@ export interface CheckoutFlowProps {
   };
 }
 
-export function CheckoutFlow({ organizationId, onComplete: _onComplete, theme }: CheckoutFlowProps) {
+export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowProps) {
   const [step, setStep] = useState<'info' | 'payment' | 'complete'>('info');
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,7 +53,7 @@ export function CheckoutFlow({ organizationId, onComplete: _onComplete, theme }:
 
   const loadCart = useCallback(async () => {
     try {
-      const response = await fetch(`/api/ecommerce/cart?orgId=${organizationId}`);
+      const response = await fetch('/api/ecommerce/cart');
       const data = await response.json() as { success: boolean; cart: Cart };
       if (data.success && data.cart) {
         setCart(data.cart);
@@ -63,7 +61,7 @@ export function CheckoutFlow({ organizationId, onComplete: _onComplete, theme }:
     } catch (err) {
       logger.error('Failed to load cart', err instanceof Error ? err : new Error(String(err)), { file: 'CheckoutFlow.tsx' });
     }
-  }, [organizationId]);
+  }, []);
 
   useEffect(() => {
     void loadCart();
@@ -82,7 +80,6 @@ export function CheckoutFlow({ organizationId, onComplete: _onComplete, theme }:
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orgId: organizationId,
           customerInfo,
         }),
       });

@@ -30,7 +30,6 @@ import {
 // ============================================================================
 
 interface EmailWriterCardProps {
-  organizationId: string;
   workspaceId: string;
   userId: string;
   dealId?: string;
@@ -49,7 +48,6 @@ interface EmailGenerationState {
 // ============================================================================
 
 function EmailWriterCardInner({
-  organizationId,
   workspaceId,
   userId,
   dealId: initialDealId,
@@ -115,7 +113,6 @@ function EmailWriterCardInner({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          organizationId,
           workspaceId,
           userId,
           emailType,
@@ -168,7 +165,6 @@ function EmailWriterCardInner({
       });
     }
   }, [
-    organizationId,
     workspaceId,
     userId,
     emailType,

@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -92,7 +92,7 @@ export default function SchemaBuilderPage() {
   });
 
   const loadSchemas = useCallback(async () => {
-    if (!DEFAULT_ORG_ID) {return;}
+    if (!PLATFORM_ID) {return;}
     setLoading(true);
     setError(null);
     try {

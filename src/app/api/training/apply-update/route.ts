@@ -11,11 +11,10 @@ import type { GoldenMasterUpdateRequest } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const ApplyUpdateSchema = z.object({
   updateRequestId: z.string().min(1, 'Update request ID is required'),
-  organizationId: z.string().min(1, 'Organization ID is required'),
   approved: z.boolean(),
   reviewNotes: z.string().optional(),
 });
@@ -38,20 +37,11 @@ export async function POST(request: NextRequest) {
     if (!parseResult.success) {
       return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid request body');
     }
-    const { updateRequestId, organizationId, approved, reviewNotes } = parseResult.data;
-
-
-    // Verify access
-    if (DEFAULT_ORG_ID !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      );
-    }
+    const { updateRequestId, approved, reviewNotes } = parseResult.data;
 
     // Get the update request
     const updateRequest = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/goldenMasterUpdates`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasterUpdates`,
       updateRequestId
     ) as GoldenMasterUpdateRequest;
 
@@ -72,7 +62,7 @@ export async function POST(request: NextRequest) {
     if (!approved) {
       // Reject the update request
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/goldenMasterUpdates`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasterUpdates`,
         updateRequestId,
         {
           ...updateRequest,
@@ -92,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Approve and apply the update request
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/goldenMasterUpdates`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasterUpdates`,
       updateRequestId,
       {
         ...updateRequest,

@@ -6,11 +6,10 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface Contact {
   id: string;
-  organizationId: string;
   workspaceId: string;
   firstName?: string;
   lastName?: string;
@@ -86,22 +85,21 @@ export async function getContacts(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Contact>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
     );
 
     logger.info('Contacts retrieved', {
-      organizationId: DEFAULT_ORG_ID,
-      count: result.data.length,
+            count: result.data.length,
       filters: filters ? JSON.stringify(filters) : undefined,
     });
 
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to get contacts', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, filters: filters ? JSON.stringify(filters) : undefined });
+    logger.error('Failed to get contacts', error instanceof Error ? error : undefined, { filters: filters ? JSON.stringify(filters) : undefined });
     throw new Error(`Failed to retrieve contacts: ${errorMessage}`);
   }
 }
@@ -115,20 +113,20 @@ export async function getContact(
 ): Promise<Contact | null> {
   try {
     const contact = await FirestoreService.get<Contact>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
       contactId
     );
 
     if (!contact) {
-      logger.warn('Contact not found', { organizationId: DEFAULT_ORG_ID, contactId });
+      logger.warn('Contact not found', { contactId });
       return null;
     }
 
-    logger.info('Contact retrieved', { organizationId: DEFAULT_ORG_ID, contactId });
+    logger.info('Contact retrieved', { contactId });
     return contact;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to get contact', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, contactId });
+    logger.error('Failed to get contact', error instanceof Error ? error : undefined, { contactId });
     throw new Error(`Failed to retrieve contact: ${errorMessage}`);
   }
 }
@@ -137,7 +135,7 @@ export async function getContact(
  * Create a new contact
  */
 export async function createContact(
-  data: Omit<Contact, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>,
+  data: Omit<Contact, 'id' | 'workspaceId' | 'createdAt'>,
   workspaceId: string = 'default'
 ): Promise<Contact> {
   try {
@@ -147,8 +145,7 @@ export async function createContact(
     const contact: Contact = {
       ...data,
       id: contactId,
-      organizationId: DEFAULT_ORG_ID,
-      workspaceId,
+            workspaceId,
       isVIP: data.isVIP ?? false,
       tags: data.tags ?? [],
       createdAt: now,
@@ -156,15 +153,14 @@ export async function createContact(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
       contactId,
       contact,
       false
     );
 
     logger.info('Contact created', {
-      organizationId: DEFAULT_ORG_ID,
-      contactId,
+            contactId,
       email: contact.email,
       company: contact.company,
     });
@@ -172,7 +168,7 @@ export async function createContact(
     return contact;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to create contact', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, email: data.email, company: data.company });
+    logger.error('Failed to create contact', error instanceof Error ? error : undefined, { email: data.email, company: data.company });
     throw new Error(`Failed to create contact: ${errorMessage}`);
   }
 }
@@ -182,7 +178,7 @@ export async function createContact(
  */
 export async function updateContact(
   contactId: string,
-  updates: Partial<Omit<Contact, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>>,
+  updates: Partial<Omit<Contact, 'id' | 'workspaceId' | 'createdAt'>>,
   workspaceId: string = 'default'
 ): Promise<Contact> {
   try {
@@ -192,14 +188,13 @@ export async function updateContact(
     };
 
     await FirestoreService.update(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
       contactId,
       updatedData
     );
 
     logger.info('Contact updated', {
-      organizationId: DEFAULT_ORG_ID,
-      contactId,
+            contactId,
       updatedFields: Object.keys(updates),
     });
 
@@ -211,7 +206,7 @@ export async function updateContact(
     return contact;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to update contact', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, contactId });
+    logger.error('Failed to update contact', error instanceof Error ? error : undefined, { contactId });
     throw new Error(`Failed to update contact: ${errorMessage}`);
   }
 }
@@ -225,14 +220,14 @@ export async function deleteContact(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
       contactId
     );
 
-    logger.info('Contact deleted', { organizationId: DEFAULT_ORG_ID, contactId });
+    logger.info('Contact deleted', { contactId });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to delete contact', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, contactId });
+    logger.error('Failed to delete contact', error instanceof Error ? error : undefined, { contactId });
     throw new Error(`Failed to delete contact: ${errorMessage}`);
   }
 }
@@ -247,12 +242,12 @@ export async function markAsVIP(
   try {
     const contact = await updateContact(contactId, { isVIP: true }, workspaceId);
 
-    logger.info('Contact marked as VIP', { organizationId: DEFAULT_ORG_ID, contactId });
+    logger.info('Contact marked as VIP', { contactId });
 
     return contact;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to mark contact as VIP', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, contactId });
+    logger.error('Failed to mark contact as VIP', error instanceof Error ? error : undefined, { contactId });
     throw new Error(`Failed to mark as VIP: ${errorMessage}`);
   }
 }
@@ -277,8 +272,7 @@ export async function addTags(
     const updated = await updateContact(contactId, { tags: mergedTags }, workspaceId);
 
     logger.info('Tags added to contact', {
-      organizationId: DEFAULT_ORG_ID,
-      contactId,
+            contactId,
       newTags,
       totalTags: mergedTags.length,
     });
@@ -286,7 +280,7 @@ export async function addTags(
     return updated;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to add tags', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, contactId, newTags });
+    logger.error('Failed to add tags', error instanceof Error ? error : undefined, { contactId, newTags });
     throw new Error(`Failed to add tags: ${errorMessage}`);
   }
 }
@@ -313,8 +307,7 @@ export async function searchContacts(
     );
 
     logger.info('Contacts searched', {
-      organizationId: DEFAULT_ORG_ID,
-      searchTerm,
+            searchTerm,
       resultsCount: filtered.length,
     });
 
@@ -325,7 +318,7 @@ export async function searchContacts(
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Contact search failed', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, searchTerm });
+    logger.error('Contact search failed', error instanceof Error ? error : undefined, { searchTerm });
     throw new Error(`Search failed: ${errorMessage}`);
   }
 }
@@ -347,7 +340,7 @@ export async function recordInteraction(
 
     // Save interaction record
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/contacts/records/${contactId}/interactions`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records/${contactId}/interactions`,
       `interaction-${Date.now()}`,
       {
         type,
@@ -358,13 +351,12 @@ export async function recordInteraction(
     );
 
     logger.info('Contact interaction recorded', {
-      organizationId: DEFAULT_ORG_ID,
-      contactId,
+            contactId,
       interactionType: type,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('Failed to record interaction', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, contactId, type });
+    logger.error('Failed to record interaction', error instanceof Error ? error : undefined, { contactId, type });
     throw new Error(`Failed to record interaction: ${errorMessage}`);
   }
 }

@@ -4,7 +4,7 @@
  * Marketing Scraper Dashboard
  * Full management UI for the Scraper Intelligence system.
  * Start scrape jobs, view extracted signals, and manage research intelligence configs.
- * Uses DEFAULT_ORG_ID (rapid-compliance-root) for penthouse access.
+ * Uses PLATFORM_ID (rapid-compliance-root) for penthouse access.
  */
 
 import React, { useState, useCallback } from 'react';

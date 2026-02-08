@@ -7,7 +7,7 @@ import { getOrCreateCart } from '@/lib/ecommerce/cart-service';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { useTheme } from '@/contexts/ThemeContext'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface CartItem {
   id: string;
@@ -56,7 +56,7 @@ export default function CheckoutPage() {
         return;
       }
 
-      const cartData = await getOrCreateCart(sessionId, 'default', DEFAULT_ORG_ID);
+      const cartData = await getOrCreateCart(sessionId, 'default', PLATFORM_ID);
       if (!cartData.items || cartData.items.length === 0) {
         router.push('/store/cart');
         return;

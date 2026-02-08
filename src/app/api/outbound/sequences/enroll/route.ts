@@ -12,7 +12,6 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 interface SequenceEnrollRequestBody {
-  orgId?: string;
   sequenceId?: string;
   prospectIds?: string[];
 }
@@ -36,14 +35,7 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Invalid request body');
     }
 
-    const { orgId, sequenceId, prospectIds } = body;
-
-    if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID is required' },
-        { status: 400 }
-      );
-    }
+    const { sequenceId, prospectIds } = body;
 
     if (!sequenceId) {
       return NextResponse.json(
@@ -59,10 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // NEW PRICING MODEL: All features available to all active subscriptions
-    // Feature check no longer needed - everyone gets sequence enrollment!
-    // const featureCheck = await requireFeature(request, orgId, 'emailSequences');
-    // if (featureCheck) return featureCheck;
+    // Penthouse model: All features available
 
     // Enroll each prospect
     const results = await Promise.allSettled(

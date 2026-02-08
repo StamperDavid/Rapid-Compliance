@@ -17,7 +17,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './useAuth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   FeatureToggleService,
   buildNavigationStructure,
@@ -118,7 +118,6 @@ export function useFeatureVisibility(): UseFeatureVisibilityResult {
     setSettings(prev => {
       if (!prev) {
         return {
-          organizationId: DEFAULT_ORG_ID,
           features: {
             [featureId]: {
               featureId,
@@ -164,7 +163,6 @@ export function useFeatureVisibility(): UseFeatureVisibilityResult {
     setSettings(prev => {
       if (!prev) {
         return {
-          organizationId: DEFAULT_ORG_ID,
           features: {},
           hiddenCategories: hidden ? [category] : [],
           updatedAt: new Date(),
@@ -210,7 +208,6 @@ export function useFeatureVisibility(): UseFeatureVisibilityResult {
     }
     await FeatureToggleService.resetToDefault(user.id);
     setSettings({
-      organizationId: DEFAULT_ORG_ID,
       features: {},
       hiddenCategories: [],
       updatedAt: new Date(),

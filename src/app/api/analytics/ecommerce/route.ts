@@ -3,7 +3,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Safely converts polymorphic date values (Firestore Timestamp, Date, string, number) to Date.
@@ -43,7 +43,6 @@ function safeParseFloat(value: unknown, fallback: number): number {
  * GET /api/analytics/ecommerce - Get e-commerce analytics
  *
  * Query params:
- * - orgId: organization ID (required)
  * - period: '7d' | '30d' | '90d' | 'all' (optional, default: '30d')
  */
 export async function GET(request: NextRequest) {
@@ -93,13 +92,13 @@ export async function GET(request: NextRequest) {
     }
     
     // Get orders from Firestore
-    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/orders`;
+    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
     let allOrders: OrderRecord[] = [];
     
     try {
       allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
     } catch (_e) {
-      logger.debug('No orders collection yet', { DEFAULT_ORG_ID });
+      logger.debug('No orders collection yet');
     }
 
     // Filter by date
@@ -119,13 +118,13 @@ export async function GET(request: NextRequest) {
     );
 
     // Cart data (abandoned carts)
-    const cartsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/carts`;
+    const cartsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`;
     let allCarts: CartRecord[] = [];
     
     try {
       allCarts = await FirestoreService.getAll<CartRecord>(cartsPath, []);
     } catch (_e) {
-      logger.debug('No carts collection yet', { DEFAULT_ORG_ID });
+      logger.debug('No carts collection yet');
     }
 
     const abandonedCarts = allCarts.filter(cart => {

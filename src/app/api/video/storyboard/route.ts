@@ -36,7 +36,6 @@ const CreativeDirectionSchema = z.object({
 }).optional();
 
 const StoryboardRequestSchema = z.object({
-  organizationId: z.string().min(1, 'Organization ID required'),
   brief: BriefSchema,
   constraints: ConstraintsSchema,
   creativeDirection: CreativeDirectionSchema,
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { organizationId, brief, constraints, creativeDirection, voiceoverScript } = parseResult.data;
+    const { brief, constraints, creativeDirection, voiceoverScript } = parseResult.data;
 
     // Build Brand DNA snapshot from org settings (simplified for now)
     const brandDNA = {
@@ -73,7 +72,6 @@ export async function POST(request: NextRequest) {
 
     // Build Director Request
     const directorRequest: DirectorRequest = {
-      organizationId,
       brief: {
         objective: brief.objective ?? 'awareness',
         message: brief.message,
@@ -95,7 +93,6 @@ export async function POST(request: NextRequest) {
     };
 
     logger.info('Video API: Generating storyboard', {
-      organizationId,
       platform: brief.targetPlatform,
       duration: constraints?.maxDuration,
     });

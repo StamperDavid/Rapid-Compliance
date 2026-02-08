@@ -97,7 +97,6 @@ export class RecoveryEngine {
       metadata: {
         merchantId: merchant.id,
         recoveryAttempt: merchant.emailsSent + 1,
-        organizationId: 'platform',
       },
     });
 
@@ -127,7 +126,6 @@ export class RecoveryEngine {
     await sendSMS({
       to: merchant.phoneNumber,
       message: smsTemplate,
-      organizationId: 'platform',
       metadata: {
         merchantId: merchant.id,
         recoveryAttempt: merchant.smsSent + 1,

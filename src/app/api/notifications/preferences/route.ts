@@ -14,7 +14,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { updatePreferencesRequestSchema } from '@/lib/notifications/validation';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { Timestamp } from 'firebase/firestore';
 import type { NotificationPreferences } from '@/lib/notifications/types';
 
@@ -23,7 +23,7 @@ import type { NotificationPreferences } from '@/lib/notifications/types';
  */
 interface UpdatePreferencesRequestBody {
   userId?: string;
-  DEFAULT_ORG_ID?: string;
+  PLATFORM_ID?: string;
   enabled?: boolean;
   channels?: NotificationPreferences['channels'];
   categories?: NotificationPreferences['categories'];
@@ -89,13 +89,13 @@ export async function GET(request: NextRequest) {
 
     // Get preferences from Firestore
     const preferences = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notification_preferences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_preferences`,
       userId
     );
 
     if (!preferences) {
       // Return default preferences
-      const defaultPrefs = getDefaultPreferences(userId, DEFAULT_ORG_ID);
+      const defaultPrefs = getDefaultPreferences(userId);
       
       return NextResponse.json(
         {
@@ -161,9 +161,9 @@ export async function PUT(request: NextRequest) {
     const bodyUserId = typeof body.userId === 'string' ? body.userId : undefined;
     const userId: string = userIdHeader ?? bodyUserId ?? 'default_user';
 
-    // Add userId and DEFAULT_ORG_ID to body for validation
+    // Add userId and PLATFORM_ID to body for validation
     body.userId = userId;
-    body.DEFAULT_ORG_ID = DEFAULT_ORG_ID;
+    body.PLATFORM_ID = PLATFORM_ID;
 
     // Validate request
     const validatedData = updatePreferencesRequestSchema.parse(body);
@@ -180,14 +180,14 @@ export async function PUT(request: NextRequest) {
 
     // Get existing preferences
     const existingPrefsDoc = await FirestoreService.get<FirestoreDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notification_preferences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_preferences`,
       userId
     );
 
     // Create default preferences if not exists
     const existingPrefs = existingPrefsDoc
       ? (existingPrefsDoc as unknown as NotificationPreferences)
-      : getDefaultPreferences(userId, DEFAULT_ORG_ID);
+      : getDefaultPreferences(userId);
 
     // Merge with updates
     // Deep merge is necessary because validatedData uses deepPartial()
@@ -198,7 +198,6 @@ export async function PUT(request: NextRequest) {
     // and validatedData only provides overrides (validated by Zod schema)
     const updatedPrefs: NotificationPreferences = {
       userId,
-      orgId: DEFAULT_ORG_ID,
       enabled: validatedData.enabled ?? existingPrefs.enabled,
       channels: {
         slack: (() => {
@@ -269,7 +268,7 @@ export async function PUT(request: NextRequest) {
 
     // Save to Firestore
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notification_preferences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_preferences`,
       userId,
       updatedPrefs
     );
@@ -321,7 +320,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 /**
  * Get default notification preferences
  */
-function getDefaultPreferences(userId: string, _orgId: string): NotificationPreferences {
+function getDefaultPreferences(userId: string): NotificationPreferences {
   const now = Timestamp.now();
 
   const categories: NotificationPreferences['categories'] = {
@@ -344,7 +343,6 @@ function getDefaultPreferences(userId: string, _orgId: string): NotificationPref
 
   return {
     userId,
-    orgId: DEFAULT_ORG_ID,
     enabled: true,
     channels: {
       slack: {

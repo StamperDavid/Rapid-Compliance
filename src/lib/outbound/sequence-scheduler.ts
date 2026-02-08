@@ -8,7 +8,7 @@ import { SequenceEngine } from './sequence-engine';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { ProspectEnrollment } from '@/types/outbound-sequence'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Process all due sequence steps
@@ -53,7 +53,7 @@ export async function processSequences(): Promise<{
         }
       } catch (error) {
         // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
-        logger.error('[Sequence Scheduler] Error processing org ${DEFAULT_ORG_ID}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
+        logger.error('[Sequence Scheduler] Error processing org ${PLATFORM_ID}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
         errors++;
       }
     }
@@ -93,13 +93,13 @@ async function getAllOrganizations(): Promise<string[]> {
  * Get all active enrollments for an organization
  */
 async function getActiveEnrollments(): Promise<ProspectEnrollment[]> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const { where } = await import('firebase/firestore');
 
     // Query active enrollments
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
       [
         where('status', '==', 'active'),
       ]
@@ -128,7 +128,7 @@ export async function handleEmailBounce(
 
   // Get enrollment
   const enrollment = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
     enrollmentId
   ) as ProspectEnrollment;
 
@@ -169,7 +169,7 @@ export async function handleEmailReply(
 
   // Get enrollment
   const enrollment = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
     enrollmentId
   ) as ProspectEnrollment;
 
@@ -189,7 +189,7 @@ export async function handleEmailReply(
 
   // Get sequence
   const sequence = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
     enrollment.sequenceId
   ) as SequenceDoc;
 
@@ -204,7 +204,7 @@ export async function handleEmailReply(
   enrollment.updatedAt = new Date().toISOString();
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
     enrollmentId,
     enrollment,
     false
@@ -219,7 +219,7 @@ export async function handleEmailOpen(
   stepId: string
 ): Promise<void> {
   const enrollment = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
     enrollmentId
   ) as ProspectEnrollment;
 
@@ -233,7 +233,7 @@ export async function handleEmailOpen(
     action.updatedAt = new Date().toISOString();
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
       enrollmentId,
       enrollment,
       false
@@ -249,7 +249,7 @@ export async function handleEmailClick(
   stepId: string
 ): Promise<void> {
   const enrollment = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
     enrollmentId
   ) as ProspectEnrollment;
 
@@ -262,7 +262,7 @@ export async function handleEmailClick(
     action.updatedAt = new Date().toISOString();
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
       enrollmentId,
       enrollment,
       false

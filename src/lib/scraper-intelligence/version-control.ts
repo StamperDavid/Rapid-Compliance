@@ -13,7 +13,7 @@
 import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
 import type { TrainingData, TrainingHistory } from '@/types/scraper-intelligence';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS
@@ -55,7 +55,6 @@ export interface VersionDiff {
 export interface Branch {
   id: string;
   name: string;
-  organizationId: string;
   description: string;
   createdAt: Date;
   createdBy: string;
@@ -77,7 +76,6 @@ export interface MergeResult {
 export interface Changelog {
   entries: ChangelogEntry[];
   generatedAt: Date;
-  organizationId: string;
 }
 
 export interface ChangelogEntry {
@@ -361,7 +359,6 @@ export async function createBranch(params: {
     const branch: Branch = {
       id: branchId,
       name,
-      organizationId: DEFAULT_ORG_ID,
       description,
       createdAt: now,
       createdBy: userId,
@@ -378,7 +375,6 @@ export async function createBranch(params: {
     logger.info('Created training data branch', {
       branchId,
       name,
-      organizationId: DEFAULT_ORG_ID,
       snapshotSize: Object.keys(snapshot).length,
     });
 
@@ -391,7 +387,6 @@ export async function createBranch(params: {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to create branch', err, {
       name: params.name,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = err.message;
@@ -433,14 +428,6 @@ export async function mergeBranch(
     }
 
     const branch = branchDoc.data() as Branch;
-
-    if (branch.organizationId !== DEFAULT_ORG_ID) {
-      throw new VersionControlError(
-        'Unauthorized: branch belongs to different organization',
-        'UNAUTHORIZED',
-        403
-      );
-    }
 
     // Get current training data
     const currentDocs = await db
@@ -518,14 +505,12 @@ export async function mergeBranch(
         branchId,
         branchName: branch.name,
         mergedCount,
-        organizationId: DEFAULT_ORG_ID,
       });
     } else {
       logger.warn('Branch merge has conflicts', {
         branchId,
         branchName: branch.name,
         conflictCount: conflicts.length,
-        organizationId: DEFAULT_ORG_ID,
       });
     }
 
@@ -543,7 +528,6 @@ export async function mergeBranch(
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to merge branch', err, {
       branchId,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = err.message;
@@ -581,9 +565,7 @@ export async function listBranches(
     });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to list branches', err, {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Failed to list branches', err);
 
     throw new VersionControlError(
       'Failed to list branches',
@@ -650,13 +632,10 @@ export async function generateChangelog(
     return {
       entries: sortedEntries,
       generatedAt: new Date(),
-      organizationId: DEFAULT_ORG_ID,
     };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to generate changelog', err, {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Failed to generate changelog', err);
 
     throw new VersionControlError(
       'Failed to generate changelog',
@@ -769,7 +748,6 @@ export function validateIntegrity(trainingData: TrainingData): {
  * Attempts to restore from last known good version.
  * 
  * @param trainingDataId - Training data ID
- * @param organizationId - Organization ID
  * @returns Recovered data or null
  */
 export async function recoverFromHistory(
@@ -795,7 +773,6 @@ export async function recoverFromHistory(
           logger.info('Recovered training data from history', {
             trainingDataId,
             version: historyData.version,
-            organizationId: DEFAULT_ORG_ID,
           });
 
           return historyData;
@@ -808,7 +785,6 @@ export async function recoverFromHistory(
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to recover from history', err, {
       trainingDataId,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     return null;

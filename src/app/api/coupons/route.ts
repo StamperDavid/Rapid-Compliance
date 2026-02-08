@@ -5,7 +5,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import type { MerchantCoupon } from '@/types/pricing';
 import { z } from 'zod';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const CouponInputSchema = z.object({
   id: z.string().optional(),
@@ -52,7 +52,7 @@ export async function GET(
       coupons: coupons ?? [],
     });
   } catch (error: unknown) {
-    logger.error('Error fetching merchant coupons', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Error fetching merchant coupons', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to fetch coupons' },
       { status: 500 }
@@ -132,7 +132,6 @@ export async function POST(
       category_ids: couponData.category_ids,
       customer_segments: couponData.customer_segments,
       status: couponData.status ?? 'active',
-      organization_id: DEFAULT_ORG_ID,
       created_at: existingCoupon?.created_at ?? now,
       updated_at: now,
       created_by: existingCoupon?.created_by ?? user.uid,
@@ -144,7 +143,6 @@ export async function POST(
 
     logger.info('Merchant coupon saved', {
       userId: user.uid,
-      orgId: DEFAULT_ORG_ID,
       couponId,
       code: normalizedCode,
       action: isNew ? 'create' : 'update',
@@ -157,7 +155,7 @@ export async function POST(
       message: isNew ? 'Coupon created successfully' : 'Coupon updated successfully',
     });
   } catch (error: unknown) {
-    logger.error('Error saving merchant coupon', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Error saving merchant coupon', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to save coupon' },
       { status: 500 }

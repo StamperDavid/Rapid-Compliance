@@ -24,7 +24,7 @@ import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { Deal } from '@/lib/crm/deal-service';
 import { getTemplateById, type SalesIndustryTemplate } from './industry-templates';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -136,7 +136,6 @@ export function generateRevenueForecast(
   
   try {
     logger.info('Generating revenue forecast', {
-      orgId: DEFAULT_ORG_ID,
       period: options.period,
       templateId: options.templateId
     });
@@ -211,7 +210,6 @@ export function generateRevenueForecast(
       const coordinator = getServerSignalCoordinator();
       void coordinator.emitSignal({
         type: 'forecast.updated',
-        orgId: DEFAULT_ORG_ID,
         workspaceId: options.workspaceId,
         confidence: confidence / 100,
         priority: quotaAttainment < 70 ? 'High' : 'Medium',
@@ -231,7 +229,6 @@ export function generateRevenueForecast(
       });
 
       logger.info('Signal emitted: forecast.updated', {
-        orgId: DEFAULT_ORG_ID,
         forecast: forecast.forecast
       });
     } catch (signalError) {
@@ -240,7 +237,6 @@ export function generateRevenueForecast(
     
     const duration = Date.now() - startTime;
     logger.info('Revenue forecast generated', {
-      orgId: DEFAULT_ORG_ID,
       period: options.period,
       forecast: forecast.forecast,
       quota: options.quota,
@@ -252,7 +248,6 @@ export function generateRevenueForecast(
     
   } catch (error) {
     logger.error('Revenue forecasting failed', error as Error, {
-      orgId: DEFAULT_ORG_ID,
       period: options.period
     });
     throw new Error(`Revenue forecasting failed: ${(error as Error).message}`);
@@ -451,7 +446,6 @@ function fetchPipelineDeals(
 
     deals.push({
       id: `deal_${i}`,
-      organizationId: DEFAULT_ORG_ID,
       value,
       createdAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000),
       updatedAt: new Date(),
@@ -509,7 +503,6 @@ export function calculateQuotaPerformance(
     };
     
     logger.info('Quota performance calculated', {
-      orgId: DEFAULT_ORG_ID,
       quota,
       attainment: performance.attainment,
       onTrack: performance.onTrack
@@ -518,9 +511,7 @@ export function calculateQuotaPerformance(
     return performance;
 
   } catch (error) {
-    logger.error('Quota performance calculation failed', error as Error, {
-      orgId: DEFAULT_ORG_ID
-    });
+    logger.error('Quota performance calculation failed', error as Error);
     throw new Error(`Quota performance calculation failed: ${(error as Error).message}`);
   }
 }

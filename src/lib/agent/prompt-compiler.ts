@@ -12,7 +12,7 @@ import type {
   BehaviorConfig
 } from '@/types/agent-memory';
 import { buildClientAgentContext } from '@/lib/ai/context-wrapper';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /** Business context fields used in prompt generation */
 export interface BusinessContextFields {
@@ -91,7 +91,6 @@ export function compileSystemPrompt(
   let isolationHeader = '';
   if (isolationContext) {
     isolationHeader = buildClientAgentContext(
-      DEFAULT_ORG_ID,
       isolationContext.orgName,
       isolationContext.industry ?? industry,
       agentPersona.name ?? 'AI Assistant'

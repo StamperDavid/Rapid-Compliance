@@ -35,7 +35,7 @@ import {
   type InsightEntry,
 } from '../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Minimal BrandDNA type for this manager
 interface BrandDNA {
@@ -824,7 +824,7 @@ export class ArchitectManager extends BaseManager {
       // Parse the request payload
       const request = this.parseRequest(message);
 
-      this.log('INFO', `Processing blueprint request for organization: ${DEFAULT_ORG_ID}`);
+      this.log('INFO', `Processing blueprint request for organization: ${PLATFORM_ID}`);
 
       // Phase 1: Load context (Brand DNA + Intelligence Briefs)
       const context = await this.loadOrgContext();
@@ -920,7 +920,7 @@ export class ArchitectManager extends BaseManager {
     brandDNA: BrandDNA | null;
     intelligenceBriefs: InsightEntry[];
   }> {
-    this.log('INFO', `Loading context for organization: ${DEFAULT_ORG_ID}`);
+    this.log('INFO', `Loading context for organization: ${PLATFORM_ID}`);
 
     // Load Brand DNA
     let brandDNA: BrandDNA | null = null;
@@ -1791,7 +1791,7 @@ DELIVERABLES:
     specialistResults: SpecialistResult[],
     warnings: string[]
   ): SiteArchitecture {
-    const blueprintId = `blueprint_${DEFAULT_ORG_ID}_${Date.now()}`;
+    const blueprintId = `blueprint_${PLATFORM_ID}_${Date.now()}`;
 
     // Extract specialist contributions
     const uxResult = specialistResults.find(r => r.specialistId === 'UX_UI_SPECIALIST');
@@ -2031,7 +2031,6 @@ DELIVERABLES:
         purpose: 'Website pages content',
         fields: [
           { name: 'id', type: 'string', required: true, indexed: true },
-          { name: 'organizationId', type: 'string', required: true, indexed: true },
           { name: 'slug', type: 'string', required: true, indexed: true },
           { name: 'title', type: 'string', required: true, indexed: false },
           { name: 'content', type: 'array', required: true, indexed: false },
@@ -2048,7 +2047,6 @@ DELIVERABLES:
         purpose: 'Blog articles',
         fields: [
           { name: 'id', type: 'string', required: true, indexed: true },
-          { name: 'organizationId', type: 'string', required: true, indexed: true },
           { name: 'slug', type: 'string', required: true, indexed: true },
           { name: 'title', type: 'string', required: true, indexed: false },
           { name: 'content', type: 'array', required: true, indexed: false },
@@ -2066,7 +2064,6 @@ DELIVERABLES:
         purpose: 'E-commerce products',
         fields: [
           { name: 'id', type: 'string', required: true, indexed: true },
-          { name: 'organizationId', type: 'string', required: true, indexed: true },
           { name: 'sku', type: 'string', required: true, indexed: true },
           { name: 'name', type: 'string', required: true, indexed: false },
           { name: 'price', type: 'number', required: true, indexed: true },

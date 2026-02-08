@@ -30,7 +30,6 @@ describe('Distillation Engine Integration Tests', () => {
     try {
       const scrapes = await db
         .collection(TEMPORARY_SCRAPES_COLLECTION)
-        .where('organizationId', '==', TEST_ORG_ID)
         .get();
 
       const batch = db.batch();
@@ -138,7 +137,6 @@ describe('Distillation Engine Integration Tests', () => {
       `;
 
       const result = await distillScrape({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         url: 'https://abchvac.example.com',
         rawHtml,
@@ -186,7 +184,6 @@ describe('Distillation Engine Integration Tests', () => {
 
     it('should detect duplicate content and update lastSeen', async () => {
       const params = {
-        organizationId: TEST_ORG_ID,
         url: 'https://duplicate.example.com',
         rawHtml: '<html><body>Test content</body></html>',
         cleanedContent: 'Test content',
@@ -211,7 +208,6 @@ describe('Distillation Engine Integration Tests', () => {
 
     it('should create new scrape when content changes', async () => {
       const baseParams = {
-        organizationId: TEST_ORG_ID,
         url: 'https://changing.example.com',
         metadata: { title: 'Test' },
         research: mockResearch,
@@ -241,7 +237,6 @@ describe('Distillation Engine Integration Tests', () => {
       const cleanedContent = 'We offer 24/7 emergency service';
 
       const result = await distillScrape({
-        organizationId: TEST_ORG_ID,
         url: 'https://test.example.com',
         rawHtml,
         cleanedContent,
@@ -261,7 +256,6 @@ describe('Distillation Engine Integration Tests', () => {
       const cleanedContent = 'Generic company information';
 
       const result = await distillScrape({
-        organizationId: TEST_ORG_ID,
         url: 'https://generic.example.com',
         rawHtml,
         cleanedContent,
@@ -279,7 +273,6 @@ describe('Distillation Engine Integration Tests', () => {
     it('should distill multiple scrapes', async () => {
       const scrapes = [
         {
-          organizationId: TEST_ORG_ID,
           url: 'https://company1.example.com',
           rawHtml: '<html><body>24/7 emergency service available</body></html>',
           cleanedContent: '24/7 emergency service available',
@@ -287,7 +280,6 @@ describe('Distillation Engine Integration Tests', () => {
           platform: 'website' as ScrapingPlatform,
         },
         {
-          organizationId: TEST_ORG_ID,
           url: 'https://company2.example.com',
           rawHtml: "<html><body>We're hiring HVAC techs!</body></html>",
           cleanedContent: "We're hiring HVAC techs!",
@@ -295,7 +287,6 @@ describe('Distillation Engine Integration Tests', () => {
           platform: 'website' as ScrapingPlatform,
         },
         {
-          organizationId: TEST_ORG_ID,
           url: 'https://company3.example.com',
           rawHtml: '<html><body>Opening new location next month</body></html>',
           cleanedContent: 'Opening new location next month',
@@ -321,7 +312,6 @@ describe('Distillation Engine Integration Tests', () => {
     it('should continue batch processing after error', async () => {
       const scrapes = [
         {
-          organizationId: TEST_ORG_ID,
           url: 'https://valid1.example.com',
           rawHtml: '<html><body>Valid content</body></html>',
           cleanedContent: 'Valid content',
@@ -330,7 +320,6 @@ describe('Distillation Engine Integration Tests', () => {
         },
         // Invalid scrape (missing required fields will cause error in service layer)
         {
-          organizationId: '',
           url: '', // Invalid URL
           rawHtml: '',
           cleanedContent: '',
@@ -338,7 +327,6 @@ describe('Distillation Engine Integration Tests', () => {
           platform: 'website' as ScrapingPlatform,
         },
         {
-          organizationId: TEST_ORG_ID,
           url: 'https://valid2.example.com',
           rawHtml: '<html><body>Valid content 2</body></html>',
           cleanedContent: 'Valid content 2',
@@ -357,7 +345,6 @@ describe('Distillation Engine Integration Tests', () => {
   describe('TTL and Cleanup', () => {
     it('should set expiration date 7 days in future', async () => {
       const result = await distillScrape({
-        organizationId: TEST_ORG_ID,
         url: 'https://ttl-test.example.com',
         rawHtml: '<html><body>Test</body></html>',
         cleanedContent: 'Test',
@@ -380,7 +367,6 @@ describe('Distillation Engine Integration Tests', () => {
 
     it('should delete flagged scrapes', async () => {
       const result = await distillScrape({
-        organizationId: TEST_ORG_ID,
         url: 'https://flagged-test.example.com',
         rawHtml: '<html><body>Test</body></html>',
         cleanedContent: 'Test',
@@ -408,7 +394,6 @@ describe('Distillation Engine Integration Tests', () => {
 
     it('should delete expired scrapes', async () => {
       const result = await distillScrape({
-        organizationId: TEST_ORG_ID,
         url: 'https://expired-test.example.com',
         rawHtml: '<html><body>Test</body></html>',
         cleanedContent: 'Test',
@@ -457,7 +442,6 @@ describe('Distillation Engine Integration Tests', () => {
       `;
 
       const result = await distillScrape({
-        organizationId: TEST_ORG_ID,
         url: 'https://large-site.example.com',
         rawHtml: largeHtml,
         cleanedContent: 'We offer 24/7 emergency service',

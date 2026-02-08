@@ -7,7 +7,7 @@
 import type { VoiceProvider, VoiceProviderType, VoiceProviderConfig, VoiceProviderCosts } from './types';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Type definitions for provider-specific API key structures
 interface TwilioKeys {
@@ -89,7 +89,7 @@ export class VoiceProviderFactory {
   static async getProvider(
     preferredProvider?: VoiceProviderType
   ): Promise<VoiceProvider> {
-    const cacheKey = `${DEFAULT_ORG_ID}:${preferredProvider ?? 'default'}`;
+    const cacheKey = `${PLATFORM_ID}:${preferredProvider ?? 'default'}`;
     const cached = providerCache.get(cacheKey);
 
     if (cached && Date.now() - cached.createdAt.getTime() < CACHE_TTL_MS) {
@@ -123,7 +123,7 @@ export class VoiceProviderFactory {
         // Validate the provider works
         const isValid = await provider.validateConfig();
         if (isValid) {
-          logger.info(`[VoiceFactory] Using ${providerType} for org ${DEFAULT_ORG_ID}`, { file: 'voice-factory.ts' });
+          logger.info(`[VoiceFactory] Using ${providerType} for org ${PLATFORM_ID}`, { file: 'voice-factory.ts' });
           return provider;
         }
       } catch (error) {
@@ -141,7 +141,7 @@ export class VoiceProviderFactory {
     providerType: VoiceProviderType
   ): Promise<VoiceProviderConfig | null> {
     try {
-      const keysRaw: unknown = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, providerType);
+      const keysRaw: unknown = await apiKeyService.getServiceKey(PLATFORM_ID, providerType);
       if (!keysRaw) {return null;}
 
       // Map provider-specific key names to standard config

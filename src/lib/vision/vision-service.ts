@@ -41,15 +41,14 @@ interface ServiceKeys {
  */
 export async function analyzeImage(
   request: VisionAnalysisRequest,
-  organizationId?: string
 ): Promise<VisionAnalysisResponse> {
   const startTime = Date.now();
   const model = request.model ?? 'gpt-4-vision';
 
   if (model === 'gpt-4-vision') {
-    return analyzeWithGPT4Vision(request, organizationId, startTime);
+    return analyzeWithGPT4Vision(request, startTime);
   } else {
-    return analyzeWithGeminiVision(request, organizationId, startTime);
+    return analyzeWithGeminiVision(request, startTime);
   }
 }
 
@@ -58,12 +57,12 @@ export async function analyzeImage(
  */
 async function analyzeWithGPT4Vision(
   request: VisionAnalysisRequest,
-  organizationId?: string,
   startTime: number = Date.now()
 ): Promise<VisionAnalysisResponse> {
   try {
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-    const keys = await apiKeyService.getServiceKey((organizationId !== '' && organizationId != null) ? organizationId : 'demo', 'openai') as ServiceKeys | null;
+    const keys = await apiKeyService.getServiceKey(PLATFORM_ID, 'openai') as ServiceKeys | null;
     const apiKey = keys?.openaiApiKey ?? process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
@@ -128,7 +127,6 @@ async function analyzeWithGPT4Vision(
  */
 async function analyzeWithGeminiVision(
   request: VisionAnalysisRequest,
-  _organizationId?: string,
   startTime: number = Date.now()
 ): Promise<VisionAnalysisResponse> {
   try {

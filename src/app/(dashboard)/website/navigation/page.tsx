@@ -5,7 +5,7 @@
 
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -97,7 +97,6 @@ export default function NavigationManagementPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           navigation: {
             ...navigation,
             updatedAt: new Date().toISOString(),
@@ -125,7 +124,6 @@ export default function NavigationManagementPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           settings: {
             homepage,
           },

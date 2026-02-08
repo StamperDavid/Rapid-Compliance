@@ -66,7 +66,6 @@ export const notificationCategorySchema = z.enum([
  */
 export const notificationVariablesSchema = z.object({
   // Organization context
-  orgId: z.string().min(1),
   orgName: z.string().optional(),
   workspaceId: z.string().optional(),
   
@@ -183,7 +182,6 @@ export const quietHoursSchema = z.object({
  */
 export const notificationPreferencesSchema = z.object({
   userId: z.string().min(1),
-  orgId: z.string().min(1),
   enabled: z.boolean(),
   
   channels: z.object({
@@ -275,7 +273,6 @@ export const notificationContentSchema = z.object({
  */
 export const notificationSchema = z.object({
   id: z.string().optional(),
-  orgId: z.string().min(1),
   userId: z.string().min(1),
   templateId: z.string().min(1),
   category: notificationCategorySchema,
@@ -317,7 +314,6 @@ export const notificationSchema = z.object({
  */
 export const notificationBatchSchema = z.object({
   id: z.string().optional(),
-  orgId: z.string().min(1),
   userId: z.string().min(1),
   channel: notificationChannelSchema,
   notificationIds: z.array(z.string()).min(1),
@@ -354,7 +350,6 @@ export const sendNotificationRequestSchema = z.object({
  */
 export const updatePreferencesRequestSchema = notificationPreferencesSchema.deepPartial().extend({
   userId: z.string().min(1),
-  orgId: z.string().min(1),
 });
 
 /**

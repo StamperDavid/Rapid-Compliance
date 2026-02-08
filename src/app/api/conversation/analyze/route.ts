@@ -24,6 +24,7 @@ import {
 } from '@/lib/conversation/validation';
 import { logger } from '@/lib/logger/logger';
 import { ZodError } from 'zod';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RATE LIMITING
@@ -42,24 +43,24 @@ const rateLimitMap = new Map<string, RateLimitEntry>();
 /**
  * Check if request is rate limited
  */
-function checkRateLimit(organizationId: string): { allowed: boolean; resetAt: number; remaining: number } {
+function checkRateLimit(): { allowed: boolean; resetAt: number; remaining: number } {
   const now = Date.now();
-  const entry = rateLimitMap.get(organizationId);
-  
+  const entry = rateLimitMap.get(PLATFORM_ID);
+
   // No entry or window expired
   if (!entry || now >= entry.resetAt) {
-    rateLimitMap.set(organizationId, {
+    rateLimitMap.set(PLATFORM_ID, {
       count: 1,
       resetAt: now + RATE_LIMIT_WINDOW,
     });
     return { allowed: true, resetAt: now + RATE_LIMIT_WINDOW, remaining: MAX_REQUESTS_PER_WINDOW - 1 };
   }
-  
+
   // Within window
   if (entry.count >= MAX_REQUESTS_PER_WINDOW) {
     return { allowed: false, resetAt: entry.resetAt, remaining: 0 };
   }
-  
+
   // Increment count
   entry.count++;
   return { allowed: true, resetAt: entry.resetAt, remaining: MAX_REQUESTS_PER_WINDOW - entry.count };
@@ -117,7 +118,6 @@ function setCachedResponse(key: string, data: unknown): void {
 /** Cache key request interface */
 interface CacheKeyRequest {
   conversationId?: string;
-  organizationId: string;
   transcript?: string;
 }
 
@@ -126,14 +126,14 @@ interface CacheKeyRequest {
  */
 function getCacheKey(request: CacheKeyRequest): string {
   if (request.conversationId) {
-    return `conv_${request.organizationId}_${request.conversationId}`;
+    return `conv_${PLATFORM_ID}_${request.conversationId}`;
   }
 
   // For transcript analysis, hash the transcript (simplified)
   const transcriptHash = request.transcript
     ? request.transcript.substring(0, 100)
     : 'unknown';
-  return `trans_${request.organizationId}_${transcriptHash}`;
+  return `trans_${PLATFORM_ID}_${transcriptHash}`;
 }
 
 // ============================================================================
@@ -149,17 +149,15 @@ function getCacheKey(request: CacheKeyRequest): string {
  * Option 1 - Analyze existing conversation:
  * {
  *   conversationId: string,
- *   organizationId: string,
  *   workspaceId?: string,
  *   includeCoaching?: boolean,
  *   includeFollowUps?: boolean,
  *   customContext?: string,
  *   forceRefresh?: boolean
  * }
- * 
+ *
  * Option 2 - Analyze raw transcript:
  * {
- *   organizationId: string,
  *   transcript: string,
  *   conversationType: string,
  *   participants: Participant[],
@@ -230,13 +228,8 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // Get organization ID from validated request (one must be set due to earlier validation)
-    const organizationId = isTranscriptAnalysis
-      ? (validatedTranscriptRequest ?? { organizationId: '' }).organizationId
-      : (validatedConversationRequest ?? { organizationId: '' }).organizationId;
-
     // Check rate limit
-    const rateLimit = checkRateLimit(organizationId);
+    const rateLimit = checkRateLimit();
     if (!rateLimit.allowed) {
       const resetIn = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
 
@@ -265,13 +258,11 @@ export async function POST(request: NextRequest) {
       if (!forceRefresh) {
         const cacheKey = getCacheKey({
           conversationId: validatedConversationRequest.conversationId,
-          organizationId: validatedConversationRequest.organizationId,
         });
         const cachedData = getCachedResponse(cacheKey);
 
         if (cachedData) {
           logger.info('Returning cached conversation analysis', {
-            organizationId,
             conversationId: validatedConversationRequest.conversationId,
           });
 
@@ -296,7 +287,6 @@ export async function POST(request: NextRequest) {
 
     // Perform analysis
     logger.info('Starting conversation analysis', {
-      organizationId,
       isTranscriptAnalysis,
       conversationId: validatedConversationRequest?.conversationId,
     });
@@ -315,7 +305,6 @@ export async function POST(request: NextRequest) {
     if (!isTranscriptAnalysis && validatedConversationRequest) {
       const cacheKey = getCacheKey({
         conversationId: validatedConversationRequest.conversationId,
-        organizationId: validatedConversationRequest.organizationId,
       });
       setCachedResponse(cacheKey, analysis);
     }
@@ -323,7 +312,6 @@ export async function POST(request: NextRequest) {
     const duration = Date.now() - startTime;
     
     logger.info('Conversation analysis complete', {
-      organizationId,
       conversationId: analysis.conversationId,
       overallScore: analysis.scores.overall,
       duration,

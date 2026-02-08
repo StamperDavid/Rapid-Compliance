@@ -8,7 +8,7 @@ import type { Workflow, ScheduleTrigger, WorkflowTriggerData } from '@/types/wor
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
 import { CronExpressionParser } from 'cron-parser';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Register schedule trigger
@@ -26,12 +26,11 @@ export async function registerScheduleTrigger(
 
   // Store schedule configuration
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
     workflow.id,
     {
       workflowId: workflow.id,
       schedule: trigger.schedule,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       registeredAt: new Date().toISOString(),
       nextRun: calculateNextRun(trigger.schedule),
@@ -183,7 +182,6 @@ export async function executeScheduledWorkflows(): Promise<void> {
 
           // Execute workflow with proper typing
           const triggerData: WorkflowTriggerData = {
-            organizationId: org.id as string,
             workspaceId: workspace.id as string,
             scheduledAt: now,
             scheduleType,
@@ -225,7 +223,7 @@ export async function unregisterScheduleTrigger(
   workspaceId: string
 ): Promise<void> {
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
     workflowId
   );
 

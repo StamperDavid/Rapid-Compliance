@@ -49,7 +49,7 @@ describe('Payment Integration Tests', () => {
       // Delete all test organizations created during this test
       for (const orgId of createdOrgIds) {
         await FirestoreService.delete('organizations', orgId);
-        console.log(`✅ Deleted test organization: ${orgId}`);
+        console.log(`✅ Deleted test organization: $rapid-compliance-root`);
       }
       
       console.log('✅ Test cleanup complete');
@@ -78,7 +78,6 @@ describe('Payment Integration Tests', () => {
       // Or configure via API keys for test org
       
       const request = {
-        organizationId: testOrgId,
         workspaceId: testWorkspaceId,
         amount: 100,
         currency: 'USD',
@@ -115,7 +114,6 @@ describe('Payment Integration Tests', () => {
 
     it('should handle payment failure gracefully', async () => {
       const request = {
-        organizationId: testOrgId,
         workspaceId: testWorkspaceId,
         amount: 100,
         currency: 'USD',
@@ -153,7 +151,6 @@ describe('Payment Integration Tests', () => {
       createdOrgIds.push(unconfiguredOrgId); // Track for cleanup
 
       const request = {
-        organizationId: unconfiguredOrgId,
         workspaceId: 'default',
         amount: 100,
         currency: 'USD',

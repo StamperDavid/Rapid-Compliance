@@ -19,7 +19,6 @@ export interface BackupConfig {
   storageType: 'local' | 'gcs';
   storagePath: string;
   incrementalEnabled: boolean;
-  organizationId?: string;
 }
 
 export interface BackupMetadata {
@@ -148,7 +147,6 @@ export class BackupService {
       for (const collection of config.collections) {
         const collectionDocs = await this.backupCollection(
           collection,
-          config.organizationId,
           lastBackupTimestamp
         );
         documents.push(...collectionDocs);
@@ -231,7 +229,7 @@ export class BackupService {
       const collectionsRestored = new Set<string>();
 
       for (const doc of bundle.documents) {
-        await this.restoreDocument(doc, config.organizationId);
+        await this.restoreDocument(doc);
         documentsRestored++;
         collectionsRestored.add(doc.collection);
       }
@@ -343,7 +341,6 @@ export class BackupService {
 
   private async backupCollection(
     collection: string,
-    organizationId?: string,
     sinceTimestamp?: string
   ): Promise<DocumentBackup[]> {
     const documents: DocumentBackup[] = [];
@@ -351,15 +348,13 @@ export class BackupService {
     try {
       // Use admin SDK for backup operations
       const { adminDb } = await import('@/lib/firebase/admin');
+      const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
       if (!adminDb) {
         throw new Error('Admin Firestore not initialized');
       }
 
-      let collectionPath = collection;
-      if (organizationId) {
-        collectionPath = `organizations/${organizationId}/${collection}`;
-      }
+      const collectionPath = `organizations/${PLATFORM_ID}/${collection}`;
 
       let query = adminDb.collection(collectionPath);
 
@@ -387,7 +382,7 @@ export class BackupService {
     return documents;
   }
 
-  private async restoreDocument(doc: DocumentBackup, organizationId?: string): Promise<void> {
+  private async restoreDocument(doc: DocumentBackup): Promise<void> {
     try {
       const { adminDb } = await import('@/lib/firebase/admin');
 
@@ -395,15 +390,7 @@ export class BackupService {
         throw new Error('Admin Firestore not initialized');
       }
 
-      let collectionPath = doc.collection;
-      // If the backup was org-scoped but we're restoring to a different org
-      if (organizationId && !doc.collection.includes(organizationId)) {
-        const parts = doc.collection.split('/');
-        if (parts[0] === 'organizations') {
-          parts[1] = organizationId;
-          collectionPath = parts.join('/');
-        }
-      }
+      const collectionPath = doc.collection;
 
       await adminDb.collection(collectionPath).doc(doc.documentId).set(doc.data, { merge: true });
     } catch (error) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,7 +12,6 @@ type TemplateType = 'proposal' | 'quote' | 'contract' | 'invoice';
 export default function ProposalBuilderPage() {
   const router = useRouter();
   const toast = useToast();
-  const _orgId = DEFAULT_ORG_ID;
 
   const [template, setTemplate] = useState<Partial<ProposalTemplate>>({
     name: 'Untitled Proposal',

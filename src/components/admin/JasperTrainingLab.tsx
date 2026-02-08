@@ -27,7 +27,6 @@ import { Badge } from '@/components/ui/badge';
 // ============================================================================
 
 interface JasperTrainingLabProps {
-  organizationId: string;
 }
 
 interface PersonaConfig {
@@ -124,8 +123,8 @@ const SPECIALIST_REGISTRY = [
 // PERSONA EDITOR COMPONENT
 // ============================================================================
 
-const PersonaEditor = React.memo<{ organizationId: string; persona: PersonaConfig; onSave: (persona: PersonaConfig) => void }>(
-  ({ organizationId, persona, onSave }) => {
+const PersonaEditor = React.memo<{ persona: PersonaConfig; onSave: (persona: PersonaConfig) => void }>(
+  ({ persona, onSave }) => {
     const [localPersona, setLocalPersona] = useState<PersonaConfig>(persona);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -151,7 +150,7 @@ const PersonaEditor = React.memo<{ organizationId: string; persona: PersonaConfi
         <CardHeader>
           <CardTitle>Persona Configuration</CardTitle>
           <CardDescription>
-            Define Jasper&apos;s personality, tone, and base instructions for organization: {organizationId}
+            Define Jasper&apos;s personality, tone, and base instructions
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -610,9 +609,8 @@ TrainingExamplesManager.displayName = 'TrainingExamplesManager';
 // ============================================================================
 
 const TestChatInterface = React.memo<{
-  organizationId: string;
   persona: PersonaConfig;
-}>(({ organizationId, persona }) => {
+}>(({ persona }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -657,7 +655,7 @@ const TestChatInterface = React.memo<{
       <CardHeader>
         <CardTitle>Test Chat Interface</CardTitle>
         <CardDescription>
-          Simulate conversations with Jasper for organization: {organizationId}
+          Simulate conversations with Jasper
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -908,7 +906,7 @@ KnowledgeBaseManager.displayName = 'KnowledgeBaseManager';
 // MAIN COMPONENT
 // ============================================================================
 
-const JasperTrainingLab: React.FC<JasperTrainingLabProps> = ({ organizationId }) => {
+const JasperTrainingLab: React.FC<JasperTrainingLabProps> = () => {
   const [persona, setPersona] = useState<PersonaConfig>({
     name: 'Jasper',
     title: 'AI Sales Orchestrator',
@@ -960,7 +958,6 @@ const JasperTrainingLab: React.FC<JasperTrainingLabProps> = ({ organizationId })
 
         <TabsContent value="persona">
           <PersonaEditor
-            organizationId={organizationId}
             persona={persona}
             onSave={handlePersonaSave}
           />
@@ -989,7 +986,6 @@ const JasperTrainingLab: React.FC<JasperTrainingLabProps> = ({ organizationId })
 
         <TabsContent value="test">
           <TestChatInterface
-            organizationId={organizationId}
             persona={persona}
           />
         </TabsContent>

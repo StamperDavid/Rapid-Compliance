@@ -5,7 +5,7 @@ import { searchQuerySchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     // Validate input
     const validation = validateInput(searchQuerySchema, {
       q: query,
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
       workspaceId,
       limit,
     });
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     const { workspaceId: validatedWorkspaceId, q: validatedQuery, limit: validatedLimit } = validation.data;
 
-    const results = await searchWorkspace(DEFAULT_ORG_ID, validatedWorkspaceId, validatedQuery, { limit: validatedLimit });
+    const results = await searchWorkspace(validatedWorkspaceId, validatedQuery, { limit: validatedLimit });
 
     return NextResponse.json({
       success: true,

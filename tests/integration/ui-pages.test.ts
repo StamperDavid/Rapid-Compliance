@@ -70,14 +70,13 @@ describe('E-Commerce UI Integration', () => {
     );
 
     // Set up Stripe API key for payment processing
-    // The apiKeyService stores ALL keys in a single document with organizationId as the document ID
+    // The apiKeyService stores ALL keys in a single document with the document ID
     const stripeTestKey = 'sk_test_51ShZSEJOv1wOceZ7IiOo1u1Grqb41akFjPbC7vMzttwpNmAQ0yrKw3MVoAEegeenak0BHHq7pqzlg6AEV1Mglpx900vVoWeeiE';
     await FirestoreService.set(
       `organizations/${testOrgId}/apiKeys`,
       testOrgId,
       {
         id: `keys-${testOrgId}`,
-        organizationId: testOrgId,
         payments: {
           stripe: {
             apiKey: stripeTestKey,
@@ -200,7 +199,6 @@ describe('Workflow UI Integration', () => {
         trigger: { type: 'manual', id: 'trigger-1', name: 'Manual', requireConfirmation: false },
         actions: [],
         status: 'draft',
-        organizationId: testOrgId,
         workspaceId: testWorkspaceId,
       },
       false
@@ -219,7 +217,6 @@ describe('Workflow UI Integration', () => {
   it('should execute workflow (workflow page → workflow engine)', async () => {
     const workflow: any = {
       id: 'test-workflow',
-      organizationId: testOrgId,
       workspaceId: testWorkspaceId,
       name: 'Test',
       trigger: { type: 'manual', id: 'trigger-1', name: 'Manual', requireConfirmation: false, config: {} },
@@ -265,7 +262,6 @@ describe('Email Campaign UI Integration', () => {
 
   it('should create campaign (campaign builder → campaign service)', async () => {
     const campaign = await createCampaign({
-      organizationId: testOrgId,
       name: 'Test Campaign',
       subject: 'Test Subject',
       htmlContent: 'Test email body',

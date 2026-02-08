@@ -60,11 +60,6 @@ const LengthSchema = z.enum(['short', 'medium', 'long'], {
  */
 export const GenerateEmailSchema = z.object({
   // Required fields
-  organizationId: z
-    .string()
-    .min(1, 'Organization ID is required')
-    .max(100, 'Organization ID is too long'),
-  
   workspaceId: z
     .string()
     .min(1, 'Workspace ID is required')

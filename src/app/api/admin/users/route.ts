@@ -9,6 +9,7 @@ import {
 } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -29,7 +30,6 @@ interface FirestoreUserData {
   readonly name?: string;
   readonly displayName?: string;
   readonly role?: string;
-  readonly organizationId?: string;
   readonly createdAt?: FirestoreTimestamp | Timestamp;
   readonly updatedAt?: FirestoreTimestamp | Timestamp;
   readonly lastLoginAt?: FirestoreTimestamp | Timestamp;
@@ -43,7 +43,6 @@ interface UserData {
   readonly email: string;
   readonly name: string;
   readonly role: string;
-  readonly organizationId: string;
   readonly createdAt: string | null;
   readonly updatedAt: string | null;
   readonly lastLoginAt: string | null;
@@ -56,7 +55,6 @@ interface UpdateUserRequestBody {
   readonly userId: string;
   readonly name?: string;
   readonly role?: string;
-  readonly organizationId?: string;
   readonly status?: string;
 }
 
@@ -66,7 +64,6 @@ interface UpdateUserRequestBody {
 interface ValidatedUpdateFields {
   name?: string;
   role?: string;
-  organizationId?: string;
   status?: string;
   updatedAt: ReturnType<typeof FieldValue.serverTimestamp>;
   updatedBy: string;
@@ -160,7 +157,6 @@ function transformFirestoreUser(docId: string, data: FirestoreUserData): UserDat
     email: data.email ?? '',
     name: (data.name ?? data.displayName) ?? 'Unknown',
     role: data.role ?? 'member',
-    organizationId: data.organizationId ?? '',
     createdAt: timestampToISOString(data.createdAt),
     updatedAt: timestampToISOString(data.updatedAt),
     lastLoginAt: timestampToISOString(data.lastLoginAt),
@@ -292,9 +288,6 @@ export async function PATCH(request: NextRequest) {
     }
     if (body.role !== undefined) {
       partialUpdates.role = body.role;
-    }
-    if (body.organizationId !== undefined) {
-      partialUpdates.organizationId = body.organizationId;
     }
     if (body.status !== undefined) {
       partialUpdates.status = body.status;

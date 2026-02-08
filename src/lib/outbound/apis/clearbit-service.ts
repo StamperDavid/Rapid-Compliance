@@ -5,8 +5,8 @@
  * Use native discovery-engine.ts instead for 100% native data acquisition.
  * 
  * Migration path:
- * - Instead of: enrichCompanyByDomain(domain, DEFAULT_ORG_ID)
- * - Use: discoverCompany(domain, DEFAULT_ORG_ID) from @/lib/services/discovery-engine
+ * - Instead of: enrichCompanyByDomain(domain, PLATFORM_ID)
+ * - Use: discoverCompany(domain, PLATFORM_ID) from @/lib/services/discovery-engine
  * 
  * Deprecation reason: Third-party data dependency violates Hunter-Closer mandate.
  * Our native discovery engine builds a proprietary 30-day cache moat.

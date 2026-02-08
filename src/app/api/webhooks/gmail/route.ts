@@ -8,7 +8,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getEmail, parseEmailHeaders, getEmailBody, type GmailMessage } from '@/lib/integrations/gmail-service';
 import { classifyReply, sendReplyEmail, type ReplyClassification } from '@/lib/outbound/reply-handler';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -39,7 +39,6 @@ interface GmailTokens {
 interface GmailIntegration {
   id: string;
   userId: string;
-  organizationId: string;
   email: string;
   provider: string;
   type: string;
@@ -199,12 +198,10 @@ function isGmailIntegration(value: unknown): value is GmailIntegration {
     value !== null &&
     'id' in value &&
     'userId' in value &&
-    'organizationId' in value &&
     'email' in value &&
     'credentials' in value &&
     typeof (value as { id: unknown }).id === 'string' &&
     typeof (value as { userId: unknown }).userId === 'string' &&
-    typeof (value as { organizationId: unknown }).organizationId === 'string' &&
     typeof (value as { email: unknown }).email === 'string'
   );
 }
@@ -404,7 +401,7 @@ async function unenrollProspectFromSequences(
   try {
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
       [where('email', '==', prospectEmail)]
     );
 
@@ -422,7 +419,7 @@ async function unenrollProspectFromSequences(
     const prospectId = firstProspect.id;
 
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
       [
         where('prospectId', '==', prospectId),
         where('status', '==', 'active'),
@@ -461,7 +458,7 @@ async function pauseProspectSequences(
   try {
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
       [where('email', '==', prospectEmail)]
     );
 
@@ -475,7 +472,7 @@ async function pauseProspectSequences(
     const prospectId = firstProspect.id;
 
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
       [
         where('prospectId', '==', prospectId),
         where('status', '==', 'active'),
@@ -488,7 +485,7 @@ async function pauseProspectSequences(
       }
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
         enrollment.id,
         {
           ...enrollment,
@@ -520,7 +517,7 @@ async function saveForReview(
 
   const emailId = email.id ?? `unknown_${Date.now()}`;
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/inbox`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/inbox`,
     emailId,
     {
       id: emailId,

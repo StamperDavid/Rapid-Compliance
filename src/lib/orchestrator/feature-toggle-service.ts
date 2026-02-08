@@ -5,13 +5,13 @@
  * The AI Implementation Guide can trigger this when a client says
  * "I don't need that" - immediately cleaning up visual clutter.
  *
- * Persistence: Firestore (organizations/{orgId}/settings/featureVisibility)
+ * Persistence: Firestore (organizations/rapid-compliance-root/settings/featureVisibility)
  *
  * @module feature-toggle-service
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { FeatureStatus } from './system-health-service';
 
 // Re-export FeatureStatus for consumers
@@ -43,7 +43,6 @@ export interface FeatureVisibility {
 }
 
 export interface FeatureVisibilitySettings {
-  organizationId: string;
   features: Record<string, FeatureVisibility>;
   hiddenCategories: FeatureCategory[];
   updatedAt: Date;
@@ -193,7 +192,7 @@ export class FeatureToggleService {
   static async getVisibilitySettings(): Promise<FeatureVisibilitySettings | null> {
     try {
       const settings = await FirestoreService.get<FeatureVisibilitySettings>(
-        `organizations/${DEFAULT_ORG_ID}/settings`,
+        `organizations/${PLATFORM_ID}/settings`,
         'featureVisibility'
       );
       return settings;
@@ -216,14 +215,13 @@ export class FeatureToggleService {
     userId: string,
     reason?: string
   ): Promise<void> {
-    const path = `organizations/${DEFAULT_ORG_ID}/settings`;
+    const path = `organizations/${PLATFORM_ID}/settings`;
     const docId = 'featureVisibility';
 
     // Get existing settings
     let settings = await this.getVisibilitySettings();
 
     settings ??= {
-      organizationId: DEFAULT_ORG_ID,
       features: {},
       hiddenCategories: [],
       updatedAt: new Date(),
@@ -254,13 +252,12 @@ export class FeatureToggleService {
     hidden: boolean,
     userId: string
   ): Promise<void> {
-    const path = `organizations/${DEFAULT_ORG_ID}/settings`;
+    const path = `organizations/${PLATFORM_ID}/settings`;
     const docId = 'featureVisibility';
 
     let settings = await this.getVisibilitySettings();
 
     settings ??= {
-      organizationId: DEFAULT_ORG_ID,
       features: {},
       hiddenCategories: [],
       updatedAt: new Date(),
@@ -310,11 +307,10 @@ export class FeatureToggleService {
    * Reset all visibility settings to default (show everything)
    */
   static async resetToDefault(userId: string): Promise<void> {
-    const path = `organizations/${DEFAULT_ORG_ID}/settings`;
+    const path = `organizations/${PLATFORM_ID}/settings`;
     const docId = 'featureVisibility';
 
     const settings: FeatureVisibilitySettings = {
-      organizationId: DEFAULT_ORG_ID,
       features: {},
       hiddenCategories: [],
       updatedAt: new Date(),

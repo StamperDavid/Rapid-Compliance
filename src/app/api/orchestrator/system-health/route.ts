@@ -5,15 +5,15 @@
  * Used by the Implementation Guide to understand what's configured
  * and what needs attention.
  *
- * GET /api/orchestrator/system-health?DEFAULT_ORG_ID=xxx
+ * GET /api/orchestrator/system-health?PLATFORM_ID=xxx
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface SpecialistStatusRequestBody {
-  DEFAULT_ORG_ID?: string;
+  PLATFORM_ID?: string;
 }
 
 function isSpecialistStatusRequestBody(value: unknown): value is SpecialistStatusRequestBody {
@@ -27,12 +27,12 @@ export async function GET(request: NextRequest) {
 
     if (quickOnly) {
       // Return just the quick status for performance
-      const quickStatus = await SystemHealthService.getQuickStatus(DEFAULT_ORG_ID);
+      const quickStatus = await SystemHealthService.getQuickStatus();
       return NextResponse.json(quickStatus);
     }
 
     // Return full health report
-    const report = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
+    const report = await SystemHealthService.generateHealthReport();
 
     return NextResponse.json(report);
   } catch (error) {
@@ -56,16 +56,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { DEFAULT_ORG_ID } = body;
+    const { PLATFORM_ID } = body;
 
-    if (!DEFAULT_ORG_ID) {
+    if (!PLATFORM_ID) {
       return NextResponse.json(
-        { error: 'DEFAULT_ORG_ID is required' },
+        { error: 'PLATFORM_ID is required' },
         { status: 400 }
       );
     }
 
-    const specialistStatus = await SystemHealthService.getSpecialistStatus(DEFAULT_ORG_ID);
+    const specialistStatus = await SystemHealthService.getSpecialistStatus();
 
     return NextResponse.json({
       specialists: specialistStatus,

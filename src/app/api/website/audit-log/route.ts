@@ -1,13 +1,13 @@
 /**
  * Audit Log API
  * View change history and publishing activity
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { Query, DocumentData } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,6 @@ export const dynamic = 'force-dynamic';
 // Audit entry type
 interface AuditEntry {
   id: string;
-  organizationId?: string;
   type?: string;
   pageId?: string;
   postId?: string;
@@ -41,8 +40,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(limitParam ?? '50', 10);
 
     const auditRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/audit-log/entries',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/audit-log/entries'
     );
     let query: Query<DocumentData> = auditRef.orderBy('performedAt', 'desc');
 
@@ -65,17 +63,6 @@ export async function GET(request: NextRequest) {
     const entries: AuditEntry[] = [];
     for (const doc of snapshot.docs) {
       const data = doc.data() as AuditEntry;
-
-      if (data.organizationId && data.organizationId !== DEFAULT_ORG_ID) {
-        logger.error('[SECURITY] Audit log organizationId mismatch', new Error('Audit log cross-org access'), {
-          route: '/api/website/audit-log',
-          method: 'GET',
-          requested: DEFAULT_ORG_ID,
-          actual: data.organizationId,
-          entryId: doc.id,
-        });
-        continue;
-      }
 
       // Convert Firestore Timestamp to ISO string if needed
       let performedAt: string | undefined;

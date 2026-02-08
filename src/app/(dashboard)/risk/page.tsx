@@ -28,14 +28,13 @@ export default function RiskDashboardPage() {
   const [prediction, setPrediction] = useState<DealRiskPrediction | null>(null);
   const [deal, setDeal] = useState<Deal | null>(null);
   const [dealId, setDealId] = useState<string>('');
-  const [organizationId, setOrganizationId] = useState<string>('');
 
   /**
    * Fetch risk prediction
    */
   const fetchRiskPrediction = async () => {
-    if (!dealId || !organizationId) {
-      setError('Please enter both Deal ID and Organization ID');
+    if (!dealId) {
+      setError('Please enter Deal ID');
       return;
     }
 
@@ -50,7 +49,6 @@ export default function RiskDashboardPage() {
         },
         body: JSON.stringify({
           dealId,
-          organizationId,
           workspaceId: 'default',
           includeInterventions: true,
           forceRefresh: false,
@@ -125,7 +123,6 @@ export default function RiskDashboardPage() {
    */
   const loadDemoData = () => {
     setDealId('demo-deal-001');
-    setOrganizationId('demo-org-001');
   };
 
   return (
@@ -162,7 +159,7 @@ export default function RiskDashboardPage() {
             Analyze Deal Risk
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="dealId" className="block text-sm font-medium text-gray-700 mb-2">
                 Deal ID
@@ -177,24 +174,10 @@ export default function RiskDashboardPage() {
               />
             </div>
 
-            <div>
-              <label htmlFor="organizationId" className="block text-sm font-medium text-gray-700 mb-2">
-                Organization ID
-              </label>
-              <input
-                type="text"
-                id="organizationId"
-                value={organizationId}
-                onChange={(e) => setOrganizationId(e.target.value)}
-                placeholder="Enter organization ID"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
             <div className="flex items-end">
               <button
                 onClick={() => { void fetchRiskPrediction(); }}
-                disabled={loading || !dealId || !organizationId}
+                disabled={loading || !dealId}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-2 px-6 rounded-lg transition-colors"
               >
                 {loading ? (

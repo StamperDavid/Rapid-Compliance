@@ -6,7 +6,7 @@ import type { Order } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 type QueryConstraint = ReturnType<typeof where> | ReturnType<typeof orderBy>;
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     // Use paginated query
     const result = await FirestoreService.getAllPaginated<Order>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/default/orders`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/orders`,
       constraints,
       Math.min(pageSize, 100) // Max 100 per page
     );

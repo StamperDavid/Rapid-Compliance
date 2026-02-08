@@ -142,7 +142,6 @@ export default function EmailWriterPage() {
         
         {/* Email Writer Card */}
         <EmailWriterCard
-          organizationId={DEFAULT_ORG_ID}
           workspaceId={workspaceId}
           userId={userId}
           onEmailSent={handleEmailSent}

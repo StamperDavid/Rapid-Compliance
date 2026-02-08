@@ -48,7 +48,6 @@ export async function POST(request: NextRequest) {
     }
     
     const {
-      organizationId,
       workspaceId,
       period,
       quota,
@@ -57,7 +56,6 @@ export async function POST(request: NextRequest) {
     } = validation.data;
     
     logger.info('Generating revenue forecast', {
-      orgId: organizationId,
       period,
       quota,
       templateId

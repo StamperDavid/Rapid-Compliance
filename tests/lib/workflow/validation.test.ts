@@ -21,7 +21,6 @@ import {
 describe('Workflow Validation', () => {
   it('should validate valid workflow creation data', () => {
     const validData = {
-      organizationId: 'org_test_001',
       workspaceId: 'default',
       name: 'Test Workflow',
       description: 'A test workflow',
@@ -82,7 +81,6 @@ describe('Workflow Validation', () => {
   
   it('should reject workflow with invalid action type', () => {
     const invalidData = {
-      organizationId: 'org_test',
       workspaceId: 'default',
       name: 'Test Workflow',
       description: 'Test',
@@ -127,7 +125,6 @@ describe('Workflow Validation', () => {
   
   it('should validate workflow with multiple actions', () => {
     const validData = {
-      organizationId: 'org_test',
       workspaceId: 'default',
       name: 'Multi-Action Workflow',
       description: 'Workflow with multiple actions',
@@ -389,7 +386,6 @@ describe('Workflow Execution Validation', () => {
   it('should validate valid execution request', () => {
     const validRequest = {
       workflowId: 'workflow_001',
-      organizationId: 'org_test',
       workspaceId: 'default',
       dealId: 'deal_001',
       triggerData: {
@@ -405,23 +401,11 @@ describe('Workflow Execution Validation', () => {
   
   it('should require workflowId', () => {
     const invalidRequest = {
-      organizationId: 'org_test',
       workspaceId: 'default',
     };
-    
+
     const result = validateWorkflowExecution(invalidRequest);
-    
-    expect(result.success).toBe(false);
-  });
-  
-  it('should require organizationId', () => {
-    const invalidRequest = {
-      workflowId: 'workflow_001',
-      workspaceId: 'default',
-    };
-    
-    const result = validateWorkflowExecution(invalidRequest);
-    
+
     expect(result.success).toBe(false);
   });
 });

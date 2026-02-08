@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/config';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   collection,
   doc,
@@ -50,15 +50,12 @@ export async function GET(
       );
     }
 
-    // Use the penthouse organization ID
-    const orgId = DEFAULT_ORG_ID;
     let form: FormDefinition | null = null;
     let fields: FormFieldConfig[] = [];
 
     const formRef = doc(
       db,
       'organizations',
-      orgId,
       'workspaces',
       'default',
       'forms',
@@ -73,7 +70,6 @@ export async function GET(
       const fieldsRef = collection(
         db,
         'organizations',
-        orgId,
         'workspaces',
         'default',
         'forms',
@@ -111,7 +107,6 @@ export async function GET(
     const formRefForUpdate = doc(
       db,
       'organizations',
-      orgId,
       'workspaces',
       'default',
       'forms',
@@ -193,15 +188,12 @@ export async function POST(
       );
     }
 
-    // Use the penthouse organization ID
-    const orgId = DEFAULT_ORG_ID;
     let form: FormDefinition | null = null;
     let fields: FormFieldConfig[] = [];
 
     const formRef = doc(
       db,
       'organizations',
-      orgId,
       'workspaces',
       'default',
       'forms',
@@ -216,7 +208,6 @@ export async function POST(
       const fieldsRef = collection(
         db,
         'organizations',
-        orgId,
         'workspaces',
         'default',
         'forms',
@@ -277,7 +268,6 @@ export async function POST(
     const submission: Omit<FormSubmission, 'id'> = {
       formId,
       formVersion: form.version,
-      organizationId: orgId,
       workspaceId: 'default',
       status: 'completed',
       responses: fieldResponses,
@@ -300,7 +290,6 @@ export async function POST(
     const submissionsRef = collection(
       db,
       'organizations',
-      orgId,
       'workspaces',
       'default',
       'forms',
@@ -313,7 +302,6 @@ export async function POST(
     const formRefForSubmissionCount = doc(
       db,
       'organizations',
-      orgId,
       'workspaces',
       'default',
       'forms',

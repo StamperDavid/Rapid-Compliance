@@ -5,6 +5,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface TrackingPixel {
   messageId: string;
@@ -55,9 +56,6 @@ export function generateTrackedLink(messageId: string, originalUrl: string): Tra
 
   // Link mapping should be stored in Firestore when email is sent
   // The tracking endpoint will redirect to originalUrl after logging the click
-  if (typeof window !== 'undefined') {
-    logger.warn('generateTrackedLink: organizationId needed for Firestore storage', { file: 'email-tracking.ts' });
-  }
 
   return {
     messageId,
@@ -179,15 +177,10 @@ interface TrackingData {
 
 export async function getEmailTrackingStats(
   messageId: string,
-  organizationId?: string
 ): Promise<EmailTrackingStats | null> {
-  if (!organizationId) {
-    return null;
-  }
-
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const rawData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
     messageId
   );
 

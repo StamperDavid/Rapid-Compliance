@@ -180,12 +180,10 @@ export type SequenceEvent =
  * Create sequence analyzed event
  */
 export function createSequenceAnalyzedEvent(
-  analysis: SequenceAnalysis,
-  orgId: string = 'default'
+  analysis: SequenceAnalysis
 ): Omit<SequenceAnalyzedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'sequence.analyzed',
-    orgId,
     confidence: 0.9,
     priority: 'Low' as const,
     payload: {
@@ -211,13 +209,11 @@ export function createSequenceAnalyzedEvent(
  */
 export function createPatternDetectedEvent(
   pattern: SequencePattern,
-  affectedSequences: number,
-  orgId: string = 'default'
+  affectedSequences: number
 ): Omit<PatternDetectedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   const confidenceMap = { high: 0.9, medium: 0.75, low: 0.6 };
   return {
     type: 'sequence.pattern_detected',
-    orgId,
     confidence: confidenceMap[pattern.confidence],
     priority: pattern.confidence === 'high' ? 'High' as const : 'Medium' as const,
     payload: {
@@ -244,18 +240,16 @@ export function createPatternDetectedEvent(
  */
 export function createUnderperformingSequenceEvent(
   sequenceMetrics: SequenceMetrics,
-  benchmarkReplyRate: number,
-  orgId: string = 'default'
+  benchmarkReplyRate: number
 ): Omit<UnderperformingSequenceEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   const gap = benchmarkReplyRate - sequenceMetrics.overallReplyRate;
-  const urgency: 'low' | 'medium' | 'high' | 'critical' = 
+  const urgency: 'low' | 'medium' | 'high' | 'critical' =
     gap > 50 ? 'critical' :
     gap > 30 ? 'high' :
     gap > 15 ? 'medium' : 'low';
-  
+
   return {
     type: 'sequence.underperforming',
-    orgId,
     confidence: 0.85,
     priority: urgency === 'critical' || urgency === 'high' ? 'High' as const : 'Medium' as const,
     payload: {
@@ -280,13 +274,11 @@ export function createUnderperformingSequenceEvent(
  */
 export function createOptimizationNeededEvent(
   recommendation: OptimizationRecommendation,
-  sequenceId: string,
-  orgId: string = 'default'
+  sequenceId: string
 ): Omit<OptimizationNeededEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   const confidenceMap = { high: 0.9, medium: 0.75, low: 0.6 };
   return {
     type: 'sequence.optimization_needed',
-    orgId,
     confidence: confidenceMap[recommendation.confidence],
     priority: recommendation.priority === 'critical' ? 'High' as const :
              recommendation.priority === 'high' ? 'High' as const : 'Medium' as const,
@@ -316,12 +308,10 @@ export function createOptimalTimingFoundEvent(
   bestHours: number[],
   bestDays: string[],
   improvementPotential: number,
-  currentTimingScore: number,
-  orgId: string = 'default'
+  currentTimingScore: number
 ): Omit<OptimalTimingFoundEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'sequence.optimal_timing_found',
-    orgId,
     confidence: 0.85,
     priority: improvementPotential > 20 ? 'High' as const : 'Medium' as const,
     payload: {
@@ -343,16 +333,14 @@ export function createOptimalTimingFoundEvent(
  * Create A/B test completed event
  */
 export function createABTestCompletedEvent(
-  test: ABTest,
-  orgId: string = 'default'
+  test: ABTest
 ): Omit<ABTestCompletedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   if (!test.winningVariant || test.lift === undefined) {
     throw new Error('Cannot create event for incomplete A/B test');
   }
-  
+
   return {
     type: 'sequence.ab_test_completed',
-    orgId,
     confidence: (test.statisticalSignificance ?? 0) / 100,
     priority: test.lift > 20 ? 'High' as const : 'Medium' as const,
     payload: {
@@ -381,14 +369,12 @@ export function createPerformanceDeclineEvent(
   metric: string,
   previousValue: number,
   currentValue: number,
-  timeframe: string,
-  orgId: string = 'default'
+  timeframe: string
 ): Omit<PerformanceDeclineEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   const percentageChange = ((currentValue - previousValue) / previousValue) * 100;
-  
+
   return {
     type: 'sequence.performance_decline',
-    orgId,
     confidence: 0.8,
     priority: percentageChange < -30 ? 'High' as const : 'Medium' as const,
     payload: {
@@ -417,12 +403,10 @@ export function createBestPracticeFoundEvent(
   category: string,
   impact: string,
   adoption: number,
-  sequences: string[],
-  orgId: string = 'default'
+  sequences: string[]
 ): Omit<BestPracticeFoundEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'sequence.best_practice_found',
-    orgId,
     confidence: 0.85,
     priority: impact === 'high' ? 'High' as const : 'Medium' as const,
     payload: {
@@ -446,12 +430,10 @@ export function createBestPracticeFoundEvent(
  */
 export function createSequenceMetricsUpdatedEvent(
   sequenceMetrics: SequenceMetrics,
-  period: string,
-  orgId: string = 'default'
+  period: string
 ): Omit<SequenceMetricsUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'sequence.metrics_updated',
-    orgId,
     confidence: 0.95,
     priority: 'Low' as const,
     payload: {

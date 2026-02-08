@@ -9,7 +9,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Type definitions for API responses
 interface OpenAIErrorResponse {
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     // Load API keys
     const apiKeys = await FirestoreService.get<ApiKeysCollection>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
       'apiKeys'
     );
 

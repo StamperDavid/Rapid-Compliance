@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Helper function to convert various date formats to Date object
@@ -24,9 +24,8 @@ function toDate(value: unknown): Date {
 
 /**
  * GET /api/analytics/revenue - Get revenue analytics
- * 
+ *
  * Query params:
- * - orgId: organization ID (required)
  * - period: '7d' | '30d' | '90d' | 'all' (optional, default: '30d')
  */
 export async function GET(request: NextRequest) {
@@ -41,13 +40,12 @@ export async function GET(request: NextRequest) {
     // Use caching for analytics queries
     const analytics = await withCache(
       'revenue',
-      async () => calculateRevenueAnalytics(DEFAULT_ORG_ID, period),
+      async () => calculateRevenueAnalytics(period),
       { period }
     );
 
-    logger.info('Revenue analytics retrieved', { 
+    logger.info('Revenue analytics retrieved', {
       route: '/api/analytics/revenue',
-      DEFAULT_ORG_ID, 
       period,
       totalRevenue: analytics.totalRevenue,
     });
@@ -63,7 +61,7 @@ export async function GET(request: NextRequest) {
 /**
  * Calculate revenue analytics (extracted for caching)
  */
-async function calculateRevenueAnalytics(orgId: string, period: string) {
+async function calculateRevenueAnalytics(period: string) {
   // Calculate date range based on period
   const now = new Date();
   let startDate: Date;
@@ -119,7 +117,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     }
     
     // Get deals from Firestore with date filtering for better performance
-    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/default/entities/deals`;
+    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
     let allDeals: DealRecord[] = [];
     
     try {
@@ -128,7 +126,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       // If org has 10,000+ deals, consider implementing background jobs for analytics
       allDeals = await FirestoreService.getAll<DealRecord>(dealsPath, []);
     } catch (_e) {
-      logger.debug('No deals collection yet', { DEFAULT_ORG_ID });
+      logger.debug('No deals collection yet');
     }
 
     // Filter by date and status
@@ -141,13 +139,13 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     });
 
     // Get orders (e-commerce)
-    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/orders`;
+    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
     let allOrders: OrderRecord[] = [];
     
     try {
       allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
     } catch (_e) {
-      logger.debug('No orders collection yet', { DEFAULT_ORG_ID });
+      logger.debug('No orders collection yet');
     }
 
     const completedOrders = allOrders.filter(order => {

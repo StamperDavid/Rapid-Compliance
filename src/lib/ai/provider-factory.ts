@@ -10,7 +10,7 @@ import { GeminiProvider } from './providers/gemini-provider';
 import { OpenRouterProvider } from './openrouter-provider';
 import type { ModelName, ChatRequest, ChatResponse } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Simple provider interface for chat routes
@@ -70,7 +70,7 @@ export class AIProviderFactory {
         break;
 
       case 'openrouter':
-        provider = new OpenRouterProvider(DEFAULT_ORG_ID);
+        provider = new OpenRouterProvider(PLATFORM_ID);
         break;
 
       default:

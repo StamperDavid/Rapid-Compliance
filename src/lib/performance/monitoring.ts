@@ -4,7 +4,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface PerformanceMetrics {
   fcp?: number; // First Contentful Paint
@@ -112,7 +112,6 @@ export function reportPerformance(metrics: PerformanceMetrics): void {
   // Send to analytics endpoint
   if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
     const data = {
-      organizationId: DEFAULT_ORG_ID,
       metrics,
       timestamp: Date.now(),
       url: window.location.href,

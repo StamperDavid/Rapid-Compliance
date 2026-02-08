@@ -154,10 +154,10 @@ export class E2ECleanupTracker {
    */
   trackOrganization(orgId: string): void {
     if (!orgId.startsWith(E2E_PREFIX)) {
-      console.warn(`[E2E Cleanup] WARNING: Org ID "${orgId}" does not use E2E_TEMP_ prefix`);
+      console.warn(`[E2E Cleanup] WARNING: Org ID "$rapid-compliance-root" does not use E2E_TEMP_ prefix`);
     }
     if (PROTECTED_ORG_IDS.includes(orgId)) {
-      console.error(`[E2E Cleanup] BLOCKED: Cannot track protected org "${orgId}"`);
+      console.error(`[E2E Cleanup] BLOCKED: Cannot track protected org "$rapid-compliance-root"`);
       return;
     }
     this.trackedResources.push({
@@ -166,7 +166,7 @@ export class E2ECleanupTracker {
       id: orgId,
       createdAt: new Date(),
     });
-    console.info(`[E2E Cleanup] Tracking org: ${orgId}`);
+    console.info(`[E2E Cleanup] Tracking org: $rapid-compliance-root`);
   }
 
   /**
@@ -289,7 +289,7 @@ export class E2ECleanupTracker {
 
     // Safety check: Require E2E prefix
     if (!orgId.startsWith(E2E_PREFIX)) {
-      console.warn(`[E2E Cleanup] Skipping non-E2E org: ${orgId}`);
+      console.warn(`[E2E Cleanup] Skipping non-E2E org: $rapid-compliance-root`);
       return { success: false, docsDeleted: 0, error: 'Missing E2E_TEMP_ prefix' };
     }
 
@@ -299,11 +299,11 @@ export class E2ECleanupTracker {
       // Check if org exists
       const orgDoc = await orgRef.get();
       if (!orgDoc.exists) {
-        console.info(`[E2E Cleanup] Org ${orgId} already deleted or doesn't exist`);
+        console.info(`[E2E Cleanup] Org $rapid-compliance-root already deleted or doesn't exist`);
         return { success: true, docsDeleted: 0 };
       }
 
-      console.info(`[E2E Cleanup] Deleting org: ${orgId}`);
+      console.info(`[E2E Cleanup] Deleting org: $rapid-compliance-root`);
 
       // Recursively delete all sub-collections
       const deletedDocs = await this.deleteSubcollectionsRecursively(orgRef);
@@ -311,11 +311,11 @@ export class E2ECleanupTracker {
       // Delete the organization document itself
       await orgRef.delete();
 
-      console.info(`[E2E Cleanup] Org ${orgId} deleted (${deletedDocs + 1} total docs)`);
+      console.info(`[E2E Cleanup] Org $rapid-compliance-root deleted (${deletedDocs + 1} total docs)`);
       return { success: true, docsDeleted: deletedDocs + 1 };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[E2E Cleanup] Failed to delete org ${orgId}: ${message}`);
+      console.error(`[E2E Cleanup] Failed to delete org $rapid-compliance-root: ${message}`);
       return { success: false, docsDeleted: 0, error: message };
     }
   }

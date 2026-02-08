@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,7 +36,6 @@ interface Campaign {
  * Connected to Autonomous Posting Agent
  */
 export default function SocialMediaCampaignsPage() {
-  const _orgId = DEFAULT_ORG_ID as string;
   const { user: _user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'campaigns' | 'posts' | 'analytics' | 'settings'>('campaigns');

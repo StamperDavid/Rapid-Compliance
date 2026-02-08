@@ -9,14 +9,13 @@ import { getTokensFromCode } from '@/lib/integrations/outlook-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
 // Zod schema for OAuth state validation
 const OAuthStateSchema = z.object({
   userId: z.string().min(1),
-  orgId: z.string().min(1),
 });
 
 export async function GET(request: NextRequest) {
@@ -53,7 +52,6 @@ export async function GET(request: NextRequest) {
       {
         id: `microsoft_${userId}`,
         userId,
-        organizationId: DEFAULT_ORG_ID,
         provider: 'microsoft',
         type: 'outlook',
         status: 'active',
@@ -64,7 +62,7 @@ export async function GET(request: NextRequest) {
       false
     );
 
-    logger.info('Microsoft integration saved', { route: '/api/integrations/microsoft/callback', DEFAULT_ORG_ID });
+    logger.info('Microsoft integration saved', { route: '/api/integrations/microsoft/callback', PLATFORM_ID });
 
     return NextResponse.redirect('/settings/integrations?success=microsoft');
   } catch (error) {

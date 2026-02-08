@@ -5,7 +5,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import crypto from 'crypto';
 
 export interface OAuthConfig {
@@ -28,7 +28,6 @@ export const OAuthConfigDefaults: Record<string, Partial<OAuthConfig>> = {
 
 export interface OAuthState {
   state: string;
-  organizationId: string;
   workspaceId?: string;
   integrationId: string;
   provider: string;
@@ -65,7 +64,6 @@ export interface MicrosoftUserInfo {
 
 export interface IntegrationData {
   id: string;
-  organizationId: string;
   workspaceId?: string;
   provider: string;
   accessToken: string;
@@ -136,11 +134,10 @@ export async function generateAuthUrl(
 
   // Save state to Firestore
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/oauthStates`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/oauthStates`,
     state,
     {
       state,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       integrationId,
       provider,
@@ -230,7 +227,7 @@ export async function exchangeCodeForTokens(
 
   // Delete state token
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/oauthStates`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/oauthStates`,
     state
   );
 
@@ -246,7 +243,7 @@ export async function refreshAccessToken(
 ): Promise<string> {
   // Get integration
   const integration = await FirestoreService.get<StoredIntegration>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
     integrationId
   );
 
@@ -292,7 +289,7 @@ export async function refreshAccessToken(
 
   // Update integration with new tokens
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
     integrationId,
     {
       ...integration,
@@ -315,7 +312,7 @@ export async function refreshAccessToken(
 async function getOAuthConfig(
   provider: 'google' | 'microsoft' | 'slack' | 'quickbooks' | 'xero'
 ): Promise<OAuthConfig> {
-  const apiKeys = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'integrations');
+  const apiKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'integrations');
   
   if (!apiKeys) {
     throw new Error('Integration API keys not configured');
@@ -456,13 +453,12 @@ async function saveIntegrationTokens(
 ): Promise<void> {
   // Get or create integration
   const integration = await FirestoreService.get<Record<string, unknown>>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
     integrationId
   );
 
   const integrationData: IntegrationData = {
     id: integrationId,
-    organizationId: DEFAULT_ORG_ID,
     workspaceId,
     provider,
     accessToken: tokens.access_token,
@@ -504,7 +500,7 @@ async function saveIntegrationTokens(
   }
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
     integrationId,
     integration ? { ...integration, ...integrationData } : integrationData,
     false
@@ -518,7 +514,7 @@ export async function getValidAccessToken(
   integrationId: string
 ): Promise<string> {
   const integration = await FirestoreService.get<StoredIntegration>(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
     integrationId
   );
 

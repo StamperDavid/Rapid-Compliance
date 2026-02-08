@@ -37,6 +37,7 @@ import {
   query
 } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Options for write operations with audit and access control
@@ -48,8 +49,6 @@ export interface WriteOptions {
   audit?: boolean;
   /** User ID performing the operation (for audit trail) */
   userId?: string;
-  /** Organization ID context (for access control) */
-  organizationId?: string;
 }
 
 /**
@@ -143,20 +142,19 @@ export class BaseAgentDAL {
   /**
    * Get an organization sub-collection reference
    * Handles nested collection paths with environment awareness
-   * 
-   * @param orgId - Organization ID
+   *
    * @param subCollection - Sub-collection name (e.g., 'records', 'schemas')
    * @returns CollectionReference for the org sub-collection
-   * 
+   *
    * @example
-   * dal.getOrgSubCollection('org123', 'records')
-   * // Returns: 'test_organizations/org123/test_records' (dev)
-   * // Returns: 'organizations/org123/records' (production)
+   * dal.getOrgSubCollection('records')
+   * // Returns: 'test_organizations/rapid-compliance-root/test_records' (dev)
+   * // Returns: 'organizations/rapid-compliance-root/records' (production)
    */
-  getOrgSubCollection(orgId: string, subCollection: string): CollectionReference {
+  getOrgSubCollection(subCollection: string): CollectionReference {
     const orgPath = this.getColPath('organizations');
     const subPath = this.getColPath(subCollection);
-    const fullPath = `${orgPath}/${orgId}/${subPath}`;
+    const fullPath = `${orgPath}/${PLATFORM_ID}/${subPath}`;
     return collection(this.db, fullPath);
   }
   
@@ -209,15 +207,8 @@ export class BaseAgentDAL {
     
     // Dry run mode - log without executing
     if (options?.dryRun) {
-      logger.info('[DRY RUN] Would write to Firestore', {
-        organizationId: options?.organizationId,
-      });
+      logger.info('[DRY RUN] Would write to Firestore');
       return;
-    }
-    
-    // TODO: Add organization-scoped access check
-    if (options?.organizationId) {
-      this.verifyOrgAccess(options.userId, options.organizationId);
     }
     
     const docRef = doc(this.db, path, docId) as DocumentReference<T>;
@@ -227,7 +218,6 @@ export class BaseAgentDAL {
       docId,
       env:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       userId: options?.userId,
-      orgId: options?.organizationId,
       file: 'BaseAgentDAL.ts'
     });
     
@@ -251,14 +241,8 @@ export class BaseAgentDAL {
     const path = this.getColPath(baseName);
     
     if (options?.dryRun) {
-      logger.info('[DRY RUN] Would update Firestore', {
-        organizationId: options?.organizationId,
-      });
+      logger.info('[DRY RUN] Would update Firestore');
       return;
-    }
-    
-    if (options?.organizationId) {
-      this.verifyOrgAccess(options.userId, options.organizationId);
     }
     
     const docRef = doc(this.db, path, docId) as DocumentReference<T>;
@@ -289,9 +273,7 @@ export class BaseAgentDAL {
     const path = this.getColPath(baseName);
     
     if (options?.dryRun) {
-      logger.info('[DRY RUN] Would delete from Firestore', {
-        organizationId: options?.organizationId,
-      });
+      logger.info('[DRY RUN] Would delete from Firestore');
       return;
     }
     
@@ -332,9 +314,7 @@ export class BaseAgentDAL {
     const path = this.getColPath(baseName);
     
     if (options?.dryRun) {
-      logger.info('[DRY RUN] Would add to Firestore', {
-        organizationId: options?.organizationId,
-      });
+      logger.info('[DRY RUN] Would add to Firestore');
       return doc(this.db, path, 'dry-run-doc-id');
     }
     
@@ -436,17 +416,14 @@ export class BaseAgentDAL {
   // ========================================
 
   /**
-   * Verify that a user has access to an organization
-   * This will be implemented as part of the security enhancement
+   * Verify that a user has access
+   * @deprecated Single-tenant system does not require org-level access control
    */
   private verifyOrgAccess(
     userId: string | undefined,
-    organizationId: string
   ): void {
-    // TODO: Implement organization-scoped access control
-    logger.debug('🔒 Verifying org access', {
+    logger.debug('🔒 Verifying access', {
       userId,
-      organizationId,
       file: 'BaseAgentDAL.ts'
     });
   }

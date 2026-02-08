@@ -24,11 +24,6 @@ export const urlSchema = z.string().url('Invalid URL format').max(2048);
 export const phoneSchema = z.string().regex(phoneRegex, 'Invalid phone number format').max(20);
 
 /**
- * Organization ID validation
- */
-export const organizationIdSchema = z.string().min(1).max(100).regex(/^[a-z0-9\-_]+$/i);
-
-/**
  * User ID validation
  */
 export const userIdSchema = z.string().min(1).max(100);
@@ -55,7 +50,6 @@ export const emailSendSchema = z.object({
     clicks: z.boolean().optional(),
   }).optional(),
   metadata: z.record(z.any()).optional(),
-  organizationId: organizationIdSchema,
 }).refine((data) => !!data.html || !!data.text, {
   message: 'Either html or text is required',
   path: ['html'],
@@ -68,7 +62,6 @@ export const smsSendSchema = z.object({
   to: phoneSchema,
   message: z.string().min(1).max(1600), // SMS character limit
   from: phoneSchema.optional(),
-  organizationId: organizationIdSchema,
   metadata: z.record(z.any()).optional(),
 });
 
@@ -78,7 +71,6 @@ export const smsSendSchema = z.object({
 export const paymentIntentSchema = z.object({
   amount: z.number().positive().max(999999.99),
   currency: z.string().length(3).default('usd'),
-  organizationId: organizationIdSchema,
   metadata: z.record(z.string()).optional(),
 });
 
@@ -102,13 +94,11 @@ export const leadScoringSchema = z.union([
       }).optional(),
       leads: z.array(z.any()).optional(),
     }),
-    organizationId: organizationIdSchema,
-  }),
+    }),
   // Lightweight payload used in tests and simple flows
   z.object({
     leadId: z.string().min(1),
-    organizationId: organizationIdSchema,
-  }),
+    }),
 ]);
 
 /**
@@ -123,14 +113,12 @@ export const workflowExecuteSchema = z.union([
       actions: z.array(z.any()),
     }),
     triggerData: z.record(z.any()),
-    organizationId: organizationIdSchema,
-  }),
+    }),
   // Simpler form used by tests
   z.object({
     workflowId: z.string(),
     triggerData: z.record(z.any()),
-    organizationId: organizationIdSchema,
-  }),
+    }),
 ]);
 
 /**
@@ -143,7 +131,6 @@ export const campaignCreateSchema = z.object({
   text: z.string().optional(),
   templateId: z.string().optional(),
   recipientList: z.array(emailSchema),
-  organizationId: organizationIdSchema,
   scheduleAt: z.string().datetime().optional(),
 }).refine((data) => !!data.html || !!data.text || !!data.templateId, {
   message: 'Provide html, text, or templateId',
@@ -155,7 +142,6 @@ export const campaignCreateSchema = z.object({
  */
 export const checkoutCompleteSchema = z.object({
   paymentIntentId: z.string().min(1),
-  organizationId: organizationIdSchema,
   orderData: z.record(z.any()).optional(),
 });
 
@@ -170,11 +156,9 @@ export const campaignActionSchema = z.object({
     html: z.string().min(1),
     text: z.string().optional(),
     recipientList: z.array(emailSchema),
-    organizationId: organizationIdSchema,
-    scheduleAt: z.string().datetime().optional(),
+      scheduleAt: z.string().datetime().optional(),
   }).optional(),
   campaignId: z.string().optional(),
-  organizationId: organizationIdSchema,
 });
 
 /**
@@ -186,10 +170,8 @@ export const leadNurtureSchema = z.object({
     sequence: z.any().optional(),
     leadId: z.string().optional(),
     sequenceId: z.string().optional(),
-    organizationId: organizationIdSchema.optional(),
     model: z.string().optional(),
   }),
-  organizationId: organizationIdSchema,
 });
 
 /**
@@ -197,7 +179,6 @@ export const leadNurtureSchema = z.object({
  */
 export const leadEnrichSchema = z.object({
   leadId: z.string().min(1),
-  organizationId: organizationIdSchema,
   sources: z.record(z.any()).optional(),
 });
 
@@ -206,7 +187,6 @@ export const leadEnrichSchema = z.object({
  */
 export const agentChatSchema = z.object({
   customerId: z.string().min(1),
-  orgId: organizationIdSchema,
   message: z.string().min(1).max(10000),
   stream: z.boolean().optional().default(false),
 });
@@ -216,7 +196,6 @@ export const agentChatSchema = z.object({
  */
 export const searchQuerySchema = z.object({
   q: z.string().min(1).max(500),
-  orgId: organizationIdSchema,
   workspaceId: z.string().min(1),
   limit: z.number().int().min(1).max(100).optional().default(50),
 });
@@ -227,7 +206,6 @@ export const searchQuerySchema = z.object({
 export const subscriptionCreateSchema = z.object({
   email: emailSchema,
   name: z.string().min(1).max(255).optional(),
-  organizationId: organizationIdSchema,
   planId: z.string().min(1),
   trialDays: z.number().int().min(0).max(365).optional().default(14),
 });

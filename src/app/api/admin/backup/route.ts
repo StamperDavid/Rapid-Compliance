@@ -10,7 +10,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { backupService, type BackupConfig } from '@/lib/backup/backup-service';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +63,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       storageType: body.storageType ?? 'gcs',
       storagePath: process.env.BACKUP_STORAGE_PATH ?? './backups',
       incrementalEnabled: body.incremental ?? true,
-      organizationId: DEFAULT_ORG_ID,
     };
 
     const result = await backupService.runBackup(config);
@@ -125,7 +124,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       storageType: storageType ?? 'gcs',
       storagePath: process.env.BACKUP_STORAGE_PATH ?? './backups',
       incrementalEnabled: true,
-      organizationId: DEFAULT_ORG_ID,
     };
 
     const backups = await backupService.listBackups(config);
@@ -176,7 +174,6 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
       storageType: 'gcs',
       storagePath: process.env.BACKUP_STORAGE_PATH ?? './backups',
       incrementalEnabled: true,
-      organizationId: DEFAULT_ORG_ID,
     };
 
     const deletedCount = await backupService.pruneOldBackups(config, retentionDays);

@@ -26,7 +26,6 @@ describe('LeadRoutingEngine', () => {
     // Mock lead
     mockLead = {
       id: 'lead_test_123',
-      orgId: 'org_test',
       companyName: 'Test Company',
       contactName: 'John Doe',
       contactEmail: 'john@test.com',
@@ -48,7 +47,6 @@ describe('LeadRoutingEngine', () => {
     mockReps = [
       {
         id: 'rep_1',
-        orgId: 'org_test',
         name: 'Alice Johnson',
         email: 'alice@company.com',
         performanceTier: 'top_performer',
@@ -101,7 +99,6 @@ describe('LeadRoutingEngine', () => {
       },
       {
         id: 'rep_2',
-        orgId: 'org_test',
         name: 'Bob Smith',
         email: 'bob@company.com',
         performanceTier: 'high_performer',
@@ -153,7 +150,6 @@ describe('LeadRoutingEngine', () => {
       },
       {
         id: 'rep_3',
-        orgId: 'org_test',
         name: 'Carol Davis',
         email: 'carol@company.com',
         performanceTier: 'average',
@@ -207,7 +203,6 @@ describe('LeadRoutingEngine', () => {
 
     // Mock routing configuration
     mockConfig = {
-      orgId: 'org_test',
       defaultStrategy: 'performance_weighted',
       strategyWeights: {
         performance: 0.35,
@@ -464,7 +459,6 @@ describe('LeadRoutingEngine', () => {
       const rules: RoutingRule[] = [
         {
           id: 'rule_1',
-          orgId: 'org_test',
           name: 'USA Territory Rule',
           type: 'territory',
           priority: 10,
@@ -504,7 +498,6 @@ describe('LeadRoutingEngine', () => {
       const rules: RoutingRule[] = [
         {
           id: 'rule_2',
-          orgId: 'org_test',
           name: 'Hot Lead to Top Performers',
           type: 'performance',
           priority: 10,
@@ -534,7 +527,6 @@ describe('LeadRoutingEngine', () => {
       const rules: RoutingRule[] = [
         {
           id: 'rule_disabled',
-          orgId: 'org_test',
           name: 'Disabled Rule',
           type: 'custom',
           priority: 10,
@@ -558,7 +550,6 @@ describe('LeadRoutingEngine', () => {
       const rules: RoutingRule[] = [
         {
           id: 'rule_3',
-          orgId: 'org_test',
           name: 'Impossible Rule',
           type: 'territory',
           priority: 10,
@@ -636,7 +627,6 @@ describe('LeadRoutingEngine', () => {
 
       expect(assignment.leadId).toBe(mockLead.id);
       expect(assignment.repId).toBe(analysis.recommendation.repId);
-      expect(assignment.orgId).toBe(mockLead.orgId);
       expect(assignment.assignmentMethod).toBe('automatic');
       expect(assignment.strategy).toBe('performance_weighted');
       expect(assignment.matchScore).toBe(analysis.recommendation.matchScore);
@@ -709,7 +699,6 @@ describe('LeadRoutingEngine', () => {
     test('should handle lead with minimal data', () => {
       const minimalLead: Lead = {
         id: 'lead_minimal',
-        orgId: 'org_test',
         companyName: 'Minimal Co',
         contactName: 'Jane Doe',
         contactEmail: 'jane@minimal.com',

@@ -23,14 +23,17 @@
  */
 
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { DocumentReference } from 'firebase-admin/firestore';
 
 export class TestCleanupTracker {
   private organizationsToCleanup: Set<string> = new Set();
   private usersToCleanup: Set<string> = new Set();
   
-  // PERMANENT DEMO ORGS - NEVER DELETE
+  // PERMANENT ORGS - NEVER DELETE
+  // In single-tenant mode, PLATFORM_ID is protected
   private static PROTECTED_ORG_IDS = [
+    PLATFORM_ID,
     'platform',
     'org_demo_auraflow',
     'org_demo_greenthumb',
@@ -50,7 +53,7 @@ export class TestCleanupTracker {
   trackOrganization(orgId: string) {
     // Never track protected organizations
     if (TestCleanupTracker.PROTECTED_ORG_IDS.includes(orgId)) {
-      console.warn(`⚠️  Attempted to track protected org: ${orgId} - ignoring`);
+      console.warn(`⚠️  Attempted to track protected org: $rapid-compliance-root - ignoring`);
       return;
     }
     this.organizationsToCleanup.add(orgId);
@@ -86,7 +89,7 @@ export class TestCleanupTracker {
       try {
         // Double-check it's not protected
         if (TestCleanupTracker.PROTECTED_ORG_IDS.includes(orgId)) {
-          console.warn(`⚠️  Skipping protected org: ${orgId}`);
+          console.warn(`⚠️  Skipping protected org: $rapid-compliance-root`);
           continue;
         }
 
@@ -97,11 +100,11 @@ export class TestCleanupTracker {
         
         // Delete the organization document
         await orgRef.delete();
-        console.log(`   ✅ Deleted org: ${orgId}`);
+        console.log(`   ✅ Deleted org: $rapid-compliance-root`);
         deletedOrgs++;
         
       } catch (error) {
-        console.error(`   ❌ Failed to delete org ${orgId}:`, error instanceof Error ? error.message : 'Unknown error');
+        console.error(`   ❌ Failed to delete org $rapid-compliance-root:`, error instanceof Error ? error.message : 'Unknown error');
         errors++;
       }
     }
@@ -180,6 +183,7 @@ export class TestCleanupTracker {
 
 /**
  * Helper function to create a test organization with automatic cleanup tracking
+ * Single-tenant mode: Always returns PLATFORM_ID, but can create sub-collections for testing
  */
 export async function createTestOrganization(
   cleanup: TestCleanupTracker,
@@ -188,9 +192,10 @@ export async function createTestOrganization(
   if (!adminDb) {
     throw new Error('Firebase Admin DB is not initialized');
   }
-  
-  const orgId = `test-org-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  
+
+  // Single-tenant: Use PLATFORM_ID
+  const orgId = PLATFORM_ID;
+
   const orgData = {
     name,
     slug: name.toLowerCase().replace(/\s+/g, '-'),
@@ -200,12 +205,13 @@ export async function createTestOrganization(
     updatedAt: new Date(),
     isAutomatedTest: true,  // CRITICAL: Mark as automated test data
   };
-  
-  await adminDb.collection('organizations').doc(orgId).set(orgData);
-  
-  // Track for cleanup
-  cleanup.trackOrganization(orgId);
-  
+
+  // Set or merge into existing platform org
+  await adminDb.collection('organizations').doc(orgId).set(orgData, { merge: true });
+
+  // DO NOT track PLATFORM_ID for cleanup (it's protected)
+  // Tests should clean up their sub-collections individually
+
   return orgId;
 }
 
@@ -214,7 +220,6 @@ export async function createTestOrganization(
  */
 export async function createTestUser(
   cleanup: TestCleanupTracker,
-  orgId: string,
   email: string = `test-${Date.now()}@test.com`
 ): Promise<string> {
   if (!adminAuth) {
@@ -233,7 +238,6 @@ export async function createTestUser(
   const userData = {
     email,
     name: 'Test User',
-    organizationId: orgId,
     role: 'admin',
     createdAt: new Date(),
     updatedAt: new Date(),

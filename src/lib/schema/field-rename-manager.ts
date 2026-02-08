@@ -83,11 +83,11 @@ export class FieldRenameManager {
   ): Promise<void> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+      const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
       // Get schema
       const schema = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
         schemaId
       ) as Schema;
       
@@ -148,7 +148,7 @@ export class FieldRenameManager {
       updatedFields[fieldIndex] = updatedField;
       
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
         schemaId,
         {
           ...schema,
@@ -268,9 +268,9 @@ export class FieldRenameManager {
   ): Promise<void> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+      const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
-      const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notifications`;
+      const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`;
       const notificationId = `notif_rollback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       await FirestoreService.set(
@@ -278,7 +278,6 @@ export class FieldRenameManager {
         notificationId,
         {
           id: notificationId,
-          organizationId: DEFAULT_ORG_ID,
           workspaceId,
           title: 'Field Rolled Back',
           message: `Field "${field.label}" in schema "${schemaName}" was rolled back from "${oldKey}" to "${newKey}"`,

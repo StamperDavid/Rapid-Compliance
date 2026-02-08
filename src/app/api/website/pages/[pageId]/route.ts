@@ -1,6 +1,6 @@
 /**
  * Single Page API
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -8,10 +8,9 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface PageData {
-  organizationId: string;
   version?: number;
 }
 
@@ -35,8 +34,8 @@ export async function GET(
     const params = await context.params;
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      { pageId: params.pageId }
     );
 
     const doc = await pageRef.get();
@@ -85,8 +84,8 @@ export async function PUT(
     const { page } = body;
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      { pageId: params.pageId }
     );
 
     const existingDoc = await pageRef.get();
@@ -111,7 +110,6 @@ export async function PUT(
 
     const updatedData = {
       ...page,
-      organizationId: existingData.organizationId,
       id: params.pageId,
       updatedAt: FieldValue.serverTimestamp(),
       lastEditedBy: performedBy,
@@ -153,8 +151,8 @@ export async function DELETE(
     const params = await context.params;
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      { pageId: params.pageId }
     );
 
     const doc = await pageRef.get();

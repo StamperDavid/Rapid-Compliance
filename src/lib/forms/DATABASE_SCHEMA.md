@@ -5,14 +5,14 @@
 This document describes the Firestore database schema for the Form Builder module. The design is optimized for:
 
 1. **Read-heavy workloads** - Form rendering needs to be fast
-2. **Organization isolation** - Each organization's data is completely separate
+2. **Workspace isolation** - Each workspace's data is completely separate
 3. **Efficient querying** - Common queries are supported with composite indexes
 4. **Scalability** - Subcollections prevent document size limits
 
 ## Collection Structure
 
 ```
-organizations/{orgId}/workspaces/{workspaceId}/
+workspaces/{workspaceId}/
 ├── forms/{formId}                              # Form definitions
 │   ├── fields/{fieldId}                        # Form fields (subcollection)
 │   ├── submissions/{submissionId}              # Form submissions (subcollection)
@@ -27,10 +27,9 @@ organizations/{orgId}/workspaces/{workspaceId}/
 ### FormDefinition
 
 ```typescript
-// Path: organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}
+// Path: workspaces/{workspaceId}/forms/{formId}
 {
   id: string;
-  organizationId: string;
   workspaceId: string;
 
   // Basic info
@@ -80,11 +79,10 @@ organizations/{orgId}/workspaces/{workspaceId}/
 ### FormFieldConfig
 
 ```typescript
-// Path: organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
+// Path: workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
 {
   id: string;
   formId: string;
-  organizationId: string;
   workspaceId: string;
 
   // Field definition
@@ -124,12 +122,11 @@ organizations/{orgId}/workspaces/{workspaceId}/
 ### FormSubmission
 
 ```typescript
-// Path: organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
+// Path: workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
 {
   id: string;
   formId: string;
   formVersion: number;             // Indexed
-  organizationId: string;
   workspaceId: string;
 
   // Status
@@ -188,11 +185,10 @@ organizations/{orgId}/workspaces/{workspaceId}/
 ### FormAnalyticsSummary
 
 ```typescript
-// Path: organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/analytics/{YYYY-MM-DD}
+// Path: workspaces/{workspaceId}/forms/{formId}/analytics/{YYYY-MM-DD}
 {
   id: string;                      // Format: YYYY-MM-DD
   formId: string;
-  organizationId: string;
   workspaceId: string;
   date: string;                    // Indexed - YYYY-MM-DD format
 
@@ -307,7 +303,7 @@ organizations/{orgId}/workspaces/{workspaceId}/
 
 ```typescript
 query(
-  collection(db, 'organizations/{orgId}/workspaces/{workspaceId}/forms'),
+  collection(db, 'workspaces/{workspaceId}/forms'),
   where('status', '==', 'published'),
   orderBy('updatedAt', 'desc'),
   limit(20)
@@ -384,41 +380,41 @@ query(
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /organizations/{orgId}/workspaces/{workspaceId}/forms/{formId} {
-      allow read: if isOrgMember(orgId) || resource.data.publicAccess == true;
-      allow write: if isOrgMember(orgId);
+    match /workspaces/{workspaceId}/forms/{formId} {
+      allow read: if isWorkspaceMember(workspaceId) || resource.data.publicAccess == true;
+      allow write: if isWorkspaceMember(workspaceId);
 
       match /fields/{fieldId} {
-        allow read: if isOrgMember(orgId) || get(/databases/$(database)/documents/organizations/$(orgId)/workspaces/$(workspaceId)/forms/$(formId)).data.publicAccess == true;
-        allow write: if isOrgMember(orgId);
+        allow read: if isWorkspaceMember(workspaceId) || get(/databases/$(database)/documents/workspaces/$(workspaceId)/forms/$(formId)).data.publicAccess == true;
+        allow write: if isWorkspaceMember(workspaceId);
       }
 
       match /submissions/{submissionId} {
-        allow read: if isOrgMember(orgId);
+        allow read: if isWorkspaceMember(workspaceId);
         allow create: if true;  // Public submission
-        allow update, delete: if isOrgMember(orgId);
+        allow update, delete: if isWorkspaceMember(workspaceId);
       }
 
       match /views/{viewId} {
-        allow read: if isOrgMember(orgId);
+        allow read: if isWorkspaceMember(workspaceId);
         allow create: if true;  // Public view tracking
-        allow update: if isOrgMember(orgId);
+        allow update: if isWorkspaceMember(workspaceId);
       }
 
       match /analytics/{date} {
-        allow read: if isOrgMember(orgId);
+        allow read: if isWorkspaceMember(workspaceId);
         allow write: if false;  // Server-only via Cloud Functions
       }
     }
 
-    match /organizations/{orgId}/workspaces/{workspaceId}/formTemplates/{templateId} {
-      allow read: if isOrgMember(orgId);
-      allow write: if isOrgMember(orgId);
+    match /workspaces/{workspaceId}/formTemplates/{templateId} {
+      allow read: if isWorkspaceMember(workspaceId);
+      allow write: if isWorkspaceMember(workspaceId);
     }
 
-    function isOrgMember(orgId) {
+    function isWorkspaceMember(workspaceId) {
       return request.auth != null &&
-        exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid));
+        exists(/databases/$(database)/documents/workspaces/$(workspaceId)/members/$(request.auth.uid));
     }
   }
 }

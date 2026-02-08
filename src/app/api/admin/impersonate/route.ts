@@ -52,7 +52,6 @@ interface FirestoreUserData {
   readonly name?: string;
   readonly displayName?: string;
   readonly role?: string;
-  readonly organizationId?: string;
   readonly status?: string;
 }
 
