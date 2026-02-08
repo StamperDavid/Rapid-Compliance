@@ -26,12 +26,12 @@ import type { VoiceCall, VoiceProvider } from './types';
 import { logger } from '@/lib/logger/logger';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
 import type { TTSEngineType } from '@/lib/voice/tts/types';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export type VoiceAgentMode = 'prospector' | 'closer';
 
 export interface VoiceAgentConfig {
   mode: VoiceAgentMode;
-  organizationId: string;
   agentId: string;
 
   // Company context for AI
@@ -182,7 +182,6 @@ class VoiceAgentHandler {
     );
 
     logger.info(`[VoiceAgent] Initialized in ${config.mode.toUpperCase()} mode`, {
-      organizationId: config.organizationId,
       agentId: config.agentId,
       file: 'voice-agent-handler.ts',
     });
@@ -201,7 +200,6 @@ class VoiceAgentHandler {
     // Build AI conversation config
     const conversationConfig: ConversationConfig = {
       mode: this.config.mode,
-      organizationId: this.config.organizationId,
       agentId: this.config.agentId,
       companyName: this.config.companyName,
       productName: this.config.productName,
@@ -316,7 +314,6 @@ class VoiceAgentHandler {
 
     await callTransferService.aiToHumanHandoff({
       callId,
-      organizationId: this.config.organizationId,
       aiAgentId: this.config.agentId,
       conversationSummary: summary,
       customerSentiment: context?.sentiment ?? 'neutral',
@@ -446,7 +443,6 @@ class VoiceAgentHandler {
 
       await callTransferService.aiToHumanHandoff({
         callId,
-        organizationId: this.config.organizationId,
         aiAgentId: this.config.agentId,
         conversationSummary: `AI FALLBACK: ${errorMessage}`,
         customerSentiment: 'neutral',
@@ -485,7 +481,6 @@ class VoiceAgentHandler {
     try {
       const response = await VoiceEngineFactory.getAudio({
         text,
-        organizationId: this.config?.organizationId ?? '',
         engine: this.config?.voiceSettings?.engine,
         voiceId: this.config?.voiceSettings?.voiceId,
       });
@@ -631,7 +626,7 @@ class VoiceAgentHandler {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       await FirestoreService.set(
-        `organizations/${this.config.organizationId}/callContexts`,
+        `organizations/${PLATFORM_ID}/callContexts`,
         callId,
         {
           callId,

@@ -44,7 +44,6 @@ export interface IntegrationStatus {
 }
 
 export interface SystemHealthReport {
-  organizationId: string;
   generatedAt: Date;
 
   // Overall Score (0-100)
@@ -254,7 +253,7 @@ export class SystemHealthService {
   /**
    * Generate a comprehensive health report for an organization
    */
-  static async generateHealthReport(organizationId: string): Promise<SystemHealthReport> {
+  static async generateHealthReport(): Promise<SystemHealthReport> {
     // Fetch all required data in parallel
     const [
       organization,
@@ -266,14 +265,14 @@ export class SystemHealthService {
       contactCount,
       featureSettings,
     ] = await Promise.all([
-      this.getOrganization(organizationId),
-      this.getIntegrations(organizationId),
-      this.getBaseModel(organizationId),
-      this.getGoldenMasters(organizationId),
-      this.getRecordCount(organizationId, 'products'),
-      this.getRecordCount(organizationId, 'leads'),
-      this.getRecordCount(organizationId, 'contacts'),
-      this.getFeatureSettings(organizationId),
+      this.getOrganization(),
+      this.getIntegrations(),
+      this.getBaseModel(),
+      this.getGoldenMasters(),
+      this.getRecordCount('products'),
+      this.getRecordCount('leads'),
+      this.getRecordCount('contacts'),
+      this.getFeatureSettings(),
     ]);
 
     // Build feature health checks
@@ -305,7 +304,6 @@ export class SystemHealthService {
     const connectedIntegrations = integrations.filter(i => i.connected).length;
 
     return {
-      organizationId,
       generatedAt: new Date(),
       readinessScore: score,
       readinessLevel: level,
@@ -342,13 +340,13 @@ export class SystemHealthService {
   /**
    * Get a quick status check (lighter than full report)
    */
-  static async getQuickStatus(organizationId: string): Promise<{
+  static async getQuickStatus(): Promise<{
     readinessScore: number;
     readinessLevel: string;
     unconfiguredCount: number;
     topRecommendation?: string;
   }> {
-    const report = await this.generateHealthReport(organizationId);
+    const report = await this.generateHealthReport();
     return {
       readinessScore: report.readinessScore,
       readinessLevel: report.readinessLevel,
@@ -360,12 +358,12 @@ export class SystemHealthService {
   /**
    * Get specialist connection status
    */
-  static async getSpecialistStatus(organizationId: string): Promise<Array<{
+  static async getSpecialistStatus(): Promise<Array<{
     specialist: typeof SPECIALISTS[number];
     connected: boolean;
     available: boolean;
   }>> {
-    const integrations = await this.getIntegrations(organizationId);
+    const integrations = await this.getIntegrations();
 
     return SPECIALISTS.map(specialist => {
       // Map specialist to integration
@@ -384,7 +382,7 @@ export class SystemHealthService {
   // PRIVATE HELPERS
   // ============================================================================
 
-  private static async getOrganization(orgId: string) {
+  private static async getOrganization() {
     try {
       return await FirestoreService.get<Record<string, unknown>>('organizations', orgId);
     } catch {
@@ -392,7 +390,7 @@ export class SystemHealthService {
     }
   }
 
-  private static async getIntegrations(orgId: string): Promise<IntegrationStatus[]> {
+  private static async getIntegrations(): Promise<IntegrationStatus[]> {
     // Define all possible integrations
     const integrationTypes = [
       { id: 'email', name: 'Email/SMTP' },
@@ -410,7 +408,7 @@ export class SystemHealthService {
 
     try {
       const integrationDocs = await FirestoreService.getAll<Record<string, unknown>>(
-        `organizations/${orgId}/integrations`,
+        `organizations/$rapid-compliance-root/integrations`,
         []
       );
 
@@ -433,10 +431,10 @@ export class SystemHealthService {
     }
   }
 
-  private static async getBaseModel(orgId: string) {
+  private static async getBaseModel() {
     try {
       const models = await FirestoreService.getAll<Record<string, unknown>>(
-        `organizations/${orgId}/baseModels`,
+        `organizations/$rapid-compliance-root/baseModels`,
         []
       );
       return models[0] ?? null;
@@ -445,10 +443,10 @@ export class SystemHealthService {
     }
   }
 
-  private static async getGoldenMasters(orgId: string) {
+  private static async getGoldenMasters() {
     try {
       return await FirestoreService.getAll<Record<string, unknown>>(
-        `organizations/${orgId}/goldenMasters`,
+        `organizations/$rapid-compliance-root/goldenMasters`,
         []
       );
     } catch {
@@ -456,10 +454,10 @@ export class SystemHealthService {
     }
   }
 
-  private static async getRecordCount(orgId: string, collection: string): Promise<number> {
+  private static async getRecordCount(collection: string): Promise<number> {
     try {
       const records = await FirestoreService.getAll<Record<string, unknown>>(
-        `organizations/${orgId}/${collection}`,
+        `organizations/$rapid-compliance-root/${collection}`,
         []
       );
       return records.length;
@@ -468,10 +466,10 @@ export class SystemHealthService {
     }
   }
 
-  private static async getFeatureSettings(orgId: string): Promise<Record<string, FeatureStatus>> {
+  private static async getFeatureSettings(): Promise<Record<string, FeatureStatus>> {
     try {
       const settings = await FirestoreService.get<Record<string, unknown>>(
-        `organizations/${orgId}/settings`,
+        `organizations/$rapid-compliance-root/settings`,
         'featureVisibility'
       );
       return (settings?.visibility as Record<string, FeatureStatus>) ?? {};

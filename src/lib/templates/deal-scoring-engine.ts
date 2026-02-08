@@ -26,7 +26,7 @@ import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { Deal } from '@/lib/crm/deal-service';
 import { getTemplateById, type SalesIndustryTemplate } from './industry-templates';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -68,7 +68,6 @@ export interface RiskFactor {
 }
 
 export interface DealScoringOptions {
-  organizationId: string;
   workspaceId: string;
   dealId: string;
   deal?: Deal; // Optional if you already have the deal
@@ -117,7 +116,6 @@ export function calculateDealScore(
   
   try {
     logger.info('Calculating deal score', {
-      orgId: options.organizationId,
       dealId: options.dealId,
       templateId: options.templateId
     });
@@ -173,7 +171,7 @@ export function calculateDealScore(
     });
     
     // Factor 3: Engagement
-    const engagementFactor = calculateEngagementFactor(deal, options.organizationId, options.workspaceId);
+    const engagementFactor = calculateEngagementFactor(deal, options.workspaceId);
     factors.push({
       id: 'engagement',
       name: 'Engagement Level',
@@ -229,7 +227,7 @@ export function calculateDealScore(
     });
     
     // Factor 7: Historical Win Rate
-    const historicalFactor = calculateHistoricalWinRateFactor(deal, options.organizationId, options.workspaceId, template);
+    const historicalFactor = calculateHistoricalWinRateFactor(deal, options.workspaceId, template);
     factors.push({
       id: 'historical_win_rate',
       name: 'Historical Win Rate',
@@ -290,7 +288,6 @@ export function calculateDealScore(
       const coordinator = getServerSignalCoordinator();
       void coordinator.emitSignal({
         type: 'deal.scored',
-        orgId: options.organizationId,
         workspaceId: options.workspaceId,
         confidence: confidence / 100,
         priority: tier === 'at-risk' || tier === 'hot' ? 'High' : 'Medium',
@@ -308,9 +305,8 @@ export function calculateDealScore(
           timestamp: new Date().toISOString()
         }
       });
-      
+
       logger.info('Signal emitted: deal.scored', {
-        orgId: options.organizationId,
         dealId: deal.id,
         score: finalScore
       });
@@ -331,7 +327,6 @@ export function calculateDealScore(
     
   } catch (error) {
     logger.error('Deal scoring failed', error as Error, {
-      orgId: options.organizationId,
       dealId: options.dealId
     });
     throw new Error(`Deal scoring failed: ${(error as Error).message}`);
@@ -450,7 +445,7 @@ function calculateStageVelocityFactor(deal: Deal, template: SalesIndustryTemplat
  * Calculate engagement factor
  * Activity level and recency
  */
-function calculateEngagementFactor(_deal: Deal, _orgId: string, _workspaceId: string): {
+function calculateEngagementFactor(_deal: Deal, __workspaceId: string): {
   score: number;
   impact: 'positive' | 'negative' | 'neutral';
   description: string;
@@ -641,7 +636,7 @@ function calculateCompetitionFactor(_deal: Deal): {
 /**
  * Calculate historical win rate factor
  */
-function calculateHistoricalWinRateFactor(_deal: Deal, _orgId: string, _workspaceId: string, template: SalesIndustryTemplate | null): {
+function calculateHistoricalWinRateFactor(_deal: Deal, _workspaceId: string, template: SalesIndustryTemplate | null): {
   score: number;
   impact: 'positive' | 'negative' | 'neutral';
   description: string;
@@ -839,7 +834,6 @@ function fetchDeal(dealId: string): Deal {
   // Mock deal
   return {
     id: dealId,
-    organizationId: DEFAULT_ORG_ID,
     value: 50000,
     createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
     updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
@@ -859,7 +853,6 @@ export function batchScoreDeals(
   for (const dealId of dealIds) {
     try {
       const score = calculateDealScore({
-        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         dealId,
         templateId
