@@ -172,13 +172,6 @@
       ]
     },
     {
-      "collectionGroup": "discoveryArchive",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "expiresAt", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "discoveryQueue",
       "queryScope": "COLLECTION",
       "fields": [
