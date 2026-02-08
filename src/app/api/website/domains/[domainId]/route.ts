@@ -8,7 +8,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * DELETE /api/website/domains/[domainId]

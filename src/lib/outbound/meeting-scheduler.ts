@@ -160,7 +160,6 @@ export async function scheduleMeeting(
   request: MeetingRequest,
   hostUserId: string
 ): Promise<ScheduledMeeting> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   try {
     // Find available slots

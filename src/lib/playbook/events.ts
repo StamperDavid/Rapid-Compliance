@@ -19,7 +19,6 @@
  */
 
 import type { SalesSignal } from '@/lib/orchestration';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // EVENT TYPES

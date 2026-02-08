@@ -10,7 +10,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { backupService, type BackupConfig } from '@/lib/backup/backup-service';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 

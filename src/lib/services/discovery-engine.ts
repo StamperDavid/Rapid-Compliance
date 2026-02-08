@@ -20,7 +20,6 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { createBrowserController } from './BrowserController';
 import {
   saveToDiscoveryArchive,

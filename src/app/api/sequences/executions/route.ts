@@ -10,7 +10,6 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { Timestamp } from 'firebase-admin/firestore';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES

@@ -11,7 +11,6 @@ import type { Lead } from './lead-service';
 import { getActivityStats } from './activity-service';
 import { logger } from '@/lib/logger/logger';
 import { adminDal } from '@/lib/firebase/admin-dal';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { ScoringWeights, ScoringModel } from './predictive-scoring';
 

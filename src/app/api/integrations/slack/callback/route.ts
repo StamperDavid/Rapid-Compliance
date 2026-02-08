@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/slack-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Zod schema for OAuth callback validation
 const oauthCallbackSchema = z.object({

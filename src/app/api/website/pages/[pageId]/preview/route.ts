@@ -9,10 +9,8 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
-interface PageData {
-}
+type PageData = Record<string, never>;
 
 interface TokenData {
   pageId: string;

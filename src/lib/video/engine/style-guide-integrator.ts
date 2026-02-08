@@ -22,7 +22,6 @@ import type {
   ShotType,
   BrandDNASnapshot,
 } from './types';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // STYLE EXTRACTION CONFIGURATION

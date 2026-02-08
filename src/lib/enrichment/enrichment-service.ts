@@ -29,7 +29,6 @@ import { validateEnrichmentData } from './validation-service';
 import { getAllBackupData, getTechStackFromDNS } from './backup-sources';
 import { FirestoreService, COLLECTIONS } from '../db/firestore-service';
 import { logger } from '../logger/logger';
-import { PLATFORM_ID } from '../constants/platform';
 
 // NEW: Import distillation engine and industry templates
 import { distillScrape, calculateLeadScore } from '../scraper-intelligence/distillation-engine';
@@ -466,7 +465,6 @@ async function getBackupSources(
 
     // If we got SOME data, return it with low confidence
     if (Object.keys(backupData).length > 0) {
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
       const enrichmentData: CompanyEnrichmentData = {
         name: backupData.name ?? companyName,
         website: website,

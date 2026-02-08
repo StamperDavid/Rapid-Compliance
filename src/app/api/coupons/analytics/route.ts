@@ -4,7 +4,6 @@ import { COLLECTIONS, getMerchantCouponsCollection } from '@/lib/firebase/collec
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import type { CouponRedemption, MerchantCoupon } from '@/types/pricing';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * GET: Get coupon analytics for SalesVelocity.ai

@@ -5,7 +5,6 @@ import { emailSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface ValidationError {
   path?: string[];

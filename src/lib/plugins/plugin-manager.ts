@@ -271,7 +271,6 @@ export class PluginManager {
 
     try {
       if (plugin.init) {
-        const { PLATFORM_ID } = await import('@/lib/constants/platform');
         await plugin.init({
           config: this.config,
           logger,
@@ -505,7 +504,6 @@ export class PluginManager {
     if (enabled && !state.enabled) {
       // Re-initialize
       if (state.plugin.init) {
-        const { PLATFORM_ID } = await import('@/lib/constants/platform');
         await state.plugin.init({
           config: this.config,
           logger,

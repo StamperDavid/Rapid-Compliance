@@ -147,7 +147,6 @@ export async function generateSalesEmail(
   const startTime = Date.now();
 
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
     logger.info('Generating sales email', {
       dealId: options.dealId,
@@ -608,7 +607,6 @@ async function emitEmailGeneratedSignal(params: {
   dealScore?: DealScore;
 }): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({

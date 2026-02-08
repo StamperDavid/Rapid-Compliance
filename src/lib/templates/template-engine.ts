@@ -28,7 +28,6 @@ import {
   type CustomField,
   type SalesWorkflow,
 } from './industry-templates';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES

@@ -22,7 +22,6 @@ import { db } from '../firebase-admin';
 import { logger } from '../logger/logger';
 import * as crypto from 'crypto';
 import type { TemporaryScrape } from '../../types/scraper-intelligence';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Represents a Firestore Timestamp that can be converted to Date

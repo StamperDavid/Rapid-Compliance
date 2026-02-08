@@ -7,8 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
-interface SubdomainData {
-}
+type SubdomainData = Record<string, never>;
 
 /**
  * GET /api/website/subdomain/[subdomain]
@@ -38,7 +37,7 @@ export async function GET(
       );
     }
 
-    const data = subdomainDoc.data() as SubdomainData | undefined;
+    const _data = subdomainDoc.data() as SubdomainData | undefined;
 
     return NextResponse.json({
       success: true,

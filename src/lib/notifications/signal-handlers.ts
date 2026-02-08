@@ -21,7 +21,6 @@
 import type { SalesSignal } from '@/lib/orchestration/types';
 import { NotificationService } from './notification-service';
 import type { NotificationVariables } from './types';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Initialize notification signal handlers

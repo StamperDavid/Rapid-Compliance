@@ -21,7 +21,6 @@
 import type { SalesSignal } from '@/lib/orchestration';
 import type { CoachingCategory } from '@/lib/conversation/types';
 import type { PerformanceTier } from './types';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // EVENT INTERFACES

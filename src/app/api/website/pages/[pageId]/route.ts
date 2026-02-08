@@ -8,7 +8,6 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface PageData {
   version?: number;

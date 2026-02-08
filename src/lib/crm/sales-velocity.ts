@@ -5,7 +5,6 @@
 
 import { getDeals, type Deal } from './deal-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface SalesVelocityMetrics {
   // Overall velocity

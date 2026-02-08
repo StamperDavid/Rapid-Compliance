@@ -1,7 +1,5 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 /**
  * Team Members Management Page
  * Manage users, roles, and permissions for the organization
@@ -15,7 +13,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { usePagination } from '@/hooks/usePagination';
 import { ROLE_PERMISSIONS, type RolePermissions, type UserRole } from '@/types/permissions';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
-import { where, orderBy as firestoreOrderBy, type QueryConstraint, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
+import { orderBy as firestoreOrderBy, type QueryConstraint, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
 
 interface FirestoreUser {
   email?: string;

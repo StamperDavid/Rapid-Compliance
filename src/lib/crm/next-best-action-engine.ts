@@ -20,7 +20,6 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { Deal } from './deal-service';
 
 import { calculateDealHealth, type DealHealthScore } from './deal-health';

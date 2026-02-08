@@ -1,7 +1,5 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 

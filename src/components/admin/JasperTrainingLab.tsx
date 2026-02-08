@@ -26,8 +26,7 @@ import { Badge } from '@/components/ui/badge';
 // TYPE DEFINITIONS
 // ============================================================================
 
-interface JasperTrainingLabProps {
-}
+type JasperTrainingLabProps = Record<string, never>;
 
 interface PersonaConfig {
   name: string;

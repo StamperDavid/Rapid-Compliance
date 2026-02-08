@@ -75,7 +75,6 @@ export async function POST(request: NextRequest) {
     let sent = false;
     if (canAutoSend && suggestedResponse) {
       try {
-        const { PLATFORM_ID } = await import('@/lib/constants/platform');
         const replyMessageId: string = String(validatedReply.inReplyTo ?? validatedReply.threadId ?? '');
         const emailMetadata: Record<string, string> = {
           type: 'reply_handler',

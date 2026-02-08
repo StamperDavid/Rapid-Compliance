@@ -1,7 +1,5 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState } from 'react';
 import type { LeaderboardEntry } from '@/lib/team/collaboration';
 

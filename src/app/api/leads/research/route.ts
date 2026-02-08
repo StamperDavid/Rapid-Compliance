@@ -9,7 +9,6 @@ import { enrichCompany } from '@/lib/enrichment/enrichment-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Zod schema for research request
 const leadResearchSchema = z.object({

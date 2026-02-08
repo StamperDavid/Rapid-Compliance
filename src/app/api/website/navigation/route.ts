@@ -8,7 +8,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Navigation } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface RequestBody {
   navigation?: Partial<Navigation>;

@@ -1,7 +1,5 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';

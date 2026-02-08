@@ -7,7 +7,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
     // This is safe because the token is cryptographically secure
     const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
 
-    for (const orgDoc of orgsSnapshot.docs) {
+    for (const _orgDoc of orgsSnapshot.docs) {
       const tokenRef = adminDal.getNestedDocRef(
         'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
         { token }

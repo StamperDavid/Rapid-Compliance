@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import type { PayPalIntegration as PayPalType } from '@/types/integrations';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface PayPalIntegrationProps {
   integration: PayPalType | null;

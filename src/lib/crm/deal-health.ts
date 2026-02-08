@@ -7,7 +7,6 @@ import { getActivityStats } from './activity-service';
 import { getDeal, type Deal } from './deal-service';
 import { logger } from '@/lib/logger/logger';
 import type { ActivityStats } from '@/types/activity';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Type guard to check if value has a toDate method (Firestore Timestamp)

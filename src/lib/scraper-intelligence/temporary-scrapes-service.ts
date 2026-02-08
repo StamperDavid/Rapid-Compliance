@@ -15,7 +15,6 @@ import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
 import crypto from 'crypto';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS

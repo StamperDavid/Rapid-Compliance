@@ -10,7 +10,6 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import type { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const templateCategoryValues = ['business', 'saas', 'ecommerce', 'portfolio', 'agency', 'blog', 'other'] as const;
 

@@ -9,7 +9,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getCompetitiveMonitor } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export function GET(_request: NextRequest) {
   try {

@@ -30,7 +30,6 @@ export async function sendLinkedInMessage(
   message: string
 ): Promise<LinkedInMessageResult> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     logger.info('LinkedIn: Attempting to send message', {
       recipient: `${recipientIdentifier.substring(0, 30)  }...`,
       messageLength: message.length,
@@ -53,7 +52,6 @@ export async function sendLinkedInMessage(
       messageId: `linkedin-manual-${Date.now()}`,
     };
   } catch (error) {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     logger.error('LinkedIn: Error sending message', error as Error);
 
     return {

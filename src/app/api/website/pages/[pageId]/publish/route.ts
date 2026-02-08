@@ -13,7 +13,6 @@ import {
   errorResponse,
 } from '@/lib/api-error-handler';
 import { getUserIdentifier } from '@/lib/server-auth';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface PageData {
   content?: unknown[];

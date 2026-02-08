@@ -287,7 +287,6 @@ export async function emitRiskLevelChanged(
   workspaceId: string,
   contactId?: string
 ): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
     
@@ -400,10 +399,9 @@ export async function emitInterventionRecommended(
   workspaceId: string,
   contactId?: string
 ): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     const metadata: InterventionRecommendedMetadata = {
       source: 'risk-engine',
       dealId,
@@ -453,10 +451,9 @@ export async function emitInterventionStarted(
   workspaceId: string,
   contactId?: string
 ): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     const metadata: InterventionStartedMetadata = {
       source: 'risk-engine',
       dealId,
@@ -503,10 +500,9 @@ export async function emitInterventionCompleted(
   contactId?: string,
   notes?: string
 ): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     const metadata: InterventionCompletedMetadata = {
       source: 'risk-engine',
       dealId,
@@ -609,10 +605,9 @@ export async function emitRiskMitigated(
   workspaceId: string,
   contactId?: string
 ): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     const riskReduction = previousSlippageProbability - newSlippageProbability;
     
     const metadata: RiskMitigatedMetadata = {

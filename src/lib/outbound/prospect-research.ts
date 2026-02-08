@@ -128,7 +128,6 @@ export async function researchProspect(
  * Cost: ~$0.001 per lead (vs $0.50-$1.00 with Clearbit)
  */
 async function getCompanyInfo(companyName: string): Promise<CompanyInfo> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   const { enrichCompany } = await import('../enrichment/enrichment-service');
 
   try {

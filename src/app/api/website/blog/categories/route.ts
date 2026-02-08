@@ -8,7 +8,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const postBodySchema = z.object({
   categories: z.array(z.string()),

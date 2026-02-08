@@ -44,7 +44,6 @@ import {
   readAgentInsights,
   type InsightEntry,
 } from '../shared/memory-vault';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // COMMAND PATTERN - Task Dispatching

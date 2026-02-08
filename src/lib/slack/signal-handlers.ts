@@ -637,7 +637,7 @@ export class SlackSignalHandler {
         return null;
       }
       
-      const workspaceData = workspace.data() as SlackWorkspace;
+      const _workspaceData = workspace.data() as SlackWorkspace;
       
       const snapshot = await db
         .collection('organizations')
