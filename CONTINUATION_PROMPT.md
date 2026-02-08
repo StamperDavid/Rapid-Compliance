@@ -3,7 +3,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Commit: Pending — "refactor: complete organizationId purge + fix all type errors"
+Last Commit: e388c151 — "feat: wire MemoryVault Firestore persistence — agents survive cold starts"
 
 ## Current State (February 8, 2026)
 
@@ -16,11 +16,12 @@ Last Commit: Pending — "refactor: complete organizationId purge + fix all type
 
 ### Code Health
 - `tsc --noEmit` — **PASSES (zero errors)**
-- `npm run lint` — **158 unused-import errors** (all `PLATFORM_ID`/`DEFAULT_ORG_ID` imports left from purge — cosmetic, next task)
-- `npm run build` — PASSES (production build succeeds)
+- `npm run lint` — **PASSES (zero errors)**
+- `npm run build` — **PASSES (production build succeeds)**
 - **510 `tests/lib/` tests** — ALL PASS (19/19 suites)
 - **126 safe unit tests** — ALL PASS (event-router 49, jasper-command-authority 21, mutation-engine 9, analytics-helpers 47)
 - **92 root-level tests** — ALL PASS
+- **27 MemoryVault tests** — ALL PASS (hydration, serialization, TTL cleanup)
 - **3 service tests failing** — infrastructure issue only (missing Firestore composite indexes, not code bugs)
 
 ### What's Complete
@@ -34,16 +35,18 @@ Last Commit: Pending — "refactor: complete organizationId purge + fix all type
 - **Autonomous Business Operations (ALL 8 PHASES)** — Event Router, Operations Cycle Cron, Event Emitters, Manager Authority, Revenue Pipeline Automation, Outreach Autonomy, Content Production Hub, Intelligence Always-On, Builder/Commerce Reactive Loops, Contextual Artifact Generation, Jasper Command Authority
 - Post-Phase 8 Stabilization — integration tests, production cron scheduling, executive briefing dashboard
 - Pre-existing type errors fixed (brand-dna-service duplicate properties, claims-validator shorthand, director-service missing field, orchestrator LogContext type)
+- **Unused import cleanup — COMPLETE** (135 lint errors removed: 126 PLATFORM_ID imports, 3 empty interfaces, 6 unused vars)
+- Restored onboarding page.tsx (was accidentally emptied during orgId purge)
+- **MemoryVault Firestore persistence — COMPLETE** (commit e388c151). Agents survive Vercel cold starts. `read()` and `query()` now await Firestore hydration before returning results. TTL cleanup wired to operations-cycle cron (every 4 hours). 35+ callers across 9 agent/orchestrator files updated to async.
 
 ### Immediate Next Task
-**Remove ~120 unused `PLATFORM_ID`/`DEFAULT_ORG_ID` imports** — These are cosmetic lint errors (158 total) left behind after the organizationId purge removed the usages but not the imports. All in `src/`. Pattern: remove `import { PLATFORM_ID } from '@/lib/constants/platform'` where PLATFORM_ID is no longer used in the file. This will bring `npm run lint` to zero errors.
+**Deploy Firestore indexes** — `firebase deploy --only firestore:indexes`. Fixes 3 failing service tests. Then proceed to ConversationMemory service.
 
 ### Known Issues
 | Issue | Details |
 |-------|---------|
-| 158 unused-import lint errors | Cosmetic — `PLATFORM_ID`/`DEFAULT_ORG_ID` imports left from purge. Next task. |
 | 3 service tests failing | Missing Firestore composite indexes (status+createdAt, stage+createdAt on `records` and `workflows`). Fix: `firebase deploy --only firestore:indexes` |
-| MemoryVault is in-memory only | Agents lose all knowledge on server restart / Vercel cold start. Async method stubs already exist for Firestore persistence — needs wiring |
+| Agents have no conversation recall | Chat sessions, SMS, and orchestrator conversations are stored in Firestore but agents cannot query them. Voice call transcripts are lost when calls end (in-memory only). No unified retrieval layer exists for agents to get context on past customer interactions. See Step 3 below. |
 | Outbound webhooks are scaffolding | Settings UI exists with event list but backend dispatch system is not implemented |
 
 ---
@@ -52,13 +55,117 @@ Last Commit: Pending — "refactor: complete organizationId purge + fix all type
 
 | Step | Task | Time Est. | Why |
 |------|------|-----------|-----|
-| **0** | Remove unused imports | 30 min | 158 lint errors from orgId purge leftovers. Brings `npm run lint` to zero. |
+| ~~**0**~~ | ~~Remove unused imports~~ | ~~30 min~~ | **DONE** — 135 errors removed, lint passes clean. |
 | **1** | Deploy Firestore indexes | 15 min | `firebase deploy --only firestore:indexes`. Fixes 3 failing service tests. |
-| **2** | MemoryVault Firestore persistence | 3-4 hrs | Without this, every Vercel cold start wipes agent memory. Async stubs already in `memory-vault.ts`. |
-| **3** | Production deploy to Vercel | 2-3 hrs | 7 cron jobs already defined in `vercel.json`. OAuth flows, webhooks, Stripe — none work until deployed with real env vars. |
-| **4** | Smoke test the OODA loop | 2-3 hrs | Feed a real lead through the system. Verify event router fires, Revenue Director picks it up, sequence engine enrolls. |
-| **5** | Fix what breaks | Variable | Something will break in production. Budget time for env var issues, cold start timing, external API rate limits. |
-| **6** | Wire up outbound webhook dispatch | 3-4 hrs | Settings page exists, event list is there, UI is built — backend just doesn't send webhooks. |
+| ~~**2**~~ | ~~MemoryVault Firestore persistence~~ | ~~3-4 hrs~~ | **DONE** — commit e388c151. Agents survive cold starts. read()/query() await hydration. TTL cleanup on 4h cron. |
+| **3** | **ConversationMemory service** | 6-8 hrs | Agents cannot recall past customer interactions. See detailed spec below. |
+| **4** | Production deploy to Vercel | 2-3 hrs | 7 cron jobs already defined in `vercel.json`. OAuth flows, webhooks, Stripe — none work until deployed with real env vars. |
+| **5** | Smoke test the OODA loop | 2-3 hrs | Feed a real lead through the system. Verify event router fires, Revenue Director picks it up, sequence engine enrolls. |
+| **6** | Fix what breaks | Variable | Something will break in production. Budget time for env var issues, cold start timing, external API rate limits. |
+| **7** | Wire up outbound webhook dispatch | 3-4 hrs | Settings page exists, event list is there, UI is built — backend just doesn't send webhooks. |
+
+### Step 3 — ConversationMemory Service (Detailed Spec)
+
+**Problem:** Agents have amnesia about customer interactions. Chat sessions, SMS messages, and orchestrator conversations are stored in Firestore but no agent can query them. Voice call transcripts (the richest data) are lost entirely when calls end — stored in-memory only. When an agent prepares to contact a lead, it has zero context about prior conversations across any channel.
+
+**Solution:** A dedicated ConversationMemory service (Option B architecture) — one service owns all conversation data, agents query it when they need customer context. MemoryVault stays focused on agent-to-agent coordination.
+
+**Architecture Decision:** Option B was chosen over a hybrid approach (Option C) because:
+- No data duplication — conversation data lives in one place, not mirrored in MemoryVault
+- No sync issues — no risk of MemoryVault copies going stale
+- Clean separation — MemoryVault = agent coordination, ConversationMemory = customer interaction history
+- Agents simply query ConversationMemory as part of their lead preparation workflow
+
+**Data Flow:**
+```
+Call/Chat/SMS ends
+       │
+       ▼
+┌─────────────────────┐
+│  Persist full record │  ← Transcript + metadata → Firestore
+│  to Firestore        │     (voice is the gap — chat/SMS/orchestrator already stored)
+└────────┬────────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│  Conversation Analysis runs  │  ← Engine already exists at src/lib/conversation/
+│  automatically after each    │     Sentiment, objections, buying signals, coaching
+│  interaction completes       │     Currently manual-only via POST /api/conversation/analyze
+└────────┬────────────────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│  Analysis stored alongside   │  ← Summary, key moments, objections, next steps
+│  conversation record         │     Persisted for agent retrieval
+└─────────────────────────────┘
+
+Agent preparing to contact Lead X:
+       │
+       ▼
+┌──────────────────────────────┐
+│  ConversationMemory.brief()  │  ← Query all interactions by leadId
+│                              │     across chat, voice, SMS, email
+│  Returns structured Lead     │     Last N interactions summarized
+│  Briefing (not raw           │     Sentiment trend, open objections,
+│  transcripts)                │     recommended approach
+└──────────────────────────────┘
+```
+
+**Lead Briefing Output (what agents receive):**
+```
+Lead: John Smith, Acme Corp
+Last contact: 2 days ago (voice call, 12 min)
+Total interactions: 4 (2 calls, 1 chat, 1 email reply)
+Sentiment trend: neutral → positive (improving)
+
+Key context:
+- Budget review in March, decision after that
+- Pain point: manual compliance reporting 20hrs/week
+- Compared us to CompetitorX, said pricing was lower
+- Asked about Salesforce API integration
+
+Open objections:
+- Price concern (medium severity, unresolved)
+- Integration timeline worry
+
+Recommended approach:
+- Lead with ROI calculation (20hrs/week saved)
+- Address Salesforce integration early
+- Don't push for close before March budget review
+```
+
+**5 Implementation Sub-Tasks:**
+
+| # | Task | Details |
+|---|------|---------|
+| 3a | **Voice transcript persistence** | Save call data (transcript, turns, sentiment, qualification score, buying signals) to Firestore `conversations` collection when voice calls end. Currently in-memory only in `src/lib/voice/ai-conversation-service.ts`. |
+| 3b | **Auto-analysis trigger** | Hook the conversation analysis engine (`src/lib/conversation/conversation-engine.ts`) to fire automatically after every call/chat completion. Currently only runs on manual API call to `POST /api/conversation/analyze`. |
+| 3c | **ConversationMemory service** | New service at `src/lib/conversation/conversation-memory.ts`. Unified retrieval layer that queries across `chatSessions`, `conversations`, `smsMessages`, `orchestratorConversations` by leadId/customerId. Returns structured data, not raw transcripts. |
+| 3d | **Lead Briefing generator** | Method on ConversationMemory that synthesizes all recent interactions into a concise context block. Uses the analysis data (sentiment, objections, buying signals, next steps) to build the briefing. May use LLM for final synthesis. |
+| 3e | **Agent integration** | Update agent work cycles (Revenue Manager, Outreach Manager, Voice AI) to call `ConversationMemory.brief(leadId)` before acting on a lead. Add to the standard lead preparation workflow. |
+
+**Retention Policy:**
+| Data | Retention | Rationale |
+|------|-----------|-----------|
+| Full transcripts | 90 days | Compliance and dispute resolution |
+| Conversation summaries | 1 year | Agents need history without storage cost |
+| Lead briefings | Generated on demand | Always fresh, built from summaries |
+| Analysis results | 1 year (alongside summaries) | Sentiment trends, objection history |
+
+**Existing Infrastructure to Leverage:**
+- `src/lib/conversation/conversation-engine.ts` — Full analysis engine (sentiment, talk ratio, objections, coaching, competitor mentions). Already built, just needs auto-triggering.
+- `src/lib/conversation/types.ts` — Comprehensive types for Conversation, ConversationAnalysis, SentimentAnalysis, ObjectionAnalysis, etc.
+- `src/lib/agent/chat-session-service.ts` — Chat message storage and retrieval already working.
+- `src/lib/firebase/collections.ts` — All Firestore collection paths already defined.
+- `src/app/api/conversation/analyze/route.ts` — Analysis API with rate limiting and caching.
+
+**What This Does NOT Include:**
+- Semantic/vector search (embedding-based retrieval) — future enhancement, not needed for v1
+- Email body archival (only metadata stored today) — separate effort
+- Video conversation transcripts — not yet implemented
+- Long-term learning/agent improvement from conversations — future episodic memory layer
+
+---
 
 ### What We Are NOT Building Right Now
 - **No plugin/hook registry** — the internal infrastructure (EventRouter, SignalBus, MemoryVault, PluginManager) is powerful but intentionally closed. No external API surface for third-party tools.
@@ -99,7 +206,11 @@ Last Commit: Pending — "refactor: complete organizationId purge + fix all type
 | `src/lib/constants/platform.ts` | DEFAULT_ORG_ID and platform identity |
 | `src/lib/orchestration/event-router.ts` | Declarative rules engine — 25+ event rules → Manager actions via SignalBus |
 | `src/lib/orchestrator/signal-bus.ts` | Agent-to-agent communication (BROADCAST, DIRECT, BUBBLE_UP, BUBBLE_DOWN) |
-| `src/lib/agents/shared/memory-vault.ts` | Shared agent knowledge store (in-memory, needs Firestore persistence) |
+| `src/lib/agents/shared/memory-vault.ts` | Shared agent knowledge store (Firestore-backed, cold-start safe) |
+| `src/lib/conversation/conversation-engine.ts` | Conversation analysis engine (sentiment, objections, coaching) |
+| `src/lib/conversation/types.ts` | Comprehensive conversation/analysis type definitions |
+| `src/lib/agent/chat-session-service.ts` | Chat session + message storage/retrieval |
+| `src/lib/voice/ai-conversation-service.ts` | Voice AI conversation handling (transcripts NOT persisted — Step 3a) |
 | `src/lib/plugins/plugin-manager.ts` | Plugin registration system (built but not exposed via API) |
 | `src/lib/orchestrator/jasper-command-authority.ts` | Executive briefings, approval gateway, command issuance |
 | `src/lib/agents/base-manager.ts` | BaseManager with reviewOutput(), applyPendingMutations(), requestFromManager() |
