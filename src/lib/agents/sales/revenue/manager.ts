@@ -1674,18 +1674,34 @@ export class RevenueDirector extends BaseManager {
   /**
    * Prepare delegations based on transition result
    */
-  private prepareDelegations(
+  private async prepareDelegations(
     transitionResult: TransitionResult,
     leadData: LeadData,
     _taskId: string
   ): Promise<DelegationRecommendation[]> {
     const delegations: DelegationRecommendation[] = [...transitionResult.delegations];
 
-    // If ready for outreach, add outreach specialist delegation
+    // If ready for outreach, add outreach specialist delegation with conversation context
     if (transitionResult.canTransition && transitionResult.targetStage === LeadStage.OUTREACH) {
+      // Load conversation history to inform delegation
+      let briefContext = '';
+      try {
+        const { conversationMemory } = await import('@/lib/conversation/conversation-memory');
+        const identifier = leadData.contactEmail ?? leadData.leadId;
+        const identifierType = leadData.contactEmail ? 'email' as const : 'leadId' as const;
+        if (identifier) {
+          const brief = await conversationMemory.brief(identifier, identifierType);
+          if (brief.totalInteractions > 0) {
+            briefContext = ` (${brief.totalInteractions} prior interactions, sentiment: ${brief.sentimentTrend})`;
+          }
+        }
+      } catch {
+        // Continue without brief — non-critical
+      }
+
       delegations.push({
         specialist: 'OUTREACH_SPECIALIST',
-        action: 'Initiate personalized outreach sequence',
+        action: `Initiate personalized outreach sequence${briefContext}`,
         priority: 'HIGH',
         reason: 'Lead has met all transition criteria for outreach',
       });
