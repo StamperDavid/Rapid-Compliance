@@ -19,7 +19,6 @@ export interface CartItem {
 }
 
 export interface ShoppingCartProps {
-  organizationId: string;
   onCheckout?: (items: CartItem[]) => void;
   theme?: {
     primaryColor?: string;
@@ -28,7 +27,7 @@ export interface ShoppingCartProps {
   };
 }
 
-export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCartProps) {
+export function ShoppingCart({ onCheckout, theme }: ShoppingCartProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +40,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
 
   const loadCart = useCallback(async () => {
     try {
-      const response = await fetch(`/api/ecommerce/cart?orgId=${organizationId}`);
+      const response = await fetch('/api/ecommerce/cart');
       const data = await response.json() as { success?: boolean; cart?: { items?: CartItem[] } };
       if (data.success && data.cart?.items) {
         setCart(data.cart.items);
@@ -51,7 +50,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, []);
 
   useEffect(() => {
     void loadCart();

@@ -46,13 +46,10 @@ export type ScrapeJobPriority = 'low' | 'normal' | 'high' | 'urgent';
 export interface ScrapeJobConfig {
   /** Unique job identifier */
   jobId: string;
-  
-  /** Organization requesting the scrape */
-  organizationId: string;
-  
+
   /** Workspace ID (optional) */
   workspaceId?: string;
-  
+
   /** Industry template to use */
   industryId: string;
   

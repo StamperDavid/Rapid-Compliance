@@ -11,11 +11,10 @@ import type { NotificationPreferences } from '@/lib/notifications/types';
 
 interface NotificationSettingsProps {
   userId: string;
-  orgId: string;
   className?: string;
 }
 
-export function NotificationSettings({ userId, orgId, className = '' }: NotificationSettingsProps) {
+export function NotificationSettings({ userId, className = '' }: NotificationSettingsProps) {
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -27,7 +26,6 @@ export function NotificationSettings({ userId, orgId, className = '' }: Notifica
       const response = await fetch('/api/notifications/preferences', {
         headers: {
           'x-user-id': userId,
-          'x-org-id': orgId,
         },
       });
 
@@ -41,7 +39,7 @@ export function NotificationSettings({ userId, orgId, className = '' }: Notifica
     } finally {
       setLoading(false);
     }
-  }, [userId, orgId]);
+  }, [userId]);
 
   useEffect(() => {
     void loadPreferences();
@@ -58,7 +56,6 @@ export function NotificationSettings({ userId, orgId, className = '' }: Notifica
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': userId,
-          'x-org-id': orgId,
         },
         body: JSON.stringify(preferences),
       });

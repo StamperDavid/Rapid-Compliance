@@ -7,7 +7,7 @@
  * - Dry-run mode for testing
  * - Audit logging for compliance
  * - Production delete protection
- * - Organization-scoped access verification (coming soon)
+ * - Platform access verification
  *
  * IMPORTANT: This is for server-side (API routes) only!
  * For client-side operations, use @/lib/firebase/dal
@@ -22,7 +22,7 @@ import type {
   DocumentSnapshot,
   QuerySnapshot} from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS, getOrgSubCollection, getPrefix } from './collections';
+import { COLLECTIONS, getSubCollection, getPrefix } from './collections';
 import { logger } from '@/lib/logger/logger';
 
 interface WriteOptions {
@@ -32,8 +32,6 @@ interface WriteOptions {
   audit?: boolean;
   /** User ID performing the operation (for audit trail) */
   userId?: string;
-  /** @deprecated Organization ID no longer needed in single-tenant model */
-  organizationId?: string;
 }
 
 export class FirestoreAdminDAL {
@@ -60,17 +58,22 @@ export class FirestoreAdminDAL {
   }
 
   /**
-   * Get an organization sub-collection reference
-   * Usage: adminDal.getOrgCollection('records')
+   * Get a platform sub-collection reference
+   * Usage: adminDal.getPlatformCollection('records')
    */
-  getOrgCollection(subCollection: string): CollectionReference {
-    const path = getOrgSubCollection(subCollection);
+  getPlatformCollection(subCollection: string): CollectionReference {
+    const path = getSubCollection(subCollection);
     return this.db.collection(path);
+  }
+
+  /** @deprecated Use getPlatformCollection instead */
+  getOrgCollection(subCollection: string): CollectionReference {
+    return this.getPlatformCollection(subCollection);
   }
 
   /**
    * Get a nested collection reference with a custom path
-   * Usage: adminDal.getNestedCollection('organizations/{orgId}/ai-agents/default/config/persona', { orgId: 'org123' })
+   * Usage: adminDal.getNestedCollection('platform-root/ai-agents/default/config/persona')
    * This is useful for deep nested collections that don't fit standard patterns
    */
   getNestedCollection(pathTemplate: string, params?: Record<string, string>): CollectionReference {
@@ -88,7 +91,7 @@ export class FirestoreAdminDAL {
 
   /**
    * Get a nested document reference with a custom path
-   * Usage: adminDal.getNestedDocRef('organizations/{orgId}/ai-agents/default/config/persona', { orgId: 'org123' })
+   * Usage: adminDal.getNestedDocRef('platform-root/ai-agents/default/config/persona')
    */
   getNestedDocRef(pathTemplate: string, params?: Record<string, string>): DocumentReference {
     let path = pathTemplate;
@@ -469,13 +472,12 @@ export class FirestoreAdminDAL {
   // ========================================
 
   /**
-   * Verify that a user has access to an organization
-   * This will be implemented as part of the security enhancement
+   * Verify user access to platform
    */
-  private verifyOrgAccess(
+  private verifyAccess(
     _userId: string | undefined
   ): void {
-    logger.debug('🔒 Verifying org access (Admin)', {
+    logger.debug('Verifying platform access (Admin)', {
       userId: _userId,
       file: 'admin-dal.ts'
     });

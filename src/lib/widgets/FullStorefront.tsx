@@ -21,7 +21,6 @@ interface Product {
 }
 
 export interface FullStorefrontProps {
-  organizationId: string;
   theme?: {
     primaryColor?: string;
     borderRadius?: string;
@@ -29,7 +28,7 @@ export interface FullStorefrontProps {
   };
 }
 
-export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
+export function FullStorefront({ theme }: FullStorefrontProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -45,7 +44,7 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
 
   const loadProducts = useCallback(async () => {
     try {
-      const response = await fetch(`/api/ecommerce/products?orgId=${organizationId}`);
+      const response = await fetch('/api/ecommerce/products');
       const data = await response.json() as { success?: boolean; products?: Product[] };
       if (data.success && data.products) {
         setProducts(data.products);
@@ -59,7 +58,7 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, []);
 
   const filterProducts = useCallback(() => {
     let filtered = products;
@@ -216,7 +215,7 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
               ×
             </button>
           </div>
-          <ShoppingCart organizationId={organizationId} theme={theme} />
+          <ShoppingCart theme={theme} />
         </div>
       )}
 

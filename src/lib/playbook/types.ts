@@ -41,9 +41,8 @@ import type { PerformanceTier } from '@/lib/performance/types';
  */
 export interface Playbook {
   id: string;
-  organizationId: string;
   workspaceId: string;
-  
+
   // Metadata
   name: string;
   description: string;
@@ -601,9 +600,8 @@ export interface BestPracticeEvidence {
  * Pattern extraction request
  */
 export interface ExtractPatternsRequest {
-  organizationId: string;
   workspaceId?: string;
-  
+
   // Source data
   conversationIds?: string[]; // Specific conversations
   repIds?: string[]; // Specific reps (defaults to top performers)
@@ -642,9 +640,8 @@ export interface DateRange {
  * Pattern extraction result
  */
 export interface PatternExtractionResult {
-  organizationId: string;
   workspaceId: string;
-  
+
   // Results
   patterns: Pattern[];
   talkTracks: TalkTrack[];
@@ -756,9 +753,8 @@ export interface PlaybookDeviation {
  */
 export interface PlaybookAdoptionMetrics {
   playbookId: string;
-  organizationId: string;
   workspaceId: string;
-  
+
   // Overall adoption
   overallAdoptionRate: number; // 0-100
   repsUsing: number;
@@ -867,9 +863,8 @@ export type BarrierType =
  * Request to generate a playbook
  */
 export interface GeneratePlaybookRequest {
-  organizationId: string;
   workspaceId?: string;
-  
+
   // Playbook details
   name: string;
   description?: string;
@@ -911,7 +906,6 @@ export interface GeneratePlaybookResponse {
  */
 export interface GetAdoptionMetricsRequest {
   playbookId: string;
-  organizationId: string;
   workspaceId?: string;
   startDate?: Date | string;
   endDate?: Date | string;
@@ -936,9 +930,8 @@ export interface TrackPlaybookUsageRequest {
  * Request to search playbooks
  */
 export interface SearchPlaybooksRequest {
-  organizationId: string;
   workspaceId?: string;
-  
+
   // Search criteria
   query?: string;
   category?: PlaybookCategory;
@@ -1051,7 +1044,6 @@ export const DEFAULT_PLAYBOOK_CONFIG: PlaybookEngineConfig = {
  */
 export interface PlaybookDocument {
   id: string;
-  organizationId: string;
   workspaceId: string;
   name: string;
   description: string;
@@ -1108,7 +1100,6 @@ export interface PlaybookUsageDocument {
  */
 export interface PlaybookAdoptionDocument {
   playbookId: string;
-  organizationId: string;
   workspaceId: string;
   overallAdoptionRate: number;
   repsUsing: number;

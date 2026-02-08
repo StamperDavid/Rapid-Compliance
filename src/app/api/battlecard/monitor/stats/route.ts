@@ -9,13 +9,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getCompetitiveMonitor } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export function GET(_request: NextRequest) {
   try {
-    logger.info('API: Get monitoring stats', {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.info('API: Get monitoring stats');
 
     const monitor = getCompetitiveMonitor();
     const stats = monitor.getStats();

@@ -12,7 +12,6 @@ import { logger } from '@/lib/logger/logger';
  * Create fine-tuning job with Vertex AI
  */
 export async function createVertexAIFineTuningJob(params: {
-  organizationId: string;
   baseModel: 'gemini-1.5-pro' | 'gemini-1.0-pro';
   examples: TrainingExample[];
   hyperparameters?: {
@@ -21,9 +20,9 @@ export async function createVertexAIFineTuningJob(params: {
     learningRate?: number;
   };
 }): Promise<FineTuningJob> {
-  const { organizationId, baseModel, examples, hyperparameters } = params;
-  
-  logger.info('Vertex AI Fine-Tuning Starting job for organizationId}', { file: 'vertex-tuner.ts' });
+  const { baseModel, examples, hyperparameters } = params;
+
+  logger.info('[Vertex AI Fine-Tuning] Starting job', { file: 'vertex-tuner.ts' });
   
   // Validate data
   const validation = validateTrainingData(examples);
@@ -55,7 +54,7 @@ export async function createVertexAIFineTuningJob(params: {
     baseModel,
     trainingDatasetUri: storageUri,
     validationDatasetUri: null, // Could split data
-    tunedModelDisplayName: `${organizationId}_${baseModel}_${Date.now()}`,
+    tunedModelDisplayName: `${baseModel}_${Date.now()}`,
     hyperparameters: {
       // NUMBERS - 0 would break training but is technically valid value (use ?? for numbers)
       epoch_count: hyperparameters?.epochs ?? 4,
@@ -86,14 +85,15 @@ export async function createVertexAIFineTuningJob(params: {
     startedAt: new Date().toISOString(),
   };
   
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
     job.id,
     job,
     false
   );
   
-  logger.info('Vertex AI Fine-Tuning Job created: job.id}', { file: 'vertex-tuner.ts' });
+  logger.info(`[Vertex AI Fine-Tuning] Job created: ${job.id}`, { file: 'vertex-tuner.ts' });
   
   // Note: In production, would start monitoring the actual Vertex AI job
   
@@ -139,9 +139,9 @@ function estimateVertexAICost(exampleCount: number): number {
 export async function getVertexAIJobStatus(
   jobId: string
 ): Promise<FineTuningJob> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   const job = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
     jobId
   ) as FineTuningJob;
 

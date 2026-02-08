@@ -12,7 +12,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { FeatureToggleService, type FeatureCategory } from '@/lib/orchestrator/feature-toggle-service';
 
 interface ToggleFeatureRequest {
-  organizationId?: string;
   userId?: string;
   action?: string;
   featureId?: string;
@@ -31,12 +30,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { organizationId, userId, action, featureId, category, reason } = body;
+    const { userId, action, featureId, category, reason } = body;
 
     // Validate required fields
-    if (!organizationId || !userId || !action) {
+    if (!userId || !action) {
       return NextResponse.json(
-        { error: 'Missing required fields: organizationId, userId, action' },
+        { error: 'Missing required fields: userId, action' },
         { status: 400 }
       );
     }

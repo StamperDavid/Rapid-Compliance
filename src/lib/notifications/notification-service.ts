@@ -18,6 +18,7 @@
 import { Timestamp } from 'firebase/firestore';
 import { sendMessage } from '@/lib/integrations/slack-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   Notification,
   NotificationTemplate,
@@ -70,11 +71,9 @@ function isSlackResponse(obj: unknown): obj is SlackResponse {
  * Core service for managing notifications
  */
 export class NotificationService {
-  private readonly orgId: string;
-
-  constructor(orgId: string) {
-    this.orgId = orgId;
+  constructor() {
   }
+
 
   /**
    * Send a notification
@@ -87,12 +86,12 @@ export class NotificationService {
    * 
    * @example
    * ```typescript
-   * const service = new NotificationService('org_123');
+   * import { PLATFORM_ID } from '@/lib/constants/platform';
+   * const service = new NotificationService(PLATFORM_ID);
    * const notification = await service.sendNotification(
    *   'user_456',
    *   'deal_risk_critical',
    *   {
-   *     orgId: 'org_123',
    *     dealId: 'deal_789',
    *     dealName: 'Acme Corp - Enterprise',
    *     riskLevel: 'critical',
@@ -162,7 +161,6 @@ export class NotificationService {
     // Create notification record
     const now = Timestamp.now();
     const notification: Notification = {
-      orgId: this.orgId,
       userId,
       templateId,
       category: template.category,
@@ -306,7 +304,7 @@ export class NotificationService {
 
     // Get Slack integration
     const integration = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/integrations`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
       'slack'
     );
 
@@ -373,7 +371,6 @@ export class NotificationService {
       text: emailContent.body,
       metadata: {
         notificationId: notification.id ?? '',
-        orgId: this.orgId,
         category: notification.category,
         priority: notification.priority,
       },
@@ -468,7 +465,6 @@ export class NotificationService {
     const result = await sendSMS({
       to: phoneNumber,
       message,
-      organizationId: this.orgId,
       metadata: {
         notificationId: notification.id ?? '',
         category: notification.category,
@@ -675,7 +671,7 @@ export class NotificationService {
   private async getTemplate(templateId: string): Promise<NotificationTemplate | null> {
     try {
       const template = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notification_templates`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_templates`,
         templateId
       );
       return template as NotificationTemplate;
@@ -690,7 +686,7 @@ export class NotificationService {
   private async getPreferences(userId: string): Promise<NotificationPreferences> {
     try {
       const prefs = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notification_preferences`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_preferences`,
         userId
       );
       
@@ -710,10 +706,9 @@ export class NotificationService {
    */
   private getDefaultPreferences(userId: string): NotificationPreferences {
     const now = Timestamp.now();
-    
+
     return {
       userId,
-      orgId: this.orgId,
       enabled: true,
       channels: {
         slack: {
@@ -789,7 +784,7 @@ export class NotificationService {
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notifications`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
       notificationId,
       notification
     );
@@ -852,7 +847,7 @@ export class NotificationService {
     const now = Timestamp.now();
     
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notifications`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
       notificationId,
       {
         [`delivery.deliveredAt.${channel}`]: status === 'delivered' ? now : null,
@@ -872,7 +867,7 @@ export class NotificationService {
     error: string
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notifications`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
       notificationId,
       {
         [`delivery.errors.${channel}`]: error,
@@ -889,14 +884,14 @@ export class NotificationService {
     channel: NotificationChannel
   ): Promise<void> {
     const notification = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notifications`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
       notificationId
     ) as Notification;
 
     const currentAttempts = notification.delivery.attempts[channel] || 0;
 
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notifications`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
       notificationId,
       {
         [`delivery.attempts.${channel}`]: currentAttempts + 1,
@@ -913,7 +908,7 @@ export class NotificationService {
     response: unknown
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notifications`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
       notificationId,
       {
         [`delivery.responses.${channel}`]: response,
@@ -945,7 +940,7 @@ export class NotificationService {
     }
 
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notifications`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
       notification.id,
       {
         status: 'retrying',

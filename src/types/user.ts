@@ -60,7 +60,7 @@ export interface UserSession {
     ipAddress: string;
   };
   
-  // Context - penthouse model, orgId always 'rapid-compliance'
+  // Context
   workspaceId?: string;
   
   // Metadata
@@ -73,7 +73,7 @@ export interface UserSession {
 
 /**
  * Invitation
- * Invite users to organizations/workspaces
+ * Invite users to workspaces
  */
 export interface Invitation {
   id: string;

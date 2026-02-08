@@ -3,7 +3,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Helper function to safely convert various date formats to Date object
@@ -45,9 +45,8 @@ interface WorkflowExecutionRecord {
 
 /**
  * GET /api/analytics/workflows - Get workflow analytics
- * 
+ *
  * Query params:
- * - orgId: organization ID (required)
  * - period: '7d' | '30d' | '90d' | 'all' (optional, default: '30d')
  */
 export async function GET(request: NextRequest) {
@@ -82,23 +81,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Get workflows from Firestore
-    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workflows`;
+    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workflows`;
     let allWorkflows: WorkflowRecord[] = [];
     
     try {
       allWorkflows = await FirestoreService.getAll(workflowsPath, []);
     } catch (_e) {
-      logger.debug('No workflows collection yet', { DEFAULT_ORG_ID });
+      logger.debug('No workflows collection yet');
     }
 
     // Get workflow executions
-    const executionsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workflowExecutions`;
+    const executionsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workflowExecutions`;
     let allExecutions: WorkflowExecutionRecord[] = [];
     
     try {
       allExecutions = await FirestoreService.getAll(executionsPath, []);
     } catch (_e) {
-      logger.debug('No workflow executions collection yet', { DEFAULT_ORG_ID });
+      logger.debug('No workflow executions collection yet');
     }
 
     // Filter executions by date

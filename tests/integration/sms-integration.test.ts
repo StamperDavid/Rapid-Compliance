@@ -19,8 +19,7 @@ describe('SMS Integration Tests', () => {
         to: '+15005550006', // Twilio magic number (valid, delivers in test mode)
         message: 'Test message from integration test',
         from: '+15005550006', // Twilio test number
-        organizationId: 'test-org',
-      });
+        });
 
       expect(result).toBeDefined();
       expect(result.success).toBe(true);
@@ -35,8 +34,7 @@ describe('SMS Integration Tests', () => {
         to: '+15005550001', // Twilio magic number (invalid)
         message: 'Test message',
         from: '+15005550006',
-        organizationId: 'test-org',
-      });
+        });
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('invalid');

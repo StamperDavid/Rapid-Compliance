@@ -45,7 +45,7 @@ import {
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
 import type { TechnicalBrief, PageSEORequirements } from '../architect/manager';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Minimal BrandDNA type for this manager (used by getBrandDNA return type)
 interface _BrandDNA {
@@ -255,7 +255,6 @@ const CONTENT_MANAGER_CONFIG: ManagerConfig = {
  * Brand context loaded from MemoryVault
  */
 export interface BrandContext {
-  orgId: string;
   companyDescription: string;
   uniqueValue: string;
   targetAudience: string;
@@ -377,7 +376,6 @@ export interface ContentCalendar {
  */
 export interface ContentPackage {
   packageId: string;
-  orgId: string;
   blueprintId?: string;
   createdAt: Date;
   completedAt: Date;
@@ -496,7 +494,6 @@ export interface ArtifactGenerationResult {
  * Content request payload
  */
 export interface ContentRequest {
-  orgId: string;
   blueprintId?: string;
   technicalBrief?: TechnicalBrief;
   pages?: string[];
@@ -577,16 +574,7 @@ export class ContentManager extends BaseManager {
     try {
       const payload = message.payload as ContentRequest;
 
-      if (!payload?.orgId) {
-        return this.createReport(
-          taskId,
-          'FAILED',
-          null,
-          ['No orgId provided in payload']
-        );
-      }
-
-      this.log('INFO', `Processing content request for organization: ${DEFAULT_ORG_ID}`);
+      this.log('INFO', `Processing content request for organization: ${PLATFORM_ID}`);
 
       // Execute full content orchestration
       const contentPackage = await this.orchestrateContentProduction(payload, taskId, startTime);
@@ -623,18 +611,15 @@ export class ContentManager extends BaseManager {
 
       const blueprintPayload = messagePayload.payload as {
         blueprintId?: string;
-        orgId?: string;
         technicalBriefId?: string;
       } | undefined;
 
       // Fetch the full architecture from vault
       const architecture = await this.fetchArchitectureFromVault(
-        blueprintPayload?.orgId ?? signal.origin ?? 'default',
         blueprintPayload?.blueprintId
       );
 
       const contentRequest: ContentRequest = {
-        orgId: blueprintPayload?.orgId ?? signal.origin ?? 'default',
         blueprintId: blueprintPayload?.blueprintId,
         technicalBrief: architecture?.technicalBrief,
       };
@@ -713,8 +698,8 @@ export class ContentManager extends BaseManager {
    */
   private async loadBrandContext(): Promise<BrandContext> {
     // Check cache first
-    if (this.brandContextCache.has(DEFAULT_ORG_ID)) {
-      const cached = this.brandContextCache.get(DEFAULT_ORG_ID);
+    if (this.brandContextCache.has(PLATFORM_ID)) {
+      const cached = this.brandContextCache.get(PLATFORM_ID);
       if (cached) {
         return cached;
       }
@@ -724,12 +709,11 @@ export class ContentManager extends BaseManager {
       const brandDNA = await getBrandDNA();
 
       if (!brandDNA) {
-        this.log('WARN', `No Brand DNA found for org ${DEFAULT_ORG_ID}, using defaults`);
-        return this.createDefaultBrandContext(DEFAULT_ORG_ID);
+        this.log('WARN', `No Brand DNA found for org ${PLATFORM_ID}, using defaults`);
+        return this.createDefaultBrandContext();
       }
 
       const brandContext: BrandContext = {
-        orgId: DEFAULT_ORG_ID,
         companyDescription: brandDNA.companyDescription ?? '',
         uniqueValue: brandDNA.uniqueValue ?? '',
         targetAudience: brandDNA.targetAudience ?? '',
@@ -748,22 +732,21 @@ export class ContentManager extends BaseManager {
       };
 
       // Cache for performance
-      this.brandContextCache.set(DEFAULT_ORG_ID, brandContext);
-      this.log('INFO', `Loaded Brand DNA for org ${DEFAULT_ORG_ID} (Industry: ${brandContext.industry})`);
+      this.brandContextCache.set(PLATFORM_ID, brandContext);
+      this.log('INFO', `Loaded Brand DNA for org ${PLATFORM_ID} (Industry: ${brandContext.industry})`);
 
       return brandContext;
     } catch (error) {
       this.log('ERROR', `Failed to load Brand DNA: ${error instanceof Error ? error.message : String(error)}`);
-      return this.createDefaultBrandContext(DEFAULT_ORG_ID);
+      return this.createDefaultBrandContext();
     }
   }
 
   /**
    * Create default brand context when no Brand DNA exists
    */
-  private createDefaultBrandContext(orgId: string): BrandContext {
+  private createDefaultBrandContext(): BrandContext {
     return {
-      orgId,
       companyDescription: '',
       uniqueValue: '',
       targetAudience: '',
@@ -961,7 +944,6 @@ export class ContentManager extends BaseManager {
 
     return {
       packageId: `content_${taskId}`,
-      orgId: request.orgId,
       blueprintId: request.blueprintId,
       createdAt: new Date(startTime),
       completedAt,
@@ -1031,7 +1013,6 @@ export class ContentManager extends BaseManager {
                 toneOfVoice: brandContext.toneOfVoice,
                 keyPhrases: brandContext.keyPhrases,
                 avoidPhrases: brandContext.avoidPhrases,
-                organizationId: request.orgId,
               },
               timestamp: new Date(),
               priority: 'HIGH',
@@ -1263,7 +1244,6 @@ export class ContentManager extends BaseManager {
           brandStyle: 'modern',
           industry: brandContext.industry,
           pages: pageContent.map(p => ({ id: p.pageId, name: p.pageName })),
-          organizationId: brandContext.orgId,
         },
         timestamp: new Date(),
         priority: 'NORMAL',
@@ -1385,7 +1365,6 @@ export class ContentManager extends BaseManager {
           script: `Introducing ${brandContext.companyDescription}. ${brandContext.uniqueValue}`,
           platform: 'youtube',
           style: 'documentary',
-          organizationId: request.orgId,
         },
         timestamp: new Date(),
         priority: 'NORMAL',
@@ -1635,7 +1614,6 @@ export class ContentManager extends BaseManager {
    * Fetch architecture from MemoryVault
    */
   private async fetchArchitectureFromVault(
-    orgId: string,
     blueprintId?: string
   ): Promise<{ technicalBrief: TechnicalBrief } | null> {
     try {
@@ -1859,7 +1837,6 @@ export class ContentManager extends BaseManager {
           techStack: context.techStack,
           painPoints: context.painPoints,
           requestedInfo: context.requestedInfo,
-          organizationId: DEFAULT_ORG_ID,
         },
         timestamp: new Date(),
         priority: 'HIGH',

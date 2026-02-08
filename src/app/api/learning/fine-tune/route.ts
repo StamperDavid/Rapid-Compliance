@@ -14,7 +14,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 type TrainingExampleStatus = 'pending' | 'approved' | 'rejected' | 'used_in_training';
 type FineTuneBaseModel = 'gpt-3.5-turbo' | 'gpt-4';
@@ -25,7 +25,7 @@ interface TrainingMessage {
 }
 
 interface FineTunePostRequestBody {
-  DEFAULT_ORG_ID?: string;
+  PLATFORM_ID?: string;
   action?: string;
   conversationId?: string;
   messages?: TrainingMessage[];
@@ -41,7 +41,7 @@ interface FineTunePostRequestBody {
 }
 
 interface FineTunePutRequestBody {
-  DEFAULT_ORG_ID?: string;
+  PLATFORM_ID?: string;
   config?: Record<string, unknown>;
 }
 
@@ -83,13 +83,13 @@ export async function GET(request: NextRequest) {
 
         // Get fine-tuning jobs
         const jobs = await FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
           []
         );
 
         // Get learning config
         const config = await FirestoreService.get<LearningConfig>(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/config`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/config`,
           'continuousLearning'
         );
 
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
 
       case 'jobs': {
         const jobs = await FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/fineTuningJobs`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
           []
         );
         return NextResponse.json({ jobs });
@@ -147,9 +147,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { DEFAULT_ORG_ID, action } = body;
+    const { PLATFORM_ID, action } = body;
 
-    if (!DEFAULT_ORG_ID) {
+    if (!PLATFORM_ID) {
       return NextResponse.json(
         { error: 'Organization ID required' },
         { status: 400 }
@@ -160,7 +160,6 @@ export async function POST(request: NextRequest) {
       case 'collect_feedback': {
         // Collect training data from conversation
         const result = await processConversationFeedback({
-          organizationId: DEFAULT_ORG_ID,
           conversationId: body.conversationId ?? '',
           messages: body.messages ?? [],
           confidence: body.confidence ?? 0,
@@ -224,7 +223,6 @@ export async function POST(request: NextRequest) {
         const baseModel: FineTuneBaseModel = body.baseModel ?? 'gpt-3.5-turbo';
 
         const job = await createOpenAIFineTuningJob({
-          organizationId: DEFAULT_ORG_ID,
           baseModel,
           examples,
           hyperparameters: body.hyperparameters,
@@ -279,9 +277,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { DEFAULT_ORG_ID, config } = body;
+    const { PLATFORM_ID, config } = body;
 
-    if (!DEFAULT_ORG_ID) {
+    if (!PLATFORM_ID) {
       return NextResponse.json(
         { error: 'Organization ID required' },
         { status: 400 }
@@ -291,12 +289,12 @@ export async function PUT(request: NextRequest) {
     // Update learning config
     const configData: Record<string, unknown> = {
       ...(config ?? {}),
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
       updatedAt: new Date().toISOString(),
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/config`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/config`,
       'continuousLearning',
       configData,
       false

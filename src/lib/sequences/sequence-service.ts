@@ -13,7 +13,6 @@ export interface EnrollInSequenceParams {
   sequenceId: string;
   leadId: string;
   email: string;
-  orgId: string;
   workspaceId: string;
   source: string;
   sourceId: string;
@@ -33,6 +32,7 @@ export async function enrollInSequence(params: EnrollInSequenceParams): Promise<
   });
 
   try {
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     // Import the real sequencer dynamically to avoid circular dependencies
     const { enrollInSequence: realEnroll } = await import('@/lib/services/sequencer');
 
@@ -40,7 +40,6 @@ export async function enrollInSequence(params: EnrollInSequenceParams): Promise<
     const enrollment = await realEnroll({
       sequenceId: params.sequenceId,
       leadId: params.leadId,
-      organizationId: params.orgId,
       metadata: {
         email: params.email,
         workspaceId: params.workspaceId,

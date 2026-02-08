@@ -1,7 +1,7 @@
 /**
  * Page Publishing API
  * Handle publish/unpublish actions with version tracking
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import type { NextRequest } from 'next/server';
@@ -13,10 +13,9 @@ import {
   errorResponse,
 } from '@/lib/api-error-handler';
 import { getUserIdentifier } from '@/lib/server-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface PageData {
-  organizationId?: string;
   content?: unknown[];
   seo?: Record<string, unknown>;
   title?: string;
@@ -55,11 +54,10 @@ export async function POST(
     const params = await context.params;
     const body = await request.json() as RequestBody;
     const { scheduledFor } = body;
-    const validOrgId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: validOrgId, pageId: params.pageId }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      { pageId: params.pageId }
     );
 
     const doc = await pageRef.get();
@@ -80,8 +78,8 @@ export async function POST(
 
     // Create version snapshot before publishing
     const versionRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}/versions/{version}',
-      { orgId: validOrgId, pageId: params.pageId, version: `v${currentVersion}` }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}/versions/{version}',
+      { pageId: params.pageId, version: `v${currentVersion}` }
     );
 
     await versionRef.set({
@@ -126,8 +124,7 @@ export async function POST(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/audit-log/entries',
-      { orgId: validOrgId }
+      'organizations/rapid-compliance-root/website/audit-log/entries'
     );
 
     await auditRef.add({
@@ -138,7 +135,6 @@ export async function POST(
       scheduledFor: scheduledFor ?? null,
       performedBy,
       performedAt: now,
-      organizationId: validOrgId,
     });
 
     return successResponse(
@@ -172,11 +168,10 @@ export async function DELETE(
     }
 
     const params = await context.params;
-    const validOrgId = DEFAULT_ORG_ID;
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: validOrgId, pageId: params.pageId }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      { pageId: params.pageId }
     );
 
     const doc = await pageRef.get();
@@ -204,8 +199,7 @@ export async function DELETE(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/audit-log/entries',
-      { orgId: validOrgId }
+      'organizations/rapid-compliance-root/website/audit-log/entries'
     );
 
     await auditRef.add({
@@ -214,7 +208,6 @@ export async function DELETE(
       pageTitle: pageData.title,
       performedBy,
       performedAt: now,
-      organizationId: validOrgId,
     });
 
     return successResponse({}, 'Page unpublished successfully', 200);

@@ -314,7 +314,6 @@ export const ChunkMetadataSchema = z.object({
 export const KnowledgeChunkSchema = z.object({
   id: z.string().min(1),
   documentId: z.string().min(1),
-  organizationId: OrganizationIdSchema,
   content: z.string().min(1),
   tokens: z.number().int().nonnegative(),
   chunkIndex: z.number().int().nonnegative(),
@@ -382,7 +381,6 @@ export const RetrievalOptionsSchema = z.object({
  * Retrieval request schema
  */
 export const RetrievalRequestSchema = z.object({
-  organizationId: OrganizationIdSchema,
   workspaceId: WorkspaceIdSchema.optional(),
   query: z.string().min(1).max(10000),
   filters: RetrievalFiltersSchema.optional(),
@@ -405,7 +403,6 @@ export const OrchestrationOptionsSchema = z.object({
  * Orchestration request schema
  */
 export const OrchestrationRequestSchema = z.object({
-  organizationId: OrganizationIdSchema,
   workspaceId: WorkspaceIdSchema,
   userId: UserIdSchema,
   task: TaskContextSchema,

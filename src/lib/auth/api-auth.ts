@@ -2,7 +2,7 @@
  * API Authentication Middleware
  * Validates authentication tokens and user permissions for API routes
  *
- * Penthouse model: All users belong to DEFAULT_ORG_ID
+ * Penthouse model: All users belong to PLATFORM_ID
  */
 
 import { NextResponse, type NextRequest } from 'next/server';

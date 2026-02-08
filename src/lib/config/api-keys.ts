@@ -6,7 +6,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Type definition for API keys stored in Firestore
@@ -31,7 +31,7 @@ export async function getAPIKey(
   try {
     // Try Firestore first
     const apiKeys = await FirestoreService.get<APIKeysDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
       'apiKeys'
     );
 

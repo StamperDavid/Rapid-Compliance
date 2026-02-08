@@ -27,7 +27,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
 import { JASPER_TOOLS, executeToolCalls } from '@/lib/orchestrator/jasper-tools';
 import { SystemStateService } from '@/lib/orchestrator/system-state-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // Type Definitions
@@ -196,7 +196,6 @@ interface OrchestratorChatRequest {
     companyName?: string;
     ownerName?: string;
   };
-  organizationId?: string;
   // Model selection
   modelId?: string;
   // Voice settings
@@ -266,7 +265,6 @@ export async function POST(request: NextRequest) {
       conversationHistory,
       adminStats,
       merchantInfo,
-      organizationId,
       modelId,
       voiceEnabled,
       voiceId,
@@ -322,8 +320,7 @@ export async function POST(request: NextRequest) {
     ];
 
     // Initialize OpenRouter provider
-    const orgId = DEFAULT_ORG_ID;
-    const provider = new OpenRouterProvider(orgId);
+    const provider = new OpenRouterProvider(PLATFORM_ID);
 
     const startTime = Date.now();
 
@@ -449,12 +446,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Optionally persist to Firestore for long-term memory
-    if (organizationId) {
-      try {
-        await persistConversation(organizationId, context, message, finalResponse, modelUsed);
-      } catch (error) {
-        logger.warn('[Jasper] Failed to persist conversation', { error: error instanceof Error ? error.message : String(error) });
-      }
+    try {
+      await persistConversation(context, message, finalResponse, modelUsed);
+    } catch (error) {
+      logger.warn('[Jasper] Failed to persist conversation', { error: error instanceof Error ? error.message : String(error) });
     }
 
     // Generate voice output if enabled
@@ -464,7 +459,6 @@ export async function POST(request: NextRequest) {
       try {
         const ttsResponse = await VoiceEngineFactory.getAudio({
           text: finalResponse,
-          organizationId: orgId,
           engine: ttsEngine,
           voiceId: voiceId,
         });
@@ -655,7 +649,6 @@ Your responses may be spoken aloud via text-to-speech. Keep this in mind:
  * Persist conversation to Firestore for long-term memory
  */
 async function persistConversation(
-  organizationId: string,
   context: 'admin' | 'merchant',
   userMessage: string,
   assistantResponse: string,
@@ -664,7 +657,7 @@ async function persistConversation(
   const conversationId = `jasper_${context}`;
   const messageId = `msg_${Date.now()}`;
 
-  const conversationsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/orchestratorConversations`;
+  const conversationsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orchestratorConversations`;
 
   await FirestoreService.set(
     `${conversationsPath}/${conversationId}/messages`,
@@ -683,7 +676,6 @@ async function persistConversation(
     conversationsPath,
     conversationId,
     {
-      organizationId,
       context,
       lastMessageAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

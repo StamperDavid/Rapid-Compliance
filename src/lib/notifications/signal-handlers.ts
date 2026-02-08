@@ -21,7 +21,7 @@
 import type { SalesSignal } from '@/lib/orchestration/types';
 import { NotificationService } from './notification-service';
 import type { NotificationVariables } from './types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Initialize notification signal handlers
@@ -29,7 +29,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
  * Call this on server startup to begin listening for signals
  */
 export function initializeNotificationHandlers(): void {
-  const service = new NotificationService(DEFAULT_ORG_ID);
+  const service = new NotificationService();
 
   // Deal Risk Predictor signals
   registerDealRiskHandlers(service);
@@ -77,10 +77,9 @@ function registerDealRiskHandlers(_service: NotificationService): void {
  * Handle critical deal risk signal
  */
 export async function handleDealRiskCritical(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     dealId: signal.metadata.dealId as string,
     dealName: signal.metadata.dealName as string,
     dealValue: signal.metadata.dealValue as number,
@@ -107,10 +106,9 @@ export async function handleDealRiskCritical(signal: SalesSignal): Promise<void>
  * Handle high deal risk signal
  */
 export async function handleDealRiskHigh(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     dealId: signal.metadata.dealId as string,
     dealName: signal.metadata.dealName as string,
     riskLevel: signal.metadata.riskLevel as string,
@@ -139,10 +137,9 @@ function registerConversationHandlers(_service: NotificationService): void {
  * Handle low conversation quality
  */
 export async function handleConversationLowScore(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     conversationId: signal.metadata.conversationId as string,
     repId: signal.metadata.repId as string,
     repName: signal.metadata.repName as string,
@@ -166,10 +163,9 @@ export async function handleConversationLowScore(signal: SalesSignal): Promise<v
  * Handle conversation red flag
  */
 export async function handleConversationRedFlag(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     conversationId: signal.metadata.conversationId as string,
     repId: signal.metadata.repId as string,
     redFlagType: signal.metadata.redFlagType as string,
@@ -192,10 +188,9 @@ export async function handleConversationRedFlag(signal: SalesSignal): Promise<vo
  * Handle competitor mentioned
  */
 export async function handleCompetitorMentioned(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     conversationId: signal.metadata.conversationId as string,
     dealId: signal.metadata.dealId as string,
     competitorName: signal.metadata.competitorName as string,
@@ -219,10 +214,9 @@ export async function handleCompetitorMentioned(signal: SalesSignal): Promise<vo
  * Handle positive buying signal
  */
 export async function handlePositiveSignal(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     conversationId: signal.metadata.conversationId as string,
     dealId: signal.metadata.dealId as string,
     signalType: signal.metadata.signalType as string,
@@ -252,10 +246,9 @@ function registerCoachingHandlers(_service: NotificationService): void {
  * Handle coaching insights generated
  */
 export async function handleCoachingInsightsGenerated(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     repId: signal.metadata.repId as string,
     repName: signal.metadata.repName as string,
     performanceTier: signal.metadata.performanceTier as string,
@@ -286,10 +279,9 @@ function registerPerformanceHandlers(_service: NotificationService): void {
  * Handle top performer identified
  */
 export async function handleTopPerformerIdentified(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     repId: signal.metadata.repId as string,
     repName: signal.metadata.repName as string,
     rank: signal.metadata.rank as number,
@@ -311,10 +303,9 @@ export async function handleTopPerformerIdentified(signal: SalesSignal): Promise
  * Handle improvement opportunity
  */
 export async function handleImprovementOpportunity(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     repId: signal.metadata.repId as string,
     repName: signal.metadata.repName as string,
     skillArea: signal.metadata.skillArea as string,
@@ -345,10 +336,9 @@ function registerPlaybookHandlers(_service: NotificationService): void {
  * Handle playbook generated
  */
 export async function handlePlaybookGenerated(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     playbookId: signal.metadata.playbookId as string,
     playbookName: signal.metadata.playbookName as string,
     patternCount: signal.metadata.patternCount as number,
@@ -370,10 +360,9 @@ export async function handlePlaybookGenerated(signal: SalesSignal): Promise<void
  * Handle pattern identified
  */
 export async function handlePatternIdentified(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     patternType: signal.metadata.patternType as string,
     successRate: signal.metadata.successRate as number,
     occurrences: signal.metadata.occurrences as number,
@@ -402,10 +391,9 @@ function registerSequenceHandlers(_service: NotificationService): void {
  * Handle sequence underperforming
  */
 export async function handleSequenceUnderperforming(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     sequenceId: signal.metadata.sequenceId as string,
     sequenceName: signal.metadata.sequenceName as string,
     replyRate: signal.metadata.replyRate as number,
@@ -428,10 +416,9 @@ export async function handleSequenceUnderperforming(signal: SalesSignal): Promis
  * Handle optimization needed
  */
 export async function handleOptimizationNeeded(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     sequenceId: signal.metadata.sequenceId as string,
     sequenceName: signal.metadata.sequenceName as string,
     optimizationType: signal.metadata.optimizationType as string,
@@ -461,10 +448,9 @@ function registerRoutingHandlers(_service: NotificationService): void {
  * Handle lead routed
  */
 export async function handleLeadRouted(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     leadId: signal.metadata.leadId as string,
     leadName: signal.metadata.leadName as string,
     leadCompany: signal.metadata.leadCompany as string,
@@ -494,10 +480,9 @@ function registerEmailWriterHandlers(_service: NotificationService): void {
  * Handle email generated
  */
 export async function handleEmailGenerated(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     emailId: signal.metadata.emailId as string,
     emailType: signal.metadata.emailType as string,
     dealId: signal.metadata.dealId as string,
@@ -525,10 +510,9 @@ function registerWorkflowHandlers(_service: NotificationService): void {
  * Handle workflow executed
  */
 export async function handleWorkflowExecuted(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     workflowId: signal.metadata.workflowId as string,
     workflowName: signal.metadata.workflowName as string,
     actionsExecuted: signal.metadata.actionsExecuted as number,
@@ -564,10 +548,9 @@ function registerForecastingHandlers(_service: NotificationService): void {
  * Handle quota at risk
  */
 export async function handleQuotaAtRisk(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     period: signal.metadata.period as string,
     quota: signal.metadata.quota as number,
     forecast: signal.metadata.forecast as number,
@@ -590,10 +573,9 @@ export async function handleQuotaAtRisk(signal: SalesSignal): Promise<void> {
  * Handle quota achieved
  */
 export async function handleQuotaAchieved(signal: SalesSignal): Promise<void> {
-  const service = new NotificationService(signal.orgId);
+  const service = new NotificationService();
   
   const variables: NotificationVariables = {
-    orgId: signal.orgId,
     period: signal.metadata.period as string,
     quota: signal.metadata.quota as number,
     actual: signal.metadata.actual as number,

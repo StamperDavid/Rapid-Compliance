@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -36,7 +36,7 @@ export default function BusinessSetupPage() {
       try {
         setLoading(true);
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
         
         if (org?.onboardingData) {
           setOnboardingData(org.onboardingData as OnboardingData);
@@ -67,7 +67,7 @@ export default function BusinessSetupPage() {
       setSaving(true);
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       
-      await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID, {
+      await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, {
         onboardingData,
         updatedAt: new Date()
       });

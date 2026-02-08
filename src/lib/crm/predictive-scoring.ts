@@ -7,7 +7,7 @@
 import type { Lead } from './lead-service';
 import { getActivityStats } from './activity-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 
@@ -60,7 +60,7 @@ async function loadScoringWeights(): Promise<ScoringWeights> {
     if (!db) {
       return DEFAULT_WEIGHTS;
     }
-    const docRef = doc(db, 'organizations', DEFAULT_ORG_ID, 'config', 'scoringWeights');
+    const docRef = doc(db, 'organizations', PLATFORM_ID, 'config', 'scoringWeights');
     const modelDoc = await getDoc(docRef);
 
     if (modelDoc.exists()) {

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import type { PayPalIntegration as PayPalType } from '@/types/integrations';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface PayPalIntegrationProps {
   integration: PayPalType | null;
@@ -47,7 +47,6 @@ export default function PayPalIntegration({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           service: 'paypal',
           apiKey: clientId,
           apiSecret: clientSecret,

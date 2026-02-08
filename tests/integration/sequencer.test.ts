@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   createSequence,
   getSequence,
@@ -14,13 +15,12 @@ import {
   handleCondition,
   stopEnrollment,
   processDueSequenceSteps,
-  type Sequence,
   type SequenceStep,
   type SequenceEnrollment,
 } from '@/lib/services/sequencer';
 import { db } from '@/lib/firebase-admin';
 
-const TEST_ORG_ID = 'test-org-sequencer';
+const TEST_ORG_ID = PLATFORM_ID;
 const TEST_USER_ID = 'test-user-sequencer';
 const TEST_LEAD_ID = 'test-lead-sequencer';
 
@@ -31,7 +31,6 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
     // Clean up any existing test data
     const existingSequences = await db
       .collection('sequences')
-      .where('organizationId', '==', TEST_ORG_ID)
       .get();
 
     for (const doc of existingSequences.docs) {
@@ -40,7 +39,6 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
 
     const existingEnrollments = await db
       .collection('sequenceEnrollments')
-      .where('organizationId', '==', TEST_ORG_ID)
       .get();
 
     for (const doc of existingEnrollments.docs) {
@@ -49,16 +47,18 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
-    if (testSequenceId) {
-      await db.collection('sequences').doc(testSequenceId).delete();
+    // Clean up ALL test sequences
+    const sequences = await db
+      .collection('sequences')
+      .get();
+    for (const doc of sequences.docs) {
+      await doc.ref.delete();
     }
 
+    // Clean up ALL test enrollments
     const enrollments = await db
       .collection('sequenceEnrollments')
-      .where('organizationId', '==', TEST_ORG_ID)
       .get();
-
     for (const doc of enrollments.docs) {
       await doc.ref.delete();
     }
@@ -116,7 +116,6 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
       ];
 
       const sequence = await createSequence({
-        organizationId: TEST_ORG_ID,
         name: 'Test Outreach Sequence',
         description: 'Multi-channel test sequence',
         steps,
@@ -127,7 +126,7 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
 
       expect(sequence).toBeDefined();
       expect(sequence.id).toBeDefined();
-      expect(sequence.organizationId).toBe(TEST_ORG_ID);
+      // In single-tenant mode, all sequences belong to the platform
       expect(sequence.name).toBe('Test Outreach Sequence');
       expect(sequence.steps).toHaveLength(3);
       expect(sequence.isActive).toBe(true);
@@ -140,15 +139,15 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
 
       expect(sequence).not.toBeNull();
       expect(sequence?.id).toBe(testSequenceId);
-      expect(sequence?.organizationId).toBe(TEST_ORG_ID);
+      // Single-tenant mode: verified
     });
 
     it('should list sequences for organization', async () => {
-      const sequences = await listSequences(TEST_ORG_ID);
+      const sequences = await listSequences();
 
       expect(Array.isArray(sequences)).toBe(true);
       expect(sequences.length).toBeGreaterThan(0);
-      expect(sequences[0].organizationId).toBe(TEST_ORG_ID);
+      // Single-tenant mode: all sequences belong to the platform
     });
 
     it('should update sequence', async () => {
@@ -170,7 +169,6 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
       const enrollment = await enrollInSequence({
         sequenceId: testSequenceId,
         leadId: TEST_LEAD_ID,
-        organizationId: TEST_ORG_ID,
         metadata: {
           source: 'test',
         },
@@ -193,8 +191,7 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
         enrollInSequence({
           sequenceId: testSequenceId,
           leadId: TEST_LEAD_ID,
-          organizationId: TEST_ORG_ID,
-        })
+          })
       ).rejects.toThrow('already enrolled');
     });
 
@@ -218,8 +215,7 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
       const enrollment = await enrollInSequence({
         sequenceId: testSequenceId,
         leadId: `${TEST_LEAD_ID}-exec`,
-        organizationId: TEST_ORG_ID,
-      });
+        });
       enrollmentId = enrollment.id;
     });
 
@@ -274,15 +270,14 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
       const enrollment = await enrollInSequence({
         sequenceId: testSequenceId,
         leadId: `${TEST_LEAD_ID}-batch`,
-        organizationId: TEST_ORG_ID,
-      });
+        });
 
       // Set to due now
       await db.collection('sequenceEnrollments').doc(enrollment.id).update({
         nextExecutionAt: new Date(Date.now() - 1000), // 1 second ago
       });
 
-      const processed = await processDueSequenceSteps(TEST_ORG_ID);
+      const processed = await processDueSequenceSteps();
 
       expect(processed).toBeGreaterThan(0);
 
@@ -309,7 +304,6 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
       }));
 
       const sequence = await createSequence({
-        organizationId: TEST_ORG_ID,
         name: 'Multi-Channel Test',
         steps,
         createdBy: TEST_USER_ID,
@@ -356,7 +350,6 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
       ];
 
       const sequence = await createSequence({
-        organizationId: TEST_ORG_ID,
         name: 'Conditional Test',
         steps,
         createdBy: TEST_USER_ID,
@@ -366,8 +359,7 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
       const enrollment = await enrollInSequence({
         sequenceId: sequence.id,
         leadId: `${TEST_LEAD_ID}-conditional`,
-        organizationId: TEST_ORG_ID,
-      });
+        });
 
       // Execute first step
       await db.collection('sequenceEnrollments').doc(enrollment.id).update({

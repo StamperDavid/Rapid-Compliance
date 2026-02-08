@@ -5,12 +5,11 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { VoiceCall, SMSMessage, CallStatus, SMSStatus } from './types';
 
 export interface VoiceActivity {
   id: string;
-  organizationId: string;
   callId: string;
   type: 'call' | 'sms' | 'voicemail' | 'transfer' | 'recording';
   direction: 'inbound' | 'outbound';
@@ -36,7 +35,6 @@ export interface VoiceActivity {
 }
 
 export interface ActivitySearchParams {
-  organizationId: string;
   contactId?: string;
   leadId?: string;
   dealId?: string;
@@ -96,7 +94,6 @@ class CRMVoiceActivityLogger {
       }
 
       const activity: Omit<VoiceActivity, 'id'> = {
-        organizationId: DEFAULT_ORG_ID,
         callId: call.callId,
         type: 'call',
         direction: call.direction,
@@ -171,7 +168,6 @@ class CRMVoiceActivityLogger {
       }
 
       const activity: Omit<VoiceActivity, 'id'> = {
-        organizationId: DEFAULT_ORG_ID,
         callId: message.messageId,
         type: 'sms',
         direction: message.direction,
@@ -237,7 +233,6 @@ class CRMVoiceActivityLogger {
       }
 
       const activity: Omit<VoiceActivity, 'id'> = {
-        organizationId: DEFAULT_ORG_ID,
         callId,
         type: 'voicemail',
         direction: 'inbound',
@@ -294,7 +289,6 @@ class CRMVoiceActivityLogger {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           ...disposition,
         }),
       });
@@ -321,7 +315,6 @@ class CRMVoiceActivityLogger {
   async getActivities(params: ActivitySearchParams): Promise<VoiceActivity[]> {
     try {
       const queryParams = new URLSearchParams();
-      queryParams.set('organizationId', params.organizationId);
 
       if (params.contactId) {queryParams.set('contactId', params.contactId);}
       if (params.leadId) {queryParams.set('leadId', params.leadId);}
@@ -361,7 +354,6 @@ class CRMVoiceActivityLogger {
   ): Promise<ActivityStats> {
     try {
       const queryParams = new URLSearchParams();
-      queryParams.set('organizationId', DEFAULT_ORG_ID);
 
       if (params?.dateFrom) {queryParams.set('dateFrom', params.dateFrom.toISOString());}
       if (params?.dateTo) {queryParams.set('dateTo', params.dateTo.toISOString());}
@@ -405,7 +397,6 @@ class CRMVoiceActivityLogger {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           phoneNumbers: [from, to],
         }),
       });
@@ -443,7 +434,6 @@ class CRMVoiceActivityLogger {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           ...records,
           timestamp: new Date().toISOString(),
         }),
@@ -465,7 +455,6 @@ class CRMVoiceActivityLogger {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           event,
           data,
           source: 'voice',
@@ -492,7 +481,6 @@ class CRMVoiceActivityLogger {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           title: disposition.nextAction,
           description: `Follow-up from call ${callId}. Notes: ${disposition.notes ?? ''}`,
           dueDate: disposition.nextActionDate?.toISOString(),

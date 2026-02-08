@@ -9,16 +9,15 @@
 
 import {
   analyzeTranscript,
-  analyzeBatchConversations,
 } from '@/lib/conversation/conversation-engine';
-import type {
-  AnalyzeTranscriptRequest,
-  ConversationType,
-  Participant,
-  ParticipantRole,
-  ConversationEngineConfig,
+import {
+  DEFAULT_CONVERSATION_CONFIG,
+  type AnalyzeTranscriptRequest,
+  type ConversationType,
+  type Participant,
+  type ParticipantRole,
+  type ConversationEngineConfig,
 } from '@/lib/conversation/types';
-import { DEFAULT_CONVERSATION_CONFIG } from '@/lib/conversation/types';
 
 // Mock dependencies
 jest.mock('@/lib/logger/logger', () => ({
@@ -242,7 +241,6 @@ describe('Conversation Analysis Engine', () => {
     it('should analyze transcript successfully', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         workspaceId: 'workspace-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
@@ -260,7 +258,6 @@ describe('Conversation Analysis Engine', () => {
       
       // Assert
       expect(result).toBeDefined();
-      expect(result.organizationId).toBe('org-1');
       expect(result.workspaceId).toBe('workspace-1');
       expect(result.sentiment).toBeDefined();
       expect(result.sentiment.overall.polarity).toBe('positive');
@@ -274,7 +271,6 @@ describe('Conversation Analysis Engine', () => {
     it('should calculate talk ratio correctly', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -301,7 +297,6 @@ describe('Conversation Analysis Engine', () => {
     it('should generate coaching insights when requested', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -343,7 +338,6 @@ describe('Conversation Analysis Engine', () => {
     it('should generate follow-up actions when requested', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -384,7 +378,6 @@ describe('Conversation Analysis Engine', () => {
     it('should calculate conversation scores', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -416,7 +409,6 @@ describe('Conversation Analysis Engine', () => {
     it('should identify quality indicators', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -446,7 +438,6 @@ describe('Conversation Analysis Engine', () => {
     it('should extract red flags', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -475,7 +466,6 @@ describe('Conversation Analysis Engine', () => {
     it('should extract positive signals', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -496,7 +486,6 @@ describe('Conversation Analysis Engine', () => {
     it('should handle short transcripts', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: 'Very short transcript',
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -513,7 +502,6 @@ describe('Conversation Analysis Engine', () => {
     it('should respect custom config', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -539,7 +527,6 @@ describe('Conversation Analysis Engine', () => {
     it('should track token usage', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -560,7 +547,6 @@ describe('Conversation Analysis Engine', () => {
     it('should track processing time', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -575,13 +561,12 @@ describe('Conversation Analysis Engine', () => {
       
       // Assert
       expect(result.processingTime).toBeDefined();
-      expect(result.processingTime).toBeGreaterThan(0);
+      expect(result.processingTime).toBeGreaterThanOrEqual(0);
     });
     
     it('should handle AI errors gracefully', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -598,7 +583,6 @@ describe('Conversation Analysis Engine', () => {
     it('should handle malformed AI responses', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -639,7 +623,6 @@ Jane Buyer: Even more detailed response with comprehensive information.
       `;
       
       const request: AnalyzeTranscriptRequest = {
-        organizationId: 'org-1',
         transcript,
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),

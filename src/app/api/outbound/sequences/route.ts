@@ -11,7 +11,7 @@ import type { OutboundSequence, SequenceStep, SendTime, StepCondition, SequenceS
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 type StepType = 'email' | 'linkedin_message' | 'sms' | 'call_task' | 'manual_task';
 
@@ -31,7 +31,7 @@ function isValidStepType(value: string): value is StepType {
 }
 
 interface SequenceCreateRequestBody {
-  DEFAULT_ORG_ID?: string;
+  PLATFORM_ID?: string;
   name?: string;
   description?: string;
   steps?: SequenceStepInput[];
@@ -43,7 +43,7 @@ function isSequenceCreateRequestBody(value: unknown): value is SequenceCreateReq
 }
 
 /**
- * GET /api/outbound/sequences?DEFAULT_ORG_ID=xxx&page=1&limit=50
+ * GET /api/outbound/sequences?PLATFORM_ID=xxx&page=1&limit=50
  * List sequences for an organization with pagination
  */
 export async function GET(request: NextRequest) {
@@ -65,13 +65,13 @@ export async function GET(request: NextRequest) {
 
     // NEW PRICING MODEL: All features available to all active subscriptions
     // Feature check no longer needed - everyone gets email sequences!
-    // const featureCheck = await requireFeature(request, DEFAULT_ORG_ID, 'emailSequences');
+    // const featureCheck = await requireFeature(request, PLATFORM_ID, 'emailSequences');
     // if (featureCheck) return featureCheck;
 
     // Get sequences with pagination
     const { orderBy } = await import('firebase/firestore');
     const result = await FirestoreService.getAllPaginated(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
       [orderBy('createdAt', 'desc')],
       Math.min(pageSize, 100) // Max 100 per page
     );
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // NEW PRICING MODEL: All features available to all active subscriptions
     // Feature check no longer needed - everyone gets email sequences!
-    // const featureCheck = await requireFeature(request, DEFAULT_ORG_ID, 'emailSequences');
+    // const featureCheck = await requireFeature(request, PLATFORM_ID, 'emailSequences');
     // if (featureCheck) return featureCheck;
 
     // Create sequence
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     // Save sequence
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
       sequenceId,
       sequence,
       false

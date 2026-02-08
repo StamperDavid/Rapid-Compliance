@@ -200,15 +200,6 @@ describe('Version Control', () => {
       expect(result.errors).toContain('Missing id');
     });
 
-    it('should detect missing organizationId', () => {
-      const invalid = { ...validTrainingData, organizationId: '' } as TrainingData;
-
-      const result = validateIntegrity(invalid);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toContain('Missing organizationId');
-    });
-
     it('should detect missing signalId', () => {
       const invalid = { ...validTrainingData, signalId: '' } as TrainingData;
 
@@ -334,7 +325,6 @@ describe('Version Control', () => {
   describe('exportChangelogToMarkdown', () => {
     it('should export changelog to markdown', () => {
       const changelog: Changelog = {
-        organizationId: 'org_123',
         generatedAt: new Date('2024-01-01T00:00:00Z'),
         entries: [
           {
@@ -367,7 +357,6 @@ describe('Version Control', () => {
 
     it('should include change type badges', () => {
       const changelog: Changelog = {
-        organizationId: 'org_123',
         generatedAt: new Date(),
         entries: [
           {
@@ -403,7 +392,6 @@ describe('Version Control', () => {
 
     it('should handle empty changelog', () => {
       const changelog: Changelog = {
-        organizationId: 'org_123',
         generatedAt: new Date(),
         entries: [],
       };
@@ -416,7 +404,6 @@ describe('Version Control', () => {
 
     it('should format dates correctly', () => {
       const changelog: Changelog = {
-        organizationId: 'org_123',
         generatedAt: new Date('2024-01-01T00:00:00Z'),
         entries: [
           {
@@ -437,7 +424,6 @@ describe('Version Control', () => {
 
     it('should list all changes for an entry', () => {
       const changelog: Changelog = {
-        organizationId: 'org_123',
         generatedAt: new Date(),
         entries: [
           {

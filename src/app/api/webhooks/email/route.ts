@@ -42,7 +42,6 @@ interface EmailWebhookEvent {
   status?: string;
   enrollmentId?: string;
   stepId?: string;
-  organizationId?: string;
 }
 
 /**
@@ -97,7 +96,6 @@ function toEmailWebhookEvent(raw: Record<string, unknown>): EmailWebhookEvent {
     status: raw.status ? String(raw.status) : undefined,
     enrollmentId: raw.enrollmentId ? String(raw.enrollmentId) : undefined,
     stepId: raw.stepId ? String(raw.stepId) : undefined,
-    organizationId: raw.organizationId ? String(raw.organizationId) : undefined,
   };
 }
 
@@ -202,9 +200,8 @@ async function processEvent(event: EmailWebhookEvent): Promise<void> {
   // Extract metadata from custom args
   const enrollmentId = event.enrollmentId;
   const stepId = event.stepId;
-  const organizationId = event.organizationId;
 
-  if (!enrollmentId || !stepId || !organizationId) {
+  if (!enrollmentId || !stepId) {
     logger.warn('Event missing metadata', { route: '/api/webhooks/email', eventType: event.event });
     return;
   }

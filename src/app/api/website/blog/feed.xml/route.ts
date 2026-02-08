@@ -10,11 +10,11 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface WebsiteSettingsData {
   customDomain?: string;
   customDomainVerified?: boolean;
-  organizationId?: string;
   subdomain?: string;
   seo?: {
     title?: string;
@@ -23,7 +23,6 @@ interface WebsiteSettingsData {
 }
 
 interface BlogPostDocData {
-  organizationId?: string;
   status?: string;
   publishedAt?: string;
   createdAt?: string;
@@ -43,8 +42,7 @@ export async function GET(request: NextRequest) {
     // Extract domain or subdomain from request
     const host = request.headers.get('host') ?? '';
 
-    // Find organization by custom domain or subdomain
-    let organizationId: string | null = null;
+    // Find base URL and site info from custom domain or subdomain
     let baseUrl = '';
     let siteTitle = 'Blog';
     let siteDescription = 'Latest blog posts';
@@ -54,7 +52,6 @@ export async function GET(request: NextRequest) {
     for (const doc of domainsSnapshot.docs) {
       const data = doc.data() as WebsiteSettingsData;
       if (data.customDomain === host && data.customDomainVerified) {
-        organizationId = data.organizationId ?? null;
         baseUrl = `https://${host}`;
         siteTitle = data.seo?.title ?? siteTitle;
         siteDescription = data.seo?.description ?? siteDescription;
@@ -63,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If not custom domain, check subdomain
-    if (!organizationId) {
+    if (!baseUrl) {
       const subdomain = host.split('.')[0];
       const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
       const { adminDb } = await import('@/lib/firebase/admin');
@@ -84,7 +81,6 @@ export async function GET(request: NextRequest) {
 
         const settingsData = settingsDoc.data() as WebsiteSettingsData | undefined;
         if (settingsData?.subdomain === subdomain) {
-          organizationId = orgDoc.id;
           baseUrl = `https://${host}`;
           siteTitle = settingsData.seo?.title ?? siteTitle;
           siteDescription = settingsData.seo?.description ?? siteDescription;
@@ -93,26 +89,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (!organizationId) {
+    if (!baseUrl) {
       return new NextResponse('Site not found', { status: 404 });
     }
 
     // Get all published blog posts for this org
     const postsRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/config/blog-posts',
-      { orgId: organizationId }
+      'organizations/rapid-compliance-root/website/config/blog-posts'
     );
     const postsSnapshot = await postsRef.where('status', '==', 'published').get();
 
     const posts: BlogPost[] = [];
     postsSnapshot.forEach((doc) => {
       const data = doc.data() as BlogPostDocData;
-      if (data.organizationId === organizationId) {
-        posts.push({
-          id: doc.id,
-          ...data,
-        } as BlogPost);
-      }
+      posts.push({
+        id: doc.id,
+        ...data,
+      } as BlogPost);
     });
 
     // Sort by published date (newest first)

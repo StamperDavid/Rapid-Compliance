@@ -51,16 +51,14 @@ export async function POST(
       }, { status: 400 });
     }
     
-    const { organizationId, workspaceId, templateId } = validation.data;
+    const { workspaceId, templateId } = validation.data;
     
     logger.info('Calculating deal score', {
-      orgId: organizationId,
       dealId,
       templateId
     });
 
     const score = calculateDealScore({
-      organizationId,
       workspaceId,
       dealId,
       templateId

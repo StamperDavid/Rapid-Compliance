@@ -10,6 +10,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { sendSlackMessageSchema } from '@/lib/slack/validation';
 import { db } from '@/lib/firebase-admin';
@@ -81,7 +82,6 @@ export async function POST(request: NextRequest) {
     const message: Partial<SlackMessage> = {
       id: messageId,
       workspaceId: workspace.id,
-      organizationId: workspace.organizationId,
       channelId: data.channelId,
       type: data.type,
       priority: data.priority,
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       // Save message record
       await db
         .collection('organizations')
-        .doc(workspace.organizationId)
+        .doc(PLATFORM_ID)
         .collection('slack_messages')
         .doc(messageId)
         .set(message);
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       // Save failed message
       await db
         .collection('organizations')
-        .doc(workspace.organizationId)
+        .doc(PLATFORM_ID)
         .collection('slack_messages')
         .doc(messageId)
         .set(message);
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: unknown) {
-    logger.error('Failed to process send message request', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Failed to process send message request', error instanceof Error ? error : new Error(String(error)));
     const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
 
     return NextResponse.json(

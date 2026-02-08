@@ -6,7 +6,7 @@
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface EmailOptions {
   to: string | string[];
@@ -69,21 +69,21 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   let credentials: Record<string, unknown> | null = null;
 
   // Try SendGrid first
-  const sendgridKeys = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'sendgrid');
+  const sendgridKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'sendgrid');
   const sendgridKeysObj = typeof sendgridKeys === 'object' && sendgridKeys !== null ? sendgridKeys : null;
   if (sendgridKeysObj && typeof sendgridKeysObj.apiKey === 'string') {
     provider = 'sendgrid';
     credentials = sendgridKeysObj;
   } else {
     // Try Resend
-    const resendKeys = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'resend');
+    const resendKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'resend');
     const resendKeysObj = typeof resendKeys === 'object' && resendKeys !== null ? resendKeys : null;
     if (resendKeysObj && typeof resendKeysObj.apiKey === 'string') {
       provider = 'resend';
       credentials = resendKeysObj;
     } else {
       // Try SMTP
-      const smtpKeys = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'smtp');
+      const smtpKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'smtp');
       const smtpKeysObj = typeof smtpKeys === 'object' && smtpKeys !== null ? smtpKeys : null;
       if (smtpKeysObj && typeof smtpKeysObj.host === 'string' && typeof smtpKeysObj.username === 'string' && typeof smtpKeysObj.password === 'string') {
         provider = 'smtp';
@@ -221,11 +221,10 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
   if (options.tracking?.trackOpens) {
     void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       void FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTrackingMappings`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTrackingMappings`,
         messageIdValue,
         {
           messageId: messageIdValue,
-          organizationId: DEFAULT_ORG_ID,
           createdAt: new Date().toISOString(),
         },
         false
@@ -324,11 +323,10 @@ async function sendViaResend(options: EmailOptions, credentials: Record<string, 
   if (options.tracking?.trackOpens) {
     void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       void FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTrackingMappings`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTrackingMappings`,
         messageId,
         {
           messageId,
-          organizationId: DEFAULT_ORG_ID,
           createdAt: new Date().toISOString(),
         },
         false
@@ -400,11 +398,10 @@ function addTrackingPixel(
   if (messageId) {
     void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       void FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTrackingMappings`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTrackingMappings`,
         trackingId,
         {
           messageId,
-          organizationId: DEFAULT_ORG_ID,
           createdAt: new Date().toISOString(),
         },
         false
@@ -463,12 +460,12 @@ export async function sendBulkEmails(
  * REAL: Queries Firestore for tracking data
  */
 export async function getEmailTracking(messageId: string): Promise<EmailTracking | null> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
   const trackingData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
     messageId
   );
 
@@ -515,7 +512,7 @@ export async function recordEmailOpen(
   // Get existing tracking or create new
    
   const existing = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
     messageId
   );
 
@@ -527,7 +524,7 @@ export async function recordEmailOpen(
   const existingData = (existing ?? {}) as ExistingTracking;
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
     messageId,
     {
       emailId: messageId,
@@ -557,7 +554,7 @@ export async function recordEmailClick(
   // Get existing tracking or create new
    
   const existing = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
     messageId
   );
 
@@ -577,7 +574,7 @@ export async function recordEmailClick(
   });
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emailTracking`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
     messageId,
     {
       emailId: messageId,

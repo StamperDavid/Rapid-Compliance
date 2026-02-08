@@ -329,9 +329,8 @@ export type WorkflowExecutionStatus = 'pending' | 'running' | 'completed' | 'fai
  */
 export interface Workflow {
   id: string;
-  organizationId: string;
   workspaceId: string;
-  
+
   // Basic info
   name: string;
   description: string;
@@ -402,9 +401,8 @@ export interface WorkflowStats {
 export interface WorkflowExecution {
   id: string;
   workflowId: string;
-  organizationId: string;
   workspaceId: string;
-  
+
   // Execution context
   dealId?: string;                // Deal that triggered the workflow
   triggeredBy: 'event' | 'schedule' | 'manual';

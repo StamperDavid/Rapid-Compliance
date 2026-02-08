@@ -3,7 +3,7 @@ import { listForms, createForm, deleteForm } from '@/lib/forms/form-service';
 import type { FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const deleteBodySchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one ID is required'),
@@ -111,7 +111,6 @@ export async function POST(
       publicAccess: true,
       createdBy: 'system',
       lastModifiedBy: 'system',
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
     };
 

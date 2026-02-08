@@ -18,7 +18,6 @@ jest.mock('@/lib/integrations/slack-service');
 jest.mock('@/lib/db/firestore-service');
 
 describe('NotificationService', () => {
-  const orgId = 'test_org';
   const userId = 'test_user';
 
   beforeEach(() => {
@@ -28,7 +27,7 @@ describe('NotificationService', () => {
   describe('Variable Interpolation', () => {
     it('should interpolate simple variables', () => {
       const template = 'Hello {{userName}}!';
-      const variables = { orgId: 'org_1', userName: 'John' };
+      const variables = { userName: 'John' };
       
       // Test interpolation logic
       const result = template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
@@ -42,7 +41,6 @@ describe('NotificationService', () => {
     it('should interpolate nested variables', () => {
       const template = 'Deal: {{deal.name}}';
       const variables = {
-        orgId: 'org_1',
         deal: { name: 'Acme Corp' },
       };
       
@@ -63,7 +61,7 @@ describe('NotificationService', () => {
 
     it('should handle missing variables gracefully', () => {
       const template = 'Hello {{missingVar}}!';
-      const variables = { orgId: 'org_1' };
+      const variables = { };
       
       const result = template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
         const value = variables[path.trim() as keyof typeof variables];
@@ -75,7 +73,7 @@ describe('NotificationService', () => {
 
     it('should interpolate multiple variables', () => {
       const template = '{{userName}} has {{count}} notifications';
-      const variables = { orgId: 'org_1', userName: 'Alice', count: '5' };
+      const variables = { userName: 'Alice', count: '5' };
       
       const result = template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
         const value = variables[path.trim() as keyof typeof variables];
@@ -87,7 +85,7 @@ describe('NotificationService', () => {
 
     it('should handle numeric variables', () => {
       const template = 'Score: {{score}}';
-      const variables = { orgId: 'org_1', score: 95 };
+      const variables = { score: 95 };
       
       const result = template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
         const value = variables[path.trim() as keyof typeof variables];
@@ -99,7 +97,7 @@ describe('NotificationService', () => {
 
     it('should handle boolean variables', () => {
       const template = 'Active: {{isActive}}';
-      const variables = { orgId: 'org_1', isActive: true };
+      const variables = { isActive: true };
       
       const result = template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
         const value = variables[path.trim() as keyof typeof variables];
@@ -412,7 +410,6 @@ describe('NotificationService', () => {
     it('should create default preferences structure', () => {
       const defaultPrefs = {
         userId: 'user_1',
-        orgId: 'org_1',
         enabled: true,
         channels: {
           slack: { enabled: true },
@@ -461,7 +458,6 @@ describe('NotificationService', () => {
       };
       
       const variables = {
-        orgId: 'org_1',
         userName: 'Alice',
         taskName: 'Deal Review',
       };
@@ -481,7 +477,6 @@ describe('NotificationService', () => {
       };
       
       const variables = {
-        orgId: 'org_1',
         category: 'Deal Risk',
         description: 'Your deal needs attention',
       };

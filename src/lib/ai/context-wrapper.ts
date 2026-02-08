@@ -8,7 +8,7 @@
  */
 
 import type { AuthClaims } from '@/lib/auth/claims-validator';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -16,8 +16,6 @@ import { logger } from '@/lib/logger/logger';
 // ============================================================================
 
 export interface BusinessContext {
-  /** Organization ID */
-  orgId: string;
   /** Organization name for display */
   orgName: string;
   /** Industry type for persona matching */
@@ -33,7 +31,6 @@ export interface IsolatedPrompt {
   prompt: string;
   /** Metadata about the isolation */
   metadata: {
-    orgId: string;
     isolationLevel: 'strict' | 'admin';
     timestamp: string;
   };
@@ -42,8 +39,6 @@ export interface IsolatedPrompt {
 export interface CountVerificationRequest {
   /** Collection to verify count for */
   collection: string;
-  /** Organization ID scope */
-  orgId: string | null;
   /** Expected count from AI response */
   expectedCount: number;
 }
@@ -115,7 +110,6 @@ export function wrapPromptWithContext(
   const isolationHeader = buildIsolationHeader(context);
 
   logger.debug('Wrapping prompt with business context', {
-    orgId: context.orgId,
     isAdmin: context.isAdmin,
     promptLength: prompt.length,
     file: 'business-context-wrapper.ts',
@@ -124,7 +118,6 @@ export function wrapPromptWithContext(
   return {
     prompt: `${isolationHeader}${prompt}`,
     metadata: {
-      orgId: context.orgId,
       isolationLevel: context.isAdmin ? 'admin' : 'strict',
       timestamp: new Date().toISOString(),
     },
@@ -133,7 +126,7 @@ export function wrapPromptWithContext(
 
 /**
  * Build business context from claims and organization data.
- * Penthouse model: Always uses DEFAULT_ORG_ID.
+ * Penthouse model: Always uses PLATFORM_ID.
  *
  * @param claims - The user's auth claims
  * @param orgData - Optional organization data
@@ -144,7 +137,6 @@ export function buildBusinessContext(
   orgData?: { name?: string; industry?: string }
 ): BusinessContext {
   return {
-    orgId: DEFAULT_ORG_ID,
     orgName: orgData?.name ?? 'SalesVelocity',
     industry: orgData?.industry,
     role: claims.role ?? undefined,
@@ -176,7 +168,6 @@ export async function verifyCount(
     if (!verified) {
       logger.warn('AI count verification failed', {
         collection: request.collection,
-        orgId: request.orgId,
         expected: request.expectedCount,
         actual: actualCount,
         discrepancy,
@@ -193,7 +184,6 @@ export async function verifyCount(
   } catch (error: unknown) {
     logger.error('Count verification error', error instanceof Error ? error : new Error(String(error)), {
       collection: request.collection,
-      orgId: request.orgId,
       file: 'business-context-wrapper.ts',
     });
 
@@ -222,7 +212,6 @@ export function buildJasperContext(
   }
 ): BusinessContext {
   return {
-    orgId: DEFAULT_ORG_ID,
     orgName: 'SalesVelocity',
     industry: 'system_administration',
     role: 'admin',
@@ -262,13 +251,11 @@ When reporting these statistics, use these exact values.
  * Client agents are strictly isolated to their organization.
  */
 export function buildClientAgentContext(
-  orgId: string,
   orgName: string,
   industry: string,
   agentName: string
 ): string {
   const context: BusinessContext = {
-    orgId,
     orgName,
     industry,
     isAdmin: false,

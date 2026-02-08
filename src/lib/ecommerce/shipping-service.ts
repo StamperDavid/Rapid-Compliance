@@ -35,12 +35,12 @@ export async function calculateShipping(
   address: Address,
   methodId?: string
 ): Promise<ShippingCalculation> {
-  // Import DEFAULT_ORG_ID
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  // Import PLATFORM_ID
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   // Get e-commerce config
   const rawConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
 

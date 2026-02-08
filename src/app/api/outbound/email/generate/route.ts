@@ -21,7 +21,6 @@ interface ProspectInput {
 }
 
 interface EmailGenerateRequestBody {
-  orgId?: string;
   prospect?: ProspectInput;
   template?: string;
   tone?: string;
@@ -59,7 +58,6 @@ export async function POST(request: NextRequest) {
     }
 
     const {
-      orgId,
       prospect,
       template = 'AIDA',
       tone = 'professional',
@@ -69,18 +67,11 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!orgId) {
-      return errors.badRequest('Organization ID is required');
-    }
-
     if (!prospect?.name || !prospect.company) {
       return errors.badRequest('Prospect name and company are required');
     }
 
-    // NEW PRICING MODEL: All features available, no usage limits
-    // Feature/usage check no longer needed - unlimited AI email generation!
-    // const gateCheck = await requireFeatureWithLimit(request, orgId, 'aiEmailWriter', 1);
-    // if (gateCheck) return gateCheck;
+    // Penthouse model: All features available
 
     const prospectData: ProspectData = {
       name: prospect.name,
@@ -126,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Usage tracking removed - unlimited AI email generation in new pricing model
-    // Previously tracked with: incrementFeatureUsage(orgId, 'aiEmailWriter', 1)
+    // Previously tracked with: incrementFeatureUsage('aiEmailWriter', 1)
 
     logger.info('Email generated successfully', { route: '/api/outbound/email/generate', prospect: prospectData.name, generationTime });
 

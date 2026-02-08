@@ -21,6 +21,7 @@ import { generatePlaybook } from '@/lib/playbook/playbook-engine';
 import type { GeneratePlaybookRequest, GeneratePlaybookResponse } from '@/lib/playbook/types';
 import { validateGeneratePlaybookRequest } from '@/lib/playbook/validation';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { ZodError } from 'zod';
 
 // Use the actual response type for caching
@@ -43,24 +44,24 @@ const rateLimitMap = new Map<string, RateLimitEntry>();
 /**
  * Check if request is rate limited
  */
-function checkRateLimit(organizationId: string): { allowed: boolean; resetAt: number; remaining: number } {
+function checkRateLimit(): { allowed: boolean; resetAt: number; remaining: number } {
   const now = Date.now();
-  const entry = rateLimitMap.get(organizationId);
-  
+  const entry = rateLimitMap.get(PLATFORM_ID);
+
   // No entry or window expired
   if (!entry || now >= entry.resetAt) {
-    rateLimitMap.set(organizationId, {
+    rateLimitMap.set(PLATFORM_ID, {
       count: 1,
       resetAt: now + RATE_LIMIT_WINDOW,
     });
     return { allowed: true, resetAt: now + RATE_LIMIT_WINDOW, remaining: MAX_REQUESTS_PER_WINDOW - 1 };
   }
-  
+
   // Within window
   if (entry.count >= MAX_REQUESTS_PER_WINDOW) {
     return { allowed: false, resetAt: entry.resetAt, remaining: 0 };
   }
-  
+
   // Increment count
   entry.count++;
   return { allowed: true, resetAt: entry.resetAt, remaining: MAX_REQUESTS_PER_WINDOW - entry.count };
@@ -120,7 +121,7 @@ function setCachedResponse(key: string, data: PlaybookGenerationResult): void {
  */
 function getCacheKey(request: GeneratePlaybookRequest): string {
   const parts = [
-    request.organizationId,
+    PLATFORM_ID,
     request.category,
     request.conversationType,
     (request.sourceConversationIds ?? []).slice(0, 5).join(','),
@@ -214,11 +215,10 @@ export async function POST(request: NextRequest) {
     const validatedRequest: GeneratePlaybookRequest = parseResult;
 
     // 3. Check rate limit
-    const rateLimit = checkRateLimit(validatedRequest.organizationId);
+    const rateLimit = checkRateLimit();
     if (!rateLimit.allowed) {
       const retryAfter = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
       logger.warn('Rate limit exceeded for playbook generation', {
-        organizationId: validatedRequest.organizationId,
         retryAfter,
       });
 
@@ -246,7 +246,6 @@ export async function POST(request: NextRequest) {
       const cachedResponse = getCachedResponse(cacheKey);
       if (cachedResponse) {
         logger.info('Returning cached playbook generation result', {
-          organizationId: validatedRequest.organizationId,
           cacheKey,
         });
 
@@ -263,7 +262,6 @@ export async function POST(request: NextRequest) {
 
     // 5. Generate playbook
     logger.info('Generating playbook', {
-      organizationId: validatedRequest.organizationId,
       name: validatedRequest.name,
       category: validatedRequest.category,
     });
@@ -279,7 +277,6 @@ export async function POST(request: NextRequest) {
 
     // 7. Log success
     logger.info('Playbook generation completed', {
-      organizationId: validatedRequest.organizationId,
       playbookId: result.playbook?.id,
       success: result.success,
       processingTime,
@@ -336,7 +333,6 @@ export function GET() {
       ttl: '1 hour',
     },
     requestBody: {
-      organizationId: 'string (required)',
       workspaceId: 'string (optional)',
       name: 'string (required)',
       description: 'string (optional)',

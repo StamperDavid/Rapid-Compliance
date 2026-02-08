@@ -3,7 +3,7 @@
  * Tests that all critical UI pages are properly wired to backend services
  */
 
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect, afterAll } from '@jest/globals';
 import { getOrCreateCart, addToCart } from '@/lib/ecommerce/cart-service';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { executeWorkflow } from '@/lib/workflows/workflow-executor';
@@ -11,11 +11,23 @@ import { createCampaign, listCampaigns } from '@/lib/email/campaign-manager';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import type { Workflow } from '@/types/workflow';
 import { Timestamp } from 'firebase/firestore';
+import { TestCleanupTracker } from '../helpers/test-cleanup';
+
+// Create a single cleanup tracker for all test organizations
+const cleanup = new TestCleanupTracker();
+
+// Clean up all test data after all tests complete
+afterAll(async () => {
+  await cleanup.cleanupAll();
+});
 
 describe('E-Commerce UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
   const testSessionId = `test-session-${Date.now()}`;
   const testWorkspaceId = 'default';
+
+  // Track organization for cleanup
+  cleanup.trackOrganization(testOrgId);
 
   it('should create cart (products page → cart service)', async () => {
     const cart = await getOrCreateCart(testSessionId, testWorkspaceId, testOrgId);
@@ -76,6 +88,9 @@ describe('Workflow UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
   const testWorkspaceId = 'default';
 
+  // Track organization for cleanup
+  cleanup.trackOrganization(testOrgId);
+
   it('should list workflows (workflows page → firestore)', async () => {
     const workflows = await FirestoreService.getAll(
       `organizations/${testOrgId}/workspaces/${testWorkspaceId}/workflows`,
@@ -98,7 +113,6 @@ describe('Workflow UI Integration', () => {
         trigger: { type: 'manual', id: 'trigger-1', name: 'Manual', requireConfirmation: false },
         actions: [],
         status: 'draft',
-        organizationId: testOrgId,
         workspaceId: testWorkspaceId,
       },
       false
@@ -110,8 +124,9 @@ describe('Workflow UI Integration', () => {
     );
     
     expect(saved).toBeDefined();
-    const workflowData: any = saved;
-    expect(workflowData.name).toBe('Test Workflow');
+    if (saved && typeof saved === 'object' && 'name' in saved) {
+      expect(saved.name).toBe('Test Workflow');
+    }
   }, 10000);
 
   it('should execute workflow (workflow page → workflow engine)', async () => {
@@ -145,7 +160,7 @@ describe('Workflow UI Integration', () => {
     };
     
     const execution = await executeWorkflow(workflow, {});
-    
+
     expect(execution).toBeDefined();
     expect(execution.status).toBe('completed');
   }, 15000);
@@ -154,9 +169,11 @@ describe('Workflow UI Integration', () => {
 describe('Email Campaign UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
 
+  // Track organization for cleanup
+  cleanup.trackOrganization(testOrgId);
+
   it('should create campaign (campaign builder → campaign service)', async () => {
     const campaign = await createCampaign({
-      organizationId: testOrgId,
       name: 'Test Campaign',
       subject: 'Test Subject',
       htmlContent: 'Test email body',
@@ -170,7 +187,7 @@ describe('Email Campaign UI Integration', () => {
   }, 10000);
 
   it('should list campaigns (campaigns page → campaign service)', async () => {
-    const result = await listCampaigns();
+    const result = await listCampaigns(50);
 
     expect(result).toBeDefined();
     expect(result.campaigns).toBeDefined();
@@ -181,6 +198,9 @@ describe('Email Campaign UI Integration', () => {
 describe('CRM UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
   const testWorkspaceId = 'default';
+
+  // Track organization for cleanup
+  cleanup.trackOrganization(testOrgId);
 
   it('should list leads (leads page → firestore)', async () => {
     const leads = await FirestoreService.getAll(
@@ -231,14 +251,18 @@ describe('CRM UI Integration', () => {
     );
     
     expect(saved).toBeDefined();
-    const leadData: any = saved;
-    expect(leadData.name).toBe('Test Lead');
+    if (saved && typeof saved === 'object' && 'name' in saved) {
+      expect(saved.name).toBe('Test Lead');
+    }
   }, 10000);
 });
 
 describe('Product Management UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
   const testWorkspaceId = 'default';
+
+  // Track organization for cleanup
+  cleanup.trackOrganization(testOrgId);
 
   it('should create product (product form → firestore)', async () => {
     const productId = `test-product-${Date.now()}`;
@@ -263,9 +287,10 @@ describe('Product Management UI Integration', () => {
     );
     
     expect(saved).toBeDefined();
-    const productData: any = saved;
-    expect(productData.name).toBe('Test Product');
-    expect(productData.price).toBe(99.99);
+    if (saved && typeof saved === 'object' && 'name' in saved && 'price' in saved) {
+      expect(saved.name).toBe('Test Product');
+      expect(saved.price).toBe(99.99);
+    }
   }, 10000);
 
   it('should list products for admin (products page → firestore)', async () => {
@@ -287,8 +312,10 @@ describe('Product Management UI Integration', () => {
     
     // Verify products have required fields for display
     if (products.length > 0) {
-      const product: any = products[0];
-      expect(product.id).toBeDefined();
+      const product = products[0];
+      if (product && typeof product === 'object' && 'id' in product) {
+        expect(product.id).toBeDefined();
+      }
       // Name, price, etc. are optional but should be present for real products
     }
   }, 10000);

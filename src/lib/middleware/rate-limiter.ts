@@ -28,7 +28,7 @@
 
 import type { NextRequest } from 'next/server';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -219,8 +219,8 @@ function getIdentifier(
     }
       
     case 'org': {
-      // Single-tenant system - use DEFAULT_ORG_ID
-      return `org:${DEFAULT_ORG_ID}`;
+      // Single-tenant system - use PLATFORM_ID
+      return `org:${PLATFORM_ID}`;
     }
       
     case 'ip':

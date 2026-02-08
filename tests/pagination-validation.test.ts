@@ -89,21 +89,44 @@ describe('Pagination Stress Testing', () => {
 
   afterAll(async () => {
     console.log('Cleaning up test data...');
-    
+
     try {
+      // Delete all leads subcollection documents
+      const leads = await FirestoreService.getAll(
+        `organizations/${testOrgId}/workspaces/default/entities/leads/records`,
+        []
+      );
+      for (const lead of leads) {
+        const leadRecord = lead as { id: string };
+        await FirestoreService.delete(
+          `organizations/${testOrgId}/workspaces/default/entities/leads/records`,
+          leadRecord.id
+        );
+      }
+      console.log(`  Deleted ${leads.length} test leads`);
+
+      // Delete all deals subcollection documents
+      const deals = await FirestoreService.getAll(
+        `organizations/${testOrgId}/workspaces/default/entities/deals/records`,
+        []
+      );
+      for (const deal of deals) {
+        const dealRecord = deal as { id: string };
+        await FirestoreService.delete(
+          `organizations/${testOrgId}/workspaces/default/entities/deals/records`,
+          dealRecord.id
+        );
+      }
+      console.log(`  Deleted ${deals.length} test deals`);
+
       // Delete the test organization
       await FirestoreService.delete('organizations', testOrgId);
-      
-      // Note: Firestore subcollections (leads, deals, etc.) are NOT automatically deleted
-      // They will be orphaned but won't appear in the admin UI since the parent org is gone
-      // For a thorough cleanup, use the cleanup script: node scripts/cleanup-test-orgs.js
-      
-      console.log('✅ Test organization deleted successfully');
+
+      console.log('✅ Test data cleanup complete');
     } catch (error) {
-      console.warn('⚠️  Failed to delete test organization:', error);
-      console.log('   Run cleanup script manually: node scripts/cleanup-test-orgs.js');
+      console.error('❌ Cleanup failed:', error instanceof Error ? error.message : error);
     }
-  });
+  }, 60000);
 
   it('should paginate leads without crashing (200 records)', async () => {
     const { data, hasMore, lastDoc } = await FirestoreService.getAllPaginated(
@@ -180,7 +203,7 @@ describe('Pagination Stress Testing', () => {
       currentLastDoc = result.lastDoc ?? undefined;
       iterations++;
 
-      if (!result.hasMore) break;
+      if (!result.hasMore) {break;}
     }
 
     expect(totalLoaded).toBeGreaterThanOrEqual(100); // Updated for reduced test data volume (200 leads)

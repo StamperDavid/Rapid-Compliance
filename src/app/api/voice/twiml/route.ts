@@ -16,7 +16,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Twilio webhook payload interface
 interface TwilioWebhookPayload {
@@ -95,7 +95,6 @@ export async function POST(request: NextRequest) {
 
     // Get configuration from query params
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId') ?? DEFAULT_ORG_ID;
     const agentId = searchParams.get('agentId') ?? 'ai-prospector';
     const mode = (searchParams.get('mode') ?? 'prospector') as 'prospector' | 'closer';
     const useAI = searchParams.get('ai') !== 'false';
@@ -111,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // Handle answering machine detection
     if (answeredBy === 'machine_start' || answeredBy === 'machine_end_beep') {
-      return handleVoicemailDrop(callId, organizationId);
+      return handleVoicemailDrop(callId);
     }
 
     // If AI is disabled, return basic TwiML
@@ -120,7 +119,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize AI agent and start conversation
-    const config: VoiceAgentConfig = await loadAgentConfig(organizationId, agentId, mode);
+    const config: VoiceAgentConfig = await loadAgentConfig(agentId, mode);
     await voiceAgentHandler.initialize(config);
 
     const call: VoiceCall = {
@@ -158,10 +157,9 @@ export async function POST(request: NextRequest) {
 /**
  * Handle voicemail drop (answering machine detected)
  */
-function handleVoicemailDrop(callId: string, organizationId: string): NextResponse {
+function handleVoicemailDrop(callId: string): NextResponse {
   logger.info('[TwiML] Voicemail detected, dropping message', {
     callId,
-    organizationId,
     file: 'twiml/route.ts',
   });
 
@@ -223,7 +221,6 @@ function generateFallbackTwiML(): NextResponse {
  * Load agent configuration
  */
 async function loadAgentConfig(
-  organizationId: string,
   agentId: string,
   mode: 'prospector' | 'closer'
 ): Promise<VoiceAgentConfig> {
@@ -231,14 +228,13 @@ async function loadAgentConfig(
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     const customConfig = await FirestoreService.get(
-      `organizations/${organizationId}/voiceAgents`,
+      `organizations/${PLATFORM_ID}/voiceAgents`,
       agentId
     );
 
     if (customConfig) {
       return {
         mode,
-        organizationId,
         agentId,
         ...customConfig,
       } as VoiceAgentConfig;
@@ -249,7 +245,6 @@ async function loadAgentConfig(
 
   return {
     mode,
-    organizationId,
     agentId,
     companyName: 'Our Company',
     productName: 'Our Solution',

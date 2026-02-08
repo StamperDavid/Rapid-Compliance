@@ -305,7 +305,7 @@ async function listOrganizations() {
   
   const orgsSnapshot = await db.collection('organizations').get();
   
-  const protected = [];
+  const protectedOrgs = [];
   const testOrgs = [];
   const realOrgs = [];
   
@@ -315,7 +315,7 @@ async function listOrganizations() {
     const orgName = orgData.name || orgId;
     
     if (PROTECTED_ORG_IDS.includes(orgId)) {
-      protected.push({ id: orgId, name: orgName });
+      protectedOrgs.push({ id: orgId, name: orgName });
     } else {
       const { isTest, reason } = isTestOrganization(orgId, orgData);
       if (isTest) {
@@ -329,8 +329,8 @@ async function listOrganizations() {
   console.log(`Total organizations in database: ${orgsSnapshot.size}\n`);
   
   console.log('🛡️  PROTECTED ORGANIZATIONS (Will NEVER be deleted):');
-  console.log(`   Count: ${protected.length}`);
-  protected.forEach(org => {
+  console.log(`   Count: ${protectedOrgs.length}`);
+  protectedOrgs.forEach(org => {
     console.log(`   ✅ ${org.id} - ${org.name}`);
   });
   console.log('');
@@ -353,7 +353,7 @@ async function listOrganizations() {
   });
   console.log('');
   
-  return { protected, testOrgs, realOrgs };
+  return { protectedOrgs, testOrgs, realOrgs };
 }
 
 /**
@@ -373,7 +373,7 @@ async function cleanupTestData(dryRun = true) {
   console.log('');
   
   // Step 1: Scan database
-  const { protected, testOrgs, realOrgs } = await listOrganizations();
+  const { protectedOrgs, testOrgs, realOrgs } = await listOrganizations();
   
   if (testOrgs.length === 0) {
     console.log('✅ No test organizations found. Database is clean!\n');

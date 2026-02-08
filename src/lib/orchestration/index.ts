@@ -17,15 +17,14 @@
  * // Emit intelligence
  * await coordinator.emitSignal({
  *   type: 'lead.intent.high',
- *   orgId: 'org_acme',
  *   confidence: 0.95,
  *   priority: 'High',
  *   metadata: { source: 'website-scraper' }
  * });
- * 
+ *
  * // React to intelligence
  * coordinator.observeSignals(
- *   { orgId: 'org_acme', types: ['lead.intent.high'] },
+ *   { types: ['lead.intent.high'] },
  *   async (signal) => {
  *     // Take action...
  *   }

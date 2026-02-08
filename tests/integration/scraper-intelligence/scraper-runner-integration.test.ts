@@ -35,7 +35,6 @@ describe('Scraper Runner Integration', () => {
   it('should submit and process a job', async () => {
     const config: ScrapeJobConfig = {
       jobId: 'integration-test-1',
-      organizationId: 'org-test-1',
       industryId: 'saas-software',
       url: 'https://example.com',
       platform: 'website',
@@ -57,7 +56,6 @@ describe('Scraper Runner Integration', () => {
   it('should handle multiple concurrent jobs', async () => {
     const configs: ScrapeJobConfig[] = Array.from({ length: 5 }, (_, i) => ({
       jobId: `concurrent-${i}`,
-      organizationId: 'org-test-1',
       industryId: 'saas-software',
       url: `https://example.com/page${i}`,
       platform: 'website' as const,
@@ -80,7 +78,6 @@ describe('Scraper Runner Integration', () => {
   it('should cache results and serve from cache', async () => {
     const config: ScrapeJobConfig = {
       jobId: 'cache-test-1',
-      organizationId: 'org-test-1',
       industryId: 'saas-software',
       url: 'https://example.com/cached',
       platform: 'website',
@@ -110,7 +107,6 @@ describe('Scraper Runner Integration', () => {
   it('should cancel pending jobs', async () => {
     const config: ScrapeJobConfig = {
       jobId: 'cancel-test-1',
-      organizationId: 'org-test-1',
       industryId: 'saas-software',
       url: 'https://example.com',
       platform: 'website',
@@ -135,7 +131,6 @@ describe('Scraper Runner Integration', () => {
     const domain = 'example.com';
     const configs: ScrapeJobConfig[] = Array.from({ length: 15 }, (_, i) => ({
       jobId: `rate-limit-${i}`,
-      organizationId: 'org-test-1',
       industryId: 'saas-software',
       url: `https://${domain}/page${i}`,
       platform: 'website' as const,
@@ -162,7 +157,6 @@ describe('Scraper Runner Integration', () => {
   it('should provide accurate statistics', async () => {
     const configs: ScrapeJobConfig[] = Array.from({ length: 3 }, (_, i) => ({
       jobId: `stats-test-${i}`,
-      organizationId: 'org-test-1',
       industryId: 'saas-software',
       url: `https://example.com/stats${i}`,
       platform: 'website' as const,
@@ -188,7 +182,6 @@ describe('Scraper Runner Integration', () => {
     const configs: ScrapeJobConfig[] = [
       {
         jobId: 'priority-low',
-        organizationId: 'org-test-1',
         industryId: 'saas-software',
         url: 'https://example.com/low',
         platform: 'website',
@@ -196,7 +189,6 @@ describe('Scraper Runner Integration', () => {
       },
       {
         jobId: 'priority-urgent',
-        organizationId: 'org-test-1',
         industryId: 'saas-software',
         url: 'https://example.com/urgent',
         platform: 'website',
@@ -204,7 +196,6 @@ describe('Scraper Runner Integration', () => {
       },
       {
         jobId: 'priority-normal',
-        organizationId: 'org-test-1',
         industryId: 'saas-software',
         url: 'https://example.com/normal',
         platform: 'website',
@@ -227,7 +218,6 @@ describe('Scraper Runner Integration', () => {
   it('should gracefully shutdown with active jobs', async () => {
     const configs: ScrapeJobConfig[] = Array.from({ length: 5 }, (_, i) => ({
       jobId: `shutdown-test-${i}`,
-      organizationId: 'org-test-1',
       industryId: 'saas-software',
       url: `https://example.com/shutdown${i}`,
       platform: 'website' as const,
@@ -264,7 +254,7 @@ describe('Scraper Runner - Error Handling', () => {
   it('should handle invalid job configuration', async () => {
     const invalidConfig = {
       jobId: 'invalid-1',
-      organizationId: '',  // Invalid: empty
+      // Invalid: empty
       industryId: 'saas-software',
       url: 'https://example.com',
       platform: 'website' as const,

@@ -10,7 +10,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { Timestamp } from 'firebase-admin/firestore';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -50,7 +50,6 @@ interface NativeEnrollmentData {
   currentStepIndex: number;
   nextExecutionAt?: Timestamp;
   enrolledAt: Timestamp;
-  organizationId: string;
 }
 
 interface SequenceDocData {
@@ -111,7 +110,7 @@ export async function GET(request: NextRequest) {
     });
 
     const sequenceIdFilter = (sequenceId !== '' && sequenceId != null) ? sequenceId : undefined;
-    const executions = await getRecentExecutions(DEFAULT_ORG_ID, limit, sequenceIdFilter);
+    const executions = await getRecentExecutions(limit, sequenceIdFilter);
 
     return NextResponse.json({ executions });
 
@@ -132,7 +131,6 @@ export async function GET(request: NextRequest) {
  * Get recent sequence executions
  */
 async function getRecentExecutions(
-  organizationId: string,
   limit: number = 50,
   sequenceId?: string
 ): Promise<SequenceExecution[]> {
@@ -230,8 +228,7 @@ async function getRecentExecutions(
 
     // Fetch legacy OutboundSequence enrollments for backward compatibility
     const legacyEnrollmentsRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/sequenceEnrollments',
-      { orgId: organizationId }
+      'organizations/rapid-compliance-root/sequenceEnrollments'
     );
     const legacyEnrollmentsSnap = await legacyEnrollmentsRef
       .orderBy('enrolledAt', 'desc')
@@ -247,8 +244,8 @@ async function getRecentExecutions(
       let sequenceName = 'Unknown Sequence';
       try {
         const seqRef = adminDal.getNestedDocRef(
-          'organizations/{orgId}/sequences/{sequenceId}',
-          { orgId: organizationId, sequenceId: data.sequenceId }
+          'organizations/rapid-compliance-root/sequences/{sequenceId}',
+          { sequenceId: data.sequenceId }
         );
         const seqDoc = await seqRef.get();
         if (seqDoc.exists) {

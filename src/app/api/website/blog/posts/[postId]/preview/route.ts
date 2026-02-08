@@ -1,7 +1,7 @@
 /**
  * Blog Post Preview API
  * Generate shareable preview links for blog posts
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -10,7 +10,7 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const paramsSchema = z.object({
   postId: z.string().min(1, 'postId is required'),
@@ -25,7 +25,6 @@ const getQuerySchema = z.object({
 });
 
 interface BlogPostData {
-  organizationId: string;
   title?: string;
   status?: string;
   [key: string]: unknown;
@@ -34,7 +33,6 @@ interface BlogPostData {
 interface PreviewTokenData {
   postId: string;
   type: string;
-  organizationId: string;
   createdAt: string;
   expiresAt: string;
   createdBy: string;
@@ -73,8 +71,8 @@ export async function POST(
     const { expiresIn } = bodyResult.data;
 
     const postRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: DEFAULT_ORG_ID, postId }
+      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      { postId }
     );
 
     const doc = await postRef.get();
@@ -95,14 +93,14 @@ export async function POST(
     const performedBy = await getUserIdentifier();
 
     const tokenRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/preview-tokens/tokens/{token}',
-      { orgId: DEFAULT_ORG_ID, token: previewToken }
+      'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+      { token: previewToken }
     );
 
     await tokenRef.set({
       postId,
       type: 'blog-post',
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
       createdAt: new Date().toISOString(),
       expiresAt: expiresAt.toISOString(),
       createdBy: performedBy,
@@ -167,8 +165,8 @@ export async function GET(
 
     // Verify preview token
     const tokenRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/preview-tokens/tokens/{token}',
-      { orgId: DEFAULT_ORG_ID, token }
+      'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+      { token }
     );
 
     const tokenDoc = await tokenRef.get();
@@ -203,8 +201,8 @@ export async function GET(
 
     // Get the post data
     const postRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: DEFAULT_ORG_ID, postId }
+      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      { postId }
     );
 
     const doc = await postRef.get();

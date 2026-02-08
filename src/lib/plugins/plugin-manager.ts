@@ -7,7 +7,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============== Type Definitions ==============
 
@@ -23,7 +23,6 @@ export interface JSONSchema {
 }
 
 export interface ToolContext {
-  organizationId: string;
   workspaceId?: string;
   userId?: string;
   permissions: string[];
@@ -58,7 +57,6 @@ export interface PluginDefinition {
 }
 
 export interface PluginContext {
-  organizationId: string;
   config: Record<string, unknown>;
   logger: typeof logger;
 }
@@ -273,9 +271,8 @@ export class PluginManager {
 
     try {
       if (plugin.init) {
-        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+        const { PLATFORM_ID } = await import('@/lib/constants/platform');
         await plugin.init({
-          organizationId: DEFAULT_ORG_ID,
           config: this.config,
           logger,
         });
@@ -426,7 +423,7 @@ export class PluginManager {
 
     // Check rate limit
     if (tool.rateLimit) {
-      const rateLimitKey = `${context.organizationId}:${toolName}`;
+      const rateLimitKey = `${PLATFORM_ID}:${toolName}`;
       const allowed = this.rateLimiter.check(rateLimitKey, tool.rateLimit.maxCalls, tool.rateLimit.windowMs);
       if (!allowed) {
         return {
@@ -508,9 +505,8 @@ export class PluginManager {
     if (enabled && !state.enabled) {
       // Re-initialize
       if (state.plugin.init) {
-        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+        const { PLATFORM_ID } = await import('@/lib/constants/platform');
         await state.plugin.init({
-          organizationId: DEFAULT_ORG_ID,
           config: this.config,
           logger,
         });
@@ -605,14 +601,14 @@ export class PluginManager {
 const pluginManagerInstances: Map<string, PluginManager> = new Map();
 
 export function getPluginManager(config: Record<string, unknown> = {}): PluginManager {
-  let instance = pluginManagerInstances.get(DEFAULT_ORG_ID);
+  let instance = pluginManagerInstances.get(PLATFORM_ID);
   if (!instance) {
     instance = new PluginManager(config);
-    pluginManagerInstances.set(DEFAULT_ORG_ID, instance);
+    pluginManagerInstances.set(PLATFORM_ID, instance);
   }
   return instance;
 }
 
 export function clearPluginManager(): void {
-  pluginManagerInstances.delete(DEFAULT_ORG_ID);
+  pluginManagerInstances.delete(PLATFORM_ID);
 }

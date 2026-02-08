@@ -127,7 +127,6 @@ export class DirectorService {
     const startTime = Date.now();
 
     logger.info('Director: Starting storyboard generation', {
-      organizationId: request.organizationId,
       objective: request.brief.objective,
       platform: request.brief.targetPlatform,
       maxDuration: request.constraints.maxDuration,
@@ -176,7 +175,6 @@ export class DirectorService {
       // Step 7: Assemble master storyboard
       const storyboard: MasterStoryboard = {
         id: uuidv4(),
-        organizationId: request.organizationId,
         projectId: request.projectId,
         title: `${request.brief.objective} - ${request.brief.targetPlatform}`,
         description: request.brief.message,
@@ -192,9 +190,9 @@ export class DirectorService {
         audioConfig,
         visualStyle,
         status: 'draft',
+        createdBy: 'system',
         createdAt: new Date(),
         updatedAt: new Date(),
-        createdBy: request.organizationId,
       };
 
       // Step 8: Calculate costs
@@ -204,7 +202,6 @@ export class DirectorService {
       const { warnings, suggestions } = this.analyzeStoryboard(storyboard, request);
 
       logger.info('Director: Storyboard generation complete', {
-        organizationId: request.organizationId,
         storyboardId: storyboard.id,
         sceneCount: scenes.length,
         totalShots: scenes.reduce((acc, s) => acc + s.shots.length, 0),
@@ -221,9 +218,7 @@ export class DirectorService {
       };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('Director: Storyboard generation failed', err, {
-        organizationId: request.organizationId,
-      });
+      logger.error('Director: Storyboard generation failed', err);
       throw err;
     }
   }

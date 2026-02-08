@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/config';
 import { doc, setDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { Building2, Lock, Eye, EyeOff } from 'lucide-react';
 
@@ -111,7 +111,7 @@ export default function AccountCreationPage() {
       const userId = userCredential.user.uid;
 
       // Add user to existing platform organization
-      const orgRef = doc(db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+      const orgRef = doc(db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
       await updateDoc(orgRef, {
         members: arrayUnion(userId),
         updatedAt: serverTimestamp(),
@@ -123,9 +123,8 @@ export default function AccountCreationPage() {
         displayName: fullName ?? formData.companyName,
         fullName: fullName ?? null,
         phoneNumber: phoneNumber ?? null,
-        organizationId: DEFAULT_ORG_ID,
-        organizations: [DEFAULT_ORG_ID],
-        defaultOrganization: DEFAULT_ORG_ID,
+        organizations: [PLATFORM_ID],
+        defaultOrganization: PLATFORM_ID,
         companyName: formData.companyName,
         industry: selectedIndustry?.id ?? 'other',
         industryName: selectedIndustry?.name ?? customIndustry ?? 'Other',

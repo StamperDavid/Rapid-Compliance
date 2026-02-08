@@ -12,7 +12,7 @@
  * This prevents the "ticking time bomb" of test data polluting production.
  */
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Check NEXT_PUBLIC_APP_ENV first, fallback to NODE_ENV
 const APP_ENV = (process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV) || 'development';
@@ -109,41 +109,38 @@ export const getCollection = (name: keyof typeof COLLECTIONS): string => {
 };
 
 /**
- * Helper for organization sub-collections
- * Usage: getOrgSubCollection('records')
+ * Helper for platform sub-collections
+ * Usage: getSubCollection('records')
  * Returns: 'organizations/rapid-compliance-root/records' (or 'test_organizations/rapid-compliance-root/test_records' in test mode)
- *
- * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID
  */
-export const getOrgSubCollection = (
+export const getSubCollection = (
   subCollection: string
 ): string => {
-  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${PREFIX}${subCollection}`;
+  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${PREFIX}${subCollection}`;
 };
+
+/** @deprecated Use getSubCollection instead */
+export const getOrgSubCollection = getSubCollection;
 
 /**
  * Helper for schema sub-collections
  * Usage: getSchemaSubCollection('schema456', 'fields')
  * Returns: 'organizations/rapid-compliance-root/schemas/schema456/fields'
- *
- * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID
  */
 export const getSchemaSubCollection = (
   schemaId: string,
   subCollection: string
 ): string => {
-  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${PREFIX}schemas/${schemaId}/${PREFIX}${subCollection}`;
+  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${PREFIX}schemas/${schemaId}/${PREFIX}${subCollection}`;
 };
 
 /**
  * Helper for merchant coupons sub-collection
  * Usage: getMerchantCouponsCollection()
  * Returns: 'organizations/rapid-compliance-root/merchant_coupons'
- *
- * PENTHOUSE MODEL: Uses DEFAULT_ORG_ID
  */
 export const getMerchantCouponsCollection = (): string => {
-  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${PREFIX}merchant_coupons`;
+  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${PREFIX}merchant_coupons`;
 };
 
 /**

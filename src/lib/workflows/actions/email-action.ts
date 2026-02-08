@@ -21,7 +21,6 @@ interface EmailActionResult {
 export async function executeEmailAction(
   action: SendEmailAction,
   triggerData: WorkflowTriggerData,
-  organizationId: string
 ): Promise<EmailActionResult> {
   // Resolve variables in action fields with proper type narrowing
   const to = resolveVariablesAsStringOrArray(action.to, triggerData);
@@ -47,7 +46,6 @@ export async function executeEmailAction(
       trackClicks: true,
     },
     metadata: {
-      organizationId,
       actionId: action.id,
     },
   };

@@ -14,7 +14,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sendNotificationRequestSchema } from '@/lib/notifications/validation';
 import { NotificationService } from '@/lib/notifications/notification-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Rate limiting map (in-memory for simplicity)
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const validatedData = sendNotificationRequestSchema.parse(body);
 
     // Check rate limit (50 req/min per org)
-    const rateLimit = checkRateLimit(`send:${DEFAULT_ORG_ID}`, 50, 60000);
+    const rateLimit = checkRateLimit(`send:${PLATFORM_ID}`, 50, 60000);
     
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -86,17 +86,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create notification service
-    const service = new NotificationService(DEFAULT_ORG_ID);
+    const service = new NotificationService();
 
     // Parse scheduled date if provided
     const scheduledFor = validatedData.scheduledFor 
       ? new Date(validatedData.scheduledFor)
       : undefined;
 
-    // Ensure DEFAULT_ORG_ID is in variables (required by NotificationVariables interface)
+    // Ensure PLATFORM_ID is in variables (required by NotificationVariables interface)
     const variables = {
       ...validatedData.variables,
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
     };
     
     // Send notification

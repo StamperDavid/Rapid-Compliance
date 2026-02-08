@@ -6,7 +6,7 @@
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 // OrderPayment type not needed in this service
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Type interfaces for ecommerce configuration
 interface PaymentProvider {
@@ -104,7 +104,7 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
   // Get e-commerce config to determine payment provider
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${request.workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${request.workspaceId}/ecommerce`,
     'config'
   );
   
@@ -169,8 +169,7 @@ async function processStripePayment(
 ): Promise<PaymentResult> {
   try {
     // Get Stripe API key
-    const orgId = DEFAULT_ORG_ID;
-    const stripeKeyResponse: unknown = await apiKeyService.getServiceKey(orgId, 'stripe');
+    const stripeKeyResponse: unknown = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe');
 
     if (!stripeKeyResponse) {
       return {
@@ -266,8 +265,7 @@ async function processSquarePayment(
 ): Promise<PaymentResult> {
   try {
     // Get Square API credentials
-    const orgId = DEFAULT_ORG_ID;
-    const squareKeysResponse: unknown = await apiKeyService.getServiceKey(orgId, 'square');
+    const squareKeysResponse: unknown = await apiKeyService.getServiceKey(PLATFORM_ID, 'square');
 
     if (!squareKeysResponse) {
       return {
@@ -358,8 +356,7 @@ async function processPayPalPayment(
 ): Promise<PaymentResult> {
   try {
     // Get PayPal API credentials
-    const orgId = DEFAULT_ORG_ID;
-    const paypalKeysResponse: unknown = await apiKeyService.getServiceKey(orgId, 'paypal');
+    const paypalKeysResponse: unknown = await apiKeyService.getServiceKey(PLATFORM_ID, 'paypal');
 
     if (!paypalKeysResponse) {
       return {
@@ -527,7 +524,7 @@ export async function refundPayment(
   // Find order with this transaction ID
   const { where } = await import('firebase/firestore');
   const orders = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/orders`,
     [where('payment.transactionId', '==', transactionId)]
   );
   

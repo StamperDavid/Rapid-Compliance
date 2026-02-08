@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 /* eslint-disable no-alert -- Admin UI uses native dialogs for quick user confirmations */
 
 import React, { useState } from 'react';
@@ -11,7 +11,6 @@ import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 export default function WebhooksPage() {
   const { user: _user } = useAuth();
-  const _orgId = DEFAULT_ORG_ID;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useOrgTheme();
   const [showCreateModal, setShowCreateModal] = useState(false);

@@ -8,7 +8,7 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Interface for Microsoft 365 API keys
 interface Microsoft365Keys {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const userId = user.uid;
 
     // Check if Microsoft 365 (Teams) is configured
-    const microsoft365Keys = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'microsoft365') as Microsoft365Keys | null;
+    const microsoft365Keys = await apiKeyService.getServiceKey(PLATFORM_ID, 'microsoft365') as Microsoft365Keys | null;
 
     if (!microsoft365Keys?.clientId) {
       return NextResponse.json({
@@ -51,9 +51,9 @@ export async function POST(request: NextRequest) {
       `&response_type=code` +
       `&redirect_uri=${encodeURIComponent(baseRedirectUri)}` +
       `&scope=${encodeURIComponent('https://graph.microsoft.com/ChannelMessage.Send offline_access')}` +
-      `&state=${DEFAULT_ORG_ID}`;
+      `&state=${PLATFORM_ID}`;
 
-    logger.info('Teams OAuth flow started', { organizationId: DEFAULT_ORG_ID, userId });
+    logger.info('Teams OAuth flow started', { userId });
 
     return NextResponse.json({
       success: true,

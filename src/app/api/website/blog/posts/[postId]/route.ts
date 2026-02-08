@@ -1,7 +1,7 @@
 /**
  * Individual Blog Post API
  * Get, update, delete a specific blog post
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const paramsSchema = z.object({
   postId: z.string().min(1, 'postId is required'),
@@ -66,8 +66,8 @@ export async function GET(
 
     // Get post document
     const postRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: DEFAULT_ORG_ID, postId }
+      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      { postId }
     );
 
     const postDoc = await postRef.get();
@@ -133,8 +133,8 @@ export async function PUT(
 
     // Get existing post
     const postRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: DEFAULT_ORG_ID, postId }
+      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      { postId }
     );
 
     const existingPost = await postRef.get();
@@ -214,8 +214,8 @@ export async function DELETE(
 
     // Get post to verify ownership
     const postRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: DEFAULT_ORG_ID, postId }
+      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      { postId }
     );
 
     const postDoc = await postRef.get();

@@ -5,7 +5,7 @@ import { emailSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface ValidationError {
   path?: string[];
@@ -59,20 +59,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { organizationId, ...emailData } = validation.data;
-
-    // Verify user has access to this organization (penthouse model - verify against DEFAULT_ORG_ID)
-    if (DEFAULT_ORG_ID !== organizationId) {
-      const response = NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
-      logApiRequest(request, response, startTime, {
-        organizationId,
-        userId: user.uid,
-      });
-      return response;
-    }
+    const emailData = validation.data;
 
     // Verify required email fields
     if (!emailData.to || !emailData.subject) {
@@ -85,7 +72,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Send email with type assertion after validation
     const result = await sendEmail({
       ...emailData,
-      metadata: { ...emailData.metadata, organizationId, userId: user.uid },
+      metadata: { ...emailData.metadata, userId: user.uid },
     } as Parameters<typeof sendEmail>[0]);
 
     if (!result.success) {
@@ -94,7 +81,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { status: 500 }
       );
       logApiRequest(request, response, startTime, {
-        organizationId,
         userId: user.uid,
       });
       return response;
@@ -102,7 +88,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const response = NextResponse.json(result);
     logApiRequest(request, response, startTime, {
-      organizationId,
       userId: user.uid,
     });
     return response;

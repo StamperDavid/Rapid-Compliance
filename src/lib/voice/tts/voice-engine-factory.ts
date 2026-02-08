@@ -6,7 +6,7 @@
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   TTS_PROVIDER_INFO,
   DEFAULT_TTS_CONFIGS,
@@ -67,7 +67,7 @@ export class VoiceEngineFactory {
   ): Promise<TTSProvider> {
     const orgConfig = config ?? await this.getOrgConfig();
     const effectiveEngine = engine ?? orgConfig.engine;
-    const cacheKey = `${DEFAULT_ORG_ID}-${effectiveEngine}-${orgConfig.keyMode}`;
+    const cacheKey = `${PLATFORM_ID}-${effectiveEngine}-${orgConfig.keyMode}`;
 
     // Check cache
     const cached = providerCache.get(cacheKey);
@@ -131,7 +131,7 @@ export class VoiceEngineFactory {
    */
   static async getOrgConfig(): Promise<TTSEngineConfig> {
     // Check cache
-    const cached = configCache.get(DEFAULT_ORG_ID);
+    const cached = configCache.get(PLATFORM_ID);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return cached.config;
     }
@@ -141,12 +141,12 @@ export class VoiceEngineFactory {
         console.warn('Firestore not initialized, using default TTS config');
         return DEFAULT_TTS_CONFIGS.native as TTSEngineConfig;
       }
-      const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID, 'settings', 'ttsEngine');
+      const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, 'settings', 'ttsEngine');
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         const config = docSnap.data() as TTSEngineConfig;
-        configCache.set(DEFAULT_ORG_ID, { config, timestamp: Date.now() });
+        configCache.set(PLATFORM_ID, { config, timestamp: Date.now() });
         return config;
       }
     } catch (error) {
@@ -186,14 +186,14 @@ export class VoiceEngineFactory {
     if (!db) {
       throw new Error('Firestore not initialized');
     }
-    const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID, 'settings', 'ttsEngine');
+    const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, 'settings', 'ttsEngine');
     await setDoc(docRef, updatedConfig, { merge: true });
 
     // Clear cache
-    configCache.delete(DEFAULT_ORG_ID);
+    configCache.delete(PLATFORM_ID);
     // Clear provider cache for this org
     for (const key of providerCache.keys()) {
-      if (key.startsWith(DEFAULT_ORG_ID)) {
+      if (key.startsWith(PLATFORM_ID)) {
         providerCache.delete(key);
       }
     }

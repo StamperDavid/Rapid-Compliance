@@ -364,12 +364,10 @@ export function createScrapeCache(
  * Get cache key for a scrape request
  */
 export function getScrapeCacheKey(
-  url: string, 
+  url: string,
   platform: ScrapingPlatform,
-  organizationId?: string
 ): string {
-  const base = getCacheKey(url, platform);
-  return organizationId ? `${organizationId}:${base}` : base;
+  return getCacheKey(url, platform);
 }
 
 /**

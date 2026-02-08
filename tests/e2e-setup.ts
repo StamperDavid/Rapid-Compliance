@@ -7,6 +7,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Test configuration
 export const TEST_CONFIG = {
@@ -19,8 +20,8 @@ export const TEST_CONFIG = {
     email: 'e2e-test@auraflow.test',
     password: 'Testing123!E2E',
     companyName: 'E2E Test Organization',
-    orgId: '', // Will be set after creation
     userId: '', // Will be set after creation
+    // Single-tenant: always use PLATFORM_ID
   },
 };
 
@@ -78,12 +79,9 @@ export async function setupTestOrganization() {
     TEST_CONFIG.testOrg.userId = userRecord.uid;
     console.log(`✅ Test user created: ${userRecord.uid}`);
 
-    // Create organization
-    const orgId = `e2e-test-org-${Date.now()}`;
-    TEST_CONFIG.testOrg.orgId = orgId;
-
-    await db.collection('organizations').doc(orgId).set({
-      id: orgId,
+    // Single-tenant: Use PLATFORM_ID for organization
+    await db.collection('organizations').doc(PLATFORM_ID).set({
+      id: PLATFORM_ID,
       name: TEST_CONFIG.testOrg.companyName,
       industry: 'Software Testing',
       plan: 'professional',
@@ -94,9 +92,9 @@ export async function setupTestOrganization() {
         timezone: 'America/New_York',
         currency: 'USD',
       },
-    });
+    }, { merge: true });
 
-    console.log(`✅ Test organization created: ${orgId}`);
+    console.log(`✅ Test organization configured: ${PLATFORM_ID}`);
 
     // Create user document
     await db.collection('users').doc(userRecord.uid).set({
@@ -104,13 +102,12 @@ export async function setupTestOrganization() {
       email: TEST_CONFIG.testOrg.email,
       name: 'E2E Test User',
       role: 'owner',
-      organizationId: orgId,
       createdAt: new Date(),
     });
 
     // Add to organization members
     await db.collection('organizations')
-      .doc(orgId)
+      .doc(PLATFORM_ID)
       .collection('members')
       .doc(userRecord.uid)
       .set({
@@ -121,7 +118,6 @@ export async function setupTestOrganization() {
       });
 
     return {
-      orgId,
       userId: userRecord.uid,
       db,
       auth,
@@ -130,11 +126,8 @@ export async function setupTestOrganization() {
     // If user already exists, just get their info
     if (error instanceof Error && 'code' in error && error.code === 'auth/email-already-exists') {
       const user = await auth.getUserByEmail(TEST_CONFIG.testOrg.email);
-      const userDoc = await db.collection('users').doc(user.uid).get();
-      const userData = userDoc.data();
 
       return {
-        orgId: userData?.organizationId,
         userId: user.uid,
         db,
         auth,
@@ -157,30 +150,24 @@ export async function cleanupTestOrganization() {
       await db.collection('users').doc(TEST_CONFIG.testOrg.userId).delete();
     }
 
-    if (TEST_CONFIG.testOrg.orgId) {
-      // Delete organization and all subcollections
-      const orgRef = db.collection('organizations').doc(TEST_CONFIG.testOrg.orgId);
-      
-      // Delete subcollections (prospects, sequences, enrollments, etc.)
-      const subcollections = [
-        'prospects',
-        'sequences',
-        'enrollments',
-        'workflows',
-        'smsMessages',
-        'emails',
-        'members',
-      ];
+    // Single-tenant: Clean up test data from PLATFORM_ID organization
+    const orgRef = db.collection('organizations').doc(PLATFORM_ID);
 
-      for (const subcol of subcollections) {
-        const snapshot = await orgRef.collection(subcol).get();
-        const batch = db.batch();
-        snapshot.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-      }
+    // Delete test subcollections only (do not delete the entire organization)
+    const subcollections = [
+      'prospects',
+      'sequences',
+      'enrollments',
+      'workflows',
+      'smsMessages',
+      'emails',
+    ];
 
-      // Delete organization
-      await orgRef.delete();
+    for (const subcol of subcollections) {
+      const snapshot = await orgRef.collection(subcol).get();
+      const batch = db.batch();
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
     }
 
     console.log('✅ Test organization cleaned up');
@@ -192,9 +179,11 @@ export async function cleanupTestOrganization() {
 
 /**
  * Create test prospect for sequence testing
+ * @param _orgId - Unused, kept for backward compatibility. Always uses PLATFORM_ID.
  */
-export async function createTestProspect(orgId: string) {
+export async function createTestProspect(_orgId?: string) {
   const { db } = initializeFirebaseForTesting();
+  const orgId = PLATFORM_ID;
 
   const prospectData = {
     id: TEST_IDS.prospect.id,
@@ -205,7 +194,6 @@ export async function createTestProspect(orgId: string) {
     company: 'Test Company Inc',
     title: 'CEO',
     status: 'new',
-    organizationId: orgId,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -222,14 +210,15 @@ export async function createTestProspect(orgId: string) {
 
 /**
  * Create test sequence for testing
+ * @param _orgId - Unused, kept for backward compatibility. Always uses PLATFORM_ID.
  */
-export async function createTestSequence(orgId: string) {
+export async function createTestSequence(_orgId?: string) {
   const { db } = initializeFirebaseForTesting();
+  const orgId = PLATFORM_ID;
 
   const sequenceData = {
     id: TEST_IDS.sequence.id,
     name: TEST_IDS.sequence.name,
-    organizationId: orgId,
     status: 'active',
     steps: [
       {
@@ -287,13 +276,14 @@ export async function createTestSequence(orgId: string) {
 
 /**
  * Create test workflow
+ * @param _orgId - Unused, kept for backward compatibility. Always uses PLATFORM_ID.
  */
-export async function createTestWorkflow(orgId: string) {
+export async function createTestWorkflow(_orgId?: string) {
   const { db } = initializeFirebaseForTesting();
+  const orgId = PLATFORM_ID;
 
   const workflowData = {
     id: TEST_IDS.workflow.id,
-    organizationId: orgId,
     name: TEST_IDS.workflow.name,
     trigger: {
       id: 'trigger-1',

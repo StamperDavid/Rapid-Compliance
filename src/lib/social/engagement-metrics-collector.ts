@@ -18,7 +18,7 @@ import { logger } from '@/lib/logger/logger';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { createTwitterService } from '@/lib/integrations/twitter-service';
 import { getMemoryVault } from '@/lib/agents/shared/memory-vault';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { SocialMediaPost, PostMetrics } from '@/types/social';
 
 // ============================================================================
@@ -86,9 +86,7 @@ export async function collectEngagementMetrics(): Promise<MetricsCollectionResul
   const errors: string[] = [];
   const updates: PostMetricsUpdate[] = [];
 
-  logger.info('[MetricsCollector] Starting engagement metrics collection', {
-    organizationId: DEFAULT_ORG_ID,
-  });
+  logger.info('[MetricsCollector] Starting engagement metrics collection');
 
   try {
     // 1. Fetch all published posts that have a platformPostId
@@ -270,7 +268,7 @@ async function getPublishedPostsWithPlatformIds(): Promise<SocialMediaPost[]> {
   try {
     const { where } = await import('firebase/firestore');
     const posts = await FirestoreService.getAll<SocialMediaPost>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
       [where('status', '==', 'published')]
     );
 
@@ -286,7 +284,7 @@ async function getPublishedPostsWithPlatformIds(): Promise<SocialMediaPost[]> {
 /** Update a post's metrics in Firestore */
 async function updatePostMetrics(postId: string, metrics: PostMetrics): Promise<void> {
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${SOCIAL_POSTS_COLLECTION}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
     postId,
     {
       metrics,
@@ -299,7 +297,7 @@ async function updatePostMetrics(postId: string, metrics: PostMetrics): Promise<
 async function storeMetricsSnapshot(snapshot: MetricsSnapshot): Promise<void> {
   const snapshotId = `snapshot_${snapshot.postId}_${Date.now()}`;
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${METRICS_SNAPSHOTS_COLLECTION}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${METRICS_SNAPSHOTS_COLLECTION}`,
     snapshotId,
     {
       ...snapshot,

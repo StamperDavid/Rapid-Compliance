@@ -12,7 +12,6 @@ import type { SendSMSAction, WorkflowTriggerData } from '@/types/workflow';
 export async function executeSMSAction(
   action: SendSMSAction,
   triggerData: WorkflowTriggerData,
-  organizationId: string
 ): Promise<unknown> {
   // Resolve variables
   const to = resolveVariables(action.to, triggerData);
@@ -22,7 +21,6 @@ export async function executeSMSAction(
   const result = await sendSMS({
     to,
     message,
-    organizationId,
   });
   
   if (!result.success) {

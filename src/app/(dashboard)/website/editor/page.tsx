@@ -5,7 +5,7 @@
 
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -188,7 +188,6 @@ export default function PageEditorPage() {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          organizationId: DEFAULT_ORG_ID,
           page: {
             ...page,
             updatedAt: new Date().toISOString(),
@@ -277,7 +276,6 @@ export default function PageEditorPage() {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    organizationId: DEFAULT_ORG_ID,
                     template: {
                       name: templateName,
                       description:(templateDescription !== '' && templateDescription != null) ? templateDescription : `Custom template based on ${page.title}`,
@@ -318,7 +316,7 @@ export default function PageEditorPage() {
       const response = await fetch(`/api/website/pages/${pageId}/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId: DEFAULT_ORG_ID, scheduledFor }),
+        body: JSON.stringify({ scheduledFor }),
       });
 
       if (!response.ok) {
@@ -431,7 +429,7 @@ export default function PageEditorPage() {
       const response = await fetch(`/api/website/pages/${pageId}/preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ organizationId: DEFAULT_ORG_ID }),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {
@@ -691,7 +689,6 @@ export default function PageEditorPage() {
       {showVersionHistory && pageId && (
         <VersionHistory
           pageId={pageId}
-          organizationId={DEFAULT_ORG_ID}
           onRestore={handleRestoreVersion}
           onClose={() => setShowVersionHistory(false)}
         />

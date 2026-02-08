@@ -147,7 +147,6 @@ export interface OrchestratorConfig {
     activeAgents: number;
     pendingTickets: number;
   };
-  organizationId?: string;
   /** Model selection (defaults to google/gemini-2.0-flash-exp) */
   modelId?: string;
   /** Voice configuration */
@@ -473,7 +472,6 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
           conversationHistory,
           adminStats: config.adminStats,
           merchantInfo: config.merchantInfo,
-          organizationId: config.organizationId,
           modelId: selectedModel,
           voiceEnabled: voiceSettings.enabled,
           voiceId: voiceSettings.voiceId,

@@ -47,7 +47,6 @@ describe('Training Manager', () => {
   describe('submitFeedback', () => {
     const mockScrape = {
       id: 'scrape_123',
-      organizationId: 'org_123',
       url: 'https://example.com',
       rawHtml: '<html>test</html>',
       cleanedContent: 'test',
@@ -78,7 +77,6 @@ describe('Training Manager', () => {
       (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
-        organizationId: 'org_123',
         userId: 'user_456',
         feedbackType: 'correct' as const,
         signalId: 'signal_789',
@@ -108,7 +106,6 @@ describe('Training Manager', () => {
       (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
-        organizationId: 'org_123',
         userId: 'user_456',
         feedbackType: 'correct' as const,
         signalId: 'signal_789',
@@ -134,7 +131,6 @@ describe('Training Manager', () => {
       (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
-        organizationId: 'org_123',
         userId: 'user_456',
         feedbackType: 'incorrect' as const,
         signalId: 'signal_789',
@@ -160,7 +156,6 @@ describe('Training Manager', () => {
       (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
-        organizationId: 'org_123',
         userId: 'user_456',
         feedbackType: 'correct' as const,
         signalId: 'signal_789',
@@ -182,7 +177,6 @@ describe('Training Manager', () => {
       (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue(null);
 
       const params = {
-        organizationId: 'org_123',
         userId: 'user_456',
         feedbackType: 'correct' as const,
         signalId: 'signal_789',
@@ -200,7 +194,6 @@ describe('Training Manager', () => {
       });
 
       const params = {
-        organizationId: 'org_123',
         userId: 'user_456',
         feedbackType: 'correct' as const,
         signalId: 'signal_789',
@@ -230,7 +223,6 @@ describe('Training Manager', () => {
 
       const longText = 'a'.repeat(2000);
       const params = {
-        organizationId: 'org_123',
         userId: 'user_456',
         feedbackType: 'correct' as const,
         signalId: 'signal_789',
@@ -305,7 +297,6 @@ describe('Training Manager', () => {
       const mockData = [
         {
           id: 'training_1',
-          organizationId: 'org_123',
           signalId: 'signal_789',
           pattern: 'hiring engineers',
           patternType: 'keyword',
@@ -546,7 +537,6 @@ describe('Training Manager', () => {
     it('should handle missing metadata gracefully', async () => {
       const mockScrape = {
         id: 'scrape_123',
-        organizationId: 'org_123',
         url: 'https://example.com',
         rawHtml: '<html>test</html>',
         cleanedContent: 'test',
@@ -573,7 +563,6 @@ describe('Training Manager', () => {
       (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
-        organizationId: 'org_123',
         userId: 'user_456',
         feedbackType: 'correct' as const,
         signalId: 'signal_789',

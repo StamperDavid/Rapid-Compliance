@@ -10,7 +10,6 @@ import { prefillOnboardingData } from '@/lib/onboarding/prefill-engine';
 
 interface PrefillRequestBody {
   websiteUrl?: string;
-  organizationId?: string;
 }
 
 function isPrefillRequestBody(value: unknown): value is PrefillRequestBody {
@@ -26,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!isPrefillRequestBody(body)) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
-    const { websiteUrl, organizationId } = body;
+    const { websiteUrl } = body;
 
     // Validation
     if (!websiteUrl || typeof websiteUrl !== 'string') {
@@ -36,16 +35,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!organizationId || typeof organizationId !== 'string') {
-      return NextResponse.json(
-        { error: 'Organization ID is required' },
-        { status: 400 }
-      );
-    }
-
     logger.info('Prefill API request received', {
       websiteUrl,
-      organizationId,
     });
 
     // Call prefill engine
@@ -53,7 +44,6 @@ export async function POST(request: NextRequest) {
 
     logger.info('Prefill API request complete', {
       websiteUrl,
-      organizationId,
       overallConfidence: result.overallConfidence,
       fieldsPrefilledCount: Object.keys(result.fieldConfidences).length,
     });

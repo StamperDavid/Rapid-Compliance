@@ -7,11 +7,10 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface ProposalTemplate {
   id: string;
-  organizationId: string;
   name: string;
   type: 'proposal' | 'quote' | 'contract' | 'invoice';
   sections: ProposalSection[];
@@ -58,7 +57,6 @@ export interface ProposalData {
 
 export interface GeneratedProposal {
   id: string;
-  organizationId: string;
   templateId: string;
   dealId?: string;
   contactId?: string;
@@ -87,7 +85,7 @@ export async function generateProposal(
 
     // Get template
     const template = await FirestoreService.get<ProposalTemplate>(
-      `organizations/${DEFAULT_ORG_ID}/proposalTemplates`,
+      `organizations/${PLATFORM_ID}/proposalTemplates`,
       data.templateId
     );
 
@@ -120,7 +118,6 @@ export async function generateProposal(
 
     const proposal: GeneratedProposal = {
       id: proposalId,
-      organizationId: DEFAULT_ORG_ID,
       templateId: data.templateId,
       dealId: data.dealId,
       contactId: data.contactId,
@@ -135,14 +132,13 @@ export async function generateProposal(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/proposals`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/proposals`,
       proposalId,
       proposal,
       false
     );
 
     logger.info('Proposal generated', {
-      organizationId: DEFAULT_ORG_ID,
       proposalId,
       totalAmount,
     });
@@ -150,7 +146,7 @@ export async function generateProposal(
     return proposal;
 
   } catch (error) {
-    logger.error('Proposal generation failed', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
+    logger.error('Proposal generation failed', error instanceof Error ? error : new Error(String(error)), { file: 'proposal-generator.ts' });
     throw error;
   }
 }
@@ -339,7 +335,7 @@ async function generatePDF(htmlContent: string): Promise<string> {
       const { admin } = await import('@/lib/firebase-admin');
       const bucket = admin.storage().bucket();
       const pdfId = `pdf-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-      const filePath = `proposals/${DEFAULT_ORG_ID}/${pdfId}.pdf`;
+      const filePath = `proposals/${PLATFORM_ID}/${pdfId}.pdf`;
       const file = bucket.file(filePath);
 
       await file.save(pdfBuffer, {
@@ -347,7 +343,6 @@ async function generatePDF(htmlContent: string): Promise<string> {
           contentType: 'application/pdf',
           metadata: {
             generatedAt: new Date().toISOString(),
-            organizationId: DEFAULT_ORG_ID,
           },
         },
       });
@@ -356,7 +351,6 @@ async function generatePDF(htmlContent: string): Promise<string> {
       const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
       logger.info('PDF generated and uploaded to storage', {
-        organizationId: DEFAULT_ORG_ID,
         filePath,
         sizeBytes: pdfBuffer.length,
       });
@@ -366,23 +360,19 @@ async function generatePDF(htmlContent: string): Promise<string> {
       await browser.close();
     }
   } catch (error) {
-    logger.error('PDF generation failed', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('PDF generation failed', error instanceof Error ? error : new Error(String(error)));
     // Fallback: upload HTML and return URL (graceful degradation)
     try {
       const { admin } = await import('@/lib/firebase-admin');
       const bucket = admin.storage().bucket();
       const fallbackId = `proposal-${Date.now()}.html`;
-      const filePath = `proposals/${DEFAULT_ORG_ID}/${fallbackId}`;
+      const filePath = `proposals/${PLATFORM_ID}/${fallbackId}`;
       const file = bucket.file(filePath);
       await file.save(htmlContent, { metadata: { contentType: 'text/html' } });
       await file.makePublic();
       return `https://storage.googleapis.com/${bucket.name}/${filePath}`;
     } catch (fallbackError) {
-      logger.error('PDF fallback also failed', fallbackError instanceof Error ? fallbackError : new Error(String(fallbackError)), {
-        organizationId: DEFAULT_ORG_ID,
-      });
+      logger.error('PDF fallback also failed', fallbackError instanceof Error ? fallbackError : new Error(String(fallbackError)));
       throw new Error('PDF generation failed');
     }
   }
@@ -399,7 +389,7 @@ export async function sendProposal(
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
     const proposal = await FirestoreService.get<GeneratedProposal>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/default/proposals`,
+      `organizations/${PLATFORM_ID}/workspaces/default/proposals`,
       proposalId
     );
 
@@ -426,12 +416,12 @@ Best regards
       subject,
       text: body,
       html: proposal.htmlContent,
-      metadata: { organizationId: DEFAULT_ORG_ID },
+      metadata: { source: 'proposal-generator' },
     });
 
     // Update proposal status
     await FirestoreService.update(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/default/proposals`,
+      `organizations/${PLATFORM_ID}/workspaces/default/proposals`,
       proposalId,
       {
         status: 'sent',
@@ -442,7 +432,7 @@ Best regards
     logger.info('Proposal sent', { proposalId, recipientEmail });
 
   } catch (error) {
-    logger.error('Failed to send proposal', error instanceof Error ? error : new Error(String(error)), { proposalId });
+    logger.error('Failed to send proposal', error instanceof Error ? error : new Error(String(error)), { proposalId, file: 'proposal-generator.ts' });
     throw error;
   }
 }

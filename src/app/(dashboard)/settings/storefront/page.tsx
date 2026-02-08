@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -91,7 +91,6 @@ const DEFAULT_CONFIG: StorefrontConfig = {
 
 export default function StorefrontSettingsPage() {
   const { user } = useAuth();
-  const _orgId = DEFAULT_ORG_ID;
   const { theme: crmTheme } = useOrgTheme(); // Get CRM theme automatically
   const [config, setConfig] = useState<StorefrontConfig>(DEFAULT_CONFIG);
   const [activeTab, setActiveTab] = useState<'setup' | 'widgets'>('setup'); // Removed 'theme' tab
@@ -107,7 +106,7 @@ export default function StorefrontSettingsPage() {
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         const configData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/storefrontConfig`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/storefrontConfig`,
           'default'
         );
 
@@ -115,7 +114,7 @@ export default function StorefrontSettingsPage() {
           setConfig(configData as StorefrontConfig);
         }
       } catch (error: unknown) {
-        logger.error('Failed to load storefront config', error instanceof Error ? error : new Error(String(error)), {});
+        logger.error('Failed to load storefront config', error instanceof Error ? error : new Error(String(error)));
       }
     };
 
@@ -129,7 +128,7 @@ export default function StorefrontSettingsPage() {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/storefrontConfig`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/storefrontConfig`,
         'default',
         {
           ...config,
@@ -138,7 +137,7 @@ export default function StorefrontSettingsPage() {
         false
       );
     } catch (error: unknown) {
-      logger.error('Failed to save storefront config', error instanceof Error ? error : new Error(String(error)), {});
+      logger.error('Failed to save storefront config', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setTimeout(() => setIsSaving(false), 1000);
     }

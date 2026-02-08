@@ -24,40 +24,25 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config'
 import { logger } from '../logger/logger';
-import { DEFAULT_ORG_ID } from '../constants/platform';
+import { PLATFORM_ID } from '../constants/platform';
 
 // ============================================================================
-// PENTHOUSE MODEL: Penthouse Path Builder
-// All paths now use the hardcoded DEFAULT_ORG_ID instead of dynamic orgId
+// Path Builders — single-tenant platform paths
 // ============================================================================
 
-/**
- * Build organization-scoped collection path.
- * PENTHOUSE MODEL: Always uses DEFAULT_ORG_ID.
- * @param subPath - Sub-collection path (e.g., 'workspaces', 'emailCampaigns')
- */
-function orgPath(subPath: string): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${subPath}`;
+/** Platform root path for sub-collections */
+function platformPath(subPath: string): string {
+  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${subPath}`;
 }
 
-/**
- * Build workspace-scoped collection path.
- * PENTHOUSE MODEL: Always uses DEFAULT_ORG_ID.
- * @param workspaceId - Workspace ID
- * @param subPath - Sub-collection path (e.g., 'schemas', 'workflows')
- */
+/** Workspace-scoped collection path */
 function workspacePath(workspaceId: string, subPath: string): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${subPath}`;
+  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${subPath}`;
 }
 
-/**
- * Build entity-scoped collection path for records.
- * PENTHOUSE MODEL: Always uses DEFAULT_ORG_ID.
- * @param workspaceId - Workspace ID
- * @param entityName - Entity name
- */
+/** Entity records collection path */
 function entityRecordsPath(workspaceId: string, entityName: string): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${entityName}/${COLLECTIONS.RECORDS}`;
+  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${entityName}/${COLLECTIONS.RECORDS}`;
 }
 
 // Helper to check if Firestore is available
@@ -370,41 +355,28 @@ export class FirestoreService {
 }
 
 /**
- * Organization-specific operations
+ * Platform data operations (single-tenant root document)
  */
-export class OrganizationService {
-  static async get(orgId: string) {
+export class PlatformService {
+  static async get() {
     return FirestoreService.get(
       COLLECTIONS.ORGANIZATIONS,
-      orgId
+      PLATFORM_ID
     );
   }
 
-  static async getAll() {
-    return FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
-  }
-
-  static async set(orgId: string, data: Record<string, unknown>) {
-    return FirestoreService.set(
-      COLLECTIONS.ORGANIZATIONS,
-      orgId,
-      data,
-      false
-    );
-  }
-
-  static async update(orgId: string, data: Record<string, unknown>) {
+  static async update(data: Record<string, unknown>) {
     return FirestoreService.update(
       COLLECTIONS.ORGANIZATIONS,
-      orgId,
+      PLATFORM_ID,
       data
     );
   }
 
-  static subscribe(orgId: string, callback: (data: DocumentData | null) => void) {
+  static subscribe(callback: (data: DocumentData | null) => void) {
     return FirestoreService.subscribe(
       COLLECTIONS.ORGANIZATIONS,
-      orgId,
+      PLATFORM_ID,
       callback
     );
   }
@@ -416,20 +388,20 @@ export class OrganizationService {
 export class WorkspaceService {
   static async get(workspaceId: string) {
     return FirestoreService.get(
-      orgPath(COLLECTIONS.WORKSPACES),
+      platformPath(COLLECTIONS.WORKSPACES),
       workspaceId
     );
   }
 
   static async getAll() {
     return FirestoreService.getAll(
-      orgPath(COLLECTIONS.WORKSPACES)
+      platformPath(COLLECTIONS.WORKSPACES)
     );
   }
 
   static async set(workspaceId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      orgPath(COLLECTIONS.WORKSPACES),
+      platformPath(COLLECTIONS.WORKSPACES),
       workspaceId,
       data,
       false
@@ -438,7 +410,7 @@ export class WorkspaceService {
 
   static subscribe(workspaceId: string, callback: (data: Record<string, unknown> | null) => void) {
     return FirestoreService.subscribe(
-      orgPath(COLLECTIONS.WORKSPACES),
+      platformPath(COLLECTIONS.WORKSPACES),
       workspaceId,
       callback
     );
@@ -482,7 +454,7 @@ export class SchemaService {
 
 /**
  * Record-specific operations (dynamic entities)
- * Path: organizations/{DEFAULT_ORG_ID}/workspaces/{workspaceId}/entities/{entityName}/records
+ * Path: organizations/{PLATFORM_ID}/workspaces/{workspaceId}/entities/{entityName}/records
  */
 export class RecordService {
   private static getCollectionPath(workspaceId: string, entityName: string): string {
@@ -606,14 +578,14 @@ export class WorkflowService {
 export class EmailCampaignService {
   static async get(campaignId: string) {
     return FirestoreService.get(
-      orgPath(COLLECTIONS.EMAIL_CAMPAIGNS),
+      platformPath(COLLECTIONS.EMAIL_CAMPAIGNS),
       campaignId
     );
   }
 
   static async getAll() {
     return FirestoreService.getAll(
-      orgPath(COLLECTIONS.EMAIL_CAMPAIGNS)
+      platformPath(COLLECTIONS.EMAIL_CAMPAIGNS)
     );
   }
 
@@ -626,7 +598,7 @@ export class EmailCampaignService {
     lastDoc?: QueryDocumentSnapshot
   ) {
     return FirestoreService.getAllPaginated(
-      orgPath(COLLECTIONS.EMAIL_CAMPAIGNS),
+      platformPath(COLLECTIONS.EMAIL_CAMPAIGNS),
       constraints,
       Math.min(pageSize, 100),
       lastDoc
@@ -635,7 +607,7 @@ export class EmailCampaignService {
 
   static async set(campaignId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      orgPath(COLLECTIONS.EMAIL_CAMPAIGNS),
+      platformPath(COLLECTIONS.EMAIL_CAMPAIGNS),
       campaignId,
       data,
       false
@@ -649,20 +621,20 @@ export class EmailCampaignService {
 export class LeadNurturingService {
   static async getSequence(sequenceId: string) {
     return FirestoreService.get(
-      orgPath(COLLECTIONS.NURTURE_SEQUENCES),
+      platformPath(COLLECTIONS.NURTURE_SEQUENCES),
       sequenceId
     );
   }
 
   static async getAllSequences() {
     return FirestoreService.getAll(
-      orgPath(COLLECTIONS.NURTURE_SEQUENCES)
+      platformPath(COLLECTIONS.NURTURE_SEQUENCES)
     );
   }
 
   static async setSequence(sequenceId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      orgPath(COLLECTIONS.NURTURE_SEQUENCES),
+      platformPath(COLLECTIONS.NURTURE_SEQUENCES),
       sequenceId,
       data,
       false
@@ -671,14 +643,14 @@ export class LeadNurturingService {
 
   static async getEnrichment(leadId: string) {
     return FirestoreService.get(
-      orgPath(COLLECTIONS.LEAD_ENRICHMENTS),
+      platformPath(COLLECTIONS.LEAD_ENRICHMENTS),
       leadId
     );
   }
 
   static async setEnrichment(leadId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      orgPath(COLLECTIONS.LEAD_ENRICHMENTS),
+      platformPath(COLLECTIONS.LEAD_ENRICHMENTS),
       leadId,
       data,
       false

@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Sequence Analytics Dashboard
@@ -156,7 +156,7 @@ export default function SequenceAnalyticsPage() {
 
   // Load analytics data
   useEffect(() => {
-    if (!DEFAULT_ORG_ID) {return;}
+    if (!PLATFORM_ID) {return;}
 
     const loadAnalytics = async () => {
       try {
@@ -171,7 +171,7 @@ export default function SequenceAnalyticsPage() {
         
         const response = await fetch(`/api/sequences/analytics?${params.toString()}`, {
           headers: {
-            'x-organization-id': DEFAULT_ORG_ID,
+            'x-organization-id': PLATFORM_ID,
           },
         });
 
@@ -186,7 +186,7 @@ export default function SequenceAnalyticsPage() {
         // Load recent executions
         const executionsResponse = await fetch(`/api/sequences/executions?limit=50`, {
           headers: {
-            'x-organization-id': DEFAULT_ORG_ID,
+            'x-organization-id': PLATFORM_ID,
           },
         });
 
@@ -209,7 +209,7 @@ export default function SequenceAnalyticsPage() {
         try {
           const executionsResponse = await fetch(`/api/sequences/executions?limit=50`, {
             headers: {
-              'x-organization-id': DEFAULT_ORG_ID,
+              'x-organization-id': PLATFORM_ID,
             },
           });
 

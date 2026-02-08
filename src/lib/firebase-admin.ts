@@ -85,7 +85,6 @@ export { admin };
 export async function getCurrentUser(request: Request): Promise<{
   uid: string;
   email?: string;
-  organizationId?: string;
 } | null> {
   try {
     const authHeader = request.headers.get('authorization');
@@ -110,8 +109,7 @@ export async function getCurrentUser(request: Request): Promise<{
  * Verify user has access to organization
  */
 export async function verifyOrgAccess(
-  userId: string,
-  _organizationId: string
+  userId: string
 ): Promise<boolean> {
   try {
     // Use environment-aware collection path via helper

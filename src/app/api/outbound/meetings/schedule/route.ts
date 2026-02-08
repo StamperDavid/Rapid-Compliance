@@ -14,7 +14,6 @@ type MeetingType = 'demo' | 'discovery' | 'intro' | 'follow-up' | 'custom';
 type MeetingUrgency = 'asap' | 'this_week' | 'next_week' | 'flexible';
 
 interface MeetingScheduleRequestBody {
-  orgId?: string;
   prospectEmail?: string;
   prospectName?: string;
   companyName?: string;
@@ -52,7 +51,6 @@ export async function POST(request: NextRequest) {
     }
 
     const {
-      orgId,
       prospectEmail,
       prospectName,
       companyName,
@@ -65,13 +63,6 @@ export async function POST(request: NextRequest) {
       context,
     } = body;
 
-    if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID is required' },
-        { status: 400 }
-      );
-    }
-
     if (!prospectEmail || !prospectName || !companyName) {
       return NextResponse.json(
         { success: false, error: 'Prospect email, name, and company are required' },
@@ -79,8 +70,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // NEW PRICING MODEL: All features available to all active subscriptions
-    // Meeting scheduling is now available to all users
+    // Penthouse model: All features available
 
     // Validate meetingType and urgency
     const validMeetingType: MeetingType = isValidMeetingType(meetingType) ? meetingType : 'discovery';

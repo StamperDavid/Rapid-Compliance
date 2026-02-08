@@ -6,11 +6,10 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface Product {
   id: string;
-  organizationId: string;
   workspaceId: string;
   name: string;
   description?: string;
@@ -87,7 +86,7 @@ export async function getProducts(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Product>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -135,7 +134,7 @@ export async function getProduct(
 ): Promise<Product | null> {
   try {
     const product = await FirestoreService.get<Product>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
       productId
     );
 
@@ -157,7 +156,7 @@ export async function getProduct(
  * Create a new product
  */
 export async function createProduct(
-  data: Omit<Product, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>,
+  data: Omit<Product, 'id' | 'workspaceId' | 'createdAt'>,
   workspaceId: string = 'default'
 ): Promise<Product> {
   try {
@@ -167,7 +166,6 @@ export async function createProduct(
     const product: Product = {
       ...data,
       id: productId,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       currency:(data.currency !== '' && data.currency != null) ? data.currency : 'USD',
       inStock: data.inStock ?? true,
@@ -180,7 +178,7 @@ export async function createProduct(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
       productId,
       product,
       false
@@ -208,7 +206,7 @@ export async function createProduct(
  */
 export async function updateProduct(
   productId: string,
-  updates: Partial<Omit<Product, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>>,
+  updates: Partial<Omit<Product, 'id' | 'workspaceId' | 'createdAt'>>,
   workspaceId: string = 'default'
 ): Promise<Product> {
   try {
@@ -218,7 +216,7 @@ export async function updateProduct(
     };
 
     await FirestoreService.update(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
       productId,
       updatedData
     );
@@ -250,7 +248,7 @@ export async function deleteProduct(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
       productId
     );
 

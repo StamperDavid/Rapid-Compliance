@@ -95,9 +95,7 @@ export async function createZoomMeeting(
 
     const data = await response.json() as ZoomApiMeetingResponse;
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     logger.info('Zoom meeting created', {
-      organizationId: DEFAULT_ORG_ID,
       meetingId: data.id,
       topic: options.topic,
     });
@@ -114,8 +112,7 @@ export async function createZoomMeeting(
     };
 
   } catch (error) {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to create Zoom meeting', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to create Zoom meeting', error instanceof Error ? error : undefined);
     throw error;
   }
 }
@@ -145,12 +142,10 @@ export async function cancelZoomMeeting(
       throw new Error('Failed to cancel Zoom meeting');
     }
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.info('Zoom meeting cancelled', { organizationId: DEFAULT_ORG_ID, meetingId });
+    logger.info('Zoom meeting cancelled', { meetingId });
 
   } catch (error) {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to cancel Zoom meeting', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, meetingId });
+    logger.error('Failed to cancel Zoom meeting', error instanceof Error ? error : undefined, { meetingId });
     throw error;
   }
 }

@@ -21,7 +21,7 @@ import {
 } from '@/lib/agents/orchestrator/manager';
 import type { AgentStatus } from '@/lib/agents/types';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RESPONSE TYPES - Frontend-optimized shapes
@@ -711,7 +711,7 @@ export async function GET(
     }
 
     logger.info('[SystemStatus] Fetching swarm status', {
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
       adminId: authResult.user.uid,
       file: 'api/system/status/route.ts',
     });
@@ -730,7 +730,7 @@ export async function GET(
 
     const duration = Date.now() - startTime;
     logger.info('[SystemStatus] Status retrieved successfully', {
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
       overallHealth: response.overallHealth,
       agentCount: response.agents.length,
       duration,

@@ -116,7 +116,6 @@ export async function analyzeConversation(
   try {
     logger.info('Analyzing conversation', {
       conversationId: request.conversationId,
-      organizationId: request.organizationId,
       includeCoaching: request.includeCoaching,
     });
     
@@ -136,7 +135,6 @@ export async function analyzeConversation(
     
     // 2. Perform AI-powered analysis
     const analysis = await analyzeTranscript({
-      organizationId: request.organizationId,
       workspaceId: request.workspaceId,
       transcript: conversation.transcript,
       conversationType: conversation.type,
@@ -166,7 +164,6 @@ export async function analyzeConversation(
     const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Conversation analysis failed', error instanceof Error ? error : new Error(String(error)), {
       conversationId: request.conversationId,
-      organizationId: request.organizationId,
     });
     throw new Error(`Conversation analysis failed: ${_errorMessage}`);
   }
@@ -249,7 +246,6 @@ export async function analyzeTranscript(
     // 10. Build complete analysis
     const analysis: ConversationAnalysis = {
       conversationId: `analysis_${Date.now()}`, // Will be updated if saving
-      organizationId: request.organizationId,
       workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       
       sentiment: aiAnalysis.sentiment,
@@ -282,9 +278,7 @@ export async function analyzeTranscript(
 
   } catch (error) {
     const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Transcript analysis failed', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: request.organizationId,
-    });
+    logger.error('Transcript analysis failed', error instanceof Error ? error : new Error(String(error)));
     throw new Error(`Transcript analysis failed: ${_errorMessage}`);
   }
 }
@@ -301,7 +295,6 @@ export async function analyzeBatchConversations(
   try {
     logger.info('Batch conversation analysis started', {
       conversationCount: request.conversationIds.length,
-      organizationId: request.organizationId,
     });
     
     const analyses = new Map<string, ConversationAnalysis>();
@@ -312,7 +305,6 @@ export async function analyzeBatchConversations(
         const analysis = await analyzeConversation(
           {
             conversationId,
-            organizationId: request.organizationId,
             workspaceId: request.workspaceId,
             includeCoaching: request.includeCoaching,
             includeFollowUps: request.includeFollowUps,
@@ -347,9 +339,7 @@ export async function analyzeBatchConversations(
 
   } catch (error) {
     const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Batch conversation analysis failed', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: request.organizationId,
-    });
+    logger.error('Batch conversation analysis failed', error instanceof Error ? error : new Error(String(error)));
     throw new Error(`Batch conversation analysis failed: ${_errorMessage}`);
   }
 }
@@ -1267,7 +1257,6 @@ async function emitAnalysisSignal(
     await coordinator.emitSignal({
       type: 'conversation.analyzed',
       leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-      orgId: analysis.organizationId,
       workspaceId: analysis.workspaceId,
       confidence: analysis.confidence / 100,
       priority: analysis.scores.overall >= 70 ? 'Low' : analysis.scores.overall >= 50 ? 'Medium' : 'High',

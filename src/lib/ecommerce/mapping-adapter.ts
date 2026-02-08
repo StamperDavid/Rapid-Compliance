@@ -8,7 +8,7 @@ import type { EcommerceConfig, ProductFieldMappings } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
 import type { Schema } from '@/types/schema';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Adapt e-commerce mappings to schema changes
@@ -20,7 +20,7 @@ export async function adaptEcommerceMappings(
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
     // Get e-commerce config for this workspace
-    const configPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/ecommerceConfig`;
+    const configPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/ecommerceConfig`;
     const configs = await FirestoreService.getAll(configPath);
     
     if (configs.length === 0) {
@@ -169,7 +169,7 @@ async function handleFieldDeletion(
   // Get schema for field resolution
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const schemaData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
     schemaId
   );
   
@@ -243,7 +243,7 @@ export async function validateEcommerceMappings(
     // Get product schema
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
       config.productSchema
     );
     
@@ -325,7 +325,7 @@ export async function autoConfigureEcommerceMappings(
     // Get schema
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
       schemaId
     );
     

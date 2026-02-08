@@ -9,7 +9,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface OrganizationMember {
   userId: string;
@@ -127,7 +127,7 @@ export async function createComment(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/comments`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/comments`,
       commentId,
       comment,
       false
@@ -189,7 +189,7 @@ async function notifyMentionedUsers(
     for (const userId of mentionedUserIds) {
       // Get user email
       const user = await FirestoreService.get<OrganizationMember>(
-        `organizations/${DEFAULT_ORG_ID}/members`,
+        `organizations/${PLATFORM_ID}/members`,
         userId
       );
 
@@ -198,7 +198,6 @@ async function notifyMentionedUsers(
           to: user.email,
           subject: `${comment.authorName} mentioned you in a comment`,
           text: `${comment.authorName} mentioned you:\n\n"${comment.content}"\n\nView in CRM: [LINK]`,
-          metadata: { organizationId: DEFAULT_ORG_ID },
         });
       }
     }
@@ -228,7 +227,7 @@ export async function createTask(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/tasks`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/tasks`,
       taskId,
       newTask,
       false
@@ -260,7 +259,7 @@ async function notifyTaskAssignment(
     const { sendEmail } = await import('@/lib/email/email-service');
 
     const user = await FirestoreService.get<OrganizationMember>(
-      `organizations/${DEFAULT_ORG_ID}/members`,
+      `organizations/${PLATFORM_ID}/members`,
       task.assignedTo
     );
 
@@ -269,7 +268,6 @@ async function notifyTaskAssignment(
         to: user.email,
         subject: `New task assigned: ${task.title}`,
         text: `${task.assignedByName} assigned you a task:\n\nTitle: ${task.title}\nPriority: ${task.priority}\nDue: ${(() => { const v = task.dueDate?.toLocaleDateString(); return (v !== '' && v != null) ? v : 'No due date'; })()}\n\n${task.description ?? ''}`,
-        metadata: { organizationId: DEFAULT_ORG_ID },
       });
     }
 
@@ -289,7 +287,7 @@ export async function calculateLeaderboard(
   try {
     // Get all team members
     const membersResult = await FirestoreService.getAll<OrganizationMember>(
-      `organizations/${DEFAULT_ORG_ID}/members`
+      `organizations/${PLATFORM_ID}/members`
     );
 
     const members = membersResult;
@@ -337,7 +335,6 @@ export async function calculateLeaderboard(
     });
 
     logger.info('Leaderboard calculated', {
-      organizationId: DEFAULT_ORG_ID,
       period,
       teamSize: leaderboard.length,
     });
@@ -345,7 +342,7 @@ export async function calculateLeaderboard(
     return leaderboard;
 
   } catch (error: unknown) {
-    logger.error('Failed to calculate leaderboard', error instanceof Error ? error : new Error(String(error)), { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to calculate leaderboard', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -401,7 +398,7 @@ async function calculateUserMetrics(
 
     // Tasks completed
     const tasksResult = await FirestoreService.getAll<TeamTask>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/tasks`
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/tasks`
     );
     const tasksCompleted = tasksResult.filter(t =>
       t.assignedTo === userId &&
@@ -443,7 +440,7 @@ export async function getUserTasks(
 ): Promise<TeamTask[]> {
   try {
     const result = await FirestoreService.getAll<TeamTask>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/tasks`
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/tasks`
     );
 
     let tasks = result.filter(t => t.assignedTo === userId);
@@ -484,7 +481,7 @@ export async function completeTask(
 ): Promise<void> {
   try {
     await FirestoreService.update(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/tasks`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/tasks`,
       taskId,
       {
         status: 'completed',

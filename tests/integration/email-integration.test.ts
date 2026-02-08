@@ -37,8 +37,7 @@ describe('Email Integration Tests', () => {
         html: '<h1>Test via Gmail</h1>',
         from: 'you@gmail.com',
         metadata: {
-          organizationId: 'test-org',
-        },
+          },
       });
 
       expect(result.success).toBe(true);

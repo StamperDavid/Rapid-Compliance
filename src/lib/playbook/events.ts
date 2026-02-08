@@ -19,7 +19,7 @@
  */
 
 import type { SalesSignal } from '@/lib/orchestration';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // EVENT TYPES
@@ -224,7 +224,6 @@ export function createPlaybookGeneratedEvent(
   return {
     type: 'playbook.generated',
     timestamp: new Date(),
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Medium',
     confidence: metadata.confidence / 100, // Convert 0-100 to 0-1
@@ -242,7 +241,6 @@ export function createPatternsExtractedEvent(
   return {
     type: 'playbook.patterns_extracted',
     timestamp: new Date(),
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Low',
     confidence: metadata.highConfidencePatterns > 0 ? 0.8 : 0.6,
@@ -260,7 +258,6 @@ export function createPlaybookActivatedEvent(
   return {
     type: 'playbook.activated',
     timestamp: new Date(),
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'High',
     confidence: metadata.confidence / 100,
@@ -278,7 +275,6 @@ export function createPlaybookUsedEvent(
   return {
     type: 'playbook.used',
     timestamp: new Date(),
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Low',
     confidence: metadata.adherenceScore / 100,
@@ -296,7 +292,6 @@ export function createPlaybookUpdatedEvent(
   return {
     type: 'playbook.updated',
     timestamp: new Date(),
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Medium',
     confidence: Math.abs(metadata.confidenceChange) > 10 ? 0.7 : 0.8,
@@ -314,7 +309,6 @@ export function createAdoptionTrackedEvent(
   return {
     type: 'playbook.adoption_tracked',
     timestamp: new Date(),
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Low',
     confidence: metadata.adoptionRate / 100,
@@ -332,7 +326,6 @@ export function createEffectivenessMeasuredEvent(
   return {
     type: 'playbook.effectiveness_measured',
     timestamp: new Date(),
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: metadata.recommendation === 'retire' ? 'High' : 'Medium',
     confidence: metadata.confidence / 100,
@@ -350,7 +343,6 @@ export function createPlaybookArchivedEvent(
   return {
     type: 'playbook.archived',
     timestamp: new Date(),
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: 'Medium',
     confidence: metadata.finalEffectiveness / 100,
@@ -368,7 +360,6 @@ export function createPatternIdentifiedEvent(
   return {
     type: 'playbook.pattern_identified',
     timestamp: new Date(),
-    orgId: DEFAULT_ORG_ID,
     workspaceId,
     priority: metadata.shouldAddToPlaybook ? 'High' : 'Low',
     confidence: metadata.confidence / 100,

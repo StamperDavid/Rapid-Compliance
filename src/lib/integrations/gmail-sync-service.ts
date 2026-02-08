@@ -6,7 +6,7 @@
 import { google, type gmail_v1 } from 'googleapis';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Gmail OAuth scopes
 export const GMAIL_SCOPES = [
@@ -41,7 +41,6 @@ export interface GmailAttachment {
 }
 
 export interface GmailSyncStatus {
-  organizationId: string;
   lastSyncAt: string;
   historyId: string;
   messagesSynced: number;
@@ -116,7 +115,6 @@ async function fullSync(
     
     if (!listResponse.data.messages) {
       return {
-        organizationId: DEFAULT_ORG_ID,
         lastSyncAt: new Date().toISOString(),
         historyId: (() => {
           const histId = listResponse.data.resultSizeEstimate?.toString();
@@ -164,7 +162,6 @@ async function fullSync(
     
     // Save sync status
     const status: GmailSyncStatus = {
-      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       historyId,
       messagesSynced,
@@ -200,7 +197,6 @@ async function incrementalSync(
     
     if (!historyResponse.data.history) {
       return {
-        organizationId: DEFAULT_ORG_ID,
         lastSyncAt: new Date().toISOString(),
         historyId: (historyResponse.data.historyId !== '' && historyResponse.data.historyId != null) ? historyResponse.data.historyId : startHistoryId,
         messagesSynced: 0,
@@ -276,7 +272,6 @@ async function incrementalSync(
     }
     
     const status: GmailSyncStatus = {
-      organizationId: DEFAULT_ORG_ID,
       lastSyncAt: new Date().toISOString(),
       historyId: (historyResponse.data.historyId !== '' && historyResponse.data.historyId != null) ? historyResponse.data.historyId : startHistoryId,
       messagesSynced,
@@ -382,7 +377,6 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
     // Save email record
     const emailData = {
       id: message.id,
-      organizationId: DEFAULT_ORG_ID,
       threadId: message.threadId,
       contactId: contact?.id,
       from: message.from,
@@ -405,7 +399,7 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
     };
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
       message.id,
       emailData
     );
@@ -413,7 +407,7 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
     // Update contact with last interaction
     if (contact) {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`,
         contact.id,
         {
           lastContactDate: new Date(parseInt(message.internalDate)),
@@ -434,7 +428,7 @@ async function saveMessageToCRM(message: GmailMessage): Promise<void> {
 async function deleteMessageFromCRM(messageId: string): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
       messageId
     );
   } catch (error) {
@@ -448,7 +442,7 @@ async function deleteMessageFromCRM(messageId: string): Promise<void> {
 async function updateMessageLabels(messageId: string, labels: string[]): Promise<void> {
   try {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
       messageId,
       {
         isRead: !labels.includes('UNREAD'),
@@ -467,7 +461,7 @@ async function updateMessageLabels(messageId: string, labels: string[]): Promise
 async function findContactByEmail(email: string): Promise<GmailContact | null> {
   try {
     const contacts = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/contacts`
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`
     );
     const contactsFiltered = contacts.filter((c: unknown) => {
       const contact = c as GmailContact;
@@ -487,7 +481,7 @@ async function findContactByEmail(email: string): Promise<GmailContact | null> {
 async function getLastSyncStatus(): Promise<GmailSyncStatus | null> {
   try {
     const status = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       'gmail-sync'
     );
     return status as GmailSyncStatus | null;
@@ -502,7 +496,7 @@ async function getLastSyncStatus(): Promise<GmailSyncStatus | null> {
 async function saveSyncStatus(status: GmailSyncStatus): Promise<void> {
   try {
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${status.organizationId}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       'gmail-sync',
       status
     );

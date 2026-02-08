@@ -3,7 +3,7 @@
  * Integration tests for lead service layer
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals';
 import {
   getLeads,
   getLead,
@@ -13,19 +13,15 @@ import {
   searchLeads,
   bulkUpdateLeads,
 } from '@/lib/crm/lead-service';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 describe('LeadService', () => {
-  const testOrgId = `test-org-${Date.now()}`;
+  const testOrgId = PLATFORM_ID;
   const testWorkspaceId = 'default';
   let testLeadId: string;
 
   beforeEach(async () => {
-    // Create test organization
-    await FirestoreService.set('organizations', testOrgId, {
-      id: testOrgId,
-      name: 'Test Organization',
-    }, false);
+    // PENTHOUSE: Uses PLATFORM_ID — no test org creation needed
   });
 
   afterEach(async () => {
@@ -34,9 +30,13 @@ describe('LeadService', () => {
       try {
         await deleteLead(testLeadId, testWorkspaceId);
       } catch {
-        // Ignore cleanup errors
+        // Ignore - lead may already be deleted by test
       }
     }
+  });
+
+  afterAll(async () => {
+    // PENTHOUSE: No test org cleanup needed — using PLATFORM_ID
   });
 
   describe('createLead', () => {
@@ -59,7 +59,6 @@ describe('LeadService', () => {
       expect(lead.firstName).toBe('John');
       expect(lead.lastName).toBe('Doe');
       expect(lead.email).toBe('john.doe@example.com');
-      expect(lead.organizationId).toBe(testOrgId);
       expect(lead.workspaceId).toBe(testWorkspaceId);
       expect(lead.score).toBe(50); // Default score (without enrichment)
       expect(lead.createdAt).toBeDefined();

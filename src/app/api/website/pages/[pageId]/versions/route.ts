@@ -1,7 +1,7 @@
 /**
  * Page Version History API
  * Retrieve and restore previous versions of pages
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,10 +9,9 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface PageData {
-  organizationId: string;
   version?: number;
   lastPublishedVersion?: number;
   title?: string;
@@ -47,8 +46,8 @@ export async function GET(
 
     // Verify the page belongs to this org
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      { pageId: params.pageId }
     );
 
     const pageDoc = await pageRef.get();
@@ -121,8 +120,8 @@ export async function POST(
     }
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      { pageId: params.pageId }
     );
 
     const pageDoc = await pageRef.get();
@@ -177,8 +176,7 @@ export async function POST(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/audit-log/entries',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/audit-log/entries'
     );
 
     await auditRef.add({
@@ -188,7 +186,6 @@ export async function POST(
       restoredVersion: versionData?.version,
       performedBy,
       performedAt: now,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     return NextResponse.json({

@@ -23,7 +23,7 @@ import {
   type FeedbackType,
 } from '@/types/scraper-intelligence';
 import { flagScrapeForDeletion, getTemporaryScrape } from './temporary-scrapes-service';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS
@@ -49,11 +49,11 @@ class RateLimiter {
 
   checkLimit(maxRequests: number, windowMs: number): boolean {
     const now = Date.now();
-    const entry = this.limits.get(DEFAULT_ORG_ID);
+    const entry = this.limits.get(PLATFORM_ID);
 
     // No entry or window expired
     if (!entry || now - entry.windowStart > windowMs) {
-      this.limits.set(DEFAULT_ORG_ID, {
+      this.limits.set(PLATFORM_ID, {
         count: 1,
         windowStart: now,
       });
@@ -71,7 +71,7 @@ class RateLimiter {
   }
 
   reset(): void {
-    this.limits.delete(DEFAULT_ORG_ID);
+    this.limits.delete(PLATFORM_ID);
   }
 
   clear(): void {
@@ -198,7 +198,6 @@ export async function submitFeedback(params: {
       await flagScrapeForDeletion(params.sourceScrapeId);
       logger.info('Flagged scrape for deletion after positive feedback', {
         scrapeId: params.sourceScrapeId,
-        organizationId: DEFAULT_ORG_ID,
       });
     }
 
@@ -206,13 +205,11 @@ export async function submitFeedback(params: {
     processFeedbackAsync(feedback).catch((error) => {
       logger.error('Failed to process feedback into training data', error instanceof Error ? error : new Error(String(error)), {
         feedbackId,
-        organizationId: DEFAULT_ORG_ID,
       });
     });
 
     logger.info('Client feedback submitted', {
       feedbackId,
-      organizationId: DEFAULT_ORG_ID,
       userId,
       feedbackType: params.feedbackType,
       signalId: params.signalId,
@@ -225,7 +222,6 @@ export async function submitFeedback(params: {
     }
 
     logger.error('Failed to submit feedback', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
       userId,
     });
 
@@ -306,7 +302,6 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
           // Log history
           logTrainingHistory(transaction, {
             trainingDataId: doc.id,
-            organizationId: '',
             userId: feedback.userId,
             changeType: 'updated',
             previousValue: latestData,
@@ -325,7 +320,6 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
           // Log history
           logTrainingHistory(transaction, {
             trainingDataId: doc.id,
-            organizationId: '',
             userId: feedback.userId,
             changeType: 'updated',
             previousValue: trainingData,
@@ -459,7 +453,6 @@ export async function getTrainingData(
     return docs.docs.map((doc) => toTrainingData(doc.data()));
   } catch (error) {
     logger.error('Failed to get training data', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
       signalId,
     });
     throw new TrainingManagerError(
@@ -489,9 +482,7 @@ export async function getAllTrainingData(
 
     return docs.docs.map((doc) => toTrainingData(doc.data()));
   } catch (error) {
-    logger.error('Failed to get all training data', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Failed to get all training data', error instanceof Error ? error : new Error(String(error)));
     throw new TrainingManagerError(
       'Failed to get all training data',
       'FETCH_FAILED',
@@ -546,7 +537,6 @@ export async function deactivateTrainingData(
       // Log history
       logTrainingHistory(transaction, {
         trainingDataId,
-        organizationId: DEFAULT_ORG_ID,
         userId,
         changeType: 'deactivated',
         previousValue: trainingData,
@@ -557,7 +547,6 @@ export async function deactivateTrainingData(
 
     logger.info('Deactivated training data', {
       trainingDataId,
-      organizationId: DEFAULT_ORG_ID,
       userId,
     });
   } catch (error) {
@@ -567,7 +556,6 @@ export async function deactivateTrainingData(
 
     logger.error('Failed to deactivate training data', error instanceof Error ? error : new Error(String(error)), {
       trainingDataId,
-      organizationId: DEFAULT_ORG_ID,
     });
     throw new TrainingManagerError(
       'Failed to deactivate training data',
@@ -623,7 +611,6 @@ export async function activateTrainingData(
       // Log history
       logTrainingHistory(transaction, {
         trainingDataId,
-        organizationId: DEFAULT_ORG_ID,
         userId,
         changeType: 'activated',
         previousValue: trainingData,
@@ -634,7 +621,6 @@ export async function activateTrainingData(
 
     logger.info('Activated training data', {
       trainingDataId,
-      organizationId: DEFAULT_ORG_ID,
       userId,
     });
   } catch (error) {
@@ -644,7 +630,6 @@ export async function activateTrainingData(
 
     logger.error('Failed to activate training data', error instanceof Error ? error : new Error(String(error)), {
       trainingDataId,
-      organizationId: DEFAULT_ORG_ID,
     });
     throw new TrainingManagerError(
       'Failed to activate training data',
@@ -670,7 +655,6 @@ function logTrainingHistory(
   transaction: FirebaseFirestore.Transaction,
   params: {
     trainingDataId: string;
-    organizationId: string;
     userId: string;
     changeType: 'created' | 'updated' | 'deleted' | 'activated' | 'deactivated';
     previousValue?: TrainingData;
@@ -728,7 +712,6 @@ export async function getTrainingHistory(
   } catch (error) {
     logger.error('Failed to get training history', error instanceof Error ? error : new Error(String(error)), {
       trainingDataId,
-      organizationId: DEFAULT_ORG_ID,
     });
     throw new TrainingManagerError(
       'Failed to get training history',
@@ -809,7 +792,6 @@ export async function rollbackTrainingData(
       // Log history
       logTrainingHistory(transaction, {
         trainingDataId,
-        organizationId: DEFAULT_ORG_ID,
         userId,
         changeType: 'updated',
         previousValue: currentData,
@@ -821,7 +803,6 @@ export async function rollbackTrainingData(
     logger.info('Rolled back training data', {
       trainingDataId,
       targetVersion,
-      organizationId: DEFAULT_ORG_ID,
       userId,
     });
   } catch (error) {
@@ -832,7 +813,6 @@ export async function rollbackTrainingData(
     logger.error('Failed to rollback training data', error instanceof Error ? error : new Error(String(error)), {
       trainingDataId,
       targetVersion,
-      organizationId: DEFAULT_ORG_ID,
     });
     throw new TrainingManagerError(
       'Failed to rollback training data',
@@ -873,7 +853,6 @@ export async function getFeedbackForScrape(
   } catch (error) {
     logger.error('Failed to get feedback for scrape', error instanceof Error ? error : new Error(String(error)), {
       sourceScrapeId,
-      organizationId: DEFAULT_ORG_ID,
     });
     throw new TrainingManagerError(
       'Failed to get feedback',
@@ -909,9 +888,7 @@ export async function getUnprocessedFeedback(
       } as ClientFeedback;
     });
   } catch (error) {
-    logger.error('Failed to get unprocessed feedback', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Failed to get unprocessed feedback', error instanceof Error ? error : new Error(String(error)));
     throw new TrainingManagerError(
       'Failed to get unprocessed feedback',
       'FETCH_FAILED',
@@ -994,9 +971,7 @@ export async function getTrainingAnalytics(): Promise<{
       feedbackByType: feedbackByType as Record<FeedbackType, number>,
     };
   } catch (error) {
-    logger.error('Failed to get training analytics', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Failed to get training analytics', error instanceof Error ? error : new Error(String(error)));
     throw new TrainingManagerError(
       'Failed to get training analytics',
       'FETCH_FAILED',

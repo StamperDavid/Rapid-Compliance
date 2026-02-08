@@ -42,7 +42,7 @@ import type {
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Workflow, WorkflowExecution } from '@/lib/workflow/types';
 import { emitDashboardGenerated } from './events';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CACHE CONFIGURATION
@@ -96,7 +96,7 @@ export async function getDashboardAnalytics(
   const startTime = Date.now();
 
   // Check cache
-  const cacheKey = `${DEFAULT_ORG_ID}:${period}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
+  const cacheKey = `${PLATFORM_ID}:${period}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
   const cached = analyticsCache.get(cacheKey);
 
   if (cached) {
@@ -334,11 +334,11 @@ function calculateTopWorkflows(
 /**
  * Calculate action type breakdown
  */
-/** Action execution result structure */
+/** Action execution result structure (matches WorkflowExecution.actionsExecuted items) */
 interface ActionExecutionResult {
   actionType?: string;
   status?: string;
-  duration?: number;
+  durationMs?: number;
 }
 
 function calculateActionBreakdown(
@@ -364,7 +364,7 @@ function calculateActionBreakdown(
       actionMap.set(actionType, {
         count: existing.count + 1,
         success: existing.success + (result.status === 'success' ? 1 : 0),
-        times: [...existing.times, result.duration ?? 0],
+        times: [...existing.times, result.durationMs ?? 0],
       });
     });
   });

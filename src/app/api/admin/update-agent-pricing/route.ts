@@ -43,7 +43,6 @@ interface PricingKnowledgeDocument {
   readonly priority: number;
   readonly updatedAt: string;
   readonly updatedBy: string;
-  readonly organizationId?: string;
 }
 
 /**
@@ -258,15 +257,10 @@ ${tierDescriptions}
     for (const org of orgs) {
       try {
         // Update agent knowledge for this organization
-        const orgPricingKnowledge: PricingKnowledgeDocument = {
-          ...pricingKnowledge,
-          organizationId: org.id,
-        };
-
         await FirestoreService.set(
           `${COLLECTIONS.ORGANIZATIONS}/${org.id}/agent_knowledge`,
           'pricing',
-          orgPricingKnowledge
+          pricingKnowledge
         );
         successCount++;
       } catch (error: unknown) {

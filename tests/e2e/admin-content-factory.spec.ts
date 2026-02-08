@@ -34,12 +34,11 @@ const createdResources: { type: string; collection: string; id: string }[] = [];
  * Video Storyboard Request Payload
  */
 interface StoryboardRequest {
-  organizationId: string;
-  brief: {
-    objective?: 'awareness' | 'consideration' | 'conversion' | 'retention';
+  brief?: {
+    objective: string;
     message: string;
     callToAction?: string;
-    targetPlatform?: 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website';
+    targetPlatform?: string;
   };
   constraints?: {
     maxDuration?: number;
@@ -127,7 +126,6 @@ function trackResource(type: string, collection: string, id: string): void {
 test.describe('Video Generation Audit - Director Service', () => {
   test('should trigger video render job with real jobId', async ({ request }) => {
     const renderRequest = {
-      organizationId: TEST_ORG_ID,
       storyboardId: `${E2E_PREFIX}storyboard_${Date.now()}`,
       aspectRatio: '16:9',
       resolution: '1080p',
@@ -171,7 +169,6 @@ test.describe('Video Generation Audit - Director Service', () => {
 
   test('should generate storyboard with valid structure', async ({ request }) => {
     const storyboardRequest: StoryboardRequest = {
-      organizationId: TEST_ORG_ID,
       brief: {
         objective: 'awareness',
         message: 'Introducing AI-powered sales automation that works 24/7',
@@ -244,7 +241,6 @@ test.describe('Video Generation Audit - Director Service', () => {
 
   test('should reject invalid storyboard request', async ({ request }) => {
     const invalidRequest = {
-      organizationId: TEST_ORG_ID,
       brief: { objective: 'awareness' }, // Missing required 'message' field
     };
 
@@ -263,7 +259,6 @@ test.describe('Video Generation Audit - Director Service', () => {
   test('should generate platform-specific storyboards', async ({ request }) => {
     // TikTok storyboard (9:16 aspect, short duration)
     const tiktokRequest: StoryboardRequest = {
-      organizationId: TEST_ORG_ID,
       brief: {
         objective: 'awareness',
         message: 'Quick AI sales tip',
@@ -279,7 +274,6 @@ test.describe('Video Generation Audit - Director Service', () => {
 
     // YouTube storyboard (16:9 aspect, longer duration)
     const youtubeRequest: StoryboardRequest = {
-      organizationId: TEST_ORG_ID,
       brief: {
         objective: 'consideration',
         message: 'Complete guide to AI sales automation',
@@ -520,8 +514,7 @@ test.describe('AI Training Lab - Persona Audit', () => {
   test('should access training analysis endpoint', async ({ request }) => {
     const analysisRequest = {
       sessionId: `${E2E_PREFIX}session_audit`,
-      organizationId: TEST_ORG_ID,
-    };
+      };
 
     const { status } = await makeAPIRequest<{ success?: boolean; error?: string }>(
       request,
@@ -539,7 +532,6 @@ test.describe('AI Training Lab - Persona Audit', () => {
 
   test('should access golden master deployment endpoint', async ({ request }) => {
     const deployRequest = {
-      organizationId: TEST_ORG_ID,
       goldenMasterId: `${E2E_PREFIX}gm_v1`,
     };
 
@@ -570,7 +562,7 @@ test.describe('Audit Summary', () => {
       request,
       'POST',
       '/api/video/storyboard',
-      { organizationId: TEST_ORG_ID, brief: { message: 'Audit test' } }
+      { brief: { message: 'Audit test' } }
     );
 
     // Test Video Render API
@@ -578,7 +570,7 @@ test.describe('Audit Summary', () => {
       request,
       'POST',
       '/api/admin/video/render',
-      { organizationId: TEST_ORG_ID, storyboardId: `${E2E_PREFIX}audit_storyboard` }
+      { storyboardId: `${E2E_PREFIX}audit_storyboard` }
     );
 
     // Test Social API

@@ -4,11 +4,11 @@
  */
 
 import { sendBulkEmails } from './email-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface EmailCampaign {
   id: string;
   name: string;
-  organizationId: string;
   workspaceId?: string;
   
   // Campaign type
@@ -90,7 +90,6 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
   const fullCampaign: EmailCampaign = {
     id: campaignId,
     name:(campaign.name !== '' && campaign.name != null) ? campaign.name : 'Untitled Campaign',
-    organizationId: campaign.organizationId ?? '',
     workspaceId:(campaign.workspaceId !== '' && campaign.workspaceId != null) ? campaign.workspaceId : 'default',
     type: campaign.type ?? 'broadcast',
     subject: campaign.subject ?? '',
@@ -145,7 +144,7 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { COLLECTIONS } = await import('@/lib/db/firestore-service');
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${fullCampaign.organizationId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
       campaignId,
       campaignData,
       false
@@ -213,7 +212,6 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
         metadata: {
           campaignId: campaign.id,
           variant: 'A',
-          organizationId: campaign.organizationId,
         },
       });
 
@@ -232,7 +230,6 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
         metadata: {
           campaignId: campaign.id,
           variant: 'B',
-          organizationId: campaign.organizationId,
         },
       });
 
@@ -254,7 +251,6 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
         const localTrackOpens = campaign.trackOpens;
         const localTrackClicks = campaign.trackClicks;
         const localCampaignId = campaign.id;
-        const localOrgId = campaign.organizationId;
 
         setTimeout(() => {
           void (async () => {
@@ -276,7 +272,6 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
               metadata: {
                 campaignId: localCampaignId,
                 variant: winner,
-                organizationId: localOrgId,
               },
             });
           })();
@@ -297,7 +292,6 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
         },
         metadata: {
           campaignId: campaign.id,
-          organizationId: campaign.organizationId,
         },
       });
 

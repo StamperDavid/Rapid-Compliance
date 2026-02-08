@@ -164,7 +164,6 @@ export const RiskMetadataSchema = z.object({
  */
 export const DealRiskPredictionSchema = z.object({
   dealId: z.string().min(1),
-  organizationId: z.string().min(1),
   workspaceId: z.string().min(1),
   riskLevel: RiskLevelSchema,
   slippageProbability: z.number().min(0).max(100),
@@ -190,7 +189,6 @@ export const DealRiskPredictionSchema = z.object({
  */
 export const RiskPredictionRequestSchema = z.object({
   dealId: z.string().min(1, 'Deal ID is required'),
-  organizationId: z.string().min(1, 'Organization ID is required'),
   workspaceId: z.string().min(1).default('default'),
   includeInterventions: z.boolean().default(true),
   forceRefresh: z.boolean().default(false),
@@ -202,7 +200,6 @@ export const RiskPredictionRequestSchema = z.object({
  */
 export const BatchRiskPredictionRequestSchema = z.object({
   dealIds: z.array(z.string().min(1)).min(1).max(100),
-  organizationId: z.string().min(1, 'Organization ID is required'),
   workspaceId: z.string().min(1).default('default'),
   includeInterventions: z.boolean().default(true),
   highRiskOnly: z.boolean().default(false),

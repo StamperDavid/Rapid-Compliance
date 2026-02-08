@@ -41,7 +41,6 @@ interface WriteOptions {
   /** User ID performing the operation (for audit trail) */
   userId?: string;
   /** Organization ID context (for access control) */
-  organizationId?: string;
 }
 
 export class FirestoreDAL {
@@ -349,14 +348,12 @@ export class FirestoreDAL {
    * This will be implemented as part of the security enhancement
    */
   private verifyOrgAccess(
-    _userId: string | undefined,
-    _organizationId: string
+    _userId: string | undefined
   ): void {
     // TODO: Implement organization-scoped access control
     // For now, just log the check
     logger.debug('🔒 Verifying org access', {
       userId: _userId,
-      organizationId: _organizationId,
       file: 'dal.ts'
     });
   }

@@ -256,9 +256,9 @@ export async function getSchemaChangeImpactSummary(
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const { where } = await import('firebase/firestore');
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
-    const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/schemaChangeEvents`;
+    const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/schemaChangeEvents`;
     
     // Get all events for this schema (last 30 days)
     const thirtyDaysAgo = new Date();

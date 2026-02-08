@@ -36,7 +36,6 @@ import type {
 } from '@/lib/coaching/types';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RATE LIMITING
@@ -352,8 +351,8 @@ async function getTeamMembers(teamId: string): Promise<string[]> {
 
     // Query the team document from Firestore
     const teamDoc = await adminDal.getNestedDocRef(
-      'organizations/{orgId}/teams/{teamId}',
-      { orgId: DEFAULT_ORG_ID, teamId }
+      'organizations/rapid-compliance-root/teams/{teamId}',
+      { teamId }
     ).get();
 
     if (teamDoc.exists) {
@@ -370,8 +369,7 @@ async function getTeamMembers(teamId: string): Promise<string[]> {
     // Fallback: if team not found, get all users with sales role in the organization
     logger.warn('Team not found, falling back to org-wide user list', { teamId });
     const usersSnapshot = await adminDal.getNestedCollection(
-      'organizations/{orgId}/users',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/users'
     ).where('role', '==', 'sales_rep').get();
 
     const memberIds = usersSnapshot.docs
@@ -406,8 +404,8 @@ async function getTeamName(teamId: string): Promise<string> {
     }
 
     const teamDoc = await adminDal.getNestedDocRef(
-      'organizations/{orgId}/teams/{teamId}',
-      { orgId: DEFAULT_ORG_ID, teamId }
+      'organizations/rapid-compliance-root/teams/{teamId}',
+      { teamId }
     ).get();
 
     if (teamDoc.exists) {

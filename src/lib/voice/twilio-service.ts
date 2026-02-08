@@ -5,7 +5,7 @@
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface VoiceConfig {
   accountSid: string;
@@ -216,7 +216,7 @@ export async function getCallRecording(
  * Get Twilio configuration
  */
 async function getTwilioConfig(): Promise<VoiceConfig> {
-  const keys: unknown = await apiKeyService.getServiceKey(DEFAULT_ORG_ID, 'twilio');
+  const keys: unknown = await apiKeyService.getServiceKey(PLATFORM_ID, 'twilio');
 
   if (!keys) {
     throw new Error('Twilio not configured');

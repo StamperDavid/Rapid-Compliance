@@ -12,7 +12,6 @@ export async function executeConditionalAction(
   action: ConditionalBranchAction,
   triggerData: WorkflowTriggerData,
   workflow: Workflow,
-  organizationId: string
 ): Promise<unknown> {
   // Evaluate all branches
   let matchedBranch: ConditionalBranchAction['branches'][0] | null = null;
@@ -42,7 +41,7 @@ export async function executeConditionalAction(
 
   for (const subAction of actionsToExecute) {
     try {
-      const result = await executeAction(subAction, triggerData, workflow, organizationId);
+      const result = await executeAction(subAction, triggerData, workflow);
       results.push({
         actionId: subAction.id,
         success: true,
@@ -188,7 +187,6 @@ async function executeAction(
   action: WorkflowAction,
   triggerData: WorkflowTriggerData,
   workflow: Workflow,
-  organizationId: string
 ): Promise<unknown> {
   // Import action executors
   const { executeEmailAction } = await import('./email-action');
@@ -199,10 +197,10 @@ async function executeAction(
   
   switch (action.type) {
     case 'send_email': {
-      return executeEmailAction(action, triggerData, organizationId);
+      return executeEmailAction(action, triggerData);
     }
     case 'send_sms': {
-      return executeSMSAction(action, triggerData, organizationId);
+      return executeSMSAction(action, triggerData);
     }
     case 'create_entity':
     case 'update_entity':

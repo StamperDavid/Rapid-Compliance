@@ -5,7 +5,6 @@ import { leadEnrichSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 interface ZodIssue {
   path: (string | number)[];
@@ -52,12 +51,7 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { organizationId, leadId, sources } = validation.data;
-
-    // Verify user has access to this organization (penthouse model - verify against DEFAULT_ORG_ID)
-    if (DEFAULT_ORG_ID !== organizationId) {
-      return errors.forbidden('Access denied to this organization');
-    }
+    const { leadId, sources } = validation.data;
 
     const enrichment = await enrichLead(leadId, sources ?? {});
 

@@ -9,7 +9,7 @@ import type {
   SpecialistConfig,
   Signal,
 } from '../../types';
-// DEFAULT_ORG_ID available from '@/lib/constants/platform' if needed
+// PLATFORM_ID available from '@/lib/constants/platform' if needed
 
 // ============================================================================
 // DOMAIN TYPES

@@ -133,38 +133,38 @@ export {
  * Firestore collection paths for the Form Builder module
  *
  * Structure:
- * - organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}
- * - organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
- * - organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
- * - organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
- * - organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
- * - organizations/{orgId}/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
- * - organizations/{orgId}/workspaces/{workspaceId}/formTemplates/{templateId}
+ * - organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}
+ * - organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
+ * - organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
+ * - organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
+ * - organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
+ * - organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
+ * - organizations/rapid-compliance-root/workspaces/{workspaceId}/formTemplates/{templateId}
  */
 export const FORM_COLLECTION_PATHS = {
-  forms: (orgId: string, workspaceId: string) =>
-    `organizations/${orgId}/workspaces/${workspaceId}/forms`,
+  forms: (workspaceId: string) =>
+    `organizations/rapid-compliance-root/workspaces/${workspaceId}/forms`,
 
-  form: (orgId: string, workspaceId: string, formId: string) =>
-    `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}`,
+  form: (workspaceId: string, formId: string) =>
+    `organizations/rapid-compliance-root/workspaces/${workspaceId}/forms/${formId}`,
 
-  fields: (orgId: string, workspaceId: string, formId: string) =>
-    `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}/fields`,
+  fields: (workspaceId: string, formId: string) =>
+    `organizations/rapid-compliance-root/workspaces/${workspaceId}/forms/${formId}/fields`,
 
-  submissions: (orgId: string, workspaceId: string, formId: string) =>
-    `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}/submissions`,
+  submissions: (workspaceId: string, formId: string) =>
+    `organizations/rapid-compliance-root/workspaces/${workspaceId}/forms/${formId}/submissions`,
 
-  analytics: (orgId: string, workspaceId: string, formId: string) =>
-    `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}/analytics`,
+  analytics: (workspaceId: string, formId: string) =>
+    `organizations/rapid-compliance-root/workspaces/${workspaceId}/forms/${formId}/analytics`,
 
-  fieldAnalytics: (orgId: string, workspaceId: string, formId: string) =>
-    `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}/fieldAnalytics`,
+  fieldAnalytics: (workspaceId: string, formId: string) =>
+    `organizations/rapid-compliance-root/workspaces/${workspaceId}/forms/${formId}/fieldAnalytics`,
 
-  views: (orgId: string, workspaceId: string, formId: string) =>
-    `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}/views`,
+  views: (workspaceId: string, formId: string) =>
+    `organizations/rapid-compliance-root/workspaces/${workspaceId}/forms/${formId}/views`,
 
-  templates: (orgId: string, workspaceId: string) =>
-    `organizations/${orgId}/workspaces/${workspaceId}/formTemplates`,
+  templates: (workspaceId: string) =>
+    `organizations/rapid-compliance-root/workspaces/${workspaceId}/formTemplates`,
 } as const;
 
 // ============================================================================

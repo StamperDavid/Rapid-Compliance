@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Return empty if not found
     return NextResponse.json({ success: false, error: 'Pricing tiers not configured' }, { status: 404 });
   } catch (error: unknown) {
-    logger.error('[Admin] Error fetching pricing tiers', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('[Admin] Error fetching pricing tiers', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to fetch pricing tiers' },
       { status: 500 }
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       message: 'Pricing tiers updated successfully'
     });
   } catch (error: unknown) {
-    logger.error('[Admin] Error updating pricing tiers', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('[Admin] Error updating pricing tiers', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to update pricing tiers' },
       { status: 500 }

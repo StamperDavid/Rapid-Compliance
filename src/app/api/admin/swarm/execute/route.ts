@@ -15,7 +15,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Agent Factory and Registry
 import {
@@ -309,7 +309,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AgentExec
       priority: priority ?? 'NORMAL',
       payload: {
         ...payload,
-        DEFAULT_ORG_ID,
+        PLATFORM_ID,
       },
       requiresResponse: true,
       traceId: traceId ?? taskId,

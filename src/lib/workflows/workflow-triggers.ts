@@ -7,7 +7,7 @@ import type { Workflow, WorkflowTriggerData } from '@/types/workflow';
 import { executeWorkflowImpl as executeWorkflow } from './workflow-engine';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Trigger workflow manually
@@ -37,7 +37,6 @@ async function logWorkflowEvent(
   try {
     const eventId = `event_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     const eventRecord = {
-      organizationId: DEFAULT_ORG_ID,
       eventType,
       entityType: schemaId,
       entityId,
@@ -47,7 +46,7 @@ async function logWorkflowEvent(
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workflowEvents`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workflowEvents`,
       eventId,
       eventRecord,
       false

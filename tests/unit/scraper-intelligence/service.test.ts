@@ -278,10 +278,10 @@ describe('Scraper Intelligence Service - Unit Tests', () => {
     it('should use indexes for efficient queries', () => {
       // Firestore indexes are configured separately
       // This test verifies the concept
-      const indexedFields = ['organizationId', 'platform', 'createdAt'];
-      
-      expect(indexedFields).toContain('organizationId');
+      const indexedFields = ['platform', 'createdAt'];
+
       expect(indexedFields).toContain('platform');
+      expect(indexedFields).toContain('createdAt');
     });
   });
 
@@ -402,18 +402,16 @@ describe('Scraper Intelligence Service - Unit Tests', () => {
   });
 
   describe('Document ID Generation', () => {
-    it('should create composite document IDs', () => {
-      const orgId = 'org_123';
+    it('should create document IDs with industry', () => {
       const industryId = 'hvac';
-      const docId = `${orgId}_${industryId}`;
+      const docId = `research_${industryId}`;
 
-      expect(docId).toBe('org_123_hvac');
+      expect(docId).toBe('research_hvac');
     });
 
-    it('should parse composite document IDs', () => {
-      const docId = 'org_123_hvac';
-      const orgId = 'org_123';
-      const industryId = docId.replace(`${orgId}_`, '');
+    it('should parse document IDs', () => {
+      const docId = 'research_hvac';
+      const industryId = docId.replace('research_', '');
 
       expect(industryId).toBe('hvac');
     });

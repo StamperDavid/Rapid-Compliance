@@ -32,10 +32,7 @@ import type { PerformanceTier, SkillScores } from '../coaching/types';
 export interface Lead {
   /** Lead identifier */
   id: string;
-  
-  /** Organization ID */
-  orgId: string;
-  
+
   /** Lead company information */
   companyName: string;
   companyDomain?: string;
@@ -137,10 +134,7 @@ export type LeadStatus =
 export interface SalesRep {
   /** Rep identifier */
   id: string;
-  
-  /** Organization ID */
-  orgId: string;
-  
+
   /** Rep details */
   name: string;
   email: string;
@@ -375,10 +369,7 @@ export interface TimeRange {
 export interface RoutingRule {
   /** Rule identifier */
   id: string;
-  
-  /** Organization ID */
-  orgId: string;
-  
+
   /** Rule name */
   name: string;
   
@@ -497,16 +488,13 @@ export type RoutingStrategy =
 export interface LeadAssignment {
   /** Assignment identifier */
   id: string;
-  
+
   /** Lead ID */
   leadId: string;
-  
+
   /** Rep ID */
   repId: string;
-  
-  /** Organization ID */
-  orgId: string;
-  
+
   /** Assignment method */
   assignmentMethod: AssignmentMethod;
   
@@ -738,9 +726,6 @@ export interface AssignmentRecommendation {
  * Organization routing configuration
  */
 export interface RoutingConfiguration {
-  /** Organization ID */
-  orgId: string;
-  
   /** Default routing strategy */
   defaultStrategy: RoutingStrategy;
   
@@ -813,9 +798,6 @@ export interface RoutingConfiguration {
  * Routing performance metrics
  */
 export interface RoutingMetrics {
-  /** Organization ID */
-  orgId: string;
-  
   /** Time period */
   period: {
     startDate: Date;
@@ -923,9 +905,6 @@ export interface RouteLeadResponse {
  * Request for routing analytics
  */
 export interface RoutingAnalyticsRequest {
-  /** Organization ID */
-  orgId: string;
-  
   /** Time period */
   startDate: Date;
   endDate: Date;
@@ -956,9 +935,6 @@ export interface RoutingAnalyticsResponse {
  * Request to update routing configuration
  */
 export interface UpdateRoutingConfigRequest {
-  /** Organization ID */
-  orgId: string;
-  
   /** Configuration updates */
   config: Partial<RoutingConfiguration>;
 }

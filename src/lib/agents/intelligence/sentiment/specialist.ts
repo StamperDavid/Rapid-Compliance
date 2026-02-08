@@ -85,21 +85,18 @@ interface AnalyzeSentimentPayload {
   action: 'analyze_sentiment';
   text: string;
   context?: string;
-  organizationId: string;
 }
 
 interface AnalyzeBulkPayload {
   action: 'analyze_bulk';
   texts: string[];
   context?: string;
-  organizationId: string;
 }
 
 interface TrackBrandPayload {
   action: 'track_brand';
   brandName: string;
   texts: string[];
-  organizationId: string;
 }
 
 interface DetectCrisisPayload {
@@ -107,14 +104,12 @@ interface DetectCrisisPayload {
   texts: string[];
   brandName?: string;
   threshold?: number;
-  organizationId: string;
 }
 
 interface AnalyzeTrendPayload {
   action: 'analyze_trend';
   texts: string[];
   timeWindow?: string;
-  organizationId: string;
 }
 
 type SentimentPayload =
@@ -340,7 +335,6 @@ export class SentimentAnalyst extends BaseSpecialist {
         action: 'analyze_sentiment',
         text,
         context,
-        organizationId: payload.organizationId,
       });
       results.push(result);
       totalScore += result.sentiment.score;

@@ -29,7 +29,7 @@ import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
 import { initiateCall } from '@/lib/voice/twilio-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { SalesSignal } from '@/lib/orchestration/types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -78,7 +78,6 @@ export interface SequenceStep {
 
 export interface Sequence {
   id: string;
-  organizationId: string;
   name: string;
   description?: string;
   steps: SequenceStep[];
@@ -100,8 +99,6 @@ export interface SequenceEnrollment {
   id: string;
   sequenceId: string;
   leadId: string;
-  organizationId: string;
-  
   // Status
   status: 'active' | 'paused' | 'completed' | 'stopped' | 'failed';
   currentStepIndex: number;
@@ -134,7 +131,6 @@ export interface SequenceEnrollment {
  * Create a new sequence
  */
 export async function createSequence(params: {
-  organizationId: string;
   name: string;
   description?: string;
   steps: SequenceStep[];
@@ -145,7 +141,7 @@ export async function createSequence(params: {
       throw new Error('Admin DAL not initialized');
     }
 
-    const { organizationId, name, description, steps, createdBy } = params;
+    const { name, description, steps, createdBy } = params;
 
     // Validate steps
     validateSequenceSteps(steps);
@@ -153,7 +149,6 @@ export async function createSequence(params: {
     const now = new Date();
     const sequence: Sequence = {
       id: adminDal.getCollection('SEQUENCES').doc().id,
-      organizationId,
       name,
       ...(description && { description }), // Only include if defined
       steps,
@@ -177,7 +172,6 @@ export async function createSequence(params: {
 
     logger.info('Sequence created', {
       sequenceId: sequence.id,
-      organizationId,
       stepsCount: steps.length,
     });
 
@@ -227,7 +221,7 @@ export async function getSequence(sequenceId: string): Promise<Sequence | null> 
  */
 export async function updateSequence(
   sequenceId: string,
-  updates: Partial<Omit<Sequence, 'id' | 'organizationId' | 'createdAt'>>
+  updates: Partial<Omit<Sequence, 'id' | 'createdAt'>>
 ): Promise<void> {
   try {
     if (!adminDal) {
@@ -251,7 +245,7 @@ export async function updateSequence(
 /**
  * List sequences for organization
  */
-export async function listSequences(_organizationId: string): Promise<Sequence[]> {
+export async function listSequences(): Promise<Sequence[]> {
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
@@ -289,11 +283,10 @@ export async function listSequences(_organizationId: string): Promise<Sequence[]
 export async function enrollInSequence(params: {
   sequenceId: string;
   leadId: string;
-  organizationId: string;
   metadata?: Record<string, unknown>;
 }): Promise<SequenceEnrollment> {
   try {
-    const { sequenceId, leadId, organizationId, metadata = {} } = params;
+    const { sequenceId, leadId, metadata = {} } = params;
 
     // Get sequence
     const sequence = await getSequence(sequenceId);
@@ -332,7 +325,6 @@ export async function enrollInSequence(params: {
       id: adminDal.getCollection('SEQUENCE_ENROLLMENTS').doc().id,
       sequenceId,
       leadId,
-      organizationId,
       status: 'active',
       currentStepIndex: 0,
       executedSteps: [],
@@ -364,7 +356,6 @@ export async function enrollInSequence(params: {
     await emitSequenceSignal({
       type: 'sequence.started',
       leadId,
-      organizationId,
       enrollment,
       sequence,
     });
@@ -482,7 +473,6 @@ export async function executeSequenceStep(enrollmentId: string): Promise<void> {
       await emitSequenceSignal({
         type: 'sequence.completed',
         leadId: enrollment.leadId,
-        organizationId: enrollment.organizationId,
         enrollment: { ...enrollment, status: 'completed' },
         sequence,
       });
@@ -642,7 +632,6 @@ export async function stopEnrollment(enrollmentId: string, reason?: string): Pro
       await emitSequenceSignal({
         type: 'sequence.paused',
         leadId: enrollment.leadId,
-        organizationId: enrollment.organizationId,
         enrollment,
         sequence: null,
         metadata: { reason: (reason !== '' && reason != null) ? reason : 'Manual stop' },
@@ -709,7 +698,6 @@ interface LeadData {
  * Get lead data from Firestore
  */
 async function getLeadData(leadId: string): Promise<LeadData | null> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
@@ -717,16 +705,15 @@ async function getLeadData(leadId: string): Promise<LeadData | null> {
 
     // Get all workspaces for this organization
     const workspacesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/workspaces',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/workspaces'
     );
     const workspacesSnapshot = await workspacesRef.get();
 
     for (const workspaceDoc of workspacesSnapshot.docs) {
       // Check leads collection
       const leadRef = adminDal.getNestedCollection(
-        'organizations/{orgId}/workspaces/{wsId}/entities/leads/records',
-        { orgId: DEFAULT_ORG_ID, wsId: workspaceDoc.id }
+        'organizations/rapid-compliance-root/workspaces/{wsId}/entities/leads/records',
+        { wsId: workspaceDoc.id }
       ).doc(leadId);
 
       const leadDoc = await leadRef.get();
@@ -736,8 +723,8 @@ async function getLeadData(leadId: string): Promise<LeadData | null> {
 
       // Also check contacts collection
       const contactRef = adminDal.getNestedCollection(
-        'organizations/{orgId}/workspaces/{wsId}/entities/contacts/records',
-        { orgId: DEFAULT_ORG_ID, wsId: workspaceDoc.id }
+        'organizations/rapid-compliance-root/workspaces/{wsId}/entities/contacts/records',
+        { wsId: workspaceDoc.id }
       ).doc(leadId);
 
       const contactDoc = await contactRef.get();
@@ -762,15 +749,13 @@ interface TemplateData {
  * Load template from Firestore
  */
 async function loadTemplate(templateId: string): Promise<TemplateData | null> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
     }
 
     const templatesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/templates',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/templates'
     );
 
     const templateDoc = await templatesRef.doc(templateId).get();
@@ -853,7 +838,6 @@ async function executeEmailAction(
     html: messageContent,
     text: messageContent.replace(/<[^>]*>/g, ''), // Strip HTML tags for text version
     metadata: {
-      organizationId: enrollment.organizationId,
       sequenceId: enrollment.sequenceId,
       enrollmentId: enrollment.id,
       leadId: enrollment.leadId,
@@ -943,7 +927,6 @@ async function executeSMSAction(
   const result = await sendSMS({
     to: leadData.phone,
     message: _messageContent,
-    organizationId: enrollment.organizationId,
     metadata: {
       sequenceId: enrollment.sequenceId,
       enrollmentId: enrollment.id,
@@ -1101,7 +1084,7 @@ async function completeEnrollment(enrollmentId: string): Promise<void> {
  * Process due sequence enrollments
  * Should be called by a cron job every hour
  */
-export async function processDueSequenceSteps(organizationId: string): Promise<number> {
+export async function processDueSequenceSteps(): Promise<number> {
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
@@ -1118,7 +1101,6 @@ export async function processDueSequenceSteps(organizationId: string): Promise<n
     );
 
     logger.info('Processing due sequence steps', {
-      organizationId,
       count: dueEnrollments.size,
     });
 
@@ -1134,7 +1116,6 @@ export async function processDueSequenceSteps(organizationId: string): Promise<n
     }
 
     logger.info('Processed due sequence steps', {
-      organizationId,
       processed,
       total: dueEnrollments.size,
     });
@@ -1156,19 +1137,17 @@ export async function processDueSequenceSteps(organizationId: string): Promise<n
 async function emitSequenceSignal(params: {
   type: 'sequence.started' | 'sequence.completed' | 'sequence.paused' | 'sequence.failed';
   leadId: string;
-  organizationId: string;
   enrollment: SequenceEnrollment;
   sequence: Sequence | null;
   metadata?: Record<string, unknown>;
 }): Promise<void> {
   try {
-    const { type, leadId, organizationId, enrollment, sequence, metadata = {} } = params;
+    const { type, leadId, enrollment, sequence, metadata = {} } = params;
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
       type,
       leadId,
-      orgId: organizationId,
       confidence: 1.0, // Sequence events are always certain
       priority: type === 'sequence.failed' ? 'High' : 'Medium',
       metadata: {
@@ -1198,11 +1177,10 @@ async function emitSequenceSignal(params: {
 
 /**
  * Initialize signal observers for the sequencer
- * 
+ *
  * This function sets up real-time listeners that automatically react to signals.
  * Should be called once when the application starts.
- * 
- * @param organizationId - Organization to observe signals for
+ *
  * @param autoEnrollConfig - Configuration for auto-enrollment
  */
 export async function initializeSequencerSignalObservers(
@@ -1220,10 +1198,7 @@ export async function initializeSequencerSignalObservers(
   const coordinator = getServerSignalCoordinator();
   const unsubscribers: Array<() => void> = [];
 
-  logger.info('Initializing sequencer signal observers', {
-    organizationId: DEFAULT_ORG_ID,
-    autoEnrollConfig: JSON.stringify(autoEnrollConfig),
-  });
+  logger.info('Initializing sequencer signal observers');
 
   // Observer 1: Auto-enroll qualified leads
   const qualifiedSequenceId = autoEnrollConfig.qualifiedLeadSequenceId;
@@ -1231,7 +1206,6 @@ export async function initializeSequencerSignalObservers(
     const observeResult = coordinator.observeSignals(
       {
         types: ['lead.qualified'],
-        orgId: DEFAULT_ORG_ID,
         minConfidence: 0.7,
         unprocessedOnly: true,
       },
@@ -1262,7 +1236,6 @@ export async function initializeSequencerSignalObservers(
             await enrollInSequence({
               sequenceId: qualifiedSequenceId,
               leadId: signal.leadId,
-              organizationId: DEFAULT_ORG_ID,
               metadata: {
                 source: 'signal-observer',
                 trigger: 'lead.qualified',
@@ -1275,7 +1248,7 @@ export async function initializeSequencerSignalObservers(
             // Mark signal as processed
             const signalId = signal.id;
             if (signalId) {
-              await coordinator.markSignalProcessed(DEFAULT_ORG_ID, signalId, {
+              await coordinator.markSignalProcessed(signalId, {
                 success: true,
                 action: 'enrolled_in_sequence',
                 module: 'sequencer',
@@ -1292,7 +1265,7 @@ export async function initializeSequencerSignalObservers(
 
           // Mark signal processing as failed
           if (signal.id) {
-            await coordinator.markSignalProcessed(DEFAULT_ORG_ID, signal.id, {
+            await coordinator.markSignalProcessed(signal.id, {
               success: false,
               action: 'enrollment_failed',
               module: 'sequencer',
@@ -1314,7 +1287,6 @@ export async function initializeSequencerSignalObservers(
     const observeResult = coordinator.observeSignals(
       {
         types: ['lead.intent.high'],
-        orgId: DEFAULT_ORG_ID,
         minConfidence: 0.8,
         unprocessedOnly: true,
       },
@@ -1345,7 +1317,6 @@ export async function initializeSequencerSignalObservers(
             await enrollInSequence({
               sequenceId: highIntentSequenceId,
               leadId: signal.leadId,
-              organizationId: DEFAULT_ORG_ID,
               metadata: {
                 source: 'signal-observer',
                 trigger: 'lead.intent.high',
@@ -1359,7 +1330,7 @@ export async function initializeSequencerSignalObservers(
             // Mark signal as processed
             const signalId = signal.id;
             if (signalId) {
-              await coordinator.markSignalProcessed(DEFAULT_ORG_ID, signalId, {
+              await coordinator.markSignalProcessed(signalId, {
                 success: true,
                 action: 'enrolled_in_sequence',
                 module: 'sequencer',
@@ -1376,7 +1347,7 @@ export async function initializeSequencerSignalObservers(
 
           // Mark signal processing as failed
           if (signal.id) {
-            await coordinator.markSignalProcessed(DEFAULT_ORG_ID, signal.id, {
+            await coordinator.markSignalProcessed(signal.id, {
               success: false,
               action: 'enrollment_failed',
               module: 'sequencer',
@@ -1393,13 +1364,12 @@ export async function initializeSequencerSignalObservers(
   }
 
   logger.info('Sequencer signal observers initialized', {
-    organizationId: DEFAULT_ORG_ID,
     observersCount: unsubscribers.length,
   });
 
   // Return cleanup function
   return () => {
-    logger.info('Cleaning up sequencer signal observers', { organizationId: DEFAULT_ORG_ID });
+    logger.info('Cleaning up sequencer signal observers');
     unsubscribers.forEach(unsubscribe => unsubscribe());
   };
 }

@@ -1,24 +1,24 @@
 /**
  * Scheduled Publisher
  * Processes scheduled pages and blog posts to publish them at the right time
- * CRITICAL: Organization-scoped - processes all orgs safely
- * 
+ * Single-tenant: processes only the platform organization
+ *
  * REFACTORED: Now uses adminDal for environment-aware collection access
  */
 
 import { admin } from '@/lib/firebase-admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface ScheduledItem {
   id: string;
-  organizationId: string;
   scheduledFor: string;
   title: string;
   type: 'page' | 'blog-post';
 }
 
 /**
- * Check and publish scheduled pages across all organizations
+ * Check and publish scheduled pages for the platform organization
  */
 export async function processScheduledPages(): Promise<{
   processed: number;
@@ -28,93 +28,79 @@ export async function processScheduledPages(): Promise<{
   let errors = 0;
 
   try {
-    // Starting scheduled pages check
     const now = new Date();
     const items: ScheduledItem[] = [];
 
-    // Get all organizations (DAL-refactored instance #1)
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
     }
-    const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
 
-    // For each organization, check for scheduled pages
-    for (const orgDoc of orgsSnapshot.docs) {
-      const organizationId = orgDoc.id;
+    try {
+      // Get scheduled pages (DAL-refactored instances #2-3)
+      const pagesSnapshot = await adminDal
+        .getCollection('ORGANIZATIONS')
+        .doc(PLATFORM_ID)
+        .collection(adminDal.getSubColPath('website'))
+        .doc('pages')
+        .collection(adminDal.getSubColPath('items'))
+        .where('status', '==', 'scheduled')
+        .get();
 
-      try {
-        // Get scheduled pages (DAL-refactored instances #2-3)
-        const pagesSnapshot = await adminDal
-          .getCollection('ORGANIZATIONS')
-          .doc(organizationId)
-          .collection(adminDal.getSubColPath('website'))
-          .doc('pages')
-          .collection(adminDal.getSubColPath('items'))
-          .where('status', '==', 'scheduled')
-          .get();
-
-        pagesSnapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.scheduledFor) {
-            const scheduledDate = new Date(data.scheduledFor as string | number | Date);
-            if (scheduledDate <= now) {
-              items.push({
-                id: doc.id,
-                organizationId,
-                scheduledFor: data.scheduledFor as string,
-                title: data.title !== '' && data.title != null ? (data.title as string) : 'Untitled',
-                type: 'page',
-              });
-            }
+      pagesSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.scheduledFor) {
+          const scheduledDate = new Date(data.scheduledFor as string | number | Date);
+          if (scheduledDate <= now) {
+            items.push({
+              id: doc.id,
+              scheduledFor: data.scheduledFor as string,
+              title: data.title !== '' && data.title != null ? (data.title as string) : 'Untitled',
+              type: 'page',
+            });
           }
-        });
+        }
+      });
 
-        // Get scheduled blog posts (DAL-refactored instances #4-5)
-        const postsSnapshot = await adminDal
-          .getCollection('ORGANIZATIONS')
-          .doc(organizationId)
-          .collection(adminDal.getSubColPath('website'))
-          .doc('config')
-          .collection(adminDal.getSubColPath('blog-posts'))
-          .where('status', '==', 'scheduled')
-          .get();
+      // Get scheduled blog posts (DAL-refactored instances #4-5)
+      const postsSnapshot = await adminDal
+        .getCollection('ORGANIZATIONS')
+        .doc(PLATFORM_ID)
+        .collection(adminDal.getSubColPath('website'))
+        .doc('config')
+        .collection(adminDal.getSubColPath('blog-posts'))
+        .where('status', '==', 'scheduled')
+        .get();
 
-        postsSnapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.scheduledFor) {
-            const scheduledDate = new Date(data.scheduledFor as string | number | Date);
-            if (scheduledDate <= now) {
-              items.push({
-                id: doc.id,
-                organizationId,
-                scheduledFor: data.scheduledFor as string,
-                title: data.title !== '' && data.title != null ? (data.title as string) : 'Untitled',
-                type: 'blog-post',
-              });
-            }
+      postsSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.scheduledFor) {
+          const scheduledDate = new Date(data.scheduledFor as string | number | Date);
+          if (scheduledDate <= now) {
+            items.push({
+              id: doc.id,
+              scheduledFor: data.scheduledFor as string,
+              title: data.title !== '' && data.title != null ? (data.title as string) : 'Untitled',
+              type: 'blog-post',
+            });
           }
-        });
-      } catch (orgError) {
-        console.error(`[Scheduled Publisher] Error processing org ${organizationId}:`, orgError);
-        errors++;
-      }
+        }
+      });
+    } catch (orgError) {
+      console.error(`[Scheduled Publisher] Error processing platform org:`, orgError);
+      errors++;
     }
-
-    // Found items ready to publish
 
     // Publish each item
     for (const item of items) {
       try {
         await publishScheduledItem(item);
         processed++;
-        // Published item
       } catch (publishError) {
         console.error(`[Scheduled Publisher] Error publishing ${item.type} ${item.id}:`, publishError);
         errors++;
       }
     }
 
-    // Processing complete
   } catch (error) {
     console.error('[Scheduled Publisher] Fatal error:', error);
     errors++;
@@ -130,13 +116,12 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
   const now = admin.firestore.Timestamp.now();
 
   if (item.type === 'page') {
-    // DAL-refactored instances #6-7
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
     }
     const pageRef = adminDal
       .getCollection('ORGANIZATIONS')
-      .doc(item.organizationId)
+      .doc(PLATFORM_ID)
       .collection(adminDal.getSubColPath('website'))
       .doc('pages')
       .collection(adminDal.getSubColPath('items'))
@@ -174,10 +159,10 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
       lastEditedBy: 'scheduled-publisher',
     });
 
-    // Create audit log (DAL-refactored - page audit)
+    // Create audit log
     const auditRef = adminDal
       .getCollection('ORGANIZATIONS')
-      .doc(item.organizationId)
+      .doc(PLATFORM_ID)
       .collection(adminDal.getSubColPath('website'))
       .doc('audit-log')
       .collection(adminDal.getSubColPath('entries'));
@@ -189,16 +174,14 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
       scheduledFor: item.scheduledFor,
       performedBy: 'scheduled-publisher',
       performedAt: now,
-      organizationId: item.organizationId,
     });
   } else if (item.type === 'blog-post') {
-    // DAL-refactored instance #10
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
     }
     const postRef = adminDal
       .getCollection('ORGANIZATIONS')
-      .doc(item.organizationId)
+      .doc(PLATFORM_ID)
       .collection(adminDal.getSubColPath('website'))
       .doc('config')
       .collection(adminDal.getSubColPath('blog-posts'))
@@ -213,10 +196,10 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
       lastEditedBy: 'scheduled-publisher',
     });
 
-    // Create audit log (DAL-refactored - blog post audit)
+    // Create audit log
     const auditRef = adminDal
       .getCollection('ORGANIZATIONS')
-      .doc(item.organizationId)
+      .doc(PLATFORM_ID)
       .collection(adminDal.getSubColPath('website'))
       .doc('audit-log')
       .collection(adminDal.getSubColPath('entries'));
@@ -228,7 +211,6 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
       scheduledFor: item.scheduledFor,
       performedBy: 'scheduled-publisher',
       performedAt: now.toDate().toISOString(),
-      organizationId: item.organizationId,
     });
   }
 }
@@ -240,4 +222,3 @@ export async function runScheduledPublisher() {
   const result = await processScheduledPages();
   return result;
 }
-

@@ -12,7 +12,6 @@ import { logger } from '@/lib/logger/logger';
 
 /** Request body interface for starting competitive monitoring */
 interface StartMonitorRequestBody {
-  organizationId: string;
   competitors: CompetitorMonitorConfig[];
 }
 
@@ -22,10 +21,7 @@ function isValidRequestBody(body: unknown): body is StartMonitorRequestBody {
     return false;
   }
   const b = body as Record<string, unknown>;
-  return (
-    typeof b.organizationId === 'string' &&
-    Array.isArray(b.competitors)
-  );
+  return Array.isArray(b.competitors);
 }
 
 export async function POST(request: NextRequest) {
@@ -34,15 +30,14 @@ export async function POST(request: NextRequest) {
 
     if (!isValidRequestBody(body)) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: organizationId, competitors (array)' },
+        { success: false, error: 'Missing required fields: competitors (array)' },
         { status: 400 }
       );
     }
 
-    const { organizationId, competitors } = body;
+    const { competitors } = body;
 
     logger.info('API: Start competitive monitoring', {
-      organizationId,
       competitorCount: competitors.length,
     });
 

@@ -28,7 +28,6 @@ interface Address {
 }
 
 interface RequestPayload {
-  orgId: string;
   workspaceId?: string;
   customerInfo: CustomerInfo;
   shippingAddress?: Address;
@@ -61,11 +60,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as RequestPayload;
-    const { orgId, workspaceId = 'default', customerInfo, shippingAddress, billingAddress, shippingMethodId } = body;
+    const { workspaceId = 'default', customerInfo, shippingAddress, billingAddress, shippingMethodId } = body;
 
-    if (!orgId) {
-      return errors.badRequest('Organization ID required');
-    }
+    // Penthouse model: use PLATFORM_ID
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
     if (!customerInfo?.email) {
       return errors.badRequest('Customer information required');
@@ -81,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     // Get cart
     const cart = await FirestoreService.get<Cart>(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/carts`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
       authResult.user.uid
     );
 
@@ -108,11 +106,10 @@ export async function POST(request: NextRequest) {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/${orgId}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/${orgId}/cart`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/cart`,
       customer_email: customerInfo.email,
       metadata: {
-        organizationId: orgId,
         workspaceId: workspaceId,
         userId: authResult.user.uid,
         cartId: authResult.user.uid, // Cart ID is the user ID

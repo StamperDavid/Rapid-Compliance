@@ -38,7 +38,7 @@ import { logger } from '@/lib/logger/logger';
 import type { Lead, RouteLeadResponse } from '@/lib/routing/types';
 import { createLeadRoutedSignal, createRoutingFailedSignal } from '@/lib/routing/events';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RATE LIMITING
@@ -106,7 +106,6 @@ const productionRouteLeadSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  let organizationId: string | undefined;
   let leadId: string | undefined;
   let workspaceId: string = 'default';
 
@@ -121,14 +120,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { user } = authResult;
-    organizationId = DEFAULT_ORG_ID;
 
     // Verify user has permission to assign records
     if (!hasUnifiedPermission(user.role as AccountRole, 'canAssignRecords')) {
       logger.warn('Lead routing permission denied', {
         userId: user.uid,
         role: user.role,
-        organizationId,
       });
       return NextResponse.json(
         {
@@ -149,11 +146,11 @@ export async function POST(request: NextRequest) {
     workspaceId = validatedRequest.workspaceId;
     const { forceRepId } = validatedRequest;
 
-    // Rate limiting (use leadId + orgId as identifier)
-    const rateLimitKey = `${organizationId}:${leadId}`;
+    // Rate limiting (use leadId as identifier)
+    const rateLimitKey = `${PLATFORM_ID}:${leadId}`;
     const rateLimit = checkRateLimit(rateLimitKey);
     if (rateLimit.limited) {
-      logger.warn('Lead routing rate limited', { leadId, organizationId });
+      logger.warn('Lead routing rate limited', { leadId, PLATFORM_ID: PLATFORM_ID });
       return NextResponse.json(
         {
           success: false,
@@ -181,7 +178,7 @@ export async function POST(request: NextRequest) {
     const crmLead = await getLead(leadId, workspaceId);
 
     if (!crmLead) {
-      logger.warn('Lead not found for routing', { leadId, organizationId, workspaceId });
+      logger.warn('Lead not found for routing', { leadId, PLATFORM_ID, workspaceId });
       return NextResponse.json(
         {
           success: false,
@@ -201,7 +198,6 @@ export async function POST(request: NextRequest) {
       logger.info('Re-routing already assigned lead', {
         leadId,
         previousOwnerId: crmLead.ownerId,
-        organizationId,
       });
     }
 
@@ -223,7 +219,6 @@ export async function POST(request: NextRequest) {
         leadId,
         assignedTo: forceRepId,
         assignedBy: user.uid,
-        organizationId,
       });
     } else {
       // Execute automatic routing using the CRM lead-routing engine
@@ -235,7 +230,6 @@ export async function POST(request: NextRequest) {
         assignedTo: routingResult.assignedTo,
         routingRule: routingResult.routingRuleName,
         routingType: routingResult.routingRuleId,
-        organizationId,
       });
     }
 
@@ -254,7 +248,6 @@ export async function POST(request: NextRequest) {
       leadId,
       previousOwnerId: previousOwnerId ?? 'none',
       newOwnerId: routingResult.assignedTo,
-      organizationId,
     });
 
     // =========================================================================
@@ -273,13 +266,12 @@ export async function POST(request: NextRequest) {
         userName: user.email ?? 'System',
       });
 
-      logger.debug('Routing audit log created', { leadId, organizationId });
+      logger.debug('Routing audit log created', { leadId, PLATFORM_ID });
     } catch (auditError) {
       // Don't fail routing if audit logging fails
       logger.warn('Failed to create routing audit log', {
         error: auditError instanceof Error ? auditError.message : String(auditError),
         leadId,
-        organizationId,
       });
     }
 
@@ -290,7 +282,6 @@ export async function POST(request: NextRequest) {
       // Convert CRM lead to routing engine Lead type for signal emission
       const routingLead: Lead = {
         id: crmLead.id,
-        orgId: organizationId,
         companyName: crmLead.company ?? crmLead.companyName ?? 'Unknown',
         contactName: `${crmLead.firstName} ${crmLead.lastName}`,
         contactEmail: crmLead.email,
@@ -306,7 +297,6 @@ export async function POST(request: NextRequest) {
         id: `assignment_${leadId}_${Date.now()}`,
         leadId,
         repId: routingResult.assignedTo,
-        orgId: organizationId,
         assignmentMethod: forceRepId ? 'manual' as const : 'automatic' as const,
         strategy: 'hybrid' as const,
         matchedRules: [routingResult.routingRuleId],
@@ -319,7 +309,6 @@ export async function POST(request: NextRequest) {
 
       const coordinator = getServerSignalCoordinator();
       const signal = createLeadRoutedSignal(
-        organizationId,
         routingLead,
         assignment,
         crmLead.score ?? 50,
@@ -345,7 +334,6 @@ export async function POST(request: NextRequest) {
         id: `assignment_${leadId}_${Date.now()}`,
         leadId,
         repId: routingResult.assignedTo,
-        orgId: organizationId,
         assignmentMethod: forceRepId ? 'manual' : 'automatic',
         strategy: 'hybrid',
         matchedRules: [routingResult.routingRuleId],
@@ -374,7 +362,6 @@ export async function POST(request: NextRequest) {
       leadId,
       assignedTo: routingResult.assignedTo,
       processingTimeMs,
-      organizationId,
     });
 
     return NextResponse.json(response, {
@@ -389,7 +376,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Lead routing error', error instanceof Error ? error : new Error(String(error)), {
       leadId,
-      organizationId,
     });
 
     // Handle validation errors
@@ -412,11 +398,10 @@ export async function POST(request: NextRequest) {
     // Handle routing engine errors
     if (error instanceof Error) {
       // Try to emit failure signal
-      if (organizationId && leadId) {
+      if (leadId) {
         try {
           const routingLead: Lead = {
             id: leadId,
-            orgId: organizationId,
             companyName: 'Unknown',
             contactName: 'Unknown',
             contactEmail: 'unknown@example.com',
@@ -430,7 +415,6 @@ export async function POST(request: NextRequest) {
 
           const coordinator = getServerSignalCoordinator();
           const signal = createRoutingFailedSignal(
-            organizationId,
             routingLead,
             error.message,
             0,

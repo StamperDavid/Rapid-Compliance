@@ -200,7 +200,6 @@ export function getAvailableNiches(): string[] {
  * Seed demo data for an organization
  */
 export function seedDemoData(
-  orgId: string,
   niche: string,
   options?: { includeAbandoned?: boolean }
 ): { leadsSeeded: number; videosSeeded: number } {

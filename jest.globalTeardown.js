@@ -23,7 +23,13 @@ module.exports = async () => {
     await cleanupTestData(false);
     
   } catch (error) {
-    console.error('\n❌ Cleanup failed:', error);
-    // Don't fail the tests if cleanup fails
+    console.error('\n❌ ========================================');
+    console.error('❌ CLEANUP FAILED — TEST DATA MAY PERSIST');
+    console.error('❌ ========================================');
+    console.error('❌ Error:', error);
+    console.error('❌ Run manually: node scripts/db-manager.js --cleanup');
+    console.error('❌ ========================================\n');
+    // Throw so CI/CD pipelines catch cleanup failures
+    throw new Error(`Test cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };

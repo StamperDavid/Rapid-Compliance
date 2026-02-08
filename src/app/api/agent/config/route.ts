@@ -3,7 +3,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Agent Configuration Types
@@ -37,7 +37,6 @@ interface _SaveConfigResponse {
 }
 
 interface SaveConfigRequestBody {
-  orgId: string;
   selectedModel?: string;
   modelConfig?: ModelConfig;
 }
@@ -82,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     // Get agent configuration
     const agentConfigRaw = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentConfig`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
       'default'
     );
 
@@ -98,7 +97,7 @@ export async function GET(request: NextRequest) {
     // Validate and type the configuration
     if (!isValidAgentConfig(agentConfigRaw)) {
       logger.warn('Invalid agent config structure, returning defaults', {
-        DEFAULT_ORG_ID,
+        PLATFORM_ID,
         route: '/api/agent/config',
       });
 
@@ -148,7 +147,7 @@ export async function POST(request: NextRequest) {
 
     // Save agent configuration (single model - ensemble removed for MVP)
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentConfig`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
       'default',
       configData,
       false

@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
     // 3. Execute workflow
     logger.info('Executing workflow', {
       workflowId: validData.workflowId,
-      organizationId: validData.organizationId,
       dealId: validData.dealId,
     });
 

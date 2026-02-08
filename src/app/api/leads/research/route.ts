@@ -9,11 +9,11 @@ import { enrichCompany } from '@/lib/enrichment/enrichment-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Zod schema for research request
 const leadResearchSchema = z.object({
   query: z.string().min(1),
-  organizationId: z.string().min(1),
 });
 
 interface ResearchLead {
@@ -37,12 +37,12 @@ export async function POST(request: NextRequest) {
     const validation = leadResearchSchema.safeParse(body);
 
     if (!validation.success) {
-      return errors.badRequest('Missing query or organizationId');
+      return errors.badRequest('Missing query');
     }
 
-    const { query, organizationId } = validation.data;
+    const { query } = validation.data;
 
-    logger.info('Lead research query received', { route: '/api/leads/research', query, organizationId });
+    logger.info('Lead research query received', { route: '/api/leads/research', query });
 
     // Parse the natural language query
     const parsedQuery = parseSearchQuery(query);
@@ -64,8 +64,7 @@ export async function POST(request: NextRequest) {
             includeNews: true,
             includeJobs: true,
             includeSocial: true,
-          },
-          organizationId
+          }
         );
         
         if (result.success && result.data) {

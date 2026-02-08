@@ -17,6 +17,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   generatePerformanceAnalytics,
   validatePerformanceAnalyticsRequest,
@@ -41,14 +42,14 @@ const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-function checkRateLimit(organizationId: string): {
+function checkRateLimit(): {
   allowed: boolean;
   remaining: number;
   resetAt: number;
 } {
   const now = Date.now();
-  const key = `performance-analytics:${organizationId}`;
-  
+  const key = `performance-analytics:${PLATFORM_ID}`;
+
   let record = rateLimitMap.get(key);
   
   // Clean up expired records
@@ -90,7 +91,7 @@ const cache = new Map<string, CacheEntry>();
 
 function getCacheKey(request: PerformanceAnalyticsRequest): string {
   const parts = [
-    request.organizationId,
+    PLATFORM_ID,
     request.workspaceId ?? 'default',
     request.periodType ?? 'month',
     request.startDate?.toString() ?? '',
@@ -154,11 +155,10 @@ export async function POST(request: NextRequest) {
     }
     
     // 2. Check rate limit
-    const rateLimit = checkRateLimit(validatedRequest.organizationId);
-    
+    const rateLimit = checkRateLimit();
+
     if (!rateLimit.allowed) {
       logger.warn('Performance analytics rate limit exceeded', {
-        organizationId: validatedRequest.organizationId,
         resetAt: new Date(rateLimit.resetAt).toISOString(),
       });
       
@@ -209,7 +209,6 @@ export async function POST(request: NextRequest) {
     
     // 4. Generate analytics
     logger.info('Generating performance analytics', {
-      organizationId: validatedRequest.organizationId,
       periodType: validatedRequest.periodType,
     });
     
@@ -221,7 +220,6 @@ export async function POST(request: NextRequest) {
     const processingTime = Date.now() - startTime;
     
     logger.info('Performance analytics generated', {
-      organizationId: validatedRequest.organizationId,
       repsAnalyzed: analytics.repsIncluded,
       conversationsAnalyzed: analytics.conversationsAnalyzed,
       processingTime,

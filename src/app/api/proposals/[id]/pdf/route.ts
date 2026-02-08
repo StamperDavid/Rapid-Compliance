@@ -6,7 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Look up proposal in Firestore
     const proposalDoc = await adminDb
       .collection('organizations')
-      .doc(DEFAULT_ORG_ID)
+      .doc(PLATFORM_ID)
       .collection('proposals')
       .doc(id)
       .get();
@@ -52,9 +52,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Redirect to the Firebase Storage URL
     return NextResponse.redirect(pdfUrl);
   } catch (error) {
-    logger.error('Proposal PDF download failed', error instanceof Error ? error : new Error(String(error)), {
-      organizationId: DEFAULT_ORG_ID,
-    });
+    logger.error('Proposal PDF download failed', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: 'Failed to retrieve proposal PDF' },
       { status: 500 }

@@ -7,7 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
 import { adminDal } from '@/lib/firebase/admin-dal';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { SchemaField } from '@/types/schema';
 
 interface SchemaData {
@@ -41,8 +41,8 @@ export async function GET(
 
     // Get schema
     const schemaRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/workspaces/{workspaceId}/schemas/{schemaId}',
-      { orgId: DEFAULT_ORG_ID, workspaceId, schemaId: params.schemaId }
+      'organizations/rapid-compliance-root/workspaces/{workspaceId}/schemas/{schemaId}',
+      { workspaceId, schemaId: params.schemaId }
     );
     const schemaDoc = await schemaRef.get();
     

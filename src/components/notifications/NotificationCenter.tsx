@@ -11,11 +11,10 @@ import type { Notification, NotificationCategory } from '@/lib/notifications/typ
 
 interface NotificationCenterProps {
   userId: string;
-  orgId: string;
   className?: string;
 }
 
-export function NotificationCenter({ userId, orgId, className = '' }: NotificationCenterProps) {
+export function NotificationCenter({ userId, className = '' }: NotificationCenterProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread'>('unread');
@@ -37,7 +36,6 @@ export function NotificationCenter({ userId, orgId, className = '' }: Notificati
       const response = await fetch(`/api/notifications/list?${params}`, {
         headers: {
           'x-user-id': userId,
-          'x-org-id': orgId,
         },
       });
 
@@ -51,7 +49,7 @@ export function NotificationCenter({ userId, orgId, className = '' }: Notificati
     } finally {
       setLoading(false);
     }
-  }, [userId, orgId, filter, _categoryFilter]);
+  }, [userId, filter, _categoryFilter]);
 
   useEffect(() => {
     void loadNotifications();
@@ -64,7 +62,6 @@ export function NotificationCenter({ userId, orgId, className = '' }: Notificati
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': userId,
-          'x-org-id': orgId,
         },
         body: JSON.stringify({ notificationIds }),
       });

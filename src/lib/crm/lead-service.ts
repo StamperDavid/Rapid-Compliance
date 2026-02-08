@@ -7,7 +7,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface EnrichmentData {
   linkedInUrl?: string;
@@ -20,7 +20,6 @@ export interface EnrichmentData {
 
 export interface Lead {
   id: string;
-  organizationId: string;
   workspaceId: string;
   firstName: string;
   lastName: string;
@@ -89,14 +88,13 @@ export async function getLeads(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Lead>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
     );
 
     logger.info('Leads retrieved', {
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       count: result.data.length,
       hasMore: result.hasMore,
@@ -106,7 +104,7 @@ export async function getLeads(
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get leads', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, workspaceId, filters: filters ? JSON.stringify(filters) : undefined });
+    logger.error('Failed to get leads', error instanceof Error ? error : undefined, { workspaceId, filters: filters ? JSON.stringify(filters) : undefined });
     throw new Error(`Failed to retrieve leads: ${errorMessage}`);
   }
 }
@@ -120,20 +118,20 @@ export async function getLead(
 ): Promise<Lead | null> {
   try {
     const lead = await FirestoreService.get<Lead>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
       leadId
     );
 
     if (!lead) {
-      logger.warn('Lead not found', { organizationId: DEFAULT_ORG_ID, leadId, workspaceId });
+      logger.warn('Lead not found', { leadId, workspaceId });
       return null;
     }
 
-    logger.info('Lead retrieved', { organizationId: DEFAULT_ORG_ID, leadId });
+    logger.info('Lead retrieved', { leadId });
     return lead;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get lead', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, leadId });
+    logger.error('Failed to get lead', error instanceof Error ? error : undefined, { leadId });
     throw new Error(`Failed to retrieve lead: ${errorMessage}`);
   }
 }
@@ -142,7 +140,7 @@ export async function getLead(
  * Create a new lead with auto-enrichment
  */
 export async function createLead(
-  data: Omit<Lead, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>,
+  data: Omit<Lead, 'id' | 'workspaceId' | 'createdAt'>,
   workspaceId: string = 'default',
   options: { autoEnrich?: boolean; skipDuplicateCheck?: boolean } = {}
 ): Promise<Lead> {
@@ -159,7 +157,7 @@ export async function createLead(
         const { enrichCompany } = await import('@/lib/enrichment/enrichment-service');
         const enrichmentResponse = await enrichCompany({
           companyName: data.company,
-        }, DEFAULT_ORG_ID);
+        });
 
         if (enrichmentResponse.success && enrichmentResponse.data) {
           enrichmentData = enrichmentResponse.data as unknown as EnrichmentData;
@@ -185,7 +183,6 @@ export async function createLead(
     const lead: Lead = {
       ...data,
       id: leadId,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       status: data.status ?? 'new',
       score: enrichedScore,
@@ -195,7 +192,7 @@ export async function createLead(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
       leadId,
       lead,
       false
@@ -227,7 +224,6 @@ export async function createLead(
     }
 
     logger.info('Lead created', {
-      organizationId: DEFAULT_ORG_ID,
       leadId,
       email: lead.email,
       source: lead.source,
@@ -237,7 +233,7 @@ export async function createLead(
     return lead;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to create lead', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, dataKeys: Object.keys(data).join(',') });
+    logger.error('Failed to create lead', error instanceof Error ? error : undefined, { dataKeys: Object.keys(data).join(',') });
     throw new Error(`Failed to create lead: ${errorMessage}`);
   }
 }
@@ -247,7 +243,7 @@ export async function createLead(
  */
 export async function updateLead(
   leadId: string,
-  updates: Partial<Omit<Lead, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>>,
+  updates: Partial<Omit<Lead, 'id' | 'workspaceId' | 'createdAt'>>,
   workspaceId: string = 'default'
 ): Promise<Lead> {
   try {
@@ -263,13 +259,12 @@ export async function updateLead(
     };
 
     await FirestoreService.update(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
       leadId,
       updatedData
     );
 
     logger.info('Lead updated', {
-      organizationId: DEFAULT_ORG_ID,
       leadId,
       updatedFields: Object.keys(updates),
     });
@@ -310,7 +305,7 @@ export async function updateLead(
     return lead;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to update lead', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, leadId, updatedFields: Object.keys(updates).join(',') });
+    logger.error('Failed to update lead', error instanceof Error ? error : undefined, { leadId, updatedFields: Object.keys(updates).join(',') });
     throw new Error(`Failed to update lead: ${errorMessage}`);
   }
 }
@@ -324,14 +319,14 @@ export async function deleteLead(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
       leadId
     );
 
-    logger.info('Lead deleted', { organizationId: DEFAULT_ORG_ID, leadId });
+    logger.info('Lead deleted', { leadId });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to delete lead', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, leadId });
+    logger.error('Failed to delete lead', error instanceof Error ? error : undefined, { leadId });
     throw new Error(`Failed to delete lead: ${errorMessage}`);
   }
 }
@@ -358,7 +353,7 @@ export async function enrichLead(
     if (lead.company) {
       const enrichmentResponse = await enrichCompany({
         companyName: lead.company,
-      }, DEFAULT_ORG_ID);
+      });
 
       if (enrichmentResponse.success && enrichmentResponse.data) {
         enrichmentData = enrichmentResponse.data as unknown as EnrichmentData;
@@ -373,7 +368,6 @@ export async function enrichLead(
     }, workspaceId);
 
     logger.info('Lead enriched', {
-      organizationId: DEFAULT_ORG_ID,
       leadId,
       dataPoints: Object.keys(enrichmentData ?? {}).length,
     });
@@ -381,7 +375,7 @@ export async function enrichLead(
     return updatedLead;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to enrich lead', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, leadId });
+    logger.error('Failed to enrich lead', error instanceof Error ? error : undefined, { leadId });
     throw new Error(`Failed to enrich lead: ${errorMessage}`);
   }
 }
@@ -440,7 +434,6 @@ export async function bulkUpdateLeads(
     }
 
     logger.info('Bulk lead update completed', {
-      organizationId: DEFAULT_ORG_ID,
       total: leadIds.length,
       successful: successCount,
       failed: leadIds.length - successCount,
@@ -449,7 +442,7 @@ export async function bulkUpdateLeads(
     return successCount;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Bulk lead update failed', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, leadCount: leadIds.length });
+    logger.error('Bulk lead update failed', error instanceof Error ? error : undefined, { leadCount: leadIds.length });
     throw new Error(`Bulk update failed: ${errorMessage}`);
   }
 }
@@ -476,7 +469,6 @@ export async function searchLeads(
     );
 
     logger.info('Leads searched', {
-      organizationId: DEFAULT_ORG_ID,
       searchTerm,
       resultsCount: filtered.length,
     });
@@ -488,7 +480,7 @@ export async function searchLeads(
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Lead search failed', error instanceof Error ? error : undefined, { organizationId: DEFAULT_ORG_ID, searchTerm });
+    logger.error('Lead search failed', error instanceof Error ? error : undefined, { searchTerm });
     throw new Error(`Search failed: ${errorMessage}`);
   }
 }

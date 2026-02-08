@@ -14,13 +14,29 @@ import type {
 } from '@/lib/workflow/types';
 import { Timestamp } from 'firebase/firestore';
 
+// Mock dynamic imports used by executeAction
+jest.mock('@/lib/email-writer/email-writer-engine', () => ({
+  generateSalesEmail: jest.fn<() => Promise<Record<string, unknown>>>().mockResolvedValue({
+    success: true,
+    id: 'email_mock_001',
+    subject: 'Follow-up: Test',
+    body: 'Mock email body',
+    recipientEmail: 'test@example.com',
+    email: {
+      id: 'email_mock_001',
+      subject: 'Follow-up: Test',
+      body: 'Mock email body',
+    },
+  }),
+}));
+jest.mock('@/lib/logger/logger');
+
 // ============================================================================
 // TEST DATA
 // ============================================================================
 
 const mockWorkflow: Workflow = {
   id: 'workflow_test_001',
-  organizationId: 'org_test',
   workspaceId: 'default',
   name: 'Test Workflow',
   description: 'Test workflow for unit tests',
@@ -74,7 +90,6 @@ const mockWorkflow: Workflow = {
 };
 
 const mockContext: WorkflowExecutionContext = {
-  organizationId: 'org_test',
   workspaceId: 'default',
   dealId: 'deal_test_001',
   dealScore: {
@@ -233,8 +248,8 @@ describe('WorkflowEngine - Trigger Evaluation', () => {
 
 describe('WorkflowEngine - Field Value Extraction', () => {
   it('should extract top-level field', () => {
-    const value = WorkflowEngine.getFieldValue('organizationId', mockContext);
-    expect(value).toBe('org_test');
+    const value = WorkflowEngine.getFieldValue('workspaceId', mockContext);
+    expect(value).toBe('default');
   });
   
   it('should extract nested field', () => {

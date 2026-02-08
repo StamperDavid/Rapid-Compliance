@@ -42,7 +42,6 @@ interface _Schema {
  * Search across all entities in a workspace
  */
 export async function searchWorkspace(
-  orgId: string,
   workspaceId: string,
   query: string,
   options: SearchOptions = {}
@@ -55,6 +54,7 @@ export async function searchWorkspace(
   const results: SearchResult[] = [];
 
   try {
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     // Search records (all entity types)
     // In production, this would use Algolia/Typesense
     // For now, we'll do a basic Firestore query
@@ -71,7 +71,7 @@ export async function searchWorkspace(
     // Search each entity type
     for (const schema of schemas) {
       const records = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${schema.id}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${schema.id}`,
         []
       );
 
@@ -119,7 +119,6 @@ export async function searchWorkspace(
  * In production, this would add to Algolia/Typesense index
  */
 export function indexRecord(
-  orgId: string,
   workspaceId: string,
   entityName: string,
   recordId: string,
@@ -127,20 +126,19 @@ export function indexRecord(
 ): void {
   // In production, add to search index
   // For now, records are automatically searchable via Firestore queries
-  logger.info('Indexing record', { orgId, workspaceId, entityName, recordId, file: 'search-service.ts' });
+  logger.info('Indexing record', { workspaceId, entityName, recordId, file: 'search-service.ts' });
 }
 
 /**
  * Remove a record from search index
  */
 export function unindexRecord(
-  orgId: string,
   workspaceId: string,
   entityName: string,
   recordId: string
 ): void {
   // In production, remove from search index
-  logger.info('Unindexing record', { orgId, workspaceId, entityName, recordId, file: 'search-service.ts' });
+  logger.info('Unindexing record', { workspaceId, entityName, recordId, file: 'search-service.ts' });
 }
 
 /**

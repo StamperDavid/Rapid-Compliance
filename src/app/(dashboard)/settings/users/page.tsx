@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Team Members Management Page
@@ -65,7 +65,6 @@ export default function TeamMembersPage() {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
     const constraints: QueryConstraint[] = [
-      where('organizationId', '==', DEFAULT_ORG_ID),
       firestoreOrderBy('createdAt', 'desc')
     ];
 

@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { createVideoJobService } from '@/lib/video/video-job-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // =============================================================================
 // REQUEST VALIDATION SCHEMAS
@@ -72,7 +72,6 @@ export async function POST(request: NextRequest) {
     } = validation.data;
 
     logger.info('[AdminVideoRender] Starting video render job', {
-      organizationId: DEFAULT_ORG_ID,
       storyboardId,
       provider,
       adminId: authResult.user.uid,
@@ -99,7 +98,6 @@ export async function POST(request: NextRequest) {
 
     logger.info('[AdminVideoRender] Video job created successfully', {
       jobId: job.id,
-      organizationId: DEFAULT_ORG_ID,
       storyboardId,
       file: 'admin/video/render/route.ts',
     });
@@ -181,12 +179,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     return NextResponse.json({
       success: true,
       job: {
         id: job.id,
-        organizationId: DEFAULT_ORG_ID,
         storyboardId: job.storyboardId,
         status: job.status,
         progress: job.progress,

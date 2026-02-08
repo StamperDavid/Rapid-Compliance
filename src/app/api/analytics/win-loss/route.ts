@@ -5,7 +5,7 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Helper to convert Firestore timestamps, Date objects, strings, or numbers to Date
@@ -73,13 +73,12 @@ export async function GET(request: NextRequest) {
     // Use caching for analytics queries (TTL: 10 minutes)
     const analytics = await withCache(
       'win-loss',
-      async () => calculateWinLossAnalytics(DEFAULT_ORG_ID, period),
+      async () => calculateWinLossAnalytics(period),
       { period }
     );
 
     logger.info('Win/loss analytics retrieved', {
       route: '/api/analytics/win-loss',
-      orgId: DEFAULT_ORG_ID,
       period,
       won: analytics.won,
       lost: analytics.lost,
@@ -96,7 +95,7 @@ export async function GET(request: NextRequest) {
 /**
  * Calculate win/loss analytics (extracted for caching)
  */
-async function calculateWinLossAnalytics(orgId: string, period: string) {
+async function calculateWinLossAnalytics(period: string) {
   // Calculate date range based on period
   const now = new Date();
   let startDate: Date;
@@ -119,13 +118,13 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
   }
 
   // Get deals from Firestore
-  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
+  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
   let allDeals: DealRecord[] = [];
   
   try {
     allDeals = await FirestoreService.getAll(dealsPath, []);
   } catch (_e) {
-    logger.debug('No deals collection yet', { orgId });
+    logger.debug('No deals collection yet');
   }
 
     // Filter closed deals in period

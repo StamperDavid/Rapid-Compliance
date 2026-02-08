@@ -9,7 +9,6 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 const checkoutSchema = z.object({
   cartId: z.string(),
-  organizationId: z.string(),
   workspaceId: z.string(),
   customer: z.object({
     email: z.string().email(),
@@ -103,9 +102,9 @@ export async function POST(request: NextRequest) {
     const checkoutData: CheckoutData = validation.data;
 
     // Verify required fields
-    if (!checkoutData.cartId || !checkoutData.organizationId || !checkoutData.workspaceId) {
+    if (!checkoutData.cartId || !checkoutData.workspaceId) {
       return NextResponse.json(
-        { success: false, error: 'cartId, organizationId, and workspaceId are required' },
+        { success: false, error: 'cartId and workspaceId are required' },
         { status: 400 }
       );
     }

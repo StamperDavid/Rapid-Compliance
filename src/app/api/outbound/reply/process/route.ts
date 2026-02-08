@@ -19,7 +19,6 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 interface ReplyProcessRequestBody {
-  orgId?: string;
   emailReply?: EmailReply;
   prospectContext?: ProspectContext;
   autoSend?: boolean;
@@ -44,11 +43,7 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Invalid request body');
     }
 
-    const { orgId, emailReply, prospectContext, autoSend = false } = body;
-
-    if (!orgId) {
-      return errors.badRequest('Organization ID is required');
-    }
+    const { emailReply, prospectContext, autoSend = false } = body;
 
     if (!emailReply) {
       return errors.badRequest('Email reply data is required');
@@ -57,8 +52,7 @@ export async function POST(request: NextRequest) {
     // Extract reply details with explicit types after validation
     const validatedReply: EmailReply = emailReply;
 
-    // NEW PRICING MODEL: All features available to all active subscriptions
-    // Reply handling is now available to all users
+    // Penthouse model: All features available
 
     // Classify the reply
     logger.info('Processing reply', { route: '/api/outbound/reply/process', from: validatedReply.from });
@@ -81,9 +75,9 @@ export async function POST(request: NextRequest) {
     let sent = false;
     if (canAutoSend && suggestedResponse) {
       try {
+        const { PLATFORM_ID } = await import('@/lib/constants/platform');
         const replyMessageId: string = String(validatedReply.inReplyTo ?? validatedReply.threadId ?? '');
         const emailMetadata: Record<string, string> = {
-          organizationId: orgId,
           type: 'reply_handler',
           inReplyTo: replyMessageId,
           references: replyMessageId,

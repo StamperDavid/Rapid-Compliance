@@ -22,7 +22,6 @@ import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../
 // ============================================================================
 
 interface BusinessContext {
-  organizationId: string;
   brandName: string;
   industry: string;
   productName: string;

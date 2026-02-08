@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Zod schema for Teams OAuth callback
 const teamsCallbackSchema = z.object({
@@ -58,11 +59,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const organizationId = validation.data.state;
     const validatedCode = validation.data.code;
 
     // Get Microsoft 365 (Teams) config
-    const microsoft365Keys = await apiKeyService.getServiceKey(organizationId, 'microsoft365') as Microsoft365Keys | null;
+    const microsoft365Keys = await apiKeyService.getServiceKey(PLATFORM_ID, 'microsoft365') as Microsoft365Keys | null;
     if (!microsoft365Keys) {
       throw new Error('Microsoft 365 (Teams) not configured');
     }
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
 
     // Store tokens
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
       'teams',
       {
         id: 'teams',
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
       false
     );
 
-    logger.info('Teams connected successfully', { organizationId });
+    logger.info('Teams connected successfully');
 
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?success=teams_connected`

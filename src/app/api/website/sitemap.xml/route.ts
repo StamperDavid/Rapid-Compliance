@@ -10,11 +10,11 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Page } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface WebsiteData {
   customDomain?: string;
   customDomainVerified?: boolean;
-  organizationId?: string;
   subdomain?: string;
 }
 
@@ -26,9 +26,8 @@ export async function GET(request: NextRequest) {
 
     // Extract domain or subdomain from request
     const host = request.headers.get('host') ?? '';
-    
-    // Find organization by custom domain or subdomain
-    let organizationId: string | null = null;
+
+    // Find base URL from custom domain or subdomain
     let baseUrl = '';
 
     // Check if custom domain (query across all orgs' website settings)
@@ -36,14 +35,13 @@ export async function GET(request: NextRequest) {
     for (const doc of domainsSnapshot.docs) {
       const data = doc.data() as WebsiteData;
       if (data.customDomain === host && data.customDomainVerified) {
-        organizationId = data.organizationId ?? null;
         baseUrl = `https://${host}`;
         break;
       }
     }
 
     // If not custom domain, check subdomain
-    if (!organizationId) {
+    if (!baseUrl) {
       const subdomain = host.split('.')[0];
       const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
       const { adminDb } = await import('@/lib/firebase/admin');
@@ -64,33 +62,28 @@ export async function GET(request: NextRequest) {
 
         const settingsData = settingsDoc.data() as WebsiteData | undefined;
         if (settingsData?.subdomain === subdomain) {
-          organizationId = orgDoc.id;
           baseUrl = `https://${host}`;
           break;
         }
       }
     }
 
-    if (!organizationId) {
+    if (!baseUrl) {
       return new NextResponse('Site not found', { status: 404 });
     }
 
     // Get all published pages for this org
     const pagesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/config/pages',
-      { orgId: organizationId }
+      'organizations/rapid-compliance-root/website/config/pages'
     );
     const pagesSnapshot = await pagesRef.where('status', '==', 'published').get();
 
     const pages: Page[] = [];
     pagesSnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.organizationId === organizationId) {
-        pages.push({
-          id: doc.id,
-          ...data,
-        } as Page);
-      }
+      pages.push({
+        id: doc.id,
+        ...doc.data(),
+      } as Page);
     });
 
     // Generate sitemap XML

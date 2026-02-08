@@ -19,7 +19,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import type { SignalEmissionResult } from '@/lib/orchestration/types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   type WorkforceTemplate,
   type WorkforcePlatform,
@@ -45,8 +45,6 @@ export interface WorkforceDeploymentOptions {
   /**
    * Organization ID to deploy to
    */
-  orgId: string;
-
   /**
    * Template ID to deploy
    */
@@ -88,7 +86,6 @@ export interface AgentActivationResult {
  * Workforce state change event
  */
 export interface WorkforceStateChangeEvent {
-  orgId: string;
   platform: WorkforcePlatform;
   previousState: AgentDeploymentState;
   newState: AgentDeploymentState;
@@ -100,7 +97,6 @@ export interface WorkforceStateChangeEvent {
  * Platform connection event
  */
 export interface PlatformConnectionEvent {
-  orgId: string;
   platform: WorkforcePlatform;
   connected: boolean;
   accountId?: string;
@@ -123,7 +119,6 @@ export class WorkforceOrchestrator {
   constructor(
     private signalEmitter?: (signal: {
       type: string;
-      orgId: string;
       confidence: number;
       priority: 'High' | 'Medium' | 'Low';
       metadata: Record<string, unknown>;
@@ -140,7 +135,7 @@ export class WorkforceOrchestrator {
    * Deploy a workforce template to an organization
    */
   async deployWorkforce(options: WorkforceDeploymentOptions): Promise<OrganizationWorkforce> {
-    const { orgId, templateId, agentStateOverrides, platformConnections, templateOverrides, autoActivateOnConnect: _autoActivateOnConnect = true } = options;
+    const { templateId, agentStateOverrides, platformConnections, templateOverrides, autoActivateOnConnect: _autoActivateOnConnect = true } = options;
 
     // Get the template
     const template = getWorkforceTemplate(templateId);
@@ -148,7 +143,7 @@ export class WorkforceOrchestrator {
       throw new Error(`Workforce template not found: ${templateId}`);
     }
 
-    logger.info('Deploying workforce template', { orgId, templateId });
+    logger.info('Deploying workforce template', { templateId });
 
     // Initialize agent states from template defaults with overrides
     const agentStates: Record<WorkforcePlatform, OrganizationAgentState> = {} as Record<WorkforcePlatform, OrganizationAgentState>;
@@ -179,7 +174,6 @@ export class WorkforceOrchestrator {
 
     // Create the organization workforce
     const workforce: OrganizationWorkforce = {
-      orgId,
       templateId,
       agentStates,
       platformConnections: connections,
@@ -189,17 +183,16 @@ export class WorkforceOrchestrator {
     };
 
     // Cache the workforce
-    this.workforceCache.set(orgId, workforce);
+    this.workforceCache.set(PLATFORM_ID, workforce);
 
     // Emit deployment signal
-    await this.emitWorkforceSignal('workforce.deployed', orgId, {
+    await this.emitWorkforceSignal('workforce.deployed', {
       templateId,
       activeAgents: Object.values(agentStates).filter(s => s.state === 'active').length,
       hibernatedAgents: Object.values(agentStates).filter(s => s.state === 'hibernated').length,
     });
 
     logger.info('Workforce deployed successfully', {
-      orgId,
       templateId,
       activeAgents: Object.values(agentStates).filter(s => s.state === 'active').length,
     });
@@ -210,8 +203,8 @@ export class WorkforceOrchestrator {
   /**
    * Get workforce for an organization
    */
-  getWorkforce(_orgId: string): OrganizationWorkforce | null {
-    return this.workforceCache.get(DEFAULT_ORG_ID) ?? null;
+  getWorkforce(): OrganizationWorkforce | null {
+    return this.workforceCache.get(PLATFORM_ID) ?? null;
   }
 
   // ==========================================================================
@@ -225,11 +218,10 @@ export class WorkforceOrchestrator {
    * The agent's Industry Template remains intact and is instantly available.
    */
   async activateAgent(
-    orgId: string,
     platform: WorkforcePlatform,
     reason: string = 'Manual activation'
   ): Promise<AgentActivationResult> {
-    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
+    const workforce = this.workforceCache.get(PLATFORM_ID);
     if (!workforce) {
       return {
         success: false,
@@ -273,7 +265,6 @@ export class WorkforceOrchestrator {
 
     // Emit state change event
     const event: WorkforceStateChangeEvent = {
-      orgId,
       platform,
       previousState,
       newState: 'active',
@@ -283,13 +274,13 @@ export class WorkforceOrchestrator {
     this.notifyStateChangeListeners(event);
 
     // Emit signal
-    await this.emitWorkforceSignal('agent.activated', orgId, {
+    await this.emitWorkforceSignal('agent.activated', {
       platform,
       previousState,
       reason,
     });
 
-    logger.info('Agent activated', { orgId, platform, previousState, reason });
+    logger.info('Agent activated', { platform, previousState, reason });
 
     return {
       success: true,
@@ -309,11 +300,10 @@ export class WorkforceOrchestrator {
    * - Usage limits exceeded
    */
   async hibernateAgent(
-    orgId: string,
     platform: WorkforcePlatform,
     reason: string = 'Manual hibernation'
   ): Promise<AgentActivationResult> {
-    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
+    const workforce = this.workforceCache.get(PLATFORM_ID);
     if (!workforce) {
       return {
         success: false,
@@ -345,7 +335,6 @@ export class WorkforceOrchestrator {
 
     // Emit state change event
     const event: WorkforceStateChangeEvent = {
-      orgId,
       platform,
       previousState,
       newState: 'hibernated',
@@ -355,13 +344,13 @@ export class WorkforceOrchestrator {
     this.notifyStateChangeListeners(event);
 
     // Emit signal
-    await this.emitWorkforceSignal('agent.hibernated', orgId, {
+    await this.emitWorkforceSignal('agent.hibernated', {
       platform,
       previousState,
       reason,
     });
 
-    logger.info('Agent hibernated', { orgId, platform, previousState, reason });
+    logger.info('Agent hibernated', { platform, previousState, reason });
 
     return {
       success: true,
@@ -378,11 +367,10 @@ export class WorkforceOrchestrator {
    * Used for compliance or administrative reasons.
    */
   async disableAgent(
-    orgId: string,
     platform: WorkforcePlatform,
     reason: string = 'Administrative action'
   ): Promise<AgentActivationResult> {
-    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
+    const workforce = this.workforceCache.get(PLATFORM_ID);
     if (!workforce) {
       return {
         success: false,
@@ -413,13 +401,13 @@ export class WorkforceOrchestrator {
     workforce.lastActivityAt = new Date();
 
     // Emit signal
-    await this.emitWorkforceSignal('agent.disabled', orgId, {
+    await this.emitWorkforceSignal('agent.disabled', {
       platform,
       previousState,
       reason,
     });
 
-    logger.warn('Agent disabled', { orgId, platform, previousState, reason });
+    logger.warn('Agent disabled', { platform, previousState, reason });
 
     return {
       success: true,
@@ -442,16 +430,15 @@ export class WorkforceOrchestrator {
    * 3. Emits connection signal
    */
   async handlePlatformConnected(
-    orgId: string,
     platform: WorkforcePlatform,
     connectionInfo: {
       accountId: string;
       accountName: string;
     }
   ): Promise<void> {
-    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
+    const workforce = this.workforceCache.get(PLATFORM_ID);
     if (!workforce) {
-      logger.warn('Platform connected but workforce not found', { orgId, platform });
+      logger.warn('Platform connected but workforce not found', { platform });
       return;
     }
 
@@ -467,7 +454,6 @@ export class WorkforceOrchestrator {
 
     // Notify connection listeners
     const event: PlatformConnectionEvent = {
-      orgId,
       platform,
       connected: true,
       accountId: connectionInfo.accountId,
@@ -480,20 +466,19 @@ export class WorkforceOrchestrator {
     const agentState = workforce.agentStates[platform];
     if (agentState?.state === 'hibernated') {
       await this.activateAgent(
-        orgId,
         platform,
         `Platform connected: ${connectionInfo.accountName}`
       );
     }
 
     // Emit signal
-    await this.emitWorkforceSignal('platform.connected', orgId, {
+    await this.emitWorkforceSignal('platform.connected', {
       platform,
       accountId: connectionInfo.accountId,
       accountName: connectionInfo.accountName,
     });
 
-    logger.info('Platform connected', { orgId, platform, accountName: connectionInfo.accountName });
+    logger.info('Platform connected', { platform, accountName: connectionInfo.accountName });
   }
 
   /**
@@ -505,13 +490,12 @@ export class WorkforceOrchestrator {
    * 3. Emits disconnection signal
    */
   async handlePlatformDisconnected(
-    orgId: string,
     platform: WorkforcePlatform,
     reason: string = 'User disconnected'
   ): Promise<void> {
-    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
+    const workforce = this.workforceCache.get(PLATFORM_ID);
     if (!workforce) {
-      logger.warn('Platform disconnected but workforce not found', { orgId, platform });
+      logger.warn('Platform disconnected but workforce not found', { platform });
       return;
     }
 
@@ -524,7 +508,6 @@ export class WorkforceOrchestrator {
 
     // Notify connection listeners
     const event: PlatformConnectionEvent = {
-      orgId,
       platform,
       connected: false,
       timestamp: new Date(),
@@ -534,16 +517,16 @@ export class WorkforceOrchestrator {
     // Hibernate the agent (but preserve template for re-activation)
     const agentState = workforce.agentStates[platform];
     if (agentState?.state === 'active') {
-      await this.hibernateAgent(orgId, platform, `Platform disconnected: ${reason}`);
+      await this.hibernateAgent(platform, `Platform disconnected: ${reason}`);
     }
 
     // Emit signal
-    await this.emitWorkforceSignal('platform.disconnected', orgId, {
+    await this.emitWorkforceSignal('platform.disconnected', {
       platform,
       reason,
     });
 
-    logger.info('Platform disconnected', { orgId, platform, reason });
+    logger.info('Platform disconnected', { platform, reason });
   }
 
   // ==========================================================================
@@ -556,8 +539,8 @@ export class WorkforceOrchestrator {
    * This retrieves the "Environment Manual" (System Prompt + Tool Config)
    * for a specialized agent, with any organization-specific overrides applied.
    */
-  getAgentManual(orgId: string, platform: WorkforcePlatform): AgentManual | null {
-    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
+  getAgentManual(platform: WorkforcePlatform): AgentManual | null {
+    const workforce = this.workforceCache.get(PLATFORM_ID);
     if (!workforce) {
       return null;
     }
@@ -589,9 +572,9 @@ export class WorkforceOrchestrator {
   /**
    * Get all active agent manuals for an organization
    */
-  getActiveAgentManuals(orgId: string): Map<WorkforcePlatform, AgentManual> {
+  getActiveAgentManuals(): Map<WorkforcePlatform, AgentManual> {
     const result = new Map<WorkforcePlatform, AgentManual>();
-    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
+    const workforce = this.workforceCache.get(PLATFORM_ID);
 
     if (!workforce) {
       return result;
@@ -599,7 +582,7 @@ export class WorkforceOrchestrator {
 
     for (const platform of Object.keys(workforce.agentStates) as WorkforcePlatform[]) {
       if (isPlatformActive(workforce, platform)) {
-        const manual = this.getAgentManual(orgId, platform);
+        const manual = this.getAgentManual(platform);
         if (manual) {
           result.set(platform, manual);
         }
@@ -616,14 +599,14 @@ export class WorkforceOrchestrator {
   /**
    * Get workforce health summary
    */
-  getWorkforceHealth(_orgId: string): {
+  getWorkforceHealth(): {
     score: number;
     activeAgents: number;
     hibernatedAgents: number;
     disabledAgents: number;
     connectedPlatforms: number;
   } | null {
-    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
+    const workforce = this.workforceCache.get(PLATFORM_ID);
     if (!workforce) {
       return null;
     }
@@ -644,8 +627,8 @@ export class WorkforceOrchestrator {
   /**
    * Get agents available for activation
    */
-  getActivatableAgents(_orgId: string): WorkforcePlatform[] {
-    const workforce = this.workforceCache.get(DEFAULT_ORG_ID);
+  getActivatableAgents(): WorkforcePlatform[] {
+    const workforce = this.workforceCache.get(PLATFORM_ID);
     if (!workforce) {
       return [];
     }
@@ -706,7 +689,6 @@ export class WorkforceOrchestrator {
 
   private async emitWorkforceSignal(
     type: string,
-    orgId: string,
     metadata: Record<string, unknown>
   ): Promise<void> {
     if (!this.signalEmitter) {
@@ -716,7 +698,6 @@ export class WorkforceOrchestrator {
     try {
       await this.signalEmitter({
         type: type as 'custom',
-        orgId,
         confidence: 1.0,
         priority: 'Medium',
         metadata: {
@@ -725,7 +706,7 @@ export class WorkforceOrchestrator {
         },
       });
     } catch (error) {
-      logger.error('Failed to emit workforce signal', error instanceof Error ? error : new Error(String(error)), { type, orgId });
+      logger.error('Failed to emit workforce signal', error instanceof Error ? error : new Error(String(error)), { type });
     }
   }
 }
@@ -742,7 +723,6 @@ let orchestratorInstance: WorkforceOrchestrator | null = null;
 export function getWorkforceOrchestrator(
   signalEmitter?: (signal: {
     type: string;
-    orgId: string;
     confidence: number;
     priority: 'High' | 'Medium' | 'Low';
     metadata: Record<string, unknown>;
@@ -775,7 +755,7 @@ export function getVisualStyleSeeds(): {
   brandDNA: WorkforceTemplate['visualStyleSeeds']['brandDNA'];
 } | null {
   const orchestrator = getWorkforceOrchestrator();
-  const workforce = orchestrator.getWorkforce(DEFAULT_ORG_ID);
+  const workforce = orchestrator.getWorkforce();
 
   if (!workforce) {
     return null;

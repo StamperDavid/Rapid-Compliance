@@ -190,7 +190,6 @@ export const ParticipantSchema = z.object({
 
 export const ConversationSchema = z.object({
   id: z.string().min(1),
-  organizationId: z.string().min(1),
   workspaceId: z.string().min(1),
   
   type: ConversationTypeSchema,
@@ -408,7 +407,6 @@ export const PositiveSignalSchema = z.object({
 
 export const ConversationAnalysisSchema = z.object({
   conversationId: z.string().min(1),
-  organizationId: z.string().min(1),
   workspaceId: z.string().min(1),
   
   sentiment: SentimentAnalysisSchema,
@@ -443,7 +441,6 @@ export const ConversationAnalysisSchema = z.object({
 
 export const AnalyzeConversationRequestSchema = z.object({
   conversationId: z.string().min(1).max(200),
-  organizationId: z.string().min(1).max(200),
   workspaceId: z.string().min(1).max(200).optional(),
   
   dealId: z.string().max(200).optional(),
@@ -457,7 +454,6 @@ export const AnalyzeConversationRequestSchema = z.object({
 });
 
 export const AnalyzeTranscriptRequestSchema = z.object({
-  organizationId: z.string().min(1).max(200),
   workspaceId: z.string().min(1).max(200).optional(),
   
   transcript: z.string().min(100).max(1000000),
@@ -477,7 +473,6 @@ export const AnalyzeTranscriptRequestSchema = z.object({
 
 export const BatchAnalysisRequestSchema = z.object({
   conversationIds: z.array(z.string().min(1).max(200)).min(1).max(50),
-  organizationId: z.string().min(1).max(200),
   workspaceId: z.string().min(1).max(200).optional(),
   includeCoaching: z.boolean().optional().default(false),
   includeFollowUps: z.boolean().optional().default(false),

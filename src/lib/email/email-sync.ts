@@ -8,14 +8,13 @@ import { syncGmailMessages, setupGmailPushNotifications, stopGmailPushNotificati
 import { syncOutlookMessages } from '@/lib/integrations/outlook-sync-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface EmailSyncConfig {
   provider: 'gmail' | 'outlook';
   syncDirection: 'inbound' | 'outbound' | 'bidirectional';
   syncFolders: string[];
   autoCreateContacts: boolean;
-  organizationId: string;
   workspaceId?: string;
   accessToken: string;
   refreshToken?: string;
@@ -58,7 +57,6 @@ export async function syncEmails(config: EmailSyncConfig): Promise<SyncResult> {
   logger.info('Starting email sync', { 
     route: '/email/sync', 
     provider: config.provider,
-    organizationId: config.organizationId 
   });
 
   try {
@@ -138,7 +136,7 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
     
     // Get unsent emails from CRM
     const unsentEmails = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${config.organizationId}/emails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
       [
         where('source', '==', 'crm'),
         where('synced', '!=', true),
@@ -157,7 +155,7 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
       try {
         // Mark as synced (emails are already sent via API)
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${config.organizationId}/emails`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
           email.id,
           {
             synced: true,
@@ -197,13 +195,12 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
   logger.info('Starting continuous email sync', { 
     route: '/email/sync/start', 
     provider: config.provider,
-    organizationId: config.organizationId 
   });
 
   try {
     // Store sync configuration
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${config.organizationId}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       `${config.provider}-sync-config`,
       {
         ...config,
@@ -225,7 +222,6 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
       
       logger.info('Gmail push notifications enabled', { 
         route: '/email/sync/start',
-        organizationId: config.organizationId 
       });
     } else if (config.provider === 'outlook') {
       // Outlook uses Microsoft Graph webhooks (subscriptions)
@@ -255,18 +251,17 @@ export async function stopEmailSync(provider: 'gmail' | 'outlook'): Promise<void
   logger.info('Stopping email sync', {
     route: '/email/sync/stop',
     provider,
-    organizationId: DEFAULT_ORG_ID
   });
 
   try {
     // Get sync configuration
     const syncConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       `${provider}-sync-config`
     );
 
     if (!syncConfig) {
-      logger.warn('No sync config found', { organizationId: DEFAULT_ORG_ID, provider });
+      logger.warn('No sync config found', { provider });
       return;
     }
 
@@ -280,16 +275,16 @@ export async function stopEmailSync(provider: 'gmail' | 'outlook'): Promise<void
     // Stop push notifications
     if (provider === 'gmail') {
       await stopGmailPushNotifications(typedSyncConfig.accessToken);
-      logger.info('Gmail push notifications stopped', { organizationId: DEFAULT_ORG_ID });
+      logger.info('Gmail push notifications stopped');
     } else if (provider === 'outlook') {
       // TODO: Implement Outlook webhook removal
       // await stopOutlookWebhook(typedSyncConfig.accessToken);
-      logger.info('Outlook webhooks would be stopped here', { organizationId: DEFAULT_ORG_ID });
+      logger.info('Outlook webhooks would be stopped here');
     }
 
     // Update sync configuration
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       `${provider}-sync-config`,
       {
         isActive: false,
@@ -324,13 +319,13 @@ export async function getSyncStatus(provider: 'gmail' | 'outlook'): Promise<Sync
   try {
     // Get sync configuration
     const syncConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       `${provider}-sync-config`
     );
 
     // Get last sync result
     const lastSyncResult = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrationStatus`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
       `${provider}-sync`
     );
 
@@ -367,7 +362,7 @@ export async function getSyncStatus(provider: 'gmail' | 'outlook'): Promise<Sync
     };
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to get sync status', err, { organizationId: DEFAULT_ORG_ID, provider });
+    logger.error('Failed to get sync status', err, { provider });
     return {
       isActive: false,
       syncedCount: 0,

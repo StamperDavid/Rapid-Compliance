@@ -13,6 +13,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { SequenceEngine } from '@/lib/outbound/sequence-engine';
 import { handleEmailOpen, handleEmailClick, handleEmailBounce } from '@/lib/outbound/sequence-scheduler';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import * as path from 'path';
 
 // Initialize Firebase Admin with actual credentials for E2E tests
@@ -27,31 +28,20 @@ if (getApps().length === 0) {
 const db = getFirestore();
 
 describe('Email Sequences E2E', () => {
-  let orgId: string;
   let prospectId: string;
   let sequenceId: string;
 
   beforeAll(async () => {
-    // Find any organization to use for testing
-    const orgsSnapshot = await db.collection('organizations')
-      .limit(1)
-      .get();
-
-    if (orgsSnapshot.empty) {
-      console.warn('⚠️ No organizations found - E2E tests will be skipped');
-      return;
-    }
-
-    orgId = orgsSnapshot.docs[0].id;
+    // Single-tenant: Always use PLATFORM_ID
     prospectId = 'e2e-prospect-001';
     sequenceId = 'e2e-test-sequence-001';
 
-    console.log(`✅ Using test org: ${orgId}`);
+    console.log(`✅ Using platform org: ${PLATFORM_ID}`);
   }, 30000);
 
   describe('Prospect Enrollment - REAL Firebase', () => {
     it('should enroll a prospect in a sequence', async () => {
-      if (!orgId) {
+      if (false) {
         console.log('⚠️ Skipping test - no org available');
         return;
       }
@@ -70,7 +60,7 @@ describe('Email Sequences E2E', () => {
 
       // Verify it was ACTUALLY saved to Firestore (not mocked!)
       const saved = await db.collection('organizations')
-        .doc(orgId)
+        .doc(PLATFORM_ID)
         .collection('enrollments')
         .doc(enrollment.id)
         .get();
@@ -84,7 +74,7 @@ describe('Email Sequences E2E', () => {
     }, 15000);
 
     it('should prevent duplicate enrollments', async () => {
-      if (!orgId) {
+      if (false) {
         console.log('⚠️ Skipping test - no org available');
         return;
       }
@@ -103,7 +93,7 @@ describe('Email Sequences E2E', () => {
     beforeAll(async () => {
       // Get the real enrollment ID from Firestore
       const enrollments = await db.collection('organizations')
-        .doc(orgId)
+        .doc(PLATFORM_ID)
         .collection('enrollments')
         .where('prospectId', '==', prospectId)
         .where('sequenceId', '==', sequenceId)
@@ -117,8 +107,8 @@ describe('Email Sequences E2E', () => {
     });
 
     it('should handle email open webhook', async () => {
-      if (!orgId || !enrollmentId) {
-        console.log('⚠️ Skipping test - no org/enrollment available');
+      if (!enrollmentId) {
+        console.log('⚠️ Skipping test - no enrollment available');
         return;
       }
       expect(enrollmentId).toBeDefined();
@@ -128,7 +118,7 @@ describe('Email Sequences E2E', () => {
 
       // Verify it was ACTUALLY updated in Firestore
       const enrollment = await db.collection('organizations')
-        .doc(orgId)
+        .doc(PLATFORM_ID)
         .collection('enrollments')
         .doc(enrollmentId)
         .get();
@@ -142,8 +132,8 @@ describe('Email Sequences E2E', () => {
     }, 10000);
 
     it('should handle email click webhook', async () => {
-      if (!orgId || !enrollmentId) {
-        console.log('⚠️ Skipping test - no org/enrollment available');
+      if (!enrollmentId) {
+        console.log('⚠️ Skipping test - no enrollment available');
         return;
       }
       console.log('\n🖱️  Handling email click webhook...');
@@ -151,7 +141,7 @@ describe('Email Sequences E2E', () => {
 
       // Verify in REAL Firestore
       const enrollment = await db.collection('organizations')
-        .doc(orgId)
+        .doc(PLATFORM_ID)
         .collection('enrollments')
         .doc(enrollmentId)
         .get();
@@ -166,14 +156,14 @@ describe('Email Sequences E2E', () => {
 
   describe('Sequence Analytics - REAL Calculations', () => {
     it('should update sequence analytics in real Firestore', async () => {
-      if (!orgId) {
+      if (false) {
         console.log('⚠️ Skipping test - no org available');
         return;
       }
       console.log('\n📊 Checking real sequence analytics...');
       
       const sequenceDoc = await db.collection('organizations')
-        .doc(orgId)
+        .doc(PLATFORM_ID)
         .collection('sequences')
         .doc(sequenceId)
         .get();

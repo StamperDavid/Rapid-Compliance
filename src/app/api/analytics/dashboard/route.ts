@@ -13,7 +13,7 @@
  * - Performance tracking
  *
  * QUERY PARAMETERS:
- * - DEFAULT_ORG_ID (required): Organization ID
+ * - PLATFORM_ID (required): Organization ID
  * - period (required): Time period ('24h', '7d', '30d', '90d', 'month', 'quarter', 'year', 'custom')
  * - startDate (optional): Custom start date (ISO string)
  * - endDate (optional): Custom end date (ISO string)
@@ -26,7 +26,7 @@ import { AnalyticsRequestSchema } from '@/lib/analytics/dashboard/validation';
 import type { AnalyticsResponse, AnalyticsErrorResponse, TimePeriod } from '@/lib/analytics/dashboard/types';
 import { emitDashboardViewed, emitAnalyticsError } from '@/lib/analytics/dashboard/events';
 import { ZodError } from 'zod';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -83,7 +83,6 @@ export async function GET(request: NextRequest) {
 
     // Build request object
     const requestData = {
-      organizationId: DEFAULT_ORG_ID,
       period,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
@@ -112,7 +111,6 @@ export async function GET(request: NextRequest) {
         await emitAnalyticsError(
           'Validation error',
           'VALIDATION_ERROR',
-          DEFAULT_ORG_ID ?? undefined,
           { errors: error.errors }
         );
         
@@ -121,8 +119,8 @@ export async function GET(request: NextRequest) {
       throw error;
     }
     
-    // Check rate limit (use DEFAULT_ORG_ID as identifier)
-    const rateLimit = checkRateLimit(validatedRequest.organizationId);
+    // Check rate limit (use PLATFORM_ID as identifier)
+    const rateLimit = checkRateLimit(PLATFORM_ID);
     
     if (!rateLimit.allowed) {
       const errorResponse: AnalyticsErrorResponse = {
@@ -193,7 +191,6 @@ export async function GET(request: NextRequest) {
     await emitAnalyticsError(
       errorMessage,
       'INTERNAL_ERROR',
-      undefined,
       process.env.NODE_ENV === 'development' ? { stack: errorStack } : undefined
     );
 

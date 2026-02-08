@@ -1,6 +1,6 @@
 /**
  * Website Settings API
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const postBodySchema = z.object({
   settings: z.record(z.unknown()).refine((val) => Object.keys(val).length > 0, {
@@ -33,8 +33,7 @@ export async function GET(_request: NextRequest) {
     }
 
     const settingsRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/settings',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/settings'
     );
     const doc = await settingsRef.get();
 
@@ -102,13 +101,11 @@ export async function POST(request: NextRequest) {
     const { settings } = bodyResult.data;
 
     const settingsRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/settings',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/settings'
     );
 
     const settingsData: Record<string, unknown> = {
       ...settings,
-      organizationId: DEFAULT_ORG_ID,
       updatedAt: FieldValue.serverTimestamp(),
     };
 
@@ -160,13 +157,11 @@ export async function PUT(request: NextRequest) {
     const { settings } = bodyResult.data;
 
     const settingsRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/settings',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/settings'
     );
 
     const settingsData: Record<string, unknown> = {
       ...settings,
-      organizationId: DEFAULT_ORG_ID,
       updatedAt: FieldValue.serverTimestamp(),
     };
 

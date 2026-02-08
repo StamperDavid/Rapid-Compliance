@@ -8,7 +8,6 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
 interface SubdomainData {
-  organizationId?: string;
 }
 
 /**
@@ -43,7 +42,6 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      organizationId: data?.organizationId,
       subdomain,
     });
   } catch (error: unknown) {

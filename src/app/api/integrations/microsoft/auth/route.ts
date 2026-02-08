@@ -6,7 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getMicrosoftAuthUrl } from '@/lib/integrations/outlook-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const state = Buffer.from(JSON.stringify({ userId, DEFAULT_ORG_ID })).toString('base64');
+  const state = Buffer.from(JSON.stringify({ userId, PLATFORM_ID })).toString('base64');
   const authUrl = `${getMicrosoftAuthUrl()}&state=${state}`;
 
   return NextResponse.redirect(authUrl);

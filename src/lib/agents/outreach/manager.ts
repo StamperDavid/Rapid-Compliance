@@ -35,7 +35,7 @@ import {
 } from '../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // SYSTEM PROMPT - Omni-Channel Communication Orchestration
@@ -883,7 +883,6 @@ export class OutreachManager extends BaseManager {
             subject: content.subject ?? `Message for ${lead.firstName}`,
             html: this.formatEmailHtml(content.message, content.sentiment),
             text: content.message,
-            organizationId: DEFAULT_ORG_ID,
             trackOpens: true,
             trackClicks: true,
             metadata: {
@@ -907,7 +906,6 @@ export class OutreachManager extends BaseManager {
             action: 'send_sms',
             to: lead.phone,
             message: content.message.slice(0, 1600), // SMS character limit
-            organizationId: DEFAULT_ORG_ID,
             metadata: {
               leadId: lead.leadId,
               sentiment: content.sentiment,
@@ -1034,7 +1032,7 @@ export class OutreachManager extends BaseManager {
       to: specialistId,
       type: 'COMMAND',
       priority: 'NORMAL',
-      payload: { ...payload, organizationId: DEFAULT_ORG_ID },
+      payload: { ...payload },
       requiresResponse: true,
       traceId: taskId,
     };

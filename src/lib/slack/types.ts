@@ -106,10 +106,7 @@ export type SlackButtonStyle =
 export interface SlackWorkspace {
   /** Unique workspace identifier */
   id: string;
-  
-  /** Organization this workspace belongs to */
-  organizationId: string;
-  
+
   /** Slack team/workspace ID */
   teamId: string;
   
@@ -228,13 +225,10 @@ export interface SlackWorkspaceSettings {
 export interface SlackChannel {
   /** Channel ID */
   id: string;
-  
+
   /** Workspace this channel belongs to */
   workspaceId: string;
-  
-  /** Organization ID */
-  organizationId: string;
-  
+
   /** Channel name (without #) */
   name: string;
   
@@ -272,13 +266,10 @@ export interface SlackChannel {
 export interface SlackChannelMapping {
   /** Unique mapping identifier */
   id: string;
-  
+
   /** Workspace ID */
   workspaceId: string;
-  
-  /** Organization ID */
-  organizationId: string;
-  
+
   /** Notification category */
   category: NotificationCategory;
   
@@ -310,13 +301,10 @@ export interface SlackChannelMapping {
 export interface SlackUserMapping {
   /** Unique mapping identifier */
   id: string;
-  
+
   /** Workspace ID */
   workspaceId: string;
-  
-  /** Organization ID */
-  organizationId: string;
-  
+
   /** Platform user ID */
   platformUserId: string;
   
@@ -356,13 +344,10 @@ export interface SlackUserMapping {
 export interface SlackMessage {
   /** Unique message identifier */
   id: string;
-  
+
   /** Workspace ID */
   workspaceId: string;
-  
-  /** Organization ID */
-  organizationId: string;
-  
+
   /** Channel to send to */
   channelId: string;
   
@@ -579,10 +564,7 @@ export interface SlackMessageTemplate {
   
   /** Category this template is for */
   category: NotificationCategory;
-  
-  /** Organization ID (or 'system' for built-in templates) */
-  organizationId: string;
-  
+
   /** Template content */
   template: {
     /** Text template with {{variables}} */
@@ -626,13 +608,10 @@ export interface SlackMessageTemplate {
 export interface SlackAnalyticsEvent {
   /** Event ID */
   id: string;
-  
+
   /** Workspace ID */
   workspaceId: string;
-  
-  /** Organization ID */
-  organizationId: string;
-  
+
   /** Event type */
   eventType: 
     | 'message_sent'
@@ -737,10 +716,7 @@ export interface SlackRateLimitInfo {
 export interface SlackOAuthState {
   /** State token */
   state: string;
-  
-  /** Organization ID */
-  organizationId: string;
-  
+
   /** User ID initiating OAuth */
   userId: string;
   

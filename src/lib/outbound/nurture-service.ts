@@ -27,7 +27,6 @@ export interface NurtureStep {
 
 export interface NurtureCampaign {
   id: string;
-  organizationId: string;
   name: string;
   description?: string;
   status: 'draft' | 'active' | 'paused' | 'archived';
@@ -72,7 +71,7 @@ export async function getNurtureCampaigns(
   filters?: NurtureFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<NurtureCampaign>> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const constraints: QueryConstraint[] = [];
 
@@ -87,7 +86,7 @@ export async function getNurtureCampaigns(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<NurtureCampaign>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/nurtureSequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -112,10 +111,10 @@ export async function getNurtureCampaigns(
 export async function getNurtureCampaign(
   campaignId: string
 ): Promise<NurtureCampaign | null> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const campaign = await FirestoreService.get<NurtureCampaign>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/nurtureSequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
       campaignId
     );
 
@@ -137,10 +136,10 @@ export async function getNurtureCampaign(
  * Create nurture campaign
  */
 export async function createNurtureCampaign(
-  data: Omit<NurtureCampaign, 'id' | 'organizationId' | 'createdAt' | 'stats'>,
+  data: Omit<NurtureCampaign, 'id' | 'createdAt' | 'stats'>,
   createdBy: string
 ): Promise<NurtureCampaign> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const campaignId = `nurture-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
@@ -148,7 +147,6 @@ export async function createNurtureCampaign(
     const campaign: NurtureCampaign = {
       ...data,
       id: campaignId,
-      organizationId: DEFAULT_ORG_ID,
       status: data.status || 'draft',
       steps: data.steps ?? [],
       stats: {
@@ -163,7 +161,7 @@ export async function createNurtureCampaign(
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/nurtureSequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
       campaignId,
       campaign,
       false
@@ -178,7 +176,7 @@ export async function createNurtureCampaign(
     return campaign;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to create nurture campaign', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Failed to create nurture campaign', error instanceof Error ? error : new Error(String(error)));
     throw new Error(`Failed to create nurture campaign: ${errorMessage}`);
   }
 }
@@ -188,9 +186,9 @@ export async function createNurtureCampaign(
  */
 export async function updateNurtureCampaign(
   campaignId: string,
-  updates: Partial<Omit<NurtureCampaign, 'id' | 'organizationId' | 'createdAt' | 'stats'>>
+  updates: Partial<Omit<NurtureCampaign, 'id' | 'createdAt' | 'stats'>>
 ): Promise<NurtureCampaign> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const updatedData = {
       ...updates,
@@ -198,7 +196,7 @@ export async function updateNurtureCampaign(
     };
 
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/nurtureSequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
       campaignId,
       updatedData
     );
@@ -227,10 +225,10 @@ export async function updateNurtureCampaign(
 export async function deleteNurtureCampaign(
   campaignId: string
 ): Promise<void> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/nurtureSequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
       campaignId
     );
 
@@ -272,7 +270,7 @@ export async function enrollLead(
   campaignId: string,
   leadId: string
 ): Promise<{ success: boolean; enrollmentId: string }> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const campaign = await getNurtureCampaign(campaignId);
     if (!campaign) {
@@ -287,13 +285,12 @@ export async function enrollLead(
     const now = new Date();
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/nurtureSequences/${campaignId}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences/${campaignId}/enrollments`,
       enrollmentId,
       {
         id: enrollmentId,
         campaignId,
         leadId,
-        organizationId: DEFAULT_ORG_ID,
         status: 'active',
         currentStep: 0,
         startedAt: now,
@@ -322,7 +319,7 @@ export async function enrollLead(
 export async function getCampaignStats(
   campaignId: string
 ): Promise<NurtureCampaign['stats']> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const campaign = await getNurtureCampaign(campaignId);
     if (!campaign) {
@@ -331,7 +328,7 @@ export async function getCampaignStats(
 
     // Get enrollment counts
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/nurtureSequences/${campaignId}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences/${campaignId}/enrollments`,
       []
     );
 

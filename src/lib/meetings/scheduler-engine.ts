@@ -10,11 +10,10 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { createZoomMeeting } from '@/lib/integrations/zoom';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface MeetingSchedulerConfig {
   id: string;
-  organizationId: string;
   name: string;
   duration: number; // minutes
   bufferBefore: number; // minutes
@@ -35,7 +34,6 @@ export interface MeetingSchedulerConfig {
 
 export interface ScheduledMeeting {
   id: string;
-  organizationId: string;
   workspaceId: string;
   schedulerConfigId: string;
   title: string;
@@ -83,7 +81,7 @@ export async function scheduleMeeting(
   try {
     // Get scheduler configuration
     const schedulerConfig = await FirestoreService.get<MeetingSchedulerConfig>(
-      `organizations/${DEFAULT_ORG_ID}/meetingSchedulers`,
+      `organizations/${PLATFORM_ID}/meetingSchedulers`,
       config.schedulerConfigId
     );
 
@@ -127,7 +125,6 @@ export async function scheduleMeeting(
 
     const meeting: ScheduledMeeting = {
       id: meetingId,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       schedulerConfigId: config.schedulerConfigId,
       title: config.title,
@@ -146,7 +143,7 @@ export async function scheduleMeeting(
     };
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/meetings`,
+      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/meetings`,
       meetingId,
       meeting,
       false
@@ -173,7 +170,6 @@ export async function scheduleMeeting(
     }
 
     logger.info('Meeting scheduled', {
-      organizationId: DEFAULT_ORG_ID,
       meetingId,
       assignedTo: assignedUserId,
       hasZoom: !!zoomData.zoomMeetingId,
@@ -183,7 +179,7 @@ export async function scheduleMeeting(
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to schedule meeting', error instanceof Error ? error : new Error(errorMessage), { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to schedule meeting', error instanceof Error ? error : new Error(errorMessage), { file: 'scheduler-engine.ts' });
     throw error;
   }
 }
@@ -214,7 +210,7 @@ async function getRoundRobinAssignment(
   try {
     // Get last assigned user index
     const state = await FirestoreService.get<{ lastIndex: number }>(
-      `organizations/${DEFAULT_ORG_ID}/meetingSchedulers/${schedulerConfigId}/state`,
+      `organizations/${PLATFORM_ID}/meetingSchedulers/${schedulerConfigId}/state`,
       'roundRobin'
     );
 
@@ -224,7 +220,7 @@ async function getRoundRobinAssignment(
 
     // Update last assigned index
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/meetingSchedulers/${schedulerConfigId}/state`,
+      `organizations/${PLATFORM_ID}/meetingSchedulers/${schedulerConfigId}/state`,
       'roundRobin',
       { lastIndex: nextIndex, updatedAt: new Date() },
       true
@@ -255,7 +251,7 @@ async function scheduleReminders(
       // In production, this would use a job queue (Bull, Agenda, etc.)
       // For now, we'll store reminder schedules and process via cron
       await FirestoreService.set(
-        `organizations/${meeting.organizationId}/workspaces/${meeting.workspaceId}/scheduledReminders`,
+        `organizations/${PLATFORM_ID}/workspaces/${meeting.workspaceId}/scheduledReminders`,
         `${meeting.id}-${hours}h`,
         {
           meetingId: meeting.id,
@@ -287,7 +283,7 @@ export async function sendMeetingReminder(
 ): Promise<void> {
   try {
     const meeting = await FirestoreService.get<ScheduledMeeting>(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/default/meetings`,
+      `organizations/${PLATFORM_ID}/workspaces/default/meetings`,
       meetingId
     );
 
@@ -318,7 +314,6 @@ Looking forward to speaking with you!
         to: attendee.email,
         subject,
         text: body,
-        metadata: { organizationId: DEFAULT_ORG_ID },
       });
 
       // Send SMS reminder if phone provided
@@ -327,14 +322,13 @@ Looking forward to speaking with you!
         await sendSMS({
           to: attendee.phone,
           message: `Reminder: ${meeting.title} at ${meeting.startTime.toLocaleTimeString()}. ${meeting.zoomJoinUrl ?? ''}`,
-          organizationId: DEFAULT_ORG_ID,
         });
       }
     }
 
     // Update meeting with reminder sent
     await FirestoreService.update(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/default/meetings`,
+      `organizations/${PLATFORM_ID}/workspaces/default/meetings`,
       meetingId,
       {
         reminders: [
@@ -348,7 +342,7 @@ Looking forward to speaking with you!
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to send meeting reminder', error instanceof Error ? error : new Error(errorMessage), { meetingId });
+    logger.error('Failed to send meeting reminder', error instanceof Error ? error : new Error(errorMessage), { meetingId, file: 'scheduler-engine.ts' });
   }
 }
 

@@ -84,7 +84,6 @@ describe('Notification Validation', () => {
   describe('Variables Schema', () => {
     it('should accept valid variables', () => {
       const variables = {
-        orgId: 'org_123',
         userId: 'user_456',
         dealId: 'deal_789',
         dealName: 'Acme Corp',
@@ -106,12 +105,10 @@ describe('Notification Validation', () => {
 
     it('should validate email format', () => {
       const validEmail = {
-        orgId: 'org_123',
         userEmail: 'user@example.com',
       };
 
       const invalidEmail = {
-        orgId: 'org_123',
         userEmail: 'invalid-email',
       };
 
@@ -121,7 +118,6 @@ describe('Notification Validation', () => {
 
     it('should allow custom fields', () => {
       const variables = {
-        orgId: 'org_123',
         customField1: 'value1',
         customField2: 123,
         customField3: { nested: 'object' },
@@ -138,7 +134,6 @@ describe('Notification Validation', () => {
         userId: 'user_123',
         templateId: 'deal_risk_critical',
         variables: {
-          orgId: 'org_123',
           dealId: 'deal_456',
           dealName: 'Acme Corp',
         },
@@ -153,7 +148,6 @@ describe('Notification Validation', () => {
         userId: 'user_123',
         templateId: 'deal_risk_critical',
         variables: {
-          orgId: 'org_123',
         },
         channels: ['slack', 'in_app'],
         priority: 'high',
@@ -168,7 +162,6 @@ describe('Notification Validation', () => {
       const request = {
         templateId: 'deal_risk_critical',
         variables: {
-          orgId: 'org_123',
         },
       };
 
@@ -180,7 +173,6 @@ describe('Notification Validation', () => {
       const request = {
         userId: 'user_123',
         variables: {
-          orgId: 'org_123',
         },
       };
 
@@ -203,7 +195,6 @@ describe('Notification Validation', () => {
     it('should accept valid preferences update', () => {
       const request = {
         userId: 'user_123',
-        orgId: 'org_123',
         enabled: true,
         channels: {
           slack: {
@@ -220,7 +211,6 @@ describe('Notification Validation', () => {
     it('should allow partial updates', () => {
       const request = {
         userId: 'user_123',
-        orgId: 'org_123',
         enabled: false,
       };
 
@@ -231,7 +221,6 @@ describe('Notification Validation', () => {
     it('should validate channel preferences', () => {
       const request = {
         userId: 'user_123',
-        orgId: 'org_123',
         channels: {
           slack: {
             enabled: true,

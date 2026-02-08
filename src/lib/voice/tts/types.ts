@@ -71,9 +71,6 @@ export interface TTSSynthesizeRequest {
   // Text to synthesize
   text: string;
 
-  // Organization ID for config lookup
-  organizationId: string;
-
   // Optional engine override
   engine?: TTSEngineType;
 

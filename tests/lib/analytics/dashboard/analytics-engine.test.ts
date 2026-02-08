@@ -8,30 +8,30 @@ import { getDashboardAnalytics, clearAnalyticsCache } from '@/lib/analytics/dash
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Workflow, WorkflowExecution } from '@/lib/workflow/types';
 
-// Mock admin DAL
-const mockAdminDal = {
-  getAllWorkflows: jest.fn(),
-  getWorkflowExecutions: jest.fn(),
-  getEmailGenerations: jest.fn(),
-  getActiveDeals: jest.fn(),
-  getDealsSnapshot: jest.fn(),
-  getClosedDeals: jest.fn(),
-  getWonDeals: jest.fn(),
-  getRevenueForecast: jest.fn(),
-  getSalesReps: jest.fn(),
-  getRepDeals: jest.fn(),
-};
-
+// Mock admin DAL — all mocks defined inline to avoid jest.mock hoisting issues
 jest.mock('@/lib/firebase/admin-dal', () => ({
-  adminDal: mockAdminDal,
+  adminDal: {
+    getAllWorkflows: jest.fn(),
+    getWorkflowExecutions: jest.fn(),
+    getEmailGenerations: jest.fn(),
+    getActiveDeals: jest.fn(),
+    getDealsSnapshot: jest.fn(),
+    getClosedDeals: jest.fn(),
+    getWonDeals: jest.fn(),
+    getRevenueForecast: jest.fn(),
+    getSalesReps: jest.fn(),
+    getRepDeals: jest.fn(),
+  },
 }));
+
+// Access mocked module for test assertions (non-null: jest.mock replaces the module)
+const mockAdminDal = jest.mocked(adminDal!);
 
 // Helper function to create a proper Workflow mock
 function createMockWorkflow(overrides: Partial<Workflow> = {}): Workflow {
   const now = new Date();
   return {
     id: 'wf1',
-    organizationId: 'org1',
     workspaceId: 'ws1',
     name: 'Test Workflow',
     description: 'Test workflow description',
@@ -65,7 +65,6 @@ function createMockWorkflowExecution(overrides: Partial<WorkflowExecution> = {})
   return {
     id: 'ex1',
     workflowId: 'wf1',
-    organizationId: 'org1',
     workspaceId: 'ws1',
     triggeredBy: 'event',
     triggerData: {},
@@ -126,9 +125,9 @@ describe('Analytics Engine', () => {
         }),
       ];
 
-      (mockAdminDal.getAllWorkflows).mockResolvedValue(mockWorkflows);
-      (mockAdminDal.getWorkflowExecutions).mockResolvedValue(mockExecutions);
-      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getAllWorkflows).mockResolvedValue(mockWorkflows as unknown as Record<string, unknown>[]);
+      (mockAdminDal.getWorkflowExecutions).mockResolvedValue(mockExecutions as unknown as Record<string, unknown>[]);
+      (mockAdminDal.getEmailGenerations).mockReturnValue([]);
       (mockAdminDal.getActiveDeals).mockResolvedValue([]);
       (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
@@ -190,11 +189,11 @@ describe('Analytics Engine', () => {
         }),
       ];
 
-      (mockAdminDal.getAllWorkflows).mockResolvedValue(mockWorkflows);
+      (mockAdminDal.getAllWorkflows).mockResolvedValue(mockWorkflows as unknown as Record<string, unknown>[]);
       (mockAdminDal.getWorkflowExecutions)
-        .mockResolvedValueOnce(mockExecutions) // Current period
+        .mockResolvedValueOnce(mockExecutions as unknown as Record<string, unknown>[]) // Current period
         .mockResolvedValueOnce([]); // Previous period
-      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockReturnValue([]);
       (mockAdminDal.getActiveDeals).mockResolvedValue([]);
       (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
@@ -239,11 +238,11 @@ describe('Analytics Engine', () => {
         }),
       ];
 
-      (mockAdminDal.getAllWorkflows).mockResolvedValue(mockWorkflows);
+      (mockAdminDal.getAllWorkflows).mockResolvedValue(mockWorkflows as unknown as Record<string, unknown>[]);
       (mockAdminDal.getWorkflowExecutions)
-        .mockResolvedValueOnce(mockExecutions)
+        .mockResolvedValueOnce(mockExecutions as unknown as Record<string, unknown>[])
         .mockResolvedValueOnce([]);
-      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockReturnValue([]);
       (mockAdminDal.getActiveDeals).mockResolvedValue([]);
       (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
@@ -288,7 +287,7 @@ describe('Analytics Engine', () => {
       
       (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
       (mockAdminDal.getWorkflowExecutions).mockResolvedValue([]);
-      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockReturnValue([]);
       (mockAdminDal.getActiveDeals).mockResolvedValue(mockDeals);
       (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
       (mockAdminDal.getClosedDeals).mockResolvedValue(mockClosedDeals);
@@ -328,7 +327,7 @@ describe('Analytics Engine', () => {
       
       (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
       (mockAdminDal.getWorkflowExecutions).mockResolvedValue([]);
-      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockReturnValue([]);
       (mockAdminDal.getActiveDeals).mockResolvedValue([]);
       (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
       (mockAdminDal.getClosedDeals).mockResolvedValue(mockAllClosedDeals);
@@ -362,7 +361,7 @@ describe('Analytics Engine', () => {
       // Setup minimal mocks
       (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
       (mockAdminDal.getWorkflowExecutions).mockResolvedValue([]);
-      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockReturnValue([]);
       (mockAdminDal.getActiveDeals).mockResolvedValue([]);
       (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
@@ -405,9 +404,9 @@ describe('Analytics Engine', () => {
 
       (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
       (mockAdminDal.getWorkflowExecutions)
-        .mockResolvedValueOnce(currentExecutions) // Current period
-        .mockResolvedValueOnce(previousExecutions); // Previous period
-      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+        .mockResolvedValueOnce(currentExecutions as unknown as Record<string, unknown>[]) // Current period
+        .mockResolvedValueOnce(previousExecutions as unknown as Record<string, unknown>[]); // Previous period
+      (mockAdminDal.getEmailGenerations).mockReturnValue([]);
       (mockAdminDal.getActiveDeals).mockResolvedValue([]);
       (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
@@ -430,7 +429,7 @@ describe('Analytics Engine', () => {
       // Setup minimal mocks
       (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
       (mockAdminDal.getWorkflowExecutions).mockResolvedValue([]);
-      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockReturnValue([]);
       (mockAdminDal.getActiveDeals).mockResolvedValue([]);
       (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
@@ -465,9 +464,9 @@ describe('Analytics Engine', () => {
 
       (mockAdminDal.getAllWorkflows).mockResolvedValue([]);
       (mockAdminDal.getWorkflowExecutions)
-        .mockResolvedValueOnce(mockExecutions)
+        .mockResolvedValueOnce(mockExecutions as unknown as Record<string, unknown>[])
         .mockResolvedValueOnce([]);
-      (mockAdminDal.getEmailGenerations).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations).mockReturnValue([]);
       (mockAdminDal.getActiveDeals).mockResolvedValue([]);
       (mockAdminDal.getDealsSnapshot).mockResolvedValue([]);
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);

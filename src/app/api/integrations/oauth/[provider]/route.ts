@@ -8,7 +8,6 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { organizationIdSchema } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -27,34 +26,9 @@ export async function GET(
       return authResult;
     }
 
-    const _user = authResult instanceof NextResponse
-      ? { uid: 'dev-user', organizationId: 'dev-org' } // Dev fallback
-      : authResult.user;
-
     const searchParams = request.nextUrl.searchParams;
-    const organizationId = searchParams.get('organizationId');
     const redirectUriParam = searchParams.get('redirectUri');
     const redirectUri = (redirectUriParam !== '' && redirectUriParam != null) ? redirectUriParam : `${request.nextUrl.origin}/api/integrations/oauth/${provider}/callback`;
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'organizationId is required' },
-        { status: 400 }
-      );
-    }
-
-    // Validate organizationId format
-    const orgValidation = organizationIdSchema.safeParse(organizationId);
-    if (!orgValidation.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid organizationId format' },
-        { status: 400 }
-      );
-    }
-
-    // Verify organizationId matches DEFAULT_ORG_ID (if authenticated)
-    // In penthouse model, all users belong to DEFAULT_ORG_ID
-    // This check is intentionally kept but no longer checks user.organizationId
 
     // Generate OAuth URLs for different providers
     let authUrl = '';
@@ -62,14 +36,14 @@ export async function GET(
     switch (provider) {
       case 'gmail':
       case 'google-calendar':
-        authUrl = generateGoogleAuthUrl(provider, redirectUri, organizationId);
+        authUrl = generateGoogleAuthUrl(provider, redirectUri);
         break;
       case 'outlook':
       case 'outlook-calendar':
-        authUrl = generateMicrosoftAuthUrl(provider, redirectUri, organizationId);
+        authUrl = generateMicrosoftAuthUrl(provider, redirectUri);
         break;
       case 'slack':
-        authUrl = generateSlackAuthUrl(redirectUri, organizationId);
+        authUrl = generateSlackAuthUrl(redirectUri);
         break;
       default:
         return NextResponse.json(
@@ -90,7 +64,7 @@ export async function GET(
   }
 }
 
-function generateGoogleAuthUrl(provider: string, redirectUri: string, organizationId: string): string {
+function generateGoogleAuthUrl(provider: string, redirectUri: string): string {
   const googleClientIdEnv = process.env.GOOGLE_CLIENT_ID;
   const clientId = (googleClientIdEnv !== '' && googleClientIdEnv != null) ? googleClientIdEnv : '';
   const scopes = provider === 'google-calendar'
@@ -104,13 +78,13 @@ function generateGoogleAuthUrl(provider: string, redirectUri: string, organizati
     scope: scopes,
     access_type: 'offline',
     prompt: 'consent',
-    state: JSON.stringify({ provider, organizationId }),
+    state: JSON.stringify({ provider }),
   });
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-function generateMicrosoftAuthUrl(provider: string, redirectUri: string, organizationId: string): string {
+function generateMicrosoftAuthUrl(provider: string, redirectUri: string): string {
   const msClientIdEnv = process.env.MICROSOFT_CLIENT_ID;
   const clientId = (msClientIdEnv !== '' && msClientIdEnv != null) ? msClientIdEnv : '';
   const msTenantIdEnv = process.env.MICROSOFT_TENANT_ID;
@@ -125,13 +99,13 @@ function generateMicrosoftAuthUrl(provider: string, redirectUri: string, organiz
     response_type: 'code',
     scope: scopes,
     response_mode: 'query',
-    state: JSON.stringify({ provider, organizationId }),
+    state: JSON.stringify({ provider }),
   });
 
   return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
 }
 
-function generateSlackAuthUrl(redirectUri: string, organizationId: string): string {
+function generateSlackAuthUrl(redirectUri: string): string {
   const slackClientIdEnv = process.env.SLACK_CLIENT_ID;
   const clientId = (slackClientIdEnv !== '' && slackClientIdEnv != null) ? slackClientIdEnv : '';
   const scopes = 'chat:write,channels:read,users:read';
@@ -140,7 +114,7 @@ function generateSlackAuthUrl(redirectUri: string, organizationId: string): stri
     client_id: clientId,
     redirect_uri: redirectUri,
     scope: scopes,
-    state: JSON.stringify({ provider: 'slack', organizationId }),
+    state: JSON.stringify({ provider: 'slack' }),
   });
 
   return `https://slack.com/oauth/v2/authorize?${params.toString()}`;

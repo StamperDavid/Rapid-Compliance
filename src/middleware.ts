@@ -1,6 +1,6 @@
 /**
  * Next.js Edge Middleware
- * Penthouse model routing - all public site traffic goes to DEFAULT_ORG_ID
+ * Penthouse model routing - all public site traffic goes to PLATFORM_ID
  * SIMPLIFIED: Removed subdomain and custom domain routing for penthouse deployment
  */
 
@@ -33,7 +33,7 @@ export function middleware(request: NextRequest) {
   //
   // The admin layout (src/app/admin/layout.tsx) enforces:
   // - Unauthenticated users → /admin-login
-  // - Non-admin users → /workspace/{orgId}/dashboard (with proper context)
+  // - Non-admin users → /workspace/dashboard (with proper context)
   // ============================================================================
 
   // ============================================================================
@@ -98,7 +98,7 @@ export function middleware(request: NextRequest) {
   // ============================================================================
   // PENTHOUSE PUBLIC SITE ROUTING
   // ============================================================================
-  // For penthouse deployment, all public site traffic uses DEFAULT_ORG_ID
+  // For penthouse deployment, all public site traffic uses PLATFORM_ID
   // Legacy routes redirect to flat URL structure for consistency
 
   // Redirect legacy /store/* to /store/*

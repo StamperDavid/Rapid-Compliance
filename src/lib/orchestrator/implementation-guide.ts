@@ -35,7 +35,6 @@ export interface NicheRefinement {
 }
 
 export interface ImplementationContext {
-  organizationId: string;
   assistantName: string;
   ownerName?: string;
   industry: string;
@@ -170,10 +169,10 @@ export class ImplementationGuide {
     industry?: string,
     niche?: NicheRefinement
   ): Promise<ImplementationContext> {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
     // Get system health report
-    const healthReport = await SystemHealthService.generateHealthReport(DEFAULT_ORG_ID);
+    const healthReport = await SystemHealthService.generateHealthReport();
 
     // Try to find matching industry template
     const template = industry ? getTemplateById(industry) : undefined;
@@ -182,7 +181,6 @@ export class ImplementationGuide {
     const currentPhase = this.determinePhase(healthReport);
 
     return {
-      organizationId: DEFAULT_ORG_ID,
       assistantName,
       ownerName,
       industry: industry ?? 'default',

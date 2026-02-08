@@ -7,7 +7,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, EntityTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Register Firestore trigger for workflow
@@ -26,13 +26,12 @@ export async function registerFirestoreTrigger(
   // Store trigger configuration in Firestore
   // In production, this would deploy a Cloud Function
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
     workflow.id,
     {
       workflowId: workflow.id,
       triggerType: trigger.type,
       schemaId: trigger.schemaId,
-      organizationId: DEFAULT_ORG_ID,
       workspaceId,
       registeredAt: new Date().toISOString(),
     },
@@ -55,7 +54,7 @@ export async function handleEntityChange(
   // Find workflows with matching triggers
   const { where } = await import('firebase/firestore');
   const triggers = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
     [
       where('triggerType', '==', `entity.${changeType}`),
       where('schemaId', '==', schemaId),
@@ -68,7 +67,7 @@ export async function handleEntityChange(
 
   // Load workflows
   const workflows = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
     [where('status', '==', 'active')]
   );
 
@@ -82,7 +81,6 @@ export async function handleEntityChange(
   for (const workflow of matchingWorkflows) {
     try {
       const triggerData = {
-        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         schemaId,
         recordId,
@@ -107,7 +105,7 @@ export async function unregisterFirestoreTrigger(
   workspaceId: string
 ): Promise<void> {
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
     workflowId
   );
 

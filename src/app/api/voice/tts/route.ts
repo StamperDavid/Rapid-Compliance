@@ -6,11 +6,11 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { VoiceEngineFactory, type TTSEngineType, type TTSSynthesizeRequest } from '@/lib/voice/tts';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface TTSPostBody {
   text?: string;
-  DEFAULT_ORG_ID?: string;
+  PLATFORM_ID?: string;
   engine?: TTSEngineType;
   voiceId?: string;
   settings?: Record<string, unknown>;
@@ -112,7 +112,6 @@ export async function POST(request: NextRequest) {
 
     const synthesizeRequest: TTSSynthesizeRequest = {
       text,
-      organizationId: DEFAULT_ORG_ID,
       engine,
       voiceId,
       settings,

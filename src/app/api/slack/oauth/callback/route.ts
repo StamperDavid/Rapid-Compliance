@@ -15,6 +15,7 @@ import { oauthCallbackSchema } from '@/lib/slack/validation';
 import { Timestamp } from 'firebase-admin/firestore';
 import { db } from '@/lib/firebase-admin';
 import type { SlackWorkspace, SlackOAuthState } from '@/lib/slack/types';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * GET /api/slack/oauth/callback
@@ -94,7 +95,6 @@ export async function GET(request: NextRequest) {
     
     const workspace: SlackWorkspace = {
       id: workspaceId,
-      organizationId: oauthState.organizationId,
       teamId: tokenResponse.team.id,
       teamName: tokenResponse.team.name,
       teamDomain: tokenResponse.team.id, // Slack v2 doesn't always include domain
@@ -142,17 +142,16 @@ export async function GET(request: NextRequest) {
     
     await db
       .collection('organizations')
-      .doc(oauthState.organizationId)
+      .doc(PLATFORM_ID)
       .collection('slack_workspaces')
       .doc(workspaceId)
       .set(workspace);
-    
+
     // Delete state token
     await db.collection('slack_oauth_states').doc(validatedState).delete();
-    
+
     logger.info('Slack workspace connected successfully', {
       workspaceId,
-      orgId: oauthState.organizationId,
       teamId: tokenResponse.team.id,
       teamName: tokenResponse.team.name,
     });
@@ -162,7 +161,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${redirectUrl}?success=slack_connected`);
     
   } catch (error) {
-    logger.error('Failed to handle Slack OAuth callback', error instanceof Error ? error : new Error(String(error)), {});
+    logger.error('Failed to handle Slack OAuth callback', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=oauth_failed`

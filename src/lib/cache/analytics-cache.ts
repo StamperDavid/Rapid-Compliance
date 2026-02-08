@@ -10,7 +10,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface CacheEntry<T> {
   data: T;
@@ -197,17 +197,17 @@ export async function withCache<T>(
   customTTL?: number
 ): Promise<T> {
   // Try cache first
-  const cached = analyticsCache.get<T>(DEFAULT_ORG_ID, queryType, params);
+  const cached = analyticsCache.get<T>(PLATFORM_ID, queryType, params);
   if (cached !== null) {
     return cached;
   }
 
   // Cache miss - fetch data
-  logger.info(`Cache MISS: ${DEFAULT_ORG_ID}:${queryType} - fetching...`, { file: 'analytics-cache.ts' });
+  logger.info(`Cache MISS: ${PLATFORM_ID}:${queryType} - fetching...`, { file: 'analytics-cache.ts' });
   const data = await fetchFn();
 
   // Store in cache
-  analyticsCache.set(DEFAULT_ORG_ID, queryType, data, params, customTTL);
+  analyticsCache.set(PLATFORM_ID, queryType, data, params, customTTL);
 
   return data;
 }
@@ -228,11 +228,11 @@ export function invalidateAnalyticsCache(dataType?: string): void {
 
     const queries = affectedQueries[dataType] || [];
     queries.forEach(queryType => {
-      analyticsCache.invalidate(DEFAULT_ORG_ID, queryType);
+      analyticsCache.invalidate(PLATFORM_ID, queryType);
     });
   } else {
     // Invalidate everything for this org
-    analyticsCache.invalidateNamespace(DEFAULT_ORG_ID);
+    analyticsCache.invalidateNamespace(PLATFORM_ID);
   }
 }
 

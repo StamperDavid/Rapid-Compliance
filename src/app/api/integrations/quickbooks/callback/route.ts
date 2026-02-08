@@ -9,14 +9,13 @@ import { getTokensFromCode } from '@/lib/integrations/quickbooks-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
 // Zod schema for OAuth state validation
 const OAuthStateSchema = z.object({
   userId: z.string().min(1),
-  orgId: z.string().min(1),
 });
 
 export async function GET(request: NextRequest) {
@@ -45,7 +44,7 @@ export async function GET(request: NextRequest) {
 
       if (stateValidation.success) {
         userId = stateValidation.data.userId;
-        // DEFAULT_ORG_ID is now always DEFAULT_ORG_ID, ignore state.DEFAULT_ORG_ID
+        // PLATFORM_ID is now always PLATFORM_ID, ignore state.PLATFORM_ID
       } else {
         logger.warn('Invalid QuickBooks OAuth state', { errors: JSON.stringify(stateValidation.error.errors) });
       }
@@ -59,7 +58,6 @@ export async function GET(request: NextRequest) {
       {
         id: `quickbooks_${realmId}`,
         userId,
-        organizationId: DEFAULT_ORG_ID,
         provider: 'quickbooks',
         type: 'accounting',
         status: 'active',
@@ -73,7 +71,7 @@ export async function GET(request: NextRequest) {
       false
     );
 
-    logger.info('QuickBooks integration saved', { route: '/api/integrations/quickbooks/callback', DEFAULT_ORG_ID, realmId });
+    logger.info('QuickBooks integration saved', { route: '/api/integrations/quickbooks/callback', realmId });
 
     return NextResponse.redirect('/settings/integrations?success=quickbooks');
   } catch (error) {

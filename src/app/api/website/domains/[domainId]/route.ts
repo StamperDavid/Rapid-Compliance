@@ -1,14 +1,14 @@
 /**
  * Single Domain API
  * Manage individual custom domain
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * DELETE /api/website/domains/[domainId]
@@ -27,8 +27,8 @@ export async function DELETE(
     const domainId = decodeURIComponent(params.domainId);
 
     const domainRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/custom-domains/{domainId}',
-      { orgId: DEFAULT_ORG_ID, domainId }
+      'organizations/rapid-compliance-root/website/config/custom-domains/{domainId}',
+      { domainId }
     );
 
     const doc = await domainRef.get();
@@ -47,8 +47,7 @@ export async function DELETE(
     } catch (vercelError) {
       logger.error('Vercel integration error during domain deletion', vercelError instanceof Error ? vercelError : new Error(String(vercelError)), {
         route: '/api/website/domains/[domainId]',
-        domainId,
-        DEFAULT_ORG_ID
+        domainId
       });
       // Continue even if Vercel API fails
     }
@@ -64,8 +63,7 @@ export async function DELETE(
     const performedBy = await getUserIdentifier();
 
     const auditRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/audit-log/entries',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/audit-log/entries'
     );
 
     await auditRef.add({
@@ -73,7 +71,6 @@ export async function DELETE(
       domainId,
       performedBy,
       performedAt: new Date().toISOString(),
-      DEFAULT_ORG_ID,
     });
 
     return NextResponse.json({

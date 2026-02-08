@@ -1,12 +1,11 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useState } from 'react';
 import type { MeetingSchedulerConfig } from '@/lib/meetings/scheduler-engine';
 
 export default function MeetingSchedulerConfigPage() {
-  const _orgId = DEFAULT_ORG_ID as string;
   const [_configs, _setConfigs] = useState<MeetingSchedulerConfig[]>([]);
 
   return (

@@ -1,38 +1,24 @@
 /**
- * Platform-level organization configuration and utilities
+ * Platform-level configuration and utilities
  * @module lib/constants/platform
+ *
+ * SalesVelocity.ai — Single-tenant platform (Penthouse Model)
+ * There is NO multi-tenant/org layer. This file defines the platform root identity.
  */
 
 /**
- * Penthouse default organization ID
- * PENTHOUSE MODEL: Hardcoded to 'rapid-compliance-root' for penthouse deployment
- * Identity: SalesVelocity.ai — the ONLY organization in the system
- * This is NOT a multi-org platform
+ * Platform root identifier used as the Firestore document root.
+ * This is the single identity for the entire SalesVelocity.ai platform.
  */
-export const DEFAULT_ORG_ID = 'rapid-compliance-root' as const;
+export const PLATFORM_ID = 'rapid-compliance-root' as const;
+
+/** @deprecated Use PLATFORM_ID instead. Will be removed in next cleanup pass. */
+export const DEFAULT_ORG_ID = PLATFORM_ID;
 
 /**
- * Penthouse organization configuration
- * SalesVelocity is a single company, NOT a multi-org platform
+ * Platform company configuration
  */
 export const COMPANY_CONFIG = {
-  id: DEFAULT_ORG_ID,
+  id: PLATFORM_ID,
   name: 'SalesVelocity.ai',
 } as const;
-
-/**
- * Checks if a given organization ID matches the default penthouse organization
- *
- * @returns Always true in single-tenant penthouse model
- */
-export function isDefaultOrg(): boolean {
-  return true;
-}
-
-/**
- * Returns the default organization ID for penthouse model
- * This function centralizes the org ID retrieval for easier migration
- */
-export function getDefaultOrgId(): string {
-  return DEFAULT_ORG_ID;
-}

@@ -11,7 +11,7 @@ import type {
 } from '@/types/outbound-sequence';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface ProspectData {
   email?: string;
@@ -284,7 +284,7 @@ export class SequenceEngine {
 
     // Get prospect email from CRM
     const prospect: ProspectData | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/leads`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/leads`,
       enrollment.prospectId
     );
 
@@ -293,7 +293,7 @@ export class SequenceEngine {
     }
 
     // Get organization settings to determine email provider
-    const orgData: OrgData | null = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+    const orgData: OrgData | null = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     const emailProvider = (orgData?.emailProvider !== '' && orgData?.emailProvider != null)
       ? orgData.emailProvider
       : 'gmail'; // Default to Gmail
@@ -314,7 +314,6 @@ export class SequenceEngine {
         from: fromEmail,
         subject:(step.subject !== '' && step.subject != null) ? step.subject : 'Follow-up',
         body: step.body,
-        organizationId: DEFAULT_ORG_ID,
         metadata: {
           enrollmentId: enrollment.id,
           stepId: step.id,
@@ -351,7 +350,6 @@ export class SequenceEngine {
           metadata: {
             enrollmentId: enrollment.id,
             stepId: step.id,
-            organizationId: DEFAULT_ORG_ID,
             prospectId: enrollment.prospectId,
           },
         }, sendgridKey);
@@ -380,7 +378,7 @@ export class SequenceEngine {
 
     // Get prospect details
     const prospect: ProspectData | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
       enrollment.prospectId
     );
 
@@ -390,7 +388,7 @@ export class SequenceEngine {
 
     // Get LinkedIn integration credentials
     const integrations: IntegrationData[] = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`
     );
     const integration = integrations.filter((i) => i.service === 'linkedin');
 
@@ -424,7 +422,7 @@ export class SequenceEngine {
 
     // Get prospect details
     const prospect: ProspectData | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
       enrollment.prospectId
     );
 
@@ -438,7 +436,6 @@ export class SequenceEngine {
     const result = await sendSMS({
       to: prospect.phone,
       message: step.content ?? '',
-      organizationId: DEFAULT_ORG_ID,
     });
     
     if (!result.success) {
@@ -450,7 +447,7 @@ export class SequenceEngine {
     // Save SMS record with Twilio message ID for webhook tracking
     const smsRecordId = result.messageId ?? `${Date.now()}-${enrollment.prospectId}`;
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/smsMessages`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
       smsRecordId,
       {
         id: smsRecordId,
@@ -486,7 +483,7 @@ export class SequenceEngine {
     
     // Get prospect details
     const prospect: ProspectData | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
       enrollment.prospectId
     );
 
@@ -502,7 +499,6 @@ export class SequenceEngine {
     const taskId = `task-${Date.now()}-${enrollment.prospectId}`;
     const task = {
       id: taskId,
-      organizationId: DEFAULT_ORG_ID,
       title: (step.taskTitle !== '' && step.taskTitle != null)
         ? step.taskTitle
         : `Follow up with ${prospect.name}`,
@@ -527,7 +523,7 @@ export class SequenceEngine {
     };
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/tasks`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/tasks`,
       taskId,
       task
     );
@@ -549,7 +545,7 @@ export class SequenceEngine {
       const analyticsId = `${enrollmentId}-${stepId}-${Date.now()}`;
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequenceAnalytics`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequenceAnalytics`,
         analyticsId,
         {
           enrollmentId,
@@ -564,7 +560,7 @@ export class SequenceEngine {
       // Update step statistics
       const statsId = `step-${stepId}`;
       const currentStats: StepStats | null = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequenceStepStats`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequenceStepStats`,
         statsId
       );
 
@@ -584,7 +580,7 @@ export class SequenceEngine {
 
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequenceStepStats`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequenceStepStats`,
         statsId,
         stats
       );
@@ -711,7 +707,7 @@ export class SequenceEngine {
     sequenceId: string
   ): Promise<OutboundSequence | null> {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
       sequenceId
     );
   }
@@ -727,7 +723,7 @@ export class SequenceEngine {
       const { where, limit } = await import('firebase/firestore');
 
       const enrollments = await FirestoreService.getAll<ProspectEnrollment>(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
         [
           where('prospectId', '==', prospectId),
           where('sequenceId', '==', sequenceId),
@@ -749,7 +745,7 @@ export class SequenceEngine {
     enrollmentId: string
   ): Promise<ProspectEnrollment | null> {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
       enrollmentId
     );
   }
@@ -758,9 +754,9 @@ export class SequenceEngine {
    * Save enrollment
    */
   private static async saveEnrollment(enrollment: ProspectEnrollment): Promise<void> {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
       enrollment.id,
       enrollment,
       false
@@ -817,7 +813,7 @@ export class SequenceEngine {
     }
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sequences`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
       sequenceId,
       sequence,
       false
@@ -833,7 +829,7 @@ export class SequenceEngine {
   ): Promise<void> {
     try {
       // Find the sequence that contains this step
-      const sequencesPath = `organizations/${DEFAULT_ORG_ID}/sequences`;
+      const sequencesPath = `organizations/${PLATFORM_ID}/sequences`;
       const sequences = await FirestoreService.getAll<OutboundSequence>(sequencesPath);
       
       let targetSequence: OutboundSequence | null = null;
@@ -849,7 +845,7 @@ export class SequenceEngine {
       }
       
       if (!targetSequence || targetStepIndex === -1) {
-        logger.warn('Step not found for analytics update', { stepId, organizationId: DEFAULT_ORG_ID });
+        logger.warn('Step not found for analytics update', { stepId });
         return;
       }
       
@@ -871,17 +867,15 @@ export class SequenceEngine {
       targetSequence.steps[targetStepIndex] = updatedStep;
 
       // Save the updated sequence
-      const sequencePath = `organizations/${DEFAULT_ORG_ID}/sequences`;
+      const sequencePath = `organizations/${PLATFORM_ID}/sequences`;
       await FirestoreService.set(sequencePath, targetSequence.id, targetSequence, false);
 
       logger.info('Step analytics updated', {
         stepId,
-        organizationId: DEFAULT_ORG_ID,
       });
     } catch (error) {
       logger.error('Failed to update step analytics', error instanceof Error ? error : new Error(String(error)), {
         stepId,
-        organizationId: DEFAULT_ORG_ID,
       });
       // Don't throw - analytics updates shouldn't break the main flow
     }

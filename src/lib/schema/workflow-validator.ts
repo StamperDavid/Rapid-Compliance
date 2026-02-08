@@ -11,6 +11,7 @@ import type {
 } from '@/types/workflow';
 import { FieldResolver } from './field-resolver';
 import type { Schema } from '@/types/schema';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Validate workflows affected by schema change
@@ -23,7 +24,7 @@ export async function validateWorkflowsForSchema(
     const { where } = await import('firebase/firestore');
     
     // Get all workflows for this workspace
-    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/workflows`;
+    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/workflows`;
     const workflows = await FirestoreService.getAll(workflowsPath, [
       where('status', '==', 'active'),
     ]);
@@ -34,7 +35,7 @@ export async function validateWorkflowsForSchema(
     
     // Get schema for field resolution
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/${COLLECTIONS.SCHEMAS}`,
       event.schemaId
     );
 
@@ -180,9 +181,8 @@ async function createWorkflowWarningNotification(
 ): Promise<void> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
 
-    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/notifications`;
+    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`;
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     await FirestoreService.set(
@@ -190,7 +190,6 @@ async function createWorkflowWarningNotification(
       notificationId,
       {
         id: notificationId,
-        organizationId: DEFAULT_ORG_ID,
         workspaceId,
         title: 'Workflow May Be Affected by Schema Changes',
         message: `Workflow "${workflow.name}" references fields that have changed. Please review: ${warnings.join(', ')}`,
@@ -251,12 +250,11 @@ export async function getWorkflowValidationSummary(
 
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
 
-    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflows`;
+    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflows`;
     const workflows = await FirestoreService.getAll(workflowsPath);
 
-    const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
+    const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
     const schemas = await FirestoreService.getAll(schemasPath);
 
     summary.total = workflows.length;

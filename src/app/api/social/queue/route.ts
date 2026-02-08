@@ -17,7 +17,6 @@ import { z } from 'zod';
 
 // Request validation schemas
 const addToQueueSchema = z.object({
-  organizationId: z.string().min(1, 'Organization ID is required'),
   content: z.string().min(1, 'Content is required'),
   platforms: z.array(z.enum(['twitter', 'linkedin'])).min(1, 'At least one platform is required'),
   mediaUrls: z.array(z.string().url()).optional(),
@@ -26,17 +25,14 @@ const addToQueueSchema = z.object({
 });
 
 const getQueueSchema = z.object({
-  organizationId: z.string().min(1),
   platform: z.enum(['twitter', 'linkedin']).optional(),
 });
 
 const processQueueSchema = z.object({
-  organizationId: z.string().min(1),
   maxPosts: z.number().min(1).max(10).optional(),
 });
 
 const removeFromQueueSchema = z.object({
-  organizationId: z.string().min(1),
   postId: z.string().min(1),
 });
 
@@ -89,7 +85,6 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Queue API: Adding to queue', {
-      organizationId: data.organizationId,
       platforms: data.platforms,
       preferredTimeSlot: data.preferredTimeSlot,
     });
@@ -120,7 +115,6 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Queue API: Post added to queue', {
-      organizationId: data.organizationId,
       postId: result.postId,
     });
 
@@ -164,7 +158,6 @@ async function processQueue(body: unknown) {
   const data = validation.data;
 
   logger.info('Queue API: Processing queue', {
-    organizationId: data.organizationId,
     maxPosts: data.maxPosts,
   });
 
@@ -175,7 +168,6 @@ async function processQueue(body: unknown) {
   const result = await agent.processQueue(data.maxPosts ?? 1);
 
   logger.info('Queue API: Queue processed', {
-    organizationId: data.organizationId,
     successCount: result.successCount,
     failureCount: result.failureCount,
   });
@@ -208,11 +200,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
     const platform = searchParams.get('platform') as SocialPlatform | null;
 
     // Validate query params
-    const validation = getQueueSchema.safeParse({ organizationId, platform: platform ?? undefined });
+    const validation = getQueueSchema.safeParse({ platform: platform ?? undefined });
 
     if (!validation.success) {
       return NextResponse.json(
@@ -228,7 +219,6 @@ export async function GET(request: NextRequest) {
     const data = validation.data;
 
     logger.info('Queue API: Getting queue', {
-      organizationId: data.organizationId,
       platform: data.platform,
     });
 
@@ -308,7 +298,6 @@ export async function PUT(request: NextRequest) {
     }
 
     logger.info('Queue API: Posting immediately', {
-      organizationId: data.organizationId,
       platforms: data.platforms,
     });
 
@@ -327,7 +316,6 @@ export async function PUT(request: NextRequest) {
     );
 
     logger.info('Queue API: Immediate post complete', {
-      organizationId: data.organizationId,
       successCount: result.successCount,
       failureCount: result.failureCount,
     });
@@ -392,7 +380,6 @@ export async function DELETE(request: NextRequest) {
     const data = validation.data;
 
     logger.info('Queue API: Removing from queue', {
-      organizationId: data.organizationId,
       postId: data.postId,
     });
 
@@ -413,7 +400,6 @@ export async function DELETE(request: NextRequest) {
     }
 
     logger.info('Queue API: Post removed from queue', {
-      organizationId: data.organizationId,
       postId: data.postId,
     });
 

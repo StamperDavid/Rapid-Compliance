@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -287,7 +287,7 @@ export default function VoiceAITrainingLabPage() {
 
       // Load voice training settings
       const voiceData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/toolTraining`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/toolTraining`,
         'voice'
       );
       const typedVoiceData = voiceData as FirestoreVoiceData | null;
@@ -309,7 +309,7 @@ export default function VoiceAITrainingLabPage() {
       }
 
       // Load Brand DNA
-      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
       const typedOrgData = orgData as FirestoreOrgData | null;
       if (typedOrgData?.brandDNA && isBrandDNA(typedOrgData.brandDNA)) {
         setBrandDNA(typedOrgData.brandDNA);
@@ -318,7 +318,7 @@ export default function VoiceAITrainingLabPage() {
       // Load call history
       const { orderBy } = await import('firebase/firestore');
       const historyResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/voiceCallHistory`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/voiceCallHistory`,
         [orderBy('timestamp', 'desc')],
         50
       );
@@ -328,7 +328,7 @@ export default function VoiceAITrainingLabPage() {
 
       // Load knowledge base
       const knowledgeResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/voiceKnowledge`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/voiceKnowledge`,
         [orderBy('uploadedAt', 'desc')],
         100
       );
@@ -397,7 +397,7 @@ export default function VoiceAITrainingLabPage() {
   // Load TTS config and voices
   const loadTTSConfig = async () => {
     try {
-      const response = await fetch(`/api/voice/tts?orgId=${DEFAULT_ORG_ID}&action=config`);
+      const response = await fetch(`/api/voice/tts?action=config`);
       const data = await response.json() as TTSConfigResponse;
       if (data.success && data.config) {
         setTtsEngine(data.config.engine ?? 'native');
@@ -412,7 +412,7 @@ export default function VoiceAITrainingLabPage() {
   const loadTTSVoices = async (engine: TTSEngineType) => {
     setLoadingVoices(true);
     try {
-      const response = await fetch(`/api/voice/tts?orgId=${DEFAULT_ORG_ID}&engine=${engine}`);
+      const response = await fetch(`/api/voice/tts?engine=${engine}`);
       const data = await response.json() as TTSVoicesResponse;
       if (data.success && data.voices) {
         setTtsVoices(data.voices);
@@ -485,7 +485,6 @@ export default function VoiceAITrainingLabPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: testText,
-          organizationId: DEFAULT_ORG_ID,
           engine: ttsEngine,
           voiceId: selectedVoiceId,
         }),
@@ -517,7 +516,6 @@ export default function VoiceAITrainingLabPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'save-config',
-          organizationId: DEFAULT_ORG_ID,
           userId: user?.id ?? 'unknown',
           config: {
             engine: ttsEngine,
@@ -564,11 +562,10 @@ export default function VoiceAITrainingLabPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/toolTraining`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/toolTraining`,
         'voice',
         {
           toolType: 'voice',
-          orgId: DEFAULT_ORG_ID,
           inheritFromBrandDNA: !overrideForVoice,
           toolSettings: updatedSettings,
           updatedAt: new Date().toISOString(),
@@ -660,7 +657,7 @@ export default function VoiceAITrainingLabPage() {
       if (isFirebaseConfigured) {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/voiceCallHistory`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/voiceCallHistory`,
           newCall.id,
           { ...newCall, messages: callMessages },
           false
@@ -823,7 +820,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
       if (isFirebaseConfigured) {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/voiceKnowledge`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/voiceKnowledge`,
           newItem.id,
           newItem,
           false
@@ -844,7 +841,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
       if (isFirebaseConfigured) {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        await FirestoreService.delete(`${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/voiceKnowledge`, id);
+        await FirestoreService.delete(`${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/voiceKnowledge`, id);
       }
     } catch (error: unknown) {
       logger.error('Error deleting knowledge item:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });

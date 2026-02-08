@@ -292,7 +292,6 @@ export default function IdentityRefinementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: testText,
-          organizationId: DEFAULT_ORG_ID,
           engine: identity.voiceEngine,
           voiceId: identity.voiceId,
         }),

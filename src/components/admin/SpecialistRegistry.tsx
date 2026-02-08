@@ -18,7 +18,6 @@ import type { AISpecialist, SpecialistCategory, SpecialistStatus } from '@/types
 // ============================================================================
 
 export interface SpecialistRegistryProps {
-  organizationId: string;
   onSelectSpecialist?: (specialistId: string) => void;
 }
 
@@ -877,7 +876,7 @@ FilterBar.displayName = 'FilterBar';
 // MAIN COMPONENT
 // ============================================================================
 
-export const SpecialistRegistry: React.FC<SpecialistRegistryProps> = React.memo(({ organizationId, onSelectSpecialist }) => {
+export const SpecialistRegistry: React.FC<SpecialistRegistryProps> = React.memo(({ onSelectSpecialist }) => {
   const [selectedCategory, setSelectedCategory] = useState<SpecialistCategory | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<SpecialistStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -939,9 +938,6 @@ export const SpecialistRegistry: React.FC<SpecialistRegistryProps> = React.memo(
         <h1 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.5rem', color: 'var(--color-text-primary, #111827)' }}>
           AI Specialist Registry
         </h1>
-        <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary, #6b7280)', marginBottom: '1rem' }}>
-          Organization ID: {organizationId}
-        </p>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <div
             style={{

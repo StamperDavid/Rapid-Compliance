@@ -43,7 +43,6 @@ function createMockDeal(overrides: Partial<Deal> = {}): Deal {
   
   return {
     id: `deal-${Date.now()}`,
-    organizationId: TEST_ORG_ID,
     workspaceId: TEST_WORKSPACE_ID,
     name: 'Test Deal',
     value: 50000,
@@ -65,7 +64,6 @@ describe('Deal Scoring Engine', () => {
       const deal = createMockDeal();
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
         deal
@@ -115,7 +113,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
         deal
@@ -140,7 +137,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
         deal
@@ -161,7 +157,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
         deal
@@ -180,7 +175,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const scoreWithCEO = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealWithCEO.id,
         deal: dealWithCEO
@@ -198,7 +192,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const scoreWithCoordinator = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealWithCoordinator.id,
         deal: dealWithCoordinator
@@ -217,7 +210,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const scoreAtBudget = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealAtBudget.id,
         deal: dealAtBudget
@@ -235,7 +227,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const scoreOverBudget = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealOverBudget.id,
         deal: dealOverBudget
@@ -253,7 +244,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const scoreWithCompetitors = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealWithCompetitors.id,
         deal: dealWithCompetitors
@@ -268,7 +258,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const scoreNoCompetitors = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: dealNoCompetitors.id,
         deal: dealNoCompetitors
@@ -283,7 +272,6 @@ describe('Deal Scoring Engine', () => {
 
       // Score with SaaS template (emphasizes engagement)
       const saasScore = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
         deal,
@@ -292,7 +280,6 @@ describe('Deal Scoring Engine', () => {
       
       // Score with Manufacturing template (emphasizes budget)
       const mfgScore = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
         deal,
@@ -312,7 +299,6 @@ describe('Deal Scoring Engine', () => {
       const deal = createMockDeal();
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
         deal
@@ -333,7 +319,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: deal.id,
         deal
@@ -358,7 +343,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const hotScore = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: hotDeal.id,
         deal: hotDeal
@@ -374,7 +358,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const atRiskScore = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: atRiskDeal.id,
         deal: atRiskDeal
@@ -395,7 +378,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: overdueDeal.id,
         deal: overdueDeal
@@ -415,7 +397,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: budgetRiskDeal.id,
         deal: budgetRiskDeal
@@ -433,7 +414,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: noDecisionMakerDeal.id,
         deal: noDecisionMakerDeal
@@ -452,7 +432,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: riskyDeal.id,
         deal: riskyDeal
@@ -523,7 +502,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: completeDeal.id,
         deal: completeDeal
@@ -541,7 +519,6 @@ describe('Deal Scoring Engine', () => {
       });
 
       const score = calculateDealScore({
-        organizationId: TEST_ORG_ID,
         workspaceId: TEST_WORKSPACE_ID,
         dealId: incompleteDeal.id,
         deal: incompleteDeal

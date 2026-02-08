@@ -7,13 +7,12 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { successResponse } from '@/lib/api/error-handler';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Request payload structure for knowledge upload
  */
 interface KnowledgeUploadFormData {
-  organizationId: string | null;
   files: File[];
   urls: string | null;
   faqs: string | null;
@@ -35,13 +34,11 @@ interface KnowledgeUploadSuccessResponse {
  * Parse and validate form data with proper type safety
  */
 function parseKnowledgeUploadFormData(formData: FormData): KnowledgeUploadFormData {
-  const organizationId = formData.get('organizationId');
   const files = formData.getAll('files');
   const urlsRaw = formData.get('urls');
   const faqs = formData.get('faqs');
 
   return {
-    organizationId: typeof organizationId === 'string' ? organizationId : null,
     files: files.filter((file): file is File => file instanceof File),
     urls: typeof urlsRaw === 'string' ? urlsRaw : null,
     faqs: typeof faqs === 'string' ? faqs : null,
@@ -85,23 +82,11 @@ export async function POST(request: NextRequest) {
     const rawFormData = await request.formData();
     const formData = parseKnowledgeUploadFormData(rawFormData);
 
-    // Validate organizationId
-    const organizationId = formData.organizationId;
-    if (!organizationId) {
-      return errors.badRequest('Organization ID is required');
-    }
-
-    // Verify user has access (penthouse model - verify against DEFAULT_ORG_ID)
-    if (DEFAULT_ORG_ID !== organizationId) {
-      return errors.forbidden('Access denied');
-    }
-
     // Parse URLs array
     const urls = parseUrlsArray(formData.urls);
 
     // Process knowledge base
     const knowledgeBase = await processKnowledgeBase({
-      organizationId,
       uploadedFiles: formData.files,
       urls,
       faqs: formData.faqs ?? undefined,
@@ -109,11 +94,10 @@ export async function POST(request: NextRequest) {
 
     // Save to Firestore
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBase`,
       'current',
       {
         ...knowledgeBase,
-        organizationId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },

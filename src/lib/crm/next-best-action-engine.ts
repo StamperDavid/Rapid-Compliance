@@ -20,7 +20,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { Deal } from './deal-service';
 
 import { calculateDealHealth, type DealHealthScore } from './deal-health';
@@ -99,8 +99,7 @@ export async function generateNextBestActions(
 ): Promise<ActionRecommendations> {
   try {
     logger.info('Generating next best actions', {
-      organizationId: DEFAULT_ORG_ID,
-      dealId,
+            dealId,
     });
 
     // Step 1: Get or calculate deal health
@@ -186,8 +185,7 @@ export async function generateNextBestActions(
   } catch (error) {
     const errorInstance = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to generate next best actions', errorInstance, {
-      organizationId: DEFAULT_ORG_ID,
-      dealId,
+            dealId,
     });
     throw errorInstance;
   }

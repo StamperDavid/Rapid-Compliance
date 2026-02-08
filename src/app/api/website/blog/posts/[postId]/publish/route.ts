@@ -1,7 +1,7 @@
 /**
  * Blog Post Publishing API
  * Handle publish/unpublish actions for blog posts
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const paramsSchema = z.object({
   postId: z.string().min(1, 'postId is required'),
@@ -20,7 +20,6 @@ const postBodySchema = z.object({
 });
 
 interface BlogPostData {
-  organizationId: string;
   title?: string;
   status?: string;
   scheduledFor?: string | null;
@@ -71,8 +70,8 @@ export async function POST(
     const { scheduledFor } = bodyResult.data;
 
     const postRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: DEFAULT_ORG_ID, postId }
+      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      { postId }
     );
 
     const doc = await postRef.get();
@@ -127,8 +126,7 @@ export async function POST(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/audit-log/entries',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/audit-log/entries'
     );
 
     await auditRef.add({
@@ -138,7 +136,7 @@ export async function POST(
       scheduledFor: scheduledFor ?? null,
       performedBy,
       performedAt: now,
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
     });
 
     return NextResponse.json({
@@ -184,8 +182,8 @@ export async function DELETE(
     const { postId } = paramsResult.data;
 
     const postRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: DEFAULT_ORG_ID, postId }
+      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      { postId }
     );
 
     const doc = await postRef.get();
@@ -212,8 +210,7 @@ export async function DELETE(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/audit-log/entries',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/audit-log/entries'
     );
 
     await auditRef.add({
@@ -222,7 +219,7 @@ export async function DELETE(
       postTitle: postData?.title ?? '',
       performedBy,
       performedAt: now,
-      DEFAULT_ORG_ID,
+      PLATFORM_ID,
     });
 
     return NextResponse.json({

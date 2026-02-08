@@ -5,7 +5,7 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Safe parseFloat that handles NaN correctly.
@@ -83,13 +83,12 @@ export async function GET(request: NextRequest) {
     // Use caching for analytics queries (TTL: 10 minutes)
     const analytics = await withCache(
       'pipeline',
-      async () => calculatePipelineAnalytics(DEFAULT_ORG_ID, period),
+      async () => calculatePipelineAnalytics(period),
       { period }
     );
 
     logger.info('Pipeline analytics retrieved', {
       route: '/api/analytics/pipeline',
-      orgId: DEFAULT_ORG_ID,
       period,
       dealsCount: analytics.dealsCount,
     });
@@ -105,15 +104,15 @@ export async function GET(request: NextRequest) {
 /**
  * Calculate pipeline analytics (extracted for caching)
  */
-async function calculatePipelineAnalytics(orgId: string, _period: string) {
+async function calculatePipelineAnalytics(_period: string) {
   // Get all deals from Firestore
-  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
+  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
   let allDeals: DealRecord[] = [];
   
   try {
     allDeals = await FirestoreService.getAll(dealsPath, []);
   } catch (_e) {
-    logger.debug('No deals collection yet', { orgId });
+    logger.debug('No deals collection yet');
   }
 
     // Define open statuses (deals still in pipeline)

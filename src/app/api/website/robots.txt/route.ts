@@ -9,11 +9,11 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface WebsiteData {
   customDomain?: string;
   customDomainVerified?: boolean;
-  organizationId?: string;
   subdomain?: string;
   robotsTxt?: string;
 }
@@ -26,22 +26,22 @@ export async function GET(request: NextRequest) {
 
     // Extract domain or subdomain from request
     const host = request.headers.get('host') ?? '';
-    
-    // Find organization by custom domain or subdomain
-    let organizationId: string | null = null;
+
+    // Verify domain/subdomain exists
+    let domainFound = false;
 
     // Check if custom domain (query across all orgs' website settings)
     const domainsSnapshot = await adminDal.getCollectionGroup('website').get();
     for (const doc of domainsSnapshot.docs) {
       const data = doc.data() as WebsiteData;
       if (data.customDomain === host && data.customDomainVerified) {
-        organizationId = data.organizationId ?? null;
+        domainFound = true;
         break;
       }
     }
 
     // If not custom domain, check subdomain
-    if (!organizationId) {
+    if (!domainFound) {
       const subdomain = host.split('.')[0];
       const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
       const { adminDb } = await import('@/lib/firebase/admin');
@@ -62,20 +62,19 @@ export async function GET(request: NextRequest) {
 
         const settingsData = settingsDoc.data() as WebsiteData | undefined;
         if (settingsData?.subdomain === subdomain) {
-          organizationId = orgDoc.id;
+          domainFound = true;
           break;
         }
       }
     }
 
-    if (!organizationId) {
+    if (!domainFound) {
       return new NextResponse('Site not found', { status: 404 });
     }
 
     // Get robots.txt from settings
     const settingsRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/settings',
-      { orgId: organizationId }
+      'organizations/rapid-compliance-root/website/settings'
     );
     const settingsDoc = await settingsRef.get();
 

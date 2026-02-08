@@ -17,7 +17,6 @@ export const dynamic = 'force-dynamic';
 
 // Validation Schema
 const SendEmailSchema = z.object({
-  organizationId: z.string().min(1, 'Organization ID is required'),
   workspaceId: z.string().min(1, 'Workspace ID is required'),
   userId: z.string().min(1, 'User ID is required'),
 
@@ -111,14 +110,12 @@ export async function POST(request: NextRequest) {
 
     // 5. Send email
     logger.info('Sending sales email', {
-      organizationId: validData.organizationId,
       to: validData.to,
       dealId: validData.dealId,
       emailId: validData.emailId,
     });
 
     const result = await sendEmail({
-      organizationId: validData.organizationId,
       workspaceId: validData.workspaceId,
       userId: validData.userId,
       to: validData.to,
@@ -140,7 +137,6 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       logger.error('Email sending failed', undefined, {
         error: result.error,
-        organizationId: validData.organizationId,
         to: validData.to,
         deliveryId: result.deliveryId,
         duration,
@@ -159,7 +155,6 @@ export async function POST(request: NextRequest) {
     logger.info('Email sent successfully', {
       deliveryId: result.deliveryId,
       messageId: result.messageId,
-      organizationId: validData.organizationId,
       to: validData.to,
       duration,
     });

@@ -6,7 +6,6 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { formatValidationErrors } from '@/lib/validation/error-formatter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,12 +37,7 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { organizationId, ...smsData } = validation.data;
-
-    // Verify user has access to this organization
-    if (DEFAULT_ORG_ID !== organizationId) {
-      return errors.forbidden('Access denied to this organization');
-    }
+    const smsData = validation.data;
 
     // Verify required fields
     if (!smsData.to || !smsData.message) {
@@ -57,7 +51,6 @@ export async function POST(request: NextRequest) {
     const smsOptions: SMSOptions = {
       to: smsData.to,
       message: smsData.message,
-      organizationId,
       from: smsData.from,
       metadata: { ...smsData.metadata, userId: user.uid },
     };

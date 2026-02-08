@@ -3,7 +3,7 @@ import type { NextRequest} from 'next/server';
 import { verifyAdminRequest, createErrorResponse, createSuccessResponse, isAuthError } from '@/lib/api/admin-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // Type Definitions
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         const apiKeysPath = getOrgSubCollection('apiKeys');
         await adminDb
           .collection(apiKeysPath)
-          .doc(DEFAULT_ORG_ID)
+          .doc(PLATFORM_ID)
           .update({
             [`ai.${service}LastChecked`]: new Date().toISOString(),
             [`ai.${service}LastError`]: testResult.success ? null : testResult.error,

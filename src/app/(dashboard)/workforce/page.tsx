@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -402,7 +402,6 @@ const HierarchySection = memo(function HierarchySection({
  */
 export default function WorkforceCommandCenterPage() {
   const router = useRouter();
-  const _orgId = DEFAULT_ORG_ID;
   const { user: _user } = useAuth();
 
   // View state

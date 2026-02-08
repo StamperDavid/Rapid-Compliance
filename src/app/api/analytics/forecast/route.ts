@@ -4,7 +4,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Safely converts polymorphic date values (Firestore Timestamp, Date, string, number) to Date.
@@ -92,13 +92,13 @@ export async function GET(request: NextRequest) {
       : 'month';
 
     // Get open deals from Firestore
-    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/workspaces/default/entities/deals`;
+    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
     let allDeals: DealRecord[] = [];
     
     try {
       allDeals = await FirestoreService.getAll(dealsPath, []);
     } catch (_e) {
-      logger.debug('No deals collection yet', { orgId: DEFAULT_ORG_ID });
+      logger.debug('No deals collection yet');
     }
 
     // Filter to open deals (still in pipeline)

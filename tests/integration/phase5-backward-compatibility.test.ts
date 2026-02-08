@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { enrichCompany, getEnrichmentAnalytics, getStorageOptimizationAnalytics } from '@/lib/enrichment/enrichment-service';
 
 describe('Phase 5: Backward Compatibility Verification', () => {
@@ -21,9 +22,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
           includeNews: true,
           includeSocial: true,
           includeTechStack: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       expect(result.data).toBeDefined();
@@ -53,9 +52,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
           companyName: 'Explicit Disable Test',
           domain: 'explicitdisable.com',
           enableDistillation: false,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       
@@ -112,9 +109,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
           domain: 'structuretest.com',
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       
@@ -152,9 +147,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
           companyName: 'Structure Test No Distill',
           domain: 'structurenodistill.com',
           enableDistillation: false,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       expect(result.success).toBe(true);
       
@@ -178,9 +171,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
           domain: 'this-domain-does-not-exist-12345.com',
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
 
       // Should return error response, not throw
       expect(result).toBeDefined();
@@ -193,15 +184,14 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       const result = await enrichCompany(
         {
           // No companyName, domain, or website
-        } as unknown as Parameters<typeof enrichCompany>[0],
-        TEST_ORG_ID
+        } as unknown as Parameters<typeof enrichCompany>[0]
       );
 
       // Should return error, not crash
       expect(result).toBeDefined();
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      
+
       console.log('\n✅ Error handling works for missing fields');
       console.log('Error message:', result.error);
     }, 30000);
@@ -216,9 +206,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
           companyName: 'Baseline Perf Test',
           domain: 'baselineperf.com',
           enableDistillation: false,
-        },
-        TEST_ORG_ID
-      );
+        });
       const baselineDuration = Date.now() - baselineStart;
 
       // Run with distillation
@@ -229,9 +217,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
           domain: 'distillperf.com',
           industryTemplateId: 'hvac',
           enableDistillation: true,
-        },
-        TEST_ORG_ID
-      );
+        });
       const distillDuration = Date.now() - distillStart;
 
       console.log('\nPerformance Comparison:');

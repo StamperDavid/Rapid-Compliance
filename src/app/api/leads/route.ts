@@ -86,7 +86,7 @@ export async function POST(
 
     const { workspaceId, leadData } = bodyResult.data;
     // Cast to the expected type - service layer handles full validation
-    const leadInput = leadData as unknown as Omit<Lead, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>;
+    const leadInput = leadData as unknown as Omit<Lead, 'id' | 'workspaceId' | 'createdAt'>;
     const result = await createLead(leadInput, workspaceId);
 
     return NextResponse.json(result);

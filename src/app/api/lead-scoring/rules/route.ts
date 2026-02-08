@@ -15,12 +15,10 @@ import adminApp from '@/lib/firebase/admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import { type ScoringRules, DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // Interface for Firestore scoring rules data
 interface FirestoreScoringRulesData {
   id: string;
-  organizationId: string;
   name: string;
   description?: string;
   isActive?: boolean;
@@ -32,14 +30,12 @@ interface FirestoreScoringRulesData {
 
 // Zod schemas for request validation
 const createRulesSchema = z.object({
-  organizationId: z.string().min(1),
   name: z.string().min(1),
   description: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 
 const updateRulesSchema = z.object({
-  organizationId: z.string().min(1),
   rulesId: z.string().min(1),
   isActive: z.boolean().optional(),
 });
@@ -79,8 +75,7 @@ export async function GET(req: NextRequest) {
 
     // Get all scoring rules for organization
     const rulesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/scoringRules',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/scoringRules'
     );
     const snapshot = await rulesRef.orderBy('createdAt', 'desc').get();
 
@@ -158,26 +153,24 @@ export async function POST(req: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'DEFAULT_ORG_ID and name are required', details: validation.error.issues },
+        { success: false, error: 'Name is required', details: validation.error.issues },
         { status: 400 }
       );
     }
 
-    const { organizationId, name, description, isActive } = validation.data;
+    const { name, description, isActive } = validation.data;
 
     const now = new Date();
     // Generate a new document ID
     const rulesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/scoringRules',
-      { orgId: organizationId }
+      'organizations/rapid-compliance-root/scoringRules'
     );
     const rulesId = rulesRef.doc().id;
 
     // If this is set to active, deactivate all other rules
     if (isActive) {
       const existingRulesRef = adminDal.getNestedCollection(
-        'organizations/{orgId}/scoringRules',
-        { orgId: organizationId }
+        'organizations/rapid-compliance-root/scoringRules'
       );
       const existingSnapshot = await existingRulesRef.where('isActive', '==', true).get();
 
@@ -200,8 +193,8 @@ export async function POST(req: NextRequest) {
     };
 
     const rulesDocRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/scoringRules/{rulesId}',
-      { orgId: DEFAULT_ORG_ID, rulesId }
+      'organizations/rapid-compliance-root/scoringRules/{rulesId}',
+      { rulesId }
     );
 
     await rulesDocRef.set({
@@ -212,7 +205,6 @@ export async function POST(req: NextRequest) {
 
     logger.info('Created scoring rules', {
       rulesId,
-      DEFAULT_ORG_ID,
       userId,
     });
 
@@ -268,18 +260,17 @@ export async function PUT(req: NextRequest) {
 
     if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'DEFAULT_ORG_ID and rulesId are required', details: validation.error.issues },
+        { success: false, error: 'Rules ID is required', details: validation.error.issues },
         { status: 400 }
       );
     }
 
-    const { organizationId, rulesId, isActive } = validation.data;
+    const { rulesId, isActive } = validation.data;
 
     // If setting to active, deactivate others
     if (isActive) {
       const existingRulesRef = adminDal.getNestedCollection(
-        'organizations/{orgId}/scoringRules',
-        { orgId: organizationId }
+        'organizations/rapid-compliance-root/scoringRules'
       );
       const existingSnapshot = await existingRulesRef.where('isActive', '==', true).get();
 
@@ -293,8 +284,8 @@ export async function PUT(req: NextRequest) {
     }
 
     const rulesDocRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/scoringRules/{rulesId}',
-      { orgId: DEFAULT_ORG_ID, rulesId }
+      'organizations/rapid-compliance-root/scoringRules/{rulesId}',
+      { rulesId }
     );
 
     const updateData: Record<string, unknown> = {
@@ -306,7 +297,7 @@ export async function PUT(req: NextRequest) {
 
     await rulesDocRef.update(updateData);
 
-    logger.info('Updated scoring rules', { rulesId, DEFAULT_ORG_ID });
+    logger.info('Updated scoring rules', { rulesId });
 
     return NextResponse.json({
       success: true,
@@ -365,13 +356,13 @@ export async function DELETE(req: NextRequest) {
     }
 
     const rulesDocRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/scoringRules/{rulesId}',
-      { orgId: DEFAULT_ORG_ID, rulesId }
+      'organizations/rapid-compliance-root/scoringRules/{rulesId}',
+      { rulesId }
     );
 
     await rulesDocRef.delete();
 
-    logger.info('Deleted scoring rules', { rulesId, DEFAULT_ORG_ID });
+    logger.info('Deleted scoring rules', { rulesId });
 
     return NextResponse.json({
       success: true,

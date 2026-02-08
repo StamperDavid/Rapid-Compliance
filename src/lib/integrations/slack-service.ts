@@ -268,23 +268,22 @@ export async function setChannelTopic(accessToken: string, channel: string, topi
  * Convenience wrapper for form triggers and workflows
  */
 export async function sendSlackMessage(params: {
-  orgId: string;
   channelId: string;
   message: string;
   metadata?: Record<string, unknown>;
 }): Promise<void> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
     // Look up the org's Slack integration credentials
     const integration = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${params.orgId}/integrations`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
       'slack'
     );
 
     if (!integration || typeof integration !== 'object') {
       logger.warn('Slack integration not configured for organization', {
-        orgId: params.orgId,
         file: 'slack-service.ts',
       });
       return;
@@ -295,7 +294,6 @@ export async function sendSlackMessage(params: {
 
     if (typeof accessToken !== 'string' || !accessToken) {
       logger.warn('Slack access token not found for organization', {
-        orgId: params.orgId,
         file: 'slack-service.ts',
       });
       return;
@@ -308,14 +306,13 @@ export async function sendSlackMessage(params: {
     });
 
     logger.info('Slack message sent', {
-      orgId: params.orgId,
       channelId: params.channelId,
       file: 'slack-service.ts',
     });
   } catch (error) {
     logger.error('Failed to send Slack message',
       error instanceof Error ? error : new Error(String(error)),
-      { orgId: params.orgId, channelId: params.channelId, file: 'slack-service.ts' }
+      { channelId: params.channelId, file: 'slack-service.ts' }
     );
   }
 }

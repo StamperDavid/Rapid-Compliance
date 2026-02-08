@@ -629,8 +629,6 @@ export interface OrganizationWorkforce {
   /**
    * Organization ID
    */
-  orgId: string;
-
   /**
    * Active template ID
    */

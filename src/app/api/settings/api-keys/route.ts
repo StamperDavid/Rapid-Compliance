@@ -9,7 +9,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { handleAPIError, errors, validateRequired } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface ApiKeysDocument {
   [service: string]: string | undefined;
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Load keys from Firestore
     const apiKeys = await FirestoreService.get<ApiKeysDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
       'apiKeys'
     );
 
@@ -76,7 +76,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  * POST - Save API key
  */
 interface SaveApiKeyBody {
-  orgId: string;
   service: string;
   key: string;
 }
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const body: unknown = await request.json();
 
-    // Validate required fields - DEFAULT_ORG_ID no longer required (penthouse)
+    // Validate required fields - PLATFORM_ID no longer required (penthouse)
     const validation = validateRequired(body as Record<string, unknown>, ['service', 'key']);
     if (!validation.valid) {
       return handleAPIError(
@@ -102,7 +101,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Load existing keys
     const existingKeys: ApiKeysDocument = await FirestoreService.get<ApiKeysDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
       'apiKeys'
     ) ?? {};
 
@@ -112,13 +111,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Save to Firestore
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
       'apiKeys',
       existingKeys,
       false
     );
 
-    logger.info('API key saved', { route: '/api/settings/api-keys', service, DEFAULT_ORG_ID });
+    logger.info('API key saved', { route: '/api/settings/api-keys', service });
 
     return NextResponse.json({
       success: true,

@@ -503,7 +503,6 @@ Don't wait for permission on routine operations. Execute and report.
     <>
       <OrchestratorBase config={config} />
       <FeedbackModal
-        orgId="admin"
         userId={adminUser.id}
         userEmail={adminUser.email}
       />

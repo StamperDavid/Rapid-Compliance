@@ -193,9 +193,8 @@ export interface EnrichmentResponse {
  * Stores what the user cares about for future enrichment
  */
 export interface EnrichmentPreferences {
-  organizationId: string;
   userId: string;
-  
+
   // What signals matter to this user
   priorityFields: string[]; // e.g., ['techStack', 'fundingStage', 'employeeCount']
   
@@ -230,9 +229,8 @@ export interface EnrichmentPreferences {
  * Cost tracking for analytics
  */
 export interface EnrichmentCostLog {
-  organizationId: string;
   timestamp: Date;
-  
+
   // What was enriched
   companyDomain: string;
   

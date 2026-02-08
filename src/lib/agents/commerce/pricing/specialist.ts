@@ -6,6 +6,7 @@ import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { processPayment, refundPayment, type PaymentRequest, type PaymentResult } from '@/lib/ecommerce/payment-service';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============== Configuration ==============
 
@@ -53,7 +54,6 @@ Always validate payment amounts, apply appropriate discounts, and ensure PCI com
 
 interface ProcessPaymentPayload {
   action: 'process_payment';
-  organizationId: string;
   workspaceId: string;
   amount: number;
   currency: string;
@@ -70,7 +70,6 @@ interface ProcessPaymentPayload {
 
 interface ValidatePricingPayload {
   action: 'validate_pricing';
-  organizationId: string;
   items: Array<{
     productId: string;
     quantity: number;
@@ -81,7 +80,6 @@ interface ValidatePricingPayload {
 
 interface ApplyDiscountPayload {
   action: 'apply_discount';
-  organizationId: string;
   workspaceId: string;
   subtotal: number;
   discountCode: string;
@@ -89,7 +87,6 @@ interface ApplyDiscountPayload {
 
 interface CalculateTotalPayload {
   action: 'calculate_total';
-  organizationId: string;
   workspaceId: string;
   items: Array<{
     productId: string;
@@ -103,7 +100,6 @@ interface CalculateTotalPayload {
 
 interface RefundPayload {
   action: 'refund';
-  organizationId: string;
   workspaceId: string;
   transactionId: string;
   amount?: number;
@@ -112,7 +108,6 @@ interface RefundPayload {
 
 interface GetStatusPayload {
   action: 'get_status';
-  organizationId: string;
   workspaceId: string;
   transactionId: string;
 }
@@ -230,11 +225,11 @@ export class PricingStrategist extends BaseSpecialist {
    * Handle process_payment action
    */
   private async handleProcessPayment(payload: ProcessPaymentPayload): Promise<PricingExecutionResult> {
-    if (!payload.organizationId || !payload.workspaceId || !payload.amount || !payload.customer) {
+    if (!payload.workspaceId || !payload.amount || !payload.customer) {
       return {
         success: false,
         action: 'process_payment',
-        error: 'Missing required fields: organizationId, workspaceId, amount, customer',
+        error: 'Missing required fields: workspaceId, amount, customer',
       };
     }
 
@@ -289,7 +284,7 @@ export class PricingStrategist extends BaseSpecialist {
     for (const item of payload.items) {
       // Fetch product to validate price
       const product: { price?: number; status?: string } | null = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${payload.organizationId}/products`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
         item.productId
       );
 
@@ -353,7 +348,7 @@ export class PricingStrategist extends BaseSpecialist {
       usageLimit?: number;
       active?: boolean;
     } | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${payload.organizationId}/discounts`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/discounts`,
       payload.discountCode.toUpperCase()
     );
 

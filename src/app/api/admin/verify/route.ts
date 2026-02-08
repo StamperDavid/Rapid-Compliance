@@ -13,7 +13,7 @@ import {
   isAdminClaims,
   type AuthClaims,
 } from '@/lib/auth/claims-validator';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Firestore user document structure
@@ -23,7 +23,6 @@ interface FirestoreUserData {
   name?: string;
   displayName?: string;
   role?: string;
-  organizationId?: string;
   createdAt?: unknown;
   updatedAt?: unknown;
   lastLoginAt?: unknown;
@@ -37,7 +36,6 @@ interface VerifyResponseData {
   email: string;
   name: string;
   role: string;
-  organizationId: string;
   verified: boolean;
   claims: {
     isAdmin: boolean;
@@ -155,7 +153,6 @@ export async function POST(request: NextRequest) {
           ? userData.displayName
           : 'Admin User',
       role: effectiveClaims.role ?? userData.role ?? 'admin',
-      organizationId: DEFAULT_ORG_ID,
       verified: true,
       claims: {
         isAdmin: isAdminUser,

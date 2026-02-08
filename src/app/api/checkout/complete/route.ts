@@ -6,7 +6,7 @@ import { checkoutCompleteSchema, validateInput } from '@/lib/validation/schemas'
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,18 +48,10 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { organizationId, paymentIntentId } = validation.data;
-
-    // Verify user has access to this organization (penthouse model - verify against DEFAULT_ORG_ID)
-    if (DEFAULT_ORG_ID !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
-    }
+    const { paymentIntentId } = validation.data;
 
     // Get Stripe keys
-    const stripeKeys = await apiKeyService.getServiceKey(organizationId, 'stripe') as { secretKey?: string } | null;
+    const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as { secretKey?: string } | null;
 
     if (!stripeKeys?.secretKey) {
       return NextResponse.json(

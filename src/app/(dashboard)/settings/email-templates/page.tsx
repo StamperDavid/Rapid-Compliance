@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /* eslint-disable no-alert -- This admin UI uses native dialogs for quick user confirmations. Replace with modal components in production. */
 /* eslint-disable @next/next/no-img-element -- Email template images use blob URLs from FileReader which don't work with next/image. */
@@ -224,7 +224,6 @@ Best regards,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            organizationId: DEFAULT_ORG_ID,
             workspaceId: 'default',
             filters: campaignFilters
           })

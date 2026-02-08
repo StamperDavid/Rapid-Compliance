@@ -20,8 +20,7 @@ describe('Validation Schemas', () => {
         to: 'test@example.com',
         subject: 'Test Subject',
         html: '<p>Test</p>',
-        organizationId: 'org-123',
-      };
+        };
       const result = validateInput(emailSendSchema, validData);
       expect(result.success).toBe(true);
     });
@@ -31,28 +30,17 @@ describe('Validation Schemas', () => {
         to: 'not-an-email',
         subject: 'Test',
         html: '<p>Test</p>',
-        organizationId: 'org-123',
-      };
+        };
       const result = validateInput(emailSendSchema, invalidData);
       expect(result.success).toBe(false);
     });
 
-    it('should require organizationId', () => {
-      const invalidData = {
-        to: 'test@example.com',
-        subject: 'Test',
-        html: '<p>Test</p>',
-      };
-      const result = validateInput(emailSendSchema, invalidData);
-      expect(result.success).toBe(false);
-    });
 
     it('should require either html or text', () => {
       const invalidData = {
         to: 'test@example.com',
         subject: 'Test',
-        organizationId: 'org-123',
-      };
+        };
       const result = validateInput(emailSendSchema, invalidData);
       expect(result.success).toBe(false);
     });
@@ -63,20 +51,11 @@ describe('Validation Schemas', () => {
       const validData = {
         to: '+1234567890',
         message: 'Test message',
-        organizationId: 'org-123',
-      };
+        };
       const result = validateInput(smsSendSchema, validData);
       expect(result.success).toBe(true);
     });
 
-    it('should require organizationId', () => {
-      const invalidData = {
-        to: '+1234567890',
-        message: 'Test',
-      };
-      const result = validateInput(smsSendSchema, invalidData);
-      expect(result.success).toBe(false);
-    });
   });
 
   describe('createPaymentIntentSchema', () => {
@@ -84,8 +63,7 @@ describe('Validation Schemas', () => {
       const validData = {
         amount: 1000,
         currency: 'usd',
-        organizationId: 'org-123',
-      };
+        };
       const result = validateInput(paymentIntentSchema, validData);
       expect(result.success).toBe(true);
     });
@@ -94,8 +72,7 @@ describe('Validation Schemas', () => {
       const invalidData = {
         amount: -100,
         currency: 'usd',
-        organizationId: 'org-123',
-      };
+        };
       const result = validateInput(paymentIntentSchema, invalidData);
       expect(result.success).toBe(false);
     });
@@ -106,8 +83,7 @@ describe('Validation Schemas', () => {
       const validData = {
         workflowId: 'workflow-123',
         triggerData: { event: 'contact.created' },
-        organizationId: 'org-123',
-      };
+        };
       const result = validateInput(workflowExecuteSchema, validData);
       expect(result.success).toBe(true);
     });
@@ -117,8 +93,7 @@ describe('Validation Schemas', () => {
     it('should validate correct lead scoring data', () => {
       const validData = {
         leadId: 'lead-123',
-        organizationId: 'org-123',
-      };
+        };
       const result = validateInput(leadScoringSchema, validData);
       expect(result.success).toBe(true);
     });
@@ -131,8 +106,7 @@ describe('Validation Schemas', () => {
         subject: 'Test Subject',
         templateId: 'template-123',
         recipientList: ['test@example.com'],
-        organizationId: 'org-123',
-      };
+        };
       const result = validateInput(campaignCreateSchema, validData);
       expect(result.success).toBe(true);
     });

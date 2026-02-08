@@ -16,6 +16,7 @@ import {
   type SMSDeliveryStatus,
 } from '@/lib/sms/sms-service';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============== Configuration ==============
 
@@ -67,7 +68,6 @@ interface SendSMSPayload {
   to: string | string[];
   message: string;
   from?: string;
-  organizationId: string;
   workspaceId?: string;
   metadata?: Record<string, unknown>;
 }
@@ -77,7 +77,6 @@ interface SendBulkSMSPayload {
   recipients: string[];
   message: string;
   from?: string;
-  organizationId: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -86,14 +85,12 @@ interface SendTemplateSMSPayload {
   templateId: string;
   to: string | string[];
   variables: Record<string, string>;
-  organizationId: string;
   metadata?: Record<string, unknown>;
 }
 
 interface GetStatusPayload {
   action: 'get_status';
   messageId: string;
-  organizationId: string;
 }
 
 interface ValidatePhonePayload {
@@ -223,11 +220,11 @@ export class SmsSpecialist extends BaseSpecialist {
    */
   private async handleSendSMS(payload: SendSMSPayload): Promise<SMSExecutionResult> {
     // Validate required fields
-    if (!payload.to || !payload.message || !payload.organizationId) {
+    if (!payload.to || !payload.message) {
       return {
         success: false,
         action: 'send_sms',
-        error: 'Missing required fields: to, message, organizationId',
+        error: 'Missing required fields: to, message',
       };
     }
 
@@ -260,7 +257,6 @@ export class SmsSpecialist extends BaseSpecialist {
       to: payload.to,
       message: payload.message,
       from: payload.from,
-      organizationId: payload.organizationId,
       workspaceId: payload.workspaceId,
       metadata: payload.metadata,
     };
@@ -289,11 +285,11 @@ export class SmsSpecialist extends BaseSpecialist {
       };
     }
 
-    if (!payload.message || !payload.organizationId) {
+    if (!payload.message) {
       return {
         success: false,
         action: 'send_bulk_sms',
-        error: 'Missing required fields: message, organizationId',
+        error: 'Missing required field: message',
       };
     }
 
@@ -318,7 +314,6 @@ export class SmsSpecialist extends BaseSpecialist {
       payload.message,
       {
         from: payload.from,
-        organizationId: payload.organizationId,
         metadata: payload.metadata,
       }
     );
@@ -342,11 +337,11 @@ export class SmsSpecialist extends BaseSpecialist {
    * Handle send_template_sms action
    */
   private async handleSendTemplateSMS(payload: SendTemplateSMSPayload): Promise<SMSExecutionResult> {
-    if (!payload.templateId || !payload.to || !payload.organizationId) {
+    if (!payload.templateId || !payload.to) {
       return {
         success: false,
         action: 'send_template_sms',
-        error: 'Missing required fields: templateId, to, organizationId',
+        error: 'Missing required fields: templateId, to',
       };
     }
 
@@ -367,7 +362,6 @@ export class SmsSpecialist extends BaseSpecialist {
       payload.to,
       payload.variables,
       {
-        organizationId: payload.organizationId,
         metadata: payload.metadata,
       }
     );
@@ -386,15 +380,15 @@ export class SmsSpecialist extends BaseSpecialist {
    * Handle get_status action
    */
   private async handleGetStatus(payload: GetStatusPayload): Promise<SMSExecutionResult> {
-    if (!payload.messageId || !payload.organizationId) {
+    if (!payload.messageId) {
       return {
         success: false,
         action: 'get_status',
-        error: 'messageId and organizationId are required',
+        error: 'messageId is required',
       };
     }
 
-    const status = await getSMSDeliveryStatus(payload.messageId, payload.organizationId);
+    const status = await getSMSDeliveryStatus(payload.messageId);
 
     return {
       success: true,

@@ -4,14 +4,14 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
-const ORG_ID = 'test-org-001';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 test.describe('Voice Engine Marketplace E2E', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to voice training page
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/voice/training`);
+    // Navigate to voice training page (single-tenant, no workspace routing)
+    await page.goto(`${BASE_URL}/voice/training`);
     // Wait for the page to load
     await page.waitForSelector('text=Voice AI Training Lab');
   });
@@ -221,7 +221,7 @@ test.describe('Voice Engine API Integration', () => {
       });
     });
 
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/voice/training`);
+    await page.goto(`${BASE_URL}/voice/training`);
 
     // Wait for initial load
     await page.waitForTimeout(1000);
@@ -264,7 +264,7 @@ test.describe('Voice Engine API Integration', () => {
       }
     });
 
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/voice/training`);
+    await page.goto(`${BASE_URL}/voice/training`);
 
     // Wait for page to load
     await page.waitForSelector('button:has-text("Test Voice")');
@@ -277,7 +277,6 @@ test.describe('Voice Engine API Integration', () => {
 
     // Verify API was called
     expect(ttsApiCalled).toBe(true);
-    expect(requestBody.organizationId).toBe(ORG_ID);
     expect(requestBody.engine).toBeDefined();
   });
 
@@ -316,7 +315,7 @@ test.describe('Voice Engine API Integration', () => {
       }
     });
 
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/voice/training`);
+    await page.goto(`${BASE_URL}/voice/training`);
 
     // Select ElevenLabs
     await page.click('button:has-text("ElevenLabs")');
@@ -337,21 +336,21 @@ test.describe('Voice Engine API Integration', () => {
 
 test.describe('Voice Engine Cost Comparison', () => {
   test('should display cost per 1k characters for Native', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/voice/training`);
+    await page.goto(`${BASE_URL}/voice/training`);
 
     // Native cost should be displayed
     await expect(page.locator('text=$0.005/1k chars')).toBeVisible();
   });
 
   test('should display cost per 1k characters for Unreal', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/voice/training`);
+    await page.goto(`${BASE_URL}/voice/training`);
 
     // Unreal cost should be displayed (cheaper)
     await expect(page.locator('text=$0.001/1k chars')).toBeVisible();
   });
 
   test('should display cost per 1k characters for ElevenLabs', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/voice/training`);
+    await page.goto(`${BASE_URL}/voice/training`);
 
     // ElevenLabs cost should be displayed (more expensive)
     await expect(page.locator('text=$0.030/1k chars')).toBeVisible();
@@ -360,7 +359,7 @@ test.describe('Voice Engine Cost Comparison', () => {
 
 test.describe('Voice Engine Accessibility', () => {
   test('should be keyboard navigable', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/voice/training`);
+    await page.goto(`${BASE_URL}/voice/training`);
 
     // Tab through provider buttons
     await page.keyboard.press('Tab');
@@ -373,7 +372,7 @@ test.describe('Voice Engine Accessibility', () => {
   });
 
   test('should have proper labels for screen readers', async ({ page }) => {
-    await page.goto(`${BASE_URL}/workspace/${ORG_ID}/voice/training`);
+    await page.goto(`${BASE_URL}/voice/training`);
 
     // Voice select should have a label
     await expect(page.locator('text=Select Voice')).toBeVisible();

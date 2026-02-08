@@ -5,7 +5,7 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Convert unknown date value to Date object
@@ -76,13 +76,12 @@ export async function GET(request: NextRequest) {
     // Use caching for analytics queries (TTL: 10 minutes)
     const analytics = await withCache(
       'lead-scoring',
-      async () => calculateLeadScoringAnalytics(DEFAULT_ORG_ID, period),
+      async () => calculateLeadScoringAnalytics(period),
       { period }
     );
 
     logger.info('Lead scoring analytics retrieved', {
       route: '/api/analytics/lead-scoring',
-      orgId: DEFAULT_ORG_ID,
       period,
       leadsCount: analytics.totalLeads,
     });
@@ -98,7 +97,7 @@ export async function GET(request: NextRequest) {
 /**
  * Calculate lead scoring analytics (extracted for caching)
  */
-async function calculateLeadScoringAnalytics(orgId: string, period: string) {
+async function calculateLeadScoringAnalytics(period: string) {
   // Calculate date range based on period
   const now = new Date();
   let startDate: Date;
@@ -121,13 +120,13 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
   }
 
   // Get leads from Firestore
-  const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/leads`;
+  const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/leads`;
   let allLeads: LeadRecord[] = [];
   
   try {
     allLeads = await FirestoreService.getAll(leadsPath, []);
   } catch (_e) {
-    logger.debug('No leads collection yet', { orgId });
+    logger.debug('No leads collection yet');
   }
 
     // Filter by date

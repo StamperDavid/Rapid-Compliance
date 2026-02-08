@@ -24,7 +24,7 @@ import {
   readAgentInsights,
   type ContentData,
 } from '../../shared/memory-vault';
-// DEFAULT_ORG_ID available from '@/lib/constants/platform' if needed
+// PLATFORM_ID available from '@/lib/constants/platform' if needed
 
 // ============================================================================
 // TYPE DEFINITIONS

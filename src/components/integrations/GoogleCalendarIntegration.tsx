@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import type { GoogleCalendarIntegration as GoogleCalendarType } from '@/types/integrations'
 import { logger } from '@/lib/logger/logger';
 import { useAuth } from '@/hooks/useAuth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface GoogleCalendarIntegrationProps {
   integration: GoogleCalendarType | null;
@@ -39,7 +39,7 @@ export default function GoogleCalendarIntegration({
     setIsConnecting(true);
     try {
       const user = { uid: authUser?.id };
-      const org = { id: DEFAULT_ORG_ID };
+      const org = { id: PLATFORM_ID };
 
       if (!user.uid || !org.id) {
         logger.error('User or organization not found', new Error('User or organization not found'), { file: 'GoogleCalendarIntegration.tsx' });

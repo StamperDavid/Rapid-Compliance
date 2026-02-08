@@ -11,11 +11,10 @@ import type { TrainingSession } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const AnalyzeSessionSchema = z.object({
   sessionId: z.string().min(1, 'Session ID is required'),
-  organizationId: z.string().min(1, 'Organization ID is required'),
 });
 
 export async function POST(request: NextRequest) {
@@ -36,20 +35,11 @@ export async function POST(request: NextRequest) {
     if (!parseResult.success) {
       return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid request body');
     }
-    const { sessionId, organizationId } = parseResult.data;
-
-
-    // Verify access
-    if (DEFAULT_ORG_ID !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      );
-    }
+    const { sessionId } = parseResult.data;
 
     // Get the training session
     const session = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingSessions`,
       sessionId
     ) as TrainingSession;
 
@@ -65,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Update the session with analysis
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingSessions`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingSessions`,
       sessionId,
       {
         ...session,

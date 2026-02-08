@@ -1,7 +1,7 @@
 /**
  * Templates API
  * Manage custom page templates
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -10,7 +10,7 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import type { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const templateCategoryValues = ['business', 'saas', 'ecommerce', 'portfolio', 'agency', 'blog', 'other'] as const;
 
@@ -41,8 +41,7 @@ export async function GET(_request: NextRequest) {
 
     // Get custom templates for this org
     const templatesRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/config/templates',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/config/templates'
     );
 
     const snapshot = await templatesRef.get();
@@ -108,8 +107,8 @@ export async function POST(request: NextRequest) {
 
     // Save to Firestore
     const templateRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/templates/{templateId}',
-      { orgId: DEFAULT_ORG_ID, templateId: templateData.id }
+      'organizations/rapid-compliance-root/website/config/templates/{templateId}',
+      { templateId: templateData.id }
     );
 
     await templateRef.set(templateData);
@@ -153,8 +152,8 @@ export async function DELETE(request: NextRequest) {
 
     // Delete template
     const templateRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/config/templates/{templateId}',
-      { orgId: DEFAULT_ORG_ID, templateId }
+      'organizations/rapid-compliance-root/website/config/templates/{templateId}',
+      { templateId }
     );
 
     // Verify template belongs to this org

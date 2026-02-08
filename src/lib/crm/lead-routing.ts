@@ -9,12 +9,11 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { Lead } from './lead-service';
 
 export interface RoutingRule {
   id: string;
-  organizationId: string;
   name: string;
   enabled: boolean;
   priority: number; // Higher priority rules evaluated first
@@ -81,7 +80,7 @@ export async function routeLead(
   try {
     // Get all routing rules for this organization
     const rulesResult = await FirestoreService.getAll<RoutingRule>(
-      `organizations/${DEFAULT_ORG_ID}/leadRoutingRules`
+      `organizations/${PLATFORM_ID}/leadRoutingRules`
     );
 
     const rules = rulesResult
@@ -190,7 +189,7 @@ async function getRoundRobinUser(
 ): Promise<string> {
   try {
     const state = await FirestoreService.get<{ lastIndex: number }>(
-      `organizations/${DEFAULT_ORG_ID}/leadRoutingRules/${ruleId}/state`,
+      `organizations/${PLATFORM_ID}/leadRoutingRules/${ruleId}/state`,
       'roundRobin'
     );
 
@@ -199,7 +198,7 @@ async function getRoundRobinUser(
     const assignedUserId = userIds[nextIndex];
 
     await FirestoreService.set(
-      `organizations/${DEFAULT_ORG_ID}/leadRoutingRules/${ruleId}/state`,
+      `organizations/${PLATFORM_ID}/leadRoutingRules/${ruleId}/state`,
       'roundRobin',
       { lastIndex: nextIndex, updatedAt: new Date() },
       true
@@ -356,7 +355,7 @@ async function getDefaultAssignment(): Promise<string> {
   try {
     // Get organization members
     const membersResult = await FirestoreService.getAll<OrganizationMember>(
-      `organizations/${DEFAULT_ORG_ID}/members`
+      `organizations/${PLATFORM_ID}/members`
     );
 
     const activeMembers = membersResult.filter(m => m.role === 'admin' || m.role === 'member');
@@ -369,7 +368,7 @@ async function getDefaultAssignment(): Promise<string> {
     }
 
     // Fallback to org owner
-    const org = await FirestoreService.get<Organization>('organizations', DEFAULT_ORG_ID);
+    const org = await FirestoreService.get<Organization>('organizations', PLATFORM_ID);
     const orgCreatedBy = org?.createdBy;
     return org?.ownerId ?? (orgCreatedBy ?? 'unknown');
 

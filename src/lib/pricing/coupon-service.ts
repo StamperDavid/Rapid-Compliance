@@ -7,7 +7,7 @@
 
 import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, increment } from 'firebase/firestore';
 import { COLLECTIONS, getMerchantCouponsCollection } from '@/lib/firebase/collections';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   MerchantCoupon,
   PlatformCoupon,
@@ -244,7 +244,6 @@ export class CouponService {
       coupon_id: coupon.id,
       coupon_type: 'platform',
       coupon_code: coupon.code,
-      organization_id: DEFAULT_ORG_ID,
       original_amount: originalAmount,
       discount_amount: validation.discount_amount ?? 0,
       final_amount: validation.final_amount ?? originalAmount,
@@ -281,7 +280,7 @@ export class CouponService {
   private static async activateInternalOrganization(
     couponCode: string
   ): Promise<void> {
-    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     await updateDoc(orgRef, {
       status: 'active_internal',
       subscription_status: 'active',
@@ -447,7 +446,6 @@ export class CouponService {
       coupon_id: coupon.id,
       coupon_type: 'merchant',
       coupon_code: coupon.code,
-      organization_id: DEFAULT_ORG_ID,
       customer_id: customerId,
       original_amount: purchaseAmount,
       discount_amount: validation.discount_amount ?? 0,
@@ -483,8 +481,8 @@ export class CouponService {
    * Check if organization has is_internal_admin flag
    * Internal admin orgs get full AI access regardless of agent permissions
    */
-  static async isInternalAdminOrg(organizationId: string): Promise<boolean> {
-    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, organizationId);
+  static async isInternalAdminOrg(): Promise<boolean> {
+    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     const orgSnap = await getDoc(orgRef);
     const orgData = orgSnap.data() ?? {};
     return orgData.is_internal_admin === true;
@@ -508,7 +506,7 @@ export class CouponService {
     const { canNegotiate = false, isInternalAdmin = false } = options;
 
     // Check if org is internal admin (override flag)
-    const orgIsInternalAdmin = isInternalAdmin || await this.isInternalAdminOrg(DEFAULT_ORG_ID);
+    const orgIsInternalAdmin = isInternalAdmin || await this.isInternalAdminOrg();
 
     // Get all AI-authorized coupons for this organization
     const couponsPath = getMerchantCouponsCollection();
@@ -553,7 +551,7 @@ export class CouponService {
     });
 
     // Get organization's AI discount settings
-    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID);
+    const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     const orgSnap = await getDoc(orgRef);
     const orgData = orgSnap.data() ?? {};
 
@@ -572,7 +570,6 @@ export class CouponService {
     const autoOfferPriceObjection = (orgData.ai_auto_offer_price_objection as boolean | undefined) ?? true;
 
     return {
-      organization_id: DEFAULT_ORG_ID,
       available_coupons: availableCoupons,
       max_ai_discount_percentage: maxAiDiscount,
       require_human_approval_above: humanApprovalThreshold,
@@ -605,7 +602,6 @@ export class CouponService {
 
     const request: AIDiscountRequest = {
       id: requestId,
-      organization_id: DEFAULT_ORG_ID,
       agent_id: agentId,
       conversation_id: conversationId,
       requested_discount: requestedDiscount,
@@ -630,7 +626,7 @@ export class CouponService {
    * Create a merchant coupon
    */
   static async createMerchantCoupon(
-    couponData: Omit<MerchantCoupon, 'id' | 'organization_id' | 'created_at' | 'updated_at' | 'current_uses'>,
+    couponData: Omit<MerchantCoupon, 'id' | 'created_at' | 'updated_at' | 'current_uses'>,
     createdBy: string
   ): Promise<MerchantCoupon> {
     const couponId = `coupon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -640,7 +636,6 @@ export class CouponService {
       ...couponData,
       id: couponId,
       code: couponData.code.toUpperCase().trim(),
-      organization_id: DEFAULT_ORG_ID,
       current_uses: 0,
       created_at: now,
       updated_at: now,
@@ -772,7 +767,7 @@ export class CouponService {
   /**
    * Get coupon analytics for a merchant
    */
-  static async getCouponAnalytics(organizationId: string): Promise<{
+  static async getCouponAnalytics(): Promise<{
     totalCoupons: number;
     activeCoupons: number;
     totalRedemptions: number;
@@ -785,7 +780,6 @@ export class CouponService {
     const redemptionsRef = collection(this.db, COLLECTIONS.COUPON_REDEMPTIONS);
     const q = query(
       redemptionsRef,
-      where('organization_id', '==', organizationId),
       where('coupon_type', '==', 'merchant')
     );
     const redemptionsSnap = await getDocs(q);

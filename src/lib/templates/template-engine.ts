@@ -28,7 +28,7 @@ import {
   type CustomField,
   type SalesWorkflow,
 } from './industry-templates';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -120,7 +120,6 @@ export async function applyTemplate(
   
   try {
     logger.info('Applying industry template', {
-      orgId: DEFAULT_ORG_ID,
       templateId: options.templateId,
       merge: options.merge
     });
@@ -166,7 +165,6 @@ export async function applyTemplate(
     // (In a real implementation, we'd save to Firestore)
     // For now, we just log it
     logger.info('Template configuration ready', {
-      orgId: DEFAULT_ORG_ID,
       stagesCount: configuration.stages.length,
       fieldsCount: configuration.fields.length,
       workflowsCount: configuration.workflows.length
@@ -177,7 +175,6 @@ export async function applyTemplate(
       const coordinator = getServerSignalCoordinator();
       await coordinator.emitSignal({
         type: 'template.applied',
-        orgId: DEFAULT_ORG_ID,
         workspaceId: options.workspaceId,
         confidence: 1.0,
         priority: 'Medium',
@@ -195,7 +192,6 @@ export async function applyTemplate(
       });
 
       logger.info('Signal emitted: template.applied', {
-        orgId: DEFAULT_ORG_ID,
         templateId: template.id
       });
     } catch (signalError) {
@@ -204,7 +200,6 @@ export async function applyTemplate(
     
     const duration = Date.now() - startTime;
     logger.info('Template applied successfully', {
-      orgId: DEFAULT_ORG_ID,
       templateId: options.templateId,
       duration
     });
@@ -221,7 +216,6 @@ export async function applyTemplate(
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('Template application failed', error as Error, {
-      orgId: DEFAULT_ORG_ID,
       templateId: options.templateId
     });
     
@@ -333,7 +327,6 @@ export function getRecommendedTemplateForOrg(
 ): SalesIndustryTemplate | null {
   try {
     logger.info('Getting recommended template', {
-      orgId: DEFAULT_ORG_ID,
       businessType,
       industry
     });
@@ -343,7 +336,6 @@ export function getRecommendedTemplateForOrg(
       const recommended = getRecommendedTemplate(businessType);
       if (recommended) {
         logger.info('Template recommended by business type', {
-          orgId: DEFAULT_ORG_ID,
           templateId: recommended.id
         });
         return recommended;
@@ -355,7 +347,6 @@ export function getRecommendedTemplateForOrg(
       const recommended = getRecommendedTemplate(industry);
       if (recommended) {
         logger.info('Template recommended by industry', {
-          orgId: DEFAULT_ORG_ID,
           templateId: recommended.id
         });
         return recommended;
@@ -364,16 +355,12 @@ export function getRecommendedTemplateForOrg(
 
     // Strategy 3: Default to SaaS (most common)
     const defaultTemplate = getTemplateById('saas');
-    logger.info('Using default template (SaaS)', {
-      orgId: DEFAULT_ORG_ID
-    });
+    logger.info('Using default template (SaaS)');
 
     return defaultTemplate;
 
   } catch (error) {
-    logger.error('Failed to get recommended template', error as Error, {
-      orgId: DEFAULT_ORG_ID
-    });
+    logger.error('Failed to get recommended template', error as Error);
     return null;
   }
 }

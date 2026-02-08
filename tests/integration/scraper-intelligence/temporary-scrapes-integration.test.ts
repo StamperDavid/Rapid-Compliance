@@ -1,14 +1,15 @@
 /**
  * Integration Tests for Temporary Scrapes Service
- * 
+ *
  * These tests use REAL Firestore operations against the DEV database.
  * They create, read, update, and delete actual documents.
- * 
+ *
  * IMPORTANT: All test data is cleaned up after each test.
  */
 
 import { describe, it, expect, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { db } from '@/lib/firebase-admin';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   saveTemporaryScrape,
   flagScrapeForDeletion,
@@ -25,7 +26,7 @@ import type { TemporaryScrape } from '@/types/scraper-intelligence';
 // TEST CONSTANTS
 // ============================================================================
 
-const TEST_ORG_ID = 'test-org-scraper-intelligence';
+const TEST_ORG_ID = PLATFORM_ID;
 const TEST_WORKSPACE_ID = 'test-workspace-scraper';
 const TEMPORARY_SCRAPES_COLLECTION = 'temporary_scrapes';
 
@@ -56,7 +57,6 @@ const createTestScrapeData = (index: number = 1) => ({
 async function cleanupTestScrapes() {
   const scrapes = await db
     .collection(TEMPORARY_SCRAPES_COLLECTION)
-    .where('organizationId', '==', TEST_ORG_ID)
     .get();
 
   const batch = db.batch();
@@ -176,7 +176,6 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       // Both should exist in Firestore
       const docs = await db
         .collection(TEMPORARY_SCRAPES_COLLECTION)
-        .where('organizationId', '==', TEST_ORG_ID)
         .get();
       expect(docs.size).toBe(2);
     });
@@ -204,8 +203,8 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
     });
 
     it('should handle multiple organizations separately', async () => {
-      const org1Data = { ...createTestScrapeData(1), organizationId: 'org-1' };
-      const org2Data = { ...createTestScrapeData(1), organizationId: 'org-2' };
+      const org1Data = { ...createTestScrapeData(1), };
+      const org2Data = { ...createTestScrapeData(1), };
       
       const { scrape: scrape1 } = await saveTemporaryScrape(org1Data);
       const { scrape: scrape2 } = await saveTemporaryScrape(org2Data);
@@ -293,9 +292,8 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       // Verify only unflagged scrape remains
       const remaining = await db
         .collection(TEMPORARY_SCRAPES_COLLECTION)
-        .where('organizationId', '==', TEST_ORG_ID)
         .get();
-      
+
       expect(remaining.size).toBe(1);
       expect(remaining.docs[0].id).toBe(scrapes[2].scrape.id);
     });
@@ -399,9 +397,8 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       // Verify only unexpired scrape remains
       const remaining = await db
         .collection(TEMPORARY_SCRAPES_COLLECTION)
-        .where('organizationId', '==', TEST_ORG_ID)
         .get();
-      
+
       expect(remaining.size).toBe(1);
       expect(remaining.docs[0].id).toBe(scrapes[2].scrape.id);
     });

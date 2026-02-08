@@ -89,7 +89,6 @@ interface KeywordResearchPayload {
   seed: string;
   industry?: string;
   targetCount?: number;
-  organizationId: string;
 }
 
 interface PageAuditPayload {
@@ -99,7 +98,6 @@ interface PageAuditPayload {
   title?: string;
   content?: string;
   targetKeyword?: string;
-  organizationId: string;
 }
 
 interface MetaAnalysisPayload {
@@ -108,7 +106,6 @@ interface MetaAnalysisPayload {
   description?: string;
   keywords?: string[];
   url?: string;
-  organizationId: string;
 }
 
 interface ContentOptimizationPayload {
@@ -116,7 +113,6 @@ interface ContentOptimizationPayload {
   content: string;
   targetKeyword: string;
   contentType?: 'blog' | 'product' | 'landing' | 'service';
-  organizationId: string;
 }
 
 interface CrawlAnalysisPayload {
@@ -127,7 +123,6 @@ interface CrawlAnalysisPayload {
   checkSpeed?: boolean;
   checkMeta?: boolean;
   checkIndexing?: boolean;
-  organizationId: string;
 }
 
 interface KeywordGapPayload {
@@ -136,7 +131,6 @@ interface KeywordGapPayload {
   currentKeywords: string[];
   competitorDomains?: string[];
   targetMarket?: string;
-  organizationId: string;
 }
 
 interface ThirtyDayStrategyPayload {
@@ -144,7 +138,6 @@ interface ThirtyDayStrategyPayload {
   industry: string;
   currentRankings?: Array<{ keyword: string; position: number }>;
   businessGoals: string[];
-  organizationId: string;
 }
 
 type SEOPayload =

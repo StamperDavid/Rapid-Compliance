@@ -229,14 +229,12 @@ export async function syncCustomerToQuickBooks(
     const customerResponse = data as QuickBooksCustomerResponse;
     const customerId = customerResponse.Customer.Id;
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.info('QuickBooks customer synced', { organizationId: DEFAULT_ORG_ID, customerId });
+    logger.info('QuickBooks customer synced', { customerId });
 
     return customerId;
 
   } catch (error) {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to sync customer to QuickBooks', error as Error, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to sync customer to QuickBooks', error as Error);
     throw error;
   }
 }
@@ -306,9 +304,7 @@ export async function createQuickBooksInvoice(
 
     const invoiceResponse = data as QuickBooksInvoiceResponse;
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
     logger.info('QuickBooks invoice created', {
-      organizationId: DEFAULT_ORG_ID,
       invoiceId: invoiceResponse.Invoice.Id,
     });
 
@@ -318,8 +314,7 @@ export async function createQuickBooksInvoice(
     };
 
   } catch (error) {
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    logger.error('Failed to create QuickBooks invoice', error as Error, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to create QuickBooks invoice', error as Error);
     throw error;
   }
 }

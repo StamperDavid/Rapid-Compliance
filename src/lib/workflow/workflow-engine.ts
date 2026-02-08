@@ -48,7 +48,6 @@ import type { DealScore } from '@/lib/templates/deal-scoring-engine';
  * Provides all data needed for trigger evaluation and action execution
  */
 export interface WorkflowExecutionContext {
-  organizationId: string;
   workspaceId: string;
   dealId?: string;
   deal?: Record<string, unknown>;
@@ -273,7 +272,6 @@ export class WorkflowEngine {
     logger.info('Executing workflow', {
       workflowId: workflow.id,
       workflowName: workflow.name,
-      organizationId: context.organizationId,
       dealId: context.dealId,
       triggeredBy: context.triggeredBy,
     });
@@ -355,7 +353,6 @@ export class WorkflowEngine {
       
       logger.error('Workflow execution failed', error instanceof Error ? error : new Error(String(error)), {
         workflowId: workflow.id,
-        organizationId: context.organizationId,
         durationMs: duration,
       });
       
@@ -569,7 +566,6 @@ export class WorkflowEngine {
     
     // Generate email
     const result = await generateSalesEmail({
-      organizationId: context.organizationId,
       workspaceId: context.workspaceId,
       userId:(context.userId !== '' && context.userId != null) ? context.userId : 'workflow-engine',
       emailType: config.emailType,

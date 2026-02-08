@@ -200,7 +200,6 @@ const createDefaultForm = (
   name: string
 ): FormDefinition => ({
   id: formId,
-  organizationId: orgId,
   workspaceId,
   name: name || 'Untitled Form',
   status: 'draft',

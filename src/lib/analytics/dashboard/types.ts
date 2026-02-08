@@ -514,9 +514,6 @@ export interface ErrorMetrics {
  * Request parameters for analytics API
  */
 export interface AnalyticsRequest {
-  /** Organization ID */
-  organizationId: string;
-  
   /** Workspace ID */
   workspaceId: string;
   

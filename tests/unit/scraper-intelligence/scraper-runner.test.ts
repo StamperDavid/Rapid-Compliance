@@ -50,7 +50,6 @@ describe('ScraperCache', () => {
     const result: ScrapeJobResult = {
       config: {
         jobId: 'test-1',
-        organizationId: 'org-1',
         industryId: 'saas-software',
         url,
         platform: 'website',
@@ -80,7 +79,6 @@ describe('ScraperCache', () => {
     const result: ScrapeJobResult = {
       config: {
         jobId: 'test-1',
-        organizationId: 'org-1',
         industryId: 'saas-software',
         url,
         platform: 'website',
@@ -110,7 +108,6 @@ describe('ScraperCache', () => {
     const result: ScrapeJobResult = {
       config: {
         jobId: 'test-1',
-        organizationId: 'org-1',
         industryId: 'saas-software',
         url,
         platform: 'website',
@@ -138,7 +135,6 @@ describe('ScraperCache', () => {
       await cache.set(url, {
         config: {
           jobId: `test-${url}`,
-          organizationId: 'org-1',
           industryId: 'saas-software',
           url,
           platform: 'website',
@@ -164,7 +160,6 @@ describe('ScraperCache', () => {
     const result: ScrapeJobResult = {
       config: {
         jobId: 'test-1',
-        organizationId: 'org-1',
         industryId: 'saas-software',
         url,
         platform: 'website',
@@ -304,7 +299,6 @@ describe('ScraperQueue', () => {
   it('should enqueue and dequeue jobs', async () => {
     const config: ScrapeJobConfig = {
       jobId: 'test-1',
-      organizationId: 'org-1',
       industryId: 'saas-software',
       url: 'https://example.com',
       platform: 'website',
@@ -327,7 +321,6 @@ describe('ScraperQueue', () => {
     const configs: ScrapeJobConfig[] = [
       {
         jobId: 'low-1',
-        organizationId: 'org-1',
         industryId: 'saas-software',
         url: 'https://example.com/1',
         platform: 'website',
@@ -335,7 +328,6 @@ describe('ScraperQueue', () => {
       },
       {
         jobId: 'urgent-1',
-        organizationId: 'org-1',
         industryId: 'saas-software',
         url: 'https://example.com/2',
         platform: 'website',
@@ -343,7 +335,6 @@ describe('ScraperQueue', () => {
       },
       {
         jobId: 'normal-1',
-        organizationId: 'org-1',
         industryId: 'saas-software',
         url: 'https://example.com/3',
         platform: 'website',
@@ -369,7 +360,6 @@ describe('ScraperQueue', () => {
   it('should track job status', async () => {
     const config: ScrapeJobConfig = {
       jobId: 'test-1',
-      organizationId: 'org-1',
       industryId: 'saas-software',
       url: 'https://example.com',
       platform: 'website',
@@ -390,7 +380,6 @@ describe('ScraperQueue', () => {
   it('should cancel pending jobs', async () => {
     const config: ScrapeJobConfig = {
       jobId: 'test-1',
-      organizationId: 'org-1',
       industryId: 'saas-software',
       url: 'https://example.com',
       platform: 'website',
@@ -409,7 +398,6 @@ describe('ScraperQueue', () => {
   it('should provide queue statistics', async () => {
     const configs: ScrapeJobConfig[] = Array.from({ length: 5 }, (_, i) => ({
       jobId: `test-${i}`,
-      organizationId: 'org-1',
       industryId: 'saas-software',
       url: `https://example.com/${i}`,
       platform: 'website' as const,

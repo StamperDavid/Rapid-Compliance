@@ -1,7 +1,7 @@
 /**
  * Page Preview API
  * Generate shareable preview links and retrieve preview data
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -9,10 +9,9 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface PageData {
-  organizationId: string;
 }
 
 interface TokenData {
@@ -42,8 +41,8 @@ export async function POST(
     const { expiresIn } = body; // expiresIn in hours, default 24
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      { pageId: params.pageId }
     );
 
     const doc = await pageRef.get();
@@ -65,13 +64,12 @@ export async function POST(
     const createdBy = await getUserIdentifier();
 
     const previewRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/preview-tokens/tokens/{token}',
-      { orgId: DEFAULT_ORG_ID, token: previewToken }
+      'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+      { token: previewToken }
     );
 
     await previewRef.set({
       pageId: params.pageId,
-      organizationId: DEFAULT_ORG_ID,
       createdAt: new Date().toISOString(),
       expiresAt: expiresAt.toISOString(),
       createdBy,
@@ -126,8 +124,8 @@ export async function GET(
 
     // Verify preview token
     const tokenRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/preview-tokens/tokens/{token}',
-      { orgId: DEFAULT_ORG_ID, token }
+      'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+      { token }
     );
 
     const tokenDoc = await tokenRef.get();
@@ -161,8 +159,8 @@ export async function GET(
 
     // Get the page data
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/{orgId}/website/pages/items/{pageId}',
-      { orgId: DEFAULT_ORG_ID, pageId: params.pageId }
+      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      { pageId: params.pageId }
     );
 
     const doc = await pageRef.get();

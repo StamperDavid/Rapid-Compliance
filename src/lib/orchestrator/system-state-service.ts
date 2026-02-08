@@ -13,7 +13,7 @@
 import { executeGetSystemState, type SystemState } from './jasper-tools';
 import { SPECIALISTS } from './feature-manifest';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // STATE VALIDATION TYPES
@@ -255,8 +255,8 @@ PROVISIONER STATUS:
 - Recent Errors: ${state.provisioner.recentErrors.length}
 - Last Success: ${state.provisioner.lastSuccessfulProvision ?? 'N/A'}
 
-${DEFAULT_ORG_ID ? `
-FEATURE CONFIGURATION (${DEFAULT_ORG_ID}):
+${PLATFORM_ID ? `
+FEATURE CONFIGURATION (${PLATFORM_ID}):
 - Configured: ${state.features.configured.join(', ') || 'None'}
 - Unconfigured: ${state.features.unconfigured.join(', ') || 'None'}
 ` : ''}

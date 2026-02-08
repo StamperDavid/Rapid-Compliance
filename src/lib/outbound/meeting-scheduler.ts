@@ -35,7 +35,6 @@ export interface MeetingSlot {
 
 export interface ScheduledMeeting {
   id: string;
-  organizationId: string;
   prospectId?: string;
   
   // Meeting details
@@ -161,7 +160,7 @@ export async function scheduleMeeting(
   request: MeetingRequest,
   hostUserId: string
 ): Promise<ScheduledMeeting> {
-  const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
   try {
     // Find available slots
@@ -203,7 +202,6 @@ export async function scheduleMeeting(
 
     const meeting: ScheduledMeeting = {
       id: meetingId,
-      organizationId: DEFAULT_ORG_ID,
       title: getMeetingTitle(request.meetingType, request.companyName),
       description: request.topic ?? getMeetingDescription(request.meetingType),
       duration: request.duration,
@@ -442,7 +440,6 @@ async function getUserMeetings(
     // Convert busy times to meetings (simplified)
     return busy.map((slot, index) => ({
       id: `meeting_${index}`,
-      organizationId: '',
       title: 'Busy',
       description: '',
       duration: Math.floor((new Date(slot.end).getTime() - new Date(slot.start).getTime()) / 60000),

@@ -28,7 +28,7 @@ import type {
   DuckingConfig,
   VoiceoverSegment,
 } from './types';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS
@@ -152,7 +152,6 @@ export class StitcherService {
     const job: PostProductionJob = {
       id: uuidv4(),
       storyboardId: storyboard.id,
-      organizationId: DEFAULT_ORG_ID,
       clips: generatedClips,
       sfxTracks: [],
       lutApplied: false,
@@ -331,7 +330,6 @@ export class StitcherService {
     pitch: number
   ): Promise<AudioTrack> {
     logger.info('Stitcher: Generating voiceover', {
-      organizationId: DEFAULT_ORG_ID,
       segmentCount: segments.length,
       engine,
     });
@@ -344,7 +342,6 @@ export class StitcherService {
         // Generate audio for this segment
         const response = await VoiceEngineFactory.getAudio({
           text: segment.text,
-          organizationId: DEFAULT_ORG_ID,
           engine,
           voiceId,
           settings: {
@@ -903,7 +900,6 @@ export class StitcherService {
   ): { videoUrl: string; thumbnailUrl: string; fileSize: number } {
     logger.info('Stitcher: Uploading final video', {
       jobId,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     // In production, this would:
@@ -911,8 +907,8 @@ export class StitcherService {
     // 2. Generate thumbnail
     // 3. Return public URLs
 
-    const publicVideoUrl = `https://storage.example.com/videos/${DEFAULT_ORG_ID}/${jobId}.mp4`;
-    const thumbnailUrl = `https://storage.example.com/thumbnails/${DEFAULT_ORG_ID}/${jobId}.jpg`;
+    const publicVideoUrl = `https://storage.example.com/videos/${PLATFORM_ID}/${jobId}.mp4`;
+    const thumbnailUrl = `https://storage.example.com/thumbnails/${PLATFORM_ID}/${jobId}.jpg`;
 
     return {
       videoUrl: publicVideoUrl,
@@ -959,8 +955,7 @@ export class StitcherService {
    * Get all active jobs
    */
   getActiveJobs(): PostProductionJob[] {
-    return Array.from(this.activeJobs.values())
-      .filter((job) => job.organizationId === DEFAULT_ORG_ID);
+    return Array.from(this.activeJobs.values());
   }
 
   /**

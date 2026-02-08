@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,8 +50,8 @@ export async function GET(request: NextRequest) {
 
     for (const orgDoc of orgsSnapshot.docs) {
       const tokenRef = adminDal.getNestedDocRef(
-        'organizations/{orgId}/website/preview-tokens/tokens/{token}',
-        { orgId: orgDoc.id, token }
+        'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+        { token }
       );
 
       const tokenDoc = await tokenRef.get();
@@ -70,7 +71,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           success: true,
           pageId: tokenData?.pageId,
-          organizationId: orgDoc.id,
           expiresAt: tokenData?.expiresAt,
         });
       }

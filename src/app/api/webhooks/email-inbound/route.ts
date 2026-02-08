@@ -9,7 +9,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { classifyReply, type ReplyClassification } from '@/lib/outbound/reply-handler';
 import { v4 as uuidv4 } from 'uuid';
@@ -230,7 +230,7 @@ async function findOriginalEmail(
     // Try to find by Message-ID first (most reliable)
     if (inReplyTo) {
       const sentEmails = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sentEmails`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sentEmails`,
         [where('messageId', '==', inReplyTo)]
       );
 
@@ -241,7 +241,7 @@ async function findOriginalEmail(
 
     // Fall back to finding by recipient address (less reliable)
     const sentEmails = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/sentEmails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sentEmails`,
       [where('to', '==', recipientAddress)]
     );
 
@@ -380,7 +380,7 @@ async function unenrollProspectFromSequences(
   try {
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
       [where('email', '==', prospectEmail)]
     );
 
@@ -398,7 +398,7 @@ async function unenrollProspectFromSequences(
     const prospectId = firstProspect.id;
 
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
       [
         where('prospectId', '==', prospectId),
         where('status', '==', 'active'),
@@ -437,7 +437,7 @@ async function pauseProspectSequences(
   try {
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/prospects`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
       [where('email', '==', prospectEmail)]
     );
 
@@ -451,7 +451,7 @@ async function pauseProspectSequences(
     const prospectId = firstProspect.id;
 
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
       [
         where('prospectId', '==', prospectId),
         where('status', '==', 'active'),
@@ -464,7 +464,7 @@ async function pauseProspectSequences(
       }
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/enrollments`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
         enrollment.id,
         {
           ...enrollment,
@@ -498,7 +498,7 @@ async function logInboundEmail(
 
   try {
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/inboundEmails`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/inboundEmails`,
       emailId,
       {
         id: emailId,

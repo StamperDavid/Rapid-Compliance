@@ -101,7 +101,7 @@ export type CouponStatus = 'active' | 'expired' | 'depleted' | 'disabled';
 export type CouponCategory = 'public_marketing' | 'negotiation';
 
 /**
- * Merchant Coupon - Stored in organizations/{orgId}/merchant_coupons
+ * Merchant Coupon - Stored in merchant_coupons collection
  * These are coupons created by merchants for their customers
  */
 export interface MerchantCoupon {
@@ -151,7 +151,6 @@ export interface MerchantCoupon {
   status: CouponStatus;
 
   // Metadata
-  organization_id: string;
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -207,7 +206,6 @@ export interface CouponRedemption {
   coupon_code: string;
 
   // Who redeemed
-  organization_id?: string; // For platform coupons
   customer_id?: string; // For merchant coupons
 
   // Transaction details
@@ -264,8 +262,6 @@ export type CouponValidationError =
  * - is_internal_admin=true: Overrides all restrictions
  */
 export interface AIAuthorizedDiscounts {
-  organization_id: string;
-
   // Available coupons the AI can offer (filtered by permissions)
   available_coupons: {
     code: string;
@@ -297,7 +293,6 @@ export interface AIAuthorizedDiscounts {
  */
 export interface AIDiscountRequest {
   id: string;
-  organization_id: string;
   agent_id: string;
   conversation_id: string;
 

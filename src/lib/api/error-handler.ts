@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server'
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export class APIError extends Error {
   constructor(
@@ -199,13 +199,13 @@ export const errors = {
 
 /**
  * Validate authentication from request
- * PENTHOUSE: Always returns DEFAULT_ORG_ID
+ * PENTHOUSE: Always returns PLATFORM_ID
  * The request parameter is kept for interface compatibility but not used for org determination
  */
 export function validateAuth(_request: Request): string {
   // PENTHOUSE: Always return the platform's organization ID
   // No dynamic org-switching allowed - this is SalesVelocity.ai's penthouse model
-  return DEFAULT_ORG_ID;
+  return PLATFORM_ID;
 }
 
 /**

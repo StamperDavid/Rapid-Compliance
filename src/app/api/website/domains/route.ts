@@ -1,17 +1,16 @@
 /**
  * Custom Domains API
  * Manage custom domains for websites
- * Single-tenant: Uses DEFAULT_ORG_ID
+ * Single-tenant: Uses PLATFORM_ID
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface DomainData {
-  organizationId: string;
   verified: boolean;
   verificationMethod: 'cname' | 'a-record';
   verificationValue: string;
@@ -45,8 +44,7 @@ export async function GET(_request: NextRequest) {
     }
 
     const domainsRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/config/custom-domains',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/config/custom-domains'
     );
     const snapshot = await domainsRef.get();
 
@@ -124,7 +122,6 @@ export async function POST(request: NextRequest) {
     const dnsRecords = generateDNSRecords(domain, verificationMethod);
 
     const domainData: DomainData = {
-      organizationId: DEFAULT_ORG_ID,
       verified: false,
       verificationMethod,
       verificationValue: generateVerificationToken(),
@@ -138,8 +135,7 @@ export async function POST(request: NextRequest) {
 
     // Save domain using domain name as document ID
     const domainsRef = adminDal.getNestedCollection(
-      'organizations/{orgId}/website/config/custom-domains',
-      { orgId: DEFAULT_ORG_ID }
+      'organizations/rapid-compliance-root/website/config/custom-domains'
     );
     const domainRef = domainsRef.doc(domain);
     await domainRef.set(domainData);
@@ -147,7 +143,6 @@ export async function POST(request: NextRequest) {
     // Also save to global domains collection for quick lookup
     const globalDomainsRef = adminDal.getNestedCollection('custom-domains');
     await globalDomainsRef.doc(domain).set({
-      organizationId: DEFAULT_ORG_ID,
       createdAt: FieldValue.serverTimestamp(),
     });
 

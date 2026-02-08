@@ -243,16 +243,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { customerId, orgId, message } = validation.data;
+    const { customerId, message } = validation.data;
 
-    // Verify user has access to this organization (penthouse model - verify against DEFAULT_ORG_ID)
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    if (DEFAULT_ORG_ID !== orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
-    }
+    // Penthouse model: use PLATFORM_ID
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
     // Get or spawn agent instance
     const instanceManager = new AgentInstanceManager();
@@ -260,7 +254,7 @@ export async function POST(request: NextRequest) {
 
     // Get agent configuration
     const agentConfigRaw: unknown = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
       'default'
     );
 
@@ -306,7 +300,7 @@ export async function POST(request: NextRequest) {
       const ragResult = await enhanceChatWithRAG(ragMessages, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error) {
-      logger.warn('RAG enhancement failed, using base prompt', { error: error instanceof Error ? error.message : String(error), orgId, customerId });
+      logger.warn('RAG enhancement failed, using base prompt', { error: error instanceof Error ? error.message : String(error), customerId });
       // Continue with base prompt if RAG fails
     }
 

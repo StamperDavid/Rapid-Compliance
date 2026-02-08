@@ -16,7 +16,7 @@ import type {
 } from '@/types/agent-memory';
 import { logger } from '@/lib/logger/logger';
 import { getPluginManager, type ToolContext, type ToolDefinition } from '@/lib/plugins/plugin-manager';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export class AgentInstanceManager implements InstanceLifecycleService {
   /**
@@ -30,12 +30,12 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    * 5. Return ready-to-use instance
    */
   async spawnInstance(customerId: string): Promise<AgentInstance> {
-    logger.info('Spawning agent instance', { customerId, orgId: DEFAULT_ORG_ID });
+    logger.info('Spawning agent instance', { customerId });
 
     // 1. Get active Golden Master
     const goldenMaster = await this.getActiveGoldenMaster();
     if (!goldenMaster) {
-      logger.error('No active Golden Master found', new Error('No active Golden Master found'), { orgId: DEFAULT_ORG_ID });
+      logger.error('No active Golden Master found', new Error('No active Golden Master found'));
       throw new Error('No active Golden Master found. Please deploy a Golden Master first.');
     }
 
@@ -43,7 +43,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     // 2. Load or create customer memory
     let customerMemory = await this.getCustomerMemory(customerId);
     if (!customerMemory) {
-      logger.info('New customer detected, creating memory record', { customerId, orgId: DEFAULT_ORG_ID });
+      logger.info('New customer detected, creating memory record', { customerId });
       customerMemory = await this.createCustomerMemory(customerId);
     }
     
@@ -591,7 +591,7 @@ ${this.summarizeRecentConversations(customerMemory)}
 
   private async getActiveGoldenMaster(): Promise<GoldenMaster | null> {
     try {
-      logger.info(`Instance Manager Fetching Golden Masters for org: ${DEFAULT_ORG_ID}`, { file: 'instance-manager.ts' });
+      logger.info(`Instance Manager Fetching Golden Masters for org: ${PLATFORM_ID}`, { file: 'instance-manager.ts' });
 
       // Prefer admin SDK to bypass security rules
       try {
@@ -626,7 +626,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
         []
       );
       logger.info(`Instance Manager Found ${goldenMasters.length} Golden Masters (client SDK)`, { file: 'instance-manager.ts' });
@@ -664,7 +664,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       return await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
         customerId
       );
     } catch (error) {
@@ -745,7 +745,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
         memory.customerId,
         memory,
         true
@@ -761,7 +761,7 @@ ${this.summarizeRecentConversations(customerMemory)}
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/activeInstances`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/activeInstances`,
         instance.instanceId,
         {
           ...instance,
@@ -804,7 +804,7 @@ ${this.summarizeRecentConversations(customerMemory)}
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/archivedInstances`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/archivedInstances`,
         instance.instanceId,
         {
           ...instance,
@@ -853,7 +853,6 @@ ${this.summarizeRecentConversations(customerMemory)}
   getAvailableTools(userId?: string): ToolDefinition[] {
     const pluginManager = getPluginManager();
     const context: ToolContext = {
-      organizationId: DEFAULT_ORG_ID,
       userId,
       permissions: ['*'], // In production, fetch actual permissions
     };
@@ -870,7 +869,6 @@ ${this.summarizeRecentConversations(customerMemory)}
   ): Promise<{ success: boolean; data?: unknown; error?: string }> {
     const pluginManager = getPluginManager();
     const context: ToolContext = {
-      organizationId: DEFAULT_ORG_ID,
       userId,
       permissions: ['*'], // In production, fetch actual permissions
     };
@@ -894,7 +892,6 @@ ${this.summarizeRecentConversations(customerMemory)}
   }> {
     const pluginManager = getPluginManager();
     const context: ToolContext = {
-      organizationId: DEFAULT_ORG_ID,
       userId,
       permissions: ['*'],
     };

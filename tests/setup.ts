@@ -23,42 +23,45 @@ jest.mock('@/lib/db/firestore-service', () => {
   };
   
   // Now recreate EmailCampaignService to use the mocked FirestoreService
+  // Note: orgId parameter retained for backward compatibility but uses PLATFORM_ID internally
+  const { PLATFORM_ID: INTERNAL_PLATFORM_ID } = require('@/lib/constants/platform');
+
   mocked.EmailCampaignService = class EmailCampaignService {
-    static async get(orgId: string, campaignId: string) {
+    static async get(campaignId: string) {
       return AdminFirestoreService.get(
-        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${INTERNAL_PLATFORM_ID}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
         campaignId
       );
     }
-    
-    static async set(orgId: string, campaignId: string, data: any) {
+
+    static async set(campaignId: string, data: any) {
       return AdminFirestoreService.set(
-        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${INTERNAL_PLATFORM_ID}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
         campaignId,
         data,
         false
       );
     }
-    
-    static async getAll(orgId: string, filters: any[] = []) {
+
+    static async getAll(filters: any[] = []) {
       return AdminFirestoreService.getAll(
-        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${INTERNAL_PLATFORM_ID}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
         filters
       );
     }
-    
-    static async getAllPaginated(orgId: string, filters: any[] = [], pageSize: number = 50, lastVisible?: any) {
+
+    static async getAllPaginated(filters: any[] = [], pageSize: number = 50, lastVisible?: any) {
       return AdminFirestoreService.getAllPaginated(
-        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${INTERNAL_PLATFORM_ID}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
         filters,
         pageSize,
         lastVisible
       );
     }
-    
-    static async delete(orgId: string, campaignId: string) {
+
+    static async delete(campaignId: string) {
       return AdminFirestoreService.delete(
-        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${INTERNAL_PLATFORM_ID}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
         campaignId
       );
     }
@@ -69,8 +72,10 @@ jest.mock('@/lib/db/firestore-service', () => {
 
 // No mocking of API Key Service - use real implementation for production readiness
 
+import { PLATFORM_ID } from '@/lib/constants/platform';
+
 // Export common test utilities
-export const mockOrganizationId = 'test-org-123';
+export const mockOrganizationId = PLATFORM_ID;
 export const mockWorkspaceId = 'test-workspace-456';
 export const mockUserId = 'test-user-789';
 

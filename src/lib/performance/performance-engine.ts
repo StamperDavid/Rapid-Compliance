@@ -19,7 +19,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type TeamPerformanceAnalytics,
@@ -81,7 +81,6 @@ export async function generatePerformanceAnalytics(
   
   try {
     logger.info('Generating performance analytics', {
-      organizationId: request.organizationId,
       periodType: request.periodType,
     });
     
@@ -169,7 +168,6 @@ export async function generatePerformanceAnalytics(
     
     // 12. Build final analytics
     const analytics: TeamPerformanceAnalytics = {
-      organizationId: request.organizationId,
       workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       startDate,
       endDate,
@@ -201,7 +199,7 @@ export async function generatePerformanceAnalytics(
     return analytics;
     
   } catch (error) {
-    logger.error('Failed to generate performance analytics', error instanceof Error ? error : new Error(String(error)));
+    logger.error('Failed to generate performance analytics', error instanceof Error ? error : new Error(String(error)), { file: 'performance-engine.ts' });
     throw error;
   }
 }
@@ -1400,7 +1398,6 @@ async function emitAnalyticsEvents(
     }
 
     logger.info('Performance analytics events emitted', {
-      organizationId: DEFAULT_ORG_ID,
       eventsEmitted: 1 + analytics.topPerformers.length + analytics.coachingPriorities.filter(p => p.priority === 'critical' || p.priority === 'high').length,
     });
   } catch (error) {
@@ -1416,7 +1413,6 @@ export async function generateLeaderboard(
   request: LeaderboardRequest
 ): Promise<PerformanceLeaderboard> {
   const { startDate, endDate, periodType } = determinePeriod({
-    organizationId: request.organizationId,
     workspaceId: request.workspaceId,
     startDate: request.startDate,
     endDate: request.endDate,
@@ -1425,7 +1421,6 @@ export async function generateLeaderboard(
   
   // Get performance analytics
   const analytics = await generatePerformanceAnalytics({
-    organizationId: request.organizationId,
     workspaceId: request.workspaceId,
     startDate,
     endDate,
@@ -1485,7 +1480,6 @@ export async function generateLeaderboard(
   }
   
   return {
-    organizationId: request.organizationId,
     workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
     startDate,
     endDate,
@@ -1505,7 +1499,6 @@ export async function compareReps(
   request: RepComparisonRequest
 ): Promise<RepComparison> {
   const { startDate, endDate } = determinePeriod({
-    organizationId: request.organizationId,
     workspaceId: request.workspaceId,
     startDate: request.startDate,
     endDate: request.endDate,
@@ -1513,7 +1506,6 @@ export async function compareReps(
   
   // Get performance analytics
   const analytics = await generatePerformanceAnalytics({
-    organizationId: request.organizationId,
     workspaceId: request.workspaceId,
     startDate,
     endDate,
@@ -1608,7 +1600,6 @@ export async function getMetricBreakdown(
   request: MetricBreakdownRequest
 ): Promise<MetricBreakdown> {
   const { startDate, endDate } = determinePeriod({
-    organizationId: request.organizationId,
     workspaceId: request.workspaceId,
     startDate: request.startDate,
     endDate: request.endDate,
@@ -1616,7 +1607,6 @@ export async function getMetricBreakdown(
   
   // Get performance analytics
   const analytics = await generatePerformanceAnalytics({
-    organizationId: request.organizationId,
     workspaceId: request.workspaceId,
     startDate,
     endDate,

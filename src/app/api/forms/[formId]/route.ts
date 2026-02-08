@@ -12,7 +12,7 @@ import { db } from '@/lib/firebase/config';
 import type { FormFieldConfig, FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface RouteContext {
   params: Promise<{ formId: string }>;
@@ -60,7 +60,7 @@ export async function GET(
 
     // Get fields
     const firestore = getDb();
-    const fieldsPath = `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/forms/${formId}/fields`;
+    const fieldsPath = `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/fields`;
     const fieldsRef = collection(firestore, fieldsPath);
     const fieldsQuery = query(fieldsRef, orderBy('order', 'asc'));
     const fieldsSnapshot = await getDocs(fieldsQuery);
@@ -102,7 +102,7 @@ export async function PUT(
     // Update fields if provided
     if (fields && Array.isArray(fields)) {
       const firestore = getDb();
-      const fieldsPath = `organizations/${DEFAULT_ORG_ID}/workspaces/${workspaceId}/forms/${formId}/fields`;
+      const fieldsPath = `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/fields`;
       const batch = writeBatch(firestore);
 
       // Delete existing fields
@@ -118,7 +118,6 @@ export async function PUT(
         batch.set(fieldRef, {
           ...field,
           formId,
-          organizationId: DEFAULT_ORG_ID,
           workspaceId,
           updatedAt: new Date(),
         });

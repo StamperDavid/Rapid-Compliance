@@ -177,13 +177,13 @@ export async function fetchGmailInbox(
       }
     }
 
-    logger.info('Gmail inbox fetched', { organizationId: DEFAULT_ORG_ID, count: messages.length });
+    logger.info('Gmail inbox fetched', { count: messages.length });
 
     return messages;
 
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to fetch Gmail inbox', errorToLog, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to fetch Gmail inbox', errorToLog);
     throw error;
   }
 }
@@ -284,13 +284,13 @@ export async function fetchOutlookInbox(
       inReplyTo: msg.inReplyTo,
     }));
 
-    logger.info('Outlook inbox fetched', { organizationId: DEFAULT_ORG_ID, count: messages.length });
+    logger.info('Outlook inbox fetched', { count: messages.length });
 
     return messages;
 
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? error : new Error(String(error));
-    logger.error('Failed to fetch Outlook inbox', errorToLog, { organizationId: DEFAULT_ORG_ID });
+    logger.error('Failed to fetch Outlook inbox', errorToLog);
     throw error;
   }
 }
@@ -341,7 +341,7 @@ export async function processEmailReply(
         receivedAt: reply.receivedAt.toISOString(),
       });
 
-      logger.info('Email reply processed', { organizationId: DEFAULT_ORG_ID, replyId: reply.id });
+      logger.info('Email reply processed', { replyId: reply.id });
 
     } else {
       // No match - might be a new inbound email
@@ -418,7 +418,6 @@ export async function syncInbox(
     await setLastSyncTime(provider, new Date());
 
     logger.info('Inbox sync completed', {
-      organizationId: DEFAULT_ORG_ID,
       provider,
       messagesProcessed: messages.length,
     });
@@ -427,12 +426,12 @@ export async function syncInbox(
 
   } catch (error: unknown) {
     const errorToLog = error instanceof Error ? error : new Error(String(error));
-    logger.error('Inbox sync failed', errorToLog, { organizationId: DEFAULT_ORG_ID, provider });
+    logger.error('Inbox sync failed', errorToLog, { provider });
     throw error;
   }
 }
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Get last sync timestamp
@@ -440,7 +439,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 async function getLastSyncTime(provider: string): Promise<Date | null> {
   try {
     const doc = await FirestoreService.get<EmailSyncDoc>(
-      `organizations/${DEFAULT_ORG_ID}/emailSync`,
+      `organizations/${PLATFORM_ID}/emailSync`,
       provider
     );
 
@@ -466,7 +465,7 @@ async function getLastSyncTime(provider: string): Promise<Date | null> {
  */
 async function setLastSyncTime(provider: string, time: Date): Promise<void> {
   await FirestoreService.set(
-    `organizations/${DEFAULT_ORG_ID}/emailSync`,
+    `organizations/${PLATFORM_ID}/emailSync`,
     provider,
     { lastSyncAt: time },
     true

@@ -22,7 +22,7 @@ export default function MakeCallPage() {
       const response = await fetch('/api/voice/call', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: phoneNumber, organizationId: DEFAULT_ORG_ID }),
+        body: JSON.stringify({ to: phoneNumber }),
       });
       if (!response.ok) {
         throw new Error('Call failed');

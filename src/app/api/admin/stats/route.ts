@@ -23,7 +23,7 @@ import {
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { COLLECTIONS, getOrgSubCollection } from '@/lib/firebase/collections';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -206,9 +206,6 @@ export async function GET(request: NextRequest) {
     // Use the authenticated user from verifyAdminRequest
     const { user } = authResult;
 
-    // Admin always has full access in penthouse model
-    const effectiveOrgId = DEFAULT_ORG_ID;
-
     let stats: PlatformStats;
 
     {
@@ -224,7 +221,7 @@ export async function GET(request: NextRequest) {
       logger.debug('[STATS DEBUG] Querying collection:', { collection: COLLECTIONS.ORGANIZATIONS });
 
       // Agent config collection path (under the organization)
-      const agentConfigPath = `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/agentConfig`;
+      const agentConfigPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`;
       const conversationsPath = getOrgSubCollection('conversations');
       const playbooksPath = getOrgSubCollection('playbooks');
 
@@ -296,7 +293,6 @@ export async function GET(request: NextRequest) {
         email: user.email,
         uid: user.uid,
         role: user.role,
-        orgId: effectiveOrgId,
       },
     });
 

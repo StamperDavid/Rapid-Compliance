@@ -28,7 +28,7 @@ import { logger } from '@/lib/logger/logger';
 import { discoverCompany, type DiscoveredCompany } from '@/lib/services/discovery-engine';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -41,8 +41,6 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
  */
 export interface CompetitorProfile {
   id: string;
-  organizationId: string;
-  
   // Basic Info
   domain: string;
   companyName: string;
@@ -149,8 +147,6 @@ export interface CompetitorProfile {
  */
 export interface Battlecard {
   id: string;
-  organizationId: string;
-  
   // Comparison Context
   ourProduct: string;
   competitorId: string;
@@ -276,7 +272,6 @@ export async function discoverCompetitor(
   try {
     logger.info('Starting competitor discovery', {
       domain,
-      organizationId: DEFAULT_ORG_ID,
       source: 'battlecard-engine',
     });
 
@@ -297,8 +292,6 @@ export async function discoverCompetitor(
     // Step 3: Combine into CompetitorProfile
     const profile: CompetitorProfile = {
       id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      organizationId: DEFAULT_ORG_ID,
-      
       domain: company.domain,
       companyName:company.companyName ?? domain,
       description: company.description,
@@ -361,7 +354,6 @@ export async function discoverCompetitor(
 
     logger.info('Competitor profile complete', {
       domain,
-      organizationId: DEFAULT_ORG_ID,
       featuresFound: profile.productOffering.keyFeatures.length,
       strengthsFound: profile.analysis.strengths.length,
       weaknessesFound: profile.analysis.weaknesses.length,
@@ -376,7 +368,6 @@ export async function discoverCompetitor(
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to discover competitor', err, {
       domain,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = err.message;
@@ -403,7 +394,6 @@ async function extractCompetitiveIntelligence(
   try {
     logger.info('Extracting competitive intelligence with LLM', {
       domain: company.domain,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     const prompt = `You are a competitive intelligence analyst. Analyze this competitor data and extract strategic insights.
@@ -532,7 +522,6 @@ IMPORTANT:
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to extract competitive intelligence', err, {
       domain: company.domain,
-      organizationId: DEFAULT_ORG_ID,
     });
     return {};
   }
@@ -571,7 +560,6 @@ export async function generateBattlecard(
   try {
     logger.info('Generating battlecard', {
       competitor: competitorProfile.companyName,
-      organizationId: competitorProfile.organizationId,
       ourProduct: options.ourProduct,
     });
 
@@ -615,8 +603,6 @@ export async function generateBattlecard(
     // Construct final battlecard
     const battlecard: Battlecard = {
       id: `bc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      organizationId: competitorProfile.organizationId,
-      
       ourProduct: options.ourProduct,
       competitorId: competitorProfile.id,
       competitorName: competitorProfile.companyName,
@@ -660,7 +646,6 @@ export async function generateBattlecard(
 
     logger.info('Battlecard generated successfully', {
       competitor: competitorProfile.companyName,
-      organizationId: DEFAULT_ORG_ID,
       featureCategories: battlecard.featureComparison.length,
       objectionHandlers: battlecard.tactics.objectionHandling.length,
       competitiveTraps: battlecard.tactics.competitiveTraps.length,
@@ -674,7 +659,6 @@ export async function generateBattlecard(
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to generate battlecard', err, {
       competitor: competitorProfile.companyName,
-      organizationId: DEFAULT_ORG_ID,
     });
 
     const errorMessage = err.message;
@@ -836,7 +820,6 @@ async function emitCompetitorDiscoverySignal(
 
     await coordinator.emitSignal({
       type: 'competitor.discovered',
-      orgId: DEFAULT_ORG_ID,
       confidence: profile.metadata.confidence,
       priority: fromCache ? 'Low' : 'Medium',
       metadata: {
@@ -857,14 +840,12 @@ async function emitCompetitorDiscoverySignal(
 
     logger.info('Competitor discovery signal emitted', {
       competitorName: profile.companyName,
-      organizationId: DEFAULT_ORG_ID,
       fromCache,
     });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to emit competitor discovery signal', err, {
       competitorName: profile.companyName,
-      organizationId: DEFAULT_ORG_ID,
     });
   }
 }
@@ -880,7 +861,6 @@ async function emitBattlecardGeneratedSignal(
 
     await coordinator.emitSignal({
       type: 'battlecard.generated',
-      orgId: DEFAULT_ORG_ID,
       confidence: battlecard.metadata.confidence,
       priority: 'Medium',
       metadata: {
@@ -899,13 +879,11 @@ async function emitBattlecardGeneratedSignal(
     logger.info('Battlecard generated signal emitted', {
       battlecardId: battlecard.id,
       competitorName: battlecard.competitorName,
-      organizationId: DEFAULT_ORG_ID,
     });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to emit battlecard generated signal', err, {
       battlecardId: battlecard.id,
-      organizationId: DEFAULT_ORG_ID,
     });
   }
 }
@@ -929,7 +907,6 @@ export async function discoverCompetitorsBatch(
   logger.info('Starting batch competitor discovery', {
     domainsCount: domains.length,
     concurrency,
-    organizationId: DEFAULT_ORG_ID,
   });
 
   const results: CompetitorProfile[] = [];

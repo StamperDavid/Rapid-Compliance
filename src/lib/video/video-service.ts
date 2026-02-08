@@ -71,8 +71,8 @@ export async function logVideoInterest(
       return;
     }
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    await addDoc(collection(db, 'organizations', DEFAULT_ORG_ID, 'analytics_events'), {
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    await addDoc(collection(db, 'organizations', PLATFORM_ID, 'analytics_events'), {
       event: 'video_feature_interest',
       feature,
       userId: userId ?? null,
@@ -81,7 +81,6 @@ export async function logVideoInterest(
     });
 
     logger.info(`Video interest logged: ${feature}`, {
-      organizationId: DEFAULT_ORG_ID,
       feature,
       file: 'video-service.ts'
     });
@@ -115,7 +114,7 @@ export async function joinVideoWaitlist(
       return { success: false, error: 'Database not available' };
     }
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const entry: Omit<VideoWaitlistEntry, 'id'> = {
       email: email.trim().toLowerCase(),
       name: options?.name ?? undefined,
@@ -129,7 +128,7 @@ export async function joinVideoWaitlist(
     };
 
     const docRef = await addDoc(
-      collection(db, 'organizations', DEFAULT_ORG_ID, 'video_waitlist'),
+      collection(db, 'organizations', PLATFORM_ID, 'video_waitlist'),
       {
         ...entry,
         createdAt: serverTimestamp(),
@@ -142,7 +141,6 @@ export async function joinVideoWaitlist(
     });
 
     logger.info('User joined video waitlist', {
-      organizationId: DEFAULT_ORG_ID,
       email: entry.email,
       file: 'video-service.ts'
     });
@@ -861,8 +859,8 @@ export async function listVideoTemplates(
       return { templates: [] };
     }
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    const templatesRef = collection(db, 'organizations', DEFAULT_ORG_ID, 'video_templates');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const templatesRef = collection(db, 'organizations', PLATFORM_ID, 'video_templates');
 
     let q = query(templatesRef);
     if (category) {
@@ -910,8 +908,8 @@ export async function createVideoTemplate(
       return { success: false, error: 'Database not available' };
     }
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    const templatesRef = collection(db, 'organizations', DEFAULT_ORG_ID, 'video_templates');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const templatesRef = collection(db, 'organizations', PLATFORM_ID, 'video_templates');
 
     const docRef = await addDoc(templatesRef, {
       ...template,
@@ -920,7 +918,6 @@ export async function createVideoTemplate(
     });
 
     logger.info('Video template created', {
-      organizationId: DEFAULT_ORG_ID,
       templateId: docRef.id,
       file: 'video-service.ts',
     });
@@ -952,8 +949,8 @@ export async function listVideoProjects(
       return { projects: [] };
     }
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    const projectsRef = collection(db, 'organizations', DEFAULT_ORG_ID, 'video_projects');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const projectsRef = collection(db, 'organizations', PLATFORM_ID, 'video_projects');
 
     let q = query(projectsRef);
     if (userId) {
@@ -1001,8 +998,8 @@ export async function createVideoProject(
       return { success: false, error: 'Database not available' };
     }
 
-    const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-    const projectsRef = collection(db, 'organizations', DEFAULT_ORG_ID, 'video_projects');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const projectsRef = collection(db, 'organizations', PLATFORM_ID, 'video_projects');
 
     const docRef = await addDoc(projectsRef, {
       ...project,
@@ -1012,7 +1009,6 @@ export async function createVideoProject(
     });
 
     logger.info('Video project created', {
-      organizationId: DEFAULT_ORG_ID,
       projectId: docRef.id,
       file: 'video-service.ts',
     });
