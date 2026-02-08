@@ -64,3 +64,21 @@ export type {
   ThrottlerState,
   SignalEmissionResult,
 } from './types';
+
+// Event Router (Autonomous Business Event Dispatcher)
+export {
+  EventRouter,
+  getEventRouter,
+  resetEventRouter,
+  createBusinessEvent,
+  emitBusinessEvent,
+} from './event-router';
+
+export type {
+  EventRule,
+  EventAction,
+  EventPriority,
+  ConditionClause,
+  BusinessEvent,
+  EventProcessingResult,
+} from './event-router';

@@ -25,6 +25,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { discoverCompany, discoverPerson, type DiscoveredCompany, type DiscoveredPerson } from './discovery-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { emitBusinessEvent } from '@/lib/orchestration/event-router';
 import {
   DEFAULT_SCORING_RULES,
   type LeadScore,
@@ -181,7 +182,19 @@ export async function calculateLeadScore(
       priority: score.priority,
     });
 
-    // Step 10: Emit Signal Bus signals based on score
+    // Step 10: Emit business event to Event Router
+    const previousScore = !forceRescore ? (await getCachedScore(leadId, DEFAULT_ORG_ID))?.totalScore : undefined;
+    void emitBusinessEvent('lead.bant_score.updated', 'service/lead-scoring-engine', {
+      leadId,
+      score: score.totalScore,
+      grade: score.grade,
+      priority: score.priority,
+      previousScore: previousScore ?? null,
+      breakdown: score.breakdown,
+      confidence: score.metadata.confidence,
+    });
+
+    // Step 11: Emit Signal Bus signals based on score
     await emitScoringSignals(leadId, score, company, person);
 
     return score;

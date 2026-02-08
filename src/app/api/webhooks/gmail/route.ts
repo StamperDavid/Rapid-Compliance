@@ -12,6 +12,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { emitBusinessEvent } from '@/lib/orchestration/event-router';
 
 // Type definitions for Gmail webhook payload
 interface GmailPushMessage {
@@ -314,6 +315,22 @@ async function processNewEmail(
     });
 
     logger.info('Reply classified', { route: '/api/webhooks/gmail', intent: classification.intent });
+
+    // Emit event to Event Router
+    void emitBusinessEvent('email.reply.received', 'webhook/gmail', {
+      from: headers.from,
+      leadId: null, // Gmail webhook doesn't have easy prospect lookup — set null
+      threadId: emailData.threadId ?? '',
+      subject: headers.subject,
+      classification: {
+        intent: classification.intent,
+        sentiment: classification.sentiment,
+        sentimentScore: classification.sentimentScore,
+        confidence: classification.confidence,
+        suggestedAction: classification.suggestedAction,
+        requiresHumanReview: classification.requiresHumanReview,
+      },
+    });
 
     // Handle based on classification
     switch (classification.suggestedAction) {

@@ -495,7 +495,15 @@ export interface PipelineQueryRequest {
     | 'CLOSE_DEAL'
     | 'HANDLE_OBJECTION'
     | 'TUNE_GOLDEN_MASTER'
-    | 'GENERATE_BATTLECARD';
+    | 'GENERATE_BATTLECARD'
+    // Phase 3: Revenue Pipeline Automation
+    | 'ADVANCE_LEAD_STAGE'
+    | 'AUTO_TRANSITION_TO_OUTREACH'
+    | 'ADVANCE_TO_NEGOTIATION'
+    | 'PROGRESS_PIPELINE'
+    | 'LOG_WIN_LOSS_AND_UPDATE_BATTLECARDS'
+    | 'DEPLOY_OBJECTION_HANDLER'
+    | 'INTELLIGENCE_COMPLETE';
   leadId?: string;
   leadIds?: string[];
   leadData?: LeadData;
@@ -880,6 +888,45 @@ export class RevenueDirector extends BaseManager {
         case 'GENERATE_BATTLECARD':
           result = await this.synthesizeObjectionLibrary(taskId);
           break;
+
+        // =====================================================================
+        // Phase 3: Revenue Pipeline Automation Actions
+        // =====================================================================
+
+        case 'ADVANCE_LEAD_STAGE':
+        case 'AUTO_TRANSITION_TO_OUTREACH':
+        case 'ADVANCE_TO_NEGOTIATION': {
+          const autoResult = await this.autoProgressLead(payload, taskId);
+          return this.createReport(taskId, autoResult.success ? 'COMPLETED' : 'FAILED', autoResult, autoResult.errors);
+        }
+
+        case 'PROGRESS_PIPELINE': {
+          const progressResult = this.runPipelineProgression(taskId);
+          return this.createReport(taskId, 'COMPLETED', progressResult);
+        }
+
+        case 'LOG_WIN_LOSS_AND_UPDATE_BATTLECARDS': {
+          const winLossResult = await this.logWinLossAndUpdateBattlecards(payload, taskId);
+          return this.createReport(taskId, 'COMPLETED', winLossResult);
+        }
+
+        case 'DEPLOY_OBJECTION_HANDLER': {
+          if (!payload.objection && !payload.leadData) {
+            return this.createReport(taskId, 'FAILED', null, ['objection or leadData required for DEPLOY_OBJECTION_HANDLER']);
+          }
+          const objType = (payload as unknown as Record<string, unknown>).objectionType as string | undefined;
+          result = await this.orchestrateObjectionHandling(
+            objType ?? payload.objection ?? 'general objection',
+            payload.leadData,
+            taskId
+          );
+          break;
+        }
+
+        case 'INTELLIGENCE_COMPLETE': {
+          const bridgeResult = await this.handleIntelligenceComplete(payload, taskId);
+          return this.createReport(taskId, bridgeResult.success ? 'COMPLETED' : 'FAILED', bridgeResult, bridgeResult.errors);
+        }
 
         default:
           return this.createReport(taskId, 'FAILED', null, [`Unknown action: ${payload.action}`]);
@@ -2358,6 +2405,366 @@ export class RevenueDirector extends BaseManager {
       SUPPORT: "What kind of support do you offer?",
     };
     return commonObjections[category];
+  }
+
+  // ==========================================================================
+  // PHASE 3: REVENUE PIPELINE AUTOMATION
+  // ==========================================================================
+
+  /**
+   * 3a. Auto-Progress a lead based on event signals.
+   * Called by the Event Router when BANT scores cross thresholds,
+   * reply intents indicate interest, or meeting requests arrive.
+   */
+  private async autoProgressLead(
+    payload: PipelineQueryRequest,
+    _taskId: string
+  ): Promise<{ success: boolean; action: string; leadId: string; fromStage?: string; toStage?: string; errors?: string[] }> {
+    const rawPayload = payload as unknown as Record<string, unknown>;
+    const leadId = (rawPayload.leadId as string) ?? payload.leadData?.leadId ?? '';
+
+    if (!leadId) {
+      return { success: false, action: payload.action, leadId: '', errors: ['No leadId provided'] };
+    }
+
+    this.log('INFO', `Auto-progressing lead ${leadId} via action: ${payload.action}`);
+
+    try {
+      switch (payload.action) {
+        case 'AUTO_TRANSITION_TO_OUTREACH': {
+          const score = (rawPayload.score as number) ?? 0;
+          this.log('INFO', `BANT score ${score} crossed threshold — auto-transitioning ${leadId} to OUTREACH`);
+
+          // Store the progression event in MemoryVault
+          this.memoryVault.write(
+            'WORKFLOW',
+            `auto_transition_${leadId}_${Date.now()}`,
+            {
+              leadId,
+              fromStage: LeadStage.INTELLIGENCE,
+              toStage: LeadStage.OUTREACH,
+              trigger: 'BANT_THRESHOLD',
+              score,
+              automatedAt: new Date().toISOString(),
+            },
+            this.identity.id,
+            { priority: 'HIGH', tags: ['auto-progression', 'pipeline', leadId] }
+          );
+
+          // Signal Outreach Manager to begin engagement
+          await this.requestFromManager({
+            fromManager: this.identity.id,
+            toManager: 'OUTREACH_MANAGER',
+            requestType: 'BEGIN_OUTREACH_SEQUENCE',
+            description: `Auto-qualified lead ${leadId} with BANT score ${score} — begin personalized outreach`,
+            urgency: 'HIGH',
+            payload: { leadId, score, grade: rawPayload.grade },
+          });
+
+          return {
+            success: true,
+            action: 'AUTO_TRANSITION_TO_OUTREACH',
+            leadId,
+            fromStage: LeadStage.INTELLIGENCE,
+            toStage: LeadStage.OUTREACH,
+          };
+        }
+
+        case 'ADVANCE_LEAD_STAGE': {
+          const prospectEmail = rawPayload.prospectEmail as string | undefined;
+          this.log('INFO', `Advancing lead ${leadId} stage based on positive engagement signal`);
+
+          this.memoryVault.write(
+            'WORKFLOW',
+            `stage_advance_${leadId}_${Date.now()}`,
+            {
+              leadId,
+              trigger: 'POSITIVE_ENGAGEMENT',
+              prospectEmail,
+              automatedAt: new Date().toISOString(),
+            },
+            this.identity.id,
+            { priority: 'HIGH', tags: ['auto-progression', 'pipeline', leadId] }
+          );
+
+          return {
+            success: true,
+            action: 'ADVANCE_LEAD_STAGE',
+            leadId,
+          };
+        }
+
+        case 'ADVANCE_TO_NEGOTIATION': {
+          const meetingTime = rawPayload.meetingTime as string | undefined;
+          this.log('INFO', `Meeting request from lead ${leadId} — advancing to NEGOTIATION`);
+
+          this.memoryVault.write(
+            'WORKFLOW',
+            `negotiation_advance_${leadId}_${Date.now()}`,
+            {
+              leadId,
+              fromStage: LeadStage.OUTREACH,
+              toStage: LeadStage.NEGOTIATION,
+              trigger: 'MEETING_REQUEST',
+              meetingTime,
+              automatedAt: new Date().toISOString(),
+            },
+            this.identity.id,
+            { priority: 'CRITICAL', tags: ['auto-progression', 'pipeline', 'negotiation', leadId] }
+          );
+
+          // Signal Deal Closer to prepare
+          await this.requestFromManager({
+            fromManager: this.identity.id,
+            toManager: 'CONTENT_MANAGER',
+            requestType: 'PREPARE_PROPOSAL_DECK',
+            description: `Lead ${leadId} entering NEGOTIATION — prepare proposal materials`,
+            urgency: 'HIGH',
+            payload: { leadId, meetingTime },
+          });
+
+          return {
+            success: true,
+            action: 'ADVANCE_TO_NEGOTIATION',
+            leadId,
+            fromStage: LeadStage.OUTREACH,
+            toStage: LeadStage.NEGOTIATION,
+          };
+        }
+
+        default:
+          return { success: false, action: payload.action, leadId, errors: [`Unknown auto-progress action: ${payload.action}`] };
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.log('ERROR', `Auto-progression failed for ${leadId}: ${errorMsg}`);
+      return { success: false, action: payload.action, leadId, errors: [errorMsg] };
+    }
+  }
+
+  /**
+   * 3a. Run pipeline progression across all active leads.
+   * Called by the Operations Cycle cron to review the entire pipeline.
+   */
+  private runPipelineProgression(_taskId: string): {
+    leadsReviewed: number;
+    staleLeads: number;
+    autoAdvanced: number;
+    flaggedForReview: number;
+  } {
+    this.log('INFO', 'Running pipeline progression review...');
+
+    // Read all active pipeline entries from MemoryVault
+    const pipelineEntries = this.memoryVault.query(this.identity.id, {
+      category: 'WORKFLOW',
+      tags: ['pipeline'],
+      sortBy: 'updatedAt',
+      sortOrder: 'desc',
+      limit: 100,
+    });
+
+    let staleLeads = 0;
+    const autoAdvanced = 0;
+    let flaggedForReview = 0;
+
+    for (const entry of pipelineEntries) {
+      const data = entry.value as Record<string, unknown>;
+      const leadStage = data.currentStage as string | undefined;
+      const lastActivity = entry.updatedAt;
+      const daysSinceActivity = (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24);
+
+      // Flag leads stale in OUTREACH for 14+ days
+      if (leadStage === LeadStage.OUTREACH && daysSinceActivity > 14) {
+        staleLeads++;
+        flaggedForReview++;
+
+        // Write Jasper notification for review
+        this.memoryVault.write(
+          'CROSS_AGENT',
+          `stale_lead_review_${entry.key}_${Date.now()}`,
+          {
+            fromAgent: this.identity.id,
+            toAgent: 'JASPER',
+            messageType: 'NOTIFICATION' as const,
+            subject: `Stale lead in OUTREACH: ${data.leadId ?? entry.key}`,
+            body: {
+              leadId: data.leadId,
+              daysSinceActivity: Math.round(daysSinceActivity),
+              stage: leadStage,
+              recommendation: 'Review lead — consider disqualification or channel escalation',
+            },
+            requiresResponse: true,
+            responded: false,
+          },
+          this.identity.id,
+          { priority: 'HIGH', tags: ['stale-lead', 'jasper-review'] }
+        );
+      }
+    }
+
+    this.log('INFO', `Pipeline review: ${pipelineEntries.length} leads, ${staleLeads} stale, ${autoAdvanced} advanced, ${flaggedForReview} flagged`);
+
+    return {
+      leadsReviewed: pipelineEntries.length,
+      staleLeads,
+      autoAdvanced,
+      flaggedForReview,
+    };
+  }
+
+  /**
+   * 3b. Handle intelligence completion signal.
+   * When Intelligence Manager finishes scraping a prospect, evaluate completeness
+   * and auto-delegate to Outreach if threshold met.
+   */
+  private async handleIntelligenceComplete(
+    payload: PipelineQueryRequest,
+    _taskId: string
+  ): Promise<{ success: boolean; delegatedToOutreach: boolean; errors?: string[] }> {
+    const rawPayload = payload as unknown as Record<string, unknown>;
+    const leadId = (rawPayload.leadId as string) ?? '';
+
+    if (!leadId) {
+      return { success: false, delegatedToOutreach: false, errors: ['No leadId'] };
+    }
+
+    this.log('INFO', `Intelligence complete for lead ${leadId} — evaluating outreach readiness`);
+
+    // Check completeness: scraper data + competitor data + social profiles + verified contact
+    const hasScraperData = Boolean(rawPayload.companyProfile);
+    const hasCompetitorData = Boolean(rawPayload.competitorAnalysis);
+    const hasSocialProfiles = Boolean(rawPayload.socialProfiles);
+    const hasVerifiedContact = Boolean(rawPayload.verifiedEmail ?? rawPayload.verifiedPhone);
+
+    const completenessScore = [hasScraperData, hasCompetitorData, hasSocialProfiles, hasVerifiedContact]
+      .filter(Boolean).length;
+
+    const threshold = 3; // Need at least 3 of 4 data points
+
+    if (completenessScore >= threshold) {
+      this.log('INFO', `Lead ${leadId} intelligence complete (${completenessScore}/4) — delegating to Outreach`);
+
+      await this.requestFromManager({
+        fromManager: this.identity.id,
+        toManager: 'OUTREACH_MANAGER',
+        requestType: 'BEGIN_OUTREACH_SEQUENCE',
+        description: `Lead ${leadId} passed intelligence completeness check — full brief attached`,
+        urgency: 'HIGH',
+        payload: {
+          leadId,
+          intelligenceBrief: rawPayload,
+          completenessScore,
+        },
+      });
+
+      return { success: true, delegatedToOutreach: true };
+    }
+
+    this.log('INFO', `Lead ${leadId} intelligence incomplete (${completenessScore}/4) — awaiting more data`);
+    return { success: true, delegatedToOutreach: false };
+  }
+
+  /**
+   * 3c. Log win/loss and update battlecards.
+   * On deal close (won or lost), feed data back into the system.
+   */
+  private async logWinLossAndUpdateBattlecards(
+    payload: PipelineQueryRequest,
+    taskId: string
+  ): Promise<{ logged: boolean; battlecardUpdated: boolean }> {
+    const rawPayload = payload as unknown as Record<string, unknown>;
+    const dealId = (rawPayload.dealId as string) ?? '';
+    const lossReason = (rawPayload.lossReason as string) ?? '';
+    const competitorId = (rawPayload.competitorId as string) ?? '';
+    const eventType = (rawPayload.eventType as string) ?? '';
+    const isWon = eventType === 'deal.closed.won';
+
+    this.log('INFO', `Logging ${isWon ? 'WIN' : 'LOSS'} for deal ${dealId}`);
+
+    // Store the win/loss record
+    this.memoryVault.write(
+      'PERFORMANCE',
+      `deal_outcome_${dealId}_${Date.now()}`,
+      {
+        dealId,
+        outcome: isWon ? 'WON' : 'LOST',
+        lossReason,
+        competitorId,
+        recordedAt: new Date().toISOString(),
+      },
+      this.identity.id,
+      { priority: 'HIGH', tags: ['deal-outcome', isWon ? 'won' : 'lost', dealId] }
+    );
+
+    // Share insight for cross-agent consumption
+    await shareInsight(
+      this.identity.id,
+      'PERFORMANCE' as InsightData['type'],
+      `Deal ${isWon ? 'Won' : 'Lost'}: ${dealId}`,
+      isWon
+        ? `Deal ${dealId} closed successfully`
+        : `Deal ${dealId} lost: ${lossReason || 'unknown reason'}${competitorId ? ` (lost to ${competitorId})` : ''}`,
+      {
+        confidence: 100,
+        sources: [this.identity.id],
+        relatedAgents: ['OUTREACH_MANAGER', 'MARKETING_MANAGER'],
+        actions: isWon
+          ? ['Update winning patterns in outreach frameworks']
+          : ['Update battlecards with loss reason', 'Adjust objection handling strategies'],
+        tags: ['deal-outcome', isWon ? 'won' : 'lost'],
+      }
+    );
+
+    // Update battlecards via Objection Handler
+    let battlecardUpdated = false;
+    if (!isWon && lossReason && this.objectionHandlerInstance) {
+      try {
+        await this.delegateToSpecialist('OBJ_HANDLER', {
+          id: `battlecard_update_${taskId}`,
+          timestamp: new Date(),
+          from: this.identity.id,
+          to: 'OBJ_HANDLER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: {
+            action: 'update_battlecard',
+            lossReason,
+            competitorId,
+            dealId,
+          },
+          requiresResponse: false,
+          traceId: taskId,
+        });
+        battlecardUpdated = true;
+      } catch (error) {
+        this.log('WARN', `Failed to update battlecard: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    // For wins, share winning patterns with Outreach Specialist
+    if (isWon) {
+      await broadcastSignal(
+        this.identity.id,
+        'WINNING_PATTERN_DETECTED',
+        'MEDIUM',
+        { dealId, patterns: rawPayload.winningPatterns ?? [] },
+        ['OUTREACH_SPECIALIST', 'OUTREACH_MANAGER']
+      );
+    }
+
+    // For losses, share with Merchandiser for discount strategy adjustment
+    if (!isWon && lossReason.toLowerCase().includes('price')) {
+      await this.requestFromManager({
+        fromManager: this.identity.id,
+        toManager: 'COMMERCE_MANAGER',
+        requestType: 'ADJUST_PRICING_STRATEGY',
+        description: `Deal ${dealId} lost on price — review discount thresholds`,
+        urgency: 'NORMAL',
+        payload: { dealId, lossReason, competitorId },
+      });
+    }
+
+    return { logged: true, battlecardUpdated };
   }
 }
 

@@ -13,6 +13,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { collectEngagementMetrics } from '@/lib/social/engagement-metrics-collector';
 import { logger } from '@/lib/logger/logger';
+import { emitBusinessEvent } from '@/lib/orchestration/event-router';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120; // 2 minutes max — metrics collection can be slow
@@ -44,6 +45,34 @@ export async function GET(request: NextRequest) {
 
     // 1. Collect engagement metrics from platform APIs
     const metricsResult = await collectEngagementMetrics();
+
+    // Emit events for each updated post
+    if (metricsResult.updates && metricsResult.updates.length > 0) {
+      for (const update of metricsResult.updates) {
+        const avgEngagement = (update.previousMetrics?.engagements ?? 0);
+        const currentEngagement = update.currentMetrics.engagements ?? 0;
+        const engagementMultiplier = avgEngagement > 0 ? currentEngagement / avgEngagement : 1.0;
+        const impressions = update.currentMetrics.impressions ?? 0;
+        const engagementRate = impressions > 0 ? (currentEngagement / impressions) * 100 : 0;
+
+        void emitBusinessEvent('post.metrics.updated', 'cron/social-metrics-collector', {
+          postId: update.postId,
+          platform: update.platform,
+          platformPostId: update.platformPostId,
+          metrics: {
+            impressions: update.currentMetrics.impressions,
+            engagements: update.currentMetrics.engagements,
+            likes: update.currentMetrics.likes,
+            comments: update.currentMetrics.comments,
+            shares: update.currentMetrics.shares,
+            clicks: update.currentMetrics.clicks,
+          },
+          engagementRate: Math.round(engagementRate * 100) / 100,
+          engagementMultiplier: Math.round(engagementMultiplier * 100) / 100,
+          delta: update.delta,
+        });
+      }
+    }
 
     // 2. Process scheduled posts that are due
     let scheduledResult: { processed: number; errors: string[] } = {
