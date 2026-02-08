@@ -660,6 +660,27 @@ export class OutreachManager extends BaseManager {
         return this.createReport(taskId, 'FAILED', null, ['Lead profile is required for sequence execution']);
       }
 
+      // Step 0: Load conversation history for context
+      const conversationBrief = await this.loadConversationBrief(lead);
+      if (conversationBrief) {
+        // Enrich lead profile with historical context
+        if (conversationBrief.painPoints.length > 0 && !lead.painPoints?.length) {
+          lead.painPoints = conversationBrief.painPoints;
+        }
+        if (conversationBrief.lastContactChannel && !lead.preferredChannel) {
+          const channelMap: Record<string, OutreachChannel | undefined> = {
+            voice: 'VOICE',
+            chat: undefined,
+            sms: 'SMS',
+            email: 'EMAIL',
+          };
+          const mappedChannel = channelMap[conversationBrief.lastContactChannel];
+          if (mappedChannel) {
+            lead.preferredChannel = mappedChannel;
+          }
+        }
+      }
+
       // Step 1: Check sentiment before any outreach
       const { sentiment, confidence } = await this.querySentiment(lead);
       lead.sentiment = sentiment;
@@ -964,7 +985,7 @@ export class OutreachManager extends BaseManager {
       });
 
       if (report.status === 'COMPLETED') {
-        const data = report.data as Record<string, unknown> | null;
+        const data = report.data ? report.data as Record<string, unknown> : null;
         return {
           success: true,
           channel,
@@ -1106,18 +1127,24 @@ export class OutreachManager extends BaseManager {
       // Check by email
       if (lead.email) {
         const emailDNC = await vault.read('PROFILE', `dnc_email_${lead.email}`, this.identity.id);
-        if (emailDNC) {return true;}
+        if (emailDNC) {
+          return true;
+        }
       }
 
       // Check by phone
       if (lead.phone) {
         const phoneDNC = await vault.read('PROFILE', `dnc_phone_${lead.phone}`, this.identity.id);
-        if (phoneDNC) {return true;}
+        if (phoneDNC) {
+          return true;
+        }
       }
 
       // Check by leadId
       const leadDNC = await vault.read('PROFILE', `dnc_lead_${lead.leadId}`, this.identity.id);
-      if (leadDNC) {return true;}
+      if (leadDNC) {
+        return true;
+      }
 
       return lead.doNotContact ?? false;
     } catch (error) {
@@ -1144,7 +1171,9 @@ export class OutreachManager extends BaseManager {
         this.identity.id
       );
 
-      if (!history) {return true;}
+      if (!history) {
+        return true;
+      }
 
       const now = new Date();
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -1433,7 +1462,9 @@ export class OutreachManager extends BaseManager {
   private extractLeadProfile(
     payload: Record<string, unknown> | null
   ): LeadProfile | null {
-    if (!payload) {return null;}
+    if (!payload) {
+      return null;
+    }
 
     // Check if lead is provided directly
     if (payload.lead) {
@@ -1682,6 +1713,36 @@ Best regards`;
 
     } catch (error) {
       this.log('ERROR', `Failed to flag for human review: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Load conversation history brief for a lead
+   * Returns null gracefully if no history exists or service unavailable
+   */
+  private async loadConversationBrief(lead: LeadProfile): Promise<import('@/lib/conversation/conversation-memory').LeadBriefing | null> {
+    try {
+      const { conversationMemory } = await import('@/lib/conversation/conversation-memory');
+
+      // Try phone first, then email, then leadId
+      if (lead.phone) {
+        return await conversationMemory.brief(lead.phone, 'phone');
+      }
+      if (lead.email) {
+        return await conversationMemory.brief(lead.email, 'email');
+      }
+      if (lead.leadId) {
+        return await conversationMemory.brief(lead.leadId, 'leadId');
+      }
+
+      return null;
+    } catch (error) {
+      logger.warn('[OutreachManager] Failed to load conversation brief:', {
+        leadId: lead.leadId,
+        error: error instanceof Error ? error.message : String(error),
+        file: 'outreach/manager.ts',
+      });
+      return null;
     }
   }
 

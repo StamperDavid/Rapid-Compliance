@@ -197,6 +197,24 @@ class VoiceAgentHandler {
 
     this.activeCallId = call.callId;
 
+    // Load conversation history for personalized interaction
+    let conversationBrief: Awaited<ReturnType<typeof import('@/lib/conversation/conversation-memory').conversationMemory.brief>> | null = null;
+    try {
+      const { conversationMemory } = await import('@/lib/conversation/conversation-memory');
+      conversationBrief = await conversationMemory.brief(call.from, 'phone');
+      if (conversationBrief && conversationBrief.totalInteractions > 0) {
+        logger.info('[VoiceAgent] Loaded conversation history for caller', {
+          callId: call.callId,
+          phone: call.from,
+          priorInteractions: conversationBrief.totalInteractions,
+          sentiment: conversationBrief.sentimentTrend,
+          file: 'voice-agent-handler.ts',
+        });
+      }
+    } catch {
+      // Continue without brief — non-critical
+    }
+
     // Build AI conversation config
     const conversationConfig: ConversationConfig = {
       mode: this.config.mode,
@@ -305,6 +323,7 @@ class VoiceAgentHandler {
     // Update stored context before transfer
     if (context) {
       await this.storeCallContext(callId, context);
+      await this.persistConversationRecord(callId, context);
     }
 
     // Initiate warm transfer
@@ -367,7 +386,13 @@ class VoiceAgentHandler {
     const closingConfig = this.config?.closingConfig;
 
     if (!closingConfig?.paymentEnabled) {
-      // Just end the call with closing message
+      // Persist before ending
+      if (context) {
+        await this.storeCallContext(callId, context);
+        await this.persistConversationRecord(callId, context);
+      }
+      aiConversationService.endConversation(callId);
+
       return {
         text: aiResponse.text,
         action: 'end_call',
@@ -395,7 +420,18 @@ class VoiceAgentHandler {
    * Handle end call
    */
   private async handleEndCall(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
-    const context = aiConversationService.endConversation(callId);
+    // Get context and generate summary BEFORE ending conversation (which clears memory)
+    const context = aiConversationService.getConversationContext(callId);
+    const summary = context ? aiConversationService.generateTransferSummary(callId) : undefined;
+
+    // Persist call context to Firestore BEFORE clearing memory
+    if (context) {
+      await this.storeCallContext(callId, context);
+      await this.persistConversationRecord(callId, context);
+    }
+
+    // Now safe to clear from memory
+    aiConversationService.endConversation(callId);
 
     // Log final call data
     if (context && this.provider && this.config) {
@@ -405,7 +441,7 @@ class VoiceAgentHandler {
           aiAgentId: this.config.agentId,
           sentiment: context.sentiment,
           outcome: context.qualificationScore >= 70 ? 'qualified' : 'disqualified',
-          notes: aiConversationService.generateTransferSummary(callId),
+          notes: summary ?? '',
         });
       } catch {
         // Ignore logging errors on call end
@@ -647,6 +683,155 @@ class VoiceAgentHandler {
       );
     } catch (error) {
       logger.error('[VoiceAgent] Failed to store call context:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-agent-handler.ts' });
+    }
+  }
+
+  /**
+   * Persist a conversation record to the conversations collection
+   * This enables ConversationMemory to query voice interactions by leadId/phone
+   */
+  private async persistConversationRecord(callId: string, context: ConversationContext): Promise<void> {
+    try {
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
+
+      const transcript = context.turns
+        .map(t => `${t.role.toUpperCase()}: ${t.content}`)
+        .join('\n');
+
+      const startTime = context.turns[0]?.timestamp ?? new Date();
+      const endTime = context.turns[context.turns.length - 1]?.timestamp ?? new Date();
+      const durationSecs = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
+
+      await FirestoreService.set(
+        getSubCollection('conversations'),
+        `voice-${callId}`,
+        {
+          id: `voice-${callId}`,
+          workspaceId: 'default',
+          type: 'discovery_call',
+          channel: 'voice',
+          title: `Voice call with ${context.customerInfo.name ?? context.customerInfo.phone}`,
+          participants: [
+            {
+              id: this.config?.agentId ?? 'ai-agent',
+              name: `AI ${this.config?.mode ?? 'prospector'}`,
+              role: 'sales_rep',
+            },
+            {
+              id: context.customerInfo.phone,
+              name: context.customerInfo.name ?? 'Unknown',
+              role: 'prospect',
+              company: context.customerInfo.company,
+            },
+          ],
+          repId: this.config?.agentId ?? 'ai-agent',
+          duration: durationSecs,
+          transcript,
+          customerPhone: context.customerInfo.phone,
+          customerName: context.customerInfo.name,
+          customerEmail: context.customerInfo.email,
+          leadId: undefined, // Will be linked by ConversationMemory via phone/email lookup
+          status: 'completed',
+          source: 'voice-ai',
+          sentiment: context.sentiment,
+          qualificationScore: context.qualificationScore,
+          objectionCount: context.objectionCount,
+          buyingSignals: context.buyingSignals,
+          turnCount: context.turns.length,
+          createdAt: startTime.toISOString(),
+          endedAt: endTime.toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        true
+      );
+
+      logger.info('[VoiceAgent] Persisted conversation record', {
+        callId,
+        turnCount: context.turns.length,
+        duration: durationSecs,
+        file: 'voice-agent-handler.ts',
+      });
+
+      // Auto-trigger conversation analysis (fire-and-forget)
+      this.triggerAutoAnalysis(callId, transcript, context, durationSecs).catch(err => {
+        logger.error('[VoiceAgent] Auto-analysis failed:', err instanceof Error ? err : new Error(String(err)), { file: 'voice-agent-handler.ts' });
+      });
+    } catch (error) {
+      logger.error('[VoiceAgent] Failed to persist conversation record:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-agent-handler.ts' });
+    }
+  }
+
+  /**
+   * Trigger automatic conversation analysis after call completion
+   * Runs analysis and emits events to Signal Bus
+   */
+  private async triggerAutoAnalysis(
+    callId: string,
+    transcript: string,
+    context: ConversationContext,
+    durationSecs: number
+  ): Promise<void> {
+    try {
+      const { analyzeTranscript } = await import('@/lib/conversation');
+      const { emitConversationEvents } = await import('@/lib/conversation/events');
+
+      const analysis = await analyzeTranscript({
+        transcript,
+        conversationType: 'discovery_call',
+        participants: [
+          {
+            id: this.config?.agentId ?? 'ai-agent',
+            name: `AI ${this.config?.mode ?? 'prospector'}`,
+            role: 'sales_rep',
+          },
+          {
+            id: context.customerInfo.phone,
+            name: context.customerInfo.name ?? 'Unknown',
+            role: 'prospect',
+          },
+        ],
+        repId: this.config?.agentId ?? 'ai-agent',
+        duration: durationSecs,
+        includeCoaching: true,
+        includeFollowUps: true,
+      });
+
+      // Store analysis alongside conversation record
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
+
+      await FirestoreService.set(
+        getSubCollection('conversationAnalyses'),
+        `voice-${callId}`,
+        {
+          ...analysis,
+          analyzedAt: new Date().toISOString(),
+        },
+        true
+      );
+
+      // Emit events to Signal Bus for downstream processing
+      await emitConversationEvents(analysis, {
+        id: `voice-${callId}`,
+        workspaceId: 'default',
+        type: 'discovery_call',
+        title: `Voice call with ${context.customerInfo.name ?? context.customerInfo.phone}`,
+        participants: [],
+        repId: this.config?.agentId ?? 'ai-agent',
+        duration: durationSecs,
+        status: 'completed',
+        startedAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      logger.info('[VoiceAgent] Auto-analysis completed', {
+        callId,
+        overallScore: analysis.scores.overall,
+        file: 'voice-agent-handler.ts',
+      });
+    } catch (error) {
+      logger.error('[VoiceAgent] Auto-analysis error:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-agent-handler.ts' });
     }
   }
 

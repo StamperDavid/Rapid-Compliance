@@ -165,6 +165,18 @@ export {
 } from './validation';
 
 // ============================================================================
+// CONVERSATION MEMORY
+// ============================================================================
+
+export { conversationMemory } from './conversation-memory';
+export type {
+  ConversationChannel,
+  CustomerInteraction,
+  InteractionQuery,
+  LeadBriefing,
+} from './conversation-memory';
+
+// ============================================================================
 // EVENTS
 // ============================================================================
 

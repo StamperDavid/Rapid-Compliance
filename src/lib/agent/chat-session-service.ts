@@ -7,6 +7,7 @@
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { limit as firestoreLimit, orderBy, where, type QueryConstraint } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 
 export interface ChatSession {
   id: string;
@@ -200,6 +201,85 @@ export class ChatSessionService {
         outcome,
       }
     );
+
+    // Auto-trigger conversation analysis (fire-and-forget)
+    this.triggerChatAnalysis(sessionId).catch(err => {
+      logger.error('[ChatSession] Auto-analysis failed:', err instanceof Error ? err : new Error(String(err)), { file: 'chat-session-service.ts' });
+    });
+  }
+
+  /**
+   * Trigger automatic analysis for a completed chat session
+   * Uses the analysis API endpoint to avoid importing server-only modules
+   * (chat-session-service is used by client-side pages)
+   */
+  private static async triggerChatAnalysis(sessionId: string): Promise<void> {
+    try {
+      const sessionData = await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+        sessionId
+      );
+
+      if (!sessionData) {
+        return;
+      }
+
+      const session = sessionData as ChatSession;
+
+      const messages = await this.getSessionMessages(sessionId);
+      if (messages.length < 2) {
+        return;
+      }
+
+      const transcript = messages
+        .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+        .join('\n');
+
+      const startTime = new Date(session.startedAt);
+      const endTime = session.completedAt ? new Date(session.completedAt) : new Date();
+      const durationSecs = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
+
+      // Call the analysis API endpoint instead of importing server-only modules directly.
+      // This avoids the server-only import chain (conversation-engine → coordinator-factory-server)
+      // that would break webpack builds for client-side pages importing this service.
+      const baseUrl = typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+
+      const response = await fetch(`${baseUrl}/api/conversation/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript,
+          conversationType: 'discovery_call',
+          participants: [
+            { id: 'ai-chat-agent', name: 'AI Chat Agent', role: 'sales_rep' },
+            { id: session.customerId, name: session.customerName, role: 'prospect' },
+          ],
+          repId: 'ai-chat-agent',
+          duration: durationSecs,
+          includeCoaching: true,
+          includeFollowUps: true,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json() as { data?: { scores?: { overall?: number } } };
+        logger.info('[ChatSession] Auto-analysis completed via API', {
+          sessionId,
+          overallScore: result.data?.scores?.overall,
+          file: 'chat-session-service.ts',
+        });
+      } else {
+        logger.warn('[ChatSession] Auto-analysis API returned non-OK', {
+          sessionId,
+          status: response.status,
+          file: 'chat-session-service.ts',
+        });
+      }
+    } catch (error) {
+      logger.error('[ChatSession] Analysis error:', error instanceof Error ? error : new Error(String(error)), { file: 'chat-session-service.ts' });
+    }
   }
 
   /**
