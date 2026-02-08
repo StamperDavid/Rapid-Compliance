@@ -1056,7 +1056,7 @@ export class CommerceManager extends BaseManager {
   private async fetchCommerceSettings(): Promise<CommerceSettings> {
     try {
       // Try to read from vault first
-      const cachedSettings = this.memoryVault.read(
+      const cachedSettings = await this.memoryVault.read(
         'CONTEXT',
         'commerce_settings',
         this.identity.id
@@ -1429,7 +1429,7 @@ export class CommerceManager extends BaseManager {
       this.log('INFO', 'Starting commerce automation cycle');
 
       // Read pending cart abandonment events from MemoryVault
-      const cartEvents = this.memoryVault.query(this.identity.id, {
+      const cartEvents = await this.memoryVault.query(this.identity.id, {
         category: 'WORKFLOW',
         tags: ['cart-abandonment'],
       });

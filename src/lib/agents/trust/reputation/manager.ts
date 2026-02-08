@@ -1397,7 +1397,7 @@ export class ReputationManager extends BaseManager {
 
     // Load response templates from MemoryVault
     const templateKey = `review_template_${reviewData.rating}_star`;
-    const cachedTemplate = this.memoryVault.read('CONTENT', templateKey, this.identity.id);
+    const cachedTemplate = await this.memoryVault.read('CONTENT', templateKey, this.identity.id);
 
     // Delegate to REVIEW_SPECIALIST for response generation
     const message: AgentMessage = {
@@ -1677,7 +1677,7 @@ export class ReputationManager extends BaseManager {
     }
 
     // Check if CONTENT_MANAGER has ready assets
-    const contentAssets = this.memoryVault.read('CONTENT', 'gmb_assets', this.identity.id);
+    const contentAssets = await this.memoryVault.read('CONTENT', 'gmb_assets', this.identity.id);
 
     // Delegate to GMB_SPECIALIST with action-specific payload
     const message: AgentMessage = {
@@ -1861,7 +1861,7 @@ export class ReputationManager extends BaseManager {
     );
 
     // Determine trend
-    const cachedPreviousBrief = this.memoryVault.read('INSIGHT', 'previous_reputation_brief', this.identity.id);
+    const cachedPreviousBrief = await this.memoryVault.read('INSIGHT', 'previous_reputation_brief', this.identity.id);
     let trend: 'IMPROVING' | 'DECLINING' | 'STABLE' = 'STABLE';
     if (cachedPreviousBrief?.value) {
       const previousScore = (cachedPreviousBrief.value as ReputationBrief).trustScore?.overall ?? trustScoreOverall;

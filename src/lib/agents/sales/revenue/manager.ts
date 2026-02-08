@@ -901,7 +901,7 @@ export class RevenueDirector extends BaseManager {
         }
 
         case 'PROGRESS_PIPELINE': {
-          const progressResult = this.runPipelineProgression(taskId);
+          const progressResult = await this.runPipelineProgression(taskId);
           return this.createReport(taskId, 'COMPLETED', progressResult);
         }
 
@@ -1803,7 +1803,7 @@ export class RevenueDirector extends BaseManager {
 
     // Query win/loss signals from MemoryVault
     const vault = this.memoryVault;
-    const signals = vault.query(this.identity.id, {
+    const signals = await vault.query(this.identity.id, {
       category: 'SIGNAL',
       tags: ['deal.won', 'deal.lost', 'deal.created'],
       sortBy: 'createdAt',
@@ -2226,7 +2226,7 @@ export class RevenueDirector extends BaseManager {
 
     // Query win/loss signals from MemoryVault
     const vault = this.memoryVault;
-    const signals = vault.query(this.identity.id, {
+    const signals = await vault.query(this.identity.id, {
       category: 'SIGNAL',
       tags: ['deal.won', 'deal.lost'],
       sortBy: 'createdAt',
@@ -2546,16 +2546,16 @@ export class RevenueDirector extends BaseManager {
    * 3a. Run pipeline progression across all active leads.
    * Called by the Operations Cycle cron to review the entire pipeline.
    */
-  private runPipelineProgression(_taskId: string): {
+  private async runPipelineProgression(_taskId: string): Promise<{
     leadsReviewed: number;
     staleLeads: number;
     autoAdvanced: number;
     flaggedForReview: number;
-  } {
+  }> {
     this.log('INFO', 'Running pipeline progression review...');
 
     // Read all active pipeline entries from MemoryVault
-    const pipelineEntries = this.memoryVault.query(this.identity.id, {
+    const pipelineEntries = await this.memoryVault.query(this.identity.id, {
       category: 'WORKFLOW',
       tags: ['pipeline'],
       sortBy: 'updatedAt',

@@ -542,13 +542,13 @@ export class OutreachManager extends BaseManager {
           return await this.executeSingleChannel(taskId, 'SMS', payload, startTime);
 
         case 'CHECK_COMPLIANCE':
-          return this.checkCompliance(taskId, payload, startTime);
+          return await this.checkCompliance(taskId, payload, startTime);
 
         case 'CHECK_SENTIMENT':
           return await this.checkSentiment(taskId, payload, startTime);
 
         case 'MANAGE_DNC':
-          return this.manageDNC(taskId, payload, startTime);
+          return await this.manageDNC(taskId, payload, startTime);
 
         // Phase 4: Outreach Autonomy Actions
         case 'REPLY_WITH_ATTACHMENTS':
@@ -686,7 +686,7 @@ export class OutreachManager extends BaseManager {
       }
 
       // Step 2: Check compliance (DNC, frequency, quiet hours)
-      const compliance = this.performComplianceCheck(lead);
+      const compliance = await this.performComplianceCheck(lead);
 
       if (!compliance.canContact) {
         const brief: OutreachBrief = this.createOutreachBrief(
@@ -1017,7 +1017,7 @@ export class OutreachManager extends BaseManager {
 
     if (lead) {
       // Check compliance
-      const compliance = this.performComplianceCheck(lead);
+      const compliance = await this.performComplianceCheck(lead);
       if (!compliance.canContact) {
         return this.createReport(taskId, 'BLOCKED', { compliance }, compliance.blockReasons);
       }
@@ -1046,9 +1046,9 @@ export class OutreachManager extends BaseManager {
   /**
    * Perform comprehensive compliance check
    */
-  private performComplianceCheck(
+  private async performComplianceCheck(
     lead: LeadProfile
-  ): {
+  ): Promise<{
     dncChecked: boolean;
     isOnDNC: boolean;
     frequencyChecked: boolean;
@@ -1057,11 +1057,11 @@ export class OutreachManager extends BaseManager {
     isQuietHours: boolean;
     canContact: boolean;
     blockReasons: string[];
-  } {
+  }> {
     const blockReasons: string[] = [];
 
     // 1. Check DNC list
-    const isOnDNC = this.checkDNCList(lead);
+    const isOnDNC = await this.checkDNCList(lead);
     if (isOnDNC) {
       blockReasons.push('Lead is on Do Not Contact list');
     }
@@ -1072,8 +1072,8 @@ export class OutreachManager extends BaseManager {
     }
 
     // 3. Check contact frequency limits
-    const settings = this.getCommunicationSettings();
-    const withinLimits = this.checkFrequencyLimits(lead, settings);
+    const settings = await this.getCommunicationSettings();
+    const withinLimits = await this.checkFrequencyLimits(lead, settings);
     if (!withinLimits) {
       blockReasons.push('Contact frequency limit exceeded');
     }
@@ -1099,24 +1099,24 @@ export class OutreachManager extends BaseManager {
   /**
    * Check if lead is on DNC list
    */
-  private checkDNCList(lead: LeadProfile): boolean {
+  private async checkDNCList(lead: LeadProfile): Promise<boolean> {
     try {
       const vault = getMemoryVault();
 
       // Check by email
       if (lead.email) {
-        const emailDNC = vault.read('PROFILE', `dnc_email_${lead.email}`, this.identity.id);
+        const emailDNC = await vault.read('PROFILE', `dnc_email_${lead.email}`, this.identity.id);
         if (emailDNC) {return true;}
       }
 
       // Check by phone
       if (lead.phone) {
-        const phoneDNC = vault.read('PROFILE', `dnc_phone_${lead.phone}`, this.identity.id);
+        const phoneDNC = await vault.read('PROFILE', `dnc_phone_${lead.phone}`, this.identity.id);
         if (phoneDNC) {return true;}
       }
 
       // Check by leadId
-      const leadDNC = vault.read('PROFILE', `dnc_lead_${lead.leadId}`, this.identity.id);
+      const leadDNC = await vault.read('PROFILE', `dnc_lead_${lead.leadId}`, this.identity.id);
       if (leadDNC) {return true;}
 
       return lead.doNotContact ?? false;
@@ -1129,16 +1129,16 @@ export class OutreachManager extends BaseManager {
   /**
    * Check contact frequency limits
    */
-  private checkFrequencyLimits(
+  private async checkFrequencyLimits(
     lead: LeadProfile,
     settings: CommunicationSettings
-  ): boolean {
+  ): Promise<boolean> {
     try {
       const vault = getMemoryVault();
 
       // Get contact history from vault
       const historyKey = `contact_history_${lead.leadId}`;
-      const history = vault.read<{ contacts: Array<{ timestamp: Date; channel: string }> }>(
+      const history = await vault.read<{ contacts: Array<{ timestamp: Date; channel: string }> }>(
         'WORKFLOW',
         historyKey,
         this.identity.id
@@ -1190,10 +1190,10 @@ export class OutreachManager extends BaseManager {
   /**
    * Get communication settings for the organization
    */
-  private getCommunicationSettings(): CommunicationSettings {
+  private async getCommunicationSettings(): Promise<CommunicationSettings> {
     try {
       const vault = getMemoryVault();
-      const settings = vault.read<CommunicationSettings>(
+      const settings = await vault.read<CommunicationSettings>(
         'CONTEXT',
         'communication_settings',
         this.identity.id
@@ -1208,17 +1208,17 @@ export class OutreachManager extends BaseManager {
   /**
    * Check compliance only (no outreach)
    */
-  private checkCompliance(
+  private async checkCompliance(
     taskId: string,
     payload: Record<string, unknown> | null,
     _startTime: number
-  ): AgentReport {
+  ): Promise<AgentReport> {
     const lead = this.extractLeadProfile(payload);
     if (!lead) {
       return this.createReport(taskId, 'FAILED', null, ['Lead profile required for compliance check']);
     }
 
-    const compliance = this.performComplianceCheck(lead);
+    const compliance = await this.performComplianceCheck(lead);
 
     return this.createReport(taskId, 'COMPLETED', {
       lead,
@@ -1241,7 +1241,7 @@ export class OutreachManager extends BaseManager {
       const vault = getMemoryVault();
 
       // Check for cached sentiment
-      const cachedSentiment = vault.read<{
+      const cachedSentiment = await vault.read<{
         sentiment: LeadSentiment;
         confidence: number;
         analyzedAt: Date;
@@ -1340,11 +1340,11 @@ export class OutreachManager extends BaseManager {
   /**
    * Manage DNC list (add/remove)
    */
-  private manageDNC(
+  private async manageDNC(
     taskId: string,
     payload: Record<string, unknown> | null,
     _startTime: number
-  ): AgentReport {
+  ): Promise<AgentReport> {
     const action = payload?.dncAction as 'add' | 'remove' | 'check' | undefined;
     const email = payload?.email as string | undefined;
     const phone = payload?.phone as string | undefined;
@@ -1405,7 +1405,7 @@ export class OutreachManager extends BaseManager {
             phone,
             firstName: 'Check',
           };
-          const isOnDNC = this.checkDNCList(lead);
+          const isOnDNC = await this.checkDNCList(lead);
           return this.createReport(taskId, 'COMPLETED', {
             isOnDNC,
             email,
@@ -1710,7 +1710,7 @@ Best regards`;
       // Update contact history
       const vault = getMemoryVault();
       const historyKey = `contact_history_${lead.leadId}`;
-      const existing = vault.read<{ contacts: Array<{ timestamp: Date; channel: string }> }>(
+      const existing = await vault.read<{ contacts: Array<{ timestamp: Date; channel: string }> }>(
         'WORKFLOW',
         historyKey,
         this.identity.id

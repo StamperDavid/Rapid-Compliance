@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 8, 2026 (Complete organizationId purge — zero references in src/ and tests/, 564 files changed, all cascade type errors resolved, pre-existing type errors fixed, tsc --noEmit passes clean)
+**Last Updated:** February 8, 2026 (MemoryVault Firestore persistence wired — agents survive cold starts; ConversationMemory service planned as Step 3)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -2013,6 +2013,7 @@ organizations/{orgId}/
 ├── domains/                  # Custom domains
 ├── blogPosts/                # Blog content
 ├── brandDNA/                 # Brand configuration
+├── memoryVault/              # Agent shared memory (Firestore-backed, cold-start safe)
 └── provisionerLogs/          # Provisioning logs
 ```
 
@@ -2455,11 +2456,36 @@ UnifiedSidebar achieves reactivity through:
 
 ### Agent Communication
 
-Agents communicate via **TenantMemoryVault**:
+Agents communicate via **TenantMemoryVault** (Firestore-backed since Feb 8, 2026):
 - Cross-agent memory sharing
 - Signal broadcasting
 - Insight sharing
-- Location: `src/lib/agents/shared/tenant-memory-vault.ts`
+- Cold-start safe: `read()` and `query()` await Firestore hydration before returning
+- TTL cleanup runs every 4 hours via operations-cycle cron
+- Location: `src/lib/agents/shared/memory-vault.ts`
+
+### Agent Memory Hierarchy
+
+| Layer | Status | Details |
+|-------|--------|---------|
+| **Working memory** | Have it | In-process variables during a single task execution |
+| **Shared operational state (MemoryVault)** | **Complete** | Cross-agent signals, insights, context. Firestore-backed, survives cold starts (commit e388c151) |
+| **Customer/entity memory** | Have it | CRM data in Firestore collections (records, deals, contacts) |
+| **Conversation memory** | **Planned (Step 3)** | ConversationMemory service — unified retrieval of past customer interactions across all channels. See CONTINUATION_PROMPT.md for full spec. |
+| **Episodic memory** | Not built | Agents recalling specific past interactions and learning from outcomes |
+| **Semantic/vector memory** | Not built | Embedding-based retrieval for similarity search across knowledge |
+
+### Conversation Storage (Current State)
+
+| Channel | Firestore Collection | Persisted? | Agent-Queryable? |
+|---------|---------------------|------------|-----------------|
+| Chat widget | `chatSessions/{id}/messages` | Yes | No — agents don't query it |
+| Jasper (orchestrator) | `orchestratorConversations/{id}/messages` | Yes | No — UI-only |
+| SMS | `smsMessages` | Yes (individual records) | No — not threaded, not agent-accessible |
+| Voice AI | In-memory only | **No — lost when call ends** | No |
+| Email | Campaign metadata only | Partial (no body) | No |
+
+**Gap:** All conversation data is siloed. No agent can query "what's the history with this lead?" across channels. The ConversationMemory service (Step 3) will provide a unified retrieval layer with auto-analysis and Lead Briefing generation.
 
 ### Intelligence Manager - Dynamic Orchestration Engine
 

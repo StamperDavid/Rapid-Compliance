@@ -5,6 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 interface OrgData {
   brandDNA?: BrandDNA;
@@ -46,6 +47,11 @@ export async function GET(
   _req: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(_req);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     if (!adminDal || !adminDb) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
@@ -103,6 +109,11 @@ export async function POST(
   req: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(req);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     if (!adminDb) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }

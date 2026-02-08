@@ -141,10 +141,10 @@ export class JasperCommandAuthority {
     const periodStart = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Last 24 hours
 
     // Build department summaries
-    const departmentSummaries = this.buildDepartmentSummaries();
+    const departmentSummaries = await this.buildDepartmentSummaries();
 
     // Build briefing metrics
-    const metrics = this.buildBriefingMetrics();
+    const metrics = await this.buildBriefingMetrics();
 
     // Build highlights from recent activity
     const highlights = this.buildHighlights(departmentSummaries);
@@ -182,13 +182,13 @@ export class JasperCommandAuthority {
   /**
    * Build department summaries from MemoryVault data
    */
-  private buildDepartmentSummaries(): DepartmentSummary[] {
+  private async buildDepartmentSummaries(): Promise<DepartmentSummary[]> {
     const vault = getMemoryVault();
     const summaries: DepartmentSummary[] = [];
 
     for (const managerId of this.MANAGER_IDS) {
       // Read performance data for this manager
-      const performanceEntries = vault.query('JASPER', {
+      const performanceEntries = await vault.query('JASPER', {
         category: 'PERFORMANCE',
         createdBy: managerId,
         sortBy: 'createdAt',
@@ -197,7 +197,7 @@ export class JasperCommandAuthority {
       });
 
       // Read workflow data for this manager
-      const workflowEntries = vault.query('JASPER', {
+      const workflowEntries = await vault.query('JASPER', {
         category: 'WORKFLOW',
         createdBy: managerId,
         sortBy: 'createdAt',
@@ -250,11 +250,11 @@ export class JasperCommandAuthority {
   /**
    * Build aggregated metrics from MemoryVault
    */
-  private buildBriefingMetrics(): BriefingMetrics {
+  private async buildBriefingMetrics(): Promise<BriefingMetrics> {
     const vault = getMemoryVault();
 
     // Query all recent workflow entries
-    const workflowEntries = vault.query('JASPER', {
+    const workflowEntries = await vault.query('JASPER', {
       category: 'WORKFLOW',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -262,7 +262,7 @@ export class JasperCommandAuthority {
     });
 
     // Query all recent performance entries
-    const performanceEntries = vault.query('JASPER', {
+    const performanceEntries = await vault.query('JASPER', {
       category: 'PERFORMANCE',
       sortBy: 'createdAt',
       sortOrder: 'desc',

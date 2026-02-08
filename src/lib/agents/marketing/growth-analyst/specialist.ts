@@ -194,22 +194,22 @@ export class GrowthAnalyst extends BaseSpecialist {
     try {
       switch (action) {
         case 'AGGREGATE_METRICS':
-          return this.handleAggregateMetrics(taskId);
+          return await this.handleAggregateMetrics(taskId);
 
         case 'CALCULATE_KPIS':
-          return this.handleCalculateKPIs(taskId);
+          return await this.handleCalculateKPIs(taskId);
 
         case 'IDENTIFY_PATTERNS':
           return await this.handleIdentifyPatterns(taskId);
 
         case 'GENERATE_MUTATIONS':
-          return this.handleGenerateMutations(taskId);
+          return await this.handleGenerateMutations(taskId);
 
         case 'TRACK_OBJECTIVES':
-          return this.handleTrackObjectives(taskId, payload);
+          return await this.handleTrackObjectives(taskId, payload);
 
         case 'CONTENT_LIBRARY':
-          return this.handleContentLibrary(taskId);
+          return await this.handleContentLibrary(taskId);
 
         case 'WEEKLY_REPORT':
           return await this.handleWeeklyReport(taskId);
@@ -245,11 +245,11 @@ export class GrowthAnalyst extends BaseSpecialist {
   // ==========================================================================
 
   /** Aggregate performance metrics from MemoryVault */
-  private handleAggregateMetrics(taskId: string): AgentReport {
+  private async handleAggregateMetrics(taskId: string): Promise<AgentReport> {
     const vault = getMemoryVault();
 
     // Read all PERFORMANCE entries written by the metrics collector
-    const performanceEntries = vault.query(this.identity.id, {
+    const performanceEntries = await vault.query(this.identity.id, {
       category: 'PERFORMANCE',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -279,10 +279,10 @@ export class GrowthAnalyst extends BaseSpecialist {
   }
 
   /** Calculate KPIs from aggregated data */
-  private handleCalculateKPIs(taskId: string): AgentReport {
+  private async handleCalculateKPIs(taskId: string): Promise<AgentReport> {
     const vault = getMemoryVault();
 
-    const aggregated = vault.read<Record<string, unknown>>(
+    const aggregated = await vault.read<Record<string, unknown>>(
       'PERFORMANCE',
       'growth_analyst_aggregated',
       this.identity.id
@@ -290,7 +290,7 @@ export class GrowthAnalyst extends BaseSpecialist {
 
     if (!aggregated) {
       // Run aggregation first
-      this.handleAggregateMetrics(`${taskId}_pre_agg`);
+      await this.handleAggregateMetrics(`${taskId}_pre_agg`);
     }
 
     const data = aggregated?.value ?? {};
@@ -336,7 +336,7 @@ export class GrowthAnalyst extends BaseSpecialist {
   private async handleIdentifyPatterns(taskId: string): Promise<AgentReport> {
     const vault = getMemoryVault();
 
-    const performanceEntries = vault.query(this.identity.id, {
+    const performanceEntries = await vault.query(this.identity.id, {
       category: 'PERFORMANCE',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -405,11 +405,11 @@ export class GrowthAnalyst extends BaseSpecialist {
   }
 
   /** Generate mutation directives based on analysis */
-  private handleGenerateMutations(taskId: string): AgentReport {
+  private async handleGenerateMutations(taskId: string): Promise<AgentReport> {
     const vault = getMemoryVault();
 
     // Read current KPIs
-    const kpisEntry = vault.read<GrowthKPIs>(
+    const kpisEntry = await vault.read<GrowthKPIs>(
       'PERFORMANCE',
       'growth_analyst_kpis',
       this.identity.id
@@ -485,14 +485,14 @@ export class GrowthAnalyst extends BaseSpecialist {
   }
 
   /** Track progress against growth objectives */
-  private handleTrackObjectives(
+  private async handleTrackObjectives(
     taskId: string,
     payload: Record<string, unknown>
-  ): AgentReport {
+  ): Promise<AgentReport> {
     const vault = getMemoryVault();
 
     // Read objectives from MemoryVault (set by human via API)
-    const objectivesEntry = vault.read<GrowthObjective[]>(
+    const objectivesEntry = await vault.read<GrowthObjective[]>(
       'STRATEGY',
       'growth_objectives',
       this.identity.id
@@ -523,7 +523,7 @@ export class GrowthAnalyst extends BaseSpecialist {
     }
 
     // Read current KPIs for comparison
-    const kpisEntry = vault.read<GrowthKPIs>(
+    const kpisEntry = await vault.read<GrowthKPIs>(
       'PERFORMANCE',
       'growth_analyst_kpis',
       this.identity.id
@@ -569,10 +569,10 @@ export class GrowthAnalyst extends BaseSpecialist {
   }
 
   /** Manage content library — tag top performers and recycling candidates */
-  private handleContentLibrary(taskId: string): AgentReport {
+  private async handleContentLibrary(taskId: string): Promise<AgentReport> {
     const vault = getMemoryVault();
 
-    const performanceEntries = vault.query(this.identity.id, {
+    const performanceEntries = await vault.query(this.identity.id, {
       category: 'PERFORMANCE',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -666,11 +666,11 @@ export class GrowthAnalyst extends BaseSpecialist {
   /** Generate weekly executive report */
   private async handleWeeklyReport(taskId: string): Promise<AgentReport> {
     // Run all analysis steps first
-    this.handleAggregateMetrics(`${taskId}_agg`);
-    const kpiReport = this.handleCalculateKPIs(`${taskId}_kpi`);
+    await this.handleAggregateMetrics(`${taskId}_agg`);
+    const kpiReport = await this.handleCalculateKPIs(`${taskId}_kpi`);
     const patternReport = await this.handleIdentifyPatterns(`${taskId}_patterns`);
-    const mutationReport = this.handleGenerateMutations(`${taskId}_mutations`);
-    const libraryReport = this.handleContentLibrary(`${taskId}_library`);
+    const mutationReport = await this.handleGenerateMutations(`${taskId}_mutations`);
+    const libraryReport = await this.handleContentLibrary(`${taskId}_library`);
 
     const kpis = kpiReport.data as GrowthKPIs;
     const patterns = patternReport.data as Record<string, unknown>;
