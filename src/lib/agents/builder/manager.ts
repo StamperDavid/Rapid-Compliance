@@ -397,6 +397,46 @@ export interface BuildRequest {
 }
 
 /**
+ * Page analytics data from GA4/analytics
+ */
+interface PageAnalytics {
+  pageId: string;
+  path: string;
+  bounceRate: number;
+  avgTimeOnPage: number;
+  pageViews: number;
+  exitRate: number;
+  conversionRate: number;
+  period: 'day' | 'week' | 'month';
+}
+
+/**
+ * Optimization recommendation from analytics analysis
+ */
+interface OptimizationRecommendation {
+  pageId: string;
+  path: string;
+  issue: 'HIGH_BOUNCE' | 'LOW_CONVERSION' | 'HIGH_EXIT' | 'LOW_ENGAGEMENT';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  currentMetric: number;
+  threshold: number;
+  recommendation: string;
+  suggestedAction: 'REDESIGN' | 'REBUILD_SECTION' | 'A_B_TEST' | 'CONTENT_REFRESH';
+}
+
+/**
+ * Result from analytics-driven optimization check
+ */
+interface AnalyticsOptimizationResult {
+  analyzedAt: Date;
+  pagesAnalyzed: number;
+  issuesFound: number;
+  recommendations: OptimizationRecommendation[];
+  actionsDispatched: number;
+  summary: string;
+}
+
+/**
  * Complete output from the Builder Manager
  */
 export interface BuilderOutput {
@@ -1500,6 +1540,270 @@ export class BuilderManager extends BaseManager {
 
     this.log('INFO', `Generated deployment manifest: ${manifest.manifestId}`);
     return manifest;
+  }
+
+  // ==========================================================================
+  // PHASE 6A: ANALYTICS-DRIVEN PAGE OPTIMIZATION
+  // ==========================================================================
+
+  /**
+   * Analyze page performance data and generate optimization recommendations.
+   * Dispatches actions to specialists or other managers for high/critical issues.
+   */
+  async analyzePagePerformance(
+    analytics: PageAnalytics[]
+  ): Promise<AnalyticsOptimizationResult> {
+    this.log('INFO', `Analyzing ${analytics.length} pages for performance issues`);
+
+    const recommendations: OptimizationRecommendation[] = [];
+    let actionsDispatched = 0;
+
+    for (const page of analytics) {
+      // Check bounce rate threshold
+      if (page.bounceRate > 60) {
+        const severity = this.determineSeverity(page.bounceRate, 60);
+        const recommendation: OptimizationRecommendation = {
+          pageId: page.pageId,
+          path: page.path,
+          issue: 'HIGH_BOUNCE',
+          severity,
+          currentMetric: page.bounceRate,
+          threshold: 60,
+          recommendation: `Bounce rate of ${page.bounceRate}% exceeds threshold (60%). Consider redesigning hero section, improving load time, or clarifying value proposition.`,
+          suggestedAction: severity === 'CRITICAL' ? 'REDESIGN' : 'REBUILD_SECTION',
+        };
+        recommendations.push(recommendation);
+
+        // Dispatch action for high/critical severity
+        if (severity === 'HIGH' || severity === 'CRITICAL') {
+          await this.requestArchitectRedesign(recommendation);
+          actionsDispatched++;
+        }
+      }
+
+      // Check conversion rate threshold
+      if (page.conversionRate < 2) {
+        const severity = this.determineSeverity(2, page.conversionRate); // Inverted for conversion
+        const recommendation: OptimizationRecommendation = {
+          pageId: page.pageId,
+          path: page.path,
+          issue: 'LOW_CONVERSION',
+          severity,
+          currentMetric: page.conversionRate,
+          threshold: 2,
+          recommendation: `Conversion rate of ${page.conversionRate}% below threshold (2%). CTAs may need optimization, funnel may have friction, or messaging unclear.`,
+          suggestedAction: severity === 'CRITICAL' ? 'REDESIGN' : 'A_B_TEST',
+        };
+        recommendations.push(recommendation);
+
+        // Dispatch funnel diagnosis for high/critical severity
+        if (severity === 'HIGH' || severity === 'CRITICAL') {
+          await this.requestFunnelDiagnosis(recommendation);
+          actionsDispatched++;
+        }
+      }
+
+      // Check exit rate threshold
+      if (page.exitRate > 70) {
+        const severity = this.determineSeverity(page.exitRate, 70);
+        const recommendation: OptimizationRecommendation = {
+          pageId: page.pageId,
+          path: page.path,
+          issue: 'HIGH_EXIT',
+          severity,
+          currentMetric: page.exitRate,
+          threshold: 70,
+          recommendation: `Exit rate of ${page.exitRate}% exceeds threshold (70%). Page may be dead-end, lacking next steps, or not meeting user expectations.`,
+          suggestedAction: 'CONTENT_REFRESH',
+        };
+        recommendations.push(recommendation);
+      }
+
+      // Check engagement threshold (time on page in seconds)
+      if (page.avgTimeOnPage < 10) {
+        const severity = this.determineSeverity(10, page.avgTimeOnPage); // Inverted
+        const recommendation: OptimizationRecommendation = {
+          pageId: page.pageId,
+          path: page.path,
+          issue: 'LOW_ENGAGEMENT',
+          severity,
+          currentMetric: page.avgTimeOnPage,
+          threshold: 10,
+          recommendation: `Avg time on page of ${page.avgTimeOnPage}s below threshold (10s). Content may not be engaging, value unclear, or page confusing.`,
+          suggestedAction: 'CONTENT_REFRESH',
+        };
+        recommendations.push(recommendation);
+      }
+    }
+
+    // Write results to MemoryVault for other managers
+    await shareInsight(
+      'BUILDER_MANAGER',
+      'PERFORMANCE',
+      'Page Performance Analysis',
+      `Analyzed ${analytics.length} pages, found ${recommendations.length} issues (${recommendations.filter(r => r.severity === 'CRITICAL').length} critical, ${recommendations.filter(r => r.severity === 'HIGH').length} high)`,
+      {
+        confidence: 85,
+        sources: ['GA4', 'Analytics'],
+        relatedAgents: ['ARCHITECT_MANAGER', 'FUNNEL_ENGINEER'],
+        actions: recommendations.map(r => r.recommendation),
+        tags: ['analytics', 'optimization', 'page-performance'],
+      }
+    );
+
+    const summary = `Analyzed ${analytics.length} pages over ${analytics[0]?.period ?? 'unknown'} period. Found ${recommendations.length} issues: ${recommendations.filter(r => r.severity === 'CRITICAL').length} critical, ${recommendations.filter(r => r.severity === 'HIGH').length} high, ${recommendations.filter(r => r.severity === 'MEDIUM').length} medium. Dispatched ${actionsDispatched} optimization actions.`;
+
+    this.log('INFO', summary);
+
+    return {
+      analyzedAt: new Date(),
+      pagesAnalyzed: analytics.length,
+      issuesFound: recommendations.length,
+      recommendations,
+      actionsDispatched,
+      summary,
+    };
+  }
+
+  /**
+   * Request a page redesign from ARCHITECT_MANAGER for high-bounce pages.
+   */
+  private async requestArchitectRedesign(
+    recommendation: OptimizationRecommendation
+  ): Promise<void> {
+    this.log('INFO', `Requesting redesign for ${recommendation.path} due to ${recommendation.issue}`);
+
+    await this.requestFromManager({
+      fromManager: this.identity.id,
+      toManager: 'ARCHITECT_MANAGER',
+      requestType: 'PAGE_REDESIGN',
+      description: `Page ${recommendation.path} has ${recommendation.issue}: ${recommendation.currentMetric}% (threshold: ${recommendation.threshold}%)`,
+      urgency: recommendation.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
+      payload: {
+        pageId: recommendation.pageId,
+        path: recommendation.path,
+        issue: recommendation.issue,
+        currentMetric: recommendation.currentMetric,
+        threshold: recommendation.threshold,
+        suggestedAction: recommendation.suggestedAction,
+        recommendation: recommendation.recommendation,
+      },
+    });
+  }
+
+  /**
+   * Request funnel diagnosis from FUNNEL_ENGINEER specialist for low-conversion pages.
+   */
+  private async requestFunnelDiagnosis(
+    recommendation: OptimizationRecommendation
+  ): Promise<void> {
+    this.log('INFO', `Requesting funnel diagnosis for ${recommendation.path} due to ${recommendation.issue}`);
+
+    const funnelEngineer = this.specialists.get('FUNNEL_ENGINEER');
+    if (!funnelEngineer?.isFunctional()) {
+      this.log('WARN', 'FUNNEL_ENGINEER not functional, skipping diagnosis');
+      return;
+    }
+
+    const message: AgentMessage = {
+      id: `funnel_diagnosis_${Date.now()}`,
+      timestamp: new Date(),
+      from: this.identity.id,
+      to: 'FUNNEL_ENGINEER',
+      type: 'COMMAND',
+      priority: recommendation.severity === 'CRITICAL' ? 'HIGH' : 'NORMAL',
+      payload: {
+        method: 'diagnose_conversion_issue',
+        pageId: recommendation.pageId,
+        path: recommendation.path,
+        currentConversionRate: recommendation.currentMetric,
+        targetConversionRate: recommendation.threshold,
+        issue: recommendation.issue,
+      },
+      requiresResponse: true,
+      traceId: `analytics_optimization_${Date.now()}`,
+    };
+
+    try {
+      const report = await funnelEngineer.execute(message);
+
+      // Write diagnosis result to MemoryVault
+      await shareInsight(
+        'BUILDER_MANAGER',
+        'PERFORMANCE',
+        `Funnel Diagnosis: ${recommendation.path}`,
+        `FUNNEL_ENGINEER diagnosis for low conversion on ${recommendation.path}: ${report.status}`,
+        {
+          confidence: 75,
+          sources: ['FUNNEL_ENGINEER', 'Analytics'],
+          relatedAgents: ['ARCHITECT_MANAGER'],
+          actions: report.status === 'COMPLETED' ? ['Apply funnel recommendations'] : ['Manual review required'],
+          tags: ['funnel', 'conversion-optimization', recommendation.issue.toLowerCase()],
+        }
+      );
+
+      this.log('INFO', `Funnel diagnosis completed: ${report.status}`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.log('ERROR', `Funnel diagnosis failed: ${errorMsg}`);
+    }
+  }
+
+  /**
+   * Determine severity based on how far the metric exceeds the threshold.
+   */
+  private determineSeverity(
+    metric: number,
+    threshold: number
+  ): OptimizationRecommendation['severity'] {
+    const ratio = metric / threshold;
+
+    if (ratio >= 2.0) {
+      return 'CRITICAL'; // 2x+ worse than threshold
+    }
+    if (ratio >= 1.5) {
+      return 'HIGH'; // 1.5x+ worse
+    }
+    if (ratio >= 1.2) {
+      return 'MEDIUM'; // 1.2x+ worse
+    }
+    return 'LOW'; // Within acceptable range
+  }
+
+  /**
+   * Handle incoming analytics events and trigger optimization analysis.
+   * Called when analytics data arrives from external systems.
+   */
+  async handleAnalyticsEvent(
+    pageId: string,
+    path: string,
+    analytics: Record<string, number>
+  ): Promise<void> {
+    this.log('INFO', `Received analytics event for ${path}`);
+
+    // Convert raw analytics to PageAnalytics structure
+    const periodValue = String(analytics.period ?? 'day');
+    const period: PageAnalytics['period'] =
+      periodValue === 'day' || periodValue === 'week' || periodValue === 'month'
+        ? periodValue
+        : 'day';
+
+    const pageAnalytics: PageAnalytics = {
+      pageId,
+      path,
+      bounceRate: analytics.bounceRate ?? 0,
+      avgTimeOnPage: analytics.avgTimeOnPage ?? 0,
+      pageViews: analytics.pageViews ?? 0,
+      exitRate: analytics.exitRate ?? 0,
+      conversionRate: analytics.conversionRate ?? 0,
+      period,
+    };
+
+    // Analyze performance
+    const result = await this.analyzePagePerformance([pageAnalytics]);
+
+    // Log results
+    this.log('INFO', `Analytics analysis complete: ${result.issuesFound} issues, ${result.actionsDispatched} actions dispatched`);
   }
 
   // ==========================================================================
