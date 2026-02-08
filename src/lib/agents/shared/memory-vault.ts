@@ -15,7 +15,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
-import { getOrgSubCollection } from '@/lib/firebase/collections';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -254,7 +254,7 @@ export class MemoryVault {
    * Uses the standard org sub-collection pattern with environment-aware prefix.
    */
   private getCollectionPath(): string {
-    return getOrgSubCollection('memoryVault');
+    return getSubCollection('memoryVault');
   }
 
   /**
@@ -601,13 +601,15 @@ export class MemoryVault {
   // ==========================================================================
 
   /**
-   * Read a specific entry by key
+   * Read a specific entry by key.
+   * Awaits Firestore hydration to guarantee data is available after cold starts.
    */
-  read<T>(
+  async read<T>(
     category: MemoryCategory,
     key: string,
     agentId: string
-  ): MemoryEntry<T> | null {
+  ): Promise<MemoryEntry<T> | null> {
+    await this.ensureHydrated();
     const entryKey = `${category}:${key}`;
     const entry = this.store.get(entryKey) as MemoryEntry<T> | undefined;
 
@@ -631,12 +633,14 @@ export class MemoryVault {
   }
 
   /**
-   * Query entries by criteria
+   * Query entries by criteria.
+   * Awaits Firestore hydration to guarantee data is available after cold starts.
    */
-  query(
+  async query(
     _agentId: string,
     options: QueryOptions = {}
-  ): MemoryEntry[] {
+  ): Promise<MemoryEntry[]> {
+    await this.ensureHydrated();
     const now = new Date();
     let entries = Array.from(this.store.values());
 
@@ -713,7 +717,7 @@ export class MemoryVault {
     filter?: { type?: InsightData['type']; minConfidence?: number }
   ): Promise<InsightEntry[]> {
     await this.ensureHydrated();
-    const entries = this.query(agentId, {
+    const entries = await this.query(agentId, {
       category: 'INSIGHT',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -740,7 +744,7 @@ export class MemoryVault {
     agentId: string
   ): Promise<SignalEntry[]> {
     await this.ensureHydrated();
-    const entries = this.query(agentId, {
+    const entries = await this.query(agentId, {
       category: 'SIGNAL',
       sortBy: 'priority',
       sortOrder: 'desc',
@@ -760,7 +764,7 @@ export class MemoryVault {
     options?: { unrespondedOnly?: boolean }
   ): Promise<CrossAgentEntry[]> {
     await this.ensureHydrated();
-    const entries = this.query(agentId, {
+    const entries = await this.query(agentId, {
       category: 'CROSS_AGENT',
       sortBy: 'createdAt',
       sortOrder: 'desc',
@@ -785,7 +789,7 @@ export class MemoryVault {
     contentType?: ContentData['contentType']
   ): Promise<ContentEntry[]> {
     await this.ensureHydrated();
-    const entries = this.query(agentId, {
+    const entries = await this.query(agentId, {
       category: 'CONTENT',
       tags: contentType ? [contentType] : undefined,
       sortBy: 'createdAt',
@@ -863,7 +867,7 @@ export class MemoryVault {
     agentId: string
   ): Promise<boolean> {
     await this.ensureHydrated();
-    const entry = this.read<SignalData>('SIGNAL', signalKey, agentId);
+    const entry = await this.read<SignalData>('SIGNAL', signalKey, agentId);
     if (!entry) {return false;}
 
     entry.value.acknowledged = true;
@@ -883,7 +887,7 @@ export class MemoryVault {
     agentId: string
   ): Promise<boolean> {
     await this.ensureHydrated();
-    const entry = this.read<CrossAgentData>('CROSS_AGENT', messageKey, agentId);
+    const entry = await this.read<CrossAgentData>('CROSS_AGENT', messageKey, agentId);
     if (!entry) {return false;}
 
     entry.value.responded = true;
@@ -894,13 +898,15 @@ export class MemoryVault {
   }
 
   /**
-   * Get vault statistics
+   * Get vault statistics.
+   * Awaits hydration to ensure accurate counts.
    */
-  getStats(): {
+  async getStats(): Promise<{
     totalEntries: number;
     byCategory: Record<MemoryCategory, number>;
     metrics: { reads: number; writes: number };
-  } {
+  }> {
+    await this.ensureHydrated();
     const byCategory: Record<MemoryCategory, number> = {
       INSIGHT: 0, SIGNAL: 0, CONTENT: 0, PROFILE: 0,
       STRATEGY: 0, WORKFLOW: 0, PERFORMANCE: 0, CONTEXT: 0, CROSS_AGENT: 0,
@@ -918,9 +924,11 @@ export class MemoryVault {
   }
 
   /**
-   * Clean expired entries
+   * Clean expired entries from both in-memory Map and Firestore.
+   * Must hydrate first so Firestore entries are loaded for expiration check.
    */
-  cleanExpired(): number {
+  async cleanExpired(): Promise<number> {
+    await this.ensureHydrated();
     const now = new Date();
     let cleaned = 0;
 

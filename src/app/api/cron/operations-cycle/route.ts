@@ -308,6 +308,20 @@ async function executeCycle(cycleType: CycleType): Promise<{
 
   const results: StepResult[] = [];
 
+  // Run MemoryVault TTL cleanup during operational cycles (every 4h)
+  if (cycleType === 'operational') {
+    try {
+      const vault = getMemoryVault();
+      const cleaned = await vault.cleanExpired();
+      if (cleaned > 0) {
+        logger.info('[MemoryVault] TTL cleanup', { cleaned, cycleType });
+      }
+    } catch (error) {
+      logger.error('[MemoryVault] TTL cleanup failed',
+        error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
   // Execute each step sequentially
   for (const step of cycleSteps) {
     const result = await executeStep(step);
@@ -328,7 +342,7 @@ async function executeCycle(cycleType: CycleType): Promise<{
   if (cycleType === 'strategic') {
     try {
       const memoryVault = getMemoryVault();
-      const signalResults = memoryVault.query('OPERATIONS_CYCLE_CRON', {
+      const signalResults = await memoryVault.query('OPERATIONS_CYCLE_CRON', {
         category: 'SIGNAL',
       });
       crossDepartmentSignals = signalResults.length;

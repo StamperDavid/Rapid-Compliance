@@ -381,7 +381,7 @@ export abstract class BaseManager extends BaseSpecialist {
    *
    * All mutations are logged with before/after states for auditability.
    */
-  readAndApplyMutations(): MutationApplicationResult[] {
+  async readAndApplyMutations(): Promise<MutationApplicationResult[]> {
     const managedTypes = this.getManagedMutationTypes();
     if (managedTypes.length === 0) {
       return [];
@@ -393,7 +393,7 @@ export abstract class BaseManager extends BaseSpecialist {
       const vault = getMemoryVault();
 
       // Query for mutation directives tagged for this manager's domain
-      const entries = vault.query(this.identity.id, {
+      const entries = await vault.query(this.identity.id, {
         category: 'STRATEGY',
         tags: ['mutation-directive'],
         sortBy: 'priority',

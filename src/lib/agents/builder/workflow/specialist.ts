@@ -1573,7 +1573,7 @@ export class WorkflowOptimizer extends BaseSpecialist {
     const statusMap = new Map<string, { available: boolean; load: number }>();
 
     for (const agentId of agentIds) {
-      const entry = vault.read<{ available: boolean; load: number }>(
+      const entry = await vault.read<{ available: boolean; load: number }>(
         'CONTEXT',
         `agent_status_${agentId}`,
         this.identity.id
