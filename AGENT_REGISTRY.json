@@ -400,15 +400,15 @@
   },
 
   "standaloneAgents": {
-    "JASPER_GOLDEN_MASTER": {
+    "JASPER": {
       "status": "FUNCTIONAL",
-      "type": "Platform Chat Agent",
+      "type": "Platform AI Assistant",
       "path": "Firestore: organizations/platform/goldenMasters/",
       "configPath": "src/lib/orchestrator/jasper-tools.ts",
       "setupScript": "scripts/setup-jasper-golden-master.js",
       "model": "openrouter/anthropic/claude-3.5-sonnet",
-      "capabilities": ["public_chat", "lead_qualification", "product_demos", "pricing_discussion", "tool_delegation"],
-      "note": "Public-facing AI sales agent on SalesVelocity.ai landing page. Routes via OpenRouter to multiple models. Has 9 tool functions for delegation to swarm agents."
+      "capabilities": ["public_chat", "lead_qualification", "product_demos", "pricing_discussion", "tool_delegation", "swarm_command"],
+      "note": "Jasper — the platform AI assistant and primary human interface to the agent swarm. Speaks as a natural business partner, delegates to all 9 domain managers via tool functions, and provides strategic guidance across the platform."
     },
     "VOICE_AGENT_HANDLER": {
       "status": "FUNCTIONAL",

@@ -78,7 +78,7 @@
       }
     },
     "standalone": {
-      "JASPER_GOLDEN_MASTER": "REAL — OpenRouter/Claude, 9 tool functions, Firestore persistence",
+      "JASPER": "REAL — OpenRouter/Claude, 9 tool functions, Firestore persistence, platform AI assistant",
       "VOICE_AGENT_HANDLER": "REAL — Gemini AI + Telnyx/Twilio, Prospector/Closer modes",
       "AUTONOMOUS_POSTING_AGENT": "REAL — Twitter API v2 + RapidAPI (LinkedIn), Firestore analytics",
       "CHAT_SESSION_SERVICE": "REAL — session CRUD, real-time subscriptions, sentiment tracking"

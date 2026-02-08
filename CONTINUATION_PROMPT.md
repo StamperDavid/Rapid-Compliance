@@ -19,25 +19,19 @@ Last Commit: Latest on `dev` branch
 - CSS variable theme system: COMPLETE
 - Agent hierarchy with full manager orchestration: COMPLETE
 - 4-role RBAC with API gating and sidebar filtering: COMPLETE
+- Stabilization Roadmap: COMPLETE (all 15 tasks across 3 tiers)
+- Social Media Growth Engine (Phases 1-6): COMPLETE — metrics collector, growth analyst, LISTEN/ENGAGE capabilities, GROWTH_LOOP orchestration, content recycling
 
 ### What's In Progress
-- **Stabilization Roadmap** — see `docs/single_source_of_truth.md` section "Stabilization Roadmap"
-- Stabilization Roadmap COMPLETE (all 15 tasks across 3 tiers). TODOs reduced, 30 error boundaries added, accessibility pass done, mock data replaced.
-- The goal is to solidify existing functionality before adding new features
-- **Sophie Growth Engine Upgrade** — Social media agents need transformation from passive schedulers to autonomous account operators (see spec below)
+- **Autonomous Business Operations Upgrade** — Transition the entire 48-agent swarm from task executors to autonomous managers that operate the business as a team (see spec below)
 
 ---
 
 ## Trigger Phrases
 
-### Stabilization (Default)
+### Autonomous Business Operations Upgrade
 ```
-Execute Stabilization Roadmap. Read CLAUDE.md first, then docs/single_source_of_truth.md — focus on the "Stabilization Roadmap" section. Begin with the next incomplete Tier 1 task. Do not skip to Tier 2 until Tier 1 is verified complete.
-```
-
-### Sophie Growth Engine Upgrade
-```
-Execute Sophie Growth Engine Upgrade. Read CLAUDE.md first, then CONTINUATION_PROMPT.md — scroll to "Sophie-Class Social Media Growth Engine Spec" section. Begin with Phase 1 (Wire Intelligence + Metrics Collection). Do not skip phases.
+Execute Autonomous Business Operations Upgrade. Read CLAUDE.md first, then CONTINUATION_PROMPT.md — scroll to "Autonomous Business Operations Spec" section. Begin with Phase 1 (Event Router + Company Operations Cycle). Do not skip phases.
 ```
 
 ---
@@ -46,7 +40,7 @@ Execute Sophie Growth Engine Upgrade. Read CLAUDE.md first, then CONTINUATION_PR
 | File | Purpose |
 |------|---------|
 | `CLAUDE.md` | Binding governance for all Claude Code sessions |
-| `docs/single_source_of_truth.md` | Authoritative architecture doc with Stabilization Roadmap |
+| `docs/single_source_of_truth.md` | Authoritative architecture doc |
 | `ENGINEERING_STANDARDS.md` | Code quality requirements |
 | `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
 | `src/lib/constants/platform.ts` | DEFAULT_ORG_ID and platform identity |
@@ -59,209 +53,351 @@ Execute Sophie Growth Engine Upgrade. Read CLAUDE.md first, then CONTINUATION_PR
 **docs/archive/** (16 files): Historical records — do not reference for architectural decisions
 **.claude/agents/** (6 files): QA and architecture agent prompts
 
-**Deleted** (February 6, 2026): CONTINUATION_PROMPT.md (old), SYSTEM_TRANSFER_MANIFEST.md, PATH_SYNC_REPORT.md, WORKFLOW_STATE_IMPLEMENTATION.md, LEGACY_ROUTE_REDIRECTS.md, eslint-output.txt, tsc-output.txt, app_structure.txt, rule-breakdown.txt, unique-files-with-unused-vars.txt, docs/audit_dashboard_connectivity.md
-
 ---
 ---
 
-# Sophie-Class Social Media Growth Engine Spec
+# Autonomous Business Operations Spec
 
 > Added: February 7, 2026
-> Source: Core Identity Audit session — full codebase analysis of agent capabilities, gap identification, and upgraded architecture design
+> Source: Full codebase audit of all 52 agents — gap analysis between structural hierarchy (what exists) and managerial autonomy (what's needed)
 
 ## The Problem
 
-The 5 marketing specialists (TWITTER_EXPERT, LINKEDIN_EXPERT, TIKTOK_EXPERT, FACEBOOK_EXPERT, SEO_EXPERT) generate sophisticated content but **do not operate accounts**. They cannot read engagement data, cannot reply to comments, cannot engage with industry accounts, cannot detect trends, and cannot learn from what worked. The AUTONOMOUS_POSTING_AGENT is a queue processor — it posts and forgets.
+The 48-agent swarm has a complete structural hierarchy (1 Orchestrator + 9 Managers + 38 Specialists) with sophisticated capabilities across all departments. However, agents are **task executors, not autonomous managers**. They wait for human commands, execute linearly, and never act on their own analysis.
 
-Current pipeline (one-way, broken):
-```
-Goal → Plan → Generate → Post → (nothing)
-```
+**Current state:** ~70% of the infrastructure exists, ~15% of autonomous behavior exists.
 
-Target pipeline (closed-loop, autonomous):
-```
-RESEARCH → CREATE → PUBLISH → ENGAGE → ANALYZE → MUTATE → REPEAT
-```
+The agents can generate excellent content, qualify leads, classify email replies, analyze sentiment, score prospects, and produce mutation directives — but the step where those outputs trigger the *next* agent's action is manual or missing.
 
-Reference model: **Sophie from Sintra AI** — an autonomous social media employee, not a scheduling tool. The human sets a goal ("Grow LinkedIn authority in AI sales automation by 20% this quarter"). The agents figure out the how, execute it, measure it, and pivot autonomously.
+### Diagnosis
 
-### 6 Critical Gaps
+| Layer | Infrastructure | Autonomous Behavior | Verdict |
+|-------|---------------|---------------------|---------|
+| Hierarchy | 9/10 | 3/10 | Org chart exists, management behavior doesn't |
+| Perception | 6/10 | 2/10 | Can collect data, doesn't feed it back into decisions |
+| Interaction | 5/10 | 2/10 | Can reply/engage, doesn't do it autonomously |
+| Mutation | 4/10 | 1/10 | One-shot template compile, no continuous evolution |
+| Cross-Talk | 7/10 | 2/10 | SignalBus + MemoryVault built, no passengers |
+| Event Triggers | 3/10 | 1/10 | Webhook ingestion exists, no event routing |
 
-| # | Gap | What's Missing |
-|---|-----|----------------|
-| 1 | **No Listening** | System broadcasts posts but never reads engagement metrics, comments, or mentions back |
-| 2 | **No Feedback Loop** | Posts go out, system never learns which performed well or why |
-| 3 | **No Engagement Automation** | Can't reply to comments, like posts, follow targets, or DM prospects |
-| 4 | **No Trend Detection** | TREND_SCOUT exists but isn't wired to marketing — no opportunistic content |
-| 5 | **No Content Recycling** | No library, no repurposing, no evergreen rotation |
-| 6 | **No Platform Coverage** | TikTok, Facebook, Instagram — content generated, never executed |
+### The Test
+
+> "If the LinkedIn Scraper fails to find an email address for a high-value prospect, which Manager Agent is responsible for deciding the next move, and what are its three alternative options?"
+
+If the system gives a boring technical error → it's still a sequencer.
+If the Intelligence Manager detects the failure, signals the Revenue Director, who evaluates the lead's BANT score, and delegates to Marketing Manager to engage via LinkedIn comment/DM while asking Outreach Manager to try SMS → that's a managerial system.
+
+---
+
+## The Vision: Autonomous Business Operating System
+
+You set quarterly objectives. The system runs the business. Jasper (the AI assistant) is your interface — it briefs you on what happened, asks for decisions on things that need human judgment, and commands the swarm on your behalf.
+
+### How Each Department Should Operate
+
+**Intelligence Manager** — Proactively monitors the market daily. Detects competitor launches, target company funding, industry trends. Pushes signals to Revenue Director, Marketing Manager, and Content Manager without being asked.
+
+**Revenue Director** — Runs the pipeline autonomously. When Intelligence finds a prospect: auto-creates lead → auto-qualifies via BANT → auto-transitions stages → auto-assigns outreach → auto-deploys objection handling → auto-triggers deal closing.
+
+**Outreach Manager** — Manages unified inbox. Reply classified as "interested" → tells Revenue Director to advance stage + tells Content Manager to prepare proposal + drafts response. Sequence underperforming → tells Copywriter to rewrite templates.
+
+**Marketing Manager** — Runs continuous growth cycles. Monitors metrics → detects what's working → mutates strategy → produces content → publishes → engages → repeats autonomously.
+
+**Content Manager** — Operates a content production line. Receives briefs from Marketing (social), Outreach (email templates), Revenue (proposals), Reputation (review responses). Tracks performance and adjusts.
+
+**Builder Manager** — Monitors website analytics. Conversion drops on a landing page → tells Architect to redesign → rebuilds the page. New campaign launched → auto-creates matching landing page.
+
+**Commerce Manager** — Monitors cart abandonment → triggers recovery sequences. Watches pricing performance → adjusts. Customer hits loyalty threshold → generates discount → pushes through Outreach.
+
+**Reputation Manager** — Monitors reviews continuously. Auto-responds to 3-5 star. Escalates 1-2 star. 5-star review → signals Marketing to repurpose as social proof. Case study produced → tells Content to distribute.
+
+**Architect Manager** — Analyzes funnel performance. Conversion bottleneck detected → produces redesign recommendation → feeds to Builder for implementation.
 
 ---
 
 ## Existing Infrastructure (Do NOT Rebuild)
 
-| Asset | File | LOC | Status |
-|-------|------|-----|--------|
-| Twitter API v2 | `src/lib/integrations/twitter-service.ts` | 744 | Production — OAuth 2.0, posting, timeline with public_metrics, rate limiting |
-| Autonomous Posting Agent | `src/lib/social/autonomous-posting-agent.ts` | 974 | Production — queue, scheduling, Twitter + LinkedIn posting |
-| Social Post Service | `src/lib/social/social-post-service.ts` | 366 | Production — Firestore CRUD for posts |
-| Marketing Manager | `src/lib/agents/marketing/manager.ts` | 1973 | Functional — campaign orchestration, SEO-social feedback loop |
-| Twitter Expert | `src/lib/agents/marketing/twitter/specialist.ts` | 1209 | Functional — threads, hooks, ratio assessment |
-| LinkedIn Expert | `src/lib/agents/marketing/linkedin/specialist.ts` | 1511 | Functional — post optimization, 3-tier personalization |
-| TikTok Expert | `src/lib/agents/marketing/tiktok/specialist.ts` | 1063 | Functional — viral hooks, video pacing |
-| Facebook Expert | `src/lib/agents/marketing/facebook/specialist.ts` | 1717 | Functional — ad creative, audience matching |
-| SEO Expert | `src/lib/agents/marketing/seo/specialist.ts` | 1488 | Functional — keyword research, SERP analysis |
-| TREND_SCOUT | `src/lib/agents/intelligence/trend/specialist.ts` | 1587 | Functional — broadcasts TREND_EMERGING signals (NOT wired to marketing) |
-| SENTIMENT_ANALYST | `src/lib/agents/intelligence/sentiment/specialist.ts` | 834 | Functional — sentiment scoring, crisis detection (NOT wired to marketing) |
-| Content Calendar | `src/lib/agents/content/calendar/specialist.ts` | 1331 | Functional — scheduling, cross-platform sync |
-| MemoryVault | `src/lib/agents/shared/memory-vault.ts` | 864 | Production — pub/sub, insights, signals, cross-agent messaging |
-| Webhook Verification | `src/lib/security/webhook-verification.ts` | — | Production — HMAC, signature verification |
-| Cron Framework | `src/app/api/cron/scheduled-publisher/route.ts` | — | Production — Bearer token auth |
-| PostMetrics Schema | `src/types/social.ts` | — | **Defined but empty** — fields exist, never populated |
+### Signal Infrastructure (Ready)
+| Asset | File | Status |
+|-------|------|--------|
+| SignalBus | `src/lib/orchestrator/signal-bus.ts` | Production — BROADCAST, DIRECT, BUBBLE_UP, BUBBLE_DOWN signals, pending queue, history |
+| MemoryVault | `src/lib/agents/shared/memory-vault.ts` | Production — 9 categories (INSIGHT, SIGNAL, CONTENT, PROFILE, STRATEGY, WORKFLOW, PERFORMANCE, CONTEXT, CROSS_AGENT) |
+| BaseManager | `src/lib/agents/base-manager.ts` | Production — delegation rules, specialist management |
+| Master Orchestrator | `src/lib/agents/orchestrator/manager.ts` | Production — Command Pattern, Saga Pattern, intent routing |
 
-**Key facts:**
-- `getTimeline()` already returns `public_metrics` (likes, retweets, replies, impressions) — available but never stored
-- `PostMetrics` interface exists but is never populated
-- `processScheduledPosts()` exists in AutonomousPostingAgent but is never called
-- MemoryVault `PERFORMANCE` category is ready for analytics data
-- TREND_SCOUT already broadcasts signals — Marketing Manager just doesn't subscribe
+### Perception (Partially Wired)
+| Asset | File | Status |
+|-------|------|--------|
+| Metrics Collector Cron | `src/app/api/cron/social-metrics-collector/route.ts` | Production — runs every 2-4 hours |
+| Growth Analyst | `src/lib/agents/marketing/growth-analyst/specialist.ts` | Production — KPIs, patterns, mutation directives |
+| Reply Handler | `src/lib/outbound/reply-handler.ts` | Production — 16 intent types, sentiment scoring, auto-response |
+| Gmail Webhook | `src/app/api/webhooks/gmail/route.ts` | Production — push notifications, reply classification |
+| SendGrid Inbound | `src/app/api/webhooks/email-inbound/route.ts` | Production — inbound parse, auto-actions at confidence > 85% |
+| Sentiment Analyst | `src/lib/agents/intelligence/sentiment/specialist.ts` | Production — sentiment scoring, crisis detection |
+| Trend Scout | `src/lib/agents/intelligence/trend/specialist.ts` | Production — trend signals, wired to Marketing Manager |
+
+### Interaction (Partially Wired)
+| Asset | File | Status |
+|-------|------|--------|
+| Autonomous Posting Agent | `src/lib/social/autonomous-posting-agent.ts` | Production — POST, REPLY, LIKE, FOLLOW, REPOST, RECYCLE with velocity limits |
+| Email Specialist | `src/lib/agents/outreach/email/specialist.ts` | Production — send, track, A/B test, spam check |
+| SMS Specialist | `src/lib/agents/outreach/sms/specialist.ts` | Production — campaigns, two-way, compliance |
+| Sequence Engine | `src/lib/outbound/sequence-engine.ts` | Production — hourly cron, enrollment lifecycle |
+| Lead Scoring | `src/lib/services/lead-scoring-engine.ts` | Production — multi-factor (company + person + intent + engagement), 7-day cache |
+
+### Mutation (Exists But Static)
+| Asset | File | Status |
+|-------|------|--------|
+| Mutation Engine | `src/lib/services/mutation-engine.ts` | Production — one-time compile (template + onboarding → mutated template). NOT continuous. |
+| Self-Corrector | `src/lib/ai/verification/self-corrector.ts` | Production — verifies responses against knowledge base |
+| Growth Analyst Mutations | (in growth-analyst/specialist.ts) | Production — generates CONTENT_MIX_SHIFT, TONE_ADJUSTMENT, POSTING_CADENCE, FORMAT_PIVOT, HASHTAG_STRATEGY, TOPIC_KILL directives. Stored in MemoryVault. **Never automatically applied.** |
 
 ---
 
 ## Implementation Phases
 
-### Phase 1: Wire Intelligence + Metrics Collection (Foundation)
+### Phase 1: Event Router + Company Operations Cycle (Foundation)
 
-**1a. Engagement Metrics Collector Service**
-- Create a service that fetches engagement data for published posts
-- Use `TwitterService.getTimeline()` (already returns public_metrics)
-- Match tweets to stored `social_posts` by `platformPostId`
-- Update `PostMetrics` fields in Firestore with real data
-- Store historical snapshots for delta tracking
+This is the single most important change. Without it, nothing autonomous works.
 
-**1b. Cron Endpoint `/api/cron/social-metrics-collector`**
-- Authenticate via `CRON_SECRET` (same pattern as `/api/cron/scheduled-publisher`)
-- Call metrics collector service (every 1-4 hours)
-- Also trigger `processScheduledPosts()` (currently dormant)
+**1a. Event Router Service**
 
-**1c. Wire TREND_SCOUT → MARKETING_MANAGER**
-- Marketing Manager subscribes to `TREND_EMERGING` signals via `getPendingSignals()`
-- HIGH/CRITICAL trend → enter `OPPORTUNISTIC` mode → generate timely content → fast-track publish
+Create `src/lib/orchestration/event-router.ts`
 
-**1d. Wire SENTIMENT_ANALYST → MARKETING_MANAGER**
-- Subscribe to `BRAND_SENTIMENT_SHIFT` signals
-- Negative spike → `CRISIS_RESPONSE` mode: pause publishing, generate response
-- Positive spike → `AMPLIFICATION` mode: boost frequency, share positive mentions
+A rules engine that watches for real-world events and dispatches work to the appropriate Manager via SignalBus.
 
-### Phase 2: GROWTH_ANALYST (New Agent)
+Event rules structure:
+```typescript
+interface EventRule {
+  id: string;
+  event: string;           // e.g., 'email.reply.received', 'post.metrics.updated'
+  condition: string;       // e.g., 'intent === "interested"', 'engagementRate > 5'
+  action: {
+    targetManager: ManagerId;
+    command: string;
+    payload: Record<string, unknown>;
+  };
+  priority: 'CRITICAL' | 'HIGH' | 'NORMAL' | 'LOW';
+  enabled: boolean;
+}
+```
 
-**Create `src/lib/agents/marketing/growth-analyst/specialist.ts`**
+Initial event rules to implement:
 
-New L3 specialist under MARKETING_MANAGER. Agent ID: `GROWTH_ANALYST`.
+**Revenue Events:**
+| Event | Condition | Action |
+|-------|-----------|--------|
+| `email.reply.received` | intent = `interested` | Revenue Director: advance lead stage |
+| `email.reply.received` | intent = `needs_more_info` | Content Manager: generate assets → Outreach Manager: reply with attachments |
+| `email.reply.received` | intent = `objection` | Revenue Director: deploy Objection Handler → Outreach Manager: send rebuttal |
+| `email.reply.received` | intent = `meeting_request` | Revenue Director: advance to NEGOTIATION, trigger meeting booking |
+| `lead.bant_score.updated` | score crosses 70 | Revenue Director: auto-transition to OUTREACH stage |
+| `deal.closed.won` | — | Reputation Manager: start review solicitation, Commerce Manager: process payment |
+| `deal.closed.lost` | — | Revenue Director: log win/loss, Objection Handler: update battlecards |
 
-Task types:
-- `AGGREGATE_METRICS` — Read PERFORMANCE data from all platform specialists, normalize
-- `CALCULATE_KPIS` — Follower Growth Rate, Engagement Rate, Virality Coefficient, Content Velocity
-- `IDENTIFY_PATTERNS` — Which content types/topics/formats/times correlate with growth
-- `GENERATE_MUTATIONS` — Produce mutation directives for each specialist:
-  - `CONTENT_MIX_SHIFT` — Change ratio of content categories
-  - `TONE_ADJUSTMENT` — Shift voice/style based on audience response
-  - `POSTING_CADENCE` — Adjust frequency and timing
-  - `FORMAT_PIVOT` — Prefer formats that perform (e.g., threads over single tweets)
-  - `HASHTAG_STRATEGY` — Add/remove tags based on reach data
-  - `TOPIC_KILL` — Stop producing content on underperforming topics
-- `TRACK_OBJECTIVES` — Compare metrics against human-set growth objective
-- `CONTENT_LIBRARY` — Track published content, tag top performers, flag recycling candidates
-- `WEEKLY_REPORT` — Synthesize analysis into executive summary
+**Outreach Events:**
+| Event | Condition | Action |
+|-------|-----------|--------|
+| `email.sequence.underperforming` | open rate < 10% for 3 days | Copywriter: rewrite subject lines, Outreach Manager: swap templates |
+| `email.engagement.ghosting` | 5+ opens, no reply within 48hrs | Outreach Manager: trigger pattern-break email |
+| `email.engagement.hot` | opened within 1 hour | Outreach Manager: accelerate next step timing |
 
-Register in `src/lib/agents/index.ts` and `AGENT_REGISTRY.json`. Add to MARKETING_MANAGER specialist list.
+**Marketing Events:**
+| Event | Condition | Action |
+|-------|-----------|--------|
+| `post.metrics.updated` | engagement > 5x average | Content Manager: produce follow-up content |
+| `post.metrics.updated` | engagement < 1% for 7 days | Growth Analyst: emergency analysis + mutations |
+| `trend.detected` | urgency = HIGH | Marketing Manager: OPPORTUNISTIC mode |
+| `sentiment.spike` | negative | Marketing Manager: CRISIS_RESPONSE mode |
 
-### Phase 3: LISTEN Capabilities on Specialists
+**Commerce Events:**
+| Event | Condition | Action |
+|-------|-----------|--------|
+| `cart.abandoned` | no checkout within 1 hour | Outreach Manager: recovery sequence |
+| `customer.loyalty.threshold` | spend crosses tier | Merchandiser: generate offer → Outreach Manager: send |
 
-Add LISTEN task types to each platform specialist's `execute()` method:
+**Builder Events:**
+| Event | Condition | Action |
+|-------|-----------|--------|
+| `page.bounce_rate.high` | bounce > 60% | Architect Manager: redesign recommendation → Builder Manager: rebuild |
+| `campaign.launched` | new campaign from Marketing | Builder Manager: create matching landing page |
 
-**All specialists get:**
-- `FETCH_POST_METRICS` — Pull engagement data for published posts
-- `FETCH_MENTIONS` — Find brand mentions and conversations
-- `FETCH_TRENDING` — Platform-specific trending topics in our industry
-- `FETCH_AUDIENCE` — Follower count, growth rate, demographics
+**Reputation Events:**
+| Event | Condition | Action |
+|-------|-----------|--------|
+| `review.received` | rating 3-5 | Review Specialist: auto-respond |
+| `review.received` | rating 1-2 | Review Specialist: draft response → queue for human approval via Jasper |
+| `review.received` | rating 5 | Marketing Manager: repurpose as social proof |
 
-**Platform-specific additions:**
-- TWITTER: `MONITOR_COMPETITORS` (track competitor tweets via user timeline endpoint)
-- LINKEDIN: `FETCH_PROFILE_VIEWS`, `MONITOR_THOUGHT_LEADERS`
-- TIKTOK: `FETCH_TRENDING_SOUNDS`, `MONITOR_CREATORS`
-- FACEBOOK: `FETCH_AD_PERFORMANCE`, `FETCH_AUDIENCE_BREAKDOWN`
+**1b. Company Operations Cycle Cron**
 
-Each LISTEN task writes results to MemoryVault as `PERFORMANCE` category entries.
+Create `src/app/api/cron/operations-cycle/route.ts`
 
-### Phase 4: ENGAGE Capabilities
+Scheduled management cycle that runs the business between human interactions:
 
-**TWITTER_EXPERT engage tasks:**
-- `REPLY_TO_COMMENTS` — Contextual replies to comments on our tweets
-- `REPLY_TO_MENTIONS` — Respond to brand mentions (positive: thank, negative: address)
-- `ENGAGE_INDUSTRY` — Like + thoughtful reply on industry leader posts
-- `QUOTE_TWEET_STRATEGY` — Quote-tweet conversations with our take
+```
+Every 4 hours — OPERATIONAL CYCLE:
+  1. Intelligence:  Check for new market signals, competitor activity
+  2. Revenue:       Progress pipeline (advance/stall/disqualify leads based on data)
+  3. Marketing:     Check growth metrics, apply pending mutations, queue next content
+  4. Outreach:      Process pending replies, check sequence performance, escalate channels
+  5. Reputation:    Check new reviews, respond, update brand health score
 
-**LINKEDIN_EXPERT engage tasks:**
-- `REPLY_TO_COMMENTS` — Respond to comments on company posts
-- `ENGAGE_PROSPECTS` — Comment on posts by target decision-makers
-- `CONNECTION_NURTURE` — Value-add messages to new connections (value first, never pitch)
+Every 24 hours — STRATEGIC CYCLE:
+  6. Growth Analyst: Full KPI report across all departments
+  7. Revenue Director: Pipeline health + conversion rate analysis
+  8. Marketing Manager: Content performance + mutation recommendations
+  9. Intelligence Manager: Market shift briefing
+  10. Each Manager: Read cross-department signals, adjust strategy
 
-**TIKTOK_EXPERT engage tasks:**
-- `REPLY_TO_COMMENTS` — Reply to video comments (first hour is algorithm-critical)
-- `DUET_STRATEGY` — Identify trending videos to duet/stitch
-- `CREATOR_OUTREACH` — Identify micro-influencers for collaboration
+Weekly — EXECUTIVE CYCLE:
+  11. Orchestrator: Aggregate all department reports
+  12. Compare performance against quarterly objectives
+  13. Generate executive briefing for Jasper to present
+  14. Identify underperforming departments and recommend interventions
+```
 
-**FACEBOOK_EXPERT engage tasks:**
-- `REPLY_TO_AD_COMMENTS` — Respond to comments on ads (social proof)
-- `COMMUNITY_MANAGEMENT` — Monitor and engage in relevant groups
+**1c. Event Emitters**
 
-**Upgrade AUTONOMOUS_POSTING_AGENT** with new action types:
-- `REPLY` — Execute reply to specific post/comment
-- `LIKE` — Like a target post
-- `FOLLOW` — Follow a target account
-- `REPOST` — Retweet / LinkedIn share
-- `RECYCLE` — Re-publish top performer with new hook after 30-day cooldown
+Update existing webhooks and services to emit events into the Event Router:
+- `src/app/api/webhooks/email-inbound/route.ts` → emit `email.reply.received`
+- `src/app/api/webhooks/gmail/route.ts` → emit `email.reply.received`
+- `src/app/api/cron/social-metrics-collector/route.ts` → emit `post.metrics.updated`
+- `src/lib/services/lead-scoring-engine.ts` → emit `lead.bant_score.updated`
+- Reply handler → emit events based on classification
 
-**Compliance guardrails (mandatory):**
-- Engagement velocity limits (max N actions/hour to avoid bot detection)
-- DM only accounts that engaged with us first
-- Sentiment gate before auto-replying
-- Human escalation for complaints or legal language
+### Phase 2: Manager Authority Upgrade
 
-### Phase 5: Content Recycling + Loop Orchestration
+Upgrade `BaseManager` to give all 9 Managers three new capabilities:
 
-**Content Library & Recycling (in GROWTH_ANALYST):**
-- Track all published content in MemoryVault (CONTENT category) with performance data
-- Tag top performers (engagement rate > 2x average)
-- After 30-day cooldown, flag as recyclable
-- Generate "remix" briefs — same message, new hook/angle — route back through CREATE
+**2a. Review Before Execute (Quality Gate)**
 
-**Marketing Manager orchestration modes:**
+Add `reviewOutput()` method to BaseManager that each Manager can override:
+- Marketing Manager: Check content against Brand DNA, verify spam score < 20
+- Outreach Manager: Verify DNC compliance, check send frequency
+- Revenue Director: Validate BANT calculation, verify outreach personalization
 
-| Mode | Trigger | Behavior |
-|------|---------|----------|
-| `CAMPAIGN_SPRINT` | Human command | Current behavior — single campaign (keep as-is) |
-| `GROWTH_LOOP` | Growth objective set | Continuous: LISTEN → ANALYZE → CREATE → PUBLISH → ENGAGE → repeat |
-| `OPPORTUNISTIC` | TREND_SCOUT signal | Interrupt flow, fast-track trending content |
-| `CRISIS_RESPONSE` | SENTIMENT_ANALYST signal | Pause publishing, deploy damage control |
+If output fails review → send back to specialist with feedback for revision (max 2 retries, then escalate to Jasper).
 
-**GROWTH_LOOP cycle:**
-1. LISTEN — Dispatch LISTEN tasks to all specialists in parallel
-2. ANALYZE — Send data to GROWTH_ANALYST for pattern analysis + mutation generation
-3. MUTATE — Read mutation directives, distribute to specialists
-4. CREATE — Dispatch content creation (existing behavior, now informed by mutations)
-5. PUBLISH — Route through AUTONOMOUS_POSTING_AGENT with smart timing
-6. ENGAGE — Dispatch engagement tasks based on LISTEN data
-7. Wait for next cycle interval (configurable: 1x/day, 2x/day)
-8. Repeat from step 1
+**2b. Read and Apply Mutations**
 
-### Phase 6: Finalize
+At the start of each operations cycle, each Manager reads pending mutation directives from MemoryVault that target their domain:
+- Marketing Manager reads CONTENT_MIX_SHIFT, TONE_ADJUSTMENT, POSTING_CADENCE, FORMAT_PIVOT, HASHTAG_STRATEGY, TOPIC_KILL
+- Outreach Manager reads EMAIL_SUBJECT_STRATEGY, SEND_TIME_OPTIMIZATION, CHANNEL_PREFERENCE
+- Revenue Director reads QUALIFICATION_THRESHOLD, OUTREACH_FRAMEWORK_PREFERENCE
 
-- Update `AGENT_REGISTRY.json` (new agent count: 52 = 48 swarm + 4 standalone)
-- Update `docs/single_source_of_truth.md` with new architecture
-- Run `npm run lint`, `npx tsc --noEmit`, `npm run build`
-- Commit to dev, push, sync worktrees per CLAUDE.md protocol
+Mutations are applied to specialist parameters (content mix ratios, cadence settings, etc.), NOT to LLM system prompts. Mutations are logged to MemoryVault with before/after states for auditability.
+
+**2c. Cross-Department Request Protocol**
+
+Add `requestFromManager()` to BaseManager that sends structured requests to other Managers via SignalBus DIRECT signals:
+- Revenue Director → Content Manager: "Generate a proposal deck for prospect X by next cycle"
+- Marketing Manager → Content Manager: "Produce 3 social posts about trending topic Y"
+- Reputation Manager → Marketing Manager: "Distribute this 5-star review as social proof"
+
+Uses existing SignalBus DIRECT type. Receiving Manager adds request to its next cycle queue.
+
+### Phase 3: Revenue Pipeline Automation
+
+Make the Revenue Director's lead pipeline state machine self-driving:
+
+**3a. Auto-Progression Engine**
+- When `lead.bant_score.updated` fires and score >= 70: auto-transition INTELLIGENCE → OUTREACH
+- When positive engagement signals accumulate: advance to NEGOTIATION
+- When no activity for 14 days in OUTREACH: flag for Jasper review
+- When deal signals detected: auto-trigger Deal Closer
+
+**3b. Intelligence-to-Outreach Bridge**
+- When Intelligence Manager completes scraping a prospect, auto-signal Revenue Director
+- Revenue Director evaluates completeness (has scraper data + competitor data + social profiles + verified contact)
+- If threshold met: auto-delegate to Outreach Specialist with full intelligence brief
+
+**3c. Win/Loss Feedback Loop**
+- On deal close (won or lost): auto-update Objection Handler battlecards
+- Winning patterns → shared to Outreach Specialist as preferred frameworks
+- Losing patterns → shared to Merchandiser for discount strategy adjustment
+
+### Phase 4: Outreach Autonomy
+
+**4a. Reply → Action Chains**
+- Wire reply handler classification to Event Router (from Phase 1)
+- `interested` → Revenue Director advances stage + Outreach Manager drafts follow-up
+- `needs_more_info` → Content Manager generates personalized assets (HeyGen video + PDF proposal using scraped company data) → Outreach Manager sends reply with attachments
+- `objection` → Objection Handler generates rebuttal → Outreach Manager sends
+- `meeting_request` → Calendar booking triggered → Revenue Director advance to NEGOTIATION
+
+**4b. Adaptive Timing**
+- Replace fixed sequence delays (Day 3, Day 6, Day 10) with engagement-based timing
+- Opened within 1 hour → accelerate next step
+- Not opened in 5 days → extend delay
+- 5+ opens, no reply → trigger pattern-break email instead of next sequence step
+- Modify `processNextStep()` in sequence engine to check engagement data before executing
+
+**4c. Ghosting Recovery**
+- Track "high open / no reply" pattern (5+ opens, 0 replies within 48 hours)
+- Trigger COPYWRITER_SPECIALIST to generate a "pattern break" email (different tone, different angle)
+- If ghosting persists after pattern break → channel escalate (EMAIL → SMS → VOICE)
+
+### Phase 5: Content Production Line + Intelligence Always-On
+
+**5a. Content Manager as Central Production Hub**
+- Receives briefs from all departments (not just Marketing)
+- Revenue Director: "Need a proposal for [company]" → Copywriter + Video Specialist produce assets
+- Marketing Manager: "Create follow-up thread for viral post" → Copywriter drafts
+- Reputation Manager: "Distribute this case study" → Calendar Coordinator schedules
+- Content Manager maintains a production queue, prioritized by urgency
+
+**5b. Intelligence Manager Always-On Mode**
+- Schedule daily intelligence sweeps: competitor monitoring, funding announcements, hiring signals, tech stack changes
+- Every signal discovered → written to MemoryVault as SIGNAL entry
+- Revenue Director consumes signals for proactive lead discovery
+- Marketing Manager consumes signals for trend-responsive content
+- Create cron endpoint: `src/app/api/cron/intelligence-sweep/route.ts`
+
+### Phase 6: Builder/Commerce Reactive Loops
+
+**6a. Analytics-Driven Page Optimization**
+- Builder Manager monitors landing page analytics (if GA4/analytics wired)
+- Bounce rate > 60% → signal Architect Manager for redesign
+- Conversion drop at specific funnel step → Funnel Pathologist diagnoses → Builder rebuilds
+
+**6b. Commerce Automation**
+- Cart abandonment detection → triggers Outreach Manager recovery sequence
+- Pricing Strategist monitors conversion rates → adjusts pricing recommendations
+- Merchandiser auto-generates loyalty offers when customer spend crosses tier thresholds
+
+### Phase 7: Contextual Artifact Generation (Advanced)
+
+The "Sintra killer" feature — requires Phases 1-4 to be complete:
+
+- Reply handler classifies `needs_more_info` from a prospect
+- Event Router fires → Content Manager receives request with full prospect context (from scraper data)
+- Video Specialist generates personalized HeyGen video for that company
+- Copywriter generates tailored PDF proposal based on their tech stack and pain points
+- Outreach Manager auto-replies with both attachments within minutes
+
+This works because: HeyGen integration exists, PDF generation exists, reply handler exists, scraper data exists — they just need to be connected via the Event Router.
+
+### Phase 8: Jasper Command Authority
+
+Upgrade Jasper from task submitter to command authority:
+
+**8a. Briefing System**
+- When user opens the platform, Jasper reads the latest executive cycle report
+- Presents: "While you were away, I processed 12 inbound replies — 3 interested leads advanced to outreach. LinkedIn engagement up 14%. Two 5-star reviews responded to. Here's what needs your attention..."
+
+**8b. Approval Gateway**
+- Some actions queue for human approval through Jasper:
+  - Responding to 1-2 star reviews
+  - Sending large campaigns (> 100 recipients)
+  - Pricing changes
+  - Actions where agent confidence < 80%
+- Jasper presents the pending action, user approves/rejects, system executes
+
+**8c. Command Authority**
+- Jasper can issue commands to any Manager: "Revenue Director, pause outreach on lead X"
+- Jasper can override autonomous decisions: "Marketing Manager, don't post about topic Y"
+- Jasper can set objectives: "Marketing Manager, grow LinkedIn engagement 20% this quarter"
 
 ---
 
@@ -271,13 +407,15 @@ Each LISTEN task writes results to MemoryVault as `PERFORMANCE` category entries
 |------|-----|---------------|
 | `src/lib/agents/types.ts` | 83 | AgentMessage, AgentReport, Signal interfaces |
 | `src/lib/agents/base-specialist.ts` | 110 | Abstract methods every specialist must implement |
-| `src/lib/agents/base-manager.ts` | 163 | Delegation rules, specialist management |
+| `src/lib/agents/base-manager.ts` | 163 | Delegation rules, specialist management — **you're upgrading this** |
 | `src/lib/agents/shared/memory-vault.ts` | 864 | Full cross-agent communication API |
+| `src/lib/orchestrator/signal-bus.ts` | — | Signal routing — BROADCAST, DIRECT, BUBBLE_UP, BUBBLE_DOWN |
 | `src/lib/agents/index.ts` | 236 | Agent ID enum, factory pattern |
-| `src/lib/agents/marketing/manager.ts` | 1973 | Marketing Manager (you're extending this) |
-| `src/lib/agents/marketing/twitter/specialist.ts` | 1209 | Example specialist pattern to follow |
-| `src/lib/integrations/twitter-service.ts` | 744 | Twitter API already available |
-| `src/lib/social/autonomous-posting-agent.ts` | 974 | Posting infrastructure to upgrade |
+| `src/lib/agents/orchestrator/manager.ts` | 2000+ | Master Orchestrator — Command Pattern, Saga Pattern |
+| `src/lib/orchestrator/jasper-tools.ts` | — | Jasper's 9 delegation tools |
+| `src/lib/orchestrator/jasper-thought-partner.ts` | — | Jasper's conversation engine |
+| `src/lib/outbound/reply-handler.ts` | 500+ | Email reply classification — 16 intents |
+| `src/lib/services/lead-scoring-engine.ts` | 800+ | Multi-factor lead scoring |
 | `CLAUDE.md` | — | **Binding governance — read first** |
 
 ## Constraints (from CLAUDE.md — binding)
@@ -288,5 +426,13 @@ Each LISTEN task writes results to MemoryVault as `PERFORMANCE` category entries
 - **Zod validation** on all new API endpoints
 - **Service layer architecture** — business logic in services, not routes
 - **All agents extend BaseSpecialist** — implement all abstract methods
-- **All cross-agent communication through MemoryVault** — no direct agent calls
+- **All cross-agent communication through MemoryVault/SignalBus** — no direct agent calls
+- **Professional naming only** — no mascot names, no cutesy terminology. Agent names describe function.
 - **Commit format:** `feat: <description>` with `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
+
+## Naming Convention
+
+- **Jasper** — the AI assistant (not "Jasper Golden Master")
+- **Golden Master** — the versioned agent template system (internal technical term, not a name)
+- All agents are named by function: Revenue Director, Marketing Manager, Growth Analyst, etc.
+- No Sintra-style mascot naming. No "Sophie," "Emmie," or similar.

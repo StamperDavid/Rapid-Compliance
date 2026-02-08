@@ -183,7 +183,7 @@ interface AutomationBridgePayload {
 }
 
 // ============================================================================
-// LISTEN TASK PAYLOADS (Sophie Growth Engine)
+// LISTEN TASK PAYLOADS (Social Media Growth Engine)
 // ============================================================================
 
 interface FetchPostMetricsPayload {
@@ -218,7 +218,7 @@ interface MonitorThoughtLeadersPayload {
 }
 
 // ============================================================================
-// ENGAGE TASK PAYLOADS (Sophie Growth Engine)
+// ENGAGE TASK PAYLOADS (Social Media Growth Engine)
 // ============================================================================
 
 interface ReplyToCommentsPayload {
@@ -1579,7 +1579,7 @@ Best regards`;
   }
 
   // ==========================================================================
-  // LISTEN TASK HANDLERS (Sophie Growth Engine)
+  // LISTEN TASK HANDLERS (Social Media Growth Engine)
   // ==========================================================================
 
   /**
@@ -1993,7 +1993,7 @@ Best regards`;
   }
 
   // ==========================================================================
-  // ENGAGE TASK HANDLERS (Sophie Growth Engine)
+  // ENGAGE TASK HANDLERS (Social Media Growth Engine)
   // ==========================================================================
 
   /**
