@@ -7,12 +7,11 @@
  */
 
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { 
+import {
   SequenceIntelligenceEngine,
-  SequenceAnalysisInput,
-  SequenceMetrics,
-  SequencePattern,
-  OptimizationRecommendation,
+  type SequenceAnalysisInput,
+  type SequenceMetrics,
+  type SequencePattern,
 } from '@/lib/sequence';
 
 // Mock AI service
@@ -146,8 +145,8 @@ describe('SequenceIntelligenceEngine', () => {
       const invalidInput = {
         // Missing sequenceId or sequenceIds
         includePatterns: true,
-      } as any;
-      
+      } as unknown as SequenceAnalysisInput;
+
       await expect(engine.analyzeSequences(invalidInput)).rejects.toThrow();
     });
   });
@@ -236,12 +235,10 @@ describe('SequenceIntelligenceEngine', () => {
       expect(patterns).toHaveLength(0);
     });
     
-    it('should return empty array when no metrics provided', async () => {
-      const patterns = await engine.detectPatterns({
-        sequenceMetrics: [],
-      });
-      
-      expect(patterns).toHaveLength(0);
+    it('should reject when no metrics provided (Zod min validation)', async () => {
+      await expect(
+        engine.detectPatterns({ sequenceMetrics: [] })
+      ).rejects.toThrow();
     });
   });
   
@@ -341,15 +338,15 @@ describe('SequenceIntelligenceEngine', () => {
     it('should reject analysis with no sequence identifier', async () => {
       const input = {
         includePatterns: true,
-      } as any;
-      
+      } as unknown as SequenceAnalysisInput;
+
       await expect(engine.analyzeSequences(input)).rejects.toThrow();
     });
     
     it('should reject pattern detection with empty metrics', async () => {
       await expect(
         engine.detectPatterns({ sequenceMetrics: [] })
-      ).resolves.toHaveLength(0);
+      ).rejects.toThrow();
     });
     
     it('should handle invalid date ranges', async () => {

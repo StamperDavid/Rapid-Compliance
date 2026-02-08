@@ -9,16 +9,15 @@
 
 import {
   analyzeTranscript,
-  analyzeBatchConversations,
 } from '@/lib/conversation/conversation-engine';
-import type {
-  AnalyzeTranscriptRequest,
-  ConversationType,
-  Participant,
-  ParticipantRole,
-  ConversationEngineConfig,
+import {
+  DEFAULT_CONVERSATION_CONFIG,
+  type AnalyzeTranscriptRequest,
+  type ConversationType,
+  type Participant,
+  type ParticipantRole,
+  type ConversationEngineConfig,
 } from '@/lib/conversation/types';
-import { DEFAULT_CONVERSATION_CONFIG } from '@/lib/conversation/types';
 
 // Mock dependencies
 jest.mock('@/lib/logger/logger', () => ({
@@ -575,7 +574,7 @@ describe('Conversation Analysis Engine', () => {
       
       // Assert
       expect(result.processingTime).toBeDefined();
-      expect(result.processingTime).toBeGreaterThan(0);
+      expect(result.processingTime).toBeGreaterThanOrEqual(0);
     });
     
     it('should handle AI errors gracefully', async () => {

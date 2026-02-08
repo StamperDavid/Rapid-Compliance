@@ -1,6 +1,6 @@
 /**
  * Email Delivery Service Tests
- * 
+ *
  * Tests for SendGrid email delivery, tracking, and Signal Bus integration
  */
 
@@ -22,7 +22,53 @@ import { adminDb } from '@/lib/firebase/admin';
 jest.mock('@sendgrid/mail');
 jest.mock('@/lib/logger/logger');
 jest.mock('@/lib/orchestration/coordinator-factory-server');
-jest.mock('@/lib/firebase/admin');
+jest.mock('@/lib/firebase/collections', () => ({
+  getOrgSubCollection: jest.fn((sub: string) => `organizations/rapid-compliance-root/${sub}`),
+  COLLECTIONS: { ORGANIZATIONS: 'organizations' },
+}));
+
+// Mock retryWithBackoff to execute the operation once without retries or delays
+jest.mock('@/lib/utils/retry', () => ({
+  retryWithBackoff: jest.fn(async (operation: () => Promise<unknown>) => operation()),
+}));
+
+// Mock adminDb with proper collection/doc chain (inline to avoid TDZ)
+jest.mock('@/lib/firebase/admin', () => {
+  const mockSet = jest.fn().mockResolvedValue(undefined);
+  const mockUpdate = jest.fn().mockResolvedValue(undefined);
+  const mockGet = jest.fn().mockResolvedValue({
+    exists: true,
+    data: () => ({
+      id: 'delivery_123',
+      status: 'sent',
+      organizationId: 'rapid-compliance-root',
+    }),
+  });
+  const mockDoc = jest.fn(() => ({
+    set: mockSet,
+    update: mockUpdate,
+    get: mockGet,
+  }));
+  const mockWhere = jest.fn();
+  // Set up chainable where pattern
+  mockWhere.mockReturnValue({
+    where: mockWhere,
+    orderBy: jest.fn().mockReturnValue({
+      limit: jest.fn().mockReturnValue({
+        get: jest.fn().mockResolvedValue({ docs: [] }),
+      }),
+    }),
+    get: jest.fn().mockResolvedValue({ docs: [] }),
+  });
+  const mockCollection = jest.fn(() => ({
+    doc: mockDoc,
+    where: mockWhere,
+  }));
+  return {
+    __esModule: true,
+    adminDb: { collection: mockCollection },
+  };
+});
 
 describe('Email Delivery Service', () => {
   // Mock implementations
@@ -30,72 +76,28 @@ describe('Email Delivery Service', () => {
     setApiKey: jest.fn(),
     send: jest.fn(),
   };
-  
+
   const mockCoordinator = {
-    emitSignal: jest.fn(),
+    emitSignal: jest.fn().mockResolvedValue({ success: true }),
   };
-  
-  const mockAdminDb = {
-    Timestamp: {
-      now: jest.fn(() => ({ toDate: () => new Date('2026-01-02T12:00:00Z') })),
-      fromDate: jest.fn((date: Date) => ({ toDate: () => date })),
-    },
-    FieldValue: {
-      increment: jest.fn((value: number) => value),
-    },
-    collection: jest.fn(() => ({
-      doc: jest.fn(() => ({
-        set: jest.fn(),
-        update: jest.fn(),
-        get: jest.fn(() => ({
-          exists: true,
-          data: () => ({
-            id: 'delivery_123',
-            status: 'sent',
-          }),
-        })),
-      })),
-      where: jest.fn(() => ({
-        orderBy: jest.fn(() => ({
-          limit: jest.fn(() => ({
-            get: jest.fn(() => ({
-              docs: [],
-            })),
-          })),
-        })),
-        where: jest.fn(() => ({
-          where: jest.fn(() => ({
-            get: jest.fn(() => ({
-              docs: [],
-            })),
-          })),
-          get: jest.fn(() => ({
-            docs: [],
-          })),
-        })),
-        get: jest.fn(() => ({
-          docs: [],
-        })),
-      })),
-    })),
-  };
-  
+
   beforeAll(() => {
     // Set up mocks
     Object.assign(sgMail, mockSgMail);
     jest.mocked(getServerSignalCoordinator).mockReturnValue(mockCoordinator as unknown as ReturnType<typeof getServerSignalCoordinator>);
-    Object.assign(adminDb ?? {}, mockAdminDb);
-    
+
     // Set required environment variables
     process.env.SENDGRID_API_KEY = 'test-api-key';
     process.env.FROM_EMAIL = 'noreply@example.com';
     process.env.FROM_NAME = 'AI Sales Platform';
   });
-  
+
   beforeEach(() => {
     jest.clearAllMocks();
+    // Re-apply mocks that clearAllMocks wipes
+    jest.mocked(getServerSignalCoordinator).mockReturnValue(mockCoordinator as unknown as ReturnType<typeof getServerSignalCoordinator>);
   });
-  
+
   describe('sendEmail', () => {
     it('should send email successfully', async () => {
       // Arrange
@@ -112,17 +114,17 @@ describe('Email Delivery Service', () => {
         trackOpens: true,
         trackClicks: true,
       };
-      
+
       mockSgMail.send.mockResolvedValue([{
         statusCode: 202,
         headers: {
           'x-message-id': 'sg_message_123',
         },
       }]);
-      
+
       // Act
       const result: EmailDeliveryResult = await sendEmail(options);
-      
+
       // Assert
       expect(result.success).toBe(true);
       expect(result.messageId).toBe('sg_message_123');
@@ -144,7 +146,7 @@ describe('Email Delivery Service', () => {
         })
       );
     });
-    
+
     it('should handle SendGrid errors', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
@@ -156,18 +158,18 @@ describe('Email Delivery Service', () => {
         html: '<p>Test</p>',
         text: 'Test',
       };
-      
+
       mockSgMail.send.mockRejectedValue(new Error('SendGrid API error'));
-      
+
       // Act
       const result: EmailDeliveryResult = await sendEmail(options);
-      
+
       // Assert
       expect(result.success).toBe(false);
       expect(result.error).toBe('SendGrid API error');
       expect(result.deliveryId).toBeDefined();
     });
-    
+
     it('should include tracking settings', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
@@ -181,15 +183,15 @@ describe('Email Delivery Service', () => {
         trackOpens: true,
         trackClicks: false,
       };
-      
+
       mockSgMail.send.mockResolvedValue([{
         statusCode: 202,
         headers: { 'x-message-id': 'msg_123' },
       }]);
-      
+
       // Act
       await sendEmail(options);
-      
+
       // Assert
       expect(mockSgMail.send).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -205,7 +207,7 @@ describe('Email Delivery Service', () => {
         })
       );
     });
-    
+
     it('should include custom args for tracking', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
@@ -220,15 +222,15 @@ describe('Email Delivery Service', () => {
         emailId: 'email_abc',
         campaignId: 'campaign_xyz',
       };
-      
+
       mockSgMail.send.mockResolvedValue([{
         statusCode: 202,
         headers: { 'x-message-id': 'msg_123' },
       }]);
-      
+
       // Act
       await sendEmail(options);
-      
+
       // Assert
       expect(mockSgMail.send).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -243,7 +245,7 @@ describe('Email Delivery Service', () => {
         })
       );
     });
-    
+
     it('should emit email.sent signal on success', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
@@ -256,21 +258,21 @@ describe('Email Delivery Service', () => {
         text: 'Test',
         dealId: 'deal_123',
       };
-      
+
       mockSgMail.send.mockResolvedValue([{
         statusCode: 202,
         headers: { 'x-message-id': 'msg_123' },
       }]);
-      
+
       // Act
       await sendEmail(options);
-      
-      // Assert
+
+      // Assert — source emits with orgId (from DEFAULT_ORG_ID) and capitalized priority
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'email.sent',
-          organizationId: 'org_123',
-          priority: 'medium',
+          orgId: 'rapid-compliance-root',
+          priority: 'Medium',
           metadata: expect.objectContaining({
             to: 'recipient@example.com',
             subject: 'Test Email',
@@ -279,7 +281,7 @@ describe('Email Delivery Service', () => {
         })
       );
     });
-    
+
     it('should emit email.delivery.failed signal on error', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
@@ -291,18 +293,18 @@ describe('Email Delivery Service', () => {
         html: '<p>Test</p>',
         text: 'Test',
       };
-      
+
       mockSgMail.send.mockRejectedValue(new Error('API error'));
-      
+
       // Act
       await sendEmail(options);
-      
-      // Assert
+
+      // Assert — source emits with orgId (from DEFAULT_ORG_ID) and capitalized priority
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'email.delivery.failed',
-          organizationId: 'org_123',
-          priority: 'high',
+          orgId: 'rapid-compliance-root',
+          priority: 'High',
           metadata: expect.objectContaining({
             to: 'recipient@example.com',
             error: 'API error',
@@ -311,51 +313,51 @@ describe('Email Delivery Service', () => {
       );
     });
   });
-  
+
   describe('updateDeliveryStatus', () => {
     it('should update delivery status', async () => {
       // Act
       await updateDeliveryStatus('delivery_123', 'delivered', {
         deliveredAt: new Date('2026-01-02T12:00:00Z'),
       });
-      
-      // Assert
-      expect(mockAdminDb.collection).toHaveBeenCalled();
+
+      // Assert — verify collection was called on the mocked adminDb
+      expect(adminDb!.collection).toHaveBeenCalled();
     });
   });
-  
+
   describe('incrementOpenCount', () => {
     it('should increment open count and emit signal', async () => {
       // Act
       await incrementOpenCount('delivery_123');
-      
-      // Assert
+
+      // Assert — source emits with orgId and capitalized priority
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'email.opened',
-          organizationId: 'org_123',
-          priority: 'low',
+          orgId: 'rapid-compliance-root',
+          priority: 'Low',
         })
       );
     });
   });
-  
+
   describe('incrementClickCount', () => {
     it('should increment click count and emit signal', async () => {
       // Act
       await incrementClickCount('delivery_123');
-      
-      // Assert
+
+      // Assert — source emits with orgId and capitalized priority
       expect(mockCoordinator.emitSignal).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'email.clicked',
-          organizationId: 'org_123',
-          priority: 'medium',
+          orgId: 'rapid-compliance-root',
+          priority: 'Medium',
         })
       );
     });
   });
-  
+
   describe('getDeliveryStatsForUser', () => {
     it('should calculate delivery stats correctly', async () => {
       // Arrange
@@ -367,29 +369,27 @@ describe('Email Delivery Service', () => {
         { status: 'bounced', uniqueOpens: 0, uniqueClicks: 0 },
         { status: 'failed', uniqueOpens: 0, uniqueClicks: 0 },
       ];
-      
+
+      // Build a chainable where mock that ultimately resolves with our records
       const mockQuery: {
         where: jest.Mock;
-        orderBy: jest.Mock;
         get: jest.Mock;
       } = {
-        where: jest.fn(function(this: typeof mockQuery) { return this; }),
-        orderBy: jest.fn(() => ({
-          limit: jest.fn(() => ({
-            get: jest.fn(() => ({
-              docs: [],
-            })),
-          })),
-        })),
-        get: jest.fn(() => ({
+        where: jest.fn(),
+        get: jest.fn().mockResolvedValue({
           docs: mockRecords.map(data => ({ data: () => data })),
-        })),
+        }),
       };
-      mockAdminDb.collection.mockReturnValue(mockQuery as unknown as ReturnType<typeof mockAdminDb.collection>);
-      
+      // Make .where() return self for chaining
+      mockQuery.where.mockReturnValue(mockQuery);
+
+      // Use mockReturnValueOnce to avoid polluting subsequent tests
+      const db = adminDb!;
+      jest.mocked(db.collection).mockReturnValueOnce(mockQuery as unknown as ReturnType<typeof db.collection>);
+
       // Act
       const stats = await getDeliveryStatsForUser('user_123');
-      
+
       // Assert
       expect(stats.totalSent).toBe(5); // All except failed
       expect(stats.totalOpened).toBe(3); // opened + clicked
@@ -401,80 +401,50 @@ describe('Email Delivery Service', () => {
       expect(stats.bounceRate).toBe(20); // 1/5 * 100
     });
   });
-  
+
   describe('environment validation', () => {
-    it('should throw error if SENDGRID_API_KEY is missing', async () => {
-      // Arrange
-      const originalKey = process.env.SENDGRID_API_KEY;
-      const originalEmail = process.env.FROM_EMAIL;
-      const originalName = process.env.FROM_NAME;
-      
-      try {
-        // Temporarily unset required env vars
-        process.env.SENDGRID_API_KEY = '';
-        process.env.FROM_EMAIL = originalEmail ?? '';
-        process.env.FROM_NAME = originalName ?? '';
-        
-        const options: EmailDeliveryOptions = {
-          organizationId: 'org_123',
-          workspaceId: 'workspace_123',
-          userId: 'user_123',
-          to: 'recipient@example.com',
-          subject: 'Test',
-          html: '<p>Test</p>',
-          text: 'Test',
-        };
-        
-        // Act & Assert
-        const result = await sendEmail(options);
-        
-        expect(result.success).toBe(false);
-        expect(result.error).toBeDefined();
-      } finally {
-        // Restore
-        if (originalKey !== undefined) {
-          process.env.SENDGRID_API_KEY = originalKey;
-        } else {
-          delete process.env.SENDGRID_API_KEY;
-        }
-      }
+    it('should return failure if SENDGRID_API_KEY is missing', async () => {
+      process.env.SENDGRID_API_KEY = '';
+
+      const options: EmailDeliveryOptions = {
+        organizationId: 'org_123',
+        workspaceId: 'workspace_123',
+        userId: 'user_123',
+        to: 'recipient@example.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+        text: 'Test',
+      };
+
+      const result = await sendEmail(options);
+
+      // Restore to the value set in beforeAll
+      process.env.SENDGRID_API_KEY = 'test-api-key';
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
     });
-    
-    it('should throw error if FROM_EMAIL is missing', async () => {
-      // Arrange
-      const originalKey = process.env.SENDGRID_API_KEY;
-      const originalEmail = process.env.FROM_EMAIL;
-      const originalName = process.env.FROM_NAME;
-      
-      try {
-        // Temporarily unset required env vars
-        process.env.SENDGRID_API_KEY = originalKey ?? '';
-        process.env.FROM_EMAIL = '';
-        process.env.FROM_NAME = originalName ?? '';
-        
-        const options: EmailDeliveryOptions = {
-          organizationId: 'org_123',
-          workspaceId: 'workspace_123',
-          userId: 'user_123',
-          to: 'recipient@example.com',
-          subject: 'Test',
-          html: '<p>Test</p>',
-          text: 'Test',
-        };
-        
-        // Act & Assert
-        const result = await sendEmail(options);
-        
-        expect(result.success).toBe(false);
-        expect(result.error).toBeDefined();
-      } finally {
-        // Restore
-        if (originalEmail !== undefined) {
-          process.env.FROM_EMAIL = originalEmail;
-        } else {
-          delete process.env.FROM_EMAIL;
-        }
-      }
+
+    it('should return failure if FROM_EMAIL is missing', async () => {
+      process.env.FROM_EMAIL = '';
+
+      const options: EmailDeliveryOptions = {
+        organizationId: 'org_123',
+        workspaceId: 'workspace_123',
+        userId: 'user_123',
+        to: 'recipient@example.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+        text: 'Test',
+      };
+
+      const result = await sendEmail(options);
+
+      // Restore to the value set in beforeAll
+      process.env.FROM_EMAIL = 'noreply@example.com';
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
     });
   });
 });

@@ -334,11 +334,11 @@ function calculateTopWorkflows(
 /**
  * Calculate action type breakdown
  */
-/** Action execution result structure */
+/** Action execution result structure (matches WorkflowExecution.actionsExecuted items) */
 interface ActionExecutionResult {
   actionType?: string;
   status?: string;
-  duration?: number;
+  durationMs?: number;
 }
 
 function calculateActionBreakdown(
@@ -364,7 +364,7 @@ function calculateActionBreakdown(
       actionMap.set(actionType, {
         count: existing.count + 1,
         success: existing.success + (result.status === 'success' ? 1 : 0),
-        times: [...existing.times, result.duration ?? 0],
+        times: [...existing.times, result.durationMs ?? 0],
       });
     });
   });

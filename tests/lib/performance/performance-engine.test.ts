@@ -8,18 +8,9 @@
  * @module tests/lib/performance
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import type {
-  TeamPerformanceAnalytics,
   RepPerformanceMetrics,
-  PerformanceBenchmarks,
-  TopPerformer,
-  ImprovementOpportunity,
-  CoachingPriority,
-  BestPractice,
-  PerformanceLeaderboard,
-  RepComparison,
-  MetricBreakdown,
 } from '@/lib/performance/types';
 import type { ConversationAnalysis, ConversationScores } from '@/lib/conversation/types';
 
@@ -27,7 +18,7 @@ import type { ConversationAnalysis, ConversationScores } from '@/lib/conversatio
 // MOCK DATA
 // ============================================================================
 
-const createMockConversationAnalysis = (
+const _createMockConversationAnalysis = (
   repId: string,
   scores: Partial<ConversationScores> = {}
 ): ConversationAnalysis => ({
@@ -76,13 +67,13 @@ const createMockConversationAnalysis = (
   coachingInsights: [],
   followUpActions: [],
   scores: {
-    overall: scores.overall || 85,
-    discovery: scores.discovery || 80,
-    valueArticulation: scores.valueArticulation || 85,
-    objectionHandling: scores.objectionHandling || 90,
-    closing: scores.closing || 85,
-    rapport: scores.rapport || 80,
-    engagement: scores.engagement || 85,
+    overall: scores.overall ?? 85,
+    discovery: scores.discovery ?? 80,
+    valueArticulation: scores.valueArticulation ?? 85,
+    objectionHandling: scores.objectionHandling ?? 90,
+    closing: scores.closing ?? 85,
+    rapport: scores.rapport ?? 80,
+    engagement: scores.engagement ?? 85,
   },
   qualityIndicators: [
     { type: 'talk_ratio', status: 'excellent', score: 90, description: 'Ideal talk ratio' },
@@ -170,10 +161,10 @@ describe('Performance Analytics - Team Metrics', () => {
 
   it('should handle empty individual metrics', () => {
     const individualMetrics: RepPerformanceMetrics[] = [];
-    
+
     // Should not throw
     expect(() => {
-      const totalConversations = individualMetrics.reduce((sum, m) => sum + m.totalConversations, 0);
+      const _totalConversations = individualMetrics.reduce((sum, m) => sum + m.totalConversations, 0);
     }).not.toThrow();
   });
 });
@@ -277,7 +268,7 @@ describe('Performance Analytics - Benchmarks', () => {
   });
 
   it('should calculate percentile thresholds', () => {
-    const scores = [60, 70, 75, 80, 85, 90].sort((a, b) => b - a); // Sorted descending
+    const scores = [60, 70, 75, 80, 85, 90].sort((a, b) => a - b); // Sorted ascending for percentile calculation
 
     // Calculate 75th percentile
     const p75Index = Math.ceil((75 / 100) * scores.length) - 1;
@@ -392,7 +383,6 @@ describe('Performance Analytics - Improvement Opportunities', () => {
   it('should identify skill gaps', () => {
     const repScore = 65;
     const teamAvgScore = 75;
-    const topPerformerScore = 90;
 
     const gapSize = teamAvgScore - repScore;
 
@@ -514,7 +504,6 @@ describe('Performance Analytics - Coaching Priorities', () => {
     const percentageAffected60 = 60;
     const percentageAffected35 = 35;
     const percentageAffected25 = 25;
-    const percentageAffected15 = 15;
 
     const avgGapHigh = 18;
     const avgGapMedium = 12;
@@ -601,10 +590,18 @@ describe('Performance Analytics - Performance Tiers', () => {
     const percentiles = [95, 72, 55, 35, 12];
 
     const tiers = percentiles.map(p => {
-      if (p >= 80) return 'top_performer';
-      if (p >= 60) return 'high_performer';
-      if (p >= 40) return 'solid_performer';
-      if (p >= 20) return 'developing';
+      if (p >= 80) {
+        return 'top_performer';
+      }
+      if (p >= 60) {
+        return 'high_performer';
+      }
+      if (p >= 40) {
+        return 'solid_performer';
+      }
+      if (p >= 20) {
+        return 'developing';
+      }
       return 'needs_improvement';
     });
 

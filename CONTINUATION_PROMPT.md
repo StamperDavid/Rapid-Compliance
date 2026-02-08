@@ -24,7 +24,7 @@ Last Commit: Latest on `dev` branch
 - **Autonomous Business Operations Upgrade (ALL 8 PHASES): COMPLETE** — Event Router, Operations Cycle Cron, Event Emitters, Manager Authority (quality gates, mutations, cross-department protocol), Revenue Pipeline Automation, Outreach Autonomy, Content Production Hub, Intelligence Always-On, Builder/Commerce Reactive Loops, Contextual Artifact Generation, Jasper Command Authority
 - **Post-Phase 8 Stabilization: COMPLETE** — Platform stabilization, integration tests, production cron scheduling, executive briefing dashboard
 - **Database Hygiene Verification: COMPLETE** — 72 test files audited, MemoryVault confirmed in-memory only, production DB protected, 23 integration/E2E tests flagged for cleanup hardening
-- **Test Cleanup Hardening: MOSTLY COMPLETE** — Fixed 7 high-risk test files with proper afterAll cleanup, hardened jest.globalTeardown.js to throw on failure, fixed `protected` reserved word bug in db-manager.js. 14 `tests/lib/` suites have pre-existing assertion failures (not cleanup-related)
+- **Test Cleanup Hardening: COMPLETE** — Fixed 7 high-risk test files with proper afterAll cleanup, hardened jest.globalTeardown.js to throw on failure, fixed `protected` reserved word bug in db-manager.js. All 14 previously-failing `tests/lib/` suites now pass (19/19 suites, 510/510 tests)
 
 ### Post-Phase 8 Stabilization (February 8, 2026)
 
@@ -128,38 +128,32 @@ Full audit of all 72 test files, Jest configuration, and MemoryVault. Key findin
 
 3. **scripts/db-manager.js fixed** — Renamed `protected` variable to `protectedOrgs` (was a reserved keyword causing SWC parse failure, blocking Jest teardown from loading).
 
-**Test results this session:**
+**Test results (cumulative):**
 - `tsc --noEmit` — PASSES (zero errors)
 - `npm run lint` — PASSES (zero warnings)
 - `npm run build` — PASSES (production build succeeds)
 - **126 safe unit tests** — ALL PASS (event-router 49, jasper-command-authority 21, mutation-engine 9, analytics-helpers 47)
 - **92 root-level tests** — ALL PASS (validation, rate-limiting, auth, payment, oauth, api-routes, schema, pagination)
+- **510 `tests/lib/` tests** — ALL PASS (19/19 suites — analytics, coaching, conversation, email-writer, notifications, performance, playbook, risk, routing, sequence, slack, workflow)
 - **Database cleanup verified** — After every test run, db-manager confirms only 1 real org remains (`j6sKmIjTT2HMQJxVWSY0 - Rapid Compliance`)
 
-**Remaining test failures (14 suites in `tests/lib/`, pre-existing, NOT cleanup-related):**
+**`tests/lib/` test suites: ALL 14 FIXED (19/19 suites, 510/510 tests passing)**
 
-| Suite | Failure Type | Root Cause |
-|-------|-------------|------------|
-| `tests/lib/email-writer/email-delivery-service.test.ts` | `ensureAdminDb(...).collection(...).doc is not a function` | Firebase Admin mock incomplete — `doc()` not mocked |
-| `tests/lib/workflow/validation.test.ts` | Assertion mismatch | Zod schema changed, test expectations outdated |
-| `tests/lib/analytics/dashboard/validation.test.ts` | `expect().toThrow()` fails | Schema now accepts what was previously rejected |
-| `tests/lib/analytics/dashboard/analytics-engine.test.ts` | Mock initialization | `ReferenceError: Cannot access 'mockAdminDal' before initialization` |
-| `tests/lib/conversation/conversation-engine.test.ts` | Timing assertion | `expect(processingTime).toBeGreaterThan(0)` fails (too fast) |
-| `tests/lib/performance/performance-engine.test.ts` | Threshold mismatch | Percentile calculation changed |
-| `tests/lib/routing/routing-engine.test.ts` | Score assertion | Lead quality scoring algorithm changed |
-| `tests/lib/slack/message-builder.test.ts` | String content | Slack message templates changed |
-| `tests/lib/slack/slack-service.test.ts` | Mock issue | fetch() mock not matching |
-| `tests/lib/notifications/templates.test.ts` | Template structure | Notification templates changed |
-| `tests/lib/sequence/sequence-engine.test.ts` | Mock issue | AI service mock incomplete |
-| `tests/lib/coaching/team-coaching-engine.test.ts` | Mock issue | CoachingAnalyticsEngine mock incomplete |
-| `tests/lib/workflow/workflow-engine.test.ts` | Mock issue | Dependencies mock incomplete |
-| `tests/lib/risk/risk-engine.test.ts` | Mock issue | Firebase/AI mock incomplete |
+Fixed across two sessions:
+- **Session 1 (Feb 7):** Fixed 12 of 14 suites — updated mock shapes, assertion values, schema expectations, timing assertions, threshold values, template content, AI service mocks, coaching mocks, and Firebase/risk mocks
+- **Session 2 (Feb 7):** Fixed final 2 suites:
+  - `analytics-engine.test.ts` — Fixed `getEmailGenerations` mock (sync function needed `mockReturnValue` not `mockResolvedValue`), fixed `ActionExecutionResult.duration` → `durationMs` property name (also fixed in source), fixed `mockAdminDal` null assertion, fixed type casts for `Workflow[]`/`WorkflowExecution[]` → `Record<string, unknown>[]`
+  - `email-delivery-service.test.ts` — Fixed `jest.mock` hoisting TDZ issue (moved admin DB mock inline into factory), mocked `retryWithBackoff` to execute immediately, fixed signal assertion shapes (`orgId`/capitalized priorities/`confidence`), fixed `mockReturnValue` pollution between tests
 
-**Service test issues (3 suites, infrastructure-related):**
+**Source code bug fix:** `src/lib/analytics/dashboard/analytics-engine.ts` — `ActionExecutionResult.duration` → `durationMs` (was reading wrong property, always returning 0 for `averageTime` in action breakdowns)
+
+**Source code fix:** `src/lib/workflows/workflow-service.ts` — Fixed Timestamp SDK mismatch. Changed `Timestamp` to type-only import with `as unknown as Timestamp` cast (FirestoreService.set() overwrites with `serverTimestamp()` anyway). Tests: 3/4 pass, 1 remaining failure is missing composite index.
+
+**Service test issues (2 suites, infrastructure-related — NOT test code issues):**
 
 | Suite | Issue |
 |-------|-------|
-| `tests/services/workflow-service.test.ts` | Timestamp SDK mismatch — `Timestamp.fromDate()` uses client SDK but test env uses Admin SDK |
+| `tests/services/workflow-service.test.ts` | 1 of 4 tests fails: missing Firestore composite index (status+createdAt on `workflows`) |
 | `tests/services/deal-service.test.ts` | Missing Firestore composite index (stage+createdAt on `records`) — index defined in `firestore.indexes.json` but not deployed |
 | `tests/services/lead-service.test.ts` | Missing Firestore composite index (status+createdAt on `records`) — same issue |
 
@@ -167,9 +161,7 @@ Full audit of all 72 test files, Jest configuration, and MemoryVault. Key findin
 - Nothing currently in progress.
 
 ### What's Next (Priority Order)
-1. **Fix 14 `tests/lib/` test suites** — Update assertions to match current source code behavior. Tests are outdated, not the source. Common patterns: schema changes, template changes, mock initialization order, threshold changes.
-2. **Fix 3 service test issues** — Deploy Firestore indexes (`firebase deploy --only firestore:indexes`), fix Timestamp SDK mismatch in workflow-service test
-3. **Deploy Firestore indexes** — Run `firebase deploy --only firestore:indexes` to deploy the indexes already defined in `firestore.indexes.json`
+1. **Deploy Firestore indexes** — Run `firebase deploy --only firestore:indexes` to deploy the indexes already defined in `firestore.indexes.json` (fixes 3 remaining service test failures)
 4. **Vercel Deployment** — Deploy to production and run smoke tests
 5. **MemoryVault Persistence Layer** — Currently in-memory only, data lost on restart. Implement Firestore-backed persistence (the async method stubs are already in place)
 6. **End-to-end smoke test** of full event routing chains in production

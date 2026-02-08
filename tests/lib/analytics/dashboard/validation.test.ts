@@ -53,10 +53,10 @@ describe('Analytics Dashboard Validation', () => {
       expect(() => AnalyticsRequestSchema.parse(invalidRequest)).toThrow(ZodError);
     });
 
-    it('should require workspaceId', () => {
+    it('should require period', () => {
       const invalidRequest = {
         organizationId: 'org123',
-        period: '30d',
+        // Missing period
       };
 
       expect(() => AnalyticsRequestSchema.parse(invalidRequest)).toThrow(ZodError);

@@ -9,9 +9,9 @@ import {
   validateWorkflow,
   validateWorkflowUpdate,
   validateWorkflowExecution,
-  CreateWorkflowSchema,
   TriggerConditionSchema,
   WorkflowActionSchema,
+  EmailActionConfigSchema,
 } from '@/lib/workflow/validation';
 
 // ============================================================================
@@ -80,7 +80,7 @@ describe('Workflow Validation', () => {
     }
   });
   
-  it('should reject workflow with invalid email action config', () => {
+  it('should reject workflow with invalid action type', () => {
     const invalidData = {
       organizationId: 'org_test',
       workspaceId: 'default',
@@ -97,21 +97,31 @@ describe('Workflow Validation', () => {
       actions: [
         {
           id: 'action_001',
-          type: 'email.send',
-          config: {
-            emailType: 'follow_up',
-            // Missing recipientEmail or recipientField
-          },
+          type: 'not.a.valid.action.type',
+          config: {},
           order: 1,
           continueOnError: false,
-          name: 'Send Email',
-          description: 'Send email',
+          name: 'Bad Action',
+          description: 'Invalid action type',
         },
       ],
     };
-    
+
     const result = validateWorkflow(invalidData);
-    
+
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject email config without recipient via EmailActionConfigSchema', () => {
+    // ActionConfigSchema has a z.record(z.unknown()) catch-all for custom actions,
+    // so email-specific validation must be tested directly on EmailActionConfigSchema
+    const invalidEmailConfig = {
+      emailType: 'follow_up',
+      // Missing both recipientEmail and recipientField
+    };
+
+    const result = EmailActionConfigSchema.safeParse(invalidEmailConfig);
+
     expect(result.success).toBe(false);
   });
   

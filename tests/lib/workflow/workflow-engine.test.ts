@@ -14,6 +14,23 @@ import type {
 } from '@/lib/workflow/types';
 import { Timestamp } from 'firebase/firestore';
 
+// Mock dynamic imports used by executeAction
+jest.mock('@/lib/email-writer/email-writer-engine', () => ({
+  generateSalesEmail: jest.fn<() => Promise<Record<string, unknown>>>().mockResolvedValue({
+    success: true,
+    id: 'email_mock_001',
+    subject: 'Follow-up: Test',
+    body: 'Mock email body',
+    recipientEmail: 'test@example.com',
+    email: {
+      id: 'email_mock_001',
+      subject: 'Follow-up: Test',
+      body: 'Mock email body',
+    },
+  }),
+}));
+jest.mock('@/lib/logger/logger');
+
 // ============================================================================
 // TEST DATA
 // ============================================================================
