@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 7, 2026 (Sophie Growth Engine: GROWTH_ANALYST agent, engagement metrics collector, intelligence signal wiring, LISTEN/ENGAGE capabilities, GROWTH_LOOP orchestration cycle. Gap closure: Voice AI TTS, PDF generation, SendGrid Inbound Parse, video render pipeline, ML lead scoring, mock data replaced with production implementations)
+**Last Updated:** February 7, 2026 (Jasper identity rename, Autonomous Business Operations spec added to CONTINUATION_PROMPT, Social Media Growth Engine marked COMPLETE, agent swarm autonomy roadmap — 8 phases covering Event Router, Manager Authority, Revenue Pipeline, Outreach Autonomy, Content Production, Intelligence Always-On, Commerce/Builder Reactive Loops, Jasper Command Authority)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -239,35 +239,11 @@ Only after Tiers 1 and 2 are verified complete.
 
 ---
 
-## Sophie Growth Engine (Social Media Autonomy)
+## Social Media Growth Engine (COMPLETE)
 
-> **Status:** ACTIVE — Phases 1-5 implemented (February 7, 2026). Full spec in `CONTINUATION_PROMPT.md`.
+> **Status:** COMPLETE — All 6 phases implemented (February 7, 2026).
 
-**Goal:** Transform marketing specialists from passive content generators into autonomous account operators with a closed feedback loop: RESEARCH → CREATE → PUBLISH → ENGAGE → ANALYZE → MUTATE → REPEAT.
-
-**Reference Model:** Sophie from Sintra AI — autonomous social media employee.
-
-### Implementation Status
-
-| Phase | Description | Status |
-|-------|-------------|--------|
-| **1a** | Engagement Metrics Collector (`src/lib/social/engagement-metrics-collector.ts`) | COMPLETE |
-| **1b** | Cron endpoint `/api/cron/social-metrics-collector` | COMPLETE |
-| **1c** | Wire TREND_SCOUT → MARKETING_MANAGER (OPPORTUNISTIC mode) | COMPLETE |
-| **1d** | Wire SENTIMENT_ANALYST → MARKETING_MANAGER (CRISIS_RESPONSE / AMPLIFICATION modes) | COMPLETE |
-| **2** | GROWTH_ANALYST agent — 7 task types, registered in index + registry + Marketing Manager | COMPLETE |
-| **3** | LISTEN capabilities on all 4 platform specialists (FETCH_POST_METRICS, FETCH_MENTIONS, etc.) | COMPLETE |
-| **4** | ENGAGE capabilities on all specialists + Autonomous Posting Agent upgrade (REPLY, LIKE, FOLLOW, REPOST, RECYCLE) with compliance guardrails | COMPLETE |
-| **5** | GROWTH_LOOP orchestration cycle in Marketing Manager + content recycling with 30-day cooldown | COMPLETE |
-| **6** | Registry updates + SSOT sync | COMPLETE |
-
-### New Infrastructure
-
-| Component | Path | Purpose |
-|-----------|------|---------|
-| Engagement Metrics Collector | `src/lib/social/engagement-metrics-collector.ts` | Fetches engagement data via Twitter API, matches to stored posts, updates PostMetrics in Firestore |
-| Social Metrics Cron | `src/app/api/cron/social-metrics-collector/route.ts` | CRON_SECRET auth, triggers metrics collection + scheduled post processing |
-| Growth Analyst Agent | `src/lib/agents/marketing/growth-analyst/specialist.ts` | L3 specialist: KPIs, pattern analysis, mutation directives, content library, weekly reports |
+Metrics collector, Growth Analyst agent, LISTEN/ENGAGE capabilities, GROWTH_LOOP orchestration, content recycling with 30-day cooldown. All infrastructure is production-ready and feeds into the Autonomous Business Operations upgrade below.
 
 ### Marketing Manager Orchestration Modes
 
@@ -278,6 +254,50 @@ Only after Tiers 1 and 2 are verified complete.
 | `OPPORTUNISTIC` | TREND_SCOUT HIGH/CRITICAL signal | Interrupt flow, fast-track trending content |
 | `CRISIS_RESPONSE` | SENTIMENT_ANALYST negative spike | Pause publishing, deploy damage control |
 | `AMPLIFICATION` | SENTIMENT_ANALYST positive spike | Boost content frequency, share positive mentions |
+
+---
+
+## Autonomous Business Operations Upgrade
+
+> **Status:** PLANNED — Full spec in `CONTINUATION_PROMPT.md`. Next active initiative.
+
+**Goal:** Transition the entire 48-agent swarm from task executors to autonomous managers that operate the business as a team. The human sets objectives; the system runs the business. Jasper (AI assistant) is the human interface.
+
+**Current Assessment:** ~70% infrastructure built, ~15% autonomous behavior active. Agents produce excellent analysis and outputs, but the step where those outputs trigger the next agent's action is manual or missing.
+
+### Implementation Phases
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| **1** | Event Router + Company Operations Cycle (foundation for all autonomy) | PLANNED |
+| **2** | Manager Authority Upgrade (quality gates, mutation application, cross-department signals) | PLANNED |
+| **3** | Revenue Pipeline Automation (auto-progression, intelligence-to-outreach bridge, win/loss feedback) | PLANNED |
+| **4** | Outreach Autonomy (reply → action chains, adaptive timing, ghosting recovery) | PLANNED |
+| **5** | Content Production Line + Intelligence Always-On (cross-department briefs, daily market sweeps) | PLANNED |
+| **6** | Builder/Commerce Reactive Loops (analytics-driven page optimization, cart recovery, pricing) | PLANNED |
+| **7** | Contextual Artifact Generation (reply → personalized video + PDF → auto-send) | PLANNED |
+| **8** | Jasper Command Authority (briefing system, approval gateway, command authority) | PLANNED |
+
+### Key New Infrastructure (To Be Built)
+
+| Component | Planned Path | Purpose |
+|-----------|-------------|---------|
+| Event Router | `src/lib/orchestration/event-router.ts` | Rules engine — watches real-world events, dispatches work to Managers via SignalBus |
+| Operations Cycle Cron | `src/app/api/cron/operations-cycle/route.ts` | Company-wide management cycle (4-hour operational, 24-hour strategic, weekly executive) |
+| Intelligence Sweep Cron | `src/app/api/cron/intelligence-sweep/route.ts` | Daily market monitoring — competitor activity, funding, hiring signals |
+| BaseManager upgrades | `src/lib/agents/base-manager.ts` | reviewOutput(), applyMutations(), requestFromManager() |
+
+### Cross-Department Event Routing (Phase 1 Target)
+
+| Event | Condition | Action |
+|-------|-----------|--------|
+| `email.reply.received` (interested) | intent classification | Revenue Director: advance stage |
+| `email.reply.received` (needs_more_info) | intent classification | Content Manager: generate assets → Outreach Manager: reply |
+| `lead.bant_score.updated` | score >= 70 | Revenue Director: auto-transition to OUTREACH |
+| `post.metrics.updated` (viral) | engagement > 5x average | Content Manager: produce follow-up |
+| `review.received` (5-star) | rating = 5 | Marketing Manager: repurpose as social proof |
+| `cart.abandoned` | no checkout within 1 hour | Outreach Manager: recovery sequence |
+| `deal.closed.won` | — | Reputation Manager: review solicitation |
 
 ---
 
@@ -333,7 +353,7 @@ MASTER_ORCHESTRATOR (L1 - Swarm CEO)
 ├── REVENUE_DIRECTOR (L2) → 5 Specialists
 └── REPUTATION_MANAGER (L2) → 4 Specialists
 
-Standalone: JASPER_GOLDEN_MASTER, VOICE_AGENT_HANDLER,
+Standalone: JASPER, VOICE_AGENT_HANDLER,
            AUTONOMOUS_POSTING_AGENT, CHAT_SESSION_SERVICE
 ```
 
@@ -709,7 +729,7 @@ Legacy workspace URLs are automatically redirected:
 | Status | Count | Description |
 |--------|-------|-------------|
 | FUNCTIONAL (Swarm) | 48 | **100% SWARM COMPLETION** - All agents fully operational |
-| FUNCTIONAL (Standalone) | 4 | Jasper Golden Master, Voice Agent, Autonomous Posting Agent, Chat Session Service |
+| FUNCTIONAL (Standalone) | 4 | Jasper (AI Assistant), Voice Agent, Autonomous Posting Agent, Chat Session Service |
 | GHOST | 0 | All specialists have been implemented |
 
 ### Master Orchestrator (1) - L1 Swarm CEO
@@ -1071,7 +1091,7 @@ These agents operate independently of the L1/L2/L3 swarm hierarchy:
 
 | Agent | Type | Path | Status | Description |
 |-------|------|------|--------|-------------|
-| Jasper Golden Master | Platform Chat Agent | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Public-facing AI sales agent on SalesVelocity.ai landing page. Routes via OpenRouter to multiple models. 9 tool functions for delegation to swarm agents. |
+| Jasper | Platform AI Assistant | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the platform AI assistant and primary human interface to the agent swarm. Delegates to all 9 domain managers via tool functions. Provides strategic guidance across the platform. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
 | Autonomous Posting Agent | Social Media Automation | `src/lib/social/autonomous-posting-agent.ts` | FUNCTIONAL | Manages autonomous content posting across LinkedIn and Twitter/X with scheduling, queueing, and analytics tracking. |
 | Chat Session Service | Agent Infrastructure | `src/lib/agent/chat-session-service.ts` | FUNCTIONAL | Manages real-time AI chat sessions and agent instance lifecycle. `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) handles ephemeral agent instances spawned from Golden Masters. |
@@ -1148,7 +1168,7 @@ src/lib/agents/
     └── case-study/specialist.ts
 
 # Standalone Agent Files (outside swarm)
-src/lib/orchestrator/jasper-tools.ts    # Jasper Golden Master tools
+src/lib/orchestrator/jasper-tools.ts    # Jasper AI assistant tools
 src/lib/voice/voice-agent-handler.ts    # Voice AI Agent (Prospector/Closer)
 src/lib/social/autonomous-posting-agent.ts  # Autonomous Social Posting
 src/lib/agent/chat-session-service.ts   # Chat Session Service

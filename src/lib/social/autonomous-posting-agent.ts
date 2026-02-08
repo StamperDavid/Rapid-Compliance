@@ -7,7 +7,7 @@
  * - Schedules posts across multiple platforms
  * - Supports immediate posting or scheduled queue
  * - Logs all posts to Firestore for analytics
- * - Sophie Growth Engine Phase 4: Multi-action support + compliance guardrails
+ * - Social Media Growth Engine Phase 4: Multi-action support + compliance guardrails
  */
 
 import { logger } from '@/lib/logger/logger';
@@ -28,7 +28,7 @@ import type {
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 
 // =============================================================================
-// Sophie Growth Engine Phase 4: New Action Types
+// Social Media Growth Engine Phase 4: New Action Types
 // =============================================================================
 
 export type EngagementActionType = 'POST' | 'REPLY' | 'LIKE' | 'FOLLOW' | 'REPOST' | 'RECYCLE';
@@ -83,7 +83,7 @@ export class AutonomousPostingAgent {
   private config: PostingAgentConfig;
   private twitterService: TwitterService | null = null;
 
-  // Sophie Growth Engine Phase 4: Velocity tracking
+  // Social Media Growth Engine Phase 4: Velocity tracking
   private actionCounts: Map<string, ActionCount> = new Map();
 
   // Velocity limits per hour per platform (compliance guardrails)
@@ -141,7 +141,7 @@ export class AutonomousPostingAgent {
   }
 
   // =============================================================================
-  // Sophie Growth Engine Phase 4: Compliance Guardrails
+  // Social Media Growth Engine Phase 4: Compliance Guardrails
   // =============================================================================
 
   /**
@@ -270,7 +270,7 @@ export class AutonomousPostingAgent {
   }
 
   // =============================================================================
-  // Sophie Growth Engine Phase 4: Multi-Action Execution
+  // Social Media Growth Engine Phase 4: Multi-Action Execution
   // =============================================================================
 
   /**
