@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 8, 2026 (MemoryVault Firestore persistence wired — agents survive cold starts; ConversationMemory service planned as Step 3)
+**Last Updated:** February 8, 2026 (ConversationMemory service complete — agents recall customer history)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -2471,7 +2471,7 @@ Agents communicate via **TenantMemoryVault** (Firestore-backed since Feb 8, 2026
 | **Working memory** | Have it | In-process variables during a single task execution |
 | **Shared operational state (MemoryVault)** | **Complete** | Cross-agent signals, insights, context. Firestore-backed, survives cold starts (commit e388c151) |
 | **Customer/entity memory** | Have it | CRM data in Firestore collections (records, deals, contacts) |
-| **Conversation memory** | **Planned (Step 3)** | ConversationMemory service — unified retrieval of past customer interactions across all channels. See CONTINUATION_PROMPT.md for full spec. |
+| **Conversation memory** | **COMPLETE (commit b1c50e8f)** | ConversationMemory service — unified retrieval of past customer interactions across all channels. Location: `src/lib/conversation/conversation-memory.ts` |
 | **Episodic memory** | Not built | Agents recalling specific past interactions and learning from outcomes |
 | **Semantic/vector memory** | Not built | Embedding-based retrieval for similarity search across knowledge |
 
@@ -2485,7 +2485,7 @@ Agents communicate via **TenantMemoryVault** (Firestore-backed since Feb 8, 2026
 | Voice AI | In-memory only | **No — lost when call ends** | No |
 | Email | Campaign metadata only | Partial (no body) | No |
 
-**Gap:** All conversation data is siloed. No agent can query "what's the history with this lead?" across channels. The ConversationMemory service (Step 3) will provide a unified retrieval layer with auto-analysis and Lead Briefing generation.
+**Gap Resolved (commit b1c50e8f):** ConversationMemory service now provides unified retrieval across all channels. Agents can query conversation history with auto-analysis and Lead Briefing generation. Voice transcripts persist to Firestore, and all channels are agent-queryable.
 
 ### Intelligence Manager - Dynamic Orchestration Engine
 
