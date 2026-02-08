@@ -10,7 +10,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface WebsiteSettingsData {
   customDomain?: string;

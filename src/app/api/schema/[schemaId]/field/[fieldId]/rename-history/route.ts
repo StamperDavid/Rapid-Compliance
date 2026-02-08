@@ -7,7 +7,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
 import { adminDal } from '@/lib/firebase/admin-dal';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { SchemaField } from '@/types/schema';
 
 interface SchemaData {

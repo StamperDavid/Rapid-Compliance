@@ -12,7 +12,6 @@ export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/config';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   collection,
   doc,

@@ -8,7 +8,6 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const postBodySchema = z.object({
   settings: z.record(z.unknown()).refine((val) => Object.keys(val).length > 0, {

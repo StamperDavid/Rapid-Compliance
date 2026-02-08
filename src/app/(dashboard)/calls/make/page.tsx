@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger/logger';

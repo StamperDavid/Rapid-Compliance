@@ -63,7 +63,6 @@ export async function prefillOnboardingData(
   websiteUrl: string
 ): Promise<PrefillResult> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     logger.info('Starting onboarding prefill', {
       websiteUrl,
       source: 'prefill-engine',
@@ -118,7 +117,6 @@ export async function prefillOnboardingData(
 
     return result;
   } catch (error) {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     logger.error('Failed to prefill onboarding data', error instanceof Error ? error : new Error(String(error)), {
       websiteUrl,
     });
@@ -455,7 +453,6 @@ async function emitOnboardingStartedSignal(
   websiteUrl: string
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
@@ -474,7 +471,6 @@ async function emitOnboardingStartedSignal(
     });
   } catch (error) {
     // Don't fail prefill if signal emission fails
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     logger.error('Failed to emit onboarding.started signal', error instanceof Error ? error : new Error(String(error)));
   }
 }
@@ -488,7 +484,6 @@ async function emitOnboardingPrefilledSignal(
   fromCache: boolean
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
@@ -516,7 +511,6 @@ async function emitOnboardingPrefilledSignal(
     });
   } catch (error) {
     // Don't fail prefill if signal emission fails
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     logger.error('Failed to emit onboarding.prefilled signal', error instanceof Error ? error : new Error(String(error)));
   }
 }
@@ -535,7 +529,6 @@ export async function emitOnboardingCompletedSignal(
   }
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({
@@ -554,7 +547,6 @@ export async function emitOnboardingCompletedSignal(
     });
   } catch (error) {
     // Don't fail onboarding completion if signal emission fails
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     logger.error('Failed to emit onboarding.completed signal', error instanceof Error ? error : new Error(String(error)));
   }
 }
@@ -573,7 +565,6 @@ export async function emitOnboardingAbandonedSignal(
   }
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     await coordinator.emitSignal({

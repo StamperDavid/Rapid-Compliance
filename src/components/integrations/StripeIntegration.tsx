@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import type { StripeIntegration as StripeType } from '@/types/integrations';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface StripeIntegrationProps {
   integration: StripeType | null;

@@ -18,7 +18,6 @@
 import React, { useState } from 'react';
 import { EmailWriterCard } from '@/components/email-writer/EmailWriterCard';
 import type { GeneratedEmail } from '@/lib/email-writer';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { useAuth } from '@/hooks/useAuth';
 
 // ============================================================================

@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 /**
  * Lead Research Teaching Interface
  * Chat-based lead generation with AI learning from user feedback

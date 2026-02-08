@@ -1,7 +1,5 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 /* eslint-disable no-alert -- Admin UI uses native dialogs for quick user confirmations */
 
 import React, { useState } from 'react';

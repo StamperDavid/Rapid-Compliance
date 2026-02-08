@@ -13,7 +13,6 @@
 import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
 import type { TrainingData, TrainingHistory } from '@/types/scraper-intelligence';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONSTANTS

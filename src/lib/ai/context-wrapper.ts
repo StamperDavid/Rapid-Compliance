@@ -8,7 +8,6 @@
  */
 
 import type { AuthClaims } from '@/lib/auth/claims-validator';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================

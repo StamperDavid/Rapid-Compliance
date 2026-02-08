@@ -28,7 +28,6 @@ import { logger } from '@/lib/logger/logger';
 import { discoverCompany, type DiscoveredCompany } from '@/lib/services/discovery-engine';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES

@@ -9,7 +9,6 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const paramsSchema = z.object({
   postId: z.string().min(1, 'postId is required'),

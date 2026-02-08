@@ -5,7 +5,6 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { VoiceCall, SMSMessage, CallStatus, SMSStatus } from './types';
 
 export interface VoiceActivity {

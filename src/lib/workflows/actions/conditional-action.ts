@@ -186,7 +186,7 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: WorkflowTr
 async function executeAction(
   action: WorkflowAction,
   triggerData: WorkflowTriggerData,
-  workflow: Workflow,
+  _workflow: Workflow,
 ): Promise<unknown> {
   // Import action executors
   const { executeEmailAction } = await import('./email-action');

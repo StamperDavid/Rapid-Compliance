@@ -552,7 +552,6 @@ async function emitEmailSentSignal(
   }
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.sent',
@@ -575,7 +574,6 @@ async function emitEmailOpenedSignal(
   deliveryId: string
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.opened',
@@ -597,7 +595,6 @@ async function emitEmailClickedSignal(
   deliveryId: string
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.clicked',
@@ -624,7 +621,6 @@ async function emitEmailFailedSignal(
   }
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.delivery.failed',

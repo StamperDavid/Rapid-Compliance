@@ -35,7 +35,6 @@ import {
 } from '../shared/memory-vault';
 import { getBrandDNA } from '@/lib/brand/brand-dna-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // SYSTEM PROMPT - Omni-Channel Communication Orchestration

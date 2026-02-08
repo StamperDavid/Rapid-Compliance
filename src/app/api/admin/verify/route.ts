@@ -13,7 +13,6 @@ import {
   isAdminClaims,
   type AuthClaims,
 } from '@/lib/auth/claims-validator';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Firestore user document structure

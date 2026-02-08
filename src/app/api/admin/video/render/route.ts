@@ -12,7 +12,6 @@ import { z } from 'zod';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { createVideoJobService } from '@/lib/video/video-job-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // =============================================================================
 // REQUEST VALIDATION SCHEMAS
@@ -179,7 +178,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     return NextResponse.json({
       success: true,
       job: {

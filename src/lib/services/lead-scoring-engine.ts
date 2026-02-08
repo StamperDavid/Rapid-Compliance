@@ -24,7 +24,6 @@ import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import { discoverCompany, discoverPerson, type DiscoveredCompany, type DiscoveredPerson } from './discovery-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { emitBusinessEvent } from '@/lib/orchestration/event-router';
 import {
   DEFAULT_SCORING_RULES,

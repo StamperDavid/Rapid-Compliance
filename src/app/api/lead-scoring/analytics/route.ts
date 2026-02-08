@@ -13,7 +13,6 @@ import adminApp from '@/lib/firebase/admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { LeadScoreAnalytics, StoredLeadScore, IntentSignalType } from '@/types/lead-scoring';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // Interface for Firestore timestamp conversion
 interface FirestoreLeadScore extends Omit<StoredLeadScore, 'metadata'> {

@@ -10,7 +10,6 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface SpecialistStatusRequestBody {
   PLATFORM_ID?: string;

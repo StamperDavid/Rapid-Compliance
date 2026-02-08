@@ -17,7 +17,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './useAuth';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   FeatureToggleService,
   buildNavigationStructure,

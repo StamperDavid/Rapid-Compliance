@@ -24,7 +24,6 @@ import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { Deal } from '@/lib/crm/deal-service';
 import { getTemplateById, type SalesIndustryTemplate } from './industry-templates';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES

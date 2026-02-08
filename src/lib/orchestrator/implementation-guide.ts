@@ -169,7 +169,6 @@ export class ImplementationGuide {
     industry?: string,
     niche?: NicheRefinement
   ): Promise<ImplementationContext> {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
     // Get system health report
     const healthReport = await SystemHealthService.generateHealthReport();

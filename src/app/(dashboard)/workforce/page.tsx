@@ -1,6 +1,5 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useCallback, useMemo, memo } from 'react';
 import { useRouter } from 'next/navigation';

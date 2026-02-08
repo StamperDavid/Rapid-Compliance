@@ -29,7 +29,6 @@ import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
 import { initiateCall } from '@/lib/voice/twilio-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { SalesSignal } from '@/lib/orchestration/types';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES

@@ -5,7 +5,6 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import type { MerchantCoupon } from '@/types/pricing';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 interface RouteContext {
   params: Promise<{ couponId: string }>;

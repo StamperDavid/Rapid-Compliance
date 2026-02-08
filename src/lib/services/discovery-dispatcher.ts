@@ -491,7 +491,6 @@ export async function queueDiscoveryTask(
   workspaceId: string,
   priority: number = 0
 ): Promise<string> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const taskRef = db.collection('discoveryQueue').doc();
     

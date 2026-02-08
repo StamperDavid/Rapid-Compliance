@@ -5,7 +5,6 @@
 
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';

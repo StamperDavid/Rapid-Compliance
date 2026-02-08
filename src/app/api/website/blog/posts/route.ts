@@ -9,7 +9,6 @@ import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { BlogPost, PageSection, PageSEO } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const getQuerySchema = z.object({
   status: z.enum(['draft', 'published', 'scheduled']).optional(),

@@ -17,8 +17,6 @@ import { CompetitorProfileCard } from '@/components/battlecard/CompetitorProfile
 import { BattlecardView } from '@/components/battlecard/BattlecardView';
 import type { CompetitorProfile, Battlecard, BattlecardOptions } from '@/lib/battlecard';
 import { showSuccessToast } from '@/components/ErrorToast';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 interface ApiErrorResponse {
   error?: string;
 }

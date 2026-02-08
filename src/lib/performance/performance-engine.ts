@@ -19,7 +19,6 @@
 
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type TeamPerformanceAnalytics,

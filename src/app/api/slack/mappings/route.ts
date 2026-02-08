@@ -81,16 +81,16 @@ export async function GET(request: NextRequest) {
     
     // Get workspace to verify it exists
     const workspaceDoc = await db.collection('slack_workspaces').doc(workspaceId).get();
-    
+
     if (!workspaceDoc.exists) {
       return NextResponse.json(
         { error: 'Workspace not found' },
         { status: 404 }
       );
     }
-    
-    const workspace = { id: workspaceDoc.id, ...workspaceDoc.data() } as SlackWorkspace;
-    
+
+    const _workspace = { id: workspaceDoc.id, ...workspaceDoc.data() } as SlackWorkspace;
+
     // Get mappings
     const snapshot = await db
       .collection('organizations')
@@ -158,16 +158,16 @@ export async function POST(request: NextRequest) {
     
     // Get workspace
     const workspaceDoc = await db.collection('slack_workspaces').doc(data.workspaceId).get();
-    
+
     if (!workspaceDoc.exists) {
       return NextResponse.json(
         { error: 'Workspace not found' },
         { status: 404 }
       );
     }
-    
-    const workspace = { id: workspaceDoc.id, ...workspaceDoc.data() } as SlackWorkspace;
-    
+
+    const _workspace = { id: workspaceDoc.id, ...workspaceDoc.data() } as SlackWorkspace;
+
     // Check for existing mapping
     const existingSnapshot = await db
       .collection('organizations')

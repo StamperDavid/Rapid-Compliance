@@ -16,7 +16,6 @@ import {
   type SMSDeliveryStatus,
 } from '@/lib/sms/sms-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============== Configuration ==============
 

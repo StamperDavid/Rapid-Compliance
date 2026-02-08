@@ -4,7 +4,6 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const PersonaDataSchema = z.object({
   name: z.string().optional(),

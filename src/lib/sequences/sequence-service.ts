@@ -32,7 +32,6 @@ export async function enrollInSequence(params: EnrollInSequenceParams): Promise<
   });
 
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     // Import the real sequencer dynamically to avoid circular dependencies
     const { enrollInSequence: realEnroll } = await import('@/lib/services/sequencer');
 

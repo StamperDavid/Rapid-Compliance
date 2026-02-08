@@ -12,7 +12,6 @@ import type {
   BehaviorConfig
 } from '@/types/agent-memory';
 import { buildClientAgentContext } from '@/lib/ai/context-wrapper';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /** Business context fields used in prompt generation */
 export interface BusinessContextFields {

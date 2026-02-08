@@ -133,7 +133,6 @@ export async function emitDashboardViewed(
   userId?: string
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     const payload: DashboardViewedPayload = {
@@ -163,7 +162,6 @@ export async function emitDashboardGenerated(
   data: DashboardOverview
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     const payload: DashboardGeneratedPayload = {
@@ -225,7 +223,6 @@ export async function emitExportRequested(
   userId?: string
 ): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const coordinator = getServerSignalCoordinator();
 
     const payload: ExportRequestedPayload = {

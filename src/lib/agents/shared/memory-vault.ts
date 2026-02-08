@@ -14,7 +14,6 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { adminDb } from '@/lib/firebase/admin';
 import { getOrgSubCollection } from '@/lib/firebase/collections';
 

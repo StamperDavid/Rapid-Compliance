@@ -1,7 +1,5 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ProposalTemplate, ProposalSection } from '@/lib/documents/proposal-generator';

@@ -9,7 +9,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { discoverCompetitor, type CompetitorProfile } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Request body structure for competitor discovery
