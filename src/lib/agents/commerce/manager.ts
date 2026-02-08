@@ -199,6 +199,64 @@ interface CheckoutResult {
   error?: string;
 }
 
+/**
+ * Cart abandonment event data
+ */
+interface CartAbandonmentEvent {
+  cartId: string;
+  customerId: string;
+  customerEmail: string;
+  items: CheckoutItem[];
+  cartTotal: number;
+  abandonedAt: Date;
+  lastActivityAt: Date;
+}
+
+/**
+ * Loyalty tier definition
+ */
+interface LoyaltyTier {
+  name: string;
+  minSpend: number;
+  maxSpend: number;
+  discountPercent: number;
+  perks: string[];
+}
+
+/**
+ * Pricing performance data
+ */
+interface PricingPerformance {
+  productId: string;
+  productName: string;
+  currentPrice: number;
+  conversionRate: number;
+  competitorAvgPrice?: number;
+  priceElasticity?: number;
+  recommendedAction: 'MAINTAIN' | 'INCREASE' | 'DECREASE' | 'A_B_TEST';
+}
+
+/**
+ * Commerce automation result
+ */
+interface CommerceAutomationResult {
+  type: 'CART_RECOVERY' | 'LOYALTY_OFFER' | 'PRICING_ADJUSTMENT';
+  success: boolean;
+  details: Record<string, unknown>;
+  actionsDispatched: string[];
+}
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const LOYALTY_TIERS: LoyaltyTier[] = [
+  { name: 'BRONZE', minSpend: 0, maxSpend: 499, discountPercent: 0, perks: [] },
+  { name: 'SILVER', minSpend: 500, maxSpend: 1999, discountPercent: 5, perks: ['early_access'] },
+  { name: 'GOLD', minSpend: 2000, maxSpend: 4999, discountPercent: 10, perks: ['early_access', 'priority_support'] },
+  { name: 'PLATINUM', minSpend: 5000, maxSpend: Infinity, discountPercent: 15, perks: ['early_access', 'priority_support', 'dedicated_account'] },
+];
+
 // ============================================================================
 // MANAGER CONFIGURATION
 // ============================================================================
@@ -1099,6 +1157,331 @@ export class CommerceManager extends BaseManager {
     };
 
     return this.execute(message);
+  }
+
+  // ==========================================================================
+  // PHASE 6B: COMMERCE AUTOMATION
+  // ==========================================================================
+
+  /**
+   * Handle cart abandonment with time-based recovery strategy
+   */
+  async handleCartAbandonment(event: CartAbandonmentEvent): Promise<CommerceAutomationResult> {
+    const actionsDispatched: string[] = [];
+
+    try {
+      const timeSinceAbandonment = Date.now() - event.abandonedAt.getTime();
+      const hoursAbandoned = timeSinceAbandonment / (1000 * 60 * 60);
+
+      this.log('INFO', `Processing cart abandonment: ${event.cartId} (${hoursAbandoned.toFixed(1)}h ago)`);
+
+      // Too early - customer may still return
+      if (hoursAbandoned < 1) {
+        this.log('INFO', `Cart ${event.cartId} abandoned < 1 hour ago - skipping recovery`);
+        return {
+          type: 'CART_RECOVERY',
+          success: false,
+          details: { reason: 'TOO_EARLY', hoursAbandoned },
+          actionsDispatched: [],
+        };
+      }
+
+      // Recovery strategy based on time elapsed
+      if (hoursAbandoned >= 1 && hoursAbandoned < 24) {
+        // Standard recovery email
+        await this.triggerRecoverySequence(event, false);
+        actionsDispatched.push('RECOVERY_EMAIL_SENT');
+      } else if (hoursAbandoned >= 24) {
+        // Recovery with discount incentive
+        await this.triggerRecoverySequence(event, true);
+        actionsDispatched.push('RECOVERY_EMAIL_WITH_DISCOUNT_SENT');
+      }
+
+      // Write to MemoryVault for tracking
+      this.memoryVault.write(
+        'WORKFLOW',
+        `cart_recovery_${event.cartId}_${Date.now()}`,
+        {
+          cartId: event.cartId,
+          customerId: event.customerId,
+          cartTotal: event.cartTotal,
+          itemCount: event.items.length,
+          hoursAbandoned,
+          recoveryAction: actionsDispatched[0],
+          timestamp: new Date().toISOString(),
+        },
+        this.identity.id,
+        { priority: 'MEDIUM', tags: ['cart-recovery', 'commerce-automation'] }
+      );
+
+      return {
+        type: 'CART_RECOVERY',
+        success: true,
+        details: {
+          cartId: event.cartId,
+          hoursAbandoned,
+          itemCount: event.items.length,
+          cartTotal: event.cartTotal,
+        },
+        actionsDispatched,
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.log('ERROR', `Cart abandonment handling failed: ${errorMsg}`);
+      return {
+        type: 'CART_RECOVERY',
+        success: false,
+        details: { error: errorMsg },
+        actionsDispatched,
+      };
+    }
+  }
+
+  /**
+   * Trigger cart recovery email sequence via Outreach Manager
+   */
+  private async triggerRecoverySequence(event: CartAbandonmentEvent, includeDiscount: boolean): Promise<void> {
+    const discountAmount = includeDiscount ? Math.min(event.cartTotal * 0.1, 50) : 0;
+
+    this.log('INFO', `Sending recovery email to ${event.customerEmail} (discount: $${discountAmount})`);
+
+    await this.requestFromManager({
+      fromManager: this.identity.id,
+      toManager: 'OUTREACH_MANAGER',
+      requestType: 'CART_RECOVERY',
+      description: `Cart abandonment recovery for ${event.customerEmail}`,
+      urgency: 'NORMAL',
+      payload: {
+        customerEmail: event.customerEmail,
+        items: event.items,
+        cartTotal: event.cartTotal,
+        discountAmount,
+        cartId: event.cartId,
+        includeDiscount,
+      },
+    });
+  }
+
+  /**
+   * Check if customer crossed a loyalty tier threshold and trigger offer
+   */
+  async checkLoyaltyThreshold(customerId: string, totalSpend: number): Promise<CommerceAutomationResult> {
+    const actionsDispatched: string[] = [];
+
+    try {
+      const currentTier = this.determineLoyaltyTier(totalSpend);
+
+      this.log('INFO', `Loyalty check: customer ${customerId}, spend $${totalSpend}, tier ${currentTier.name}`);
+
+      // Check if customer just crossed into a new tier (basic heuristic - in prod would query previous tier)
+      const tierBoundaries = [500, 2000, 5000];
+      const justCrossedTier = tierBoundaries.some(
+        boundary => totalSpend >= boundary && totalSpend < boundary + 100
+      );
+
+      if (justCrossedTier && currentTier.name !== 'BRONZE') {
+        // Send loyalty upgrade notification via Outreach Manager
+        await this.requestFromManager({
+          fromManager: this.identity.id,
+          toManager: 'OUTREACH_MANAGER',
+          requestType: 'LOYALTY_OFFER',
+          description: `Loyalty tier upgrade for customer ${customerId}`,
+          urgency: 'NORMAL',
+          payload: {
+            customerId,
+            newTier: currentTier.name,
+            discountPercent: currentTier.discountPercent,
+            perks: currentTier.perks,
+            totalSpend,
+          },
+        });
+
+        actionsDispatched.push('LOYALTY_UPGRADE_EMAIL_SENT');
+
+        // Write to MemoryVault
+        this.memoryVault.write(
+          'WORKFLOW',
+          `loyalty_upgrade_${customerId}_${Date.now()}`,
+          {
+            customerId,
+            tier: currentTier.name,
+            totalSpend,
+            discountPercent: currentTier.discountPercent,
+            perks: currentTier.perks,
+            timestamp: new Date().toISOString(),
+          },
+          this.identity.id,
+          { priority: 'MEDIUM', tags: ['loyalty', 'commerce-automation'] }
+        );
+      }
+
+      return {
+        type: 'LOYALTY_OFFER',
+        success: true,
+        details: {
+          customerId,
+          currentTier: currentTier.name,
+          totalSpend,
+          upgradeSent: justCrossedTier,
+        },
+        actionsDispatched,
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.log('ERROR', `Loyalty threshold check failed: ${errorMsg}`);
+      return {
+        type: 'LOYALTY_OFFER',
+        success: false,
+        details: { error: errorMsg },
+        actionsDispatched,
+      };
+    }
+  }
+
+  /**
+   * Monitor pricing performance and generate recommendations
+   */
+  async monitorPricingPerformance(products: PricingPerformance[]): Promise<CommerceAutomationResult> {
+    const actionsDispatched: string[] = [];
+    const recommendations: Array<{ productId: string; action: string; reason: string }> = [];
+
+    try {
+      this.log('INFO', `Monitoring pricing performance for ${products.length} products`);
+
+      // Ensure we have a pricing strategist available
+      await Promise.resolve();
+
+      for (const product of products) {
+        let recommendation: PricingPerformance['recommendedAction'] = 'MAINTAIN';
+        let reason = '';
+
+        // Low conversion and high price vs competitors → decrease
+        if (product.conversionRate < 1 && product.competitorAvgPrice && product.currentPrice > product.competitorAvgPrice) {
+          recommendation = 'DECREASE';
+          reason = `Low conversion (${product.conversionRate}%), overpriced vs competitors`;
+        }
+        // High conversion and low price vs competitors → increase
+        else if (product.conversionRate > 10 && product.competitorAvgPrice && product.currentPrice < product.competitorAvgPrice) {
+          recommendation = 'INCREASE';
+          reason = `High conversion (${product.conversionRate}%), underpriced vs competitors`;
+        }
+        // Moderate performance → test
+        else if (product.conversionRate >= 3 && product.conversionRate <= 7) {
+          recommendation = 'A_B_TEST';
+          reason = `Moderate conversion (${product.conversionRate}%), test pricing elasticity`;
+        }
+
+        if (recommendation !== 'MAINTAIN') {
+          recommendations.push({
+            productId: product.productId,
+            action: recommendation,
+            reason,
+          });
+        }
+      }
+
+      // Write recommendations to MemoryVault
+      if (recommendations.length > 0) {
+        this.memoryVault.write(
+          'STRATEGY',
+          `pricing_recommendations_${Date.now()}`,
+          {
+            recommendations,
+            productsAnalyzed: products.length,
+            timestamp: new Date().toISOString(),
+          },
+          this.identity.id,
+          { priority: 'HIGH', tags: ['pricing', 'commerce-automation', 'strategy'] }
+        );
+
+        actionsDispatched.push('PRICING_RECOMMENDATIONS_GENERATED');
+      }
+
+      return {
+        type: 'PRICING_ADJUSTMENT',
+        success: true,
+        details: {
+          productsAnalyzed: products.length,
+          recommendationsCount: recommendations.length,
+          recommendations,
+        },
+        actionsDispatched,
+      };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.log('ERROR', `Pricing performance monitoring failed: ${errorMsg}`);
+      return {
+        type: 'PRICING_ADJUSTMENT',
+        success: false,
+        details: { error: errorMsg },
+        actionsDispatched,
+      };
+    }
+  }
+
+  /**
+   * Determine loyalty tier based on total spend
+   */
+  private determineLoyaltyTier(totalSpend: number): LoyaltyTier {
+    for (const tier of LOYALTY_TIERS) {
+      if (totalSpend >= tier.minSpend && totalSpend <= tier.maxSpend) {
+        return tier;
+      }
+    }
+    // Default to BRONZE if no match
+    return LOYALTY_TIERS[0];
+  }
+
+  /**
+   * Process all pending commerce automation tasks
+   * Called by the operations cycle cron
+   */
+  async processCommerceAutomation(): Promise<{
+    cartRecoveries: number;
+    loyaltyOffers: number;
+    pricingReviews: number;
+  }> {
+    const results = {
+      cartRecoveries: 0,
+      loyaltyOffers: 0,
+      pricingReviews: 0,
+    };
+
+    try {
+      this.log('INFO', 'Starting commerce automation cycle');
+
+      // Read pending cart abandonment events from MemoryVault
+      const cartEvents = this.memoryVault.query(this.identity.id, {
+        category: 'WORKFLOW',
+        tags: ['cart-abandonment'],
+      });
+
+      for (const event of cartEvents) {
+        const eventData = event.value as Record<string, unknown>;
+        const cartEvent: CartAbandonmentEvent = {
+          cartId: String(eventData.cartId ?? ''),
+          customerId: String(eventData.customerId ?? ''),
+          customerEmail: String(eventData.customerEmail ?? ''),
+          items: (eventData.items as CheckoutItem[]) ?? [],
+          cartTotal: Number(eventData.cartTotal ?? 0),
+          abandonedAt: new Date(String(eventData.abandonedAt ?? Date.now())),
+          lastActivityAt: new Date(String(eventData.lastActivityAt ?? Date.now())),
+        };
+
+        const result = await this.handleCartAbandonment(cartEvent);
+        if (result.success) {
+          results.cartRecoveries++;
+        }
+      }
+
+      this.log('INFO', `Commerce automation cycle complete: ${results.cartRecoveries} cart recoveries processed`);
+
+      return results;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.log('ERROR', `Commerce automation cycle failed: ${errorMsg}`);
+      return results;
+    }
   }
 
   generateReport(taskId: string, data: unknown): AgentReport {

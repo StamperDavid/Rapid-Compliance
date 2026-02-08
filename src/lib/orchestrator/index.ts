@@ -10,6 +10,7 @@
  * - Jasper Proactive Intelligence (Admin AI)
  * - Jasper Tools (Anti-Hallucination Tool Calling)
  * - System State Service (Mandatory State Reflection)
+ * - Jasper Command Authority (Phase 8 Briefing, Approval Gateway, Command Issuance)
  *
  * @module orchestrator
  */
@@ -113,3 +114,17 @@ export {
   type StateCorrection,
   type QueryClassification,
 } from './system-state-service';
+
+// Jasper Command Authority - Phase 8 Autonomous Business Operations
+export {
+  JasperCommandAuthority,
+  getJasperCommandAuthority,
+  resetJasperCommandAuthority,
+  type ExecutiveBriefing,
+  type BriefingHighlight,
+  type DepartmentSummary,
+  type BriefingMetrics,
+  type PendingApproval,
+  type JasperCommand,
+  type CommandResult,
+} from './jasper-command-authority';

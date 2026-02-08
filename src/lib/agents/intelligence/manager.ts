@@ -125,6 +125,37 @@ export interface IntelligenceBrief {
   errors: string[];
 }
 
+/**
+ * Result from a single intelligence sweep
+ */
+interface SweepResult {
+  type: 'COMPETITOR' | 'TREND' | 'SENTIMENT' | 'TECHNOGRAPHIC';
+  status: 'SUCCESS' | 'FAILED';
+  signalsFound: number;
+  signals: Array<{
+    signalType: string;
+    title: string;
+    description: string;
+    urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    data: Record<string, unknown>;
+  }>;
+  executionTimeMs: number;
+  error?: string;
+}
+
+/**
+ * Complete intelligence sweep result
+ */
+export interface IntelligenceSweepResult {
+  sweepId: string;
+  startedAt: Date;
+  completedAt: Date;
+  totalSignals: number;
+  highUrgencySignals: number;
+  sweeps: SweepResult[];
+  summary: string;
+}
+
 // ============================================================================
 // INTENT DETECTION
 // ============================================================================
@@ -1120,6 +1151,504 @@ export class IntelligenceManager extends BaseManager {
       functional: 650,
       boilerplate: 150,
     };
+  }
+
+  // ==========================================================================
+  // PHASE 5B: ALWAYS-ON INTELLIGENCE MODE
+  // ==========================================================================
+
+  /**
+   * Run daily intelligence sweep across all specialist domains
+   * Called by cron job to gather market intelligence continuously
+   */
+  async runDailyIntelligenceSweep(): Promise<IntelligenceSweepResult> {
+    const sweepId = `sweep_${Date.now()}`;
+    const startedAt = new Date();
+
+    this.log('INFO', `Starting daily intelligence sweep: ${sweepId}`);
+
+    // Execute all sweeps in parallel
+    const sweepPromises = [
+      this.runCompetitorSweep(),
+      this.runTrendSweep(),
+      this.runSentimentSweep(),
+      this.runTechnographicSweep(),
+    ];
+
+    const sweeps = await Promise.all(sweepPromises);
+
+    // Aggregate results
+    const totalSignals = sweeps.reduce((sum, sweep) => sum + sweep.signalsFound, 0);
+    const highUrgencySignals = sweeps.reduce((sum, sweep) => {
+      return sum + sweep.signals.filter(s => s.urgency === 'HIGH' || s.urgency === 'CRITICAL').length;
+    }, 0);
+
+    const completedAt = new Date();
+
+    // Generate summary
+    const successfulSweeps = sweeps.filter(s => s.status === 'SUCCESS').length;
+    const summary = `Intelligence sweep completed: ${successfulSweeps}/${sweeps.length} specialists reported. Total signals: ${totalSignals}, high urgency: ${highUrgencySignals}`;
+
+    const result: IntelligenceSweepResult = {
+      sweepId,
+      startedAt,
+      completedAt,
+      totalSignals,
+      highUrgencySignals,
+      sweeps,
+      summary,
+    };
+
+    // Write signals to MemoryVault
+    await this.writeSignalsToVault(result);
+
+    this.log('INFO', summary);
+
+    return result;
+  }
+
+  /**
+   * Competitor sweep - detect new competitors and changes
+   */
+  private async runCompetitorSweep(): Promise<SweepResult> {
+    const startTime = Date.now();
+    const specialist = this.specialists.get('COMPETITOR_RESEARCHER');
+
+    if (!specialist?.isFunctional()) {
+      return {
+        type: 'COMPETITOR',
+        status: 'FAILED',
+        signalsFound: 0,
+        signals: [],
+        executionTimeMs: 0,
+        error: 'Specialist not functional',
+      };
+    }
+
+    try {
+      const message: AgentMessage = {
+        id: `sweep_competitor_${Date.now()}`,
+        type: 'COMMAND',
+        from: this.identity.id,
+        to: 'COMPETITOR_RESEARCHER',
+        payload: {
+          action: 'search_competitors',
+          niche: 'compliance technology',
+          limit: 10,
+        },
+        timestamp: new Date(),
+        priority: 'NORMAL',
+        requiresResponse: true,
+        traceId: `sweep_${Date.now()}`,
+      };
+
+      const report = await specialist.execute(message);
+      const signals = this.parseCompetitorSignals(report.data);
+
+      return {
+        type: 'COMPETITOR',
+        status: 'SUCCESS',
+        signalsFound: signals.length,
+        signals,
+        executionTimeMs: Date.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        type: 'COMPETITOR',
+        status: 'FAILED',
+        signalsFound: 0,
+        signals: [],
+        executionTimeMs: Date.now() - startTime,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Trend sweep - detect emerging market trends
+   */
+  private async runTrendSweep(): Promise<SweepResult> {
+    const startTime = Date.now();
+    const specialist = this.specialists.get('TREND_SCOUT');
+
+    if (!specialist?.isFunctional()) {
+      return {
+        type: 'TREND',
+        status: 'FAILED',
+        signalsFound: 0,
+        signals: [],
+        executionTimeMs: 0,
+        error: 'Specialist not functional',
+      };
+    }
+
+    try {
+      const message: AgentMessage = {
+        id: `sweep_trend_${Date.now()}`,
+        type: 'COMMAND',
+        from: this.identity.id,
+        to: 'TREND_SCOUT',
+        payload: {
+          action: 'scan_signals',
+          industry: 'compliance technology',
+          timeframe: '30d',
+        },
+        timestamp: new Date(),
+        priority: 'NORMAL',
+        requiresResponse: true,
+        traceId: `sweep_${Date.now()}`,
+      };
+
+      const report = await specialist.execute(message);
+      const signals = this.parseTrendSignals(report.data);
+
+      return {
+        type: 'TREND',
+        status: 'SUCCESS',
+        signalsFound: signals.length,
+        signals,
+        executionTimeMs: Date.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        type: 'TREND',
+        status: 'FAILED',
+        signalsFound: 0,
+        signals: [],
+        executionTimeMs: Date.now() - startTime,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Sentiment sweep - monitor brand health
+   */
+  private async runSentimentSweep(): Promise<SweepResult> {
+    const startTime = Date.now();
+    const specialist = this.specialists.get('SENTIMENT_ANALYST');
+
+    if (!specialist?.isFunctional()) {
+      return {
+        type: 'SENTIMENT',
+        status: 'FAILED',
+        signalsFound: 0,
+        signals: [],
+        executionTimeMs: 0,
+        error: 'Specialist not functional',
+      };
+    }
+
+    try {
+      const message: AgentMessage = {
+        id: `sweep_sentiment_${Date.now()}`,
+        type: 'COMMAND',
+        from: this.identity.id,
+        to: 'SENTIMENT_ANALYST',
+        payload: {
+          action: 'track_brand',
+          brand: 'SalesVelocity.ai',
+          sources: ['social', 'reviews', 'news'],
+        },
+        timestamp: new Date(),
+        priority: 'NORMAL',
+        requiresResponse: true,
+        traceId: `sweep_${Date.now()}`,
+      };
+
+      const report = await specialist.execute(message);
+      const signals = this.parseSentimentSignals(report.data);
+
+      return {
+        type: 'SENTIMENT',
+        status: 'SUCCESS',
+        signalsFound: signals.length,
+        signals,
+        executionTimeMs: Date.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        type: 'SENTIMENT',
+        status: 'FAILED',
+        signalsFound: 0,
+        signals: [],
+        executionTimeMs: Date.now() - startTime,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Technographic sweep - monitor tech stack changes
+   */
+  private async runTechnographicSweep(): Promise<SweepResult> {
+    const startTime = Date.now();
+    const specialist = this.specialists.get('TECHNOGRAPHIC_SCOUT');
+
+    if (!specialist?.isFunctional()) {
+      return {
+        type: 'TECHNOGRAPHIC',
+        status: 'FAILED',
+        signalsFound: 0,
+        signals: [],
+        executionTimeMs: 0,
+        error: 'Specialist not functional',
+      };
+    }
+
+    try {
+      const message: AgentMessage = {
+        id: `sweep_technographic_${Date.now()}`,
+        type: 'COMMAND',
+        from: this.identity.id,
+        to: 'TECHNOGRAPHIC_SCOUT',
+        payload: {
+          action: 'scan_tech_stack',
+          niche: 'compliance technology',
+          includeEstimates: true,
+        },
+        timestamp: new Date(),
+        priority: 'NORMAL',
+        requiresResponse: true,
+        traceId: `sweep_${Date.now()}`,
+      };
+
+      const report = await specialist.execute(message);
+      const signals = this.parseTechnographicSignals(report.data);
+
+      return {
+        type: 'TECHNOGRAPHIC',
+        status: 'SUCCESS',
+        signalsFound: signals.length,
+        signals,
+        executionTimeMs: Date.now() - startTime,
+      };
+    } catch (error) {
+      return {
+        type: 'TECHNOGRAPHIC',
+        status: 'FAILED',
+        signalsFound: 0,
+        signals: [],
+        executionTimeMs: Date.now() - startTime,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Write discovered signals to MemoryVault and broadcast high-urgency items
+   */
+  private async writeSignalsToVault(sweepResult: IntelligenceSweepResult): Promise<void> {
+    const vault = getMemoryVault();
+
+    for (const sweep of sweepResult.sweeps) {
+      for (const signal of sweep.signals) {
+        // Write each signal to vault
+        vault.write(
+          'SIGNAL',
+          `signal_${sweep.type}_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          {
+            sweepId: sweepResult.sweepId,
+            sweepType: sweep.type,
+            signalType: signal.signalType,
+            title: signal.title,
+            description: signal.description,
+            urgency: signal.urgency,
+            data: signal.data,
+            detectedAt: new Date(),
+          },
+          this.identity.id,
+          {
+            priority: signal.urgency === 'CRITICAL' ? 'CRITICAL' : signal.urgency === 'HIGH' ? 'HIGH' : signal.urgency === 'MEDIUM' ? 'MEDIUM' : 'LOW',
+            tags: ['intelligence-sweep', sweep.type.toLowerCase(), signal.signalType.toLowerCase()],
+          }
+        );
+
+        // Broadcast high-urgency signals
+        if (signal.urgency === 'HIGH' || signal.urgency === 'CRITICAL') {
+          await broadcastSignal(
+            this.identity.id,
+            `${sweep.type}_${signal.signalType}`,
+            signal.urgency === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
+            {
+              title: signal.title,
+              description: signal.description,
+              data: signal.data,
+              sweepId: sweepResult.sweepId,
+            },
+            ['REVENUE_DIRECTOR', 'MARKETING_MANAGER']
+          );
+        }
+      }
+    }
+
+    this.log('INFO', `Wrote ${sweepResult.totalSignals} signals to MemoryVault, broadcast ${sweepResult.highUrgencySignals} high-urgency signals`);
+  }
+
+  /**
+   * Parse competitor data into signal format
+   */
+  private parseCompetitorSignals(data: unknown): SweepResult['signals'] {
+    if (!data || typeof data !== 'object') {
+      return [];
+    }
+
+    const signals: SweepResult['signals'] = [];
+    const dataObj = data as Record<string, unknown>;
+
+    // Extract competitors array
+    const competitors = Array.isArray(dataObj.competitors) ? dataObj.competitors : [];
+
+    for (const competitor of competitors) {
+      if (typeof competitor !== 'object' || !competitor) {continue;}
+      const comp = competitor as Record<string, unknown>;
+
+      // Check for new competitor signal
+      if (comp.isNew) {
+        signals.push({
+          signalType: 'NEW_COMPETITOR',
+          title: `New competitor detected: ${comp.name ?? 'Unknown'}`,
+          description: `A new competitor has entered the market: ${comp.description ?? 'No description'}`,
+          urgency: 'MEDIUM',
+          data: comp,
+        });
+      }
+
+      // Check for funding announcements
+      if (comp.recentFunding) {
+        signals.push({
+          signalType: 'COMPETITOR_FUNDING',
+          title: `Competitor funding: ${comp.name ?? 'Unknown'}`,
+          description: `Competitor received funding: ${comp.fundingDetails ?? 'No details'}`,
+          urgency: 'HIGH',
+          data: comp,
+        });
+      }
+    }
+
+    return signals;
+  }
+
+  /**
+   * Parse trend data into signal format
+   */
+  private parseTrendSignals(data: unknown): SweepResult['signals'] {
+    if (!data || typeof data !== 'object') {
+      return [];
+    }
+
+    const signals: SweepResult['signals'] = [];
+    const dataObj = data as Record<string, unknown>;
+
+    // Extract signals array from trend data
+    const trendSignals = Array.isArray(dataObj.signals) ? dataObj.signals : [];
+
+    for (const trendSignal of trendSignals) {
+      if (typeof trendSignal !== 'object' || !trendSignal) {continue;}
+      const ts = trendSignal as Record<string, unknown>;
+
+      signals.push({
+        signalType: (ts.type as string) ?? 'TREND_SIGNAL',
+        title: (ts.title as string) ?? 'Market trend detected',
+        description: (ts.description as string) ?? '',
+        urgency: this.mapTrendUrgency(ts.urgency as string),
+        data: ts,
+      });
+    }
+
+    return signals;
+  }
+
+  /**
+   * Parse sentiment data into signal format
+   */
+  private parseSentimentSignals(data: unknown): SweepResult['signals'] {
+    if (!data || typeof data !== 'object') {
+      return [];
+    }
+
+    const signals: SweepResult['signals'] = [];
+    const dataObj = data as Record<string, unknown>;
+
+    // Extract alerts array
+    const alerts = Array.isArray(dataObj.alerts) ? dataObj.alerts : [];
+
+    for (const alert of alerts) {
+      if (typeof alert !== 'object' || !alert) {continue;}
+      const a = alert as Record<string, unknown>;
+
+      signals.push({
+        signalType: 'SENTIMENT_ALERT',
+        title: (a.trigger as string) ?? 'Sentiment alert',
+        description: (a.message as string) ?? '',
+        urgency: this.mapSentimentSeverity(a.severity as string),
+        data: a,
+      });
+    }
+
+    return signals;
+  }
+
+  /**
+   * Parse technographic data into signal format
+   */
+  private parseTechnographicSignals(data: unknown): SweepResult['signals'] {
+    if (!data || typeof data !== 'object') {
+      return [];
+    }
+
+    const signals: SweepResult['signals'] = [];
+    const dataObj = data as Record<string, unknown>;
+
+    // Extract tech stack changes
+    const changes = Array.isArray(dataObj.changes) ? dataObj.changes : [];
+
+    for (const change of changes) {
+      if (typeof change !== 'object' || !change) {continue;}
+      const c = change as Record<string, unknown>;
+
+      signals.push({
+        signalType: 'TECH_STACK_CHANGE',
+        title: `Tech change: ${c.technology ?? 'Unknown'}`,
+        description: `Technology change detected: ${c.description ?? ''}`,
+        urgency: 'LOW',
+        data: c,
+      });
+    }
+
+    return signals;
+  }
+
+  /**
+   * Map trend urgency to signal urgency
+   */
+  private mapTrendUrgency(urgency: string | undefined): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+    switch (urgency?.toUpperCase()) {
+      case 'CRITICAL':
+        return 'CRITICAL';
+      case 'HIGH':
+        return 'HIGH';
+      case 'MEDIUM':
+        return 'MEDIUM';
+      default:
+        return 'LOW';
+    }
+  }
+
+  /**
+   * Map sentiment severity to signal urgency
+   */
+  private mapSentimentSeverity(severity: string | undefined): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+    switch (severity?.toLowerCase()) {
+      case 'critical':
+        return 'CRITICAL';
+      case 'warning':
+        return 'HIGH';
+      case 'moderate':
+        return 'MEDIUM';
+      default:
+        return 'LOW';
+    }
   }
 }
 
