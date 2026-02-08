@@ -3,6 +3,7 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 // Type definitions
 interface CallRecord {
@@ -30,6 +31,12 @@ function isCallRecord(value: unknown): value is CallRecord {
  * Twilio voice status callback webhook
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/webhooks/voice');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     // Get raw body for signature verification
     const rawBody = await request.text();
@@ -101,8 +108,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Voice webhook error', error instanceof Error ? error : undefined, { route: '/api/webhooks/voice' });
-    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+    // Return 200 to prevent Twilio from retrying unrecoverable errors
+    return NextResponse.json({ success: false, error: 'Internal processing error' }, { status: 200 });
   }
 }
