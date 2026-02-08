@@ -94,6 +94,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
+      { id: 'executive-briefing', label: 'Executive Briefing', href: '/executive-briefing', icon: Activity, iconColor: '#10b981', requiredPermission: 'canAccessPlatformAdmin' },
       { id: 'workforce-hq', label: 'Workforce HQ', href: '/workforce', icon: Monitor, iconColor: 'var(--color-secondary)', requiredPermission: 'canAccessPlatformAdmin' },
     ],
   },

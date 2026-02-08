@@ -12,6 +12,26 @@
     {
       "path": "/api/cron/scheduled-publisher",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/social-metrics-collector",
+      "schedule": "0 */3 * * *"
+    },
+    {
+      "path": "/api/cron/operations-cycle?cycle=operational",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/cron/operations-cycle?cycle=strategic",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/operations-cycle?cycle=executive",
+      "schedule": "0 0 * * 0"
+    },
+    {
+      "path": "/api/cron/intelligence-sweep",
+      "schedule": "0 6 * * *"
     }
   ],
   "headers": [

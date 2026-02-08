@@ -8,6 +8,7 @@
  */
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes max for large sequence batches
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { processSequences } from '@/lib/outbound/sequence-scheduler';

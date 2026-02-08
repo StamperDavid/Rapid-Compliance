@@ -107,8 +107,8 @@ const OPERATIONAL_CYCLE: CycleStep[] = [
 const STRATEGIC_CYCLE: CycleStep[] = [
   {
     id: 'strat-1',
-    name: 'Growth Analyst: Full KPI Report',
-    targetAgent: AGENT_IDS.GROWTH_ANALYST,
+    name: 'Marketing Manager: Full KPI Report via Growth Analyst',
+    targetAgent: AGENT_IDS.MARKETING_MANAGER,
     command: 'GENERATE_KPI_REPORT',
     priority: 'HIGH',
   },
