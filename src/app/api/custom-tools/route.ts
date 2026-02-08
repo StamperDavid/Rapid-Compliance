@@ -3,12 +3,13 @@ import { orderBy } from 'firebase/firestore';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { validateToolUrl, type CustomTool } from '@/types/custom-tools';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 /**
  * Custom Tools API Route
  *
  * Handles CRUD operations for SalesVelocity.ai custom tools.
- * Tools are stored in: organizations/{orgId}/customTools/{toolId}
+ * Tools are stored in: organizations/{PLATFORM_ID}/customTools/{toolId}
  */
 
 /**
@@ -135,6 +136,11 @@ export async function POST(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body = (await request.json()) as CreateToolRequestBody;
     const { name, icon, url, enabled, order, description, allowedRoles } = body;
 
@@ -207,6 +213,11 @@ export async function PUT(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body = (await request.json()) as UpdateToolRequestBody;
     const { id, name, icon, url, enabled, order, description, allowedRoles } = body;
 
@@ -296,6 +307,11 @@ export async function DELETE(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body = (await request.json()) as DeleteToolRequestBody;
     const { id } = body;
 

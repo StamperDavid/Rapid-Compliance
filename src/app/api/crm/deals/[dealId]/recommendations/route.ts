@@ -12,13 +12,19 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { generateNextBestActions } from '@/lib/crm/next-best-action-engine';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { dealId: string } }
+  { params }: { params: Promise<{ dealId: string }> }
 ) {
   try {
-    const dealId = params.dealId;
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const { dealId } = await params;
     const workspaceId = 'default';
 
     logger.info('Generating deal recommendations', {
@@ -37,9 +43,7 @@ export async function GET(
       data: recommendations,
     });
   } catch (error) {
-    logger.error('Failed to generate recommendations', error instanceof Error ? error : new Error(String(error)), {
-      dealId: params.dealId,
-    });
+    logger.error('Failed to generate recommendations', error instanceof Error ? error : new Error(String(error)));
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to generate recommendations';
     return NextResponse.json(
