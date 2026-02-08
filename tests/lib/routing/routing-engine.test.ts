@@ -12,7 +12,6 @@ import type {
   SalesRep,
   RoutingConfiguration,
   RoutingRule,
-  RoutingCondition,
 } from '@/lib/routing/types';
 
 describe('LeadRoutingEngine', () => {
@@ -581,10 +580,10 @@ describe('LeadRoutingEngine', () => {
   });
 
   describe('Full Routing Flow', () => {
-    test('should route lead successfully with performance strategy', async () => {
+    test('should route lead successfully with performance strategy', () => {
       const eligibleReps = mockReps.filter(r => !r.currentWorkload.isAtCapacity);
-      
-      const analysis = await engine.routeLead(
+
+      const analysis = engine.routeLead(
         mockLead,
         eligibleReps,
         mockConfig
@@ -599,18 +598,18 @@ describe('LeadRoutingEngine', () => {
       expect(analysis.metadata.strategyUsed).toBe('performance_weighted');
     });
 
-    test('should throw error if no eligible reps available', async () => {
+    test('should throw error if no eligible reps available', () => {
       const noReps: SalesRep[] = [];
 
-      await expect(
-        engine.routeLead(mockLead, noReps, mockConfig)
-      ).rejects.toThrow('No eligible reps available');
+      expect(() => {
+        engine.routeLead(mockLead, noReps, mockConfig);
+      }).toThrow('No eligible reps available');
     });
 
-    test('should include processing time in metadata', async () => {
+    test('should include processing time in metadata', () => {
       const eligibleReps = mockReps.filter(r => !r.currentWorkload.isAtCapacity);
-      
-      const analysis = await engine.routeLead(
+
+      const analysis = engine.routeLead(
         mockLead,
         eligibleReps,
         mockConfig
@@ -619,10 +618,10 @@ describe('LeadRoutingEngine', () => {
       expect(analysis.metadata.processingTimeMs).toBeGreaterThanOrEqual(0);
     });
 
-    test('should generate assignment with correct details', async () => {
+    test('should generate assignment with correct details', () => {
       const eligibleReps = mockReps.filter(r => !r.currentWorkload.isAtCapacity);
-      
-      const analysis = await engine.routeLead(
+
+      const analysis = engine.routeLead(
         mockLead,
         eligibleReps,
         mockConfig
@@ -746,10 +745,10 @@ describe('LeadRoutingEngine', () => {
       expect(scores[0].matchScore).toBeGreaterThan(0);
     });
 
-    test('should handle empty routing rules gracefully', async () => {
+    test('should handle empty routing rules gracefully', () => {
       const eligibleReps = mockReps.filter(r => !r.currentWorkload.isAtCapacity);
-      
-      const analysis = await engine.routeLead(
+
+      const analysis = engine.routeLead(
         mockLead,
         eligibleReps,
         mockConfig,

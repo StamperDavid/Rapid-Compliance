@@ -3,7 +3,7 @@
  * Integration tests for lead service layer
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals';
 import {
   getLeads,
   getLead,
@@ -34,8 +34,16 @@ describe('LeadService', () => {
       try {
         await deleteLead(testLeadId, testWorkspaceId);
       } catch {
-        // Ignore cleanup errors
+        // Ignore - lead may already be deleted by test
       }
+    }
+  });
+
+  afterAll(async () => {
+    try {
+      await FirestoreService.delete('organizations', testOrgId);
+    } catch {
+      // Ignore - org may not exist
     }
   });
 

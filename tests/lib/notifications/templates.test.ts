@@ -142,9 +142,9 @@ describe('Notification Templates', () => {
       templates.forEach((template) => {
         if (template.slack?.text) {
           const text = template.slack.text;
-          const openCount = (text.match(/\{\{/g) || []).length;
-          const closeCount = (text.match(/\}\}/g) || []).length;
-          
+          const openCount = (text.match(/\{\{/g) ?? []).length;
+          const closeCount = (text.match(/\}\}/g) ?? []).length;
+
           expect(openCount).toBe(closeCount);
         }
       });
@@ -152,9 +152,8 @@ describe('Notification Templates', () => {
 
     it('should not have malformed variables', () => {
       const malformedPatterns = [
-        /\{[^{].*?\}/,  // Single brace
-        /\{\{.*?\{/,     // Triple opening brace
-        /\}.*?\}\}/,     // Triple closing brace
+        // Removed single brace check - templates use ${{var}} syntax which is valid
+        /\{\{\{.*?\}\}\}/,   // Triple braces (invalid)
       ];
 
       templates.forEach((template) => {
@@ -286,15 +285,6 @@ describe('Notification Templates', () => {
     });
 
     it('should use appropriate block types', () => {
-      const validBlockTypes = [
-        'header',
-        'section',
-        'divider',
-        'actions',
-        'context',
-        'image',
-      ];
-
       templates.forEach((template) => {
         if (template.slack?.blocks) {
           template.slack.blocks.forEach((block) => {

@@ -3,7 +3,7 @@
  * Integration tests for deal service layer
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals';
 import {
   getDeals,
   createDeal,
@@ -30,8 +30,16 @@ describe('DealService', () => {
       try {
         await deleteDeal(testDealId, testWorkspaceId);
       } catch {
-        // Ignore
+        // Ignore - deal may already be deleted by test
       }
+    }
+  });
+
+  afterAll(async () => {
+    try {
+      await FirestoreService.delete('organizations', testOrgId);
+    } catch {
+      // Ignore - org may not exist
     }
   });
 

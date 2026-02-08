@@ -14,8 +14,10 @@ import { getOrCreateCart, addToCart, clearCart } from '@/lib/ecommerce/cart-serv
 import { createProduct } from '@/lib/ecommerce/product-service';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { PAYMENT_PROVIDERS } from '@/lib/ecommerce/payment-providers';
+import { TestCleanupTracker } from '../helpers/test-cleanup';
 
 describe('E-Commerce Checkout E2E', () => {
+  const cleanup = new TestCleanupTracker();
   const testOrgId = `test-org-${Date.now()}`;
   const testWorkspaceId = 'default';
   let testProductId: string;
@@ -90,6 +92,9 @@ describe('E-Commerce Checkout E2E', () => {
     }, testWorkspaceId);
     testProductId = product.id;
 
+    // Track org for cleanup
+    cleanup.trackOrganization(testOrgId);
+
     console.log(`✅ Test product created: ${testProductId}`);
   }, 30000);
 
@@ -99,12 +104,13 @@ describe('E-Commerce Checkout E2E', () => {
       if (testCartId) {
         await clearCart(testCartId, testWorkspaceId);
       }
-      
-      // Note: Leave test org for manual inspection if needed
-      // In production, we'd clean up everything
-      console.log(`✅ Test completed for org: ${testOrgId}`);
+
+      // Clean up test org and all subcollections (products, orders, ecommerce config, etc.)
+      await cleanup.cleanupAll();
+
+      console.log(`✅ Test completed and cleaned up for org: ${testOrgId}`);
     } catch (error) {
-      console.warn('Cleanup warning:', error);
+      console.warn('Cleanup warning:', error instanceof Error ? error.message : 'Unknown error');
     }
   }, 30000);
 
@@ -200,8 +206,8 @@ describe('E-Commerce Checkout E2E', () => {
         console.log(`✅ Order created: ${order.orderNumber}`);
         console.log(`   Transaction ID: ${order.payment.transactionId}`);
         console.log(`   Total: $${order.total}`);
-      } catch (error: any) {
-        if (error.message.includes('Stripe API key not configured')) {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message.includes('Stripe API key not configured')) {
           console.warn('⚠️  Skipping Stripe test - API key not configured');
           expect(true).toBe(true); // Pass test with warning
         } else {
@@ -250,11 +256,11 @@ describe('E-Commerce Checkout E2E', () => {
   });
 
   describe('Inventory Management', () => {
-    it('should track inventory after checkout', async () => {
+    it('should track inventory after checkout', () => {
       // NOTE: This test would check that inventory was decremented
       // Requires successful checkout first (which is skipped above)
       // Once Stripe is configured, this will validate inventory tracking
-      
+
       console.log(`⚠️  Inventory test skipped - requires successful checkout`);
       expect(true).toBe(true); // Placeholder
     });
@@ -264,12 +270,12 @@ describe('E-Commerce Checkout E2E', () => {
     it('should have multiple payment providers configured', () => {
       expect(PAYMENT_PROVIDERS).toBeDefined();
       expect(PAYMENT_PROVIDERS.length).toBeGreaterThan(0);
-      
+
       // Check for major providers
-      const providerIds = PAYMENT_PROVIDERS.map((p: any) => p.id);
+      const providerIds = PAYMENT_PROVIDERS.map((p) => p.id);
       expect(providerIds).toContain('stripe');
       expect(providerIds).toContain('paypal');
-      
+
       console.log(`✅ ${PAYMENT_PROVIDERS.length} payment providers available`);
     });
   });

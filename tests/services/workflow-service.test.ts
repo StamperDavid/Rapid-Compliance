@@ -3,12 +3,10 @@
  * Integration tests for workflow service layer
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals';
 import {
   getWorkflows,
-  getWorkflow,
   createWorkflow,
-  updateWorkflow,
   deleteWorkflow,
   setWorkflowStatus,
 } from '@/lib/workflows/workflow-service';
@@ -30,9 +28,17 @@ describe('WorkflowService', () => {
     if (testWorkflowId) {
       try {
         await deleteWorkflow(testWorkflowId, testWorkspaceId);
-      } catch (error) {
-        // Ignore
+      } catch {
+        // Ignore - workflow may already be deleted
       }
+    }
+  });
+
+  afterAll(async () => {
+    try {
+      await FirestoreService.delete('organizations', testOrgId);
+    } catch {
+      // Ignore - org may not exist
     }
   });
 

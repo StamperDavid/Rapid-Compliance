@@ -14,7 +14,6 @@ import {
   handleCondition,
   stopEnrollment,
   processDueSequenceSteps,
-  type Sequence,
   type SequenceStep,
   type SequenceEnrollment,
 } from '@/lib/services/sequencer';
@@ -49,16 +48,20 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
-    if (testSequenceId) {
-      await db.collection('sequences').doc(testSequenceId).delete();
+    // Clean up ALL test sequences
+    const sequences = await db
+      .collection('sequences')
+      .where('organizationId', '==', TEST_ORG_ID)
+      .get();
+    for (const doc of sequences.docs) {
+      await doc.ref.delete();
     }
 
+    // Clean up ALL test enrollments
     const enrollments = await db
       .collection('sequenceEnrollments')
       .where('organizationId', '==', TEST_ORG_ID)
       .get();
-
     for (const doc of enrollments.docs) {
       await doc.ref.delete();
     }

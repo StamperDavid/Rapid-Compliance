@@ -5,9 +5,8 @@
  * Uses REAL Firestore operations (not mocks).
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, afterAll } from '@jest/globals';
 import { enrichCompany } from '@/lib/enrichment/enrichment-service';
-import { getTemporaryScrape } from '@/lib/scraper-intelligence/discovery-archive-service';
 
 // Import Firestore admin instance
 import admin from 'firebase-admin';
@@ -16,7 +15,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
   admin.initializeApp({
-    projectId: process.env.FIREBASE_PROJECT_ID || 'test-project',
+    projectId: process.env.FIREBASE_PROJECT_ID ?? 'test-project',
   });
 }
 
@@ -27,14 +26,29 @@ describe('Enrichment + Distillation Integration', () => {
   
   // Cleanup after tests
   afterAll(async () => {
-    // Clean up test data
+    // Clean up temporary_scrapes
     const scrapes = await db
       .collection('temporary_scrapes')
       .where('organizationId', '==', TEST_ORG_ID)
       .get();
-    
+
     for (const doc of scrapes.docs) {
       await doc.ref.delete();
+    }
+
+    // Clean up enrichment-costs subcollection
+    const costs = await db
+      .collection(`organizations/${TEST_ORG_ID}/enrichment-costs`)
+      .get();
+
+    for (const doc of costs.docs) {
+      await doc.ref.delete();
+    }
+
+    // Clean up the org document if it exists
+    const orgDoc = await db.collection('organizations').doc(TEST_ORG_ID).get();
+    if (orgDoc.exists) {
+      await db.collection('organizations').doc(TEST_ORG_ID).delete();
     }
   });
 
@@ -62,8 +76,8 @@ describe('Enrichment + Distillation Integration', () => {
         
         // Log results for manual verification
         console.log('\nHVAC Enrichment Results:');
-        console.log('- Signals detected:', result.data.extractedSignals?.length || 0);
-        console.log('- Lead score:', result.data.leadScore || 0);
+        console.log('- Signals detected:', result.data.extractedSignals?.length ?? 0);
+        console.log('- Lead score:', result.data.leadScore ?? 0);
         console.log('- Confidence:', result.data.confidence);
       }
     }, 30000); // 30s timeout for enrichment
@@ -133,8 +147,8 @@ describe('Enrichment + Distillation Integration', () => {
       
       if (result.data) {
         console.log('\nSaaS Enrichment Results:');
-        console.log('- Signals detected:', result.data.extractedSignals?.length || 0);
-        console.log('- Lead score:', result.data.leadScore || 0);
+        console.log('- Signals detected:', result.data.extractedSignals?.length ?? 0);
+        console.log('- Lead score:', result.data.leadScore ?? 0);
         console.log('- Industry:', result.data.industry);
         
         // Check for signal types
@@ -172,9 +186,9 @@ describe('Enrichment + Distillation Integration', () => {
       if (!scrapes.empty && result.data) {
         const scrape = scrapes.docs[0].data();
         const rawSizeBytes = scrape.sizeBytes;
-        
+
         // Calculate size of permanent signals
-        const signalsJson = JSON.stringify(result.data.extractedSignals || []);
+        const signalsJson = JSON.stringify(result.data.extractedSignals ?? []);
         const signalsSizeBytes = Buffer.byteLength(signalsJson, 'utf8');
         
         const reductionPercent = ((rawSizeBytes - signalsSizeBytes) / rawSizeBytes) * 100;
@@ -182,7 +196,7 @@ describe('Enrichment + Distillation Integration', () => {
         console.log('\nStorage Reduction Analysis:');
         console.log('- Raw scrape size:', rawSizeBytes, 'bytes');
         console.log('- Signals size:', signalsSizeBytes, 'bytes');
-        console.log('- Reduction:', reductionPercent.toFixed(2) + '%');
+        console.log(`- Reduction: ${reductionPercent.toFixed(2)}%`);
         
         // Verify >95% reduction (or at least >90% for smaller pages)
         expect(reductionPercent).toBeGreaterThan(90);
@@ -206,12 +220,12 @@ describe('Enrichment + Distillation Integration', () => {
       
       if (result.data) {
         // Should NOT have distillation results
-        expect(result.data.extractedSignals?.length || 0).toBe(0);
+        expect(result.data.extractedSignals?.length ?? 0).toBe(0);
         expect(result.data.leadScore).toBeUndefined();
-        
+
         console.log('\nNo Distillation Results:');
         console.log('- Basic enrichment worked:', result.success);
-        console.log('- Signals:', result.data.extractedSignals?.length || 0);
+        console.log('- Signals:', result.data.extractedSignals?.length ?? 0);
       }
     }, 30000);
 
@@ -233,7 +247,7 @@ describe('Enrichment + Distillation Integration', () => {
       if (result.data) {
         console.log('\nNon-Research Industry Results:');
         console.log('- Basic enrichment worked:', result.success);
-        console.log('- Signals:', result.data.extractedSignals?.length || 0);
+        console.log('- Signals:', result.data.extractedSignals?.length ?? 0);
       }
     }, 30000);
   });
@@ -265,11 +279,14 @@ describe('Enrichment + Distillation Integration', () => {
         .get();
 
       expect(scrapes1.empty).toBe(false);
-      const firstScrapeCount = scrapes1.docs[0].data().scrapeCount;
+      const firstScrapeData = scrapes1.docs[0].data() as { scrapeCount: number };
+      const firstScrapeCount: number = firstScrapeData.scrapeCount;
       expect(firstScrapeCount).toBe(1);
 
       // Second enrichment (same content, should update existing)
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      await new Promise<void>(resolve => {
+        setTimeout(() => resolve(), 2000); // Wait 2 seconds
+      });
       
       const result2 = await enrichCompany(
         {
@@ -295,18 +312,23 @@ describe('Enrichment + Distillation Integration', () => {
       // Should still be only one scrape
       expect(scrapes2.size).toBe(1);
       
-      const secondScrapeData = scrapes2.docs[0].data();
-      
+      const secondScrapeData = scrapes2.docs[0].data() as {
+        scrapeCount: number;
+        lastSeen: { toDate: () => Date };
+        createdAt: { toDate: () => Date };
+      };
+
       // scrapeCount should be incremented
-      expect(secondScrapeData.scrapeCount).toBeGreaterThan(firstScrapeCount);
-      
+      const secondScrapeCount: number = secondScrapeData.scrapeCount;
+      expect(secondScrapeCount).toBeGreaterThan(firstScrapeCount);
+
       // lastSeen should be updated
       const lastSeen = secondScrapeData.lastSeen.toDate();
       const createdAt = secondScrapeData.createdAt.toDate();
       expect(lastSeen.getTime()).toBeGreaterThan(createdAt.getTime());
-      
+
       console.log('\nDuplicate Detection Results:');
-      console.log('- Scrape count:', secondScrapeData.scrapeCount);
+      console.log('- Scrape count:', secondScrapeCount);
       console.log('- Created:', createdAt.toISOString());
       console.log('- Last seen:', lastSeen.toISOString());
     }, 60000); // 60s timeout for two enrichments
@@ -332,8 +354,8 @@ describe('Enrichment + Distillation Integration', () => {
       console.log('- Search API calls:', result.cost.searchAPICalls);
       console.log('- Scraping calls:', result.cost.scrapingCalls);
       console.log('- AI tokens used:', result.cost.aiTokensUsed);
-      console.log('- Total cost: $' + result.cost.totalCostUSD.toFixed(4));
-      console.log('- Duration:', result.metrics.durationMs + 'ms');
+      console.log(`- Total cost: $${result.cost.totalCostUSD.toFixed(4)}`);
+      console.log(`- Duration: ${result.metrics.durationMs}ms`);
       
       // Verify cost is reasonable (<$0.01 per enrichment)
       expect(result.cost.totalCostUSD).toBeLessThan(0.01);
@@ -367,10 +389,10 @@ describe('Enrichment + Distillation Integration', () => {
         console.log('\nStorage Metrics:');
         console.log('- Raw size:', result.metrics.storageMetrics.rawScrapeSize, 'bytes');
         console.log('- Signals size:', result.metrics.storageMetrics.signalsSize, 'bytes');
-        console.log('- Reduction:', result.metrics.storageMetrics.reductionPercent.toFixed(2) + '%');
-        console.log('- Content hash:', result.metrics.storageMetrics.contentHash?.substring(0, 16) + '...');
+        console.log(`- Reduction: ${result.metrics.storageMetrics.reductionPercent.toFixed(2)}%`);
+        console.log(`- Content hash: ${result.metrics.storageMetrics.contentHash?.substring(0, 16)}...`);
         console.log('- Is duplicate:', result.metrics.storageMetrics.isDuplicate);
-        console.log('- Temp scrape ID:', result.metrics.storageMetrics.temporaryScrapeId || 'N/A');
+        console.log('- Temp scrape ID:', result.metrics.storageMetrics.temporaryScrapeId ?? 'N/A');
         
         // Verify storage reduction meets target (>95%)
         expect(result.metrics.storageMetrics.reductionPercent).toBeGreaterThanOrEqual(90);
@@ -398,9 +420,11 @@ describe('Enrichment + Distillation Integration', () => {
       if (result1.metrics.storageMetrics) {
         expect(result1.metrics.storageMetrics.isDuplicate).toBe(false);
         const contentHash1 = result1.metrics.storageMetrics.contentHash;
-        
+
         // Second enrichment (same URL, should detect duplicate if content unchanged)
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s
+        await new Promise<void>(resolve => {
+          setTimeout(() => resolve(), 2000); // Wait 2s
+        });
         
         const result2 = await enrichCompany(
           {
@@ -423,8 +447,8 @@ describe('Enrichment + Distillation Integration', () => {
             expect(result2.metrics.storageMetrics.isDuplicate).toBe(true);
             
             console.log('\nContent Hash Duplicate Detection:');
-            console.log('- First hash:', contentHash1?.substring(0, 16) + '...');
-            console.log('- Second hash:', contentHash2?.substring(0, 16) + '...');
+            console.log(`- First hash: ${contentHash1?.substring(0, 16)}...`);
+            console.log(`- Second hash: ${contentHash2?.substring(0, 16)}...`);
             console.log('- Duplicate detected:', result2.metrics.storageMetrics.isDuplicate);
           }
         }
@@ -467,7 +491,7 @@ describe('Enrichment + Distillation Integration', () => {
           console.log('\nCost Log Storage Metrics:');
           console.log('- Raw size:', costLog.storageMetrics.rawScrapeSize, 'bytes');
           console.log('- Signals size:', costLog.storageMetrics.signalsSize, 'bytes');
-          console.log('- Reduction:', costLog.storageMetrics.reductionPercent + '%');
+          console.log(`- Reduction: ${costLog.storageMetrics.reductionPercent}%`);
           console.log('- Content hash logged:', costLog.storageMetrics.contentHash ? 'Yes' : 'No');
         }
       }
@@ -491,7 +515,7 @@ describe('Enrichment + Distillation Integration', () => {
       
       // Should NOT have distillation results
       if (result.data) {
-        expect(result.data.extractedSignals?.length || 0).toBe(0);
+        expect(result.data.extractedSignals?.length ?? 0).toBe(0);
         expect(result.data.leadScore).toBeUndefined();
       }
       
@@ -519,7 +543,7 @@ describe('Enrichment + Distillation Integration', () => {
       
       // Should NOT run distillation
       if (result.data) {
-        expect(result.data.extractedSignals?.length || 0).toBe(0);
+        expect(result.data.extractedSignals?.length ?? 0).toBe(0);
         expect(result.data.leadScore).toBeUndefined();
       }
       
@@ -528,7 +552,7 @@ describe('Enrichment + Distillation Integration', () => {
       
       console.log('\nBackward Compatibility (Disabled Flag):');
       console.log('- Enrichment successful:', result.success);
-      console.log('- Signals detected:', result.data?.extractedSignals?.length || 0);
+      console.log('- Signals detected:', result.data?.extractedSignals?.length ?? 0);
       console.log('- Has storage metrics:', !!result.metrics.storageMetrics);
     }, 30000);
 
@@ -573,8 +597,8 @@ describe('Enrichment + Distillation Integration', () => {
       expect(result.success).toBe(true);
       
       console.log('\nPerformance Test:');
-      console.log('- Total duration:', duration + 'ms');
-      console.log('- Reported duration:', result.metrics.durationMs + 'ms');
+      console.log(`- Total duration: ${duration}ms`);
+      console.log(`- Reported duration: ${result.metrics.durationMs}ms`);
       
       // Enrichment should complete within reasonable time (30s max)
       expect(duration).toBeLessThan(30000);
