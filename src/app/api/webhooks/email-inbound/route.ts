@@ -13,6 +13,7 @@ import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { classifyReply, type ReplyClassification } from '@/lib/outbound/reply-handler';
 import { v4 as uuidv4 } from 'uuid';
+import { emitBusinessEvent } from '@/lib/orchestration/event-router';
 
 // Type definitions for SendGrid Inbound Parse payload
 interface InboundEmailData {
@@ -127,6 +128,22 @@ export async function POST(request: NextRequest) {
       intent: classification.intent,
       sentiment: classification.sentiment,
       suggestedAction: classification.suggestedAction,
+    });
+
+    // Emit event to Event Router
+    void emitBusinessEvent('email.reply.received', 'webhook/email-inbound', {
+      from: emailData.from,
+      leadId: originalEmail?.prospectId ?? null,
+      threadId: headers.inReplyTo ?? headers.messageId ?? '',
+      subject: emailData.subject,
+      classification: {
+        intent: classification.intent,
+        sentiment: classification.sentiment,
+        sentimentScore: classification.sentimentScore,
+        confidence: classification.confidence,
+        suggestedAction: classification.suggestedAction,
+        requiresHumanReview: classification.requiresHumanReview,
+      },
     });
 
     // Take action based on classification

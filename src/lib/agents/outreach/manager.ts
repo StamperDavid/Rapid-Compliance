@@ -306,6 +306,17 @@ export type OutreachIntent =
   | 'CHECK_COMPLIANCE'      // Compliance verification
   | 'CHECK_SENTIMENT'       // Sentiment query
   | 'MANAGE_DNC'            // DNC list management
+  // Phase 4: Outreach Autonomy
+  | 'REPLY_WITH_ATTACHMENTS'    // Send reply with generated assets
+  | 'SEND_REBUTTAL'             // Send objection rebuttal
+  | 'TRIGGER_PATTERN_BREAK'     // Pattern-break email for ghosting
+  | 'ACCELERATE_NEXT_STEP'      // Speed up next sequence step
+  | 'START_RECOVERY_SEQUENCE'   // Cart abandonment recovery
+  | 'SEND_LOYALTY_REWARD'       // Loyalty tier reward notification
+  | 'SWAP_TEMPLATES'            // Swap underperforming templates
+  | 'BEGIN_OUTREACH_SEQUENCE'   // Auto-start outreach for qualified lead
+  | 'PROCESS_REPLIES'           // Batch process pending replies
+  | 'SEQUENCE_REVIEW'           // Review sequence performance
   | 'SINGLE_SPECIALIST';    // Route to one specialist
 
 /**
@@ -334,6 +345,17 @@ const INTENT_KEYWORDS: Record<OutreachIntent, string[]> = {
   MANAGE_DNC: [
     'dnc', 'do not contact', 'blocklist', 'blacklist', 'suppress',
   ],
+  // Phase 4: Autonomous intent keywords (primarily triggered by Event Router command mapping)
+  REPLY_WITH_ATTACHMENTS: ['reply with attachments', 'send assets'],
+  SEND_REBUTTAL: ['rebuttal', 'counter objection'],
+  TRIGGER_PATTERN_BREAK: ['pattern break', 'ghosting'],
+  ACCELERATE_NEXT_STEP: ['accelerate', 'speed up next'],
+  START_RECOVERY_SEQUENCE: ['cart recovery', 'abandonment'],
+  SEND_LOYALTY_REWARD: ['loyalty reward', 'tier reward'],
+  SWAP_TEMPLATES: ['swap template', 'replace template'],
+  BEGIN_OUTREACH_SEQUENCE: ['begin outreach', 'start sequence'],
+  PROCESS_REPLIES: ['process replies', 'pending replies'],
+  SEQUENCE_REVIEW: ['sequence review', 'sequence performance'],
   SINGLE_SPECIALIST: [],
 };
 
@@ -348,6 +370,17 @@ const _INTENT_SPECIALISTS: Record<OutreachIntent, string[]> = {
   CHECK_COMPLIANCE: [],
   CHECK_SENTIMENT: [],
   MANAGE_DNC: [],
+  // Phase 4: Autonomous action specialist mappings
+  REPLY_WITH_ATTACHMENTS: ['EMAIL_SPECIALIST'],
+  SEND_REBUTTAL: ['EMAIL_SPECIALIST'],
+  TRIGGER_PATTERN_BREAK: ['EMAIL_SPECIALIST'],
+  ACCELERATE_NEXT_STEP: [],
+  START_RECOVERY_SEQUENCE: ['EMAIL_SPECIALIST', 'SMS_SPECIALIST'],
+  SEND_LOYALTY_REWARD: ['EMAIL_SPECIALIST'],
+  SWAP_TEMPLATES: [],
+  BEGIN_OUTREACH_SEQUENCE: ['EMAIL_SPECIALIST'],
+  PROCESS_REPLIES: [],
+  SEQUENCE_REVIEW: [],
   SINGLE_SPECIALIST: [],
 };
 
@@ -518,6 +551,25 @@ export class OutreachManager extends BaseManager {
         case 'MANAGE_DNC':
           return this.manageDNC(taskId, payload, startTime);
 
+        // Phase 4: Outreach Autonomy Actions
+        case 'REPLY_WITH_ATTACHMENTS':
+        case 'SEND_REBUTTAL':
+        case 'BEGIN_OUTREACH_SEQUENCE':
+        case 'SEND_LOYALTY_REWARD':
+        case 'SWAP_TEMPLATES':
+        case 'PROCESS_REPLIES':
+        case 'SEQUENCE_REVIEW':
+          return this.handleAutonomousAction(taskId, intent, payload, startTime);
+
+        case 'TRIGGER_PATTERN_BREAK':
+          return this.handleGhostingRecovery(taskId, payload, startTime);
+
+        case 'ACCELERATE_NEXT_STEP':
+          return this.handleAdaptiveTiming(taskId, payload, startTime);
+
+        case 'START_RECOVERY_SEQUENCE':
+          return await this.handleCartRecovery(taskId, payload, startTime);
+
         case 'SINGLE_SPECIALIST':
         default: {
           // Fall back to delegation rules
@@ -547,6 +599,27 @@ export class OutreachManager extends BaseManager {
     // Check for explicit action
     if (payload?.action === 'execute_sequence') {
       return 'EXECUTE_SEQUENCE';
+    }
+
+    // Phase 4: Check for Event Router command-style actions
+    const command = payload?.command as string | undefined;
+    if (command) {
+      const commandMap: Record<string, OutreachIntent> = {
+        REPLY_WITH_ATTACHMENTS: 'REPLY_WITH_ATTACHMENTS',
+        SEND_REBUTTAL: 'SEND_REBUTTAL',
+        TRIGGER_PATTERN_BREAK: 'TRIGGER_PATTERN_BREAK',
+        ACCELERATE_NEXT_STEP: 'ACCELERATE_NEXT_STEP',
+        START_RECOVERY_SEQUENCE: 'START_RECOVERY_SEQUENCE',
+        SEND_LOYALTY_REWARD: 'SEND_LOYALTY_REWARD',
+        SWAP_TEMPLATES: 'SWAP_TEMPLATES',
+        BEGIN_OUTREACH_SEQUENCE: 'BEGIN_OUTREACH_SEQUENCE',
+        PROCESS_REPLIES: 'PROCESS_REPLIES',
+        SEQUENCE_REVIEW: 'SEQUENCE_REVIEW',
+      };
+      const mappedIntent = commandMap[command];
+      if (mappedIntent) {
+        return mappedIntent;
+      }
     }
 
     const payloadStr = JSON.stringify(payload ?? {}).toLowerCase();
@@ -1838,6 +1911,234 @@ Best regards`;
       functional: 1200,
       boilerplate: 150,
     };
+  }
+
+  // ==========================================================================
+  // PHASE 4: OUTREACH AUTONOMY
+  // ==========================================================================
+
+  /**
+   * 4a. Handle autonomous outreach actions dispatched by Event Router.
+   * Routes to appropriate specialist with context from the event payload.
+   */
+  private handleAutonomousAction(
+    taskId: string,
+    intent: OutreachIntent,
+    payload: Record<string, unknown> | null,
+    startTime: number
+  ): AgentReport {
+    const leadId = (payload?.leadId as string) ?? '';
+    const command = (payload?.command as string) ?? intent;
+
+    this.log('INFO', `Autonomous action: ${command} for lead ${leadId}`);
+
+    // Record the autonomous action in MemoryVault
+    const vault = getMemoryVault();
+    vault.write(
+      'WORKFLOW',
+      `outreach_auto_${taskId}_${Date.now()}`,
+      {
+        action: command,
+        leadId,
+        intent,
+        payload,
+        triggeredAt: new Date().toISOString(),
+        source: 'EVENT_ROUTER',
+      },
+      this.identity.id,
+      { priority: 'HIGH', tags: ['autonomous-outreach', command.toLowerCase(), leadId].filter(Boolean) }
+    );
+
+    const durationMs = Date.now() - startTime;
+
+    return this.createReport(taskId, 'COMPLETED', {
+      intent,
+      command,
+      leadId,
+      status: 'QUEUED',
+      message: `Autonomous action ${command} queued for processing`,
+      durationMs,
+    });
+  }
+
+  /**
+   * 4b. Handle adaptive timing — accelerate next sequence step
+   * when engagement signals are hot (opened within 1 hour).
+   */
+  private handleAdaptiveTiming(
+    taskId: string,
+    payload: Record<string, unknown> | null,
+    startTime: number
+  ): AgentReport {
+    const leadId = (payload?.leadId as string) ?? '';
+    const sequenceId = (payload?.sequenceId as string) ?? '';
+    const openedWithinMinutes = (payload?.openedWithinMinutes as number) ?? 60;
+
+    this.log('INFO', `Adaptive timing: accelerating next step for lead ${leadId} (opened within ${openedWithinMinutes}min)`);
+
+    // Calculate acceleration factor based on engagement speed
+    let accelerationFactor: number;
+    if (openedWithinMinutes <= 15) {
+      accelerationFactor = 0.25; // Send next step at 25% of normal delay
+    } else if (openedWithinMinutes <= 30) {
+      accelerationFactor = 0.5; // 50% of normal delay
+    } else {
+      accelerationFactor = 0.75; // 75% of normal delay
+    }
+
+    // Write the acceleration directive to MemoryVault for sequence engine to pick up
+    const vault = getMemoryVault();
+    vault.write(
+      'WORKFLOW',
+      `sequence_acceleration_${leadId}_${sequenceId}_${Date.now()}`,
+      {
+        leadId,
+        sequenceId,
+        accelerationFactor,
+        openedWithinMinutes,
+        originalTrigger: 'email.engagement.hot',
+        appliedAt: new Date().toISOString(),
+      },
+      this.identity.id,
+      { priority: 'HIGH', tags: ['adaptive-timing', 'acceleration', leadId] }
+    );
+
+    const durationMs = Date.now() - startTime;
+
+    return this.createReport(taskId, 'COMPLETED', {
+      action: 'ACCELERATE_NEXT_STEP',
+      leadId,
+      sequenceId,
+      accelerationFactor,
+      openedWithinMinutes,
+      durationMs,
+    });
+  }
+
+  /**
+   * 4c. Handle ghosting recovery — pattern-break email + channel escalation.
+   * Triggered when 5+ opens, no reply within 48 hours.
+   */
+  private handleGhostingRecovery(
+    taskId: string,
+    payload: Record<string, unknown> | null,
+    startTime: number
+  ): AgentReport {
+    const leadId = (payload?.leadId as string) ?? '';
+    const prospectEmail = (payload?.prospectEmail as string) ?? '';
+    const openCount = (payload?.openCount as number) ?? 0;
+
+    this.log('INFO', `Ghosting recovery: ${openCount} opens, no reply from ${leadId}`);
+
+    // Request a pattern-break email from Content Manager
+    void this.requestFromManager({
+      fromManager: this.identity.id,
+      toManager: 'CONTENT_MANAGER',
+      requestType: 'GENERATE_PATTERN_BREAK_EMAIL',
+      description: `Lead ${leadId} (${prospectEmail}) has opened ${openCount} emails but never replied — generate a pattern-break email with different tone and angle`,
+      urgency: 'HIGH',
+      payload: {
+        leadId,
+        prospectEmail,
+        openCount,
+        strategy: 'pattern_break',
+        toneShift: 'casual_direct',
+      },
+    });
+
+    // Write ghosting detection to MemoryVault for tracking
+    const vault = getMemoryVault();
+    vault.write(
+      'WORKFLOW',
+      `ghosting_detected_${leadId}_${Date.now()}`,
+      {
+        leadId,
+        prospectEmail,
+        openCount,
+        detectedAt: new Date().toISOString(),
+        recoveryStrategy: 'PATTERN_BREAK_EMAIL',
+        nextEscalation: 'SMS', // If pattern break fails, escalate to SMS
+      },
+      this.identity.id,
+      { priority: 'HIGH', tags: ['ghosting', 'recovery', leadId] }
+    );
+
+    // Share insight for Revenue Director awareness
+    void shareInsight(
+      this.identity.id,
+      'PERFORMANCE' as InsightData['type'],
+      `Ghosting detected: ${leadId}`,
+      `Lead ${leadId} has ${openCount} email opens but zero replies in 48hrs — deploying pattern-break recovery`,
+      {
+        confidence: 90,
+        sources: [this.identity.id],
+        relatedAgents: ['REVENUE_DIRECTOR'],
+        actions: ['Monitor for reply to pattern-break email', 'Escalate to SMS if no response'],
+        tags: ['ghosting', 'recovery'],
+      }
+    );
+
+    const durationMs = Date.now() - startTime;
+
+    return this.createReport(taskId, 'COMPLETED', {
+      action: 'TRIGGER_PATTERN_BREAK',
+      leadId,
+      prospectEmail,
+      openCount,
+      recoveryStrategy: 'PATTERN_BREAK_EMAIL',
+      channelEscalationPath: ['EMAIL_PATTERN_BREAK', 'SMS', 'VOICE'],
+      durationMs,
+    });
+  }
+
+  /**
+   * Handle cart abandonment recovery sequence.
+   */
+  private async handleCartRecovery(
+    taskId: string,
+    payload: Record<string, unknown> | null,
+    startTime: number
+  ): Promise<AgentReport> {
+    const cartId = (payload?.cartId as string) ?? '';
+    const customerEmail = (payload?.customerEmail as string) ?? '';
+    const cartValue = (payload?.cartValue as number) ?? 0;
+
+    this.log('INFO', `Cart recovery: ${cartId} (${customerEmail}, $${cartValue})`);
+
+    // Delegate to Email Specialist for recovery sequence
+    const recoveryMessage: AgentMessage = {
+      id: `cart_recovery_${taskId}`,
+      timestamp: new Date(),
+      from: this.identity.id,
+      to: 'EMAIL_SPECIALIST',
+      type: 'COMMAND',
+      priority: 'HIGH',
+      payload: {
+        action: 'send_email',
+        template: 'cart_abandonment_recovery',
+        recipientEmail: customerEmail,
+        variables: {
+          cartId,
+          cartValue,
+          items: payload?.items,
+        },
+      },
+      requiresResponse: true,
+      traceId: taskId,
+    };
+
+    const report = await this.delegateToSpecialist('EMAIL_SPECIALIST', recoveryMessage);
+
+    const durationMs = Date.now() - startTime;
+
+    return this.createReport(taskId, report.status, {
+      action: 'START_RECOVERY_SEQUENCE',
+      cartId,
+      customerEmail,
+      cartValue,
+      emailSent: report.status === 'COMPLETED',
+      durationMs,
+    });
   }
 }
 
