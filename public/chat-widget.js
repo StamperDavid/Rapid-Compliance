@@ -3,13 +3,12 @@
  * Embeddable JavaScript SDK for customer-facing AI chat
  * 
  * Usage:
- * <script src="https://yourplatform.com/chat-widget.js" data-org-id="YOUR_ORG_ID"></script>
- * 
+ * <script src="https://salesvelocity.ai/chat-widget.js"></script>
+ *
  * Or with configuration:
- * <script src="https://yourplatform.com/chat-widget.js"></script>
+ * <script src="https://salesvelocity.ai/chat-widget.js"></script>
  * <script>
  *   AIChatWidget.init({
- *     orgId: 'YOUR_ORG_ID',
  *     primaryColor: '#6366f1',
  *     title: 'Chat with us',
  *     position: 'bottom-right'
@@ -46,7 +45,6 @@
 
       // Merge options with defaults
       this.config = {
-        orgId: options.orgId || this.getOrgIdFromScript(),
         apiEndpoint: options.apiEndpoint || `${DEFAULT_API_BASE}${DEFAULT_API_ENDPOINT}`,
         position: options.position || 'bottom-right',
         primaryColor: options.primaryColor || '#6366f1',
@@ -62,11 +60,6 @@
         onOpen: options.onOpen || null,
         onClose: options.onClose || null,
       };
-
-      if (!this.config.orgId) {
-        console.error('AIChatWidget: orgId is required');
-        return;
-      }
 
       // Generate or restore customer ID
       this.initCustomerId();
@@ -88,18 +81,10 @@
     }
 
     /**
-     * Get orgId from script tag data attribute
-     */
-    getOrgIdFromScript() {
-      const script = document.querySelector('script[data-org-id]');
-      return script ? script.getAttribute('data-org-id') : null;
-    }
-
-    /**
      * Initialize or restore customer ID
      */
     initCustomerId() {
-      const storageKey = `ai_chat_customer_${this.config.orgId}`;
+      const storageKey = 'ai_chat_customer';
       this.customerId = localStorage.getItem(storageKey);
       
       if (!this.customerId) {
@@ -532,7 +517,6 @@
           },
           body: JSON.stringify({
             customerId: this.customerId,
-            orgId: this.config.orgId,
             message: message,
           }),
         });
@@ -657,15 +641,13 @@
   // Expose to window
   window.AIChatWidget = widget;
 
-  // Auto-init if orgId is provided via script tag
+  // Auto-init when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      const orgId = widget.getOrgIdFromScript();
-      if (orgId) widget.init({ orgId });
+      widget.init();
     });
   } else {
-    const orgId = widget.getOrgIdFromScript();
-    if (orgId) widget.init({ orgId });
+    widget.init();
   }
 
 })(window, document);
