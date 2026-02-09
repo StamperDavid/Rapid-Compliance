@@ -1,10 +1,9 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 interface NurtureCampaignStats {
@@ -25,7 +24,7 @@ export default function NurtureCampaignStatsPage() {
 
   const loadCampaign = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/nurtureSequences`, campaignId);
+      const data = await FirestoreService.get(getSubCollection('nurtureSequences'), campaignId);
       setCampaign(data as NurtureCampaignStats);
     } catch (error) {
       logger.error('Error loading campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

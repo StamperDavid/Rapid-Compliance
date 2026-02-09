@@ -10,6 +10,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { Timestamp } from 'firebase-admin/firestore';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPES
@@ -227,7 +228,7 @@ async function getRecentExecutions(
 
     // Fetch legacy OutboundSequence enrollments for backward compatibility
     const legacyEnrollmentsRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/sequenceEnrollments'
+      getSubCollection('sequenceEnrollments')
     );
     const legacyEnrollmentsSnap = await legacyEnrollmentsRef
       .orderBy('enrolledAt', 'desc')
@@ -243,7 +244,7 @@ async function getRecentExecutions(
       let sequenceName = 'Unknown Sequence';
       try {
         const seqRef = adminDal.getNestedDocRef(
-          'organizations/rapid-compliance-root/sequences/{sequenceId}',
+          `${getSubCollection('sequences')}/{sequenceId}`,
           { sequenceId: data.sequenceId }
         );
         const seqDoc = await seqRef.get();

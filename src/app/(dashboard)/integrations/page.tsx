@@ -1,8 +1,7 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect, useCallback } from 'react';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { motion } from 'framer-motion';
 import {
   Plug,
@@ -53,14 +52,14 @@ export default function IntegrationsPage() {
 
   // Fetch connected integrations with pagination
   const fetchIntegrations = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     const constraints: QueryConstraint[] = [
       orderBy('connectedAt', 'desc')
     ];
 
     return FirestoreService.getAllPaginated(
-      `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
+      getSubCollection('integrations'),
       constraints,
       50,
       lastDoc
@@ -104,7 +103,7 @@ export default function IntegrationsPage() {
 
   const saveIntegration = async (providerId: string, config: IntegrationConfig) => {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       const integration: ConnectedIntegration = {
         id: `integration_${Date.now()}`,
@@ -121,7 +120,7 @@ export default function IntegrationsPage() {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
+        getSubCollection('integrations'),
         integration.id,
         integration,
         false
@@ -146,9 +145,9 @@ export default function IntegrationsPage() {
     }
 
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       await FirestoreService.delete(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/integrations`,
+        getSubCollection('integrations'),
         pendingDisconnectId
       );
       await refresh(); // Refresh pagination

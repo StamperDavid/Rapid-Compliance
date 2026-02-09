@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -61,7 +61,7 @@ export default function RevenueAnalyticsPage() {
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/analytics/revenue?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${period}`);
+      const response = await fetch(`/api/analytics/revenue?PLATFORM_ID=${PLATFORM_ID}&period=${period}`);
       const data = await response.json() as { success?: boolean; analytics?: unknown };
       if (data.success && isRevenueAnalytics(data.analytics)) {
         setAnalytics(data.analytics);

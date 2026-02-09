@@ -1,10 +1,9 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import ActivityTimeline from '@/components/ActivityTimeline';
@@ -69,7 +68,7 @@ export default function DealDetailPage() {
 
   const loadDeal = useCallback(async () => {
     try {
-      const data = await FirestoreService.get<Deal>(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`, dealId);
+      const data = await FirestoreService.get<Deal>(`${getSubCollection('workspaces')}/default/entities/deals/records`, dealId);
       setDeal(data);
       void loadDealHealth();
     } catch (error: unknown) {
@@ -86,7 +85,7 @@ export default function DealDetailPage() {
   const handleMarkWon = useCallback(async () => {
     try {
       await FirestoreService.update(
-        `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`,
+        `${getSubCollection('workspaces')}/default/entities/deals/records`,
         dealId,
         { stage: 'closed_won', closedAt: Timestamp.now(), actualCloseDate: Timestamp.now(), status: 'won' }
       );
@@ -106,7 +105,7 @@ export default function DealDetailPage() {
     }
     try {
       await FirestoreService.update(
-        `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`,
+        `${getSubCollection('workspaces')}/default/entities/deals/records`,
         dealId,
         { stage: 'closed_lost', closedAt: Timestamp.now(), actualCloseDate: Timestamp.now(), status: 'lost', lostReason }
       );

@@ -1,10 +1,9 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 import ActivityTimeline from '@/components/ActivityTimeline';
@@ -38,7 +37,7 @@ export default function LeadDetailPage() {
 
   const loadLead = async (): Promise<void> => {
     try {
-      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/leads/records`, leadId);
+      const data = await FirestoreService.get(`${getSubCollection('workspaces')}/default/entities/leads/records`, leadId);
 
       // Type guard for lead data
       if (!data || typeof data !== 'object') {
@@ -394,7 +393,7 @@ export default function LeadDetailPage() {
                           const displayName = getDisplayName();
 
                           await FirestoreService.set(
-                            `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`,
+                            `${getSubCollection('workspaces')}/default/entities/deals/records`,
                             dealId,
                             {
                               id: dealId,

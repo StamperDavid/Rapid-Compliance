@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -34,7 +34,7 @@ export default function WorkflowAnalyticsPage() {
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/analytics/workflows?orgId=${DEFAULT_ORG_ID}`);
+      const response = await fetch(`/api/analytics/workflows?orgId=${PLATFORM_ID}`);
       const data = await response.json() as WorkflowAnalyticsApiResponse;
       if (data.success) {
         setAnalytics(data.analytics);

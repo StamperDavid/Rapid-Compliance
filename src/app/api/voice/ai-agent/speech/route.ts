@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /** Telnyx speech recognition data structure */
 interface TelnyxSpeechPayload {
@@ -231,10 +231,10 @@ async function logSpeechTurn(
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-    // Penthouse model - use PLATFORM_ID directly
+    // Penthouse model - use environment-aware path
     const logId = `${callId}-turn-${Date.now()}`;
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/conversationLogs`,
+      getSubCollection('conversationLogs'),
       logId,
       {
         callId,

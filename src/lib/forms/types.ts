@@ -3,14 +3,14 @@
  * Complete type definitions for form definitions, submissions, and analytics
  * Optimized for Firestore structure
  *
- * COLLECTION STRUCTURE:
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/formTemplates/{templateId}
+ * COLLECTION STRUCTURE (via getSubCollection helper):
+ * {platform}/workspaces/{workspaceId}/forms/{formId}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
+ * {platform}/workspaces/{workspaceId}/formTemplates/{templateId}
  *
  * @module forms/types
  * @version 2.0.0
@@ -236,7 +236,7 @@ export interface FormBehavior {
 
 /**
  * Form definition document
- * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}
+ * Path: {platform}/workspaces/{workspaceId}/forms/{formId}
  *
  * INDEX STRATEGY:
  * - Composite: (status, createdAt DESC) - List published forms
@@ -376,7 +376,7 @@ export interface SubmissionMetadata {
 
 /**
  * Form submission document
- * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
+ * Path: {platform}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
  *
  * INDEX STRATEGY:
  * - Composite: (status, submittedAt DESC) - Filter by status
@@ -465,7 +465,7 @@ export interface OrchestratorAction {
 
 /**
  * Form view event - short-lived for analytics aggregation
- * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
+ * Path: {platform}/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
  *
  * These documents should have TTL cleanup (7-30 days)
  * Analytics are aggregated into FormAnalyticsSummary documents
@@ -503,7 +503,7 @@ export interface FormView {
 
 /**
  * Daily analytics aggregation
- * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
+ * Path: {platform}/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
  *
  * Document ID format: YYYY-MM-DD for easy range queries
  *
@@ -563,7 +563,7 @@ export interface FormAnalyticsSummary {
 
 /**
  * Field-level analytics
- * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
+ * Path: {platform}/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
  *
  * Document ID format: {fieldId}_{YYYY-MM-DD}
  */
@@ -601,7 +601,7 @@ export interface FormFieldAnalytics {
 
 /**
  * Form template for reusable form structures
- * Path: organizations/rapid-compliance-root/workspaces/{workspaceId}/formTemplates/{templateId}
+ * Path: {platform}/workspaces/{workspaceId}/formTemplates/{templateId}
  */
 export interface FormTemplate {
   id: string;

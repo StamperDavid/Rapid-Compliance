@@ -11,7 +11,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /** Telnyx webhook data structure */
 interface TelnyxWebhookData {
@@ -161,7 +161,7 @@ async function loadAgentConfig(
 
     // Try to load custom config
     const customConfig = await FirestoreService.get(
-      `organizations/${PLATFORM_ID}/voiceAgents`,
+      getSubCollection('voiceAgents'),
       agentId
     );
 
@@ -217,7 +217,7 @@ async function logConversationData(
 
     const logId = `${callId}-${event}-${Date.now()}`;
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/conversationLogs`,
+      getSubCollection('conversationLogs'),
       logId,
       {
         callId,

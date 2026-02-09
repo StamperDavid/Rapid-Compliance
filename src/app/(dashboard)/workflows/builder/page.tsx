@@ -1,7 +1,5 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 /**
  * Visual Workflow Builder Page
  *
@@ -17,6 +15,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -62,7 +61,7 @@ export default function WorkflowBuilderPage() {
     try {
       setIsLoading(true);
       const data = await FirestoreService.get(
-        `organizations/${PLATFORM_ID}/workspaces/default/workflows`,
+        `${getSubCollection('workspaces')}/default/workflows`,
         id
       );
 
@@ -276,13 +275,13 @@ export default function WorkflowBuilderPage() {
 
       if (workflowId) {
         await FirestoreService.update(
-          `organizations/${PLATFORM_ID}/workspaces/default/workflows`,
+          `${getSubCollection('workspaces')}/default/workflows`,
           id,
           workflowData
         );
       } else {
         await FirestoreService.set(
-          `organizations/${PLATFORM_ID}/workspaces/default/workflows`,
+          `${getSubCollection('workspaces')}/default/workflows`,
           id,
           workflowData,
           false

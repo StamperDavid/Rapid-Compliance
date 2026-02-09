@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -46,10 +44,6 @@ export default function ConversationsPage() {
 
   // Subscribe to real-time active sessions
   useEffect(() => {
-    if (!DEFAULT_ORG_ID) {
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -74,7 +68,7 @@ export default function ConversationsPage() {
 
   // Load messages when conversation is selected
   useEffect(() => {
-    if (!selectedConversation || !DEFAULT_ORG_ID) {
+    if (!selectedConversation) {
       setSelectedMessages([]);
       return;
     }

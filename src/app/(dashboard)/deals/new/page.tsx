@@ -1,13 +1,12 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { dealFormSchema, type DealFormValues } from '@/lib/validation/deal-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -32,7 +31,7 @@ export default function NewDealPage() {
     try {
       const dealId = `deal-${Date.now()}`;
       await FirestoreService.set(
-        `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`,
+        `${getSubCollection('workspaces')}/default/entities/deals/records`,
         dealId,
         { ...data, id: dealId, createdAt: Timestamp.now() },
         false

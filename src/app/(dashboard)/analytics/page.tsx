@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -79,10 +79,10 @@ export default function AnalyticsDashboard() {
       try {
         // Load all analytics in parallel
         const [revenue, pipeline, ecommerce, workflows] = await Promise.all([
-          fetch(`/api/analytics/revenue?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<RevenueAnalytics>>,
-          fetch(`/api/analytics/pipeline?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<PipelineAnalytics>>,
-          fetch(`/api/analytics/ecommerce?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<EcommerceAnalytics>>,
-          fetch(`/api/analytics/workflows?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<WorkflowsAnalytics>>,
+          fetch(`/api/analytics/revenue?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<RevenueAnalytics>>,
+          fetch(`/api/analytics/pipeline?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<PipelineAnalytics>>,
+          fetch(`/api/analytics/ecommerce?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<EcommerceAnalytics>>,
+          fetch(`/api/analytics/workflows?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<WorkflowsAnalytics>>,
         ]);
 
         setAnalytics({

@@ -180,10 +180,10 @@ function CRMContent() {
 
     const loadConfig = async () => {
       try {
-        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const { getSubCollection } = await import('@/lib/firebase/collections');
+        const { FirestoreService } = await import('@/lib/db/firestore-service');
         const configData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/crmConfig`,
+          getSubCollection('crmConfig'),
           'default'
         );
 
@@ -250,8 +250,8 @@ function CRMContent() {
       try {
         setRecordsLoading(true);
         const { FirestoreService } = await import('@/lib/db/firestore-service');
-        const { DEFAULT_ORG_ID } = await import('@/lib/constants/platform');
-        const collectionPath = `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/${activeView}/records`;
+        const { getSubCollection } = await import('@/lib/firebase/collections');
+        const collectionPath = `${getSubCollection('workspaces')}/default/entities/${activeView}/records`;
         const records = await FirestoreService.getAll<CRMRecord>(collectionPath);
         const setter = setters[activeView];
         if (setter) {

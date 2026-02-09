@@ -1239,7 +1239,7 @@ export class LinkedInExpert extends BaseSpecialist {
   // ==========================================================================
 
   private async fetchPlaybook(): Promise<Playbook> {
-    // In production, this would fetch from Firestore: organizations/${PLATFORM_ID}/playbook
+    // In production, this would fetch from Firestore via getSubCollection('playbook')
     this.log('INFO', `Fetching playbook for organization: ${PLATFORM_ID}`);
 
     // Default playbook structure - would be overridden by organization-specific data

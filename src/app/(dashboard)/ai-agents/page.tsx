@@ -3,7 +3,7 @@
 /**
  * AI Agents / Tools
  * Management hub for AI agent configuration and orchestration.
- * Uses DEFAULT_ORG_ID (rapid-compliance-root) for penthouse access.
+ * Uses getSubCollection() for penthouse-model Firestore access.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';

@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState } from 'react';
 import type { ABTest, ABTestResults } from '@/lib/email/email-builder';
 
@@ -11,7 +9,6 @@ interface ABTestResponse {
 }
 
 export default function ABTestsPage() {
-  const _orgId = DEFAULT_ORG_ID as string;
   const [tests, setTests] = useState<(ABTest & { results?: ABTestResults })[]>([]);
   const [loading, setLoading] = useState(true);
 

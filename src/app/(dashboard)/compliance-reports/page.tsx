@@ -3,13 +3,13 @@
 /**
  * Compliance Reports
  * Regulatory and compliance reporting dashboard.
- * Uses DEFAULT_ORG_ID (rapid-compliance-root) for penthouse access.
+ * Uses getSubCollection() for penthouse-model Firestore access.
  */
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 interface ComplianceReport {
@@ -40,7 +40,7 @@ export default function ComplianceReportsPage() {
       try {
         setLoading(true);
         const result = await FirestoreService.getAll<ComplianceReport>(
-          `organizations/${DEFAULT_ORG_ID}/complianceReports`
+          getSubCollection('complianceReports')
         );
         setReports(result);
       } catch (error) {

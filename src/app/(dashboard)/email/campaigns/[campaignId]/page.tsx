@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getCampaignStats } from '@/lib/email/campaign-manager';
@@ -22,7 +20,6 @@ interface CampaignStats {
 export default function CampaignStatsPage() {
   const params = useParams();
   const router = useRouter();
-  const _orgId = DEFAULT_ORG_ID as string;
   const campaignId = params.campaignId as string;
   const { error: showError } = useToast();
 

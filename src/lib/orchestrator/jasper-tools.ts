@@ -1354,7 +1354,7 @@ PROCESS:
 5. Initial navigation structure built
 
 ERROR HANDLING:
-- Logs stored in organizations/rapid-compliance-root/provisionerLogs
+- Logs stored in provisionerLogs (via getSubCollection)
 - Failed provisions retry up to 3 times
 - Admin notified of persistent failures
       `.trim(),

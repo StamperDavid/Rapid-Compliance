@@ -1,13 +1,12 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { nurtureFormSchema, type NurtureFormValues } from '@/lib/validation/nurture-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -38,7 +37,7 @@ export default function NewNurtureCampaignPage() {
     try {
       const campaignId = `nurture-${Date.now()}`;
       await FirestoreService.set(
-        `organizations/${DEFAULT_ORG_ID}/nurtureSequences`,
+        getSubCollection('nurtureSequences'),
         campaignId,
         {
           ...data,

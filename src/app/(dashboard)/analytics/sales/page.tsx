@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import type { SalesVelocityMetrics, PipelineInsight } from '@/lib/crm/sales-velocity';
 
@@ -14,7 +12,6 @@ interface SalesAnalyticsApiResponse {
 }
 
 export default function SalesAnalyticsPage() {
-  const _orgId = DEFAULT_ORG_ID as string;
   const [metrics, setMetrics] = useState<SalesVelocityMetrics | null>(null);
   const [insights, setInsights] = useState<PipelineInsight[]>([]);
   const [loading, setLoading] = useState(true);

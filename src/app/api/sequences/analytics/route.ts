@@ -12,6 +12,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPES
@@ -322,7 +323,7 @@ async function getSequencePerformance(
 
     // Fallback to legacy OutboundSequence system
     const legacySeqRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/sequences/{sequenceId}',
+      `${getSubCollection('sequences')}/{sequenceId}`,
       { sequenceId }
     );
     const legacySeqDoc = await legacySeqRef.get();
@@ -376,7 +377,7 @@ async function getAllSequencePerformances(
 
     // Fetch legacy OutboundSequences
     const legacySeqsRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/sequences'
+      getSubCollection('sequences')
     );
     const legacySeqsSnap = await legacySeqsRef.get();
 

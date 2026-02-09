@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 /**
  * Form Builder Editor Page
  *
@@ -195,7 +193,6 @@ const styles = {
 
 const createDefaultForm = (
   formId: string,
-  orgId: string,
   workspaceId: string,
   name: string
 ): FormDefinition => ({
@@ -280,7 +277,6 @@ export default function FormEditorPage() {
       if (formId === 'new') {
         const newForm = createDefaultForm(
           `form_${Date.now()}`,
-          DEFAULT_ORG_ID,
           'default',
           'Untitled Form'
         );

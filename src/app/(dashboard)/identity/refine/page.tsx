@@ -1,8 +1,8 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -199,17 +199,17 @@ export default function IdentityRefinementPage() {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       // Load organization data (includes brandDNA)
-      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID) as OrganizationData;
+      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID) as OrganizationData;
 
       // Load onboarding data for pre-population
       const onboardingData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/onboarding`,
+        getSubCollection('onboarding'),
         'current'
       ) as OnboardingData;
 
       // Load existing workforce identity if exists
       const workforceIdentity = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/settings`,
+        getSubCollection('settings'),
         'workforceIdentity'
       ) as WorkforceIdentity;
 
@@ -250,7 +250,7 @@ export default function IdentityRefinementPage() {
   const loadVoices = useCallback(async (engine: TTSEngineType) => {
     setLoadingVoices(true);
     try {
-      const response = await fetch(`/api/voice/tts?DEFAULT_ORG_ID=${DEFAULT_ORG_ID}&engine=${engine}`);
+      const response = await fetch(`/api/voice/tts?DEFAULT_ORG_ID=${PLATFORM_ID}&engine=${engine}`);
       const data = await response.json() as VoicesApiResponse;
       if (data.success && data.voices && data.voices.length > 0) {
         setVoices(data.voices);
@@ -384,7 +384,7 @@ export default function IdentityRefinementPage() {
 
       // Save workforce identity
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/settings`,
+        getSubCollection('settings'),
         'workforceIdentity',
         {
           ...identity,
@@ -396,14 +396,14 @@ export default function IdentityRefinementPage() {
       );
 
       // Update organization Brand DNA
-      await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, DEFAULT_ORG_ID, {
+      await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, {
         brandDNA: identity.brandDNA,
         updatedAt: new Date(),
       });
 
       // Mark identity refinement as complete
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${DEFAULT_ORG_ID}/settings`,
+        getSubCollection('settings'),
         'onboardingProgress',
         {
           identityRefinementCompleted: true,

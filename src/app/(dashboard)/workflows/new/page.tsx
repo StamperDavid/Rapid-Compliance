@@ -1,13 +1,12 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { workflowFormSchema, type WorkflowFormValues } from '@/lib/validation/workflow-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -49,7 +48,7 @@ export default function WorkflowBuilderPage() {
       const now = Timestamp.now();
 
       await FirestoreService.set(
-        `organizations/${PLATFORM_ID}/workspaces/default/workflows`,
+        `${getSubCollection('workspaces')}/default/workflows`,
         workflowId,
         {
           ...data,

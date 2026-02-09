@@ -5,10 +5,10 @@
  */
 
 import { SequenceEngine } from './sequence-engine';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import type { ProspectEnrollment } from '@/types/outbound-sequence'
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Process all due sequence steps
@@ -24,36 +24,25 @@ export async function processSequences(): Promise<{
   let errors = 0;
 
   try {
-    // Get all organizations with active enrollments
-    const organizations = await getAllOrganizations();
+    // Get all active enrollments (single-tenant — one organization)
+    const enrollments = await getActiveEnrollments();
 
-    for (const _orgId of organizations) {
+    for (const enrollment of enrollments) {
       try {
-        // Get all active enrollments for this org
-        const enrollments = await getActiveEnrollments();
+        // Check if this enrollment is due for next step
+        if (enrollment.nextStepAt) {
+          const nextStepTime = new Date(enrollment.nextStepAt);
+          const now = new Date();
 
-        for (const enrollment of enrollments) {
-          try {
-            // Check if this enrollment is due for next step
-            if (enrollment.nextStepAt) {
-              const nextStepTime = new Date(enrollment.nextStepAt);
-              const now = new Date();
-
-              if (now >= nextStepTime) {
-                // Process next step
-                await SequenceEngine.processNextStep(enrollment.id);
-                processed++;
-              }
-            }
-          } catch (error) {
-            // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
-            logger.error('[Sequence Scheduler] Error processing enrollment ${enrollment.id}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
-            errors++;
+          if (now >= nextStepTime) {
+            // Process next step
+            await SequenceEngine.processNextStep(enrollment.id);
+            processed++;
           }
         }
       } catch (error) {
         // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
-        logger.error('[Sequence Scheduler] Error processing org ${PLATFORM_ID}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
+        logger.error('[Sequence Scheduler] Error processing enrollment ${enrollment.id}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
         errors++;
       }
     }
@@ -68,38 +57,15 @@ export async function processSequences(): Promise<{
 }
 
 /**
- * Get all organizations with active sequences
- */
-async function getAllOrganizations(): Promise<string[]> {
-  try {
-    // Get all organizations that have sequences
-    const orgs = await FirestoreService.getAll(
-      COLLECTIONS.ORGANIZATIONS,
-      []
-    );
-    
-    // Return org IDs
-    return orgs.map((org) => {
-      const orgData = org as { id: string };
-      return orgData.id;
-    });
-  } catch (error) {
-    logger.error('[Sequence Scheduler] Error getting organizations:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
-    return [];
-  }
-}
-
-/**
- * Get all active enrollments for an organization
+ * Get all active enrollments
  */
 async function getActiveEnrollments(): Promise<ProspectEnrollment[]> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const { where } = await import('firebase/firestore');
 
     // Query active enrollments
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+      getSubCollection('enrollments'),
       [
         where('status', '==', 'active'),
       ]
@@ -128,7 +94,7 @@ export async function handleEmailBounce(
 
   // Get enrollment
   const enrollment = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+    getSubCollection('enrollments'),
     enrollmentId
   ) as ProspectEnrollment;
 
@@ -169,7 +135,7 @@ export async function handleEmailReply(
 
   // Get enrollment
   const enrollment = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+    getSubCollection('enrollments'),
     enrollmentId
   ) as ProspectEnrollment;
 
@@ -189,7 +155,7 @@ export async function handleEmailReply(
 
   // Get sequence
   const sequence = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
+    getSubCollection('sequences'),
     enrollment.sequenceId
   ) as SequenceDoc;
 
@@ -204,7 +170,7 @@ export async function handleEmailReply(
   enrollment.updatedAt = new Date().toISOString();
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+    getSubCollection('enrollments'),
     enrollmentId,
     enrollment,
     false
@@ -219,7 +185,7 @@ export async function handleEmailOpen(
   stepId: string
 ): Promise<void> {
   const enrollment = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+    getSubCollection('enrollments'),
     enrollmentId
   ) as ProspectEnrollment;
 
@@ -233,7 +199,7 @@ export async function handleEmailOpen(
     action.updatedAt = new Date().toISOString();
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+      getSubCollection('enrollments'),
       enrollmentId,
       enrollment,
       false
@@ -249,7 +215,7 @@ export async function handleEmailClick(
   stepId: string
 ): Promise<void> {
   const enrollment = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+    getSubCollection('enrollments'),
     enrollmentId
   ) as ProspectEnrollment;
 
@@ -262,7 +228,7 @@ export async function handleEmailClick(
     action.updatedAt = new Date().toISOString();
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+      getSubCollection('enrollments'),
       enrollmentId,
       enrollment,
       false

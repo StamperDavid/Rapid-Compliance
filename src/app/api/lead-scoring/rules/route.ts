@@ -15,6 +15,7 @@ import adminApp from '@/lib/firebase/admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import { type ScoringRules, DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // Interface for Firestore scoring rules data
 interface FirestoreScoringRulesData {
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
 
     // Get all scoring rules for organization
     const rulesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/scoringRules'
+      getSubCollection('scoringRules')
     );
     const snapshot = await rulesRef.orderBy('createdAt', 'desc').get();
 
@@ -163,14 +164,14 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     // Generate a new document ID
     const rulesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/scoringRules'
+      getSubCollection('scoringRules')
     );
     const rulesId = rulesRef.doc().id;
 
     // If this is set to active, deactivate all other rules
     if (isActive) {
       const existingRulesRef = adminDal.getNestedCollection(
-        'organizations/rapid-compliance-root/scoringRules'
+        getSubCollection('scoringRules')
       );
       const existingSnapshot = await existingRulesRef.where('isActive', '==', true).get();
 
@@ -193,7 +194,7 @@ export async function POST(req: NextRequest) {
     };
 
     const rulesDocRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/scoringRules/{rulesId}',
+      `${getSubCollection('scoringRules')}/{rulesId}`,
       { rulesId }
     );
 
@@ -270,7 +271,7 @@ export async function PUT(req: NextRequest) {
     // If setting to active, deactivate others
     if (isActive) {
       const existingRulesRef = adminDal.getNestedCollection(
-        'organizations/rapid-compliance-root/scoringRules'
+        getSubCollection('scoringRules')
       );
       const existingSnapshot = await existingRulesRef.where('isActive', '==', true).get();
 
@@ -284,7 +285,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const rulesDocRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/scoringRules/{rulesId}',
+      `${getSubCollection('scoringRules')}/{rulesId}`,
       { rulesId }
     );
 
@@ -356,7 +357,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const rulesDocRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/scoringRules/{rulesId}',
+      `${getSubCollection('scoringRules')}/{rulesId}`,
       { rulesId }
     );
 

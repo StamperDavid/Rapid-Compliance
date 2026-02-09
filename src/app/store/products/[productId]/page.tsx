@@ -13,7 +13,7 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { addToCart } from '@/lib/ecommerce/cart-service';
 import { useTheme } from '@/contexts/ThemeContext'
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 interface Product {
   id: string;
@@ -44,7 +44,7 @@ export default function ProductDetailPage() {
     try {
       setLoading(true);
       const productData = await FirestoreService.get(
-        `organizations/${PLATFORM_ID}/products`,
+        getSubCollection('products'),
         productId
       );
       setProduct(productData as Product);

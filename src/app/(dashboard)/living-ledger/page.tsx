@@ -20,7 +20,8 @@ import { NextBestActionsCard } from '@/components/crm/NextBestActionsCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { Deal } from '@/lib/crm/deal-service';
 import type { DealHealthScore } from '@/lib/crm/deal-health';
 import type { ActionRecommendations } from '@/lib/crm/next-best-action-engine';
@@ -63,7 +64,7 @@ export default function LivingLedgerPage() {
     const loadDeals = async () => {
       try {
         const { FirestoreService } = await import('@/lib/db/firestore-service');
-        const collectionPath = `organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/deals/records`;
+        const collectionPath = `${getSubCollection('workspaces')}/default/entities/deals/records`;
         const records = await FirestoreService.getAll<Deal>(collectionPath);
 
         setDeals(records);
@@ -90,7 +91,7 @@ export default function LivingLedgerPage() {
           `/api/crm/deals/${selectedDealId}/health`,
           {
             headers: {
-              'x-organization-id': DEFAULT_ORG_ID,
+              'x-organization-id': PLATFORM_ID,
               'x-workspace-id': 'default',
             },
           }
@@ -118,7 +119,7 @@ export default function LivingLedgerPage() {
           `/api/crm/deals/${selectedDealId}/recommendations`,
           {
             headers: {
-              'x-organization-id': DEFAULT_ORG_ID,
+              'x-organization-id': PLATFORM_ID,
               'x-workspace-id': 'default',
             },
           }
@@ -143,7 +144,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': DEFAULT_ORG_ID,
+          'x-organization-id': PLATFORM_ID,
           'x-workspace-id': 'default',
         },
         body: JSON.stringify({
@@ -169,7 +170,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': DEFAULT_ORG_ID,
+          'x-organization-id': PLATFORM_ID,
           'x-workspace-id': 'default',
         },
       });

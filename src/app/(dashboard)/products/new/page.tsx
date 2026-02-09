@@ -1,13 +1,12 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { productFormSchema, type ProductFormValues } from '@/lib/validation/product-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -33,7 +32,7 @@ export default function NewProductPage() {
     try {
       const productId = `prod-${Date.now()}`;
       await FirestoreService.set(
-        `organizations/${PLATFORM_ID}/workspaces/default/entities/products/records`,
+        `${getSubCollection('workspaces')}/default/entities/products/records`,
         productId,
         {
           ...data,

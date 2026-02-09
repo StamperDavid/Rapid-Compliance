@@ -16,7 +16,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // Twilio webhook payload interface
 interface TwilioWebhookPayload {
@@ -228,7 +228,7 @@ async function loadAgentConfig(
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     const customConfig = await FirestoreService.get(
-      `organizations/${PLATFORM_ID}/voiceAgents`,
+      getSubCollection('voiceAgents'),
       agentId
     );
 

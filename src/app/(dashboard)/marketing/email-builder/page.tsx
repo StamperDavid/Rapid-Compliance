@@ -1,7 +1,5 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -11,8 +9,6 @@ import { useToast } from '@/hooks/useToast';
 export default function EmailBuilderPage() {
   const router = useRouter();
   const toast = useToast();
-  const _orgId = DEFAULT_ORG_ID;
-  
   const [template, setTemplate] = useState<Partial<EmailTemplate>>({
     name: 'Untitled Email',
     subject: '',

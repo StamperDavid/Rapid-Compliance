@@ -13,6 +13,7 @@ import adminApp from '@/lib/firebase/admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { LeadScoreAnalytics, StoredLeadScore, IntentSignalType } from '@/types/lead-scoring';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // Interface for Firestore timestamp conversion
 interface FirestoreLeadScore extends Omit<StoredLeadScore, 'metadata'> {
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
 
     // Get all lead scores in date range
     const scoresRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/leadScores'
+      getSubCollection('leadScores')
     );
     const snapshot = await scoresRef.get();
 

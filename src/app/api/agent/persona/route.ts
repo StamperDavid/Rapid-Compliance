@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 const PersonaDataSchema = z.object({
   name: z.string().optional(),
@@ -31,7 +32,7 @@ export async function GET(
 
     // Try to load existing persona using nested doc reference
     const personaDocRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/ai-agents/default/config/persona'
+      `${getSubCollection('ai-agents')}/default/config/persona`
     );
     const personaDoc = await personaDocRef.get();
 
@@ -41,7 +42,7 @@ export async function GET(
 
     // If no persona exists, check if onboarding data exists to auto-generate
     const onboardingDocRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/onboarding/data'
+      `${getSubCollection('onboarding')}/data`
     );
     const onboardingDoc = await onboardingDocRef.get();
 
@@ -87,7 +88,7 @@ export async function POST(
 
     // Save persona to Firestore using nested doc reference
     const personaDocRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/ai-agents/default/config/persona'
+      `${getSubCollection('ai-agents')}/default/config/persona`
     );
 
     const currentVersion = personaData.version ?? 0;

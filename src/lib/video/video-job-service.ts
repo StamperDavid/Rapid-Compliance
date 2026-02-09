@@ -7,7 +7,7 @@
  * - Tracking job status (pending, processing, completed, failed)
  * - Persisting job data to Firestore for worker execution
  *
- * Collection: organizations/rapid-compliance-root/videoJobs
+ * Collection: videoJobs (via getSubCollection)
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';

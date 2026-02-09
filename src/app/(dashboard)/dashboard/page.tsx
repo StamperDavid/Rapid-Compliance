@@ -1,6 +1,6 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -92,7 +92,7 @@ export default function WorkspaceDashboardPage() {
 
   useEffect(() => {
     async function fetchDashboardData() {
-      if (!db || !DEFAULT_ORG_ID) {
+      if (!db) {
         setLoading(false);
         return;
       }
@@ -100,14 +100,14 @@ export default function WorkspaceDashboardPage() {
       try {
         // Fetch leads
         const leadsQuery = query(
-          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
+          collection(db, getSubCollection('records')),
           where('entityType', '==', 'leads')
         );
         const leadsSnapshot = await getDocs(leadsQuery);
 
         // Fetch deals
         const dealsQuery = query(
-          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
+          collection(db, getSubCollection('records')),
           where('entityType', '==', 'deals')
         );
         const dealsSnapshot = await getDocs(dealsQuery);
@@ -159,14 +159,14 @@ export default function WorkspaceDashboardPage() {
 
         // Fetch conversations
         const convoQuery = query(
-          collection(db, 'organizations', DEFAULT_ORG_ID, 'conversations'),
+          collection(db, getSubCollection('conversations')),
           limit(100)
         );
         const convoSnapshot = await getDocs(convoQuery);
 
         // Fetch tasks
         const tasksQuery = query(
-          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
+          collection(db, getSubCollection('records')),
           where('entityType', '==', 'tasks'),
           where('completed', '==', false),
           limit(10)
@@ -196,7 +196,7 @@ export default function WorkspaceDashboardPage() {
 
         // Get recent deals
         const recentDealsQuery = query(
-          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
+          collection(db, getSubCollection('records')),
           where('entityType', '==', 'deals'),
           orderBy('createdAt', 'desc'),
           limit(3)
@@ -222,7 +222,7 @@ export default function WorkspaceDashboardPage() {
 
         // Get recent leads
         const recentLeadsQuery = query(
-          collection(db, 'organizations', DEFAULT_ORG_ID, 'records'),
+          collection(db, getSubCollection('records')),
           where('entityType', '==', 'leads'),
           orderBy('createdAt', 'desc'),
           limit(2)

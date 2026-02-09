@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { SchemaField } from '@/types/schema';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 interface SchemaData {
   fields?: SchemaField[];
@@ -40,7 +41,7 @@ export async function GET(
 
     // Get schema
     const schemaRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/workspaces/{workspaceId}/schemas/{schemaId}',
+      `${getSubCollection('workspaces')}/{workspaceId}/schemas/{schemaId}`,
       { workspaceId, schemaId: params.schemaId }
     );
     const schemaDoc = await schemaRef.get();

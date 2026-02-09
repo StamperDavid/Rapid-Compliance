@@ -1,10 +1,9 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -31,7 +30,7 @@ export default function EditProductPage() {
 
   const loadProduct = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${PLATFORM_ID}/workspaces/default/entities/products/records`, productId);
+      const data = await FirestoreService.get(`${getSubCollection('workspaces')}/default/entities/products/records`, productId);
       setProduct(data as Product);
     } catch (error) {
       logger.error('Error loading product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -51,7 +50,7 @@ export default function EditProductPage() {
     }
     try {
       setSaving(true);
-      await FirestoreService.update(`organizations/${PLATFORM_ID}/workspaces/default/entities/products/records`, productId, { ...product, updatedAt: Timestamp.now() });
+      await FirestoreService.update(`${getSubCollection('workspaces')}/default/entities/products/records`, productId, { ...product, updatedAt: Timestamp.now() });
       toast.success('Product updated successfully');
       router.push(`/products`);
     } catch (error) {

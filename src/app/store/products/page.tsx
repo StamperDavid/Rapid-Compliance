@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { useTheme } from '@/contexts/ThemeContext';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 interface Product {
   id: string;
@@ -40,7 +40,7 @@ export default function ProductCatalogPage() {
 
       // Load products from Firestore (org-level collection)
       const productsData = await FirestoreService.getAll(
-        `organizations/${PLATFORM_ID}/products`,
+        getSubCollection('products'),
         []
       );
 

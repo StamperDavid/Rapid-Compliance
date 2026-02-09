@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import twilio from 'twilio';
 
 interface CallRequestBody {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const callId = `call-${Date.now()}`;
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/default/calls`,
+      `${getSubCollection('workspaces')}/default/calls`,
       callId,
       {
         id: callId,
