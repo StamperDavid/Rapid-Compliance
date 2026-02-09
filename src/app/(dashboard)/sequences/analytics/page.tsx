@@ -228,8 +228,8 @@ export default function SequenceAnalyticsPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#000' }}>
-        <div style={{ textAlign: 'center', color: '#666' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
+        <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
           <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📊</div>
           <p>Loading analytics...</p>
         </div>
@@ -239,8 +239,8 @@ export default function SequenceAnalyticsPage() {
 
   if (!summary) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#000' }}>
-        <div style={{ textAlign: 'center', color: '#666' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
+        <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
           <p>No analytics data available</p>
         </div>
       </div>
@@ -248,19 +248,19 @@ export default function SequenceAnalyticsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000', padding: '2rem' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', padding: '2rem' }}>
       <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
-          <Link href={`/outbound/sequences`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+          <Link href={`/outbound/sequences`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
             ← Back to Sequences
           </Link>
           <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                 📊 Sequence Analytics
               </h1>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                 Performance insights across all omni-channel sequences
               </p>
             </div>
@@ -273,9 +273,9 @@ export default function SequenceAnalyticsPage() {
                     onClick={() => exportSummaryToCSV(summary, dateRange)}
                     style={{
                       padding: '0.75rem 1.25rem',
-                      backgroundColor: '#1a1a1a',
-                      color: '#fff',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-paper)',
+                      color: 'var(--color-text-primary)',
+                      border: '1px solid var(--color-border-light)',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
@@ -291,9 +291,9 @@ export default function SequenceAnalyticsPage() {
                     onClick={() => exportSequencePerformanceToCSV(sequences)}
                     style={{
                       padding: '0.75rem 1.25rem',
-                      backgroundColor: '#1a1a1a',
-                      color: '#fff',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-paper)',
+                      color: 'var(--color-text-primary)',
+                      border: '1px solid var(--color-border-light)',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
@@ -314,7 +314,7 @@ export default function SequenceAnalyticsPage() {
                   style={{
                     padding: '0.75rem 1.25rem',
                     backgroundColor: '#1a1a1a',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     border: '1px solid #333',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
@@ -335,7 +335,7 @@ export default function SequenceAnalyticsPage() {
                   style={{
                     padding: '0.75rem 1.25rem',
                     backgroundColor: '#1a1a1a',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     border: '1px solid #333',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
@@ -367,7 +367,7 @@ export default function SequenceAnalyticsPage() {
               backgroundColor: 'transparent',
               color: activeView === 'overview' ? '#6366f1' : '#999',
               border: 'none',
-              borderBottom: `3px solid ${activeView === 'overview' ? '#6366f1' : 'transparent'}`,
+              borderBottom: `3px solid ${activeView === 'overview' ? 'var(--color-primary)' : 'transparent'}`,
               cursor: 'pointer',
               fontSize: '0.875rem',
               fontWeight: '600',
@@ -382,7 +382,7 @@ export default function SequenceAnalyticsPage() {
               backgroundColor: 'transparent',
               color: activeView === 'sequences' ? '#6366f1' : '#999',
               border: 'none',
-              borderBottom: `3px solid ${activeView === 'sequences' ? '#6366f1' : 'transparent'}`,
+              borderBottom: `3px solid ${activeView === 'sequences' ? 'var(--color-primary)' : 'transparent'}`,
               cursor: 'pointer',
               fontSize: '0.875rem',
               fontWeight: '600',
@@ -397,7 +397,7 @@ export default function SequenceAnalyticsPage() {
               backgroundColor: 'transparent',
               color: activeView === 'channels' ? '#6366f1' : '#999',
               border: 'none',
-              borderBottom: `3px solid ${activeView === 'channels' ? '#6366f1' : 'transparent'}`,
+              borderBottom: `3px solid ${activeView === 'channels' ? 'var(--color-primary)' : 'transparent'}`,
               cursor: 'pointer',
               fontSize: '0.875rem',
               fontWeight: '600',
@@ -412,7 +412,7 @@ export default function SequenceAnalyticsPage() {
               backgroundColor: 'transparent',
               color: activeView === 'monitoring' ? '#6366f1' : '#999',
               border: 'none',
-              borderBottom: `3px solid ${activeView === 'monitoring' ? '#6366f1' : 'transparent'}`,
+              borderBottom: `3px solid ${activeView === 'monitoring' ? 'var(--color-primary)' : 'transparent'}`,
               cursor: 'pointer',
               fontSize: '0.875rem',
               fontWeight: '600',
@@ -455,17 +455,17 @@ export default function SequenceAnalyticsPage() {
             </div>
 
             {/* Engagement Funnel */}
-            <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
                 Engagement Funnel
               </h2>
               <FunnelChart
                 stages={[
-                  { label: 'Sent', value: summary.totalSent, color: '#6366f1' },
+                  { label: 'Sent', value: summary.totalSent, color: 'var(--color-primary)' },
                   { label: 'Delivered', value: summary.totalDelivered, color: '#8b5cf6' },
                   { label: 'Opened', value: summary.totalOpened, color: '#a855f7' },
                   { label: 'Clicked', value: summary.totalClicked, color: '#c084fc' },
-                  { label: 'Replied', value: summary.totalReplied, color: '#10b981' },
+                  { label: 'Replied', value: summary.totalReplied, color: 'var(--color-success)' },
                 ]}
               />
             </div>
@@ -480,8 +480,8 @@ export default function SequenceAnalyticsPage() {
 
             {/* Top Performers */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
-              <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+              <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
                   🏆 Top by Reply Rate
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -493,7 +493,7 @@ export default function SequenceAnalyticsPage() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '0.75rem',
-                        backgroundColor: '#111',
+                        backgroundColor: 'var(--color-bg-elevated)',
                         borderRadius: '0.5rem',
                         cursor: 'pointer',
                       }}
@@ -506,14 +506,14 @@ export default function SequenceAnalyticsPage() {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ color: '#666', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                        <span style={{ color: 'var(--color-text-disabled)', fontSize: '1.25rem', fontWeight: 'bold' }}>
                           #{index + 1}
                         </span>
-                        <span style={{ color: '#fff', fontSize: '0.875rem' }}>
+                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                           {seq.name}
                         </span>
                       </div>
-                      <span style={{ color: '#10b981', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <span style={{ color: 'var(--color-success)', fontSize: '0.875rem', fontWeight: '600' }}>
                         {seq.replyRate.toFixed(1)}%
                       </span>
                     </div>
@@ -521,8 +521,8 @@ export default function SequenceAnalyticsPage() {
                 </div>
               </div>
 
-              <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+              <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
                   ⚡ Top by Engagement
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -534,7 +534,7 @@ export default function SequenceAnalyticsPage() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '0.75rem',
-                        backgroundColor: '#111',
+                        backgroundColor: 'var(--color-bg-elevated)',
                         borderRadius: '0.5rem',
                         cursor: 'pointer',
                       }}
@@ -547,14 +547,14 @@ export default function SequenceAnalyticsPage() {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ color: '#666', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                        <span style={{ color: 'var(--color-text-disabled)', fontSize: '1.25rem', fontWeight: 'bold' }}>
                           #{index + 1}
                         </span>
-                        <span style={{ color: '#fff', fontSize: '0.875rem' }}>
+                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                           {seq.name}
                         </span>
                       </div>
-                      <span style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <span style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
                         {seq.engagementScore.toFixed(1)}
                       </span>
                     </div>
@@ -588,12 +588,12 @@ export default function SequenceAnalyticsPage() {
                     justifyContent: 'space-between',
                   }}>
                     <div>
-                      <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                         🆚 Compare Sequences
                       </h3>
-                      <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                         {abTestSequences[0] && abTestSequences[1] ? (
-                          <>Comparing: <strong style={{ color: '#6366f1' }}>{abTestSequences[0].sequenceName}</strong> vs <strong style={{ color: '#6366f1' }}>{abTestSequences[1].sequenceName}</strong></>
+                          <>Comparing: <strong style={{ color: 'var(--color-primary)' }}>{abTestSequences[0].sequenceName}</strong> vs <strong style={{ color: 'var(--color-primary)' }}>{abTestSequences[1].sequenceName}</strong></>
                         ) : abTestSequences[0] || abTestSequences[1] ? (
                           <>Select one more sequence to compare</>
                         ) : (
@@ -608,7 +608,7 @@ export default function SequenceAnalyticsPage() {
                           style={{
                             padding: '0.75rem 1.25rem',
                             backgroundColor: '#6366f1',
-                            color: '#fff',
+                            color: 'var(--color-text-primary)',
                             border: 'none',
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
@@ -625,7 +625,7 @@ export default function SequenceAnalyticsPage() {
                           style={{
                             padding: '0.75rem 1.25rem',
                             backgroundColor: '#1a1a1a',
-                            color: '#999',
+                            color: 'var(--color-text-secondary)',
                             border: '1px solid #333',
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
@@ -649,7 +649,7 @@ export default function SequenceAnalyticsPage() {
                       key={seq.sequenceId}
                       style={{
                         backgroundColor: '#0a0a0a',
-                        border: `2px solid ${isSelectedForAB ? '#6366f1' : '#333'}`,
+                        border: `2px solid ${isSelectedForAB ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
                         borderRadius: '1rem',
                         padding: '1.5rem',
                         cursor: 'pointer',
@@ -675,8 +675,8 @@ export default function SequenceAnalyticsPage() {
                           setSelectedSequence(seq);
                         }
                       }}
-                      onMouseEnter={(e) => !isSelectedForAB && (e.currentTarget.style.borderColor = '#6366f1')}
-                      onMouseLeave={(e) => !isSelectedForAB && (e.currentTarget.style.borderColor = '#333')}
+                      onMouseEnter={(e) => !isSelectedForAB && (e.currentTarget.style.borderColor = 'var(--color-primary)')}
+                      onMouseLeave={(e) => !isSelectedForAB && (e.currentTarget.style.borderColor = 'var(--color-border-light)')}
                     >
                       {isSelectedForAB && (
                         <div style={{
@@ -684,7 +684,7 @@ export default function SequenceAnalyticsPage() {
                           top: '0.75rem',
                           right: '0.75rem',
                           backgroundColor: '#6366f1',
-                          color: '#fff',
+                          color: 'var(--color-text-primary)',
                           padding: '0.25rem 0.5rem',
                           borderRadius: '0.25rem',
                           fontSize: '0.75rem',
@@ -694,7 +694,7 @@ export default function SequenceAnalyticsPage() {
                         </div>
                       )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff' }}>
+                      <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                         {seq.sequenceName}
                       </h3>
                       <StatusBadge isActive={seq.isActive} />
@@ -702,27 +702,27 @@ export default function SequenceAnalyticsPage() {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                       <ChannelBadge channel={seq.channel} />
-                      <span style={{ color: '#666', fontSize: '0.75rem' }}>
+                      <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                         {seq.stepPerformance.length} steps
                       </span>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Sent</div>
-                        <div style={{ fontSize: '1.125rem', color: '#fff', fontWeight: '600' }}>{seq.totalSent}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Sent</div>
+                        <div style={{ fontSize: '1.125rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{seq.totalSent}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Opened</div>
-                        <div style={{ fontSize: '1.125rem', color: '#fff', fontWeight: '600' }}>{seq.totalOpened}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Opened</div>
+                        <div style={{ fontSize: '1.125rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{seq.totalOpened}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Clicked</div>
-                        <div style={{ fontSize: '1.125rem', color: '#fff', fontWeight: '600' }}>{seq.totalClicked}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Clicked</div>
+                        <div style={{ fontSize: '1.125rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{seq.totalClicked}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Replied</div>
-                        <div style={{ fontSize: '1.125rem', color: '#10b981', fontWeight: '600' }}>{seq.totalReplied}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Replied</div>
+                        <div style={{ fontSize: '1.125rem', color: 'var(--color-success)', fontWeight: '600' }}>{seq.totalReplied}</div>
                       </div>
                     </div>
 
@@ -734,7 +734,7 @@ export default function SequenceAnalyticsPage() {
                       
                       {/* Hint for A/B test */}
                       {!isSelectedForAB && (
-                        <div style={{ marginTop: '1rem', padding: '0.5rem', backgroundColor: '#111', borderRadius: '0.25rem', fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>
+                        <div style={{ marginTop: '1rem', padding: '0.5rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.25rem', fontSize: '0.75rem', color: 'var(--color-text-disabled)', textAlign: 'center' }}>
                           Hold Shift + Click to select for A/B test
                         </div>
                       )}
@@ -787,17 +787,17 @@ export default function SequenceAnalyticsPage() {
           <div>
             <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                   Real-Time Execution Monitor
                 </h2>
-                <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
                   Auto-refreshes every 30 seconds • {recentExecutions.length} recent executions
                 </p>
               </div>
               <div style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: '#065f46',
-                color: '#6ee7b7',
+                backgroundColor: 'var(--color-success)',
+                color: 'var(--color-bg-main)',
                 borderRadius: '0.5rem',
                 fontSize: '0.75rem',
                 fontWeight: '600',
@@ -805,15 +805,15 @@ export default function SequenceAnalyticsPage() {
                 alignItems: 'center',
                 gap: '0.5rem',
               }}>
-                <span style={{ width: '8px', height: '8px', backgroundColor: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }}></span>
+                <span style={{ width: '8px', height: '8px', backgroundColor: 'var(--color-bg-main)', borderRadius: '50%', animation: 'pulse 2s infinite' }}></span>
                 LIVE
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '1rem', overflow: 'hidden' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', overflow: 'hidden' }}>
               <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
                 {recentExecutions.length === 0 ? (
-                  <div style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>
+                  <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-disabled)' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
                     <p>No recent executions. Sequences will appear here when they execute.</p>
                   </div>
@@ -824,7 +824,7 @@ export default function SequenceAnalyticsPage() {
                         key={execution.executionId}
                         style={{
                           padding: '1rem 1.5rem',
-                          borderBottom: '1px solid #1a1a1a',
+                          borderBottom: '1px solid var(--color-border-light)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '1rem',
@@ -833,19 +833,19 @@ export default function SequenceAnalyticsPage() {
                         <ExecutionStatusBadge status={execution.status} />
                         <ChannelBadge channel={execution.channel} small />
                         <div style={{ flex: 1 }}>
-                          <div style={{ color: '#fff', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+                          <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
                             <strong>{execution.sequenceName}</strong> → {execution.leadName ?? execution.leadId}
                           </div>
-                          <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                          <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                             Step {execution.stepIndex + 1}: {execution.action}
                             {execution.error && (
-                              <span style={{ color: '#ef4444', marginLeft: '0.5rem' }}>
+                              <span style={{ color: 'var(--color-error)', marginLeft: '0.5rem' }}>
                                 • Error: {execution.error}
                               </span>
                             )}
                           </div>
                         </div>
-                        <div style={{ color: '#666', fontSize: '0.75rem', textAlign: 'right', minWidth: '120px' }}>
+                        <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', textAlign: 'right', minWidth: '120px' }}>
                           {formatRelativeTime(new Date(execution.executedAt))}
                         </div>
                       </div>
@@ -892,19 +892,19 @@ function MetricCard({ label, value, subtitle, icon, highlight }: {
 }) {
   return (
     <div style={{
-      backgroundColor: '#0a0a0a',
-      border: `1px solid ${highlight ? '#10b981' : '#333'}`,
+      backgroundColor: 'var(--color-bg-paper)',
+      border: `1px solid ${highlight ? 'var(--color-success)' : 'var(--color-border-light)'}`,
       borderRadius: '1rem',
       padding: '1.5rem',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-        <div style={{ fontSize: '0.875rem', color: '#999', fontWeight: '500' }}>{label}</div>
+        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', fontWeight: '500' }}>{label}</div>
         <span style={{ fontSize: '1.5rem' }}>{icon}</span>
       </div>
-      <div style={{ fontSize: '2rem', color: highlight ? '#10b981' : '#fff', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+      <div style={{ fontSize: '2rem', color: highlight ? 'var(--color-success)' : 'var(--color-text-primary)', fontWeight: 'bold', marginBottom: '0.25rem' }}>
         {value}
       </div>
-      <div style={{ fontSize: '0.75rem', color: '#666' }}>{subtitle}</div>
+      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>{subtitle}</div>
     </div>
   );
 }
@@ -923,19 +923,19 @@ function FunnelChart({ stages }: { stages: Array<{ label: string; value: number;
         return (
           <div key={stage.label}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <span style={{ color: '#999', fontSize: '0.875rem' }}>{stage.label}</span>
+              <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>{stage.label}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 {index > 0 && (
-                  <span style={{ color: '#666', fontSize: '0.75rem' }}>
+                  <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                     {conversionRate}% of previous
                   </span>
                 )}
-                <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '600' }}>
+                <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
                   {stage.value.toLocaleString()}
                 </span>
               </div>
             </div>
-            <div style={{ height: '2.5rem', backgroundColor: '#111', borderRadius: '0.5rem', overflow: 'hidden' }}>
+            <div style={{ height: '2.5rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem', overflow: 'hidden' }}>
               <div
                 style={{
                   height: '100%',
@@ -949,7 +949,7 @@ function FunnelChart({ stages }: { stages: Array<{ label: string; value: number;
                 }}
               >
                 {percentage > 15 && (
-                  <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: '600' }}>
+                  <span style={{ color: 'var(--color-text-primary)', fontSize: '0.75rem', fontWeight: '600' }}>
                     {percentage.toFixed(1)}%
                   </span>
                 )}
@@ -970,9 +970,9 @@ function SequenceDetailView({ sequence, onBack }: { sequence: SequencePerformanc
         style={{
           marginBottom: '1.5rem',
           padding: '0.5rem 1rem',
-          backgroundColor: '#222',
-          color: '#999',
-          border: '1px solid #333',
+          backgroundColor: 'var(--color-bg-elevated)',
+          color: 'var(--color-text-secondary)',
+          border: '1px solid var(--color-border-light)',
           borderRadius: '0.5rem',
           cursor: 'pointer',
           fontSize: '0.875rem',
@@ -981,10 +981,10 @@ function SequenceDetailView({ sequence, onBack }: { sequence: SequencePerformanc
         ← Back to All Sequences
       </button>
 
-      <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem' }}>
+      <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               {sequence.sequenceName}
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -993,48 +993,48 @@ function SequenceDetailView({ sequence, onBack }: { sequence: SequencePerformanc
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.75rem', color: '#666' }}>Reply Rate</div>
-            <div style={{ fontSize: '2rem', color: '#10b981', fontWeight: 'bold' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Reply Rate</div>
+            <div style={{ fontSize: '2rem', color: 'var(--color-success)', fontWeight: 'bold' }}>
               {sequence.replyRate.toFixed(1)}%
             </div>
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
-          <div style={{ padding: '1rem', backgroundColor: '#111', borderRadius: '0.5rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Enrolled</div>
-            <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: '600' }}>{sequence.totalEnrolled}</div>
+          <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Enrolled</div>
+            <div style={{ fontSize: '1.5rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{sequence.totalEnrolled}</div>
           </div>
-          <div style={{ padding: '1rem', backgroundColor: '#111', borderRadius: '0.5rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Delivery Rate</div>
-            <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: '600' }}>{sequence.deliveryRate.toFixed(1)}%</div>
+          <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Delivery Rate</div>
+            <div style={{ fontSize: '1.5rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{sequence.deliveryRate.toFixed(1)}%</div>
           </div>
-          <div style={{ padding: '1rem', backgroundColor: '#111', borderRadius: '0.5rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Open Rate</div>
-            <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: '600' }}>{sequence.openRate.toFixed(1)}%</div>
+          <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Open Rate</div>
+            <div style={{ fontSize: '1.5rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{sequence.openRate.toFixed(1)}%</div>
           </div>
-          <div style={{ padding: '1rem', backgroundColor: '#111', borderRadius: '0.5rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Click Rate</div>
-            <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: '600' }}>{sequence.clickRate.toFixed(1)}%</div>
+          <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Click Rate</div>
+            <div style={{ fontSize: '1.5rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{sequence.clickRate.toFixed(1)}%</div>
           </div>
         </div>
       </div>
 
       {/* Step Performance */}
-      <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+      <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '2rem' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
           Step-by-Step Performance
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {sequence.stepPerformance.map((step) => (
-            <div key={step.stepId} style={{ padding: '1.5rem', backgroundColor: '#111', borderRadius: '0.75rem' }}>
+            <div key={step.stepId} style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'between', marginBottom: '1rem' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       backgroundColor: '#222',
-                      color: '#999',
+                      color: 'var(--color-text-secondary)',
                       borderRadius: '0.25rem',
                       fontSize: '0.75rem',
                       fontWeight: '600',
@@ -1043,30 +1043,30 @@ function SequenceDetailView({ sequence, onBack }: { sequence: SequencePerformanc
                     </span>
                     <ChannelBadge channel={step.channel} small />
                   </div>
-                  <div style={{ color: '#fff', fontSize: '0.875rem' }}>{step.action}</div>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>{step.action}</div>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Sent</div>
-                  <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>{step.sent}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Sent</div>
+                  <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{step.sent}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Delivered</div>
-                  <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>{step.delivered}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Delivered</div>
+                  <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{step.delivered}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Opened</div>
-                  <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>{step.opened}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Opened</div>
+                  <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{step.opened}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Clicked</div>
-                  <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>{step.clicked}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Clicked</div>
+                  <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{step.clicked}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>Replied</div>
-                  <div style={{ fontSize: '1.25rem', color: '#10b981', fontWeight: '600' }}>{step.replied}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Replied</div>
+                  <div style={{ fontSize: '1.25rem', color: 'var(--color-success)', fontWeight: '600' }}>{step.replied}</div>
                 </div>
               </div>
 
@@ -1099,32 +1099,32 @@ function ChannelPerformanceCard({ channel, icon, stats }: {
   const replyRate = delivered > 0 ? (replied / delivered) * 100 : 0;
 
   return (
-    <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
+    <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
         <span style={{ fontSize: '2rem' }}>{icon}</span>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', textTransform: 'capitalize' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', textTransform: 'capitalize' }}>
           {channel}
         </h3>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div style={{ padding: '1rem', backgroundColor: '#111', borderRadius: '0.5rem' }}>
-          <div style={{ fontSize: '0.75rem', color: '#666' }}>Sent</div>
-          <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: '600' }}>{sent}</div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Sent</div>
+          <div style={{ fontSize: '1.5rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{sent}</div>
         </div>
-        <div style={{ padding: '1rem', backgroundColor: '#111', borderRadius: '0.5rem' }}>
-          <div style={{ fontSize: '0.75rem', color: '#666' }}>Delivered</div>
-          <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: '600' }}>{delivered}</div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Delivered</div>
+          <div style={{ fontSize: '1.5rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{delivered}</div>
         </div>
         {channel !== 'phone' && channel !== 'sms' && (
-          <div style={{ padding: '1rem', backgroundColor: '#111', borderRadius: '0.5rem' }}>
-            <div style={{ fontSize: '0.75rem', color: '#666' }}>Opened</div>
-            <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: '600' }}>{opened}</div>
+          <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Opened</div>
+            <div style={{ fontSize: '1.5rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{opened}</div>
           </div>
         )}
-        <div style={{ padding: '1rem', backgroundColor: '#111', borderRadius: '0.5rem' }}>
-          <div style={{ fontSize: '0.75rem', color: '#666' }}>Replied</div>
-          <div style={{ fontSize: '1.5rem', color: '#10b981', fontWeight: '600' }}>{replied}</div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Replied</div>
+          <div style={{ fontSize: '1.5rem', color: 'var(--color-success)', fontWeight: '600' }}>{replied}</div>
         </div>
       </div>
 
@@ -1143,8 +1143,8 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
   return (
     <span style={{
       padding: '0.25rem 0.75rem',
-      backgroundColor: isActive ? '#065f46' : '#374151',
-      color: isActive ? '#6ee7b7' : '#9ca3af',
+      backgroundColor: isActive ? 'var(--color-success)' : 'var(--color-bg-elevated)',
+      color: isActive ? 'var(--color-bg-main)' : 'var(--color-text-secondary)',
       borderRadius: '0.25rem',
       fontSize: '0.75rem',
       fontWeight: '700',
@@ -1167,8 +1167,8 @@ function ChannelBadge({ channel, small }: { channel: string; small?: boolean }) 
   return (
     <span style={{
       padding: small ? '0.125rem 0.5rem' : '0.25rem 0.75rem',
-      backgroundColor: '#222',
-      color: '#999',
+      backgroundColor: 'var(--color-bg-elevated)',
+      color: 'var(--color-text-secondary)',
       borderRadius: '0.25rem',
       fontSize: small ? '0.625rem' : '0.75rem',
       fontWeight: '600',
@@ -1186,14 +1186,14 @@ function MetricPill({ label, value, highlight }: { label: string; value: string;
   return (
     <div style={{
       padding: '0.5rem 0.75rem',
-      backgroundColor: highlight ? '#065f46' : '#1a1a1a',
+      backgroundColor: highlight ? 'var(--color-success)' : 'var(--color-bg-paper)',
       borderRadius: '0.375rem',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
     }}>
-      <span style={{ fontSize: '0.75rem', color: highlight ? '#6ee7b7' : '#999' }}>{label}:</span>
-      <span style={{ fontSize: '0.75rem', color: highlight ? '#10b981' : '#fff', fontWeight: '600', marginLeft: '0.5rem' }}>
+      <span style={{ fontSize: '0.75rem', color: highlight ? 'var(--color-bg-main)' : 'var(--color-text-secondary)' }}>{label}:</span>
+      <span style={{ fontSize: '0.75rem', color: highlight ? 'var(--color-bg-main)' : 'var(--color-text-primary)', fontWeight: '600', marginLeft: '0.5rem' }}>
         {value}
       </span>
     </div>
@@ -1202,11 +1202,11 @@ function MetricPill({ label, value, highlight }: { label: string; value: string;
 
 function ExecutionStatusBadge({ status }: { status: 'pending' | 'executing' | 'success' | 'failed' | 'skipped' }) {
   const styles: Record<string, { bg: string; color: string; label: string }> = {
-    pending: { bg: '#374151', color: '#9ca3af', label: '⏳ Pending' },
-    executing: { bg: '#1e3a8a', color: '#60a5fa', label: '⚡ Executing' },
-    success: { bg: '#065f46', color: '#6ee7b7', label: '✅ Success' },
-    failed: { bg: '#7f1d1d', color: '#fca5a5', label: '❌ Failed' },
-    skipped: { bg: '#78350f', color: '#fbbf24', label: '⏭️ Skipped' },
+    pending: { bg: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', label: '⏳ Pending' },
+    executing: { bg: 'var(--color-primary)', color: 'white', label: '⚡ Executing' },
+    success: { bg: 'var(--color-success)', color: 'var(--color-bg-main)', label: '✅ Success' },
+    failed: { bg: 'var(--color-error)', color: 'white', label: '❌ Failed' },
+    skipped: { bg: 'var(--color-warning)', color: 'var(--color-bg-main)', label: '⏭️ Skipped' },
   };
 
   const style = styles[status];

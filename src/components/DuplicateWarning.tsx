@@ -101,11 +101,11 @@ export default function DuplicateWarning({
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">
-                    {match.record.firstName} {match.record.lastName} 
+                  <div className="font-medium text-[var(--color-text-primary)]">
+                    {match.record.firstName} {match.record.lastName}
                     {match.record.name && ` - ${match.record.name}`}
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-[var(--color-text-secondary)]">
                     {match.record.email ?? match.record.phone ?? match.record.company ?? 'No contact info'}
                   </div>
                 </div>
@@ -137,7 +137,7 @@ export default function DuplicateWarning({
                     {merging ? 'Merging...' : 'Merge with this record'}
                   </button>
                 )}
-                <button className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm font-medium hover:bg-gray-300">
+                <button className="px-3 py-1 bg-gray-200 text-[var(--color-text-primary)] rounded text-sm font-medium hover:bg-gray-300">
                   View Record
                 </button>
               </div>
@@ -197,7 +197,7 @@ export default function DuplicateWarning({
             Continue Anyway
           </button>
         )}
-        <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded font-medium hover:bg-gray-100">
+        <button className="px-4 py-2 bg-white border border-gray-300 text-[var(--color-text-primary)] rounded font-medium hover:bg-gray-100">
           Review All Duplicates
         </button>
       </div>

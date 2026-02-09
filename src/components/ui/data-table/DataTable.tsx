@@ -74,7 +74,7 @@ export function DataTable<T extends { id: string }>({
       />
 
       {/* Table */}
-      <div className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden">
+      <div className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full" aria-label={tableLabel}>
             <DataTableHeader
@@ -92,11 +92,11 @@ export function DataTable<T extends { id: string }>({
                   <td colSpan={columnCount} className="p-12 text-center">
                     <div className="flex flex-col items-center gap-4">
                       {emptyIcon && (
-                        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-surface-elevated flex items-center justify-center">
                           {emptyIcon}
                         </div>
                       )}
-                      <p className="text-gray-400">{emptyMessage}</p>
+                      <p className="text-[var(--color-text-secondary)]">{emptyMessage}</p>
                     </div>
                   </td>
                 </tr>
@@ -107,8 +107,8 @@ export function DataTable<T extends { id: string }>({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.02 }}
-                    className={`border-t border-white/5 hover:bg-white/5 transition-colors group ${
-                      selectedIds.has(row.id) ? 'bg-white/[0.03]' : ''
+                    className={`border-t border-border-light hover:bg-surface-elevated transition-colors group ${
+                      selectedIds.has(row.id) ? 'bg-surface-elevated/50' : ''
                     }`}
                   >
                     {showSelection && (
@@ -126,7 +126,7 @@ export function DataTable<T extends { id: string }>({
                           ? column.render(row)
                           : (() => {
                               const val = column.accessor?.(row);
-                              return <span className="text-gray-400">{val != null ? String(val) : '-'}</span>;
+                              return <span className="text-[var(--color-text-secondary)]">{val != null ? String(val) : '-'}</span>;
                             })()}
                       </td>
                     ))}

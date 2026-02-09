@@ -96,7 +96,7 @@ export default function EmailCampaignsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-8">
+    <div className="min-h-screen bg-surface-main p-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -104,19 +104,19 @@ export default function EmailCampaignsPage() {
         className="flex items-center justify-between mb-8"
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-500/25">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <Mail className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Email Campaigns</h1>
-            <p className="text-gray-400 text-sm mt-1">Create and manage your email marketing campaigns</p>
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Email Campaigns</h1>
+            <p className="text-[var(--color-text-secondary)] text-sm mt-1">Create and manage your email marketing campaigns</p>
           </div>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => router.push(`/email/campaigns/new`)}
-          className="px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 flex items-center gap-2 transition-all"
+          className="px-6 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 flex items-center gap-2 transition-all"
         >
           <Plus className="w-5 h-5" />
           Create Campaign
@@ -128,7 +128,8 @@ export default function EmailCampaignsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`mb-6 p-3 rounded-lg text-sm ${notification.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}
+          className={`mb-6 p-3 rounded-lg text-sm ${notification.type === 'success' ? 'text-success border border-success/20' : 'text-error border border-error/20'}`}
+          style={{ backgroundColor: notification.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}
         >
           <div className="flex items-center justify-between">
             <span>{notification.message}</span>
@@ -142,7 +143,8 @@ export default function EmailCampaignsPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mb-6 p-4 bg-red-500/20 backdrop-blur-xl border border-red-500/30 rounded-xl text-red-300"
+          className="mb-6 p-4 backdrop-blur-xl border border-error/30 rounded-xl text-error"
+          style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)' }}
         >
           {error}
         </motion.div>
@@ -153,18 +155,18 @@ export default function EmailCampaignsPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center py-16 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl"
+          className="text-center py-16 bg-surface-paper backdrop-blur-xl border border-border-light rounded-2xl"
         >
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 border border-pink-500/30 flex items-center justify-center mx-auto mb-6">
-            <Mail className="w-10 h-10 text-pink-400" />
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary/30 flex items-center justify-center mx-auto mb-6">
+            <Mail className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">No campaigns yet</h3>
-          <p className="text-gray-400 mb-6">Create your first email campaign to get started!</p>
+          <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No campaigns yet</h3>
+          <p className="text-[var(--color-text-secondary)] mb-6">Create your first email campaign to get started!</p>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => router.push(`/email/campaigns/new`)}
-            className="px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 inline-flex items-center gap-2 transition-all"
+            className="px-6 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 inline-flex items-center gap-2 transition-all"
           >
             <Plus className="w-5 h-5" />
             Create Campaign
@@ -181,42 +183,42 @@ export default function EmailCampaignsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ scale: 1.01 }}
-                className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-white/20 transition-all group"
+                className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-2xl p-6 hover:border-border-strong transition-all group"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     {/* Title and Status */}
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 border border-pink-500/30 flex items-center justify-center group-hover:from-pink-500/30 group-hover:to-rose-500/30 transition-all">
-                        <Mail className="w-5 h-5 text-pink-400" />
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary/30 flex items-center justify-center group-hover:from-primary/30 group-hover:to-secondary/30 transition-all">
+                        <Mail className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-white">{campaign.name}</h3>
+                        <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">{campaign.name}</h3>
                       </div>
                       {getStatusBadge(campaign.status)}
                     </div>
 
                     {/* Subject */}
-                    <p className="text-gray-400 mb-4 ml-13">{campaign.subject}</p>
+                    <p className="text-[var(--color-text-secondary)] mb-4 ml-13">{campaign.subject}</p>
 
                     {/* Stats */}
                     {campaign.stats && (
                       <div className="flex items-center gap-6 text-sm ml-13">
                         <div className="flex items-center gap-2">
-                          <Send className="w-4 h-4 text-gray-500" />
-                          <span className="text-gray-400">Sent:</span>
-                          <span className="text-white font-semibold">{campaign.stats.sent || 0}</span>
+                          <Send className="w-4 h-4 text-[var(--color-text-disabled)]" />
+                          <span className="text-[var(--color-text-secondary)]">Sent:</span>
+                          <span className="text-[var(--color-text-primary)] font-semibold">{campaign.stats.sent || 0}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Eye className="w-4 h-4 text-gray-500" />
-                          <span className="text-gray-400">Opened:</span>
-                          <span className="text-white font-semibold">{campaign.stats.opened || 0}</span>
-                          <span className="text-emerald-400 text-xs">({campaign.stats.openRate || 0}%)</span>
+                          <Eye className="w-4 h-4 text-[var(--color-text-disabled)]" />
+                          <span className="text-[var(--color-text-secondary)]">Opened:</span>
+                          <span className="text-[var(--color-text-primary)] font-semibold">{campaign.stats.opened || 0}</span>
+                          <span className="text-success text-xs">({campaign.stats.openRate || 0}%)</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-gray-500" />
-                          <span className="text-gray-400">Clicked:</span>
-                          <span className="text-white font-semibold">{campaign.stats.clicked || 0}</span>
+                          <TrendingUp className="w-4 h-4 text-[var(--color-text-disabled)]" />
+                          <span className="text-[var(--color-text-secondary)]">Clicked:</span>
+                          <span className="text-[var(--color-text-primary)] font-semibold">{campaign.stats.clicked || 0}</span>
                         </div>
                       </div>
                     )}
@@ -260,7 +262,7 @@ export default function EmailCampaignsPage() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
-                className="px-8 py-3 bg-black/40 backdrop-blur-xl border border-white/10 text-white rounded-xl hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold"
+                className="px-8 py-3 bg-surface-paper backdrop-blur-xl border border-border-light text-[var(--color-text-primary)] rounded-xl hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold"
               >
                 {loading ? 'Loading...' : hasMore ? `Load More (Showing ${campaigns.length})` : 'All loaded'}
               </motion.button>

@@ -73,7 +73,7 @@ export default function SchedulePublishModal({
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
+        background: 'var(--color-overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -84,7 +84,7 @@ export default function SchedulePublishModal({
     >
       <div
         style={{
-          background: 'white',
+          background: 'var(--color-surface-paper)',
           borderRadius: '12px',
           padding: '2rem',
           maxWidth: '500px',
@@ -95,10 +95,10 @@ export default function SchedulePublishModal({
       >
         {/* Header */}
         <div style={{ marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
             Schedule Publish
           </h2>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
             Choose when to automatically publish <strong>{pageTitle}</strong>
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function SchedulePublishModal({
               style={{
                 display: 'block',
                 fontWeight: '500',
-                color: '#374151',
+                color: 'var(--color-text-primary)',
                 marginBottom: '0.5rem',
                 fontSize: '0.875rem',
               }}
@@ -127,7 +127,7 @@ export default function SchedulePublishModal({
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '8px',
                 fontSize: '1rem',
               }}
@@ -140,7 +140,7 @@ export default function SchedulePublishModal({
               style={{
                 display: 'block',
                 fontWeight: '500',
-                color: '#374151',
+                color: 'var(--color-text-primary)',
                 marginBottom: '0.5rem',
                 fontSize: '0.875rem',
               }}
@@ -155,7 +155,7 @@ export default function SchedulePublishModal({
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '8px',
                 fontSize: '1rem',
               }}
@@ -166,13 +166,13 @@ export default function SchedulePublishModal({
           <div
             style={{
               padding: '0.75rem',
-              background: '#eff6ff',
-              border: '1px solid #bfdbfe',
+              background: 'var(--color-surface-elevated)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '8px',
               marginBottom: '1.5rem',
             }}
           >
-            <p style={{ fontSize: '0.75rem', color: '#1e40af' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-primary)' }}>
               ℹ️ Time is in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone})
             </p>
           </div>
@@ -182,16 +182,16 @@ export default function SchedulePublishModal({
             <div
               style={{
                 padding: '1rem',
-                background: '#f9fafb',
-                border: '1px solid #e5e7eb',
+                background: 'var(--color-surface-elevated)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '8px',
                 marginBottom: '1.5rem',
               }}
             >
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
                 Will publish on:
               </div>
-              <div style={{ fontWeight: '600', color: '#111827' }}>
+              <div style={{ fontWeight: '600', color: 'var(--color-text-primary)' }}>
                 {new Date(`${date}T${time}`).toLocaleString('en-US', {
                   weekday: 'long',
                   year: 'numeric',
@@ -209,10 +209,10 @@ export default function SchedulePublishModal({
             <div
               style={{
                 padding: '0.75rem',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
+                background: 'var(--color-error-bg)',
+                border: '1px solid var(--color-error)',
                 borderRadius: '8px',
-                color: '#991b1b',
+                color: 'var(--color-error)',
                 fontSize: '0.875rem',
                 marginBottom: '1.5rem',
               }}
@@ -229,8 +229,8 @@ export default function SchedulePublishModal({
               style={{
                 flex: 1,
                 padding: '0.75rem',
-                background: '#f3f4f6',
-                color: '#374151',
+                background: 'var(--color-surface-elevated)',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '1rem',
@@ -245,7 +245,7 @@ export default function SchedulePublishModal({
               style={{
                 flex: 1,
                 padding: '0.75rem',
-                background: '#3498db',
+                background: 'var(--color-primary)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',

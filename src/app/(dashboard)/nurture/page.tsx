@@ -43,7 +43,7 @@ export default function NurtureCampaignsPage() {
   }, [refresh]);
 
   return (
-    <div className="min-h-screen bg-black p-8">
+    <div className="min-h-screen bg-surface-main p-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -52,19 +52,19 @@ export default function NurtureCampaignsPage() {
         className="flex justify-between items-center mb-8"
       >
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <Heart className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Lead Nurture Campaigns</h1>
-            <p className="text-gray-400 text-sm mt-1">Automate your lead engagement sequences</p>
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Lead Nurture Campaigns</h1>
+            <p className="text-[var(--color-text-secondary)] text-sm mt-1">Automate your lead engagement sequences</p>
           </div>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => router.push(`/nurture/new`)}
-          className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-semibold rounded-xl shadow-lg shadow-cyan-500/25 flex items-center gap-2 transition-all duration-200"
+          className="px-6 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 flex items-center gap-2 transition-all duration-200"
         >
           <Plus className="w-5 h-5" />
           Create Campaign
@@ -76,10 +76,11 @@ export default function NurtureCampaignsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 bg-red-500/10 backdrop-blur-xl border border-red-500/30 rounded-xl flex items-start gap-3"
+          className="mb-6 p-4 backdrop-blur-xl border rounded-xl flex items-start gap-3"
+          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
         >
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-red-300">{error}</p>
+          <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+          <p className="text-error">{error}</p>
         </motion.div>
       )}
 
@@ -89,20 +90,20 @@ export default function NurtureCampaignsPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="text-center py-20 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl"
+          className="text-center py-20 bg-surface-paper backdrop-blur-xl border border-border-light rounded-2xl"
         >
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-teal-500/20 flex items-center justify-center border border-cyan-500/30">
-            <Heart className="w-10 h-10 text-cyan-400" />
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border border-primary/30">
+            <Heart className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">No Nurture Campaigns Yet</h3>
-          <p className="text-gray-400 mb-8 max-w-md mx-auto">
+          <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No Nurture Campaigns Yet</h3>
+          <p className="text-[var(--color-text-secondary)] mb-8 max-w-md mx-auto">
             Create your first automated nurture sequence to engage and convert your leads over time.
           </p>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => router.push(`/nurture/new`)}
-            className="px-8 py-3 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-semibold rounded-xl shadow-lg shadow-cyan-500/25 inline-flex items-center gap-2 transition-all duration-200"
+            className="px-8 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 inline-flex items-center gap-2 transition-all duration-200"
           >
             <Plus className="w-5 h-5" />
             Create Your First Campaign
@@ -119,13 +120,13 @@ export default function NurtureCampaignsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.05 }}
                 whileHover={{ scale: 1.01 }}
-                className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-white/20 transition-all duration-300"
+                className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-2xl p-6 hover:border-border-strong transition-all duration-300"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     {/* Campaign Header */}
                     <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-xl font-semibold text-white">{campaign.name}</h3>
+                      <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">{campaign.name}</h3>
                       <span
                         className={`px-3 py-1 rounded-lg text-xs font-semibold ${
                           campaign.status === 'active'
@@ -140,26 +141,26 @@ export default function NurtureCampaignsPage() {
                     </div>
 
                     {/* Description */}
-                    <p className="text-gray-400 mb-4 leading-relaxed">{campaign.description}</p>
+                    <p className="text-[var(--color-text-secondary)] mb-4 leading-relaxed">{campaign.description}</p>
 
                     {/* Stats */}
                     <div className="flex flex-wrap gap-6 text-sm">
-                      <div className="flex items-center gap-2 text-gray-300">
-                        <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-                          <Layers className="w-4 h-4 text-cyan-400" />
+                      <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                          <Layers className="w-4 h-4 text-primary" />
                         </div>
                         <div>
-                          <span className="font-semibold text-white">{campaign.steps?.length || 0}</span>
-                          <span className="text-gray-400 ml-1">steps</span>
+                          <span className="font-semibold text-[var(--color-text-primary)]">{campaign.steps?.length || 0}</span>
+                          <span className="text-[var(--color-text-secondary)] ml-1">steps</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-300">
-                        <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center border border-teal-500/20">
-                          <Users className="w-4 h-4 text-teal-400" />
+                      <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                        <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center border border-secondary/20">
+                          <Users className="w-4 h-4 text-secondary" />
                         </div>
                         <div>
-                          <span className="font-semibold text-white">{campaign.enrolled ?? 0}</span>
-                          <span className="text-gray-400 ml-1">leads enrolled</span>
+                          <span className="font-semibold text-[var(--color-text-primary)]">{campaign.enrolled ?? 0}</span>
+                          <span className="text-[var(--color-text-secondary)] ml-1">leads enrolled</span>
                         </div>
                       </div>
                     </div>
@@ -171,7 +172,7 @@ export default function NurtureCampaignsPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => router.push(`/nurture/${campaign.id}`)}
-                      className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-semibold rounded-xl shadow-lg shadow-cyan-500/25 flex items-center gap-2 transition-all duration-200"
+                      className="px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 flex items-center gap-2 transition-all duration-200"
                     >
                       <Edit3 className="w-4 h-4" />
                       Edit
@@ -180,7 +181,7 @@ export default function NurtureCampaignsPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => router.push(`/nurture/${campaign.id}/stats`)}
-                      className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold rounded-xl flex items-center gap-2 transition-all duration-200"
+                      className="px-4 py-2 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-[var(--color-text-primary)] font-semibold rounded-xl flex items-center gap-2 transition-all duration-200"
                     >
                       <BarChart3 className="w-4 h-4" />
                       Stats
@@ -203,11 +204,11 @@ export default function NurtureCampaignsPage() {
                 whileTap={{ scale: loading || !hasMore ? 1 : 0.98 }}
                 onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
-                className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+                className="px-8 py-3 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-[var(--color-text-primary)] font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
               >
                 {loading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-[var(--color-text-secondary)] border-t-[var(--color-text-primary)] rounded-full animate-spin" />
                     Loading...
                   </>
                 ) : hasMore ? (

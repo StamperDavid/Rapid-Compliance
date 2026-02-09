@@ -67,12 +67,12 @@ export function ConversationCoachingCard({ analysis, className = '' }: Conversat
   };
   
   return (
-    <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
-      <h2 className="text-xl font-semibold mb-4">Coaching Insights</h2>
-      
+    <div className={`bg-surface-main rounded-lg shadow p-6 ${className}`}>
+      <h2 className="text-xl font-semibold mb-4 text-[var(--color-text-primary)]">Coaching Insights</h2>
+
       {/* Quality Indicators */}
       <div className="mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Quality Indicators</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">Quality Indicators</h3>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {qualityIndicators.map((indicator, index) => {
@@ -81,7 +81,7 @@ export function ConversationCoachingCard({ analysis, className = '' }: Conversat
               <div key={index} className={`p-3 rounded-lg border ${status.bg}`}>
                 <div className="flex items-center gap-2 mb-1">
                   <span>{status.icon}</span>
-                  <span className="text-sm font-medium text-gray-900 capitalize">
+                  <span className="text-sm font-medium text-[var(--color-text-primary)] capitalize">
                     {indicator.type.replace(/_/g, ' ')}
                   </span>
                 </div>
@@ -94,7 +94,7 @@ export function ConversationCoachingCard({ analysis, className = '' }: Conversat
                   </span>
                 </div>
                 {indicator.recommendation && (
-                  <p className="text-xs text-gray-600 mt-2">
+                  <p className="text-xs text-[var(--color-text-disabled)] mt-2">
                     {indicator.recommendation}
                   </p>
                 )}
@@ -114,25 +114,25 @@ export function ConversationCoachingCard({ analysis, className = '' }: Conversat
           
           <div className="space-y-3">
             {redFlags.map((flag, index) => (
-              <div key={index} className="bg-white p-3 rounded border border-red-300">
+              <div key={index} className="bg-surface-main p-3 rounded border border-red-300">
                 <div className="flex items-start justify-between mb-2">
-                  <span className="font-medium text-gray-900 capitalize">
+                  <span className="font-medium text-[var(--color-text-primary)] capitalize">
                     {flag.type.replace(/_/g, ' ')}
                   </span>
                   {getPriorityBadge(flag.severity)}
                 </div>
-                
-                <p className="text-sm text-gray-700 mb-2">{flag.description}</p>
-                
+
+                <p className="text-sm text-[var(--color-text-secondary)] mb-2">{flag.description}</p>
+
                 {flag.quote && (
-                  <p className="text-sm text-gray-600 italic mb-2">
+                  <p className="text-sm text-[var(--color-text-disabled)] italic mb-2">
                     {'"'}{flag.quote}{'"'}
                   </p>
                 )}
-                
-                <div className="pt-2 border-t border-gray-200">
-                  <div className="text-xs font-medium text-gray-700 mb-1">Recommendation:</div>
-                  <p className="text-xs text-gray-600">{flag.recommendation}</p>
+
+                <div className="pt-2 border-t border-border-light">
+                  <div className="text-xs font-medium text-[var(--color-text-secondary)] mb-1">Recommendation:</div>
+                  <p className="text-xs text-[var(--color-text-disabled)]">{flag.recommendation}</p>
                 </div>
               </div>
             ))}
@@ -143,35 +143,35 @@ export function ConversationCoachingCard({ analysis, className = '' }: Conversat
       {/* Coaching Insights */}
       {coachingInsights.length > 0 ? (
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
             Actionable Coaching ({coachingInsights.length})
           </h3>
-          
+
           <div className="space-y-4">
             {coachingInsights.map((insight, index) => (
               <div
                 key={index}
-                className="border-l-4 border-blue-500 pl-4 py-3 bg-blue-50 rounded-r"
+                className="border-l-4 border-primary pl-4 py-3 bg-blue-50 rounded-r"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span>{getCategoryIcon(insight.category)}</span>
-                    <span className="font-medium text-gray-900 capitalize">
+                    <span className="font-medium text-[var(--color-text-primary)] capitalize">
                       {insight.skillArea}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     {getPriorityBadge(insight.priority)}
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-[var(--color-text-disabled)]">
                       Impact: {insight.impact}%
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Insight */}
                 <div className="mb-3">
-                  <div className="text-sm font-medium text-gray-900 mb-1">
+                  <div className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
                     {insight.insight}
                   </div>
                 </div>
@@ -196,16 +196,16 @@ export function ConversationCoachingCard({ analysis, className = '' }: Conversat
                 
                 {/* Specific example */}
                 <div className="mb-3">
-                  <div className="text-xs font-medium text-gray-700 mb-1">
+                  <div className="text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                     Example from conversation:
                   </div>
-                  <p className="text-xs text-gray-600 italic">
+                  <p className="text-xs text-[var(--color-text-disabled)] italic">
                     {'"'}{insight.specificExample}{'"'}
                   </p>
                 </div>
-                
+
                 {/* Recommended action */}
-                <div className="p-3 bg-white rounded border border-blue-200">
+                <div className="p-3 bg-surface-main rounded border border-blue-200">
                   <div className="text-xs font-medium text-blue-800 mb-1">
                     🎯 Recommended Action:
                   </div>
@@ -218,10 +218,10 @@ export function ConversationCoachingCard({ analysis, className = '' }: Conversat
       ) : (
         <div className="text-center py-8">
           <span className="text-4xl mb-2 block">🎉</span>
-          <p className="text-sm font-medium text-gray-700 mb-1">
+          <p className="text-sm font-medium text-[var(--color-text-secondary)] mb-1">
             Excellent Performance!
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[var(--color-text-disabled)]">
             No critical coaching areas identified. Keep up the great work!
           </p>
         </div>

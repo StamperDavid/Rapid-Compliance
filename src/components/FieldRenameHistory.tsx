@@ -146,7 +146,7 @@ export default function FieldRenameHistory({
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -171,32 +171,32 @@ export default function FieldRenameHistory({
   return (
     <div className="space-y-6">
       {/* Current Field Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-blue-900 mb-2">Current Field</h3>
+      <div className="bg-surface-elevated border border-border-light rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Current Field</h3>
         <div className="space-y-1">
           <div className="text-sm">
-            <span className="text-blue-600 font-medium">Key:</span>{' '}
-            <code className="bg-blue-100 px-2 py-1 rounded">{currentField?.currentKey}</code>
+            <span className="text-primary font-medium">Key:</span>{' '}
+            <code className="bg-surface-paper px-2 py-1 rounded">{currentField?.currentKey}</code>
           </div>
           <div className="text-sm">
-            <span className="text-blue-600 font-medium">Label:</span>{' '}
-            <span className="text-blue-900">{currentField?.currentLabel}</span>
+            <span className="text-primary font-medium">Label:</span>{' '}
+            <span className="text-[var(--color-text-primary)]">{currentField?.currentLabel}</span>
           </div>
         </div>
       </div>
 
       {/* Aliases */}
       {aliases.length > 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">All Known Aliases</h3>
+        <div className="bg-surface-elevated border border-border-light rounded-lg p-4">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">All Known Aliases</h3>
           <div className="flex flex-wrap gap-2">
             {aliases.map((alias, idx) => (
               <span
                 key={idx}
                 className={`px-2 py-1 rounded text-xs font-medium ${
                   alias === currentField?.currentKey
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-700'
+                    ? 'bg-primary/20 text-primary'
+                    : 'bg-surface-paper text-[var(--color-text-secondary)]'
                 }`}
               >
                 {alias}
@@ -207,24 +207,24 @@ export default function FieldRenameHistory({
       )}
 
       {/* Timeline */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Rename Timeline</h3>
+      <div className="bg-surface-main border border-border-light rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Rename Timeline</h3>
         <div className="space-y-4">
           {timeline.map((entry, idx) => (
             <div
               key={idx}
               className={`flex items-start gap-4 p-4 rounded-lg border ${
                 idx === timeline.length - 1
-                  ? 'bg-blue-50 border-blue-200'
-                  : 'bg-gray-50 border-gray-200'
+                  ? 'bg-primary/10 border-primary/30'
+                  : 'bg-surface-elevated border-border-light'
               }`}
             >
               <div className="flex-shrink-0">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
                     idx === timeline.length - 1
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-300 text-gray-700'
+                      ? 'bg-primary text-white'
+                      : 'bg-surface-elevated text-[var(--color-text-secondary)]'
                   }`}
                 >
                   {entry.version}
@@ -236,15 +236,15 @@ export default function FieldRenameHistory({
                   <code className="bg-white px-2 py-1 rounded border border-gray-300 text-sm font-mono">
                     {entry.key}
                   </code>
-                  <span className="text-gray-400">→</span>
-                  <span className="text-gray-900 font-medium">{entry.label}</span>
+                  <span className="text-[var(--color-text-disabled)]">→</span>
+                  <span className="text-[var(--color-text-primary)] font-medium">{entry.label}</span>
                   {idx === timeline.length - 1 && (
-                    <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded">
+                    <span className="px-2 py-1 bg-primary text-white text-xs rounded">
                       Current
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-gray-600">
+                <div className="text-xs text-[var(--color-text-secondary)]">
                   {formatTimestamp(entry.timestamp)}
                   {entry.reason && (
                     <span className="ml-2 italic">• {entry.reason}</span>

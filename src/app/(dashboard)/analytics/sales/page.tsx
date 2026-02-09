@@ -41,7 +41,7 @@ export default function SalesAnalyticsPage() {
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -62,29 +62,29 @@ export default function SalesAnalyticsPage() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-4 gap-6 mb-8">
-        <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-sm text-gray-400 mb-2">Sales Velocity</div>
-          <div className="text-3xl font-bold text-green-400">{formatCurrency(metrics.velocity)}/day</div>
-          <div className="text-xs text-gray-500 mt-2">
+        <div className="bg-surface-paper rounded-lg p-6">
+          <div className="text-sm text-[var(--color-text-secondary)] mb-2">Sales Velocity</div>
+          <div className="text-3xl font-bold text-success">{formatCurrency(metrics.velocity)}/day</div>
+          <div className="text-xs text-[var(--color-text-disabled)] mt-2">
             30d: {formatCurrency(metrics.trends.velocity30Days)}/day
           </div>
         </div>
 
-        <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-sm text-gray-400 mb-2">Win Rate</div>
+        <div className="bg-surface-paper rounded-lg p-6">
+          <div className="text-sm text-[var(--color-text-secondary)] mb-2">Win Rate</div>
           <div className="text-3xl font-bold">{metrics.winRate.toFixed(1)}%</div>
-          <div className="text-xs text-gray-500 mt-2">
+          <div className="text-xs text-[var(--color-text-disabled)] mt-2">
             30d: {metrics.trends.winRate30Days.toFixed(1)}%
           </div>
         </div>
 
-        <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-sm text-gray-400 mb-2">Avg Deal Size</div>
+        <div className="bg-surface-paper rounded-lg p-6">
+          <div className="text-sm text-[var(--color-text-secondary)] mb-2">Avg Deal Size</div>
           <div className="text-3xl font-bold">{formatCurrency(metrics.avgDealSize)}</div>
         </div>
 
-        <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-sm text-gray-400 mb-2">Avg Sales Cycle</div>
+        <div className="bg-surface-paper rounded-lg p-6">
+          <div className="text-sm text-[var(--color-text-secondary)] mb-2">Avg Sales Cycle</div>
           <div className="text-3xl font-bold">{metrics.avgSalesCycle} days</div>
         </div>
       </div>
@@ -141,49 +141,49 @@ export default function SalesAnalyticsPage() {
 
       {/* Forecast */}
       <div className="grid grid-cols-2 gap-6 mb-8">
-        <div className="bg-gray-900 rounded-lg p-6">
+        <div className="bg-surface-paper rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Revenue Forecast</h2>
-          <div className="text-4xl font-bold text-green-400 mb-2">
+          <div className="text-4xl font-bold text-success mb-2">
             {formatCurrency(metrics.forecastedRevenue)}
           </div>
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-[var(--color-text-secondary)]">
             Confidence: {metrics.confidenceLevel}%
           </div>
-          <div className="mt-4 w-full bg-gray-800 rounded-full h-3">
-            <div 
-              className="bg-green-600 h-3 rounded-full" 
+          <div className="mt-4 w-full bg-surface-elevated rounded-full h-3">
+            <div
+              className="bg-success h-3 rounded-full"
               style={{ width: `${metrics.confidenceLevel}%` }}
             />
           </div>
         </div>
 
-        <div className="bg-gray-900 rounded-lg p-6">
+        <div className="bg-surface-paper rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Velocity Trend</h2>
           <div className="space-y-3">
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-400">Last 30 Days</span>
+                <span className="text-[var(--color-text-secondary)]">Last 30 Days</span>
                 <span className="font-medium">{formatCurrency(metrics.trends.velocity30Days)}/day</span>
               </div>
-              <div className="w-full bg-gray-800 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full" 
+              <div className="w-full bg-surface-elevated rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full"
                   style={{ width: `${(metrics.trends.velocity30Days / metrics.trends.velocity90Days) * 100}%` }}
                 />
               </div>
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-400">Last 90 Days</span>
+                <span className="text-[var(--color-text-secondary)]">Last 90 Days</span>
                 <span className="font-medium">{formatCurrency(metrics.trends.velocity90Days)}/day</span>
               </div>
-              <div className="w-full bg-gray-800 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '100%' }} />
+              <div className="w-full bg-surface-elevated rounded-full h-2">
+                <div className="bg-success h-2 rounded-full" style={{ width: '100%' }} />
               </div>
             </div>
           </div>
           {metrics.trends.velocity30Days < metrics.trends.velocity90Days * 0.8 && (
-            <div className="mt-4 text-sm text-yellow-400">
+            <div className="mt-4 text-sm" style={{ color: 'var(--color-warning)' }}>
               ⚠️ Velocity declining - 30-day avg is {((1 - metrics.trends.velocity30Days / metrics.trends.velocity90Days) * 100).toFixed(0)}% below 90-day avg
             </div>
           )}
@@ -191,12 +191,12 @@ export default function SalesAnalyticsPage() {
       </div>
 
       {/* Pipeline by Stage */}
-      <div className="bg-gray-900 rounded-lg p-6 mb-8">
+      <div className="bg-surface-paper rounded-lg p-6 mb-8">
         <h2 className="text-xl font-semibold mb-6">Pipeline by Stage</h2>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-800">
+              <tr className="border-b border-border-light">
                 <th className="text-left py-3 px-4">Stage</th>
                 <th className="text-right py-3 px-4">Deals</th>
                 <th className="text-right py-3 px-4">Total Value</th>
@@ -210,7 +210,7 @@ export default function SalesAnalyticsPage() {
               {stagesArray.map(([stage, data]) => {
                 const isBottleneck = data.bottleneckScore > 120;
                 return (
-                  <tr key={stage} className={`border-b border-gray-800 ${isBottleneck ? 'bg-yellow-900/20' : ''}`}>
+                  <tr key={stage} className={`border-b border-border-light ${isBottleneck ? 'bg-surface-elevated' : ''}`}>
                     <td className="py-4 px-4 font-medium capitalize">{stage.replace('_', ' ')}</td>
                     <td className="py-4 px-4 text-right">{data.totalDeals}</td>
                     <td className="py-4 px-4 text-right">{formatCurrency(data.totalValue)}</td>
@@ -219,11 +219,11 @@ export default function SalesAnalyticsPage() {
                     <td className="py-4 px-4 text-right">{data.conversionRate.toFixed(1)}%</td>
                     <td className="py-4 px-4 text-right">
                       {isBottleneck ? (
-                        <span className="px-2 py-1 bg-yellow-900 text-yellow-300 rounded text-xs font-medium">
+                        <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'var(--color-warning)', color: 'var(--color-bg-main)' }}>
                           ⚠️ Bottleneck
                         </span>
                       ) : (
-                        <span className="px-2 py-1 bg-green-900 text-green-300 rounded text-xs font-medium">
+                        <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: 'var(--color-success)', color: 'var(--color-bg-main)' }}>
                           ✅ On Track
                         </span>
                       )}
@@ -237,21 +237,21 @@ export default function SalesAnalyticsPage() {
       </div>
 
       {/* Conversion Rates */}
-      <div className="bg-gray-900 rounded-lg p-6">
+      <div className="bg-surface-paper rounded-lg p-6">
         <h2 className="text-xl font-semibold mb-6">Stage Conversion Rates</h2>
         <div className="space-y-4">
           {Array.from(metrics.conversionRates.entries()).map(([transition, rate]) => (
             <div key={transition}>
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-400 capitalize">{transition.replace('->', ' → ').replace(/_/g, ' ')}</span>
+                <span className="text-[var(--color-text-secondary)] capitalize">{transition.replace('->', ' → ').replace(/_/g, ' ')}</span>
                 <span className="font-medium">{rate.toFixed(1)}%</span>
               </div>
-              <div className="w-full bg-gray-800 rounded-full h-3">
-                <div 
+              <div className="w-full bg-surface-elevated rounded-full h-3">
+                <div
                   className={`h-3 rounded-full ${
-                    rate >= 60 ? 'bg-green-600' : 
-                    rate >= 40 ? 'bg-yellow-600' : 
-                    'bg-red-600'
+                    rate >= 60 ? 'bg-success' :
+                    rate >= 40 ? 'bg-[var(--color-warning)]' :
+                    'bg-error'
                   }`}
                   style={{ width: `${rate}%` }}
                 />

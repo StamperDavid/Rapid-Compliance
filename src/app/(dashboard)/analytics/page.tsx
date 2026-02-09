@@ -122,8 +122,8 @@ export default function AnalyticsDashboard() {
     return (
       <div className="flex items-center justify-center min-h-[400px] p-8">
         <div className="flex items-center gap-3">
-          <Activity className="w-6 h-6 text-indigo-500 animate-pulse" />
-          <div className="text-white/60 text-lg">Loading analytics...</div>
+          <Activity className="w-6 h-6 text-primary animate-pulse" />
+          <div className="text-[var(--color-text-secondary)] text-lg">Loading analytics...</div>
         </div>
       </div>
     );
@@ -192,7 +192,7 @@ export default function AnalyticsDashboard() {
   ];
 
   return (
-    <div className="bg-black min-h-screen p-8 overflow-y-auto">
+    <div className="bg-surface-main min-h-screen p-8 overflow-y-auto">
       <div className="max-w-[1400px] mx-auto">
         {/* Header */}
         <motion.div
@@ -201,21 +201,21 @@ export default function AnalyticsDashboard() {
           className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 mb-8"
         >
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25 flex-shrink-0">
               <Activity className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
+              <h1 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2">
                 Analytics Dashboard
               </h1>
-              <p className="text-white/60 text-sm">
+              <p className="text-[var(--color-text-secondary)] text-sm">
                 Track revenue, pipeline, e-commerce, and workflow performance
               </p>
             </div>
           </div>
 
           {/* Period Selector */}
-          <div className="flex gap-2 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-1.5">
+          <div className="flex gap-2 bg-surface-paper backdrop-blur-xl border border-border-light rounded-xl p-1.5">
             {(['7d', '30d', '90d', 'all'] as const).map((period) => (
               <motion.button
                 key={period}
@@ -224,8 +224,8 @@ export default function AnalyticsDashboard() {
                 whileTap={{ scale: 0.98 }}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                   selectedPeriod === period
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
                 }`}
               >
                 {period === 'all' ? 'All Time' : period.toUpperCase()}
@@ -248,21 +248,21 @@ export default function AnalyticsDashboard() {
                 key={index}
                 variants={item}
                 whileHover={{ scale: 1.02, y: -4 }}
-                className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 hover:border-indigo-500/50 transition-all"
+                className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-xl p-6 hover:border-primary transition-all"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-xs text-white/60 uppercase tracking-wider font-semibold">
+                  <div className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider font-semibold">
                     {card.label}
                   </div>
-                  <Icon className="w-5 h-5 text-indigo-400" />
+                  <Icon className="w-5 h-5 text-primary" />
                 </div>
-                <div className="text-3xl font-bold text-white mb-2">
+                <div className="text-3xl font-bold text-[var(--color-text-primary)] mb-2">
                   {card.value}
                 </div>
                 <div className={`text-xs flex items-center gap-1 ${
                   card.positive === true ? 'text-emerald-400' :
                   card.positive === false ? 'text-red-400' :
-                  'text-white/60'
+                  'text-[var(--color-text-secondary)]'
                 }`}>
                   {card.positive === true && <TrendingUp className="w-3 h-3" />}
                   {card.positive === false && <TrendingDown className="w-3 h-3" />}
@@ -289,17 +289,17 @@ export default function AnalyticsDashboard() {
                 whileHover={{ scale: 1.02, y: -4 }}
               >
                 <Link href={card.href} className="block">
-                  <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-8 hover:border-indigo-500/50 transition-all group">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg shadow-indigo-500/25 mb-6`}>
+                  <div className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-xl p-8 hover:border-primary transition-all group">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg shadow-primary/25 mb-6`}>
                       <Icon className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-indigo-400 transition-colors">
+                    <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-3 group-hover:text-primary transition-colors">
                       {card.title}
                     </h3>
-                    <p className="text-sm text-white/60 leading-relaxed mb-6">
+                    <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed mb-6">
                       {card.description}
                     </p>
-                    <div className="flex items-center gap-2 text-indigo-400 text-sm font-semibold group-hover:gap-3 transition-all">
+                    <div className="flex items-center gap-2 text-primary text-sm font-semibold group-hover:gap-3 transition-all">
                       View Details
                       <ArrowRight className="w-4 h-4" />
                     </div>

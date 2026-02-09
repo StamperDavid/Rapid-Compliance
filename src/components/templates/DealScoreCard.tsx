@@ -58,7 +58,7 @@ function DealScoreCardInner({
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+    <div className="bg-surface-paper border border-border-light rounded-lg overflow-hidden">
       {/* Header */}
       <div className={`bg-gradient-to-r ${tierColors[score.tier]} p-6`}>
         <div className="flex items-center justify-between mb-4">
@@ -150,33 +150,33 @@ function DealScoreCardInner({
             </h4>
             <div className="space-y-2">
               {score.factors.map((factor: ScoringFactor) => (
-                <div key={factor.id} className="bg-gray-700 rounded-lg p-3">
+                <div key={factor.id} className="bg-surface-elevated rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-white font-medium">{factor.name}</span>
                     <div className="flex items-center gap-2">
                       <span className={`text-sm font-semibold ${
-                        factor.impact === 'positive' ? 'text-green-400' :
-                        factor.impact === 'negative' ? 'text-red-400' :
-                        'text-gray-400'
+                        factor.impact === 'positive' ? 'text-success' :
+                        factor.impact === 'negative' ? 'text-error' :
+                        'text-[var(--color-text-secondary)]'
                       }`}>
                         {factor.score}/100
                       </span>
-                      <span className="text-gray-400 text-sm">
+                      <span className="text-[var(--color-text-secondary)] text-sm">
                         ({Math.round(factor.weight * 100)}%)
                       </span>
                     </div>
                   </div>
-                  <div className="flex-1 bg-gray-600 rounded-full h-2 mb-2">
+                  <div className="flex-1 bg-surface-paper rounded-full h-2 mb-2">
                     <div
                       className={`h-2 rounded-full transition-all ${
-                        factor.impact === 'positive' ? 'bg-green-500' :
-                        factor.impact === 'negative' ? 'bg-red-500' :
-                        'bg-gray-400'
+                        factor.impact === 'positive' ? 'bg-success' :
+                        factor.impact === 'negative' ? 'bg-error' :
+                        'bg-[var(--color-text-secondary)]'
                       }`}
                       style={{ width: `${factor.score}%` }}
                     />
                   </div>
-                  <p className="text-sm text-gray-300">{factor.description}</p>
+                  <p className="text-sm text-[var(--color-text-secondary)]">{factor.description}</p>
                 </div>
               ))}
             </div>
@@ -226,9 +226,9 @@ function DealScoreCardInner({
               </h4>
               <div className="space-y-2">
                 {score.recommendations.map((rec, index) => (
-                  <div key={index} className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                    <p className="text-blue-300 text-sm flex items-start gap-2">
-                      <span className="text-blue-400 font-bold">{index + 1}.</span>
+                  <div key={index} className="bg-primary/10 border border-primary/30 rounded-lg p-3">
+                    <p className="text-[var(--color-text-secondary)] text-sm flex items-start gap-2">
+                      <span className="text-primary font-bold">{index + 1}.</span>
                       {rec}
                     </p>
                   </div>
@@ -238,9 +238,9 @@ function DealScoreCardInner({
           )}
 
           {/* Predictions */}
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-700">
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border-light">
             <div>
-              <div className="text-gray-400 text-sm mb-1">Predicted Close Date</div>
+              <div className="text-[var(--color-text-secondary)] text-sm mb-1">Predicted Close Date</div>
               <div className="text-white font-semibold">
                 {score.predictedCloseDate
                   ? new Date(score.predictedCloseDate).toLocaleDateString()
@@ -248,7 +248,7 @@ function DealScoreCardInner({
               </div>
             </div>
             <div>
-              <div className="text-gray-400 text-sm mb-1">Predicted Value</div>
+              <div className="text-[var(--color-text-secondary)] text-sm mb-1">Predicted Value</div>
               <div className="text-white font-semibold">
                 ${score.predictedValue?.toLocaleString() || '0'}
               </div>

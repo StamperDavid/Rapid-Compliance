@@ -126,7 +126,7 @@ export default function LeadsPage() {
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 text-blue-300">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-gradient-to-r from-primary/20 to-secondary/20 border border-primary/30 text-primary">
         <Snowflake className="w-3 h-3" />
         COLD
       </span>
@@ -138,7 +138,7 @@ export default function LeadsPage() {
       ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
       : score >= 60
       ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-300'
-      : 'bg-gray-500/20 border-gray-500/30 text-gray-300';
+      : 'bg-surface-elevated border-border-light text-[var(--color-text-secondary)]';
 
     return (
       <span className={`px-2 py-1 rounded-lg text-xs font-mono border ${colorClass}`}>
@@ -149,7 +149,7 @@ export default function LeadsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusColors: Record<string, string> = {
-      new: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300',
+      new: 'bg-primary/20 border-primary/30 text-primary',
       contacted: 'bg-purple-500/20 border-purple-500/30 text-purple-300',
       qualified: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300',
       converted: 'bg-green-500/20 border-green-500/30 text-green-300',
@@ -167,25 +167,25 @@ export default function LeadsPage() {
       key: 'name',
       header: 'Name',
       accessor: (lead) => getLeadName(lead),
-      render: (lead) => <span className="font-medium text-white">{getLeadName(lead)}</span>,
+      render: (lead) => <span className="font-medium text-[var(--color-text-primary)]">{getLeadName(lead)}</span>,
     },
     {
       key: 'company',
       header: 'Company',
       accessor: (lead) => getLeadCompany(lead),
-      render: (lead) => <span className="text-gray-400">{getLeadCompany(lead)}</span>,
+      render: (lead) => <span className="text-[var(--color-text-secondary)]">{getLeadCompany(lead)}</span>,
     },
     {
       key: 'email',
       header: 'Email',
       accessor: (lead) => lead.email ?? '',
-      render: (lead) => <span className="text-gray-400">{lead.email ?? '-'}</span>,
+      render: (lead) => <span className="text-[var(--color-text-secondary)]">{lead.email ?? '-'}</span>,
     },
     {
       key: 'phone',
       header: 'Phone',
       accessor: (lead) => lead.phone ?? '',
-      render: (lead) => <span className="text-gray-400">{lead.phone ?? '-'}</span>,
+      render: (lead) => <span className="text-[var(--color-text-secondary)]">{lead.phone ?? '-'}</span>,
     },
     {
       key: 'tier',
@@ -214,7 +214,7 @@ export default function LeadsPage() {
       render: (lead) => (
         <button
           onClick={() => router.push(`/leads/${lead.id}`)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-500/50 text-gray-400 hover:text-white rounded-lg transition-all text-sm"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-lg transition-all text-sm"
         >
           <Eye className="w-4 h-4" />
           View
@@ -235,8 +235,8 @@ export default function LeadsPage() {
 
   if (loading && leads.length === 0) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="flex items-center gap-3 text-gray-400">
+      <div className="min-h-screen bg-surface-main flex items-center justify-center">
+        <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Loading leads...</span>
         </div>
@@ -245,7 +245,7 @@ export default function LeadsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black p-8">
+    <div className="min-h-screen bg-surface-main p-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -253,18 +253,18 @@ export default function LeadsPage() {
         className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
       >
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Leads</h1>
-            <p className="text-gray-400 text-sm">{leads.length} total leads</p>
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Leads</h1>
+            <p className="text-[var(--color-text-secondary)] text-sm">{leads.length} total leads</p>
           </div>
         </div>
 
         <button
           onClick={() => router.push(`/leads/new`)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/25"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/25"
         >
           <Plus className="w-5 h-5" />
           Add Lead
@@ -284,8 +284,8 @@ export default function LeadsPage() {
             onClick={() => setFilter(status.key)}
             className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
               filter === status.key
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
-                : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
+                : 'bg-surface-elevated border border-border-light text-[var(--color-text-secondary)] hover:bg-surface-elevated hover:text-[var(--color-text-primary)]'
             }`}
           >
             {status.label}
@@ -298,10 +298,11 @@ export default function LeadsPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3"
+          className="mb-6 p-4 rounded-xl border border-error/20 flex items-center gap-3"
+          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
         >
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          <span className="text-red-300">{error}</span>
+          <AlertCircle className="w-5 h-5 text-error flex-shrink-0" />
+          <span className="text-error-light">{error}</span>
         </motion.div>
       )}
 
@@ -329,7 +330,7 @@ export default function LeadsPage() {
           onLoadMore={() => void loadMore()}
           itemCountLabel={`${leads.length} shown`}
           emptyMessage="No leads found"
-          emptyIcon={<UserPlus className="w-8 h-8 text-gray-500" />}
+          emptyIcon={<UserPlus className="w-8 h-8 text-[var(--color-text-disabled)]" />}
           accentColor="indigo"
         />
       </motion.div>

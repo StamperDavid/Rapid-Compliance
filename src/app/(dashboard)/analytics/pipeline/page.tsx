@@ -80,44 +80,44 @@ export default function PipelineAnalyticsPage() {
             <Link href={`/analytics`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
               ← Back to Analytics
             </Link>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               Pipeline Analytics
             </h1>
-            <p style={{ color: '#999', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
               Track pipeline stages, velocity, and conversion rates
             </p>
           </div>
 
           {loading ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: '#999' }}>Loading analytics...</div>
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading analytics...</div>
           ) : (
             <>
               {/* Overview Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Total Pipeline Value</div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff' }}>
+                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Total Pipeline Value</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                     {analytics?.totalValue ? formatCurrency(analytics.totalValue) : '$0'}
                   </div>
                 </div>
 
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Deals in Pipeline</div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff' }}>
+                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Deals in Pipeline</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                     {analytics?.dealsCount ?? 0}
                   </div>
                 </div>
 
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Win Rate</div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff' }}>
+                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Win Rate</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                     {analytics?.winRate ? formatPercent(analytics.winRate) : '0%'}
                   </div>
                 </div>
 
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Avg Deal Size</div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff' }}>
+                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Avg Deal Size</div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                     {analytics?.avgDealSize ? formatCurrency(analytics.avgDealSize) : '$0'}
                   </div>
                 </div>
@@ -125,20 +125,20 @@ export default function PipelineAnalyticsPage() {
 
               {/* Pipeline by Stage */}
               {analytics?.byStage && analytics.byStage.length > 0 && (
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', marginBottom: '1.5rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '1.5rem' }}>
+                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '2rem', marginBottom: '1.5rem' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
                     Pipeline by Stage
                   </h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {analytics.byStage.map((stage: PipelineStage, index: number) => (
                       <div key={index}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                          <span style={{ fontSize: '0.875rem', color: '#fff' }}>{stage.stage}</span>
-                          <span style={{ fontSize: '0.875rem', color: '#999' }}>
+                          <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>{stage.stage}</span>
+                          <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                             {formatCurrency(stage.value)} ({stage.count} deals)
                           </span>
                         </div>
-                        <div style={{ height: '8px', backgroundColor: '#0a0a0a', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ height: '8px', backgroundColor: 'var(--color-bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
                           <div style={{
                             width: `${analytics.totalValue > 0 ? (stage.value / analytics.totalValue) * 100 : 0}%`,
                             height: '100%',

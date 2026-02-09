@@ -120,25 +120,25 @@ function FormCardSkeleton() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 0.7, y: 0 }}
-      className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden"
+      className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-xl overflow-hidden"
     >
-      <div className="p-5 border-b border-white/10">
-        <div className="h-6 w-3/5 bg-white/5 rounded animate-pulse" />
-        <div className="h-4 w-4/5 bg-white/5 rounded mt-2 animate-pulse" />
+      <div className="p-5 border-b border-border-light">
+        <div className="h-6 w-3/5 bg-surface-elevated rounded animate-pulse" />
+        <div className="h-4 w-4/5 bg-surface-elevated rounded mt-2 animate-pulse" />
       </div>
       <div className="p-5">
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="text-center">
-              <div className="h-7 w-10 bg-white/5 rounded mx-auto animate-pulse" />
-              <div className="h-3 w-15 bg-white/5 rounded mx-auto mt-1 animate-pulse" />
+              <div className="h-7 w-10 bg-surface-elevated rounded mx-auto animate-pulse" />
+              <div className="h-3 w-15 bg-surface-elevated rounded mx-auto mt-1 animate-pulse" />
             </div>
           ))}
         </div>
       </div>
-      <div className="flex justify-between items-center px-5 py-4 border-t border-white/10 bg-black/20">
-        <div className="h-6 w-20 bg-white/5 rounded-full animate-pulse" />
-        <div className="h-7 w-24 bg-white/5 rounded animate-pulse" />
+      <div className="flex justify-between items-center px-5 py-4 border-t border-border-light bg-surface-main">
+        <div className="h-6 w-20 bg-surface-elevated rounded-full animate-pulse" />
+        <div className="h-7 w-24 bg-surface-elevated rounded animate-pulse" />
       </div>
     </motion.div>
   );
@@ -276,9 +276,9 @@ export default function FormsPage() {
       accessor: (form) => form.name,
       render: (form) => (
         <div>
-          <span className="font-medium text-white">{form.name}</span>
+          <span className="font-medium text-[var(--color-text-primary)]">{form.name}</span>
           {form.description && (
-            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{form.description}</p>
+            <p className="text-xs text-[var(--color-text-disabled)] mt-0.5 line-clamp-1">{form.description}</p>
           )}
         </div>
       ),
@@ -298,7 +298,7 @@ export default function FormsPage() {
       header: 'Submissions',
       accessor: (form) => form.submissionCount || 0,
       render: (form) => (
-        <span className="text-gray-300 font-medium">{form.submissionCount || 0}</span>
+        <span className="text-[var(--color-text-secondary)] font-medium">{form.submissionCount || 0}</span>
       ),
     },
     {
@@ -306,7 +306,7 @@ export default function FormsPage() {
       header: 'Views',
       accessor: (form) => form.viewCount || 0,
       render: (form) => (
-        <span className="text-gray-300 font-medium">{form.viewCount || 0}</span>
+        <span className="text-[var(--color-text-secondary)] font-medium">{form.viewCount || 0}</span>
       ),
     },
     {
@@ -318,7 +318,7 @@ export default function FormsPage() {
           ? Math.round((form.submissionCount / form.viewCount) * 100)
           : 0;
         return (
-          <span className={`font-medium ${rate > 0 ? 'text-emerald-400' : 'text-gray-500'}`}>
+          <span className={`font-medium ${rate > 0 ? 'text-success' : 'text-[var(--color-text-disabled)]'}`}>
             {rate}%
           </span>
         );
@@ -335,7 +335,7 @@ export default function FormsPage() {
         return date.toISOString();
       },
       render: (form) => (
-        <span className="text-gray-500 text-sm">{formatDate(form.updatedAt)}</span>
+        <span className="text-[var(--color-text-disabled)] text-sm">{formatDate(form.updatedAt)}</span>
       ),
     },
     {
@@ -347,7 +347,7 @@ export default function FormsPage() {
         <div className="flex gap-2">
           <button
             onClick={() => router.push(`/forms/${form.id}/edit`)}
-            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+            className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
             title="Edit form"
           >
             <Pencil className="w-4 h-4" />
@@ -357,7 +357,7 @@ export default function FormsPage() {
               href={`/forms/${form.id}`}
               target="_blank"
               onClick={(e) => e.stopPropagation()}
-              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+              className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
               title="View form"
             >
               <Eye className="w-4 h-4" />
@@ -379,7 +379,7 @@ export default function FormsPage() {
   ], [handleBulkDelete]);
 
   return (
-    <div className="min-h-screen bg-black p-8">
+    <div className="min-h-screen bg-surface-main p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -388,26 +388,26 @@ export default function FormsPage() {
           className="flex justify-between items-start mb-8"
         >
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
               <FileText className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Forms</h1>
-              <p className="text-sm text-gray-400">
+              <h1 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2">Forms</h1>
+              <p className="text-sm text-[var(--color-text-secondary)]">
                 Create and manage forms to capture leads and collect data
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             {/* View Toggle */}
-            <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl" role="group" aria-label="View options">
+            <div className="flex gap-1 p-1 bg-surface-elevated border border-border-light rounded-xl" role="group" aria-label="View options">
               <button
                 onClick={() => setView('cards')}
                 aria-pressed={view === 'cards'}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   view === 'cards'
-                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
                 }`}
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -418,8 +418,8 @@ export default function FormsPage() {
                 aria-pressed={view === 'table'}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   view === 'table'
-                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
                 }`}
               >
                 <List className="w-4 h-4" />
@@ -431,7 +431,7 @@ export default function FormsPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 transition-all duration-200"
             >
               <Plus className="w-5 h-5" />
               <span>Create New Form</span>
@@ -444,7 +444,7 @@ export default function FormsPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex gap-2 mb-6 border-b border-white/10 pb-4"
+          className="flex gap-2 mb-6 border-b border-border-light pb-4"
         >
           {(['all', 'draft', 'published', 'archived'] as const).map((filter) => (
             <motion.button
@@ -456,8 +456,8 @@ export default function FormsPage() {
                 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200
                 ${
                   activeFilter === filter
-                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
                 }
               `}
             >
@@ -476,7 +476,8 @@ export default function FormsPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"
+              className="mb-6 p-4 border rounded-xl text-error text-sm"
+              style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
             >
               {error}
             </motion.div>
@@ -508,7 +509,7 @@ export default function FormsPage() {
                 enableCsvExport
                 csvFilename="forms"
                 emptyMessage={activeFilter === 'all' ? 'No forms yet' : `No ${activeFilter} forms`}
-                emptyIcon={<FileText className="w-8 h-8 text-gray-500" />}
+                emptyIcon={<FileText className="w-8 h-8 text-[var(--color-text-disabled)]" />}
                 accentColor="violet"
               />
             )}
@@ -529,15 +530,15 @@ export default function FormsPage() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-16 px-8 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl"
+                className="text-center py-16 px-8 bg-surface-paper backdrop-blur-xl border border-border-light rounded-xl"
               >
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mx-auto mb-6 opacity-50">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-6 opacity-50">
                   <FileText className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">
+                <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
                   {activeFilter === 'all' ? 'No forms yet' : `No ${activeFilter} forms`}
                 </h3>
-                <p className="text-sm text-gray-400 mb-6">
+                <p className="text-sm text-[var(--color-text-secondary)] mb-6">
                   {activeFilter === 'all'
                     ? 'Create your first form to start capturing leads and collecting data.'
                     : `You don't have any ${activeFilter} forms.`}
@@ -547,7 +548,7 @@ export default function FormsPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 transition-all duration-200"
                   >
                     <Plus className="w-5 h-5" />
                     Create New Form
@@ -572,19 +573,19 @@ export default function FormsPage() {
                     transition={{ delay: index * 0.05 }}
                     whileHover={{ y: -4, scale: 1.01 }}
                     onClick={() => router.push(`/forms/${form.id}/edit`)}
-                    className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden cursor-pointer hover:border-white/20 transition-all duration-300 group"
+                    className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-xl overflow-hidden cursor-pointer hover:border-border-strong transition-all duration-300 group"
                   >
                     {/* Card Header */}
-                    <div className="p-5 border-b border-white/10">
+                    <div className="p-5 border-b border-border-light">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
                           <FileText className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-base font-semibold text-white truncate group-hover:text-violet-400 transition-colors">
+                          <h3 className="text-base font-semibold text-[var(--color-text-primary)] truncate group-hover:text-primary transition-colors">
                             {form.name}
                           </h3>
-                          <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                          <p className="text-xs text-[var(--color-text-secondary)] mt-1 line-clamp-2">
                             {form.description ?? 'No description'}
                           </p>
                         </div>
@@ -595,38 +596,38 @@ export default function FormsPage() {
                     <div className="p-5">
                       <div className="grid grid-cols-3 gap-4">
                         <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
-                            <Users className="w-4 h-4 text-violet-400" />
+                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-[var(--color-text-primary)] mb-1">
+                            <Users className="w-4 h-4 text-primary" />
                             {form.submissionCount || 0}
                           </div>
-                          <div className="text-xs text-gray-400">Submissions</div>
+                          <div className="text-xs text-[var(--color-text-secondary)]">Submissions</div>
                         </div>
                         <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
-                            <Eye className="w-4 h-4 text-purple-400" />
+                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-[var(--color-text-primary)] mb-1">
+                            <Eye className="w-4 h-4 text-secondary" />
                             {form.viewCount || 0}
                           </div>
-                          <div className="text-xs text-gray-400">Views</div>
+                          <div className="text-xs text-[var(--color-text-secondary)]">Views</div>
                         </div>
                         <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
-                            <TrendingUp className="w-4 h-4 text-emerald-400" />
+                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-[var(--color-text-primary)] mb-1">
+                            <TrendingUp className="w-4 h-4 text-success" />
                             {form.viewCount > 0
                               ? `${Math.round((form.submissionCount / form.viewCount) * 100)}%`
                               : '0%'}
                           </div>
-                          <div className="text-xs text-gray-400">Conversion</div>
+                          <div className="text-xs text-[var(--color-text-secondary)]">Conversion</div>
                         </div>
                       </div>
                     </div>
 
                     {/* Card Footer */}
-                    <div className="flex justify-between items-center px-5 py-4 border-t border-white/10 bg-black/20">
+                    <div className="flex justify-between items-center px-5 py-4 border-t border-border-light bg-surface-main">
                       <div className="flex items-center gap-3">
                         <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClasses(form.status)}`}>
                           {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-[var(--color-text-disabled)]">
                           {formatDate(form.updatedAt)}
                         </span>
                       </div>
@@ -634,7 +635,7 @@ export default function FormsPage() {
                         <Link
                           href={`/forms/${form.id}/edit`}
                           onClick={(e) => e.stopPropagation()}
-                          className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                          className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
                           title="Edit form"
                         >
                           <Pencil className="w-4 h-4" />
@@ -644,7 +645,7 @@ export default function FormsPage() {
                             href={`/forms/${form.id}`}
                             target="_blank"
                             onClick={(e) => e.stopPropagation()}
-                            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                            className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
                             title="View form"
                           >
                             <Eye className="w-4 h-4" />
@@ -674,21 +675,21 @@ export default function FormsPage() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-auto shadow-2xl"
+                className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-auto shadow-2xl"
               >
                 {/* Modal Header */}
-                <div className="flex justify-between items-center p-6 border-b border-white/10">
+                <div className="flex justify-between items-center p-6 border-b border-border-light">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                       <Plus className="w-5 h-5 text-white" />
                     </div>
-                    <h2 className="text-xl font-semibold text-white">Create New Form</h2>
+                    <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Create New Form</h2>
                   </div>
                   <motion.button
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setShowCreateModal(false)}
-                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                    className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
                   >
                     <X className="w-5 h-5" />
                   </motion.button>
@@ -698,7 +699,7 @@ export default function FormsPage() {
                 <div className="p-6 space-y-6">
                   {/* Form Name */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
                       Form Name
                     </label>
                     <input
@@ -707,13 +708,13 @@ export default function FormsPage() {
                       onChange={(e) => setNewFormName(e.target.value)}
                       placeholder="Enter form name..."
                       autoFocus
-                      className="w-full px-4 py-3 text-sm bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
+                      className="w-full px-4 py-3 text-sm bg-surface-elevated backdrop-blur-xl border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     />
                   </div>
 
                   {/* Template Selection */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-3">
+                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-3">
                       Choose a Template
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -727,8 +728,8 @@ export default function FormsPage() {
                             p-4 rounded-xl cursor-pointer transition-all duration-200
                             ${
                               selectedTemplate === template.id
-                                ? 'bg-gradient-to-br from-violet-600/20 to-purple-600/20 border-2 border-violet-500/50 shadow-lg shadow-violet-500/20'
-                                : 'bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/20'
+                                ? 'bg-gradient-to-br from-primary/20 to-secondary/20 border-2 border-primary shadow-lg shadow-primary/20'
+                                : 'bg-surface-elevated backdrop-blur-xl border border-border-light hover:border-border-strong'
                             }
                           `}
                         >
@@ -736,16 +737,16 @@ export default function FormsPage() {
                             w-10 h-10 rounded-lg flex items-center justify-center mb-3
                             ${
                               selectedTemplate === template.id
-                                ? 'bg-gradient-to-br from-violet-500 to-purple-500 text-white'
-                                : 'bg-white/5 text-gray-400'
+                                ? 'bg-gradient-to-br from-primary to-secondary text-white'
+                                : 'bg-surface-elevated text-[var(--color-text-secondary)]'
                             }
                           `}>
                             {template.icon}
                           </div>
-                          <div className="text-sm font-semibold text-white mb-1">
+                          <div className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">
                             {template.name}
                           </div>
-                          <div className="text-xs text-gray-400 line-clamp-2">
+                          <div className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
                             {template.description}
                           </div>
                         </motion.div>
@@ -755,12 +756,12 @@ export default function FormsPage() {
                 </div>
 
                 {/* Modal Footer */}
-                <div className="flex justify-end gap-3 p-6 border-t border-white/10 bg-black/20">
+                <div className="flex justify-end gap-3 p-6 border-t border-border-light bg-surface-main">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowCreateModal(false)}
-                    className="px-6 py-2.5 text-sm font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all"
+                    className="px-6 py-2.5 text-sm font-medium text-[var(--color-text-secondary)] bg-surface-elevated hover:bg-surface-elevated border border-border-light rounded-xl transition-all"
                   >
                     Cancel
                   </motion.button>
@@ -775,8 +776,8 @@ export default function FormsPage() {
                       px-6 py-2.5 text-sm font-semibold rounded-xl transition-all
                       ${
                         !newFormName.trim() || creating
-                          ? 'bg-gradient-to-r from-violet-600/50 to-purple-600/50 text-white/50 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-500/25'
+                          ? 'bg-gradient-to-r from-primary/50 to-secondary/50 text-white/50 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white shadow-lg shadow-primary/25'
                       }
                     `}
                   >

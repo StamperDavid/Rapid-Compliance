@@ -333,7 +333,7 @@ export function AIAgentsTab({ template, onUpdate, disabled }: AIAgentsTabProps) 
       </Card>
 
       {/* Summary Card */}
-      <Card className="bg-muted/50">
+      <Card className="bg-surface-elevated">
         <CardHeader>
           <CardTitle className="text-base">Persona Summary</CardTitle>
         </CardHeader>

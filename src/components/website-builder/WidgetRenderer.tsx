@@ -516,11 +516,11 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
         <div style={{
           ...style,
           padding: '1rem',
-          background: '#f8f9fa',
-          border: '1px dashed #dee2e6',
+          background: 'var(--color-surface-elevated)',
+          border: '1px dashed var(--color-border-light)',
           borderRadius: '4px',
           textAlign: 'center',
-          color: '#6c757d',
+          color: 'var(--color-text-secondary)',
         }}>
           {widget.type} widget
         </div>

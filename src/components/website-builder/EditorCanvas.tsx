@@ -58,7 +58,7 @@ export default function EditorCanvas({
   return (
     <div style={{
       flex: 1,
-      background: '#e9ecef',
+      background: 'var(--color-surface-main)',
       overflowY: 'auto',
       overflowX: 'hidden',
       padding: '2rem',
@@ -70,10 +70,10 @@ export default function EditorCanvas({
           <div style={{
             padding: '4rem 2rem',
             textAlign: 'center',
-            color: '#6c757d',
+            color: 'var(--color-text-secondary)',
           }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📄</div>
-            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: '#495057' }}>
+            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
               Empty Page
             </h3>
             <p style={{ margin: '0 0 1.5rem', fontSize: '0.875rem' }}>
@@ -83,7 +83,7 @@ export default function EditorCanvas({
               onClick={() => onAddSection()}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: '#007bff',
+                background: 'var(--color-primary)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -117,15 +117,15 @@ export default function EditorCanvas({
             <div style={{
               padding: '1rem',
               textAlign: 'center',
-              borderTop: '2px dashed #dee2e6',
+              borderTop: '2px dashed var(--color-border-light)',
             }}>
               <button
                 onClick={() => onAddSection()}
                 style={{
                   padding: '0.5rem 1rem',
-                  background: '#f8f9fa',
-                  color: '#495057',
-                  border: '1px solid #dee2e6',
+                  background: 'var(--color-surface-elevated)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -181,7 +181,7 @@ function SectionRenderer({
     maxWidth: section.fullWidth ? '100%' : (section.maxWidth ? `${section.maxWidth}px` : '1200px'),
     marginLeft: section.fullWidth ? '0' : 'auto',
     marginRight: section.fullWidth ? '0' : 'auto',
-    outline: isSelected ? '2px solid #007bff' : 'none',
+    outline: isSelected ? '2px solid var(--color-primary)' : 'none',
     cursor: 'pointer',
   };
 
@@ -194,7 +194,7 @@ function SectionRenderer({
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.outline = '2px dashed #007bff';
+          e.currentTarget.style.outline = '2px dashed var(--color-primary)';
         }
       }}
       onMouseLeave={(e) => {
@@ -220,7 +220,7 @@ function SectionRenderer({
             }}
             style={{
               padding: '0.25rem 0.5rem',
-              background: '#dc3545',
+              background: 'var(--color-error)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -244,7 +244,7 @@ function SectionRenderer({
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              e.currentTarget.style.backgroundColor = '#e7f3ff';
+              e.currentTarget.style.backgroundColor = 'var(--color-surface-elevated)';
             }}
             onDragLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -271,7 +271,7 @@ function SectionRenderer({
             style={{
               flex: column.width || 1,
               minHeight: column.widgets.length === 0 ? '100px' : 'auto',
-              border: column.widgets.length === 0 ? '2px dashed #dee2e6' : 'none',
+              border: column.widgets.length === 0 ? '2px dashed var(--color-border-light)' : 'none',
               borderRadius: '4px',
               display: 'flex',
               flexDirection: 'column',
@@ -285,7 +285,7 @@ function SectionRenderer({
                 alignItems: 'center',
                 justifyContent: 'center',
                 height: '100%',
-                color: '#adb5bd',
+                color: 'var(--color-text-disabled)',
                 fontSize: '0.875rem',
               }}>
                 Drop widgets here
@@ -300,12 +300,12 @@ function SectionRenderer({
                   }}
                   style={{
                     position: 'relative',
-                    outline: selectedWidgetId === widget.id ? '2px solid #28a745' : 'none',
+                    outline: selectedWidgetId === widget.id ? '2px solid var(--color-success)' : 'none',
                     cursor: 'pointer',
                   }}
                   onMouseEnter={(e) => {
                     if (selectedWidgetId !== widget.id) {
-                      e.currentTarget.style.outline = '2px dashed #28a745';
+                      e.currentTarget.style.outline = '2px dashed var(--color-success)';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -329,7 +329,7 @@ function SectionRenderer({
                         }}
                         style={{
                           padding: '0.25rem 0.5rem',
-                          background: '#dc3545',
+                          background: 'var(--color-error)',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',

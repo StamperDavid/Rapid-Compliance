@@ -114,20 +114,20 @@ export default function DealsPage() {
       key: 'name',
       header: 'Deal',
       accessor: (deal) => deal.name,
-      render: (deal) => <span className="font-medium text-white">{deal.name}</span>,
+      render: (deal) => <span className="font-medium text-[var(--color-text-primary)]">{deal.name}</span>,
     },
     {
       key: 'company',
       header: 'Company',
       accessor: (deal) => getCompanyName(deal),
-      render: (deal) => <span className="text-gray-400">{getCompanyName(deal)}</span>,
+      render: (deal) => <span className="text-[var(--color-text-secondary)]">{getCompanyName(deal)}</span>,
     },
     {
       key: 'value',
       header: 'Value',
       accessor: (deal) => deal.value ?? 0,
       render: (deal) => (
-        <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold">
+        <span className="inline-flex items-center gap-1 text-primary font-semibold">
           <DollarSign className="w-4 h-4" />
           {(deal.value ?? 0).toLocaleString()}
         </span>
@@ -145,13 +145,13 @@ export default function DealsPage() {
       accessor: (deal) => deal.probability ?? 0,
       render: (deal) => (
         <div className="flex items-center gap-2">
-          <div className="w-16 h-2 bg-white/10 rounded-full overflow-hidden">
+          <div className="w-16 h-2 bg-surface-elevated rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+              className="h-full bg-gradient-to-r from-primary to-secondary rounded-full"
               style={{ width: `${deal.probability ?? 0}%` }}
             />
           </div>
-          <span className="text-gray-400 text-sm">{deal.probability ?? 0}%</span>
+          <span className="text-[var(--color-text-secondary)] text-sm">{deal.probability ?? 0}%</span>
         </div>
       ),
     },
@@ -163,7 +163,7 @@ export default function DealsPage() {
       render: (deal) => (
         <button
           onClick={() => router.push(`/deals/${deal.id}`)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/50 text-gray-400 hover:text-white rounded-lg transition-all text-sm"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-lg transition-all text-sm"
         >
           <Eye className="w-4 h-4" />
           View
@@ -184,8 +184,8 @@ export default function DealsPage() {
 
   if (loading && deals.length === 0) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="flex items-center gap-3 text-gray-400">
+      <div className="min-h-screen bg-surface-main flex items-center justify-center">
+        <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Loading deals...</span>
         </div>
@@ -194,7 +194,7 @@ export default function DealsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black p-8">
+    <div className="min-h-screen bg-surface-main p-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -202,24 +202,24 @@ export default function DealsPage() {
         className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
       >
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <Briefcase className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Deals Pipeline</h1>
-            <p className="text-gray-400 text-sm">{deals.length} deals &bull; ${totalPipelineValue.toLocaleString()} total value</p>
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Deals Pipeline</h1>
+            <p className="text-[var(--color-text-secondary)] text-sm">{deals.length} deals &bull; ${totalPipelineValue.toLocaleString()} total value</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {/* View Toggle */}
-          <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl">
+          <div className="flex gap-1 p-1 bg-surface-elevated border border-border-light rounded-xl">
             <button
               onClick={() => setView('pipeline')}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 view === 'pipeline'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/25'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
               }`}
             >
               <LayoutGrid className="w-4 h-4" />
@@ -229,8 +229,8 @@ export default function DealsPage() {
               onClick={() => setView('list')}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 view === 'list'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/25'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
               }`}
             >
               <List className="w-4 h-4" />
@@ -240,7 +240,7 @@ export default function DealsPage() {
 
           <button
             onClick={() => router.push(`/deals/new`)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/25"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/25"
           >
             <Plus className="w-5 h-5" />
             New Deal
@@ -253,10 +253,11 @@ export default function DealsPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3"
+          className="mb-6 p-4 rounded-xl border border-error/20 flex items-center gap-3"
+          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
         >
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          <span className="text-red-300">{error}</span>
+          <AlertCircle className="w-5 h-5 text-error flex-shrink-0" />
+          <span className="text-error-light">{error}</span>
         </motion.div>
       )}
 
@@ -280,25 +281,25 @@ export default function DealsPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: stageIdx * 0.05 }}
-                  className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden"
+                  className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light overflow-hidden"
                 >
                   {/* Stage Header */}
-                  <div className={`p-4 bg-gradient-to-r ${colors.bg} border-b border-white/10`}>
+                  <div className={`p-4 bg-gradient-to-r ${colors.bg} border-b border-border-light`}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-lg">{colors.icon}</span>
-                      <h3 className="font-semibold text-white text-sm capitalize">{stage.replace('_', ' ')}</h3>
+                      <h3 className="font-semibold text-[var(--color-text-primary)] text-sm capitalize">{stage.replace('_', ' ')}</h3>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
                       <span>{stageDeals.length} deals</span>
                       <span>&bull;</span>
-                      <span className="text-emerald-400 font-medium">${stageValue.toLocaleString()}</span>
+                      <span className="text-primary font-medium">${stageValue.toLocaleString()}</span>
                     </div>
                   </div>
 
                   {/* Deal Cards */}
                   <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
                     {stageDeals.length === 0 ? (
-                      <div className="text-center py-6 text-gray-500 text-sm">
+                      <div className="text-center py-6 text-[var(--color-text-disabled)] text-sm">
                         No deals
                       </div>
                     ) : (
@@ -309,15 +310,15 @@ export default function DealsPage() {
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: idx * 0.02 }}
                           onClick={() => router.push(`/deals/${deal.id}`)}
-                          className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/30 rounded-xl p-3 cursor-pointer transition-all group"
+                          className="bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary rounded-xl p-3 cursor-pointer transition-all group"
                         >
-                          <div className="font-medium text-white text-sm mb-1 group-hover:text-emerald-300 transition-colors">
+                          <div className="font-medium text-[var(--color-text-primary)] text-sm mb-1 group-hover:text-primary-light transition-colors">
                             {deal.name}
                           </div>
-                          <div className="text-xs text-gray-500 mb-2">{getCompanyName(deal)}</div>
+                          <div className="text-xs text-[var(--color-text-disabled)] mb-2">{getCompanyName(deal)}</div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-emerald-400">${(deal.value ?? 0).toLocaleString()}</span>
-                            <span className="text-xs text-gray-500">{deal.probability ?? 0}%</span>
+                            <span className="text-sm font-semibold text-primary">${(deal.value ?? 0).toLocaleString()}</span>
+                            <span className="text-xs text-[var(--color-text-disabled)]">{deal.probability ?? 0}%</span>
                           </div>
                         </motion.div>
                       ))
@@ -334,7 +335,7 @@ export default function DealsPage() {
               <button
                 onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
@@ -377,7 +378,7 @@ export default function DealsPage() {
             onLoadMore={() => void loadMore()}
             itemCountLabel={`${deals.length} shown`}
             emptyMessage="No deals found"
-            emptyIcon={<Target className="w-8 h-8 text-gray-500" />}
+            emptyIcon={<Target className="w-8 h-8 text-[var(--color-text-disabled)]" />}
             accentColor="emerald"
           />
         </motion.div>

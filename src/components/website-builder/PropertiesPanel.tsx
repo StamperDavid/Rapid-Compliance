@@ -36,11 +36,11 @@ export default function PropertiesPanel({
     return (
       <div style={{
         width: '320px',
-        background: '#f8f9fa',
-        borderLeft: '1px solid #dee2e6',
+        background: 'var(--color-surface-elevated)',
+        borderLeft: '1px solid var(--color-border-light)',
         padding: '2rem 1rem',
         textAlign: 'center',
-        color: '#6c757d',
+        color: 'var(--color-text-secondary)',
       }}>
         <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚙️</div>
         <p style={{ fontSize: '0.875rem' }}>
@@ -69,8 +69,8 @@ export default function PropertiesPanel({
   return (
     <div style={{
       width: '320px',
-      background: '#f8f9fa',
-      borderLeft: '1px solid #dee2e6',
+      background: 'var(--color-surface-elevated)',
+      borderLeft: '1px solid var(--color-border-light)',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
@@ -78,21 +78,21 @@ export default function PropertiesPanel({
       {/* Header */}
       <div style={{
         padding: '1rem',
-        borderBottom: '1px solid #dee2e6',
-        background: 'white',
+        borderBottom: '1px solid var(--color-border-light)',
+        background: 'var(--color-surface-paper)',
       }}>
         <h3 style={{
           margin: '0 0 0.5rem',
           fontSize: '0.875rem',
           fontWeight: '600',
-          color: '#495057',
+          color: 'var(--color-text-primary)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
         }}>
           Properties
         </h3>
-        <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>
-          {selectedElement.type === 'section' ? 'Section' : 
+        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+          {selectedElement.type === 'section' ? 'Section' :
            widget ? widgetDefinitions[widget.type]?.label : 'Widget'}
         </div>
       </div>
@@ -100,16 +100,16 @@ export default function PropertiesPanel({
       {/* Tabs */}
       <div style={{
         display: 'flex',
-        background: 'white',
-        borderBottom: '1px solid #dee2e6',
+        background: 'var(--color-surface-paper)',
+        borderBottom: '1px solid var(--color-border-light)',
       }}>
         <button
           onClick={() => setActiveTab('content')}
           style={{
             flex: 1,
             padding: '0.75rem',
-            background: activeTab === 'content' ? '#007bff' : 'transparent',
-            color: activeTab === 'content' ? 'white' : '#495057',
+            background: activeTab === 'content' ? 'var(--color-primary)' : 'transparent',
+            color: activeTab === 'content' ? 'white' : 'var(--color-text-primary)',
             border: 'none',
             cursor: 'pointer',
             fontSize: '0.875rem',
@@ -123,8 +123,8 @@ export default function PropertiesPanel({
           style={{
             flex: 1,
             padding: '0.75rem',
-            background: activeTab === 'style' ? '#007bff' : 'transparent',
-            color: activeTab === 'style' ? 'white' : '#495057',
+            background: activeTab === 'style' ? 'var(--color-primary)' : 'transparent',
+            color: activeTab === 'style' ? 'white' : 'var(--color-text-primary)',
             border: 'none',
             cursor: 'pointer',
             fontSize: '0.875rem',
@@ -240,7 +240,7 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
       return (
         <div key={key} style={{ marginBottom: '1rem' }}>
           <label style={labelStyle}>{formatLabel(key)}</label>
-          <div style={{ fontSize: '0.75rem', color: '#6c757d', marginTop: '0.25rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
             {value.length} items (advanced editing)
           </div>
         </div>
@@ -253,7 +253,7 @@ function WidgetContentEditor({ widget, onUpdate }: WidgetContentEditorProps) {
     <div>
       {Object.entries(widget.data).map(([key, value]) => renderField(key, value))}
       {Object.keys(widget.data).length === 0 && (
-        <div style={{ color: '#6c757d', fontSize: '0.875rem', textAlign: 'center', padding: '2rem 0' }}>
+        <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', textAlign: 'center', padding: '2rem 0' }}>
           No content options available
         </div>
       )}
@@ -307,7 +307,7 @@ function SectionContentEditor({ section, onUpdate }: SectionContentEditorProps) 
 
       <div style={{ marginBottom: '1rem' }}>
         <label style={labelStyle}>Columns</label>
-        <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
           {section.columns.length} column(s)
         </div>
       </div>
@@ -641,7 +641,7 @@ const labelStyle: React.CSSProperties = {
   display: 'block',
   fontSize: '0.75rem',
   fontWeight: '600',
-  color: '#495057',
+  color: 'var(--color-text-primary)',
   marginBottom: '0.25rem',
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
@@ -650,7 +650,7 @@ const labelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '0.5rem',
-  border: '1px solid #ced4da',
+  border: '1px solid var(--color-border-light)',
   borderRadius: '4px',
   fontSize: '0.875rem',
 };
@@ -664,7 +664,7 @@ const smallInputStyle: React.CSSProperties = {
 const sectionHeadingStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   fontWeight: '600',
-  color: '#495057',
+  color: 'var(--color-text-primary)',
   marginBottom: '0.75rem',
   textTransform: 'uppercase',
   letterSpacing: '0.5px',

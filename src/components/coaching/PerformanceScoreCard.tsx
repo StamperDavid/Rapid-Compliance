@@ -20,9 +20,9 @@ interface PerformanceScoreCardProps {
 export function PerformanceScoreCard({ performance, loading = false }: PerformanceScoreCardProps) {
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-        <div className="h-32 bg-gray-200 rounded"></div>
+      <div className="bg-surface-main rounded-lg shadow-sm p-6 animate-pulse">
+        <div className="h-6 bg-surface-elevated rounded w-1/3 mb-4"></div>
+        <div className="h-32 bg-surface-elevated rounded"></div>
       </div>
     );
   }
@@ -66,11 +66,11 @@ export function PerformanceScoreCard({ performance, loading = false }: Performan
   const tierLabel = performance.tier.replace('_', ' ').toUpperCase();
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-surface-main rounded-lg shadow-sm p-6">
       {/* Header */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Performance Overview</h3>
-        <p className="text-sm text-gray-500">{performance.repName} · {performance.period}</p>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-1">Performance Overview</h3>
+        <p className="text-sm text-[var(--color-text-secondary)]">{performance.repName} · {performance.period}</p>
       </div>
 
       {/* Score Circle */}
@@ -80,7 +80,7 @@ export function PerformanceScoreCard({ performance, loading = false }: Performan
             <div className={`text-5xl font-bold ${getScoreColor(performance.overallScore)}`}>
               {performance.overallScore.toFixed(0)}
             </div>
-            <div className="text-sm text-gray-600">Overall Score</div>
+            <div className="text-sm text-[var(--color-text-secondary)]">Overall Score</div>
           </div>
         </div>
       </div>
@@ -117,16 +117,16 @@ export function PerformanceScoreCard({ performance, loading = false }: Performan
       </div>
 
       {/* Percentile Rank */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
+      <div className="mt-6 pt-6 border-t border-border-light">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Team Percentile</span>
-          <span className="text-lg font-semibold text-gray-900">
+          <span className="text-sm text-[var(--color-text-secondary)]">Team Percentile</span>
+          <span className="text-lg font-semibold text-[var(--color-text-primary)]">
             {performance.vsTeamAverage.percentileRank.toFixed(0)}th
           </span>
         </div>
-        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+        <div className="mt-2 w-full bg-surface-elevated rounded-full h-2">
           <div
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            className="bg-primary h-2 rounded-full transition-all duration-300"
             style={{ width: `${performance.vsTeamAverage.percentileRank}%` }}
           ></div>
         </div>
@@ -146,11 +146,11 @@ interface MetricCardProps {
 
 function MetricCard({ label, value, delta }: MetricCardProps) {
   return (
-    <div className="bg-gray-50 rounded-lg p-3">
-      <div className="text-xs text-gray-500 mb-1">{label}</div>
-      <div className="text-xl font-bold text-gray-900">{value}</div>
+    <div className="bg-surface-elevated rounded-lg p-3">
+      <div className="text-xs text-[var(--color-text-disabled)] mb-1">{label}</div>
+      <div className="text-xl font-bold text-[var(--color-text-primary)]">{value}</div>
       {delta !== null && (
-        <div className={`text-xs mt-1 flex items-center ${delta >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        <div className={`text-xs mt-1 flex items-center ${delta >= 0 ? 'text-success' : 'text-error'}`}>
           <span className="mr-1">{delta >= 0 ? '↑' : '↓'}</span>
           <span>{Math.abs(delta).toFixed(1)} vs avg</span>
         </div>

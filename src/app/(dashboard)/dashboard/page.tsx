@@ -74,7 +74,7 @@ interface TaskData {
 
 export default function WorkspaceDashboardPage() {
   const { theme } = useOrgTheme();
-  
+
   const [stats, setStats] = useState<DashboardStats>({
     totalLeads: 0,
     activeDeals: 0,
@@ -171,7 +171,7 @@ export default function WorkspaceDashboardPage() {
           where('completed', '==', false),
           limit(10)
         );
-        
+
         let tasksData: Task[] = [];
         try {
           const tasksSnapshot = await getDocs(tasksQuery);
@@ -201,7 +201,7 @@ export default function WorkspaceDashboardPage() {
           orderBy('createdAt', 'desc'),
           limit(3)
         );
-        
+
         try {
           const recentDealsSnapshot = await getDocs(recentDealsQuery);
           recentDealsSnapshot.forEach((doc) => {
@@ -227,7 +227,7 @@ export default function WorkspaceDashboardPage() {
           orderBy('createdAt', 'desc'),
           limit(2)
         );
-        
+
         try {
           const recentLeadsSnapshot = await getDocs(recentLeadsQuery);
           recentLeadsSnapshot.forEach((doc) => {
@@ -287,8 +287,8 @@ export default function WorkspaceDashboardPage() {
     return date.toLocaleDateString();
   }
 
-  const winRate = stats.wonDeals + stats.lostDeals > 0 
-    ? Math.round((stats.wonDeals / (stats.wonDeals + stats.lostDeals)) * 100) 
+  const winRate = stats.wonDeals + stats.lostDeals > 0
+    ? Math.round((stats.wonDeals / (stats.wonDeals + stats.lostDeals)) * 100)
     : 0;
 
   return (
@@ -298,21 +298,21 @@ export default function WorkspaceDashboardPage() {
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>Dashboard</h1>
-              <p style={{ color: '#666', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+              <h1 className="text-[var(--color-text-primary)]" style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>Dashboard</h1>
+              <p className="text-[var(--color-text-disabled)]" style={{ marginTop: '0.5rem', fontSize: '0.875rem' }}>
                 Welcome back! Here&apos;s what&apos;s happening in your workspace.
               </p>
             </div>
-            <Link 
+            <Link
               href={`/entities/leads?action=new`}
-              style={{ 
-                padding: '0.625rem 1.5rem', 
-                backgroundColor: primaryColor, 
-                color: '#fff', 
-                borderRadius: '0.5rem', 
-                textDecoration: 'none', 
-                fontSize: '0.875rem', 
-                fontWeight: '600' 
+              style={{
+                padding: '0.625rem 1.5rem',
+                backgroundColor: primaryColor,
+                color: '#fff',
+                borderRadius: '0.5rem',
+                textDecoration: 'none',
+                fontSize: '0.875rem',
+                fontWeight: '600'
               }}
             >
               + Add Lead
@@ -322,28 +322,28 @@ export default function WorkspaceDashboardPage() {
 
         {/* Stats Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-          <StatCard 
-            label="Total Leads" 
-            value={loading ? '...' : stats.totalLeads.toLocaleString()} 
-            icon="🎯" 
+          <StatCard
+            label="Total Leads"
+            value={loading ? '...' : stats.totalLeads.toLocaleString()}
+            icon="🎯"
             color="#6366f1"
           />
-          <StatCard 
-            label="Active Deals" 
-            value={loading ? '...' : stats.activeDeals.toLocaleString()} 
-            icon="💼" 
+          <StatCard
+            label="Active Deals"
+            value={loading ? '...' : stats.activeDeals.toLocaleString()}
+            icon="💼"
             color="#8b5cf6"
           />
-          <StatCard 
-            label="Pipeline Value" 
-            value={loading ? '...' : `$${stats.pipelineValue.toLocaleString()}`} 
-            icon="💰" 
+          <StatCard
+            label="Pipeline Value"
+            value={loading ? '...' : `$${stats.pipelineValue.toLocaleString()}`}
+            icon="💰"
             color="#10b981"
           />
-          <StatCard 
-            label="Win Rate" 
-            value={loading ? '...' : `${winRate}%`} 
-            icon="🏆" 
+          <StatCard
+            label="Win Rate"
+            value={loading ? '...' : `${winRate}%`}
+            icon="🏆"
             color="#f59e0b"
             subtitle={`${stats.wonDeals} won / ${stats.lostDeals} lost`}
           />
@@ -352,36 +352,37 @@ export default function WorkspaceDashboardPage() {
         {/* Main Content Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', marginBottom: '2rem' }} className="lg:grid-cols-2">
           {/* Sales Pipeline */}
-          <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="pipeline-heading">
-            <h2 id="pipeline-heading" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Sales Pipeline</h2>
+          <section className="bg-surface-paper border-border-light" style={{ borderWidth: '1px', borderStyle: 'solid', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="pipeline-heading">
+            <h2 id="pipeline-heading" className="text-[var(--color-text-primary)]" style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Sales Pipeline</h2>
             {loading ? (
-              <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>Loading...</div>
+              <div className="text-[var(--color-text-disabled)]" style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>
             ) : pipeline.length === 0 ? (
-              <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>
-                No deals yet. <Link href={`/entities/deals`} style={{ color: primaryColor }}>Create your first deal</Link>
+              <div className="text-[var(--color-text-disabled)]" style={{ textAlign: 'center', padding: '2rem' }}>
+                No deals yet. <Link href={`/entities/deals`} className="text-primary" style={{ color: primaryColor }}>Create your first deal</Link>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {pipeline.map((stage, idx) => (
                   <div key={idx}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.875rem', color: '#fff', fontWeight: '500' }}>{stage.stage}</span>
-                      <span style={{ fontSize: '0.875rem', color: '#666' }}>{stage.count} deals • ${stage.value.toLocaleString()}</span>
+                      <span className="text-[var(--color-text-primary)]" style={{ fontSize: '0.875rem', fontWeight: '500' }}>{stage.stage}</span>
+                      <span className="text-[var(--color-text-disabled)]" style={{ fontSize: '0.875rem' }}>{stage.count} deals • ${stage.value.toLocaleString()}</span>
                     </div>
-                    <div style={{ height: '8px', backgroundColor: '#0a0a0a', borderRadius: '9999px', overflow: 'hidden' }}>
-                      <div style={{ 
-                        height: '100%', 
-                        width: `${Math.min((stage.count / Math.max(...pipeline.map(p => p.count), 1)) * 100, 100)}%`, 
-                        backgroundColor: stage.color, 
-                        transition: 'width 0.3s' 
+                    <div className="bg-surface-main" style={{ height: '8px', borderRadius: '9999px', overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${Math.min((stage.count / Math.max(...pipeline.map(p => p.count), 1)) * 100, 100)}%`,
+                        backgroundColor: stage.color,
+                        transition: 'width 0.3s'
                       }} />
                     </div>
                   </div>
                 ))}
               </div>
             )}
-            <Link 
-              href={`/entities/deals`} 
+            <Link
+              href={`/entities/deals`}
+              className="text-primary"
               style={{ display: 'block', marginTop: '1.5rem', textAlign: 'center', color: primaryColor, fontSize: '0.875rem', fontWeight: '600', textDecoration: 'none' }}
             >
               View All Deals →
@@ -389,23 +390,23 @@ export default function WorkspaceDashboardPage() {
           </section>
 
           {/* Recent Activity */}
-          <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="activity-heading">
-            <h2 id="activity-heading" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Recent Activity</h2>
+          <section className="bg-surface-paper border-border-light" style={{ borderWidth: '1px', borderStyle: 'solid', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="activity-heading">
+            <h2 id="activity-heading" className="text-[var(--color-text-primary)]" style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Recent Activity</h2>
             {loading ? (
-              <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>Loading...</div>
+              <div className="text-[var(--color-text-disabled)]" style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>
             ) : recentActivity.length === 0 ? (
-              <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>
+              <div className="text-[var(--color-text-disabled)]" style={{ textAlign: 'center', padding: '2rem' }}>
                 No recent activity yet.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {recentActivity.map((activity) => (
-                  <div key={activity.id} style={{ display: 'flex', gap: '1rem', padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #222', borderRadius: '0.75rem' }}>
+                  <div key={activity.id} className="bg-surface-main border-border-light" style={{ display: 'flex', gap: '1rem', padding: '1rem', borderWidth: '1px', borderStyle: 'solid', borderRadius: '0.75rem' }}>
                     <div style={{ fontSize: '1.5rem' }}>{activity.icon}</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>{activity.action}</div>
-                      <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>{activity.detail}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>{activity.time}</div>
+                      <div className="text-[var(--color-text-primary)]" style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem' }}>{activity.action}</div>
+                      <div className="text-[var(--color-text-secondary)]" style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>{activity.detail}</div>
+                      <div className="text-[var(--color-text-disabled)]" style={{ fontSize: '0.75rem' }}>{activity.time}</div>
                     </div>
                   </div>
                 ))}
@@ -417,8 +418,8 @@ export default function WorkspaceDashboardPage() {
         {/* Bottom Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }} className="lg:grid-cols-[2fr_1fr]">
           {/* Quick Actions */}
-          <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="actions-heading">
-            <h2 id="actions-heading" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Quick Actions</h2>
+          <section className="bg-surface-paper border-border-light" style={{ borderWidth: '1px', borderStyle: 'solid', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="actions-heading">
+            <h2 id="actions-heading" className="text-[var(--color-text-primary)]" style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Quick Actions</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
               <QuickAction href={`/entities/leads`} icon="🎯" label="Leads" count={stats.totalLeads} />
               <QuickAction href={`/entities/deals`} icon="💼" label="Deals" count={stats.activeDeals} />
@@ -430,24 +431,24 @@ export default function WorkspaceDashboardPage() {
           </section>
 
           {/* Tasks */}
-          <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="tasks-heading">
-            <h2 id="tasks-heading" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Upcoming Tasks</h2>
+          <section className="bg-surface-paper border-border-light" style={{ borderWidth: '1px', borderStyle: 'solid', borderRadius: '1rem', padding: '1.5rem' }} aria-labelledby="tasks-heading">
+            <h2 id="tasks-heading" className="text-[var(--color-text-primary)]" style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Upcoming Tasks</h2>
             {loading ? (
-              <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>Loading...</div>
+              <div className="text-[var(--color-text-disabled)]" style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>
             ) : tasks.length === 0 ? (
-              <div style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>
-                No tasks yet. <Link href={`/entities/tasks`} style={{ color: primaryColor }}>Create a task</Link>
+              <div className="text-[var(--color-text-disabled)]" style={{ textAlign: 'center', padding: '2rem' }}>
+                No tasks yet. <Link href={`/entities/tasks`} className="text-primary" style={{ color: primaryColor }}>Create a task</Link>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {tasks.map((task) => (
-                  <div key={task.id} style={{ display: 'flex', gap: '0.75rem', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #222', borderRadius: '0.5rem' }}>
+                  <div key={task.id} className="bg-surface-main border-border-light" style={{ display: 'flex', gap: '0.75rem', padding: '0.75rem', borderWidth: '1px', borderStyle: 'solid', borderRadius: '0.5rem' }}>
                     <input type="checkbox" checked={task.completed} style={{ width: '18px', height: '18px', marginTop: '2px' }} readOnly />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.875rem', color: '#fff', marginBottom: '0.25rem' }}>{task.title}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                        <span style={{ 
-                          padding: '2px 6px', 
+                      <div className="text-[var(--color-text-primary)]" style={{ fontSize: '0.875rem', marginBottom: '0.25rem' }}>{task.title}</div>
+                      <div className="text-[var(--color-text-disabled)]" style={{ fontSize: '0.75rem' }}>
+                        <span style={{
+                          padding: '2px 6px',
                           backgroundColor: task.priority === 'Urgent' ? '#7f1d1d' : task.priority === 'High' ? '#7c2d12' : '#374151',
                           color: task.priority === 'Urgent' ? '#fca5a5' : task.priority === 'High' ? '#fdba74' : '#9ca3af',
                           borderRadius: '4px',
@@ -463,8 +464,9 @@ export default function WorkspaceDashboardPage() {
                 ))}
               </div>
             )}
-            <Link 
-              href={`/entities/tasks`} 
+            <Link
+              href={`/entities/tasks`}
+              className="text-primary"
               style={{ display: 'block', marginTop: '1rem', textAlign: 'center', color: primaryColor, fontSize: '0.875rem', fontWeight: '600', textDecoration: 'none' }}
             >
               View All Tasks →
@@ -478,12 +480,12 @@ export default function WorkspaceDashboardPage() {
 
 function StatCard({ label, value, icon, color: _color, subtitle }: { label: string; value: string; icon: string; color: string; subtitle?: string }) {
   return (
-    <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+    <div className="bg-surface-paper border-border-light" style={{ borderWidth: '1px', borderStyle: 'solid', borderRadius: '1rem', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
         <div>
-          <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>{label}</p>
-          <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>{value}</p>
-          {subtitle && <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>{subtitle}</p>}
+          <p className="text-[var(--color-text-secondary)]" style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>{label}</p>
+          <p className="text-[var(--color-text-primary)]" style={{ fontSize: '2rem', fontWeight: 'bold', margin: 0 }}>{value}</p>
+          {subtitle && <p className="text-[var(--color-text-disabled)]" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>{subtitle}</p>}
         </div>
         <div style={{ fontSize: '2.5rem', opacity: 0.3 }}>{icon}</div>
       </div>
@@ -493,33 +495,26 @@ function StatCard({ label, value, icon, color: _color, subtitle }: { label: stri
 
 function QuickAction({ href, icon, label, count }: { href: string; icon: string; label: string; count?: number }) {
   return (
-    <Link 
-      href={href} 
-      style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '1rem', 
-        padding: '1rem', 
-        backgroundColor: '#0a0a0a', 
-        border: '1px solid #222', 
-        borderRadius: '0.75rem', 
-        textDecoration: 'none', 
-        transition: 'all 0.2s' 
+    <Link
+      href={href}
+      className="bg-surface-main border-border-light hover:bg-surface-elevated"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+        padding: '1rem',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderRadius: '0.75rem',
+        textDecoration: 'none',
+        transition: 'all 0.2s'
       }}
     >
       <span style={{ fontSize: '2rem' }}>{icon}</span>
       <div>
-        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>{label}</div>
-        {count !== undefined && <div style={{ fontSize: '0.75rem', color: '#666' }}>{count} total</div>}
+        <div className="text-[var(--color-text-primary)]" style={{ fontSize: '0.875rem', fontWeight: '600' }}>{label}</div>
+        {count !== undefined && <div className="text-[var(--color-text-disabled)]" style={{ fontSize: '0.75rem' }}>{count} total</div>}
       </div>
     </Link>
   );
 }
-
-
-
-
-
-
-
-

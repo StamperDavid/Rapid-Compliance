@@ -554,11 +554,11 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         onClick={() => setMinimized(false)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 shadow-lg shadow-indigo-500/30 flex items-center justify-center hover:scale-110 transition-transform"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-110 transition-transform"
       >
         <MessageSquare className="w-6 h-6 text-white" />
         {chatHistory.length > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-error rounded-full text-xs text-white flex items-center justify-center">
             {chatHistory.filter((m) => m.role === 'assistant').length}
           </span>
         )}
@@ -576,11 +576,11 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setOpen(true)}
-            className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 shadow-2xl shadow-indigo-500/40 flex items-center justify-center hover:scale-110 transition-transform group"
+            className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-gradient-to-br from-primary via-secondary to-accent shadow-2xl shadow-primary/40 flex items-center justify-center hover:scale-110 transition-transform group"
           >
             <Sparkles className="w-7 h-7 text-white group-hover:animate-pulse" />
             <motion.div
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 opacity-0 group-hover:opacity-30"
+              className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-secondary opacity-0 group-hover:opacity-30"
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             />
@@ -596,29 +596,29 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-6 right-6 z-50 w-[420px] h-[600px] flex flex-col rounded-2xl overflow-hidden backdrop-blur-xl bg-black/40 border border-white/10 shadow-2xl"
+            className="fixed bottom-6 right-6 z-50 w-[420px] h-[600px] flex flex-col rounded-2xl overflow-hidden backdrop-blur-xl bg-surface-paper border border-border-light shadow-2xl"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border-b border-white/10">
+            <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/20 to-secondary/20 border-b border-border-light">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center relative">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center relative">
                   <Zap className="w-5 h-5 text-white" />
                   {/* Live mode indicator */}
                   {voiceSettings.liveMode && (
                     <motion.div
-                      className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full"
+                      className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-success rounded-full"
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ duration: 1, repeat: Infinity }}
                     />
                   )}
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold text-sm">
+                  <h3 className="text-[var(--color-text-primary)] font-semibold text-sm">
                     {config.assistantName ?? (config.context === 'admin' ? 'Jasper' : config.merchantInfo?.assistantName ?? 'AI Assistant')}
                   </h3>
-                  <p className="text-gray-400 text-xs">
+                  <p className="text-[var(--color-text-secondary)] text-xs">
                     {voiceSettings.liveMode ? (
-                      <span className="text-green-400 flex items-center gap-1">
+                      <span className="text-success flex items-center gap-1">
                         <Radio className="w-3 h-3" /> Live Mode
                       </span>
                     ) : (
@@ -631,7 +631,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                 {/* Live Mode Toggle */}
                 <button
                   onClick={toggleLiveMode}
-                  className={`p-2 rounded-lg transition-colors ${voiceSettings.liveMode ? 'bg-green-600/30 text-green-400' : 'hover:bg-white/10 text-gray-400'}`}
+                  className={`p-2 rounded-lg transition-colors ${voiceSettings.liveMode ? 'bg-success/30 text-success' : 'hover:bg-surface-elevated text-[var(--color-text-secondary)]'}`}
                   title={voiceSettings.liveMode ? 'Exit Live Mode' : 'Enter Live Mode (Continuous Mic)'}
                 >
                   {voiceSettings.liveMode ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
@@ -639,7 +639,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                 {/* Voice Toggle */}
                 <button
                   onClick={toggleVoice}
-                  className={`p-2 rounded-lg transition-colors ${voiceSettings.enabled ? 'bg-indigo-600/30 text-indigo-400' : 'hover:bg-white/10 text-gray-400'}`}
+                  className={`p-2 rounded-lg transition-colors ${voiceSettings.enabled ? 'bg-primary/30 text-primary' : 'hover:bg-surface-elevated text-[var(--color-text-secondary)]'}`}
                   title={voiceSettings.enabled ? 'Disable Voice' : 'Enable Voice'}
                 >
                   {voiceSettings.enabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -647,21 +647,21 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                 {/* Settings */}
                 <button
                   onClick={() => setShowSettings(!showSettings)}
-                  className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-gray-400'}`}
+                  className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-surface-elevated text-[var(--color-text-primary)]' : 'hover:bg-surface-elevated text-[var(--color-text-secondary)]'}`}
                 >
                   <Settings className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setMinimized(true)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  className="p-2 hover:bg-surface-elevated rounded-lg transition-colors"
                 >
-                  <Minus className="w-4 h-4 text-gray-400" />
+                  <Minus className="w-4 h-4 text-[var(--color-text-secondary)]" />
                 </button>
                 <button
                   onClick={() => setOpen(false)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  className="p-2 hover:bg-surface-elevated rounded-lg transition-colors"
                 >
-                  <X className="w-4 h-4 text-gray-400" />
+                  <X className="w-4 h-4 text-[var(--color-text-secondary)]" />
                 </button>
               </div>
             </div>
@@ -673,48 +673,48 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  className="border-b border-white/10 bg-black/40 overflow-hidden"
+                  className="border-b border-border-light bg-surface-paper overflow-hidden"
                 >
                   <div className="p-4 space-y-4">
                     {/* Model Selection */}
                     <div>
-                      <label className="text-xs text-gray-400 block mb-1">AI Model</label>
+                      <label className="text-xs text-[var(--color-text-secondary)] block mb-1">AI Model</label>
                       <select
                         value={selectedModel}
                         onChange={(e) => setSelectedModel(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        className="w-full bg-white/5 border border-border-light rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       >
                         {Object.entries(AVAILABLE_MODELS).map(([id, name]) => (
-                          <option key={id} value={id} className="bg-gray-900">{name}</option>
+                          <option key={id} value={id} className="bg-surface-elevated">{name}</option>
                         ))}
                       </select>
                     </div>
 
                     {/* TTS Engine */}
                     <div>
-                      <label className="text-xs text-gray-400 block mb-1">Voice Engine</label>
+                      <label className="text-xs text-[var(--color-text-secondary)] block mb-1">Voice Engine</label>
                       <select
                         value={voiceSettings.ttsEngine}
                         onChange={(e) => setVoiceSettings(prev => ({ ...prev, ttsEngine: e.target.value as 'native' | 'unreal' | 'elevenlabs' }))}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        className="w-full bg-white/5 border border-border-light rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       >
-                        <option value="elevenlabs" className="bg-gray-900">ElevenLabs (Ultra Quality)</option>
-                        <option value="unreal" className="bg-gray-900">Unreal Speech (Fast)</option>
-                        <option value="native" className="bg-gray-900">Native Voice (Balanced)</option>
+                        <option value="elevenlabs" className="bg-surface-elevated">ElevenLabs (Ultra Quality)</option>
+                        <option value="unreal" className="bg-surface-elevated">Unreal Speech (Fast)</option>
+                        <option value="native" className="bg-surface-elevated">Native Voice (Balanced)</option>
                       </select>
                     </div>
 
                     {/* Voice ID */}
                     <div>
-                      <label className="text-xs text-gray-400 block mb-1">Voice Style</label>
+                      <label className="text-xs text-[var(--color-text-secondary)] block mb-1">Voice Style</label>
                       <select
                         value={voiceSettings.voiceId}
                         onChange={(e) => setVoiceSettings(prev => ({ ...prev, voiceId: e.target.value }))}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        className="w-full bg-white/5 border border-border-light rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       >
-                        <option value={DEFAULT_VOICE_IDS.jasper_deep} className="bg-gray-900">Deep & Strategic</option>
-                        <option value={DEFAULT_VOICE_IDS.jasper_energetic} className="bg-gray-900">Energetic & Dynamic</option>
-                        <option value={DEFAULT_VOICE_IDS.merchant_warm} className="bg-gray-900">Warm & Friendly</option>
+                        <option value={DEFAULT_VOICE_IDS.jasper_deep} className="bg-surface-elevated">Deep & Strategic</option>
+                        <option value={DEFAULT_VOICE_IDS.jasper_energetic} className="bg-surface-elevated">Energetic & Dynamic</option>
+                        <option value={DEFAULT_VOICE_IDS.merchant_warm} className="bg-surface-elevated">Warm & Friendly</option>
                       </select>
                     </div>
                   </div>
@@ -731,22 +731,22 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                 <MessageBubble key={message.id} message={message} />
               ))}
               {isTyping && (
-                <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <div className="flex items-center gap-2 text-[var(--color-text-secondary)] text-sm">
                   <div className="flex gap-1">
                     <motion.span
                       animate={{ opacity: [0.4, 1, 0.4] }}
                       transition={{ duration: 1, repeat: Infinity, delay: 0 }}
-                      className="w-2 h-2 rounded-full bg-indigo-400"
+                      className="w-2 h-2 rounded-full bg-primary"
                     />
                     <motion.span
                       animate={{ opacity: [0.4, 1, 0.4] }}
                       transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
-                      className="w-2 h-2 rounded-full bg-indigo-400"
+                      className="w-2 h-2 rounded-full bg-primary"
                     />
                     <motion.span
                       animate={{ opacity: [0.4, 1, 0.4] }}
                       transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
-                      className="w-2 h-2 rounded-full bg-indigo-400"
+                      className="w-2 h-2 rounded-full bg-primary"
                     />
                   </div>
                   <span>Thinking...</span>
@@ -756,14 +756,14 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
 
             {/* Live Mode Status Bar */}
             {voiceSettings.liveMode && (
-              <div className="px-4 py-2 border-t border-white/10 bg-green-900/20 flex items-center justify-between">
+              <div className="px-4 py-2 border-t border-border-light bg-green-900/20 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <motion.div
-                    className={`w-2 h-2 rounded-full ${isSpeaking ? 'bg-red-500' : isListening ? 'bg-green-500' : 'bg-yellow-500'}`}
+                    className={`w-2 h-2 rounded-full ${isSpeaking ? 'bg-error' : isListening ? 'bg-success' : 'bg-yellow-500'}`}
                     animate={isSpeaking ? { scale: [1, 1.3, 1] } : {}}
                     transition={{ duration: 0.3, repeat: isSpeaking ? Infinity : 0 }}
                   />
-                  <span className="text-xs text-gray-300">
+                  <span className="text-xs text-[var(--color-text-secondary)]">
                     {isSpeaking ? 'Listening...' : isListening ? 'Ready' : 'Initializing...'}
                   </span>
                 </div>
@@ -785,19 +785,19 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="border-t border-white/10 bg-black/60 backdrop-blur-md max-h-48 overflow-y-auto"
+                  className="border-t border-border-light bg-surface-paper backdrop-blur-md max-h-48 overflow-y-auto"
                 >
                   <div className="p-2 grid grid-cols-2 gap-1">
                     {SPECIALISTS.slice(0, 6).map((specialist) => (
                       <button
                         key={specialist.id}
                         onClick={() => quickInvokeSpecialist(specialist)}
-                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 transition-colors text-left"
+                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-surface-elevated transition-colors text-left"
                       >
                         <span className="text-lg">{specialist.icon}</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-white text-xs font-medium truncate">{specialist.name}</p>
-                          <p className="text-gray-500 text-xs truncate">{specialist.role}</p>
+                          <p className="text-[var(--color-text-disabled)] text-xs truncate">{specialist.role}</p>
                         </div>
                       </button>
                     ))}
@@ -807,17 +807,17 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
             </AnimatePresence>
 
             {/* Quick Actions */}
-            <div className="px-4 py-2 border-t border-white/10 flex gap-2">
+            <div className="px-4 py-2 border-t border-border-light flex gap-2">
               <button
                 onClick={() => openFeedbackModal('support')}
-                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-gray-400 text-xs"
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 hover:bg-surface-elevated transition-colors text-[var(--color-text-secondary)] text-xs"
               >
                 <HelpCircle className="w-3.5 h-3.5" />
                 Support
               </button>
               <button
                 onClick={() => openFeedbackModal('feature')}
-                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-gray-400 text-xs"
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 hover:bg-surface-elevated transition-colors text-[var(--color-text-secondary)] text-xs"
               >
                 <Lightbulb className="w-3.5 h-3.5" />
                 Feature Request
@@ -825,11 +825,11 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 border-t border-white/10 bg-black/20">
+            <div className="p-4 border-t border-border-light bg-surface-main">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowCommands(!showCommands)}
-                  className={`p-2 rounded-lg transition-colors ${showCommands ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+                  className={`p-2 rounded-lg transition-colors ${showCommands ? 'bg-primary text-white' : 'bg-white/5 text-[var(--color-text-secondary)] hover:bg-surface-elevated'}`}
                 >
                   <ChevronDown className={`w-5 h-5 transition-transform ${showCommands ? 'rotate-180' : ''}`} />
                 </button>
@@ -840,7 +840,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={voiceSettings.liveMode ? "Speak or type..." : "Ask me anything..."}
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
+                  className="flex-1 bg-white/5 border border-border-light rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
                 />
                 <button
                   id="orchestrator-send-btn"
@@ -848,7 +848,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                     void handleSendMessage();
                   }}
                   disabled={!input.trim() || isTyping}
-                  className="p-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:from-indigo-500 hover:to-purple-500 transition-all"
+                  className="p-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white disabled:opacity-50 disabled:cursor-not-allowed hover:from-primary hover:to-secondary transition-all"
                 >
                   <Send className="w-5 h-5" />
                 </button>
@@ -921,7 +921,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     let key = 0;
 
     const patterns = [
-      { regex: /`([^`]+)`/g, render: (match: string) => <code key={key++} className="px-1 py-0.5 bg-black/30 rounded text-xs font-mono">{match}</code> },
+      { regex: /`([^`]+)`/g, render: (match: string) => <code key={key++} className="px-1 py-0.5 bg-surface-main rounded text-xs font-mono">{match}</code> },
       { regex: /\*\*([^*]+)\*\*/g, render: (match: string) => <strong key={key++} className="font-semibold">{match}</strong> },
       { regex: /\*([^*]+)\*/g, render: (match: string) => <em key={key++} className="italic">{match}</em> },
     ];
@@ -968,8 +968,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-3 ${
           isUser
-            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'
-            : 'bg-white/10 text-gray-100'
+            ? 'bg-gradient-to-r from-primary to-secondary text-white'
+            : 'bg-surface-elevated text-[var(--color-text-primary)]'
         }`}
       >
         <div className="text-sm leading-relaxed">

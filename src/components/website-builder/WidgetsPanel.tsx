@@ -56,8 +56,8 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
   return (
     <div style={{
       width: '280px',
-      background: '#f8f9fa',
-      borderRight: '1px solid #dee2e6',
+      background: 'var(--color-surface-elevated)',
+      borderRight: '1px solid var(--color-border-light)',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
@@ -65,19 +65,19 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
       {/* Header */}
       <div style={{
         padding: '1rem',
-        borderBottom: '1px solid #dee2e6',
+        borderBottom: '1px solid var(--color-border-light)',
       }}>
-        <h3 style={{ 
-          margin: '0 0 0.75rem', 
+        <h3 style={{
+          margin: '0 0 0.75rem',
           fontSize: '0.875rem',
           fontWeight: '600',
-          color: '#495057',
+          color: 'var(--color-text-primary)',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
         }}>
           Widgets
         </h3>
-        
+
         <input
           type="text"
           placeholder="Search widgets..."
@@ -86,7 +86,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
           style={{
             width: '100%',
             padding: '0.5rem',
-            border: '1px solid #ced4da',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '4px',
             fontSize: '0.875rem',
           }}
@@ -98,8 +98,8 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
         display: 'flex',
         gap: '0.25rem',
         padding: '0.75rem',
-        borderBottom: '1px solid #dee2e6',
-        background: 'white',
+        borderBottom: '1px solid var(--color-border-light)',
+        background: 'var(--color-surface-paper)',
         overflowX: 'auto',
       }}>
         {categories.map(cat => (
@@ -109,8 +109,8 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
             title={cat.label}
             style={{
               padding: '0.5rem 0.75rem',
-              background: activeCategory === cat.id ? '#007bff' : '#e9ecef',
-              color: activeCategory === cat.id ? 'white' : '#495057',
+              background: activeCategory === cat.id ? 'var(--color-primary)' : 'var(--color-surface-main)',
+              color: activeCategory === cat.id ? 'white' : 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
@@ -134,7 +134,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
           <div style={{
             padding: '2rem 1rem',
             textAlign: 'center',
-            color: '#6c757d',
+            color: 'var(--color-text-secondary)',
             fontSize: '0.875rem',
           }}>
             No widgets found
@@ -149,18 +149,18 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
                 onDragStart={(e) => handleDragStart(e, type as WidgetType)}
                 style={{
                   padding: '0.75rem',
-                  background: 'white',
-                  border: '1px solid #dee2e6',
+                  background: 'var(--color-surface-paper)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   cursor: 'grab',
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#007bff';
-                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,123,255,0.1)';
+                  e.currentTarget.style.borderColor = 'var(--color-primary)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px var(--color-primary-shadow)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#dee2e6';
+                  e.currentTarget.style.borderColor = 'var(--color-border-light)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
@@ -171,19 +171,19 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
                   marginBottom: '0.25rem',
                 }}>
                   <span style={{ fontSize: '1.25rem' }}>{def.icon}</span>
-                  <span style={{ 
+                  <span style={{
                     fontSize: '0.875rem',
                     fontWeight: '500',
-                    color: '#212529',
+                    color: 'var(--color-text-primary)',
                   }}>
                     {def.label}
                   </span>
                 </div>
-                
+
                 {def.description && (
                   <div style={{
                     fontSize: '0.75rem',
-                    color: '#6c757d',
+                    color: 'var(--color-text-secondary)',
                     marginLeft: '1.75rem',
                   }}>
                     {def.description}

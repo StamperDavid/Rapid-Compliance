@@ -120,31 +120,31 @@ export default function ContactsPage() {
       key: 'name',
       header: 'Name',
       accessor: (c) => getContactName(c),
-      render: (c) => <span className="font-medium text-white">{getContactName(c)}</span>,
+      render: (c) => <span className="font-medium text-[var(--color-text-primary)]">{getContactName(c)}</span>,
     },
     {
       key: 'email',
       header: 'Email',
       accessor: (c) => c.email ?? '',
-      render: (c) => <span className="text-gray-400">{c.email ?? '-'}</span>,
+      render: (c) => <span className="text-[var(--color-text-secondary)]">{c.email ?? '-'}</span>,
     },
     {
       key: 'phone',
       header: 'Phone',
       accessor: (c) => c.phone ?? '',
-      render: (c) => <span className="text-gray-400">{c.phone ?? '-'}</span>,
+      render: (c) => <span className="text-[var(--color-text-secondary)]">{c.phone ?? '-'}</span>,
     },
     {
       key: 'company',
       header: 'Company',
       accessor: (c) => getContactCompany(c),
-      render: (c) => <span className="text-gray-400">{getContactCompany(c)}</span>,
+      render: (c) => <span className="text-[var(--color-text-secondary)]">{getContactCompany(c)}</span>,
     },
     {
       key: 'title',
       header: 'Title',
       accessor: (c) => c.title ?? '',
-      render: (c) => <span className="text-gray-400">{c.title ?? '-'}</span>,
+      render: (c) => <span className="text-[var(--color-text-secondary)]">{c.title ?? '-'}</span>,
     },
     {
       key: 'vip',
@@ -156,7 +156,7 @@ export default function ContactsPage() {
           VIP
         </span>
       ) : (
-        <span className="text-gray-600">-</span>
+        <span className="text-[var(--color-text-disabled)]">-</span>
       ),
     },
     {
@@ -167,7 +167,7 @@ export default function ContactsPage() {
       render: (c) => (
         <button
           onClick={() => router.push(`/contacts/${c.id}`)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 text-gray-400 hover:text-white rounded-lg transition-all text-sm"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-lg transition-all text-sm"
         >
           <Eye className="w-4 h-4" />
           View
@@ -187,7 +187,7 @@ export default function ContactsPage() {
   ], [handleBulkDelete]);
 
   return (
-    <div className="min-h-screen bg-black p-8">
+    <div className="min-h-screen bg-surface-main p-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -195,25 +195,25 @@ export default function ContactsPage() {
         className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
       >
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <Users className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Contacts</h1>
-            <p className="text-gray-400 text-sm">{contacts.length} total contacts</p>
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Contacts</h1>
+            <p className="text-[var(--color-text-secondary)] text-sm">{contacts.length} total contacts</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {/* View Toggle */}
-          <div className="flex gap-1 p-1 bg-white/5 border border-white/10 rounded-xl" role="group" aria-label="View options">
+          <div className="flex gap-1 p-1 bg-surface-elevated border border-border-light rounded-xl" role="group" aria-label="View options">
             <button
               onClick={() => setView('cards')}
               aria-pressed={view === 'cards'}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 view === 'cards'
-                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/25'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
               }`}
             >
               <LayoutGrid className="w-4 h-4" />
@@ -224,8 +224,8 @@ export default function ContactsPage() {
               aria-pressed={view === 'table'}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 view === 'table'
-                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/25'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
+                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
               }`}
             >
               <List className="w-4 h-4" />
@@ -235,7 +235,7 @@ export default function ContactsPage() {
 
           <button
             onClick={() => router.push(`/contacts/new`)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/25"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/25"
           >
             <Plus className="w-5 h-5" />
             Add Contact
@@ -248,10 +248,11 @@ export default function ContactsPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3"
+          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
+          className="mb-6 p-4 rounded-xl border-error/20 border flex items-center gap-3"
         >
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          <span className="text-red-300">{error}</span>
+          <AlertCircle className="w-5 h-5 text-error flex-shrink-0" />
+          <span className="text-error-light">{error}</span>
         </motion.div>
       )}
 
@@ -280,7 +281,7 @@ export default function ContactsPage() {
             onLoadMore={() => void loadMore()}
             itemCountLabel={`${contacts.length} shown`}
             emptyMessage="No contacts found"
-            emptyIcon={<UserPlus className="w-8 h-8 text-gray-500" />}
+            emptyIcon={<UserPlus className="w-8 h-8 text-[var(--color-text-disabled)]" />}
             accentColor="blue"
           />
         </motion.div>
@@ -293,13 +294,13 @@ export default function ContactsPage() {
             transition={{ delay: 0.1 }}
             className="relative max-w-md mb-6"
           >
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-disabled)]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search contacts..."
-              className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+              className="w-full pl-12 pr-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
             />
           </motion.div>
 
@@ -308,22 +309,22 @@ export default function ContactsPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-12 text-center"
+              className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-12 text-center"
             >
               <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center">
-                  <UserPlus className="w-8 h-8 text-gray-500" />
+                <div className="w-16 h-16 rounded-full bg-surface-elevated flex items-center justify-center">
+                  <UserPlus className="w-8 h-8 text-[var(--color-text-disabled)]" />
                 </div>
                 <div>
-                  <p className="text-gray-400 mb-1">No contacts found</p>
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-[var(--color-text-secondary)] mb-1">No contacts found</p>
+                  <p className="text-[var(--color-text-disabled)] text-sm">
                     {searchQuery ? 'Try a different search term.' : 'Click "Add Contact" to create your first contact.'}
                   </p>
                 </div>
                 {!searchQuery && (
                   <button
                     onClick={() => router.push(`/contacts/new`)}
-                    className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-medium rounded-xl transition-all text-sm"
+                    className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-medium rounded-xl transition-all text-sm"
                   >
                     <Plus className="w-4 h-4" />
                     Add Contact
@@ -347,10 +348,10 @@ export default function ContactsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.03 }}
                     onClick={() => router.push(`/contacts/${contact.id}`)}
-                    className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 hover:bg-white/5 hover:border-blue-500/30 transition-all cursor-pointer group"
+                    className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6 hover:bg-surface-elevated hover:border-primary transition-all cursor-pointer group"
                   >
                     <div className="flex items-start justify-between mb-4">
-                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-500/25">
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-primary/25">
                         {getInitial(contact)}
                       </div>
                       {contact.isVIP && (
@@ -361,43 +362,43 @@ export default function ContactsPage() {
                       )}
                     </div>
 
-                    <h3 className="font-semibold text-lg text-white mb-1 group-hover:text-blue-300 transition-colors">
+                    <h3 className="font-semibold text-lg text-[var(--color-text-primary)] mb-1 group-hover:text-primary-light transition-colors">
                       {getContactName(contact)}
                     </h3>
 
                     {contact.title && (
-                      <p className="text-sm text-gray-400 mb-1">{contact.title}</p>
+                      <p className="text-sm text-[var(--color-text-secondary)] mb-1">{contact.title}</p>
                     )}
 
                     {(contact.company ?? contact.companyName) && (
-                      <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
-                        <Building className="w-4 h-4 text-gray-500" />
+                      <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)] mb-4">
+                        <Building className="w-4 h-4 text-[var(--color-text-disabled)]" />
                         <span>{contact.company ?? contact.companyName}</span>
                       </div>
                     )}
 
-                    <div className="space-y-2 pt-4 border-t border-white/10">
+                    <div className="space-y-2 pt-4 border-t border-border-light">
                       {contact.email && (
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <Mail className="w-4 h-4 text-gray-500" />
+                        <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                          <Mail className="w-4 h-4 text-[var(--color-text-disabled)]" />
                           <span className="truncate">{contact.email}</span>
                         </div>
                       )}
                       {contact.phone && (
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <Phone className="w-4 h-4 text-gray-500" />
+                        <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                          <Phone className="w-4 h-4 text-[var(--color-text-disabled)]" />
                           <span>{contact.phone}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-white/10 flex justify-end">
+                    <div className="mt-4 pt-4 border-t border-border-light flex justify-end">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(`/contacts/${contact.id}`);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 text-gray-400 hover:text-white rounded-lg transition-all text-sm"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-lg transition-all text-sm"
                       >
                         <Eye className="w-4 h-4" />
                         View
@@ -413,7 +414,7 @@ export default function ContactsPage() {
                   <button
                     onClick={() => void loadMore()}
                     disabled={loading || !hasMore}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <>

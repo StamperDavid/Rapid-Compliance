@@ -503,19 +503,19 @@ function CreateSequenceModal({ onClose, onCreate }: { onClose: () => void; onCre
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}>
-      <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', maxWidth: '40rem', width: '100%' }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
+      <div className="bg-surface-elevated" style={{ borderRadius: '1rem', border: '1px solid var(--color-border-light)', maxWidth: '40rem', width: '100%' }}>
+        <div className="border-b border-border-light" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 className="text-[var(--color-text-primary)]" style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>
             Create Email Sequence
           </h2>
-          <button onClick={onClose} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}>
+          <button onClick={onClose} className="text-[var(--color-text-disabled)]" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}>
             ✕
           </button>
         </div>
 
         <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+            <label className="text-[var(--color-text-secondary)]" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
               Sequence Name *
             </label>
             <input
@@ -523,12 +523,13 @@ function CreateSequenceModal({ onClose, onCreate }: { onClose: () => void; onCre
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Cold Outreach - Tech Startups"
-              style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+              className="bg-surface-paper border-border-light text-[var(--color-text-primary)]"
+              style={{ width: '100%', padding: '0.75rem', border: '1px solid', borderRadius: '0.5rem', fontSize: '0.875rem' }}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+            <label className="text-[var(--color-text-secondary)]" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
               Description
             </label>
             <textarea
@@ -536,20 +537,23 @@ function CreateSequenceModal({ onClose, onCreate }: { onClose: () => void; onCre
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the purpose of this sequence..."
               rows={3}
-              style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem', resize: 'vertical' }}
+              className="bg-surface-paper border-border-light text-[var(--color-text-primary)]"
+              style={{ width: '100%', padding: '0.75rem', border: '1px solid', borderRadius: '0.5rem', fontSize: '0.875rem', resize: 'vertical' }}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #1a1a1a' }}>
+          <div className="border-t border-border-light" style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem' }}>
             <button
               onClick={onClose}
-              style={{ flex: 1, padding: '0.75rem', border: '1px solid #333', color: '#999', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+              className="bg-surface-paper border-border-light text-[var(--color-text-secondary)]"
+              style={{ flex: 1, padding: '0.75rem', border: '1px solid', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              style={{ flex: 1, padding: '0.75rem', backgroundColor: '#6366f1', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+              className="bg-primary"
+              style={{ flex: 1, padding: '0.75rem', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
             >
               Create Sequence
             </button>

@@ -307,7 +307,7 @@ export default function AdminSidebar() {
       {/* Mobile Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-surface-paper z-40 md:hidden"
           onClick={handleMobileClose}
           aria-hidden="true"
         />

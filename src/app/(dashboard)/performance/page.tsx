@@ -64,29 +64,29 @@ export default function PerformanceDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface-main">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-surface-paper border-b border-border-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Performance Analytics</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Performance Analytics</h1>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1">
                 Team-wide conversation performance and benchmarking
               </p>
             </div>
             
             <div className="flex items-center gap-4">
               {/* Period Selector */}
-              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center gap-2 bg-surface-elevated rounded-lg p-1">
                 {(['week', 'month', 'quarter'] as const).map((period) => (
                   <button
                     key={period}
                     onClick={() => setSelectedPeriod(period)}
                     className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                       selectedPeriod === period
-                        ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        ? 'bg-surface-paper text-[var(--color-text-primary)] shadow-sm'
+                        : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                     }`}
                   >
                     {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -98,7 +98,7 @@ export default function PerformanceDashboardPage() {
               <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 border border-border-light rounded-md shadow-sm text-sm font-medium text-[var(--color-text-primary)] bg-surface-paper hover:bg-surface-elevated focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg
                   className={`-ml-1 mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`}
@@ -124,10 +124,10 @@ export default function PerformanceDashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Error State */}
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="rounded-lg p-4 mb-6" style={{ backgroundColor: 'var(--color-error)', opacity: 0.1, border: '1px solid var(--color-error)' }}>
             <div className="flex items-start">
               <svg
-                className="w-5 h-5 text-red-400 mt-0.5"
+                className="w-5 h-5 text-error mt-0.5"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -138,11 +138,11 @@ export default function PerformanceDashboardPage() {
                 />
               </svg>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error loading analytics</h3>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
+                <h3 className="text-sm font-medium text-error">Error loading analytics</h3>
+                <p className="text-sm text-error mt-1">{error}</p>
                 <button
                   onClick={handleRefresh}
-                  className="mt-2 text-sm font-medium text-red-600 hover:text-red-500"
+                  className="mt-2 text-sm font-medium text-error hover:opacity-80"
                 >
                   Try again
                 </button>
@@ -182,10 +182,10 @@ export default function PerformanceDashboardPage() {
         {!loading && analytics && (
           <>
             {/* Period Info */}
-            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="mb-6 bg-surface-elevated border border-border-light rounded-lg p-4">
               <div className="flex items-start">
                 <svg
-                  className="w-5 h-5 text-blue-400 mt-0.5"
+                  className="w-5 h-5 text-primary mt-0.5"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -196,12 +196,12 @@ export default function PerformanceDashboardPage() {
                   />
                 </svg>
                 <div className="ml-3">
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-[var(--color-text-primary)]">
                     Analyzing <strong>{analytics.conversationsAnalyzed} conversations</strong> from{' '}
                     <strong>{analytics.repsIncluded} reps</strong> over the past{' '}
                     <strong>{selectedPeriod}</strong>
                   </p>
-                  <p className="text-xs text-blue-600 mt-1">
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-1">
                     Generated {new Date(analytics.generatedAt).toLocaleString()}
                   </p>
                 </div>
@@ -237,29 +237,29 @@ export default function PerformanceDashboardPage() {
 
               {/* Improvement Opportunities */}
               {analytics.improvementOpportunities.length > 0 && (
-                <div className="bg-white rounded-lg shadow">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">Improvement Opportunities</h3>
-                    <p className="text-sm text-gray-500 mt-1">
+                <div className="bg-surface-paper rounded-lg shadow">
+                  <div className="px-6 py-4 border-b border-border-light">
+                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Improvement Opportunities</h3>
+                    <p className="text-sm text-[var(--color-text-secondary)] mt-1">
                       Reps who would benefit most from coaching
                     </p>
                   </div>
                   <div className="p-6">
                     <div className="space-y-4">
                       {analytics.improvementOpportunities.slice(0, 5).map((opportunity) => (
-                        <div key={opportunity.repId} className="p-4 bg-gray-50 rounded-lg">
+                        <div key={opportunity.repId} className="p-4 bg-surface-elevated rounded-lg">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold text-gray-900">{opportunity.repName}</h4>
-                            <span className="text-sm text-gray-600">
+                            <h4 className="font-semibold text-[var(--color-text-primary)]">{opportunity.repName}</h4>
+                            <span className="text-sm text-[var(--color-text-secondary)]">
                               Current: <span className="font-semibold">{opportunity.currentScore.toFixed(1)}</span>
                               {' → '}
-                              Target: <span className="font-semibold text-green-600">{opportunity.targetScore.toFixed(1)}</span>
+                              Target: <span className="font-semibold text-success">{opportunity.targetScore.toFixed(1)}</span>
                             </span>
                           </div>
                           <div className="space-y-1">
                             {opportunity.recommendedActions.slice(0, 3).map((action, idx) => (
-                              <p key={idx} className="text-sm text-gray-700 flex items-start gap-2">
-                                <svg className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <p key={idx} className="text-sm text-[var(--color-text-primary)] flex items-start gap-2">
+                                <svg className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                                 </svg>
                                 {action}
@@ -275,32 +275,35 @@ export default function PerformanceDashboardPage() {
 
               {/* Coaching Priorities */}
               {analytics.coachingPriorities.length > 0 && (
-                <div className="bg-white rounded-lg shadow">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">Team Coaching Priorities</h3>
-                    <p className="text-sm text-gray-500 mt-1">
+                <div className="bg-surface-paper rounded-lg shadow">
+                  <div className="px-6 py-4 border-b border-border-light">
+                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Team Coaching Priorities</h3>
+                    <p className="text-sm text-[var(--color-text-secondary)] mt-1">
                       Focus areas that would benefit the most reps
                     </p>
                   </div>
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {analytics.coachingPriorities.map((priority) => (
-                        <div key={priority.category} className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                        <div key={priority.category} className="p-4 bg-surface-elevated rounded-lg border-l-4 border-primary">
                           <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-semibold text-gray-900">
+                            <h4 className="font-semibold text-[var(--color-text-primary)]">
                               {priority.category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                             </h4>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              priority.priority === 'critical' ? 'bg-red-100 text-red-800' :
-                              priority.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                              priority.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                              priority.priority === 'critical' ? 'bg-error text-[var(--color-bg-main)]' :
+                              priority.priority === 'high' ? 'text-[var(--color-bg-main)]' :
+                              priority.priority === 'medium' ? 'text-[var(--color-bg-main)]' :
+                              'bg-surface-elevated text-[var(--color-text-secondary)]'
+                            }`} style={
+                              priority.priority === 'high' ? { backgroundColor: 'var(--color-warning)' } :
+                              priority.priority === 'medium' ? { backgroundColor: 'var(--color-warning)', opacity: 0.7 } : {}
+                            }>
                               {priority.priority}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-700 mb-2">{priority.recommendation}</p>
-                          <p className="text-xs text-gray-600">
+                          <p className="text-sm text-[var(--color-text-primary)] mb-2">{priority.recommendation}</p>
+                          <p className="text-xs text-[var(--color-text-secondary)]">
                             Affects {priority.repsAffected} reps · {priority.estimatedROI} ROI
                           </p>
                         </div>
@@ -315,9 +318,9 @@ export default function PerformanceDashboardPage() {
 
         {/* Empty State */}
         {!loading && !analytics && !error && (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
+          <div className="bg-surface-paper rounded-lg shadow p-12 text-center">
             <svg
-              className="w-16 h-16 mx-auto text-gray-400 mb-4"
+              className="w-16 h-16 mx-auto text-[var(--color-text-disabled)] mb-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -329,13 +332,13 @@ export default function PerformanceDashboardPage() {
                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
               />
             </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Analytics Available</h3>
-            <p className="text-sm text-gray-500 mb-6">
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">No Analytics Available</h3>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-6">
               Complete some conversation analyses to see performance analytics
             </p>
             <button
               onClick={handleRefresh}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-light"
             >
               Check Again
             </button>

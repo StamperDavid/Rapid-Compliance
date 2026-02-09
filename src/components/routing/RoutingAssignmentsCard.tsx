@@ -21,10 +21,10 @@ export function RoutingAssignmentsCard({ assignments, loading }: RoutingAssignme
     return (
       <Card className="p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-6 bg-surface-elevated rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-gray-100 rounded"></div>
+              <div key={i} className="h-20 bg-surface-elevated rounded"></div>
             ))}
           </div>
         </div>
@@ -35,12 +35,12 @@ export function RoutingAssignmentsCard({ assignments, loading }: RoutingAssignme
   return (
     <Card className="p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Recent Assignments</h3>
-        <p className="text-sm text-gray-500">Latest lead routing assignments</p>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Recent Assignments</h3>
+        <p className="text-sm text-[var(--color-text-disabled)]">Latest lead routing assignments</p>
       </div>
 
       {assignments.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-[var(--color-text-disabled)]">
           <p>No assignments yet</p>
           <p className="text-sm mt-1">Assignments will appear here once leads are routed</p>
         </div>
@@ -57,52 +57,52 @@ export function RoutingAssignmentsCard({ assignments, loading }: RoutingAssignme
 
 function AssignmentRow({ assignment }: { assignment: LeadAssignment }) {
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+    <div className="border border-border-light rounded-lg p-4 hover:border-border-strong transition-colors">
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-gray-900">
+            <span className="font-medium text-[var(--color-text-primary)]">
               Lead #{assignment.leadId.substring(0, 8)}
             </span>
             <Badge variant={getStatusVariant(assignment.status)}>
               {formatStatus(assignment.status)}
             </Badge>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-[var(--color-text-disabled)]">
             Assigned to: <span className="font-medium">Rep #{assignment.repId.substring(0, 8)}</span>
           </p>
         </div>
         <div className="text-right">
-          <div className="text-lg font-semibold text-blue-600">
+          <div className="text-lg font-semibold text-primary">
             {assignment.matchScore}%
           </div>
-          <div className="text-xs text-gray-500">Match Score</div>
+          <div className="text-xs text-[var(--color-text-disabled)]">Match Score</div>
         </div>
       </div>
 
       <div className="mt-3 pt-3 border-t border-gray-100">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-gray-500">Method:</span>
-            <span className="ml-2 text-gray-900 capitalize">
+            <span className="text-[var(--color-text-disabled)]">Method:</span>
+            <span className="ml-2 text-[var(--color-text-primary)] capitalize">
               {assignment.assignmentMethod.replace('_', ' ')}
             </span>
           </div>
           <div>
-            <span className="text-gray-500">Strategy:</span>
-            <span className="ml-2 text-gray-900 capitalize">
+            <span className="text-[var(--color-text-disabled)]">Strategy:</span>
+            <span className="ml-2 text-[var(--color-text-primary)] capitalize">
               {assignment.strategy.replace('_', ' ')}
             </span>
           </div>
           <div>
-            <span className="text-gray-500">Confidence:</span>
-            <span className="ml-2 text-gray-900">
+            <span className="text-[var(--color-text-disabled)]">Confidence:</span>
+            <span className="ml-2 text-[var(--color-text-primary)]">
               {Math.round(assignment.confidence * 100)}%
             </span>
           </div>
           <div>
-            <span className="text-gray-500">Assigned:</span>
-            <span className="ml-2 text-gray-900">
+            <span className="text-[var(--color-text-disabled)]">Assigned:</span>
+            <span className="ml-2 text-[var(--color-text-primary)]">
               {formatDate(assignment.assignedAt)}
             </span>
           </div>
@@ -110,22 +110,22 @@ function AssignmentRow({ assignment }: { assignment: LeadAssignment }) {
 
         {assignment.reason && (
           <div className="mt-3 text-sm">
-            <span className="text-gray-500">Reason:</span>
-            <p className="text-gray-700 mt-1">{assignment.reason}</p>
+            <span className="text-[var(--color-text-disabled)]">Reason:</span>
+            <p className="text-[var(--color-text-secondary)] mt-1">{assignment.reason}</p>
           </div>
         )}
 
         {assignment.alternatives && assignment.alternatives.length > 0 && (
           <div className="mt-3">
             <details className="text-sm">
-              <summary className="text-gray-500 cursor-pointer hover:text-gray-700">
+              <summary className="text-[var(--color-text-disabled)] cursor-pointer hover:text-[var(--color-text-secondary)]">
                 {assignment.alternatives.length} alternative{assignment.alternatives.length > 1 ? 's' : ''} considered
               </summary>
               <div className="mt-2 space-y-1 pl-4">
                 {assignment.alternatives.map((alt, idx) => (
-                  <div key={idx} className="text-gray-600">
+                  <div key={idx} className="text-[var(--color-text-disabled)]">
                     <span className="font-medium">{alt.repName}</span>
-                    <span className="text-gray-500"> - {alt.matchScore}% match</span>
+                    <span className="text-[var(--color-text-disabled)]"> - {alt.matchScore}% match</span>
                   </div>
                 ))}
               </div>

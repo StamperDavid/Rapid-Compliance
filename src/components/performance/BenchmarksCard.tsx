@@ -25,13 +25,13 @@ export function BenchmarksCard({
 }: BenchmarksCardProps) {
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-surface-main rounded-lg shadow p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-6 bg-surface-elevated rounded w-1/3 mb-4"></div>
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-            <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+            <div className="h-4 bg-surface-elevated rounded"></div>
+            <div className="h-4 bg-surface-elevated rounded w-5/6"></div>
+            <div className="h-4 bg-surface-elevated rounded w-4/6"></div>
           </div>
         </div>
       </div>
@@ -45,11 +45,11 @@ export function BenchmarksCard({
   const _teamAvgScore = individualMetrics.reduce((sum, m) => sum + m.scores.overall, 0) / individualMetrics.length;
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-surface-main rounded-lg shadow">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Performance Benchmarks</h3>
-        <p className="text-sm text-gray-500 mt-1">
+      <div className="px-6 py-4 border-b border-border-light">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Performance Benchmarks</h3>
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
           Compare your position against team standards
         </p>
       </div>
@@ -58,7 +58,7 @@ export function BenchmarksCard({
       <div className="p-6">
         {/* Overall Score Comparison */}
         <div className="mb-6">
-          <h4 className="text-sm font-semibold text-gray-700 mb-4">Overall Score Benchmarks</h4>
+          <h4 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">Overall Score Benchmarks</h4>
           
           <div className="space-y-4">
             <BenchmarkBar
@@ -83,9 +83,9 @@ export function BenchmarksCard({
         </div>
 
         {/* Percentile Thresholds */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">Percentile Thresholds</h4>
-          
+        <div className="mb-6 p-4 bg-surface-elevated rounded-lg">
+          <h4 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Percentile Thresholds</h4>
+
           <div className="space-y-2">
             <PercentileRow
               percentile="90th"
@@ -117,7 +117,7 @@ export function BenchmarksCard({
 
         {/* Metric Comparisons */}
         <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-gray-700">Key Metrics: Top vs Median</h4>
+          <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Key Metrics: Top vs Median</h4>
           
           <MetricComparison
             label="Sentiment"
@@ -149,11 +149,11 @@ export function BenchmarksCard({
         </div>
 
         {/* Gap Analysis */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h4 className="text-sm font-semibold text-blue-900 mb-2">Performance Gap</h4>
-          <div className="text-sm text-blue-700">
+        <div className="mt-6 p-4 bg-surface-elevated rounded-lg border border-primary">
+          <h4 className="text-sm font-semibold text-primary mb-2">Performance Gap</h4>
+          <div className="text-sm text-[var(--color-text-secondary)]">
             <p>
-              Top performers score <span className="font-bold">
+              Top performers score <span className="font-bold text-[var(--color-text-primary)]">
                 {(benchmarks.topPerformerAvgScore - benchmarks.teamMedianScore).toFixed(1)} points
               </span> higher than the median.
             </p>
@@ -188,16 +188,16 @@ function BenchmarkBar({ label, value, color, isHighlight = false }: BenchmarkBar
   };
 
   return (
-    <div className={`${isHighlight ? 'p-3 bg-gray-50 rounded-lg' : ''}`}>
+    <div className={`${isHighlight ? 'p-3 bg-surface-elevated rounded-lg' : ''}`}>
       <div className="flex items-center justify-between mb-2">
-        <span className={`text-sm ${isHighlight ? 'font-semibold' : 'font-medium'} text-gray-700`}>
+        <span className={`text-sm ${isHighlight ? 'font-semibold' : 'font-medium'} text-[var(--color-text-primary)]`}>
           {label}
         </span>
         <span className={`text-sm font-bold ${textColorClasses[color]}`}>
           {value.toFixed(1)}
         </span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
+      <div className="w-full bg-surface-paper rounded-full h-2">
         <div
           className={`${colorClasses[color]} h-2 rounded-full transition-all duration-500`}
           style={{ width: `${value}%` }}
@@ -217,10 +217,10 @@ function PercentileRow({ percentile, value, description }: PercentileRowProps) {
   return (
     <div className="flex items-center justify-between py-2">
       <div>
-        <span className="text-sm font-medium text-gray-700">{percentile} Percentile</span>
-        <span className="text-xs text-gray-500 ml-2">({description})</span>
+        <span className="text-sm font-medium text-[var(--color-text-primary)]">{percentile} Percentile</span>
+        <span className="text-xs text-[var(--color-text-disabled)] ml-2">({description})</span>
       </div>
-      <span className="text-sm font-semibold text-gray-900">{value.toFixed(1)}</span>
+      <span className="text-sm font-semibold text-[var(--color-text-primary)]">{value.toFixed(1)}</span>
     </div>
   );
 }
@@ -249,27 +249,27 @@ function MetricComparison({ label, topValue, medianValue, format }: MetricCompar
   const _gapPercentage = medianValue !== 0 ? (gap / Math.abs(medianValue)) * 100 : 0;
 
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+    <div className="flex items-center justify-between p-3 bg-surface-elevated rounded-lg">
       <div className="flex-1">
-        <div className="text-sm font-medium text-gray-700 mb-1">{label}</div>
+        <div className="text-sm font-medium text-[var(--color-text-primary)] mb-1">{label}</div>
         <div className="flex items-center gap-4">
           <div>
-            <span className="text-xs text-gray-500">Top:</span>
-            <span className="text-sm font-semibold text-green-600 ml-1">
+            <span className="text-xs text-[var(--color-text-disabled)]">Top:</span>
+            <span className="text-sm font-semibold text-success ml-1">
               {formatValue(topValue)}
             </span>
           </div>
           <div>
-            <span className="text-xs text-gray-500">Median:</span>
-            <span className="text-sm font-semibold text-blue-600 ml-1">
+            <span className="text-xs text-[var(--color-text-disabled)]">Median:</span>
+            <span className="text-sm font-semibold text-primary ml-1">
               {formatValue(medianValue)}
             </span>
           </div>
         </div>
       </div>
       <div className="text-right">
-        <div className="text-xs text-gray-500">Gap</div>
-        <div className={`text-sm font-bold ${gap > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+        <div className="text-xs text-[var(--color-text-disabled)]">Gap</div>
+        <div className={`text-sm font-bold ${gap > 0 ? 'text-success' : 'text-[var(--color-text-secondary)]'}`}>
           {gap > 0 ? '+' : ''}{format === 'percentage' ? `${gap.toFixed(1)}%` : gap.toFixed(1)}
         </div>
       </div>

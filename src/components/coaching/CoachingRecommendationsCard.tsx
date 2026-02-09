@@ -29,12 +29,12 @@ export function CoachingRecommendationsCard({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+      <div className="bg-surface-main rounded-lg shadow-sm p-6 animate-pulse">
+        <div className="h-6 bg-surface-elevated rounded w-1/3 mb-4"></div>
         <div className="space-y-3">
-          <div className="h-20 bg-gray-200 rounded"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
+          <div className="h-20 bg-surface-elevated rounded"></div>
+          <div className="h-20 bg-surface-elevated rounded"></div>
+          <div className="h-20 bg-surface-elevated rounded"></div>
         </div>
       </div>
     );
@@ -42,9 +42,9 @@ export function CoachingRecommendationsCard({
 
   if (recommendations.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Coaching Recommendations</h3>
-        <p className="text-sm text-gray-500">No recommendations available</p>
+      <div className="bg-surface-main rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Coaching Recommendations</h3>
+        <p className="text-sm text-[var(--color-text-disabled)]">No recommendations available</p>
       </div>
     );
   }
@@ -56,11 +56,11 @@ export function CoachingRecommendationsCard({
   });
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-surface-main rounded-lg shadow-sm p-6">
       {/* Header */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Coaching Recommendations</h3>
-        <p className="text-sm text-gray-500">AI-powered suggestions for improvement</p>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-1">Coaching Recommendations</h3>
+        <p className="text-sm text-[var(--color-text-secondary)]">AI-powered suggestions for improvement</p>
       </div>
 
       {/* Recommendations List */}
@@ -127,11 +127,11 @@ function RecommendationItem({
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-border-light rounded-lg overflow-hidden">
       {/* Header */}
       <button
         onClick={onToggle}
-        className="w-full p-4 text-left hover:bg-gray-50 transition"
+        className="w-full p-4 text-left hover:bg-surface-elevated transition"
       >
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
@@ -142,15 +142,15 @@ function RecommendationItem({
               <span className={`text-xs font-medium px-2 py-1 rounded ${getEffortBadge(recommendation.effort)}`}>
                 {recommendation.effort} effort
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-[var(--color-text-disabled)]">
                 {(recommendation.confidence * 100).toFixed(0)}% confidence
               </span>
             </div>
-            <h4 className="text-base font-semibold text-gray-900">{recommendation.title}</h4>
-            <p className="text-sm text-gray-600 mt-1">{recommendation.category.replace('_', ' ')}</p>
+            <h4 className="text-base font-semibold text-[var(--color-text-primary)]">{recommendation.title}</h4>
+            <p className="text-sm text-[var(--color-text-secondary)] mt-1">{recommendation.category.replace('_', ' ')}</p>
           </div>
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-[var(--color-text-disabled)] transition-transform ${expanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -162,31 +162,31 @@ function RecommendationItem({
 
       {/* Expanded Content */}
       {expanded && (
-        <div className="px-4 pb-4 border-t border-gray-100">
+        <div className="px-4 pb-4 border-t border-border-light">
           {/* Recommendation Text */}
           <div className="mb-4 pt-4">
-            <p className="text-sm text-gray-700 whitespace-pre-line">{recommendation.recommendation}</p>
+            <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-line">{recommendation.recommendation}</p>
           </div>
 
           {/* Rationale */}
           <div className="mb-4">
-            <h5 className="text-sm font-medium text-gray-900 mb-2">Why This Matters</h5>
-            <p className="text-sm text-gray-600">{recommendation.rationale}</p>
+            <h5 className="text-sm font-medium text-[var(--color-text-primary)] mb-2">Why This Matters</h5>
+            <p className="text-sm text-[var(--color-text-secondary)]">{recommendation.rationale}</p>
           </div>
 
           {/* Actions */}
           {recommendation.actions.length > 0 && (
             <div className="mb-4">
-              <h5 className="text-sm font-medium text-gray-900 mb-2">Action Steps</h5>
+              <h5 className="text-sm font-medium text-[var(--color-text-primary)] mb-2">Action Steps</h5>
               <ul className="space-y-2">
                 {recommendation.actions.map((action, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
-                    <span className="flex-shrink-0 w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">
+                    <span className="flex-shrink-0 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-xs font-medium">
                       {idx + 1}
                     </span>
                     <div className="flex-1">
-                      <span className="text-gray-700">{action.action}</span>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                      <span className="text-[var(--color-text-primary)]">{action.action}</span>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-[var(--color-text-disabled)]">
                         <span>Timeline: {action.timeline}</span>
                         <span>·</span>
                         <span>Owner: {action.owner}</span>
@@ -201,16 +201,16 @@ function RecommendationItem({
           {/* Expected Outcomes */}
           {recommendation.expectedOutcomes.length > 0 && (
             <div className="mb-4">
-              <h5 className="text-sm font-medium text-gray-900 mb-2">Expected Outcomes</h5>
+              <h5 className="text-sm font-medium text-[var(--color-text-primary)] mb-2">Expected Outcomes</h5>
               <div className="space-y-2">
                 {recommendation.expectedOutcomes.map((outcome, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <span className="text-sm text-gray-700">{outcome.metric}</span>
+                  <div key={idx} className="flex items-center justify-between p-2 bg-surface-elevated rounded">
+                    <span className="text-sm text-[var(--color-text-primary)]">{outcome.metric}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">{outcome.baseline}</span>
-                      <span className="text-sm text-gray-400">→</span>
-                      <span className="text-sm font-semibold text-green-600">{outcome.target}</span>
-                      <span className="text-xs text-gray-500">({outcome.timeframe})</span>
+                      <span className="text-sm text-[var(--color-text-secondary)]">{outcome.baseline}</span>
+                      <span className="text-sm text-[var(--color-text-disabled)]">→</span>
+                      <span className="text-sm font-semibold text-success">{outcome.target}</span>
+                      <span className="text-xs text-[var(--color-text-disabled)]">({outcome.timeframe})</span>
                     </div>
                   </div>
                 ))}
@@ -220,11 +220,11 @@ function RecommendationItem({
 
           {/* Actions */}
           {(onAccept ?? onDismiss) && (
-            <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-2 pt-4 border-t border-border-light">
               {onAccept && (
                 <button
                   onClick={() => onAccept(recommendation.id)}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-light transition"
                 >
                   Accept & Track
                 </button>
@@ -232,7 +232,7 @@ function RecommendationItem({
               {onDismiss && (
                 <button
                   onClick={() => onDismiss(recommendation.id)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition"
+                  className="px-4 py-2 bg-surface-elevated text-[var(--color-text-primary)] rounded-lg text-sm font-medium hover:bg-surface-paper transition"
                 >
                   Dismiss
                 </button>

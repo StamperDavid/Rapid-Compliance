@@ -175,7 +175,7 @@ export function IndustryList({ templates, onSelect, isLoading }: IndustryListPro
                           <div className="flex items-start justify-between gap-2">
                             <CardTitle className="text-base flex items-center gap-2">
                               {template.hasOverride ? (
-                                <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                <CheckCircle className="h-4 w-4 text-success flex-shrink-0" />
                               ) : (
                                 <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               )}

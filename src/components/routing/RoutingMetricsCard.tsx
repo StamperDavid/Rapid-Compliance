@@ -20,10 +20,10 @@ export function RoutingMetricsCard({ metrics, loading }: RoutingMetricsCardProps
     return (
       <Card className="p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-6 bg-surface-elevated rounded w-1/3 mb-4"></div>
           <div className="grid grid-cols-2 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-20 bg-gray-100 rounded"></div>
+              <div key={i} className="h-20 bg-surface-elevated rounded"></div>
             ))}
           </div>
         </div>
@@ -34,8 +34,8 @@ export function RoutingMetricsCard({ metrics, loading }: RoutingMetricsCardProps
   return (
     <Card className="p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Routing Performance</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Routing Performance</h3>
+        <p className="text-sm text-[var(--color-text-disabled)]">
           {formatPeriod(metrics.period.startDate, metrics.period.endDate)}
         </p>
       </div>
@@ -66,46 +66,46 @@ export function RoutingMetricsCard({ metrics, loading }: RoutingMetricsCardProps
       <div className="space-y-4">
         {/* Volume Breakdown */}
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Volume Breakdown</h4>
+          <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Volume Breakdown</h4>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Automatic:</span>
-              <span className="font-medium text-gray-900">{metrics.volume.automaticAssignments}</span>
+              <span className="text-[var(--color-text-disabled)]">Automatic:</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{metrics.volume.automaticAssignments}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Manual:</span>
-              <span className="font-medium text-gray-900">{metrics.volume.manualAssignments}</span>
+              <span className="text-[var(--color-text-disabled)]">Manual:</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{metrics.volume.manualAssignments}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Reassignments:</span>
-              <span className="font-medium text-gray-900">{metrics.volume.reassignments}</span>
+              <span className="text-[var(--color-text-disabled)]">Reassignments:</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{metrics.volume.reassignments}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Queued:</span>
-              <span className="font-medium text-gray-900">{metrics.volume.queuedLeads}</span>
+              <span className="text-[var(--color-text-disabled)]">Queued:</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{metrics.volume.queuedLeads}</span>
             </div>
           </div>
         </div>
 
         {/* Efficiency Metrics */}
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Efficiency</h4>
+          <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Efficiency</h4>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Avg Routing Time:</span>
-              <span className="font-medium text-gray-900">{metrics.efficiency.averageRoutingTimeMs}ms</span>
+              <span className="text-[var(--color-text-disabled)]">Avg Routing Time:</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{metrics.efficiency.averageRoutingTimeMs}ms</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Time to Accept:</span>
-              <span className="font-medium text-gray-900">{formatHours(metrics.efficiency.averageTimeToAcceptance)}</span>
+              <span className="text-[var(--color-text-disabled)]">Time to Accept:</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{formatHours(metrics.efficiency.averageTimeToAcceptance)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Time to Contact:</span>
-              <span className="font-medium text-gray-900">{formatHours(metrics.efficiency.averageTimeToFirstContact)}</span>
+              <span className="text-[var(--color-text-disabled)]">Time to Contact:</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{formatHours(metrics.efficiency.averageTimeToFirstContact)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Rejection Rate:</span>
-              <span className="font-medium text-gray-900">{Math.round(metrics.quality.rejectionRate * 100)}%</span>
+              <span className="text-[var(--color-text-disabled)]">Rejection Rate:</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{Math.round(metrics.quality.rejectionRate * 100)}%</span>
             </div>
           </div>
         </div>
@@ -113,19 +113,19 @@ export function RoutingMetricsCard({ metrics, loading }: RoutingMetricsCardProps
         {/* Strategy Performance */}
         {metrics.strategyPerformance.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Strategy Performance</h4>
+            <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Strategy Performance</h4>
             <div className="space-y-2">
               {metrics.strategyPerformance.map(strategy => (
                 <div key={strategy.strategy} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 capitalize">
+                  <span className="text-[var(--color-text-disabled)] capitalize">
                     {strategy.strategy.replace('_', ' ')}
                   </span>
                   <div className="flex items-center gap-3">
-                    <span className="text-gray-500">{strategy.usageCount} uses</span>
+                    <span className="text-[var(--color-text-disabled)]">{strategy.usageCount} uses</span>
                     <span className="font-medium text-green-600">
                       {Math.round(strategy.conversionRate * 100)}% conv
                     </span>
-                    <span className="font-medium text-blue-600">
+                    <span className="font-medium text-primary">
                       {Math.round(strategy.averageMatchScore)} score
                     </span>
                   </div>
@@ -138,19 +138,19 @@ export function RoutingMetricsCard({ metrics, loading }: RoutingMetricsCardProps
         {/* Top Performers */}
         {metrics.topPerformers.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Top Performers</h4>
+            <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Top Performers</h4>
             <div className="space-y-2">
               {metrics.topPerformers.slice(0, 5).map((performer, idx) => (
                 <div key={idx} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-medium">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 text-primary flex items-center justify-center text-xs font-medium">
                       {idx + 1}
                     </div>
-                    <span className="font-medium text-gray-900">{performer.repName}</span>
+                    <span className="font-medium text-[var(--color-text-primary)]">{performer.repName}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-500 capitalize">{performer.metric.replace('_', ' ')}</span>
-                    <span className="font-medium text-gray-900">{formatMetricValue(performer.value, performer.metric)}</span>
+                    <span className="text-[var(--color-text-disabled)] capitalize">{performer.metric.replace('_', ' ')}</span>
+                    <span className="font-medium text-[var(--color-text-primary)]">{formatMetricValue(performer.value, performer.metric)}</span>
                   </div>
                 </div>
               ))}
@@ -164,7 +164,7 @@ export function RoutingMetricsCard({ metrics, loading }: RoutingMetricsCardProps
 
 function MetricBox({ label, value, color }: { label: string; value: string | number; color: string }) {
   const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600',
+    blue: 'bg-blue-50 text-primary',
     green: 'bg-green-50 text-green-600',
     purple: 'bg-purple-50 text-purple-600',
     orange: 'bg-orange-50 text-orange-600',

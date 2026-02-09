@@ -159,13 +159,13 @@ export default function ConversationsPage() {
         return {
           icon: <MessageCircle className="w-3 h-3" />,
           label: 'Chat',
-          gradient: 'from-sky-500 to-blue-500'
+          gradient: 'from-primary to-secondary'
         };
     }
   };
 
   return (
-    <div className="flex flex-col min-h-0 h-full bg-black">
+    <div className="flex flex-col min-h-0 h-full bg-surface-main">
       {/* Notification */}
       {notification && (
         <motion.div
@@ -186,15 +186,15 @@ export default function ConversationsPage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="p-8 border-b border-white/10"
+        className="p-8 border-b border-border-light"
       >
         <div className="flex items-center gap-4 mb-2">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-500 to-blue-500 flex items-center justify-center shadow-lg shadow-sky-500/25">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <MessageSquare className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-white">Live Conversations</h1>
-            <p className="text-sm text-white/60">Monitor active customer sessions and review past conversations</p>
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Live Conversations</h1>
+            <p className="text-sm text-[var(--color-text-secondary)]">Monitor active customer sessions and review past conversations</p>
           </div>
         </div>
       </motion.div>
@@ -204,7 +204,7 @@ export default function ConversationsPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="px-8 py-4 bg-black/40 backdrop-blur-xl border-b border-white/10"
+        className="px-8 py-4 bg-surface-paper backdrop-blur-xl border-b border-border-light"
       >
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
@@ -212,7 +212,7 @@ export default function ConversationsPage() {
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
               <div className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full animate-ping opacity-75" />
             </div>
-            <span className="text-sm font-semibold text-white/80">
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               {liveConversations.filter(c => c.status === 'active').length} Active
             </span>
           </div>
@@ -221,11 +221,11 @@ export default function ConversationsPage() {
               <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
               <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75" />
             </div>
-            <span className="text-sm font-semibold text-white/80">
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               {needsAttentionCount} Need Attention
             </span>
           </div>
-          <div className="ml-auto flex items-center gap-2 text-sm text-white/40">
+          <div className="ml-auto flex items-center gap-2 text-sm text-[var(--color-text-disabled)]">
             <RefreshCw className="w-4 h-4 animate-spin" />
             Real-time updates
           </div>
@@ -237,7 +237,7 @@ export default function ConversationsPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="flex gap-4 px-8 border-b border-white/10"
+        className="flex gap-4 px-8 border-b border-border-light"
       >
         {[
           { id: 'active' as const, label: 'Active Conversations', badge: needsAttentionCount, icon: Activity },
@@ -251,8 +251,8 @@ export default function ConversationsPage() {
             }}
             className="relative px-6 py-4 flex items-center gap-2 text-sm font-semibold transition-all"
           >
-            <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-sky-500' : 'text-white/40'}`} />
-            <span className={activeTab === tab.id ? 'text-sky-500' : 'text-white/40'}>
+            <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-primary' : 'text-[var(--color-text-disabled)]'}`} />
+            <span className={activeTab === tab.id ? 'text-primary' : 'text-[var(--color-text-disabled)]'}>
               {tab.label}
             </span>
             {tab.badge > 0 && (
@@ -263,7 +263,7 @@ export default function ConversationsPage() {
             {activeTab === tab.id && (
               <motion.div
                 layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-sky-500 to-blue-500"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-secondary"
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
               />
             )}
@@ -279,8 +279,8 @@ export default function ConversationsPage() {
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-16"
           >
-            <RefreshCw className="w-12 h-12 text-sky-500 animate-spin mb-4" />
-            <p className="text-white/60">Loading conversations...</p>
+            <RefreshCw className="w-12 h-12 text-primary animate-spin mb-4" />
+            <p className="text-[var(--color-text-secondary)]">Loading conversations...</p>
           </motion.div>
         ) : error ? (
           <motion.div
@@ -307,13 +307,13 @@ export default function ConversationsPage() {
                     <motion.div
                       initial={{ scale: 0.9, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-16 text-center"
+                      className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-2xl p-16 text-center"
                     >
-                      <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-sky-500/20 to-blue-500/20 flex items-center justify-center">
-                        <MessageSquare className="w-10 h-10 text-sky-500" />
+                      <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                        <MessageSquare className="w-10 h-10 text-primary" />
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">No active conversations</h3>
-                      <p className="text-sm text-white/60">Conversations will appear here when customers start chatting with your AI agent</p>
+                      <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">No active conversations</h3>
+                      <p className="text-sm text-[var(--color-text-secondary)]">Conversations will appear here when customers start chatting with your AI agent</p>
                     </motion.div>
                   ) : (
                     <div className={`grid gap-6 ${selectedConversation ? 'grid-cols-[400px_1fr]' : 'grid-cols-1'}`}>
@@ -329,12 +329,12 @@ export default function ConversationsPage() {
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: index * 0.05 }}
                               onClick={() => setSelectedConversation(conv.id)}
-                              className={`relative bg-black/40 backdrop-blur-xl border-2 rounded-2xl p-6 cursor-pointer transition-all hover:bg-black/60 ${
+                              className={`relative bg-surface-paper backdrop-blur-xl border-2 rounded-2xl p-6 cursor-pointer transition-all hover:bg-surface-paper ${
                                 selectedConversation === conv.id
-                                  ? 'border-sky-500 shadow-lg shadow-sky-500/25'
+                                  ? 'border-primary shadow-lg shadow-primary/25'
                                   : conv.status === 'needs_help'
                                   ? 'border-red-500 shadow-lg shadow-red-500/25'
-                                  : 'border-white/10'
+                                  : 'border-border-light'
                               }`}
                             >
                               {conv.status === 'needs_help' && (
@@ -359,12 +359,12 @@ export default function ConversationsPage() {
                               {/* Customer Info */}
                               <div className="mb-4">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <User className="w-4 h-4 text-sky-500" />
-                                  <h3 className="text-white font-semibold">
+                                  <User className="w-4 h-4 text-primary" />
+                                  <h3 className="text-[var(--color-text-primary)] font-semibold">
                                     {conv.customerName || 'Anonymous Customer'}
                                   </h3>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-white/60">
+                                <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
                                   <Clock className="w-3 h-3" />
                                   {conv.customerEmail || conv.customerId} • Started {formatTimeAgo(conv.startedAt)}
                                 </div>
@@ -372,8 +372,8 @@ export default function ConversationsPage() {
 
                               {/* Last Message */}
                               {conv.lastMessage && (
-                                <div className="bg-black/60 border border-white/10 rounded-xl p-3 mb-4">
-                                  <p className="text-sm text-white/80 line-clamp-2 italic">
+                                <div className="bg-surface-paper border border-border-light rounded-xl p-3 mb-4">
+                                  <p className="text-sm text-[var(--color-text-primary)] line-clamp-2 italic">
                                     &ldquo;{conv.lastMessage}&rdquo;
                                   </p>
                                 </div>
@@ -381,12 +381,12 @@ export default function ConversationsPage() {
 
                               {/* Stats */}
                               <div className="flex gap-4 mb-4">
-                                <div className="flex-1 bg-black/60 rounded-xl p-3 border border-white/10">
-                                  <div className="text-xs text-white/60 mb-1">Messages</div>
-                                  <div className="text-lg font-bold text-white">{conv.messageCount}</div>
+                                <div className="flex-1 bg-surface-paper rounded-xl p-3 border border-border-light">
+                                  <div className="text-xs text-[var(--color-text-secondary)] mb-1">Messages</div>
+                                  <div className="text-lg font-bold text-[var(--color-text-primary)]">{conv.messageCount}</div>
                                 </div>
-                                <div className="flex-1 bg-black/60 rounded-xl p-3 border border-white/10">
-                                  <div className="text-xs text-white/60 mb-1">Sentiment</div>
+                                <div className="flex-1 bg-surface-paper rounded-xl p-3 border border-border-light">
+                                  <div className="text-xs text-[var(--color-text-secondary)] mb-1">Sentiment</div>
                                   <div className={`text-xs font-bold ${
                                     conv.sentiment === 'positive' ? 'text-green-500' :
                                     conv.sentiment === 'frustrated' ? 'text-red-500' :
@@ -406,7 +406,7 @@ export default function ConversationsPage() {
                                 className={`w-full px-4 py-3 rounded-xl font-semibold text-white shadow-lg transition-all ${
                                   conv.status === 'needs_help'
                                     ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 shadow-red-500/25'
-                                    : 'bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 shadow-sky-500/25'
+                                    : 'bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light shadow-primary/25'
                                 }`}
                               >
                                 <div className="flex items-center justify-center gap-2">
@@ -426,31 +426,31 @@ export default function ConversationsPage() {
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
-                            className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col h-[700px]"
+                            className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-2xl flex flex-col h-[700px]"
                           >
                             {/* Detail Header */}
-                            <div className="flex items-center justify-between p-6 border-b border-white/10">
+                            <div className="flex items-center justify-between p-6 border-b border-border-light">
                               <div>
-                                <h3 className="text-xl font-bold text-white mb-1">
+                                <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">
                                   {liveConversations.find(c => c.id === selectedConversation)?.customerName ?? 'Anonymous'}
                                 </h3>
-                                <div className="flex items-center gap-2 text-sm text-white/60">
+                                <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
                                   <Mail className="w-4 h-4" />
                                   {liveConversations.find(c => c.id === selectedConversation)?.customerEmail ?? 'No email provided'}
                                 </div>
                               </div>
                               <button
                                 onClick={() => setSelectedConversation(null)}
-                                className="p-2 rounded-xl bg-black/60 hover:bg-black/80 border border-white/10 transition-all"
+                                className="p-2 rounded-xl bg-surface-paper hover:bg-surface-main border border-border-light transition-all"
                               >
-                                <X className="w-5 h-5 text-white" />
+                                <X className="w-5 h-5 text-[var(--color-text-primary)]" />
                               </button>
                             </div>
 
                             {/* Messages */}
                             <div className="flex-1 p-6 overflow-y-auto space-y-4">
                               {selectedMessages.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-white/60">
+                                <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-secondary)]">
                                   <MessageSquare className="w-12 h-12 mb-4 opacity-40" />
                                   <p>No messages yet</p>
                                 </div>
@@ -466,11 +466,11 @@ export default function ConversationsPage() {
                                     <div
                                       className={`max-w-[75%] rounded-2xl px-4 py-3 ${
                                         msg.role === 'user'
-                                          ? 'bg-gradient-to-r from-sky-600 to-blue-600 text-white'
-                                          : 'bg-black/60 border border-white/10 text-white/80'
+                                          ? 'bg-gradient-to-r from-primary to-secondary text-white'
+                                          : 'bg-surface-paper border border-border-light text-[var(--color-text-primary)]'
                                       }`}
                                     >
-                                      <div className={`text-xs mb-1 ${msg.role === 'user' ? 'text-white/80' : 'text-white/60'}`}>
+                                      <div className={`text-xs mb-1 ${msg.role === 'user' ? 'text-white/80' : 'text-[var(--color-text-secondary)]'}`}>
                                         {msg.role === 'user' ? 'Customer' : msg.role === 'assistant' ? 'AI Agent' : msg.role === 'agent' ? 'Human Agent' : 'System'} • {new Date(msg.timestamp).toLocaleTimeString()}
                                       </div>
                                       <div className="text-sm">{msg.content}</div>
@@ -481,7 +481,7 @@ export default function ConversationsPage() {
                             </div>
 
                             {/* Action Footer */}
-                            <div className="p-6 border-t border-white/10">
+                            <div className="p-6 border-t border-border-light">
                               <button
                                 onClick={() => void handleTakeOver(selectedConversation)}
                                 className="w-full px-6 py-4 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 transition-all"
@@ -513,13 +513,13 @@ export default function ConversationsPage() {
                     <motion.div
                       initial={{ scale: 0.9, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-16 text-center"
+                      className="bg-surface-paper backdrop-blur-xl border border-border-light rounded-2xl p-16 text-center"
                     >
-                      <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-sky-500/20 to-blue-500/20 flex items-center justify-center">
-                        <Clock className="w-10 h-10 text-sky-500" />
+                      <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                        <Clock className="w-10 h-10 text-primary" />
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">No conversation history</h3>
-                      <p className="text-sm text-white/60">Completed conversations will appear here</p>
+                      <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">No conversation history</h3>
+                      <p className="text-sm text-[var(--color-text-secondary)]">Completed conversations will appear here</p>
                     </motion.div>
                   ) : (
                     <div className="space-y-4">
@@ -531,8 +531,8 @@ export default function ConversationsPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            className={`relative bg-black/40 backdrop-blur-xl border-2 rounded-2xl p-6 ${
-                              conv.flaggedForTraining ? 'border-red-500 shadow-lg shadow-red-500/25' : 'border-white/10'
+                            className={`relative bg-surface-paper backdrop-blur-xl border-2 rounded-2xl p-6 ${
+                              conv.flaggedForTraining ? 'border-red-500 shadow-lg shadow-red-500/25' : 'border-border-light'
                             }`}
                           >
                             {conv.flaggedForTraining && (
@@ -554,26 +554,26 @@ export default function ConversationsPage() {
                                   {channelBadge.label}
                                 </div>
                                 <div className="flex items-center gap-2 mb-1">
-                                  <User className="w-4 h-4 text-sky-500" />
-                                  <h3 className="text-white font-semibold">
+                                  <User className="w-4 h-4 text-primary" />
+                                  <h3 className="text-[var(--color-text-primary)] font-semibold">
                                     {conv.customerName ?? 'Anonymous'}
                                   </h3>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-white/60">
+                                <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
                                   <Clock className="w-3 h-3" />
                                   {conv.completedAt ? new Date(conv.completedAt).toLocaleString() : 'Unknown'}
                                 </div>
                               </div>
 
                               {/* Messages */}
-                              <div className="bg-black/60 rounded-xl p-3 border border-white/10">
-                                <div className="text-xs text-white/60 mb-1">Messages</div>
-                                <div className="text-lg font-bold text-white">{conv.messageCount}</div>
+                              <div className="bg-surface-paper rounded-xl p-3 border border-border-light">
+                                <div className="text-xs text-[var(--color-text-secondary)] mb-1">Messages</div>
+                                <div className="text-lg font-bold text-[var(--color-text-primary)]">{conv.messageCount}</div>
                               </div>
 
                               {/* Status */}
-                              <div className="bg-black/60 rounded-xl p-3 border border-white/10">
-                                <div className="text-xs text-white/60 mb-1">Status</div>
+                              <div className="bg-surface-paper rounded-xl p-3 border border-border-light">
+                                <div className="text-xs text-[var(--color-text-secondary)] mb-1">Status</div>
                                 <div className={`text-xs font-bold ${
                                   conv.status === 'completed' ? 'text-green-500' : 'text-yellow-500'
                                 }`}>
@@ -582,8 +582,8 @@ export default function ConversationsPage() {
                               </div>
 
                               {/* Sentiment */}
-                              <div className="bg-black/60 rounded-xl p-3 border border-white/10">
-                                <div className="text-xs text-white/60 mb-1">Sentiment</div>
+                              <div className="bg-surface-paper rounded-xl p-3 border border-border-light">
+                                <div className="text-xs text-[var(--color-text-secondary)] mb-1">Sentiment</div>
                                 <div className={`text-xs font-bold ${
                                   conv.sentiment === 'positive' ? 'text-green-500' :
                                   conv.sentiment === 'frustrated' ? 'text-red-500' :
@@ -600,7 +600,7 @@ export default function ConversationsPage() {
                                     setSelectedConversation(conv.id);
                                     void ChatSessionService.getSessionMessages(conv.id).then(setSelectedMessages);
                                   }}
-                                  className="flex-1 px-3 py-2 bg-black/60 hover:bg-black/80 text-white border border-white/10 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1"
+                                  className="flex-1 px-3 py-2 bg-surface-paper hover:bg-surface-main text-[var(--color-text-primary)] border border-border-light rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1"
                                 >
                                   <Eye className="w-3 h-3" />
                                   View
@@ -608,7 +608,7 @@ export default function ConversationsPage() {
                                 {!conv.flaggedForTraining && (
                                   <button
                                     onClick={() => void handleSendToTraining(conv.id, 'Manual review')}
-                                    className="flex-1 px-3 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-sky-500/25 transition-all flex items-center justify-center gap-1"
+                                    className="flex-1 px-3 py-2 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white rounded-xl text-xs font-semibold shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-1"
                                   >
                                     <GraduationCap className="w-3 h-3" />
                                     Train

@@ -243,7 +243,7 @@ function WorkflowPalette({ onAddStep, hasTrigger }: WorkflowPaletteProps) {
 
     return groupedItems.map(group => (
       <div key={group.category} className="mb-4">
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
+        <h4 className="text-xs font-semibold text-[var(--color-text-disabled)] uppercase tracking-wider mb-2 px-1">
           {group.category}
         </h4>
         <div className="space-y-1">
@@ -256,8 +256,8 @@ function WorkflowPalette({ onAddStep, hasTrigger }: WorkflowPaletteProps) {
                 w-full p-3 rounded-xl text-left transition-all duration-200
                 border border-transparent
                 ${item.type === 'trigger' && hasTrigger
-                  ? 'opacity-50 cursor-not-allowed bg-white/5'
-                  : 'bg-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.98]'
+                  ? 'opacity-50 cursor-not-allowed bg-surface-elevated'
+                  : 'bg-surface-elevated hover:bg-surface-elevated hover:border-border-light active:scale-[0.98]'
                 }
               `}
             >
@@ -269,14 +269,14 @@ function WorkflowPalette({ onAddStep, hasTrigger }: WorkflowPaletteProps) {
                   {item.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-200 truncate">
+                  <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
                     {item.name}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-[var(--color-text-disabled)] truncate">
                     {item.description}
                   </p>
                 </div>
-                <svg className="w-4 h-4 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-[var(--color-text-disabled)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
               </div>
@@ -288,15 +288,15 @@ function WorkflowPalette({ onAddStep, hasTrigger }: WorkflowPaletteProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
+    <div className="h-full flex flex-col bg-surface-main">
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
-        <h3 className="text-sm font-semibold text-gray-200 mb-3">Add Step</h3>
+      <div className="p-4 border-b border-border-light">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Add Step</h3>
 
         {/* Search */}
         <div className="relative">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-disabled)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -308,39 +308,39 @@ function WorkflowPalette({ onAddStep, hasTrigger }: WorkflowPaletteProps) {
             placeholder="Search steps..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-surface-elevated border border-border-light rounded-lg text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
           />
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-white/10">
+      <div className="flex border-b border-border-light">
         <button
           onClick={() => setActiveTab('triggers')}
           className={`flex-1 px-4 py-3 text-sm font-medium transition-all relative
             ${activeTab === 'triggers'
-              ? 'text-emerald-400'
-              : 'text-gray-500 hover:text-gray-300'
+              ? 'text-success'
+              : 'text-[var(--color-text-disabled)] hover:text-[var(--color-text-secondary)]'
             }
           `}
         >
           Triggers
           {activeTab === 'triggers' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-success" />
           )}
         </button>
         <button
           onClick={() => setActiveTab('actions')}
           className={`flex-1 px-4 py-3 text-sm font-medium transition-all relative
             ${activeTab === 'actions'
-              ? 'text-indigo-400'
-              : 'text-gray-500 hover:text-gray-300'
+              ? 'text-primary'
+              : 'text-[var(--color-text-disabled)] hover:text-[var(--color-text-secondary)]'
             }
           `}
         >
           Actions
           {activeTab === 'actions' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
           )}
         </button>
       </div>
@@ -350,8 +350,8 @@ function WorkflowPalette({ onAddStep, hasTrigger }: WorkflowPaletteProps) {
         {activeTab === 'triggers' ? (
           <>
             {hasTrigger && (
-              <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <p className="text-xs text-amber-400">
+              <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/20">
+                <p className="text-xs text-warning">
                   A workflow can only have one trigger. Delete the existing trigger to add a new one.
                 </p>
               </div>
@@ -359,14 +359,14 @@ function WorkflowPalette({ onAddStep, hasTrigger }: WorkflowPaletteProps) {
             {filteredTriggers.length > 0 ? (
               renderItemsByCategory(filteredTriggers)
             ) : (
-              <p className="text-center text-gray-500 text-sm py-8">No triggers found</p>
+              <p className="text-center text-[var(--color-text-disabled)] text-sm py-8">No triggers found</p>
             )}
           </>
         ) : (
           <>
             {!hasTrigger && (
-              <div className="mb-4 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-                <p className="text-xs text-indigo-400">
+              <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-xs text-primary">
                   Add a trigger first to start your workflow.
                 </p>
               </div>
@@ -374,15 +374,15 @@ function WorkflowPalette({ onAddStep, hasTrigger }: WorkflowPaletteProps) {
             {filteredActions.length > 0 ? (
               renderItemsByCategory(filteredActions)
             ) : (
-              <p className="text-center text-gray-500 text-sm py-8">No actions found</p>
+              <p className="text-center text-[var(--color-text-disabled)] text-sm py-8">No actions found</p>
             )}
           </>
         )}
       </div>
 
       {/* Footer hint */}
-      <div className="p-4 border-t border-white/10">
-        <p className="text-xs text-gray-500 text-center">
+      <div className="p-4 border-t border-border-light">
+        <p className="text-xs text-[var(--color-text-disabled)] text-center">
           Click on a step to add it to your workflow
         </p>
       </div>

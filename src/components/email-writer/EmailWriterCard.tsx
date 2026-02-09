@@ -205,12 +205,12 @@ function EmailWriterCardInner({
   // ============================================================================
   
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 space-y-6">
+    <div className="bg-surface-elevated border border-border-light rounded-lg p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-white">AI Email Writer</h2>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
             Generate personalized sales emails powered by deal scoring and battlecards
           </p>
         </div>
@@ -231,8 +231,8 @@ function EmailWriterCardInner({
                 onClick={() => setEmailType(type)}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   emailType === type
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    ? 'bg-primary text-white'
+                    : 'bg-surface-paper text-[var(--color-text-secondary)] hover:bg-surface-elevated'
                 }`}
               >
                 {template.name.split(' ')[0]}
@@ -455,7 +455,7 @@ function EmailWriterCardInner({
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
             {/* Subject */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                 Subject:
               </label>
               {isEditing ? (
@@ -472,7 +472,7 @@ function EmailWriterCardInner({
             
             {/* Body */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                 Body:
               </label>
               {isEditing ? (
@@ -501,7 +501,7 @@ function EmailWriterCardInner({
               <p className="text-white font-medium">
                 {generationState.generatedEmail.dealScore ?? 'N/A'}
                 {generationState.generatedEmail.dealTier && (
-                  <span className="ml-1 text-xs text-gray-400">
+                  <span className="ml-1 text-xs text-[var(--color-text-secondary)]">
                     ({generationState.generatedEmail.dealTier})
                   </span>
                 )}
@@ -555,7 +555,7 @@ export function EmailWriterCard(props: EmailWriterCardProps) {
               <h3 className="text-lg font-semibold text-red-400">
                 Email Writer Error
               </h3>
-              <p className="text-sm text-gray-400 mt-1">
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1">
                 Failed to load email writer component
               </p>
             </div>

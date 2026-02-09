@@ -28,35 +28,35 @@ export function RecoveryInsights({ insights }: RecoveryInsightsProps) {
   const getInsightIcon = (type: RecoveryInsight['type']) => {
     switch (type) {
       case 'success':
-        return <CheckCircle className="w-5 h-5 text-emerald-400" />;
+        return <CheckCircle className="w-5 h-5 text-success" />;
       case 'warning':
-        return <AlertCircle className="w-5 h-5 text-yellow-400" />;
+        return <AlertCircle className="w-5 h-5 text-warning" />;
       case 'opportunity':
-        return <TrendingUp className="w-5 h-5 text-blue-400" />;
+        return <TrendingUp className="w-5 h-5 text-primary" />;
       case 'alert':
-        return <Zap className="w-5 h-5 text-red-400" />;
+        return <Zap className="w-5 h-5 text-error" />;
     }
   };
 
   const getInsightColor = (type: RecoveryInsight['type']) => {
     switch (type) {
       case 'success':
-        return 'from-emerald-600/20 to-emerald-600/5 border-emerald-500/30';
+        return 'from-success/20 to-success/5 border-success/30';
       case 'warning':
-        return 'from-yellow-600/20 to-yellow-600/5 border-yellow-500/30';
+        return 'from-warning/20 to-warning/5 border-warning/30';
       case 'opportunity':
-        return 'from-blue-600/20 to-blue-600/5 border-blue-500/30';
+        return 'from-primary/20 to-primary/5 border-primary/30';
       case 'alert':
-        return 'from-red-600/20 to-red-600/5 border-red-500/30';
+        return 'from-error/20 to-error/5 border-error/30';
     }
   };
 
   const getPriorityBadge = (priority: RecoveryInsight['priority']) => {
     const colors: Record<string, string> = {
-      low: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-      medium: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-      critical: 'bg-red-500/20 text-red-400 border-red-500/30',
+      low: 'bg-[var(--color-text-disabled)]/20 text-[var(--color-text-disabled)] border-[var(--color-text-disabled)]/30',
+      medium: 'bg-primary/20 text-primary border-primary/30',
+      high: 'bg-warning/20 text-warning border-warning/30',
+      critical: 'bg-error/20 text-error border-error/30',
     };
 
     return (
@@ -75,15 +75,15 @@ export function RecoveryInsights({ insights }: RecoveryInsightsProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-white text-lg font-semibold">AI-Generated Insights</h3>
-        <span className="text-gray-400 text-sm">{insights.length} insights</span>
+        <h3 className="text-[var(--color-text-primary)] text-lg font-semibold">AI-Generated Insights</h3>
+        <span className="text-[var(--color-text-secondary)] text-sm">{insights.length} insights</span>
       </div>
 
       {sortedInsights.length === 0 ? (
-        <div className="rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl p-12 text-center">
+        <div className="rounded-2xl bg-surface-paper border border-border-light backdrop-blur-xl p-12 text-center">
           <div className="text-5xl mb-4">🎉</div>
-          <p className="text-white font-semibold mb-2">All systems optimal!</p>
-          <p className="text-gray-400 text-sm">
+          <p className="text-[var(--color-text-primary)] font-semibold mb-2">All systems optimal!</p>
+          <p className="text-[var(--color-text-secondary)] text-sm">
             No critical insights at the moment. Keep up the great work!
           </p>
         </div>
@@ -100,21 +100,21 @@ export function RecoveryInsights({ insights }: RecoveryInsightsProps) {
               <div className="flex-shrink-0 mt-1">{getInsightIcon(insight.type)}</div>
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-3 mb-2">
-                  <h4 className="text-white font-semibold">{insight.title}</h4>
+                  <h4 className="text-[var(--color-text-primary)] font-semibold">{insight.title}</h4>
                   {getPriorityBadge(insight.priority)}
                 </div>
-                <p className="text-gray-300 text-sm mb-3">{insight.description}</p>
+                <p className="text-[var(--color-text-secondary)] text-sm mb-3">{insight.description}</p>
 
                 {insight.metric && (
-                  <div className="mb-3 px-3 py-2 rounded-lg bg-black/20 inline-block">
-                    <p className="text-white text-xs font-mono">{insight.metric}</p>
+                  <div className="mb-3 px-3 py-2 rounded-lg bg-surface-main inline-block">
+                    <p className="text-[var(--color-text-primary)] text-xs font-mono">{insight.metric}</p>
                   </div>
                 )}
 
                 {insight.recommendation && (
-                  <div className="mt-3 pt-3 border-t border-white/10">
-                    <p className="text-gray-400 text-xs font-medium mb-1">Recommendation:</p>
-                    <p className="text-white text-sm">{insight.recommendation}</p>
+                  <div className="mt-3 pt-3 border-t border-border-light">
+                    <p className="text-[var(--color-text-secondary)] text-xs font-medium mb-1">Recommendation:</p>
+                    <p className="text-[var(--color-text-primary)] text-sm">{insight.recommendation}</p>
                   </div>
                 )}
               </div>
