@@ -46,15 +46,15 @@ Last Commit: b1c50e8f — "feat: implement ConversationMemory service — agents
   - 3e: Agent integration — Outreach Manager enriches lead profiles, Revenue Director includes brief context in delegations, Voice AI loads caller history.
 
 ### Immediate Next Task
-**Code Integrity Hardening** — Eliminate "false green" state. Lint passes with zero errors but only because 113 `eslint-disable` inline comments suppress violations. Security vulnerabilities exist (unsanitized HTML, weak CSP). See the full action plan below.
+**Code Integrity Hardening Phase 3** — Type safety: Zod schemas for e-commerce Firestore boundary, `Function` type replacements. See the full action plan below.
 
 ### Known Issues
 | Issue | Details |
 |-------|---------|
-| **113 eslint-disable bypasses** | Lint passes "clean" but 113 inline suppressions mask real violations. 47 are `no-alert`, 12 are `no-console`, 7 are `react-hooks/exhaustive-deps`, 7 are `@next/next/no-img-element`. See audit below. |
-| **4 XSS-vulnerable files** | `dangerouslySetInnerHTML` without DOMPurify sanitization in WidgetRenderer.tsx, proposals/builder/page.tsx, email-templates/page.tsx, email-builder/page.tsx |
-| **CSP weakened** | `unsafe-inline` and `unsafe-eval` in CSP headers (`src/lib/middleware/security-headers.ts`, `src/lib/security/security-middleware.ts`) |
-| **CORS open** | `/api/chat/public/route.ts` reflects ANY origin instead of whitelisting |
+| ~~**113 eslint-disable bypasses**~~ | **DOWN TO ~58** — 47 `no-alert` ELIMINATED (→ 0), 8 `no-console` ELIMINATED (15 → 7 legitimate). Remaining: 7 `react-hooks/exhaustive-deps`, 7 `@next/next/no-img-element`, ~2 `@next/next/no-img-element` file-level. |
+| ~~**4 XSS-vulnerable files**~~ | **FIXED** — All 4 files now use `SafeHtml` component with DOMPurify sanitization (commit 21988280) |
+| ~~**CSP weakened**~~ | **FIXED** — `unsafe-eval` removed from both CSP locations. `unsafe-inline` kept for styles (required by Tailwind/inline styles) and scripts (until nonce-based CSP in Phase 5) |
+| ~~**CORS open**~~ | **FIXED** — Public chat endpoint now uses centralized `addCORSHeaders()` whitelist. CORS headers added to both OPTIONS and POST responses |
 | **CSRF not enforced** | Functions `generateCSRFToken()` / `validateCSRFToken()` exist in security-middleware.ts but are never called |
 | **132+ type laundering casts** | `as unknown as` used heavily. ~70% legitimate (Firebase type bridge), ~30% workarounds (especially e-commerce services — 8 repeated casts in checkout-service.ts) |
 | **20+ files use `Function` type** | Should use specific function signatures instead of the broad `Function` type |
@@ -72,11 +72,11 @@ A full read-only audit was performed covering ESLint config, TypeScript config, 
 
 **Configuration integrity: A (Excellent)** — ESLint rules, TypeScript strict mode, pre-commit hooks, and lint-staged are all properly configured and have NOT been tampered with. No `.eslintrc` overrides, no `.eslintignore` bypass files.
 
-**Inline bypass abuse: C** — 113 `eslint-disable` comments act as escape hatches. Zero `@ts-ignore`, zero `@ts-nocheck`, only 2 `@ts-expect-error` (in jest.setup.js — acceptable).
+**Inline bypass abuse: B (was C)** — Down from 113 to ~58 `eslint-disable` comments. 47 `no-alert` eliminated, 8 `no-console` eliminated. Remaining: 7 `react-hooks/exhaustive-deps`, 7 `@next/next/no-img-element`, 7 legitimate `no-console` (logger, firebase admin, CLI tool), 2 `@ts-expect-error` (in jest.setup.js — acceptable).
 
 **Type safety: B+** — Zero `any` types, zero `as any`, zero `Record<string, any>`. But 132+ `as unknown as` casts and 20+ files using broad `Function` type.
 
-**Security: C+** — 4 unsanitized `dangerouslySetInnerHTML` (XSS risk), weak CSP, open CORS on one endpoint, CSRF functions defined but never enforced.
+**Security: B+ (was C+)** — XSS: FIXED (DOMPurify SafeHtml component). CSP: `unsafe-eval` removed. CORS: whitelisted. Remaining: CSRF not enforced, `unsafe-inline` for scripts (pending nonce-based CSP).
 
 ### Worst Offender Files
 
@@ -182,8 +182,8 @@ A full read-only audit was performed covering ESLint config, TypeScript config, 
 | ~~**0**~~ | ~~Remove unused imports~~ | ~~30 min~~ | **DONE** — 135 errors removed, lint passes clean. |
 | ~~**2**~~ | ~~MemoryVault Firestore persistence~~ | ~~3-4 hrs~~ | **DONE** — commit e388c151. |
 | ~~**3**~~ | ~~ConversationMemory service~~ | ~~6-8 hrs~~ | **DONE** — commit b1c50e8f. |
-| **1** | **Code Integrity Hardening Phase 1** | 3-4 hrs | Security fixes: `SafeHtml` + DOMPurify (4 XSS files), CSP nonces, CORS whitelist. See plan above. |
-| **2** | **Code Integrity Hardening Phase 2** | 4-6 hrs | UI best practices: `useConfirm()` hook replaces 47 `alert()` calls. Console.log cleanup. |
+| ~~**1**~~ | ~~Code Integrity Hardening Phase 1~~ | ~~3-4 hrs~~ | **DONE** — commit 21988280. SafeHtml + DOMPurify (4 XSS files), CSP `unsafe-eval` removed, CORS whitelist on public chat. |
+| ~~**2**~~ | ~~Code Integrity Hardening Phase 2~~ | ~~4-6 hrs~~ | **DONE** — commit 6168ef42. useConfirm/usePrompt hooks, 47 alert→toast, 8 console.log→logger. 55 eslint-disable comments removed. |
 | **3** | **Code Integrity Hardening Phase 3** | 3-4 hrs | Type safety: Zod schemas for e-commerce boundary, `Function` type replacements. |
 | **4** | **Code Integrity Hardening Phase 4** | 2-3 hrs | Hook deps fixes, `<img>` → `<Image>` migration. |
 | **5** | **Code Integrity Hardening Phase 5** | 1-2 hrs | Pre-commit ratchet + CSRF enforcement. Lock down so bypasses can never increase. |
@@ -344,6 +344,8 @@ Recommended approach:
 | `src/lib/plugins/plugin-manager.ts` | Plugin registration system (built but not exposed via API) |
 | `src/lib/orchestrator/jasper-command-authority.ts` | Executive briefings, approval gateway, command issuance |
 | `src/lib/agents/base-manager.ts` | BaseManager with reviewOutput(), applyPendingMutations(), requestFromManager() |
+| `src/components/SafeHtml.tsx` | DOMPurify wrapper with strict/email/rich-text presets (Phase 1A) |
+| `src/hooks/useConfirm.tsx` | Promise-based useConfirm() + usePrompt() hooks with ConfirmProvider (Phase 2A) |
 | `src/lib/workflows/actions/http-action.ts` | Workflow HTTP action — calls external APIs with full auth support |
 | `vercel.json` | 7 cron entries for autonomous operations |
 | `firestore.indexes.json` | Composite indexes (defined but NOT deployed) |
