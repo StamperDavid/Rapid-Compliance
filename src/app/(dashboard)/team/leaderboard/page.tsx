@@ -49,7 +49,7 @@ export default function TeamLeaderboardPage() {
               key={p}
               onClick={() => setPeriod(p)}
               className={`px-4 py-2 rounded-lg capitalize ${
-                period === p ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                period === p ? 'bg-primary text-white' : 'bg-surface-elevated text-[var(--color-text-secondary)] hover:bg-surface-paper'
               }`}
             >
               {p}
@@ -60,15 +60,15 @@ export default function TeamLeaderboardPage() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
         </div>
       ) : (
         <div className="space-y-4">
           {leaderboard.map((entry, index) => (
             <div
               key={entry.userId}
-              className={`bg-gray-900 rounded-lg p-6 ${
-                index < 3 ? 'border-2 border-yellow-500' : ''
+              className={`bg-surface-paper rounded-lg p-6 ${
+                index < 3 ? 'border-2 border-warning' : ''
               }`}
             >
               <div className="flex items-center justify-between mb-4">
@@ -78,42 +78,42 @@ export default function TeamLeaderboardPage() {
                   </div>
                   <div>
                     <div className="font-bold text-xl">{entry.userName}</div>
-                    <div className="text-sm text-gray-400">{entry.userEmail}</div>
+                    <div className="text-sm text-[var(--color-text-secondary)]">{entry.userEmail}</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-blue-400">{entry.points.toLocaleString()}</div>
-                  <div className="text-sm text-gray-400">points</div>
+                  <div className="text-3xl font-bold text-primary">{entry.points.toLocaleString()}</div>
+                  <div className="text-sm text-[var(--color-text-secondary)]">points</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-5 gap-4 text-center">
                 <div>
-                  <div className="text-2xl font-bold text-green-400">{entry.metrics.dealsClosed}</div>
-                  <div className="text-xs text-gray-400">Deals Closed</div>
+                  <div className="text-2xl font-bold text-success">{entry.metrics.dealsClosed}</div>
+                  <div className="text-xs text-[var(--color-text-secondary)]">Deals Closed</div>
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-green-400">{formatCurrency(entry.metrics.revenueGenerated)}</div>
-                  <div className="text-xs text-gray-400">Revenue</div>
+                  <div className="text-lg font-bold text-success">{formatCurrency(entry.metrics.revenueGenerated)}</div>
+                  <div className="text-xs text-[var(--color-text-secondary)]">Revenue</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{entry.metrics.leadsCreated}</div>
-                  <div className="text-xs text-gray-400">Leads Created</div>
+                  <div className="text-xs text-[var(--color-text-secondary)]">Leads Created</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{entry.metrics.activitiesLogged}</div>
-                  <div className="text-xs text-gray-400">Activities</div>
+                  <div className="text-xs text-[var(--color-text-secondary)]">Activities</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{entry.metrics.winRate?.toFixed(0)}%</div>
-                  <div className="text-xs text-gray-400">Win Rate</div>
+                  <div className="text-xs text-[var(--color-text-secondary)]">Win Rate</div>
                 </div>
               </div>
             </div>
           ))}
 
           {leaderboard.length === 0 && (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-[var(--color-text-secondary)]">
               No data for this period
             </div>
           )}

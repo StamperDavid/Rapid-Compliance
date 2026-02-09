@@ -494,7 +494,7 @@ export default function CustomToolsSettingsPage() {
                     <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1rem', fontWeight: '600' }}>{tool.name}</h3>
                     <span style={{
                       padding: '0.125rem 0.5rem',
-                      backgroundColor: tool.enabled ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                      backgroundColor: tool.enabled ? 'rgba(var(--color-success-rgb), 0.2)' : 'rgba(var(--color-error-rgb), 0.2)',
                       color: tool.enabled ? 'var(--color-success)' : 'var(--color-error)',
                       borderRadius: '0.25rem',
                       fontSize: '0.75rem',

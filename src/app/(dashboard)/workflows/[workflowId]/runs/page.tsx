@@ -77,7 +77,7 @@ export default function WorkflowRunsPage() {
           <tbody>
             {executions.map(execution => {
               const statusClass = execution.status === 'completed' ? 'text-success' : execution.status === 'failed' ? 'text-error' : 'text-warning';
-              const statusBg = execution.status === 'completed' ? 'rgba(16, 185, 129, 0.1)' : execution.status === 'failed' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+              const statusBg = execution.status === 'completed' ? 'rgba(var(--color-success-rgb), 0.1)' : execution.status === 'failed' ? 'rgba(var(--color-error-rgb), 0.1)' : 'rgba(var(--color-warning-rgb), 0.1)';
 
               return (
                 <tr key={execution.id} className="border-t border-border-light hover:bg-surface-elevated">

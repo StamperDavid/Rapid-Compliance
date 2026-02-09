@@ -77,7 +77,7 @@ export default function NurtureCampaignsPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 p-4 backdrop-blur-xl border rounded-xl flex items-start gap-3"
-          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)', borderColor: 'rgba(var(--color-error-rgb), 0.3)' }}
         >
           <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
           <p className="text-error">{error}</p>
@@ -133,7 +133,7 @@ export default function NurtureCampaignsPage() {
                             ? 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-300 border border-emerald-500/30'
                             : campaign.status === 'paused'
                             ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/30'
-                            : 'bg-gradient-to-r from-gray-500/20 to-slate-500/20 text-gray-300 border border-gray-500/30'
+                            : 'bg-surface-elevated text-[var(--color-text-secondary)] border border-[var(--color-border-strong)]'
                         }`}
                       >
                         {campaign.status}

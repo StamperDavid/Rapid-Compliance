@@ -71,29 +71,29 @@ export default function EditDealPage() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Edit Deal</h1>
         {errorMessage && (
-          <div className="mb-4 p-4 bg-red-900/20 border border-red-900 text-red-400 rounded-lg">
+          <div style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)', borderColor: 'var(--color-error)', color: 'var(--color-error)' }} className="mb-4 p-4 border rounded-lg">
             {errorMessage}
           </div>
         )}
         <form onSubmit={(e) => void handleSubmit(e)}>
-          <div className="bg-gray-900 rounded-lg p-6 mb-4">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6 mb-4">
             <div className="space-y-4">
-              <div><label className="block text-sm font-medium mb-2">Deal Name</label><input type="text" value={deal.name ?? ''} onChange={(e) => setDeal({...deal, name: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
-              <div><label className="block text-sm font-medium mb-2">Company</label><input type="text" value={(deal.company !== '' && deal.company != null) ? deal.company : (deal.companyName ?? '')} onChange={(e) => setDeal({...deal, company: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+              <div><label className="block text-sm font-medium mb-2">Deal Name</label><input type="text" value={deal.name ?? ''} onChange={(e) => setDeal({...deal, name: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
+              <div><label className="block text-sm font-medium mb-2">Company</label><input type="text" value={(deal.company !== '' && deal.company != null) ? deal.company : (deal.companyName ?? '')} onChange={(e) => setDeal({...deal, company: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-2">Value ($)</label><input type="number" value={deal.value ?? 0} onChange={(e) => setDeal({...deal, value: parseFloat(e.target.value)})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
-                <div><label className="block text-sm font-medium mb-2">Probability (%)</label><input type="number" min="0" max="100" value={deal.probability ?? 50} onChange={(e) => setDeal({...deal, probability: parseInt(e.target.value)})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">Value ($)</label><input type="number" value={deal.value ?? 0} onChange={(e) => setDeal({...deal, value: parseFloat(e.target.value)})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">Probability (%)</label><input type="number" min="0" max="100" value={deal.probability ?? 50} onChange={(e) => setDeal({...deal, probability: parseInt(e.target.value)})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-2">Stage</label><select value={(deal.stage !== '' && deal.stage != null) ? deal.stage : 'prospecting'} onChange={(e) => setDeal({...deal, stage: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg"><option value="prospecting">Prospecting</option><option value="qualification">Qualification</option><option value="proposal">Proposal</option><option value="negotiation">Negotiation</option><option value="closed_won">Closed Won</option><option value="closed_lost">Closed Lost</option></select></div>
-                <div><label className="block text-sm font-medium mb-2">Expected Close Date</label><input type="date" value={deal.expectedCloseDate ?? ''} onChange={(e) => setDeal({...deal, expectedCloseDate: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">Stage</label><select value={(deal.stage !== '' && deal.stage != null) ? deal.stage : 'prospecting'} onChange={(e) => setDeal({...deal, stage: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg"><option value="prospecting">Prospecting</option><option value="qualification">Qualification</option><option value="proposal">Proposal</option><option value="negotiation">Negotiation</option><option value="closed_won">Closed Won</option><option value="closed_lost">Closed Lost</option></select></div>
+                <div><label className="block text-sm font-medium mb-2">Expected Close Date</label><input type="date" value={deal.expectedCloseDate ?? ''} onChange={(e) => setDeal({...deal, expectedCloseDate: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" /></div>
               </div>
-              <div><label className="block text-sm font-medium mb-2">Notes</label><textarea value={deal.notes ?? ''} onChange={(e) => setDeal({...deal, notes: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" rows={4} /></div>
+              <div><label className="block text-sm font-medium mb-2">Notes</label><textarea value={deal.notes ?? ''} onChange={(e) => setDeal({...deal, notes: e.target.value})} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg" rows={4} /></div>
             </div>
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{saving ? 'Saving...' : 'Save Changes'}</button>
+            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-[var(--color-bg-elevated)] rounded-lg hover:bg-[var(--color-border-light)]">Cancel</button>
+            <button type="submit" disabled={saving} className="flex-1 px-6 py-3 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)]">{saving ? 'Saving...' : 'Save Changes'}</button>
           </div>
         </form>
       </div>

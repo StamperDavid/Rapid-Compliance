@@ -200,7 +200,7 @@ export default function LeadResearchPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">Lead Research Assistant</h1>
-            <p className="text-gray-400 text-sm">
+            <p className="text-[var(--color-text-secondary)] text-sm">
               Chat-based lead generation. Find companies and teach the system what you&apos;re looking for.
             </p>
           </div>
@@ -232,7 +232,7 @@ export default function LeadResearchPage() {
                 >
                   {/* Sender Label */}
                   <div className={`flex items-center gap-2 text-xs mb-2 ${
-                    message.role === 'user' ? 'text-violet-200' : 'text-gray-500'
+                    message.role === 'user' ? 'text-violet-200' : 'text-[var(--color-text-disabled)]'
                   }`}>
                     {message.role === 'user' ? (
                       <>
@@ -252,7 +252,7 @@ export default function LeadResearchPage() {
 
                   {/* Cost Info */}
                   {message.cost !== undefined && (
-                    <div className="mt-3 pt-3 border-t border-white/10 text-xs text-gray-400">
+                    <div className="mt-3 pt-3 border-t border-white/10 text-xs text-[var(--color-text-secondary)]">
                       <span className="inline-flex items-center gap-1">
                         <Sparkles className="w-3 h-3" />
                         Cost: ${message.cost.toFixed(4)} • Saved vs Clearbit: ${(0.75 - message.cost).toFixed(4)}
@@ -292,25 +292,25 @@ export default function LeadResearchPage() {
                               ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
                               : lead.confidence >= 60
                               ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-300'
-                              : 'bg-gray-500/20 border border-gray-500/30 text-gray-300'
+                              : 'bg-surface-elevated border border-[var(--color-border-strong)] text-[var(--color-text-secondary)]'
                           }`}>
                             {lead.confidence}% confidence
                           </span>
                         </div>
 
                         {/* Description */}
-                        <p className="text-sm text-gray-300 mb-3">{lead.description}</p>
+                        <p className="text-sm text-[var(--color-text-secondary)] mb-3">{lead.description}</p>
 
                         {/* Meta Info */}
                         <div className="flex gap-4 mb-4">
                           <div className="flex items-center gap-2 text-sm">
-                            <Building className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-400">Industry:</span>
+                            <Building className="w-4 h-4 text-[var(--color-text-disabled)]" />
+                            <span className="text-[var(--color-text-secondary)]">Industry:</span>
                             <span className="text-white">{lead.industry}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <Users className="w-4 h-4 text-gray-500" />
-                            <span className="text-gray-400">Size:</span>
+                            <Users className="w-4 h-4 text-[var(--color-text-disabled)]" />
+                            <span className="text-[var(--color-text-secondary)]">Size:</span>
                             <span className="text-white">{lead.size}</span>
                           </div>
                         </div>
@@ -322,7 +322,7 @@ export default function LeadResearchPage() {
                             className={`flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
                               lead.isGoodLead === true
                                 ? 'bg-emerald-500 text-white'
-                                : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-emerald-500/20 hover:border-emerald-500/30 hover:text-emerald-300'
+                                : 'bg-white/5 border border-white/10 text-[var(--color-text-secondary)] hover:bg-emerald-500/20 hover:border-emerald-500/30 hover:text-emerald-300'
                             }`}
                           >
                             <ThumbsUp className="w-4 h-4" />
@@ -333,7 +333,7 @@ export default function LeadResearchPage() {
                             className={`flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
                               lead.isGoodLead === false
                                 ? 'bg-red-500 text-white'
-                                : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300'
+                                : 'bg-white/5 border border-white/10 text-[var(--color-text-secondary)] hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300'
                             }`}
                           >
                             <ThumbsDown className="w-4 h-4" />
@@ -356,7 +356,7 @@ export default function LeadResearchPage() {
 
           {/* Loading Indicator */}
           {isLoading && (
-            <div className="flex items-center gap-3 text-gray-400">
+            <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
               <Loader2 className="w-5 h-5 animate-spin text-violet-400" />
               <span>Researching leads...</span>
             </div>
@@ -379,7 +379,7 @@ export default function LeadResearchPage() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Describe the companies you're looking for..."
             disabled={isLoading}
-            className="flex-1 px-5 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all disabled:opacity-50"
+            className="flex-1 px-5 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all disabled:opacity-50"
           />
           <button
             type="submit"
@@ -411,7 +411,7 @@ export default function LeadResearchPage() {
             <button
               key={idx}
               onClick={() => setInput(example)}
-              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:bg-white/10 hover:text-white hover:border-violet-500/30 transition-all"
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-[var(--color-text-secondary)] hover:bg-white/10 hover:text-white hover:border-violet-500/30 transition-all"
             >
               {example}
             </button>

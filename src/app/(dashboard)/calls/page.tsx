@@ -133,7 +133,7 @@ export default function CallLogPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 p-4 border border-red-500/30 rounded-xl text-error backdrop-blur-xl"
-          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
         >
           <p className="flex items-center gap-2">
             <span className="text-red-500">⚠</span>

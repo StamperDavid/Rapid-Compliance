@@ -54,7 +54,7 @@ export default function ProposalBuilderPage() {
   const updateSection = (sectionId: string, content: string) => {
     setTemplate({
       ...template,
-      sections: template.sections?.map(s => 
+      sections: template.sections?.map(s =>
         s.id === sectionId ? { ...s, content } : s
       ),
     });
@@ -78,21 +78,54 @@ export default function ProposalBuilderPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950">
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button onClick={() => router.back()} className="text-gray-400 hover:text-white">← Back</button>
+    <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg-main)' }}>
+      <div style={{
+        backgroundColor: 'var(--color-bg-paper)',
+        borderBottom: '1px solid var(--color-border-main)',
+        padding: '1rem 1.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button
+            onClick={() => router.back()}
+            style={{
+              color: 'var(--color-text-secondary)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+            }}
+          >
+            ← Back
+          </button>
           <input
             type="text"
             value={template.name}
             onChange={(e) => setTemplate({ ...template, name: e.target.value })}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-lg font-medium"
             placeholder="Template Name"
+            style={{
+              backgroundColor: 'var(--color-bg-elevated)',
+              border: '1px solid var(--color-border-light)',
+              borderRadius: '0.375rem',
+              padding: '0.375rem 0.75rem',
+              color: 'var(--color-text-primary)',
+              fontSize: '1.125rem',
+              fontWeight: '500',
+            }}
           />
           <select
             value={template.type}
             onChange={(e) => setTemplate({ ...template, type: e.target.value as TemplateType })}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-1"
+            style={{
+              backgroundColor: 'var(--color-bg-elevated)',
+              border: '1px solid var(--color-border-light)',
+              borderRadius: '0.375rem',
+              padding: '0.375rem 0.75rem',
+              color: 'var(--color-text-primary)',
+              fontSize: '0.875rem',
+            }}
           >
             <option value="proposal">Proposal</option>
             <option value="quote">Quote</option>
@@ -100,20 +133,63 @@ export default function ProposalBuilderPage() {
             <option value="invoice">Invoice</option>
           </select>
         </div>
-        <button onClick={saveTemplate} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        <button
+          onClick={saveTemplate}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: 'var(--color-primary)',
+            color: 'var(--color-primary-contrast)',
+            border: 'none',
+            borderRadius: '0.375rem',
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: '0.875rem',
+          }}
+        >
           Save Template
         </button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-64 bg-gray-900 border-r border-gray-800 p-4 overflow-y-auto">
-          <h3 className="font-bold mb-4">Add Sections</h3>
-          <div className="space-y-2">
+        <div style={{
+          width: '16rem',
+          backgroundColor: 'var(--color-bg-paper)',
+          borderRight: '1px solid var(--color-border-main)',
+          padding: '1rem',
+          overflowY: 'auto',
+        }}>
+          <h3 style={{
+            color: 'var(--color-text-primary)',
+            fontWeight: '700',
+            marginBottom: '1rem',
+            fontSize: '0.875rem',
+          }}>
+            Add Sections
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {(['header', 'text', 'pricing_table', 'terms', 'signature', 'image'] as ProposalSection['type'][]).map(type => (
               <button
                 key={type}
                 onClick={() => addSection(type)}
-                className="w-full px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded text-left capitalize"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  border: '1px solid transparent',
+                  borderRadius: '0.375rem',
+                  color: 'var(--color-text-primary)',
+                  textAlign: 'left',
+                  textTransform: 'capitalize',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  transition: 'background-color 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-border-light)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)';
+                }}
               >
                 {type.replace('_', ' ')}
               </button>
@@ -121,29 +197,72 @@ export default function ProposalBuilderPage() {
           </div>
         </div>
 
-        <div className="flex-1 bg-gray-950 p-8 overflow-y-auto">
-          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-2xl p-12">
+        <div style={{
+          flex: 1,
+          backgroundColor: 'var(--color-bg-main)',
+          padding: '2rem',
+          overflowY: 'auto',
+        }}>
+          <div style={{
+            maxWidth: '56rem',
+            margin: '0 auto',
+            backgroundColor: '#ffffff',
+            borderRadius: '0.5rem',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            padding: '3rem',
+            color: '#1a1a1a',
+          }}>
             {template.sections?.length === 0 ? (
-              <div className="text-center py-20 text-gray-400">
-                <p className="text-lg mb-2">Your proposal is empty</p>
-                <p className="text-sm">Add sections from the left sidebar</p>
+              <div style={{
+                textAlign: 'center',
+                padding: '5rem 0',
+                color: 'var(--color-text-disabled)',
+              }}>
+                <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>Your proposal is empty</p>
+                <p style={{ fontSize: '0.875rem' }}>Add sections from the left sidebar</p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {template.sections?.map((section) => (
                   <div
                     key={section.id}
                     onClick={() => setSelectedSection(section)}
-                    className={`relative cursor-pointer border-2 rounded p-4 ${
-                      selectedSection?.id === section.id ? 'border-blue-500' : 'border-transparent hover:border-gray-300'
-                    }`}
+                    style={{
+                      position: 'relative',
+                      cursor: 'pointer',
+                      border: `2px solid ${selectedSection?.id === section.id ? 'var(--color-primary)' : 'transparent'}`,
+                      borderRadius: '0.25rem',
+                      padding: '1rem',
+                      transition: 'border-color 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedSection?.id !== section.id) {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedSection?.id !== section.id) {
+                        e.currentTarget.style.borderColor = 'transparent';
+                      }
+                    }}
                   >
                     <div dangerouslySetInnerHTML={{ __html: section.content }} />
-                    
+
                     {selectedSection?.id === section.id && (
                       <button
                         onClick={() => deleteSection(section.id)}
-                        className="absolute top-2 right-2 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                        style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          right: '0.5rem',
+                          padding: '0.25rem 0.5rem',
+                          backgroundColor: 'var(--color-error)',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '0.75rem',
+                          border: 'none',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                        }}
                       >
                         Delete
                       </button>
@@ -156,16 +275,40 @@ export default function ProposalBuilderPage() {
         </div>
 
         {selectedSection && (
-          <div className="w-96 bg-gray-900 border-l border-gray-800 p-4 overflow-y-auto">
-            <h3 className="font-bold mb-4">Edit Section</h3>
+          <div style={{
+            width: '24rem',
+            backgroundColor: 'var(--color-bg-paper)',
+            borderLeft: '1px solid var(--color-border-main)',
+            padding: '1rem',
+            overflowY: 'auto',
+          }}>
+            <h3 style={{
+              color: 'var(--color-text-primary)',
+              fontWeight: '700',
+              marginBottom: '1rem',
+              fontSize: '0.875rem',
+            }}>
+              Edit Section
+            </h3>
             <textarea
               value={selectedSection.content}
               onChange={(e) => updateSection(selectedSection.id, e.target.value)}
-              className="w-full h-64 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm font-mono"
+              style={{
+                width: '100%',
+                height: '16rem',
+                padding: '0.75rem',
+                backgroundColor: 'var(--color-bg-elevated)',
+                border: '1px solid var(--color-border-light)',
+                borderRadius: '0.375rem',
+                color: 'var(--color-text-primary)',
+                fontSize: '0.875rem',
+                fontFamily: 'monospace',
+                resize: 'vertical',
+              }}
             />
-            <div className="mt-4 text-xs text-gray-400">
-              <div className="font-medium mb-2">Available Variables:</div>
-              <div className="space-y-1">
+            <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+              <div style={{ fontWeight: '500', marginBottom: '0.5rem' }}>Available Variables:</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <div>{'{{customer_name}}'}</div>
                 <div>{'{{company_name}}'}</div>
                 <div>{'{{date}}'}</div>
@@ -178,4 +321,3 @@ export default function ProposalBuilderPage() {
     </div>
   );
 }
-

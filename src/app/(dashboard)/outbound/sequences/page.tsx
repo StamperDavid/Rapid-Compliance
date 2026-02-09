@@ -502,7 +502,7 @@ function CreateSequenceModal({ onClose, onCreate }: { onClose: () => void; onCre
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}>
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}>
       <div className="bg-surface-elevated" style={{ borderRadius: '1rem', border: '1px solid var(--color-border-light)', maxWidth: '40rem', width: '100%' }}>
         <div className="border-b border-border-light" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 className="text-[var(--color-text-primary)]" style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>

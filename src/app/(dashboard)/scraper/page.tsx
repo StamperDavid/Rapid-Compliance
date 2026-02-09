@@ -54,10 +54,10 @@ const PLATFORM_OPTIONS: { value: ScrapingPlatform; label: string; description: s
 ];
 
 const STATUS_STYLES: Record<JobStatus, { bg: string; text: string; label: string }> = {
-  pending: { bg: 'rgba(99, 102, 241, 0.1)', text: 'var(--color-primary)', label: 'Pending' },
-  running: { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--color-warning)', label: 'Running' },
-  completed: { bg: 'rgba(16, 185, 129, 0.1)', text: 'var(--color-success)', label: 'Completed' },
-  failed: { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--color-error)', label: 'Failed' },
+  pending: { bg: 'rgba(var(--color-primary-rgb), 0.1)', text: 'var(--color-primary)', label: 'Pending' },
+  running: { bg: 'rgba(var(--color-warning-rgb), 0.1)', text: 'var(--color-warning)', label: 'Running' },
+  completed: { bg: 'rgba(var(--color-success-rgb), 0.1)', text: 'var(--color-success)', label: 'Completed' },
+  failed: { bg: 'rgba(var(--color-error-rgb), 0.1)', text: 'var(--color-error)', label: 'Failed' },
 };
 
 // ============================================================================
@@ -217,8 +217,8 @@ export default function ScraperDashboardPage() {
               style={{
                 padding: '0.75rem 1rem',
                 marginBottom: '1rem',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
+                backgroundColor: 'rgba(var(--color-error-rgb), 0.1)',
+                border: '1px solid rgba(var(--color-error-rgb), 0.3)',
                 borderRadius: '0.5rem',
                 color: 'var(--color-error)',
                 fontSize: '0.8125rem',
@@ -490,9 +490,9 @@ export default function ScraperDashboardPage() {
                           onClick={() => setPreviewJob(job)}
                           style={{
                             padding: '0.25rem 0.75rem',
-                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)',
                             color: 'var(--color-primary)',
-                            border: '1px solid rgba(99, 102, 241, 0.3)',
+                            border: '1px solid rgba(var(--color-primary-rgb), 0.3)',
                             borderRadius: '0.375rem',
                             fontSize: '0.6875rem',
                             fontWeight: 600,

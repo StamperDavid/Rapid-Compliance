@@ -133,11 +133,15 @@ export default function LeadDetailPage() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-6">
-        <button onClick={() => router.back()} className="text-blue-400 hover:text-blue-300 mb-4">← Back to Leads</button>
+        <button onClick={() => router.back()} className="text-[var(--color-primary)] hover:opacity-80 mb-4">← Back to Leads</button>
 
         {/* Notification */}
         {notification && (
-          <div className={`mb-4 p-3 rounded-lg text-sm ${notification.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+          <div style={{
+            backgroundColor: notification.type === 'success' ? 'rgba(var(--color-success-rgb), 0.1)' : 'rgba(var(--color-error-rgb), 0.1)',
+            color: notification.type === 'success' ? 'var(--color-success)' : 'var(--color-error)',
+            borderColor: notification.type === 'success' ? 'rgba(var(--color-success-rgb), 0.2)' : 'rgba(var(--color-error-rgb), 0.2)'
+          }} className="mb-4 p-3 rounded-lg text-sm border">
             <div className="flex items-center justify-between">
               <span>{notification.message}</span>
               <button onClick={() => setNotification(null)} className="ml-2 text-current opacity-60 hover:opacity-100">&times;</button>
@@ -148,27 +152,31 @@ export default function LeadDetailPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold mb-2">{getDisplayName()}</h1>
-            <p className="text-gray-400">{getCompanyName() || '-'}</p>
+            <p className="text-[var(--color-text-secondary)]">{getCompanyName() || '-'}</p>
           </div>
           <div className="flex items-center gap-3">
             {predictiveScore && (
               <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-lg text-sm font-bold ${
-                  predictiveScore.tier === 'hot' ? 'bg-red-600 text-white' :
-                  predictiveScore.tier === 'warm' ? 'bg-orange-500 text-white' :
-                  'bg-blue-500 text-white'
-                }`}>
+                <span style={{
+                  backgroundColor: predictiveScore.tier === 'hot' ? 'var(--color-error)' :
+                    predictiveScore.tier === 'warm' ? 'var(--color-warning)' :
+                    'var(--color-primary)',
+                  color: 'var(--color-text-primary)'
+                }} className="px-3 py-1 rounded-lg text-sm font-bold">
                   {predictiveScore.tier.toUpperCase()}
                 </span>
-                <span className="text-gray-400 text-sm">{predictiveScore.score}/100</span>
+                <span className="text-[var(--color-text-secondary)] text-sm">{predictiveScore.score}/100</span>
               </div>
             )}
             {dataQuality && (
-              <span className={`px-3 py-1 rounded text-sm font-medium ${
-                dataQuality.overall >= 80 ? 'bg-green-900 text-green-300' :
-                dataQuality.overall >= 60 ? 'bg-yellow-900 text-yellow-300' :
-                'bg-red-900 text-red-300'
-              }`}>
+              <span style={{
+                backgroundColor: dataQuality.overall >= 80 ? 'rgba(var(--color-success-rgb), 0.2)' :
+                  dataQuality.overall >= 60 ? 'rgba(var(--color-warning-rgb), 0.2)' :
+                  'rgba(var(--color-error-rgb), 0.2)',
+                color: dataQuality.overall >= 80 ? 'var(--color-success)' :
+                  dataQuality.overall >= 60 ? 'var(--color-warning)' :
+                  'var(--color-error)'
+              }} className="px-3 py-1 rounded text-sm font-medium">
                 Quality: {dataQuality.overall}%
               </span>
             )}
@@ -179,11 +187,14 @@ export default function LeadDetailPage() {
         <div className="col-span-2 space-y-6">
           {/* Predictive Insights & Recommended Actions */}
           {predictiveScore && predictiveScore.recommendedActions.length > 0 && (
-            <div className={`rounded-lg border-2 p-4 ${
-              predictiveScore.tier === 'hot' ? 'bg-red-900/20 border-red-600' :
-              predictiveScore.tier === 'warm' ? 'bg-orange-900/20 border-orange-600' :
-              'bg-blue-900/20 border-blue-600'
-            }`}>
+            <div style={{
+              backgroundColor: predictiveScore.tier === 'hot' ? 'rgba(var(--color-error-rgb), 0.1)' :
+                predictiveScore.tier === 'warm' ? 'rgba(var(--color-warning-rgb), 0.1)' :
+                'rgba(var(--color-info-rgb), 0.1)',
+              borderColor: predictiveScore.tier === 'hot' ? 'var(--color-error)' :
+                predictiveScore.tier === 'warm' ? 'var(--color-warning)' :
+                'var(--color-info)'
+            }} className="rounded-lg border-2 p-4">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-bold text-lg">💡 Next Best Actions</h3>
@@ -203,7 +214,7 @@ export default function LeadDetailPage() {
 
           {/* Data Quality Issues */}
           {dataQuality && dataQuality.issues.length > 0 && (
-            <div className="bg-yellow-900/20 border-2 border-yellow-600 rounded-lg p-4">
+            <div style={{ backgroundColor: 'rgba(var(--color-warning-rgb), 0.1)', borderColor: 'var(--color-warning)' }} className="border-2 rounded-lg p-4">
               <h3 className="font-bold mb-3">⚠️ Data Quality Issues</h3>
               <div className="space-y-2">
                 {dataQuality.issues.slice(0, 3).map((issue, idx) => (
@@ -213,7 +224,7 @@ export default function LeadDetailPage() {
                 ))}
               </div>
               {dataQuality.suggestions.length > 0 && (
-                <button className="mt-3 text-sm text-yellow-300 hover:text-yellow-200">
+                <button className="mt-3 text-sm text-[var(--color-warning)] hover:opacity-80">
                   View {dataQuality.suggestions.length} suggestions →
                 </button>
               )}
@@ -221,13 +232,13 @@ export default function LeadDetailPage() {
           )}
 
           {/* Contact Information */}
-          <div className="bg-gray-900 rounded-lg p-6">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div><div className="text-sm text-gray-400 mb-1">Email</div><div>{getEmailValue() || '-'}</div></div>
-              <div><div className="text-sm text-gray-400 mb-1">Phone</div><div>{getPhoneNumber() || '-'}</div></div>
-              <div><div className="text-sm text-gray-400 mb-1">Company</div><div>{getCompanyName() || '-'}</div></div>
-              <div><div className="text-sm text-gray-400 mb-1">Title</div><div>{getTitle() || '-'}</div></div>
+              <div><div className="text-sm text-[var(--color-text-secondary)] mb-1">Email</div><div>{getEmailValue() || '-'}</div></div>
+              <div><div className="text-sm text-[var(--color-text-secondary)] mb-1">Phone</div><div>{getPhoneNumber() || '-'}</div></div>
+              <div><div className="text-sm text-[var(--color-text-secondary)] mb-1">Company</div><div>{getCompanyName() || '-'}</div></div>
+              <div><div className="text-sm text-[var(--color-text-secondary)] mb-1">Title</div><div>{getTitle() || '-'}</div></div>
             </div>
           </div>
 
@@ -245,12 +256,12 @@ export default function LeadDetailPage() {
           </div>
 
           {/* Additional Details */}
-          <div className="bg-gray-900 rounded-lg p-6">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Additional Details</h2>
             <div className="space-y-2 text-sm">
-              <div><span className="text-gray-400">Source:</span> {getSource()}</div>
+              <div><span className="text-[var(--color-text-secondary)]">Source:</span> {getSource()}</div>
               <div>
-                <span className="text-gray-400">Created:</span>{' '}
+                <span className="text-[var(--color-text-secondary)]">Created:</span>{' '}
                 {(() => {
                   if (!lead.createdAt) {return '-';}
                   if (lead.createdAt instanceof Date) {
@@ -267,8 +278,8 @@ export default function LeadDetailPage() {
               </div>
               {lead.enrichmentData && (
                 <div className="mt-4">
-                  <div className="text-gray-400 mb-2">Enrichment Data:</div>
-                  <div className="bg-gray-800 rounded p-3 space-y-1">
+                  <div className="text-[var(--color-text-secondary)] mb-2">Enrichment Data:</div>
+                  <div className="bg-[var(--color-bg-elevated)] rounded p-3 space-y-1">
                     {lead.enrichmentData.companySize && (
                       <div>Company Size: {
                         typeof lead.enrichmentData.companySize === 'number'
@@ -287,8 +298,8 @@ export default function LeadDetailPage() {
               )}
               {lead.notes && (
                 <div className="mt-4">
-                  <div className="text-gray-400 mb-2">Notes:</div>
-                  <div className="bg-gray-800 rounded p-3">{lead.notes}</div>
+                  <div className="text-[var(--color-text-secondary)] mb-2">Notes:</div>
+                  <div className="bg-[var(--color-bg-elevated)] rounded p-3">{lead.notes}</div>
                 </div>
               )}
             </div>
@@ -299,27 +310,28 @@ export default function LeadDetailPage() {
         <div className="space-y-6">
           {/* Predictive Score Breakdown */}
           {predictiveScore && (
-            <div className="bg-gray-900 rounded-lg p-6">
+            <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Lead Score Breakdown</h2>
               <div className="space-y-3">
                 {predictiveScore.factors.map((factor, idx) => (
                   <div key={idx}>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-400">{factor.name}</span>
-                      <span className={
-                        factor.impact === 'positive' ? 'text-green-400' :
-                        factor.impact === 'negative' ? 'text-red-400' :
-                        'text-gray-400'
-                      }>{factor.value}/100</span>
+                      <span className="text-[var(--color-text-secondary)]">{factor.name}</span>
+                      <span style={{
+                        color: factor.impact === 'positive' ? 'var(--color-success)' :
+                          factor.impact === 'negative' ? 'var(--color-error)' :
+                          'var(--color-text-secondary)'
+                      }}>{factor.value}/100</span>
                     </div>
-                    <div className="w-full bg-gray-800 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          factor.impact === 'positive' ? 'bg-green-600' :
-                          factor.impact === 'negative' ? 'bg-red-600' :
-                          'bg-gray-600'
-                        }`}
-                        style={{ width: `${factor.value}%` }}
+                    <div className="w-full bg-[var(--color-bg-elevated)] rounded-full h-2">
+                      <div
+                        style={{
+                          width: `${factor.value}%`,
+                          backgroundColor: factor.impact === 'positive' ? 'var(--color-success)' :
+                            factor.impact === 'negative' ? 'var(--color-error)' :
+                            'var(--color-border-light)'
+                        }}
+                        className="h-2 rounded-full"
                       />
                     </div>
                   </div>
@@ -329,7 +341,7 @@ export default function LeadDetailPage() {
           )}
 
           {/* Quick Actions */}
-          <div className="bg-gray-900 rounded-lg p-6">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
             <div className="space-y-2">
               <button
@@ -347,7 +359,7 @@ export default function LeadDetailPage() {
                   const body = `Hi ${firstName},\n\n`;
                   window.location.href = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                 }}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-left"
+                className="w-full px-4 py-2 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)] text-left"
               >
                 ✉️ Send Email
               </button>
@@ -360,13 +372,13 @@ export default function LeadDetailPage() {
                   }
                   router.push(`/calls/make?phone=${encodeURIComponent(phoneNumber)}&contactId=${leadId}`);
                 }}
-                className="w-full px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-left"
+                className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] rounded-lg hover:bg-[var(--color-border-light)] text-left"
               >
                 📞 Make Call
               </button>
               <button
                 onClick={() => router.push(`/outbound/sequences?enrollLead=${leadId}`)}
-                className="w-full px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-left"
+                className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] rounded-lg hover:bg-[var(--color-border-light)] text-left"
               >
                 ➕ Add to Sequence
               </button>
@@ -409,7 +421,7 @@ export default function LeadDetailPage() {
                     },
                   });
                 }}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-left font-medium"
+                className="w-full px-4 py-2 bg-[var(--color-success)] text-[var(--color-text-primary)] rounded-lg hover:opacity-90 text-left font-medium"
               >
                 🔄 Convert to Deal
               </button>
@@ -421,11 +433,11 @@ export default function LeadDetailPage() {
       {/* Confirmation Dialog */}
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-900 rounded-xl p-6 max-w-md mx-4 border border-gray-700 shadow-xl">
-            <p className="text-white mb-4">{confirmDialog.message}</p>
+          <div className="bg-[var(--color-bg-paper)] rounded-xl p-6 max-w-md mx-4 border border-[var(--color-border-light)] shadow-xl">
+            <p className="text-[var(--color-text-primary)] mb-4">{confirmDialog.message}</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-gray-400 hover:bg-gray-800">Cancel</button>
-              <button onClick={confirmDialog.onConfirm} className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Confirm</button>
+              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)]">Cancel</button>
+              <button onClick={confirmDialog.onConfirm} className="px-4 py-2 rounded-lg bg-[var(--color-success)] text-[var(--color-text-primary)] hover:opacity-90">Confirm</button>
             </div>
           </div>
         </div>

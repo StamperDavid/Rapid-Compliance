@@ -144,7 +144,7 @@ export default function CategoriesManagementPage() {
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         }}>
           <h2 style={{ fontSize: '1.25rem', margin: '0 0 1rem', color: 'var(--color-text-primary)' }}>
             Add New Category
@@ -189,7 +189,7 @@ export default function CategoriesManagementPage() {
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         }}>
           <h2 style={{ fontSize: '1.25rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             Categories ({categories.length})
@@ -287,7 +287,7 @@ export default function CategoriesManagementPage() {
             padding: '2rem',
             maxWidth: '400px',
             width: '90%',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
           }}>
             <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem', color: 'var(--color-text-primary)' }}>
               Delete Category

@@ -71,15 +71,15 @@ export default function EmailCampaignsPage() {
         icon: Send
       },
       scheduled: {
-        gradient: 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20',
-        border: 'border-blue-500/30',
-        text: 'text-blue-300',
+        gradient: 'bg-gradient-to-r from-[rgba(var(--color-info-rgb),0.2)] to-[rgba(var(--color-primary-rgb),0.2)]',
+        border: 'border-[rgba(var(--color-info-rgb),0.3)]',
+        text: 'text-[var(--color-info)]',
         icon: Calendar
       },
       draft: {
-        gradient: 'bg-gradient-to-r from-gray-500/20 to-slate-500/20',
-        border: 'border-gray-500/30',
-        text: 'text-gray-300',
+        gradient: 'bg-surface-elevated',
+        border: 'border-[var(--color-border-strong)]',
+        text: 'text-[var(--color-text-secondary)]',
         icon: Mail
       }
     };
@@ -129,7 +129,7 @@ export default function EmailCampaignsPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className={`mb-6 p-3 rounded-lg text-sm ${notification.type === 'success' ? 'text-success border border-success/20' : 'text-error border border-error/20'}`}
-          style={{ backgroundColor: notification.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}
+          style={{ backgroundColor: notification.type === 'success' ? 'rgba(var(--color-success-rgb), 0.1)' : 'rgba(var(--color-error-rgb), 0.1)' }}
         >
           <div className="flex items-center justify-between">
             <span>{notification.message}</span>
@@ -144,7 +144,7 @@ export default function EmailCampaignsPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="mb-6 p-4 backdrop-blur-xl border border-error/30 rounded-xl text-error"
-          style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)' }}
+          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.2)' }}
         >
           {error}
         </motion.div>
@@ -230,7 +230,7 @@ export default function EmailCampaignsPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => router.push(`/email/campaigns/${campaign.id}`)}
-                      className="px-4 py-2 bg-blue-500/20 border border-blue-500/30 text-blue-300 rounded-xl hover:bg-blue-500/30 text-sm font-semibold flex items-center gap-2 transition-all"
+                      className="px-4 py-2 bg-primary/20 border border-primary/30 text-[var(--color-primary)] rounded-xl hover:bg-primary/30 text-sm font-semibold flex items-center gap-2 transition-all"
                     >
                       <Eye className="w-4 h-4" />
                       View
@@ -239,7 +239,7 @@ export default function EmailCampaignsPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => void handleDelete(campaign.id)}
-                      className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-300 rounded-xl hover:bg-red-500/30 text-sm font-semibold flex items-center gap-2 transition-all"
+                      className="px-4 py-2 bg-error/20 border border-error/30 text-error rounded-xl hover:bg-error/30 text-sm font-semibold flex items-center gap-2 transition-all"
                     >
                       <Trash2 className="w-4 h-4" />
                       Delete
@@ -275,10 +275,10 @@ export default function EmailCampaignsPage() {
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-surface-paper rounded-xl p-6 max-w-md mx-4 border border-border-light shadow-xl">
-            <p className="text-text-primary mb-4">{confirmDialog.message}</p>
+            <p className="text-[var(--color-text-primary)] mb-4">{confirmDialog.message}</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-text-secondary hover:bg-surface-elevated">Cancel</button>
-              <button onClick={confirmDialog.onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Confirm</button>
+              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-surface-elevated">Cancel</button>
+              <button onClick={confirmDialog.onConfirm} className="px-4 py-2 rounded-lg bg-error text-white hover:bg-error/80">Confirm</button>
             </div>
           </div>
         </div>

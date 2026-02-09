@@ -181,7 +181,7 @@ export default function IntegrationsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black p-8">
+    <div className="min-h-screen bg-[var(--color-bg-main)] p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -191,11 +191,11 @@ export default function IntegrationsPage() {
         >
           <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/25">
-              <Plug className="w-6 h-6 text-white" />
+              <Plug className="w-6 h-6 text-[var(--color-text-primary)]" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Integrations</h1>
-              <p className="text-gray-400">
+              <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Integrations</h1>
+              <p className="text-[var(--color-text-secondary)]">
                 Connect your AI agent to the tools you already use
               </p>
             </div>
@@ -206,7 +206,7 @@ export default function IntegrationsPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mb-4 p-4 bg-red-500/10 backdrop-blur-xl border border-red-500/20 rounded-xl text-red-300"
+            className="mb-4 p-4 bg-[rgba(var(--color-error-rgb),0.1)] backdrop-blur-xl border border-[rgba(var(--color-error-rgb),0.2)] rounded-xl text-[var(--color-error)]"
           >
             <div className="flex items-center gap-2">
               <X className="w-5 h-5" />
@@ -220,13 +220,13 @@ export default function IntegrationsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8 p-6 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl"
+            className="mb-8 p-6 bg-[var(--color-bg-main)]/40 backdrop-blur-xl border border-white/10 rounded-xl"
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                <Check className="w-5 h-5 text-white" />
+                <Check className="w-5 h-5 text-[var(--color-text-primary)]" />
               </div>
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
                 Connected Integrations ({connectedIntegrations.length})
               </h2>
             </div>
@@ -243,17 +243,17 @@ export default function IntegrationsPage() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    className="p-4 bg-black/40 backdrop-blur-xl rounded-xl border border-green-500/30 hover:border-green-500/50 transition-all"
+                    className="p-4 bg-[var(--color-bg-main)]/40 backdrop-blur-xl rounded-xl border border-green-500/30 hover:border-green-500/50 transition-all"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/25">
-                          <CategoryIcon className="w-5 h-5 text-white" />
+                          <CategoryIcon className="w-5 h-5 text-[var(--color-text-primary)]" />
                         </div>
                         <div>
-                          <div className="font-semibold text-white">{integrationData.providerName}</div>
-                          <div className="flex items-center gap-1 text-xs text-green-400">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                          <div className="font-semibold text-[var(--color-text-primary)]">{integrationData.providerName}</div>
+                          <div className="flex items-center gap-1 text-xs text-[var(--color-success)]">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse" />
                             Connected
                           </div>
                         </div>
@@ -263,17 +263,17 @@ export default function IntegrationsPage() {
                         className="p-1.5 hover:bg-white/5 rounded-lg transition-colors group"
                         title="Disconnect"
                       >
-                        <Settings className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
+                        <Settings className="w-4 h-4 text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors" />
                       </button>
                     </div>
 
-                    <div className="text-sm text-gray-400 mb-3">
+                    <div className="text-sm text-[var(--color-text-secondary)] mb-3">
                       Used {integrationData.usageCount} times
                     </div>
 
                     <button
                       onClick={() => promptDisconnect(integrationData.id)}
-                      className="w-full px-3 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg hover:bg-red-500/20 transition text-sm font-medium flex items-center justify-center gap-2"
+                      className="w-full px-3 py-2 bg-[var(--color-error)] border border-[var(--color-border-light)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-error-dark)] transition text-sm font-medium flex items-center justify-center gap-2" style={{ opacity: 0.7 }}
                     >
                       <X className="w-4 h-4" />
                       Disconnect
@@ -293,7 +293,7 @@ export default function IntegrationsPage() {
                 <button
                   onClick={() => void loadMore()}
                   disabled={isLoading || !hasMore}
-                  className="px-6 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 mx-auto"
+                  className="px-6 py-2.5 bg-white/5 border border-white/10 text-[var(--color-text-primary)] rounded-xl hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 mx-auto"
                 >
                   {isLoading ? (
                     <>
@@ -322,13 +322,13 @@ export default function IntegrationsPage() {
           className="mb-6"
         >
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-disabled)]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search integrations..."
-              className="w-full pl-12 pr-4 py-3.5 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/50 transition-colors"
+              className="w-full pl-12 pr-4 py-3.5 bg-[var(--color-bg-main)]/40 backdrop-blur-xl border border-white/10 rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
             />
           </div>
         </motion.div>
@@ -350,8 +350,8 @@ export default function IntegrationsPage() {
                 onClick={() => setSelectedCategory(category.id)}
                 className={`px-4 py-2.5 rounded-xl font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
                   isSelected
-                    ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg shadow-orange-500/25'
-                    : 'bg-black/40 backdrop-blur-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                    ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-[var(--color-text-primary)] shadow-lg shadow-orange-500/25'
+                    : 'bg-[var(--color-bg-main)]/40 backdrop-blur-xl border border-white/10 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:border-white/20'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -375,20 +375,20 @@ export default function IntegrationsPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + index * 0.05 }}
-                className={`p-6 bg-black/40 backdrop-blur-xl border rounded-xl transition-all hover:scale-[1.02] ${
+                className={`p-6 bg-[var(--color-bg-main)]/40 backdrop-blur-xl border rounded-xl transition-all hover:scale-[1.02] ${
                   isConnected
                     ? 'border-green-500/30 hover:border-green-500/50'
-                    : 'border-white/10 hover:border-orange-500/50'
+                    : 'border-white/10 hover:border-[var(--color-primary)]'
                 }`}
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/25">
-                      <CategoryIcon className="w-6 h-6 text-white" />
+                      <CategoryIcon className="w-6 h-6 text-[var(--color-text-primary)]" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-white">{provider.name}</h3>
+                      <h3 className="font-bold text-[var(--color-text-primary)]">{provider.name}</h3>
                       {provider.isPopular && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs rounded-md mt-1">
                           <Sparkles className="w-3 h-3" />
@@ -398,7 +398,7 @@ export default function IntegrationsPage() {
                     </div>
                   </div>
                   {isConnected && (
-                    <div className="px-2.5 py-1 bg-green-500/10 border border-green-500/20 text-green-400 text-xs rounded-lg font-semibold flex items-center gap-1">
+                    <div className="px-2.5 py-1 bg-green-500/10 border border-green-500/20 text-[var(--color-success)] text-xs rounded-lg font-semibold flex items-center gap-1">
                       <Check className="w-3 h-3" />
                       Connected
                     </div>
@@ -406,22 +406,22 @@ export default function IntegrationsPage() {
                 </div>
 
                 {/* Description */}
-                <p className="text-gray-400 text-sm mb-4 line-clamp-2">{provider.description}</p>
+                <p className="text-[var(--color-text-secondary)] text-sm mb-4 line-clamp-2">{provider.description}</p>
 
                 {/* Capabilities */}
                 <div className="mb-4">
-                  <div className="text-xs text-gray-500 mb-2 font-medium">Capabilities:</div>
+                  <div className="text-xs text-[var(--color-text-disabled)] mb-2 font-medium">Capabilities:</div>
                   <div className="flex flex-wrap gap-1.5">
                     {provider.capabilities.slice(0, 3).map((capability) => (
                       <span
                         key={capability.id}
-                        className="px-2.5 py-1 bg-white/5 border border-white/10 text-gray-300 text-xs rounded-lg"
+                        className="px-2.5 py-1 bg-white/5 border border-white/10 text-[var(--color-text-secondary)] text-xs rounded-lg"
                       >
                         {capability.name}
                       </span>
                     ))}
                     {provider.capabilities.length > 3 && (
-                      <span className="px-2.5 py-1 bg-white/5 border border-white/10 text-gray-400 text-xs rounded-lg">
+                      <span className="px-2.5 py-1 bg-white/5 border border-white/10 text-[var(--color-text-secondary)] text-xs rounded-lg">
                         +{provider.capabilities.length - 3} more
                       </span>
                     )}
@@ -439,7 +439,7 @@ export default function IntegrationsPage() {
                         promptDisconnect(integration.id);
                       }
                     }}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all font-medium flex items-center justify-center gap-2"
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-[var(--color-text-primary)] rounded-xl hover:bg-white/10 transition-all font-medium flex items-center justify-center gap-2"
                   >
                     <Settings className="w-4 h-4" />
                     Manage
@@ -447,7 +447,7 @@ export default function IntegrationsPage() {
                 ) : (
                   <button
                     onClick={() => handleConnect(provider)}
-                    className="w-full px-4 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2"
+                    className="w-full px-4 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-[var(--color-text-primary)] font-semibold rounded-xl shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2"
                   >
                     <Plug className="w-4 h-4" />
                     Connect
@@ -466,25 +466,25 @@ export default function IntegrationsPage() {
             className="text-center py-16"
           >
             <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-white/10 flex items-center justify-center">
-              <Search className="w-10 h-10 text-gray-500" />
+              <Search className="w-10 h-10 text-[var(--color-text-disabled)]" />
             </div>
-            <div className="text-xl font-semibold text-white mb-2">No integrations found</div>
-            <div className="text-gray-400">Try adjusting your search or filter criteria</div>
+            <div className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No integrations found</div>
+            <div className="text-[var(--color-text-secondary)]">Try adjusting your search or filter criteria</div>
           </motion.div>
         )}
 
         {/* API Key Modal */}
         {showAPIKeyModal && pendingProvider && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[var(--color-bg-main)]/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-black/90 border border-white/10 rounded-2xl p-6 max-w-md w-full"
+              className="bg-[var(--color-bg-main)]/90 border border-white/10 rounded-2xl p-6 max-w-md w-full"
             >
-              <h3 className="text-xl font-bold text-white mb-2">
+              <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
                 Connect {pendingProvider.name}
               </h3>
-              <p className="text-gray-400 text-sm mb-4">
+              <p className="text-[var(--color-text-secondary)] text-sm mb-4">
                 Enter your API key to connect this integration
               </p>
               <input
@@ -492,7 +492,7 @@ export default function IntegrationsPage() {
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
                 placeholder="Enter API key..."
-                className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/50 mb-4"
+                className="w-full px-4 py-3 bg-[var(--color-bg-main)]/40 border border-white/10 rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:border-[var(--color-primary)] mb-4"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleAPIKeySubmit();
@@ -506,14 +506,14 @@ export default function IntegrationsPage() {
                     setPendingProvider(null);
                     setApiKeyInput('');
                   }}
-                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all"
+                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-[var(--color-text-primary)] rounded-xl hover:bg-white/10 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAPIKeySubmit}
                   disabled={!apiKeyInput.trim()}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-[var(--color-text-primary)] font-semibold rounded-xl shadow-lg shadow-orange-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Connect
                 </button>
@@ -524,16 +524,16 @@ export default function IntegrationsPage() {
 
         {/* Disconnect Confirmation Modal */}
         {showDisconnectModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-[var(--color-bg-main)]/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-black/90 border border-white/10 rounded-2xl p-6 max-w-md w-full"
+              className="bg-[var(--color-bg-main)]/90 border border-white/10 rounded-2xl p-6 max-w-md w-full"
             >
-              <h3 className="text-xl font-bold text-white mb-2">
+              <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
                 Disconnect Integration
               </h3>
-              <p className="text-gray-400 text-sm mb-6">
+              <p className="text-[var(--color-text-secondary)] text-sm mb-6">
                 Are you sure you want to disconnect this integration? This action cannot be undone.
               </p>
               <div className="flex gap-3">
@@ -542,13 +542,13 @@ export default function IntegrationsPage() {
                     setShowDisconnectModal(false);
                     setPendingDisconnectId(null);
                   }}
-                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all"
+                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 text-[var(--color-text-primary)] rounded-xl hover:bg-white/10 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => void handleDisconnect()}
-                  className="flex-1 px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all font-semibold flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-[var(--color-error)] border border-[var(--color-border-light)] text-[var(--color-text-primary)] rounded-xl hover:bg-[var(--color-error-dark)] transition-all font-semibold flex items-center justify-center gap-2" style={{ opacity: 0.7 }}
                 >
                   <X className="w-4 h-4" />
                   Disconnect

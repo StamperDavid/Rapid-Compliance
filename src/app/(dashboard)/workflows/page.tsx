@@ -168,7 +168,7 @@ export default function WorkflowsPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className={`mb-6 p-3 rounded-lg text-sm border ${notification.type === 'success' ? 'text-success border-border-light' : 'text-error border-border-light'}`}
-          style={{ backgroundColor: notification.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}
+          style={{ backgroundColor: notification.type === 'success' ? 'rgba(var(--color-success-rgb), 0.1)' : 'rgba(var(--color-error-rgb), 0.1)' }}
         >
           <div className="flex items-center justify-between">
             <span>{notification.message}</span>
@@ -183,7 +183,7 @@ export default function WorkflowsPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 p-4 backdrop-blur-xl border border-border-strong rounded-xl"
-          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
         >
           <div className="flex items-center gap-3 text-error">
             <AlertCircle className="w-5 h-5" />
@@ -199,7 +199,7 @@ export default function WorkflowsPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="text-center py-16 bg-surface-paper backdrop-blur-xl border border-border-light rounded-2xl"
         >
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center border border-border-strong" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))' }}>
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center border border-border-strong" style={{ background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.2), rgba(var(--color-secondary-rgb), 0.2))' }}>
             <WorkflowIcon className="w-10 h-10 text-primary" />
           </div>
           <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No workflows yet</h3>
@@ -235,7 +235,7 @@ export default function WorkflowsPage() {
                   <div className="flex-1">
                     {/* Title and Status */}
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center border border-border-strong" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))' }}>
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center border border-border-strong" style={{ background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.2), rgba(var(--color-secondary-rgb), 0.2))' }}>
                         <WorkflowIcon className="w-5 h-5 text-primary" />
                       </div>
                       <h3 className="text-xl font-semibold text-[var(--color-text-primary)] group-hover:text-primary transition-colors">
@@ -278,7 +278,7 @@ export default function WorkflowsPage() {
                           ? 'text-warning border-border-strong'
                           : 'text-success border-border-strong'
                       }`}
-                      style={{ backgroundColor: workflow.status === 'active' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)' }}
+                      style={{ backgroundColor: workflow.status === 'active' ? 'rgba(var(--color-warning-rgb), 0.1)' : 'rgba(var(--color-success-rgb), 0.1)' }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -299,7 +299,7 @@ export default function WorkflowsPage() {
                     <motion.button
                       onClick={() => router.push(`/workflows/${workflow.id}`)}
                       className="px-4 py-2 text-primary border border-border-strong rounded-xl text-sm font-semibold flex items-center gap-2 transition-all duration-300"
-                      style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}
+                      style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)' }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -311,7 +311,7 @@ export default function WorkflowsPage() {
                     <motion.button
                       onClick={() => router.push(`/workflows/${workflow.id}/runs`)}
                       className="px-4 py-2 text-secondary border border-border-strong rounded-xl text-sm font-semibold flex items-center gap-2 transition-all duration-300"
-                      style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)' }}
+                      style={{ backgroundColor: 'rgba(var(--color-secondary-rgb), 0.1)' }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -323,7 +323,7 @@ export default function WorkflowsPage() {
                     <motion.button
                       onClick={() => void handleDelete(workflow.id)}
                       className="px-4 py-2 text-error border border-border-strong rounded-xl text-sm font-semibold flex items-center gap-2 transition-all duration-300"
-                      style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+                      style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >

@@ -49,13 +49,13 @@ export default function NewDealPage() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Create New Deal</h1>
         <Form form={form} onSubmit={onSubmit}>
-          <div className="bg-gray-900 rounded-lg p-6 mb-4">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6 mb-4">
             <div className="space-y-4">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Deal Name *</FormLabel>
                   <FormControl>
-                    <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    <input {...field} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -64,7 +64,7 @@ export default function NewDealPage() {
                 <FormItem>
                   <FormLabel>Company *</FormLabel>
                   <FormControl>
-                    <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    <input {...field} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -74,7 +74,7 @@ export default function NewDealPage() {
                   <FormItem>
                     <FormLabel>Deal Value ($) *</FormLabel>
                     <FormControl>
-                      <input {...field} type="number" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                      <input {...field} type="number" className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -83,7 +83,7 @@ export default function NewDealPage() {
                   <FormItem>
                     <FormLabel>Probability (%)</FormLabel>
                     <FormControl>
-                      <input {...field} type="number" min={0} max={100} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                      <input {...field} type="number" min={0} max={100} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -94,7 +94,7 @@ export default function NewDealPage() {
                   <FormItem>
                     <FormLabel>Stage</FormLabel>
                     <FormControl>
-                      <select {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none">
+                      <select {...field} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none">
                         <option value="prospecting">Prospecting</option>
                         <option value="qualification">Qualification</option>
                         <option value="proposal">Proposal</option>
@@ -110,7 +110,7 @@ export default function NewDealPage() {
                   <FormItem>
                     <FormLabel>Expected Close Date</FormLabel>
                     <FormControl>
-                      <input {...field} type="date" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                      <input {...field} type="date" className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -120,7 +120,7 @@ export default function NewDealPage() {
                 <FormItem>
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <textarea {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" rows={4} />
+                    <textarea {...field} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" rows={4} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -128,11 +128,11 @@ export default function NewDealPage() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
+            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-[var(--color-bg-elevated)] rounded-lg hover:bg-[var(--color-border-light)]">Cancel</button>
             <button
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {form.formState.isSubmitting ? 'Creating...' : 'Create Deal'}
             </button>

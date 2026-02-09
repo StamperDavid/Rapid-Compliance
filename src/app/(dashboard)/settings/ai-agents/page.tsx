@@ -64,7 +64,7 @@ export default function AIAgentsPage() {
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = primaryColor;
                     e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = `0 10px 40px rgba(99, 102, 241, 0.2)`;
+                    e.currentTarget.style.boxShadow = `0 10px 40px rgba(var(--color-primary-rgb), 0.2)`;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = 'var(--color-border-strong)';

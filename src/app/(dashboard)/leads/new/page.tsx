@@ -132,15 +132,15 @@ export default function NewLeadPage() {
         {/* Confirmation Dialog */}
         {showConfirmDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-md">
+            <div className="bg-[var(--color-bg-paper)] border border-[var(--color-border-light)] rounded-lg p-6 max-w-md">
               <h2 className="text-xl font-bold mb-4">High-Confidence Duplicate Detected</h2>
-              <p className="text-gray-400 mb-6">
+              <p className="text-[var(--color-text-secondary)] mb-6">
                 A high-confidence duplicate has been detected. Are you sure you want to create this lead?
               </p>
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowConfirmDialog(false)}
-                  className="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+                  className="px-4 py-2 bg-[var(--color-bg-elevated)] rounded-lg hover:bg-[var(--color-border-light)]"
                 >
                   Cancel
                 </button>
@@ -149,7 +149,7 @@ export default function NewLeadPage() {
                     setShowConfirmDialog(false);
                     void proceedWithSubmit(form.getValues());
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)]"
                 >
                   Create Anyway
                 </button>
@@ -161,24 +161,24 @@ export default function NewLeadPage() {
         {/* Data Quality Score */}
         {dataQuality && (
           <div className="mb-4">
-            <div className="flex items-center justify-between bg-gray-900 rounded-lg p-4">
+            <div className="flex items-center justify-between bg-[var(--color-bg-paper)] rounded-lg p-4">
               <div>
-                <div className="text-sm text-gray-400">Data Quality Score</div>
+                <div className="text-sm text-[var(--color-text-secondary)]">Data Quality Score</div>
                 <div className="text-2xl font-bold">
                   {dataQuality.overall}%
                 </div>
               </div>
               <div className="flex gap-4 text-sm">
                 <div>
-                  <div className="text-gray-400">Completeness</div>
+                  <div className="text-[var(--color-text-secondary)]">Completeness</div>
                   <div className="font-medium">{dataQuality.completeness}%</div>
                 </div>
                 <div>
-                  <div className="text-gray-400">Accuracy</div>
+                  <div className="text-[var(--color-text-secondary)]">Accuracy</div>
                   <div className="font-medium">{dataQuality.accuracy}%</div>
                 </div>
                 <div>
-                  <div className="text-gray-400">Consistency</div>
+                  <div className="text-[var(--color-text-secondary)]">Consistency</div>
                   <div className="font-medium">{dataQuality.consistency}%</div>
                 </div>
               </div>
@@ -198,17 +198,17 @@ export default function NewLeadPage() {
         )}
 
         <Form form={form} onSubmit={onSubmit}>
-          <div className="bg-gray-900 rounded-lg p-6 mb-4">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6 mb-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="firstName" render={({ field }) => (
                   <FormItem>
                     <FormLabel>First Name *</FormLabel>
                     <FormControl>
-                      <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                      <input {...field} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                     </FormControl>
                     {dataQuality?.suggestions.find(s => s.field === 'firstName') && (
-                      <div className="text-xs text-yellow-400 mt-1">
+                      <div className="text-xs text-[var(--color-warning)] mt-1">
                         {dataQuality.suggestions.find(s => s.field === 'firstName')?.suggestion}
                       </div>
                     )}
@@ -219,7 +219,7 @@ export default function NewLeadPage() {
                   <FormItem>
                     <FormLabel>Last Name *</FormLabel>
                     <FormControl>
-                      <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                      <input {...field} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -229,11 +229,11 @@ export default function NewLeadPage() {
                 <FormItem>
                   <FormLabel>Email *</FormLabel>
                   <FormControl>
-                    <input {...field} type="email" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    <input {...field} type="email" className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                   </FormControl>
-                  {checkingDuplicates && <div className="text-xs text-gray-400 mt-1">Checking for duplicates...</div>}
+                  {checkingDuplicates && <div className="text-xs text-[var(--color-text-secondary)] mt-1">Checking for duplicates...</div>}
                   {dataQuality?.issues.find(i => i.field === 'email') && (
-                    <div className="text-xs text-red-400 mt-1">
+                    <div className="text-xs text-[var(--color-error)] mt-1">
                       {dataQuality.issues.find(i => i.field === 'email')?.issue}
                     </div>
                   )}
@@ -244,7 +244,7 @@ export default function NewLeadPage() {
                 <FormItem>
                   <FormLabel>Phone</FormLabel>
                   <FormControl>
-                    <input {...field} type="tel" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    <input {...field} type="tel" className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                   </FormControl>
                   {dataQuality?.suggestions.find(s => s.field === 'phone')?.suggestedValue && (
                     <button
@@ -255,7 +255,7 @@ export default function NewLeadPage() {
                           form.setValue('phone', String(suggestion.suggestedValue));
                         }
                       }}
-                      className="text-xs text-blue-400 mt-1 hover:text-blue-300"
+                      className="text-xs text-[var(--color-primary)] mt-1 hover:opacity-80"
                     >
                       Format as: {dataQuality.suggestions.find(s => s.field === 'phone')?.suggestedValue}
                     </button>
@@ -268,9 +268,9 @@ export default function NewLeadPage() {
                   <FormItem>
                     <FormLabel>Company</FormLabel>
                     <FormControl>
-                      <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                      <input {...field} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                     </FormControl>
-                    {field.value && <div className="text-xs text-gray-400 mt-1">Will auto-enrich company data on save</div>}
+                    {field.value && <div className="text-xs text-[var(--color-text-secondary)] mt-1">Will auto-enrich company data on save</div>}
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -278,7 +278,7 @@ export default function NewLeadPage() {
                   <FormItem>
                     <FormLabel>Title</FormLabel>
                     <FormControl>
-                      <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                      <input {...field} className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -288,7 +288,7 @@ export default function NewLeadPage() {
                 <FormItem>
                   <FormLabel>Source</FormLabel>
                   <FormControl>
-                    <input {...field} placeholder="e.g., Website, Referral, LinkedIn" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    <input {...field} placeholder="e.g., Website, Referral, LinkedIn" className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg focus:border-[var(--color-primary)] focus:outline-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -298,7 +298,7 @@ export default function NewLeadPage() {
 
           {/* Data Quality Issues */}
           {dataQuality && dataQuality.issues.length > 0 && (
-            <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4 mb-4">
+            <div style={{ backgroundColor: 'rgba(var(--color-warning-rgb), 0.1)', borderColor: 'var(--color-warning)' }} className="border rounded-lg p-4 mb-4">
               <div className="font-medium mb-2">Data Quality Issues:</div>
               <div className="space-y-1 text-sm">
                 {dataQuality.issues.map((issue, idx) => (
@@ -311,13 +311,13 @@ export default function NewLeadPage() {
           )}
 
           <div className="flex gap-3">
-            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">
+            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-[var(--color-bg-elevated)] rounded-lg hover:bg-[var(--color-border-light)]">
               Cancel
             </button>
             <button
               type="submit"
               disabled={form.formState.isSubmitting || checkingDuplicates}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {form.formState.isSubmitting ? 'Creating...' : checkingDuplicates ? 'Checking duplicates...' : 'Create Lead'}
             </button>

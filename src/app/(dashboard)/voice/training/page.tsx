@@ -937,7 +937,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           onClick={() => handleEngineChange(engine)}
                           style={{
                             padding: '1rem',
-                            backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--color-bg-paper)',
+                            backgroundColor: isSelected ? 'rgba(var(--color-primary-rgb), 0.15)' : 'var(--color-bg-paper)',
                             border: isSelected ? `2px solid ${primaryColor}` : '2px solid var(--color-border-strong)',
                             borderRadius: '0.75rem',
                             cursor: 'pointer',
@@ -951,7 +951,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             </span>
                             <span style={{
                               padding: '0.125rem 0.5rem',
-                              backgroundColor: info.quality === 'ultra' ? 'rgba(168, 85, 247, 0.2)' : info.quality === 'premium' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                              backgroundColor: info.quality === 'ultra' ? 'rgba(var(--color-secondary-rgb), 0.2)' : info.quality === 'premium' ? 'rgba(var(--color-success-rgb), 0.2)' : 'rgba(var(--color-warning-rgb), 0.2)',
                               color: info.quality === 'ultra' ? 'var(--color-secondary)' : info.quality === 'premium' ? 'var(--color-success)' : 'var(--color-warning)',
                               borderRadius: '9999px',
                               fontSize: '0.625rem',
@@ -971,7 +971,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             <span style={{
                               fontSize: '0.625rem',
                               padding: '0.125rem 0.375rem',
-                              backgroundColor: info.latency === 'low' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                              backgroundColor: info.latency === 'low' ? 'rgba(var(--color-success-rgb), 0.15)' : 'rgba(var(--color-warning-rgb), 0.15)',
                               color: info.latency === 'low' ? 'var(--color-success)' : 'var(--color-warning)',
                               borderRadius: '0.25rem',
                             }}>
@@ -996,7 +996,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             style={{
                               flex: 1,
                               padding: '0.75rem',
-                              backgroundColor: ttsKeyMode === 'platform' ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-bg-main)',
+                              backgroundColor: ttsKeyMode === 'platform' ? 'rgba(var(--color-primary-rgb), 0.2)' : 'var(--color-bg-main)',
                               border: ttsKeyMode === 'platform' ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                               borderRadius: '0.5rem',
                               color: ttsKeyMode === 'platform' ? primaryColor : 'var(--color-text-secondary)',
@@ -1015,7 +1015,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             style={{
                               flex: 1,
                               padding: '0.75rem',
-                              backgroundColor: ttsKeyMode === 'user' ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-bg-main)',
+                              backgroundColor: ttsKeyMode === 'user' ? 'rgba(var(--color-primary-rgb), 0.2)' : 'var(--color-bg-main)',
                               border: ttsKeyMode === 'user' ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                               borderRadius: '0.5rem',
                               color: ttsKeyMode === 'user' ? primaryColor : 'var(--color-text-secondary)',
@@ -1172,7 +1172,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       <span style={{
                         display: 'inline-block',
                         padding: '0.25rem 0.75rem',
-                        backgroundColor: overrideForVoice ? 'var(--color-bg-paper)' : 'rgba(99, 102, 241, 0.2)',
+                        backgroundColor: overrideForVoice ? 'var(--color-bg-paper)' : 'rgba(var(--color-primary-rgb), 0.2)',
                         color: overrideForVoice ? 'var(--color-text-secondary)' : primaryColor,
                         borderRadius: '9999px',
                         fontSize: '0.75rem',
@@ -1507,7 +1507,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             fontSize: '0.875rem',
                             lineHeight: '1.4',
                           }}>
-                            <div style={{ fontSize: '0.625rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.25rem' }}>
+                            <div style={{ fontSize: '0.625rem', color: 'rgba(var(--color-text-primary-rgb), 0.6)', marginBottom: '0.25rem' }}>
                               {msg.role === 'caller' ? 'Caller' : 'AI Agent'}
                             </div>
                             {msg.content}
@@ -1675,7 +1675,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           fontSize: '0.625rem',
                           padding: '0.125rem 0.5rem',
                           borderRadius: '9999px',
-                          backgroundColor: call.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : call.status === 'transferred' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                          backgroundColor: call.status === 'completed' ? 'rgba(var(--color-success-rgb), 0.2)' : call.status === 'transferred' ? 'rgba(var(--color-warning-rgb), 0.2)' : 'rgba(var(--color-error-rgb), 0.2)',
                           color: call.status === 'completed' ? 'var(--color-success)' : call.status === 'transferred' ? 'var(--color-warning)' : 'var(--color-error)',
                         }}>
                           {call.status}
@@ -1735,7 +1735,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             fontSize: '0.875rem',
                             lineHeight: '1.4',
                           }}>
-                            <div style={{ fontSize: '0.625rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.25rem' }}>
+                            <div style={{ fontSize: '0.625rem', color: 'rgba(var(--color-text-primary-rgb), 0.6)', marginBottom: '0.25rem' }}>
                               {msg.role === 'caller' ? 'Caller' : 'AI Agent'}
                             </div>
                             {msg.content}
@@ -1863,7 +1863,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             borderRadius: '9999px',
                             fontSize: '0.75rem',
                             fontWeight: '600',
-                            backgroundColor: call.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : call.status === 'transferred' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                            backgroundColor: call.status === 'completed' ? 'rgba(var(--color-success-rgb), 0.2)' : call.status === 'transferred' ? 'rgba(var(--color-warning-rgb), 0.2)' : 'rgba(var(--color-error-rgb), 0.2)',
                             color: call.status === 'completed' ? 'var(--color-success)' : call.status === 'transferred' ? 'var(--color-warning)' : 'var(--color-error)',
                           }}>
                             {call.status}

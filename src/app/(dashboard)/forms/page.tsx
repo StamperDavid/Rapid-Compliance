@@ -155,7 +155,7 @@ const getStatusBadgeClasses = (status: FormStatus) => {
     case 'archived':
       return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
     default:
-      return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
+      return 'text-[var(--color-text-secondary)] border border-[var(--color-border-light)]';
   }
 };
 
@@ -476,8 +476,8 @@ export default function FormsPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 p-4 border rounded-xl text-error text-sm"
-              style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+              className="mb-6 p-4 border rounded-xl text-error text-sm border-error/30"
+              style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
             >
               {error}
             </motion.div>
@@ -492,8 +492,8 @@ export default function FormsPage() {
             transition={{ delay: 0.2 }}
           >
             {loading ? (
-              <div className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-12 text-center">
-                <p className="text-gray-400">Loading forms...</p>
+              <div className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-12 text-center">
+                <p className="text-[var(--color-text-secondary)]">Loading forms...</p>
               </div>
             ) : (
               <DataTable

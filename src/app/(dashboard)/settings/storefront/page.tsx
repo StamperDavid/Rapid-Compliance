@@ -853,7 +853,7 @@ export default function StorefrontSettingsPage() {
               fontSize: '0.875rem',
               fontWeight: '600',
               cursor: 'pointer',
-              boxShadow: '0 10px 40px rgba(99, 102, 241, 0.3)',
+              boxShadow: '0 10px 40px rgba(var(--color-primary-rgb), 0.3)',
               zIndex: 50
             }}
           >

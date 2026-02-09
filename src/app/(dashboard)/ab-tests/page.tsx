@@ -65,7 +65,7 @@ export default function ABTestsPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 border rounded-lg text-error" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+        <div className="mb-4 p-4 border rounded-lg text-error" style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)', borderColor: 'rgba(var(--color-error-rgb), 0.2)' }}>
           {error}
         </div>
       )}
@@ -81,8 +81,8 @@ export default function ABTestsPage() {
                 test.status === 'completed' ? 'text-primary' :
                 'text-[var(--color-text-secondary)]';
               const statusBg =
-                test.status === 'running' ? 'rgba(16, 185, 129, 0.1)' :
-                test.status === 'completed' ? 'rgba(99, 102, 241, 0.1)' :
+                test.status === 'running' ? 'rgba(var(--color-success-rgb), 0.1)' :
+                test.status === 'completed' ? 'rgba(var(--color-primary-rgb), 0.1)' :
                 'var(--color-bg-elevated)';
               const variantCount = test.variants?.length ?? 0;
 
@@ -101,7 +101,7 @@ export default function ABTestsPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => router.push(`/ab-tests/${test.id}`)} className="px-3 py-1.5 bg-primary text-white rounded hover:from-primary-light hover:to-secondary-light text-sm font-medium" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }}>View Results</button>
+                      <button onClick={() => router.push(`/ab-tests/${test.id}`)} className="px-3 py-1.5 bg-primary text-white rounded hover:from-primary-light hover:to-secondary-light text-sm font-medium" style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.15)' }}>View Results</button>
                     </div>
                   </div>
                 </div>

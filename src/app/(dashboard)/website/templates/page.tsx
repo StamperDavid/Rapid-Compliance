@@ -149,7 +149,7 @@ export default function TemplateBrowserPage() {
           marginBottom: '2rem',
         }}>
           <div>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
+            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
               Page Templates
             </h1>
             <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
@@ -214,16 +214,16 @@ export default function TemplateBrowserPage() {
                 background: 'white',
                 borderRadius: '8px',
                 overflow: 'hidden',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
               }}
             >
               {/* Thumbnail */}
@@ -363,7 +363,7 @@ export default function TemplateBrowserPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
+          background: 'rgba(0, 0, 0, 0.8)',
           zIndex: 9999,
           display: 'flex',
           alignItems: 'center',
@@ -420,7 +420,7 @@ export default function TemplateBrowserPage() {
               <div style={{
                 background: 'white',
                 borderRadius: '4px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
               }}>
                 <Image
                   src={selectedTemplate.thumbnail ?? '/placeholder-template.png'}

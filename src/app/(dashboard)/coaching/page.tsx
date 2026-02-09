@@ -133,31 +133,31 @@ export default function CoachingDashboardPage() {
    */
   if (loading && !performance) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-[var(--color-bg-main)] p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header Skeleton */}
           <div className="mb-8 animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-8 bg-[var(--color-border-main)] rounded w-1/3 mb-2"></div>
+            <div className="h-4 bg-[var(--color-border-main)] rounded w-1/2"></div>
           </div>
 
           {/* Cards Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="bg-white rounded-lg shadow-sm p-6 animate-pulse">
-              <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="h-40 bg-gray-200 rounded"></div>
+            <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 animate-pulse">
+              <div className="h-6 bg-[var(--color-border-main)] rounded w-1/2 mb-4"></div>
+              <div className="h-40 bg-[var(--color-border-main)] rounded"></div>
             </div>
-            <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6 animate-pulse">
-              <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="h-40 bg-gray-200 rounded"></div>
+            <div className="lg:col-span-2 bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 animate-pulse">
+              <div className="h-6 bg-[var(--color-border-main)] rounded w-1/2 mb-4"></div>
+              <div className="h-40 bg-[var(--color-border-main)] rounded"></div>
             </div>
           </div>
 
           <div className="space-y-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-lg shadow-sm p-6 animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-                <div className="h-32 bg-gray-200 rounded"></div>
+              <div key={i} className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 animate-pulse">
+                <div className="h-6 bg-[var(--color-border-main)] rounded w-1/4 mb-4"></div>
+                <div className="h-32 bg-[var(--color-border-main)] rounded"></div>
               </div>
             ))}
           </div>
@@ -171,15 +171,15 @@ export default function CoachingDashboardPage() {
    */
   if (error && !performance) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full">
+      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center p-6">
+        <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-8 max-w-md w-full">
           <div className="text-center">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Coaching Insights</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">Failed to Load Coaching Insights</h2>
+            <p className="text-[var(--color-text-secondary)] mb-6">{error}</p>
             <button
               onClick={() => void fetchCoachingInsights()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              className="px-6 py-2 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)] transition"
             >
               Try Again
             </button>
@@ -194,14 +194,14 @@ export default function CoachingDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--color-bg-main)]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-[var(--color-bg-paper)] border-b border-[var(--color-border-main)] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Sales Coaching & Insights</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Sales Coaching & Insights</h1>
+              <p className="text-sm text-[var(--color-text-disabled)] mt-1">
                 AI-powered performance analysis and personalized recommendations
               </p>
             </div>
@@ -211,7 +211,7 @@ export default function CoachingDashboardPage() {
               <select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value as TimePeriod)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-4 py-2 border border-[var(--color-border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 disabled={refreshing}
               >
                 {TIME_PERIODS.map((p) => (
@@ -225,7 +225,7 @@ export default function CoachingDashboardPage() {
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {refreshing ? (
                   <>
@@ -287,17 +287,17 @@ export default function CoachingDashboardPage() {
 
         {/* Performance Summary */}
         {insights.performanceSummary && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Performance Summary</h3>
-            <p className="text-gray-700 mb-4">{insights.performanceSummary.assessment}</p>
+          <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">Performance Summary</h3>
+            <p className="text-[var(--color-text-secondary)] mb-4">{insights.performanceSummary.assessment}</p>
 
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Trend:</span>
+                <span className="text-sm text-[var(--color-text-secondary)]">Trend:</span>
                 <span className={`text-sm font-medium ${
-                  insights.performanceSummary.trend === 'improving' ? 'text-green-600' :
-                  insights.performanceSummary.trend === 'declining' ? 'text-red-600' :
-                  'text-gray-600'
+                  insights.performanceSummary.trend === 'improving' ? 'text-[var(--color-success)]' :
+                  insights.performanceSummary.trend === 'declining' ? 'text-[var(--color-error)]' :
+                  'text-[var(--color-text-secondary)]'
                 }`}>
                   {insights.performanceSummary.trend === 'improving' && '↗ '}
                   {insights.performanceSummary.trend === 'declining' && '↘ '}
@@ -307,10 +307,10 @@ export default function CoachingDashboardPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Focus Areas:</span>
+                <span className="text-sm text-[var(--color-text-secondary)]">Focus Areas:</span>
                 <div className="flex flex-wrap gap-2">
                   {insights.performanceSummary.focusAreas.map((area, idx) => (
-                    <span key={idx} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                    <span key={idx} className="text-xs bg-[var(--color-primary)] text-[var(--color-text-primary)] px-2 py-1 rounded" style={{ opacity: 0.7 }}>
                       {area}
                     </span>
                   ))}
@@ -341,24 +341,24 @@ export default function CoachingDashboardPage() {
 
         {/* Opportunities */}
         {insights.opportunities.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Improvement Opportunities</h3>
+          <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Improvement Opportunities</h3>
             <div className="space-y-3">
               {insights.opportunities.map((opp, idx) => (
-                <div key={idx} className="border border-blue-200 bg-blue-50 rounded-lg p-4">
+                <div key={idx} className="border border-[var(--color-border-light)] rounded-lg p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-gray-900">{opp.title}</h4>
+                    <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">{opp.title}</h4>
                     <span className={`text-xs font-medium px-2 py-1 rounded ${
-                      opp.priority === 'critical' ? 'bg-red-100 text-red-800' :
-                      opp.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                      opp.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
+                      opp.priority === 'critical' ? 'text-[var(--color-text-primary)]' :
+                      opp.priority === 'high' ? 'text-[var(--color-text-primary)]' :
+                      opp.priority === 'medium' ? 'text-[var(--color-text-primary)]' :
+                      'text-[var(--color-text-primary)]'
                     }`}>
                       {opp.priority.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700 mb-3">{opp.description}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-600">
+                  <p className="text-sm text-[var(--color-text-secondary)] mb-3">{opp.description}</p>
+                  <div className="flex items-center gap-4 text-xs text-[var(--color-text-secondary)]">
                     <span>Difficulty: {opp.difficulty}</span>
                     <span>•</span>
                     <span>Impact: {opp.timeToImpact.replace('_', ' ')}</span>
@@ -371,27 +371,27 @@ export default function CoachingDashboardPage() {
 
         {/* Risks */}
         {insights.risks.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Risks</h3>
+          <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Performance Risks</h3>
             <div className="space-y-3">
               {insights.risks.map((risk, idx) => (
-                <div key={idx} className="border border-red-200 bg-red-50 rounded-lg p-4">
+                <div key={idx} className="border border-[var(--color-border-light)] rounded-lg p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-gray-900">{risk.title}</h4>
+                    <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">{risk.title}</h4>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium px-2 py-1 rounded ${
-                        risk.severity === 'critical' ? 'bg-red-100 text-red-800' :
-                        risk.severity === 'high' ? 'bg-orange-100 text-orange-800' :
-                        'bg-yellow-100 text-yellow-800'
+                        risk.severity === 'critical' ? 'text-[var(--color-text-primary)]' :
+                        risk.severity === 'high' ? 'text-[var(--color-text-primary)]' :
+                        'text-[var(--color-text-primary)]'
                       }`}>
                         {risk.severity.toUpperCase()}
                       </span>
-                      <span className="text-xs text-gray-600">
+                      <span className="text-xs text-[var(--color-text-secondary)]">
                         {risk.likelihood.replace('_', ' ')}
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-700">{risk.description}</p>
+                  <p className="text-sm text-[var(--color-text-secondary)]">{risk.description}</p>
                 </div>
               ))}
             </div>
@@ -399,8 +399,8 @@ export default function CoachingDashboardPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="flex items-center justify-between text-sm text-gray-500">
+        <div className="mt-8 pt-6 border-t border-[var(--color-border-main)]">
+          <div className="flex items-center justify-between text-sm text-[var(--color-text-disabled)]">
             <div>
               Last updated: {new Date().toLocaleString('en-US', {
                 month: 'short',
@@ -412,7 +412,7 @@ export default function CoachingDashboardPage() {
             </div>
             <div className="flex items-center gap-2">
               <span>AI Confidence:</span>
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-[var(--color-text-primary)]">
                 {(insights.confidenceScore * 100).toFixed(0)}%
               </span>
             </div>
