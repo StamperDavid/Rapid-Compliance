@@ -619,6 +619,43 @@ service cloud.firestore {
     }
 
     // ========================================
+    // PLATFORM SETTINGS & CONFIG
+    // ========================================
+
+    // Platform settings (theme, admin theme)
+    match /platform_settings/{docId} {
+      // All authenticated users can read settings
+      allow read: if isAuthenticated();
+
+      // Only admins can write
+      allow write: if isAdmin();
+    }
+
+    // Platform config (website config)
+    match /platformConfig/{docId} {
+      // All authenticated users can read config
+      allow read: if isAuthenticated();
+
+      // Only admins can write
+      allow write: if isAdmin();
+    }
+
+    // Health check collection (used by /api/health)
+    match /health/{docId} {
+      // Public read for health checks
+      allow read: if true;
+
+      // Only admins can write
+      allow write: if isAdmin();
+    }
+
+    // Discovery Queue (scraping task queue)
+    match /discoveryQueue/{docId} {
+      // All authenticated users can read/write
+      allow read, write: if isAuthenticated();
+    }
+
+    // ========================================
     // DEFAULT DENY
     // ========================================
 
