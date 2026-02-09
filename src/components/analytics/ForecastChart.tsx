@@ -23,24 +23,24 @@ interface TooltipPayloadEntry {
 
 export default function ForecastChart({ data, showConfidence = true }: ForecastChartProps) {
   const primaryColor = typeof window !== 'undefined' 
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
-    : '#6366f1';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
   
   const successColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || '#10b981'
-    : '#10b981';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || 'var(--color-success)'
+    : 'var(--color-success)';
 
   const errorColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-error').trim() || '#ef4444'
-    : '#ef4444';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-error').trim() || 'var(--color-error)'
+    : 'var(--color-error)';
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || '#ffffff'
-    : '#ffffff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
 
   const borderColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
-    : '#333333';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-strong)'
+    : 'var(--color-border-strong)';
 
   const ChartComponent = showConfidence ? AreaChart : LineChart;
 

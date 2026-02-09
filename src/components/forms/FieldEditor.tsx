@@ -138,7 +138,7 @@ const styles = {
   },
   checkboxLabel: {
     fontSize: '0.875rem',
-    color: '#ccc',
+    color: 'var(--color-text-primary)',
   },
   optionRow: {
     display: 'flex',
@@ -193,7 +193,7 @@ const styles = {
   widthOptionActive: {
     color: 'var(--color-text-primary)',
     borderColor: 'var(--color-primary)',
-    backgroundColor: '#1e1e2f',
+    backgroundColor: 'var(--color-bg-paper)',
   },
 };
 
@@ -684,7 +684,7 @@ function ConditionalTab({ field, onUpdate }: TabProps) {
                 ? 'No conditions configured. Add conditions by referencing other fields.'
                 : `${logic.conditions.length} condition(s) configured.`}
             </p>
-            <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.5rem', margin: 0 }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem', margin: 0 }}>
               Note: Full condition builder available in form settings.
             </p>
           </div>
@@ -705,7 +705,7 @@ function MappingTab({ field, onUpdate }: TabProps) {
     <div style={styles.section}>
       <div style={styles.sectionTitle}>CRM Field Mapping</div>
 
-      <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '1rem' }}>
+      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>
         Map this form field to a CRM field to automatically sync data.
       </p>
 

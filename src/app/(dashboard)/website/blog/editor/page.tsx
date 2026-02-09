@@ -211,19 +211,19 @@ export default function BlogPostEditorPage() {
       {/* Editor Toolbar */}
       <div style={{
         height: '60px',
-        background: '#2c3e50',
+        background: 'var(--color-bg-paper)',
         color: 'white',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 1.5rem',
-        borderBottom: '1px solid #34495e',
+        borderBottom: '1px solid var(--color-border-strong)',
       }}>
         <div>
           <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>
             Blog Post: {post.title}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#95a5a6' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
             /{post.slug}
           </div>
         </div>
@@ -233,7 +233,7 @@ export default function BlogPostEditorPage() {
             onClick={() => router.push(`/website/blog`)}
             style={{
               padding: '0.5rem 1rem',
-              background: '#6c757d',
+              background: 'var(--color-text-secondary)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -248,7 +248,7 @@ export default function BlogPostEditorPage() {
             disabled={saving}
             style={{
               padding: '0.5rem 1.5rem',
-              background: saving ? '#95a5a6' : '#27ae60',
+              background: saving ? 'var(--color-text-disabled)' : 'var(--color-success)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -271,12 +271,12 @@ export default function BlogPostEditorPage() {
         {/* Left Panel: Post Metadata */}
         <div style={{
           width: '300px',
-          background: '#f8f9fa',
-          borderRight: '1px solid #dee2e6',
+          background: 'var(--color-bg-elevated)',
+          borderRight: '1px solid var(--color-border-light)',
           overflowY: 'auto',
           padding: '1.5rem',
         }}>
-          <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.5rem', color: '#212529' }}>
+          <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             Post Settings
           </h3>
 
@@ -287,7 +287,7 @@ export default function BlogPostEditorPage() {
                 marginBottom: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
-                color: '#495057',
+                color: 'var(--color-text-disabled)',
               }}>
                 Title:
               </label>
@@ -298,7 +298,7 @@ export default function BlogPostEditorPage() {
                 style={{
                   width: '100%',
                   padding: '0.5rem',
-                  border: '1px solid #ced4da',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                 }}
@@ -311,7 +311,7 @@ export default function BlogPostEditorPage() {
                 marginBottom: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
-                color: '#495057',
+                color: 'var(--color-text-disabled)',
               }}>
                 Slug:
               </label>
@@ -322,7 +322,7 @@ export default function BlogPostEditorPage() {
                 style={{
                   width: '100%',
                   padding: '0.5rem',
-                  border: '1px solid #ced4da',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                 }}
@@ -335,7 +335,7 @@ export default function BlogPostEditorPage() {
                 marginBottom: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
-                color: '#495057',
+                color: 'var(--color-text-disabled)',
               }}>
                 Excerpt:
               </label>
@@ -346,7 +346,7 @@ export default function BlogPostEditorPage() {
                 style={{
                   width: '100%',
                   padding: '0.5rem',
-                  border: '1px solid #ced4da',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                   fontFamily: 'inherit',
@@ -361,7 +361,7 @@ export default function BlogPostEditorPage() {
                 marginBottom: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
-                color: '#495057',
+                color: 'var(--color-text-disabled)',
               }}>
                 Featured Image URL:
               </label>
@@ -373,7 +373,7 @@ export default function BlogPostEditorPage() {
                 style={{
                   width: '100%',
                   padding: '0.5rem',
-                  border: '1px solid #ced4da',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                 }}
@@ -386,7 +386,7 @@ export default function BlogPostEditorPage() {
                 marginBottom: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
-                color: '#495057',
+                color: 'var(--color-text-disabled)',
               }}>
                 Categories:
               </label>
@@ -400,7 +400,7 @@ export default function BlogPostEditorPage() {
                 style={{
                   width: '100%',
                   padding: '0.5rem',
-                  border: '1px solid #ced4da',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                   minHeight: '100px',
@@ -412,7 +412,7 @@ export default function BlogPostEditorPage() {
                   </option>
                 ))}
               </select>
-              <small style={{ display: 'block', marginTop: '0.25rem', color: '#6c757d' }}>
+              <small style={{ display: 'block', marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>
                 Hold Ctrl/Cmd to select multiple
               </small>
             </div>
@@ -423,7 +423,7 @@ export default function BlogPostEditorPage() {
                 marginBottom: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
-                color: '#495057',
+                color: 'var(--color-text-disabled)',
               }}>
                 Tags (comma-separated):
               </label>
@@ -435,7 +435,7 @@ export default function BlogPostEditorPage() {
                 style={{
                   width: '100%',
                   padding: '0.5rem',
-                  border: '1px solid #ced4da',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                 }}
@@ -448,7 +448,7 @@ export default function BlogPostEditorPage() {
                 marginBottom: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
-                color: '#495057',
+                color: 'var(--color-text-disabled)',
               }}>
                 Status:
               </label>
@@ -458,7 +458,7 @@ export default function BlogPostEditorPage() {
                 style={{
                   width: '100%',
                   padding: '0.5rem',
-                  border: '1px solid #ced4da',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   fontSize: '0.875rem',
                 }}
@@ -476,7 +476,7 @@ export default function BlogPostEditorPage() {
                 gap: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
-                color: '#495057',
+                color: 'var(--color-text-disabled)',
                 cursor: 'pointer',
               }}>
                 <input

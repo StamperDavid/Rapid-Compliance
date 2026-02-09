@@ -160,7 +160,7 @@ export default function IdentityRefinementPage() {
     voiceId: '',
     voiceName: '',
     avatarStyle: 'abstract',
-    primaryColor: '#6366f1',
+    primaryColor: 'var(--color-primary)',
     responseStyle: 'balanced',
     proactivityLevel: 5,
     empathyLevel: 7,
@@ -170,7 +170,7 @@ export default function IdentityRefinementPage() {
   const [newKeyPhrase, setNewKeyPhrase] = useState('');
   const [newAvoidPhrase, setNewAvoidPhrase] = useState('');
 
-  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? 'var(--color-primary)';
 
   const mapToneToArchetype = useCallback((tone: string): WorkforceIdentity['personalityArchetype'] => {
     const mapping: Record<string, WorkforceIdentity['personalityArchetype']> = {
@@ -439,30 +439,30 @@ export default function IdentityRefinementPage() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '4rem',
-        backgroundColor: '#000',
+        backgroundColor: 'var(--color-bg-main)',
         minHeight: '100vh',
-        color: '#fff'
+        color: 'var(--color-text-primary)'
       }}>
         <div style={{
           width: '48px',
           height: '48px',
-          border: '3px solid #333',
+          border: '3px solid var(--color-border-strong)',
           borderTopColor: primaryColor,
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }} />
-        <p style={{ marginTop: '1rem', color: '#999' }}>Loading your identity configuration...</p>
+        <p style={{ marginTop: '1rem', color: 'var(--color-text-secondary)' }}>Loading your identity configuration...</p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
-    <div style={{ backgroundColor: '#000', minHeight: '100vh', color: '#fff' }}>
+    <div style={{ backgroundColor: 'var(--color-bg-main)', minHeight: '100vh', color: 'var(--color-text-primary)' }}>
       {/* Hero Header */}
       <div style={{
-        background: `linear-gradient(135deg, ${primaryColor}22 0%, #000 50%)`,
-        borderBottom: '1px solid #1a1a1a',
+        background: `linear-gradient(135deg, ${primaryColor}22 0%, var(--color-bg-main) 50%)`,
+        borderBottom: '1px solid var(--color-border-light)',
         padding: '3rem 2rem 2rem'
       }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
@@ -482,7 +482,7 @@ export default function IdentityRefinementPage() {
           <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
             Define Your Workforce Identity
           </h1>
-          <p style={{ color: '#999', fontSize: '1.125rem', maxWidth: '600px', margin: '0 auto' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.125rem', maxWidth: '600px', margin: '0 auto' }}>
             Customize how your AI team presents itself to customers. This identity will be consistent across all channels.
           </p>
 
@@ -506,12 +506,12 @@ export default function IdentityRefinementPage() {
                     width: '36px',
                     height: '36px',
                     borderRadius: '50%',
-                    backgroundColor: currentStep > index + 1 ? primaryColor : currentStep === index + 1 ? primaryColor : '#1a1a1a',
-                    border: `2px solid ${currentStep >= index + 1 ? primaryColor : '#333'}`,
+                    backgroundColor: currentStep > index + 1 ? primaryColor : currentStep === index + 1 ? primaryColor : 'var(--color-bg-paper)',
+                    border: `2px solid ${currentStep >= index + 1 ? primaryColor : 'var(--color-border-strong)'}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: currentStep >= index + 1 ? '#fff' : '#666',
+                    color: currentStep >= index + 1 ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
                     fontWeight: '600',
                     fontSize: '0.875rem',
                   }}>
@@ -519,7 +519,7 @@ export default function IdentityRefinementPage() {
                   </div>
                   <span style={{
                     fontSize: '0.75rem',
-                    color: currentStep >= index + 1 ? '#fff' : '#666',
+                    color: currentStep >= index + 1 ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
                     whiteSpace: 'nowrap'
                   }}>
                     {step}
@@ -529,7 +529,7 @@ export default function IdentityRefinementPage() {
                   <div style={{
                     width: '60px',
                     height: '2px',
-                    backgroundColor: currentStep > index + 1 ? primaryColor : '#333',
+                    backgroundColor: currentStep > index + 1 ? primaryColor : 'var(--color-border-strong)',
                     marginBottom: '1.5rem'
                   }} />
                 )}
@@ -548,13 +548,13 @@ export default function IdentityRefinementPage() {
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
               Name Your AI Workforce
             </h2>
-            <p style={{ color: '#666', marginBottom: '2rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', marginBottom: '2rem' }}>
               Give your AI team a memorable identity that reflects your brand.
             </p>
 
             {/* Workforce Name */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Workforce Name *
               </label>
               <input
@@ -565,21 +565,21 @@ export default function IdentityRefinementPage() {
                 style={{
                   width: '100%',
                   padding: '1rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1.125rem',
                 }}
               />
-              <p style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+              <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
                 This is how your AI will introduce itself to customers
               </p>
             </div>
 
             {/* Tagline */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Tagline
               </label>
               <input
@@ -591,10 +591,10 @@ export default function IdentityRefinementPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
@@ -602,7 +602,7 @@ export default function IdentityRefinementPage() {
 
             {/* Personality Archetype */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
                 Personality Archetype *
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
@@ -623,8 +623,8 @@ export default function IdentityRefinementPage() {
                       }))}
                       style={{
                         padding: '1.25rem',
-                        backgroundColor: isSelected ? `${primaryColor}22` : '#0a0a0a',
-                        border: isSelected ? `2px solid ${primaryColor}` : '2px solid #333',
+                        backgroundColor: isSelected ? `${primaryColor}22` : 'var(--color-bg-main)',
+                        border: isSelected ? `2px solid ${primaryColor}` : '2px solid var(--color-border-strong)',
                         borderRadius: '0.75rem',
                         cursor: 'pointer',
                         textAlign: 'left',
@@ -632,13 +632,13 @@ export default function IdentityRefinementPage() {
                       }}
                     >
                       <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{archetype.emoji}</div>
-                      <div style={{ color: isSelected ? primaryColor : '#fff', fontWeight: '600', marginBottom: '0.25rem' }}>
+                      <div style={{ color: isSelected ? primaryColor : 'var(--color-text-primary)', fontWeight: '600', marginBottom: '0.25rem' }}>
                         {archetype.name}
                       </div>
-                      <div style={{ color: '#666', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
                         {archetype.description}
                       </div>
-                      <div style={{ color: '#999', fontSize: '0.625rem', fontStyle: 'italic' }}>
+                      <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.625rem', fontStyle: 'italic' }}>
                         {archetype.tone}
                       </div>
                     </button>
@@ -649,7 +649,7 @@ export default function IdentityRefinementPage() {
 
             {/* Avatar Style */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
                 Avatar Style
               </label>
               <div style={{ display: 'flex', gap: '1rem' }}>
@@ -662,8 +662,8 @@ export default function IdentityRefinementPage() {
                       style={{
                         width: '80px',
                         height: '80px',
-                        backgroundColor: isSelected ? `${primaryColor}22` : '#0a0a0a',
-                        border: isSelected ? `2px solid ${primaryColor}` : '2px solid #333',
+                        backgroundColor: isSelected ? `${primaryColor}22` : 'var(--color-bg-main)',
+                        border: isSelected ? `2px solid ${primaryColor}` : '2px solid var(--color-border-strong)',
                         borderRadius: '0.75rem',
                         cursor: 'pointer',
                         display: 'flex',
@@ -674,7 +674,7 @@ export default function IdentityRefinementPage() {
                       }}
                     >
                       <span style={{ fontSize: '1.5rem' }}>{style.preview}</span>
-                      <span style={{ fontSize: '0.625rem', color: '#999' }}>{style.name}</span>
+                      <span style={{ fontSize: '0.625rem', color: 'var(--color-text-secondary)' }}>{style.name}</span>
                     </button>
                   );
                 })}
@@ -683,7 +683,7 @@ export default function IdentityRefinementPage() {
 
             {/* Primary Color */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Brand Color
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -705,10 +705,10 @@ export default function IdentityRefinementPage() {
                   onChange={(e) => setIdentity(prev => ({ ...prev, primaryColor: e.target.value }))}
                   style={{
                     padding: '0.5rem',
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-main)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.25rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                     width: '100px',
                   }}
@@ -724,13 +724,13 @@ export default function IdentityRefinementPage() {
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
               Define Your Brand Voice
             </h2>
-            <p style={{ color: '#666', marginBottom: '2rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', marginBottom: '2rem' }}>
               Set the communication guidelines that shape how your AI speaks.
             </p>
 
             {/* Company Description */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Company Description
               </label>
               <textarea
@@ -744,10 +744,10 @@ export default function IdentityRefinementPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -757,7 +757,7 @@ export default function IdentityRefinementPage() {
 
             {/* Unique Value */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 What Makes You Unique
               </label>
               <textarea
@@ -771,10 +771,10 @@ export default function IdentityRefinementPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -784,7 +784,7 @@ export default function IdentityRefinementPage() {
 
             {/* Target Audience */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Target Audience
               </label>
               <input
@@ -798,10 +798,10 @@ export default function IdentityRefinementPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
@@ -809,7 +809,7 @@ export default function IdentityRefinementPage() {
 
             {/* Communication Style */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Communication Style
               </label>
               <input
@@ -823,10 +823,10 @@ export default function IdentityRefinementPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
@@ -834,7 +834,7 @@ export default function IdentityRefinementPage() {
 
             {/* Key Phrases */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Key Phrases to Use
               </label>
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -847,10 +847,10 @@ export default function IdentityRefinementPage() {
                   style={{
                     flex: 1,
                     padding: '0.5rem',
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-main)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.25rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                   }}
                 />
@@ -858,10 +858,10 @@ export default function IdentityRefinementPage() {
                   onClick={handleAddKeyPhrase}
                   style={{
                     padding: '0.5rem 1rem',
-                    backgroundColor: '#333',
+                    backgroundColor: 'var(--color-border-strong)',
                     border: 'none',
                     borderRadius: '0.25rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     cursor: 'pointer',
                   }}
                 >
@@ -898,7 +898,7 @@ export default function IdentityRefinementPage() {
 
             {/* Avoid Phrases */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Phrases to Avoid
               </label>
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -911,10 +911,10 @@ export default function IdentityRefinementPage() {
                   style={{
                     flex: 1,
                     padding: '0.5rem',
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-main)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.25rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                   }}
                 />
@@ -922,10 +922,10 @@ export default function IdentityRefinementPage() {
                   onClick={handleAddAvoidPhrase}
                   style={{
                     padding: '0.5rem 1rem',
-                    backgroundColor: '#333',
+                    backgroundColor: 'var(--color-border-strong)',
                     border: 'none',
                     borderRadius: '0.25rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     cursor: 'pointer',
                   }}
                 >
@@ -942,7 +942,7 @@ export default function IdentityRefinementPage() {
                       border: '1px solid rgba(239, 68, 68, 0.3)',
                       borderRadius: '9999px',
                       fontSize: '0.75rem',
-                      color: '#ef4444',
+                      color: 'var(--color-error)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
@@ -951,7 +951,7 @@ export default function IdentityRefinementPage() {
                     {phrase}
                     <button
                       onClick={() => handleRemoveAvoidPhrase(phrase)}
-                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.875rem' }}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: '0.875rem' }}
                     >
                       ×
                     </button>
@@ -962,7 +962,7 @@ export default function IdentityRefinementPage() {
 
             {/* Industry */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Industry
               </label>
               <input
@@ -976,10 +976,10 @@ export default function IdentityRefinementPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
@@ -993,13 +993,13 @@ export default function IdentityRefinementPage() {
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
               Choose Your Voice
             </h2>
-            <p style={{ color: '#666', marginBottom: '2rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', marginBottom: '2rem' }}>
               Select the text-to-speech engine and voice for your AI workforce.
             </p>
 
             {/* Voice Engine Selection */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
                 Voice Engine
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
@@ -1017,8 +1017,8 @@ export default function IdentityRefinementPage() {
                       }))}
                       style={{
                         padding: '1rem',
-                        backgroundColor: isSelected ? `${primaryColor}15` : '#0a0a0a',
-                        border: isSelected ? `2px solid ${primaryColor}` : '2px solid #333',
+                        backgroundColor: isSelected ? `${primaryColor}15` : 'var(--color-bg-main)',
+                        border: isSelected ? `2px solid ${primaryColor}` : '2px solid var(--color-border-strong)',
                         borderRadius: '0.75rem',
                         cursor: 'pointer',
                         textAlign: 'left',
@@ -1026,15 +1026,15 @@ export default function IdentityRefinementPage() {
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                        <span style={{ fontWeight: '600', color: isSelected ? primaryColor : '#fff', fontSize: '0.875rem' }}>
+                        <span style={{ fontWeight: '600', color: isSelected ? primaryColor : 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                           {info.name}
                         </span>
                         <span style={{
                           padding: '0.125rem 0.5rem',
                           backgroundColor: info.quality === 'ultra' ? 'rgba(168, 85, 247, 0.2)' :
                                           info.quality === 'premium' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                          color: info.quality === 'ultra' ? '#a855f7' :
-                                info.quality === 'premium' ? '#10b981' : '#f59e0b',
+                          color: info.quality === 'ultra' ? 'var(--color-secondary)' :
+                                info.quality === 'premium' ? 'var(--color-success)' : 'var(--color-warning)',
                           borderRadius: '9999px',
                           fontSize: '0.625rem',
                           fontWeight: '600',
@@ -1043,10 +1043,10 @@ export default function IdentityRefinementPage() {
                           {info.quality}
                         </span>
                       </div>
-                      <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem', lineHeight: '1.4' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem', lineHeight: '1.4' }}>
                         {info.description.substring(0, 60)}...
                       </p>
-                      <div style={{ fontSize: '0.625rem', color: '#999' }}>
+                      <div style={{ fontSize: '0.625rem', color: 'var(--color-text-secondary)' }}>
                         ${(info.pricing.costPer1kChars / 100).toFixed(3)}/1k chars
                       </div>
                     </button>
@@ -1057,7 +1057,7 @@ export default function IdentityRefinementPage() {
 
             {/* Voice Selection */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                 Select Voice
               </label>
               <select
@@ -1074,10 +1074,10 @@ export default function IdentityRefinementPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               >
@@ -1100,8 +1100,8 @@ export default function IdentityRefinementPage() {
               style={{
                 width: '100%',
                 padding: '1rem',
-                backgroundColor: testingVoice ? '#333' : '#10b981',
-                color: '#fff',
+                backgroundColor: testingVoice ? 'var(--color-border-strong)' : 'var(--color-success)',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 cursor: testingVoice || !identity.voiceId ? 'not-allowed' : 'pointer',
@@ -1116,8 +1116,8 @@ export default function IdentityRefinementPage() {
             {/* Behavior Settings */}
             <div style={{
               padding: '1.5rem',
-              backgroundColor: '#0a0a0a',
-              border: '1px solid #1a1a1a',
+              backgroundColor: 'var(--color-bg-main)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '0.75rem',
               marginBottom: '2rem'
             }}>
@@ -1125,7 +1125,7 @@ export default function IdentityRefinementPage() {
 
               {/* Response Style */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                   Response Style
                 </label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1136,10 +1136,10 @@ export default function IdentityRefinementPage() {
                       style={{
                         flex: 1,
                         padding: '0.75rem',
-                        backgroundColor: identity.responseStyle === style ? `${primaryColor}22` : '#1a1a1a',
-                        border: identity.responseStyle === style ? `1px solid ${primaryColor}` : '1px solid #333',
+                        backgroundColor: identity.responseStyle === style ? `${primaryColor}22` : 'var(--color-bg-paper)',
+                        border: identity.responseStyle === style ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: identity.responseStyle === style ? primaryColor : '#999',
+                        color: identity.responseStyle === style ? primaryColor : 'var(--color-text-secondary)',
                         cursor: 'pointer',
                         fontSize: '0.875rem',
                         fontWeight: identity.responseStyle === style ? '600' : '400',
@@ -1154,7 +1154,7 @@ export default function IdentityRefinementPage() {
 
               {/* Proactivity Level */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                   Proactivity Level: {identity.proactivityLevel}/10
                 </label>
                 <input
@@ -1165,7 +1165,7 @@ export default function IdentityRefinementPage() {
                   onChange={(e) => setIdentity(prev => ({ ...prev, proactivityLevel: parseInt(e.target.value) }))}
                   style={{ width: '100%', accentColor: primaryColor }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.625rem', color: '#666' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>
                   <span>Reactive</span>
                   <span>Proactive</span>
                 </div>
@@ -1173,7 +1173,7 @@ export default function IdentityRefinementPage() {
 
               {/* Empathy Level */}
               <div>
-                <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                   Empathy Level: {identity.empathyLevel}/10
                 </label>
                 <input
@@ -1184,7 +1184,7 @@ export default function IdentityRefinementPage() {
                   onChange={(e) => setIdentity(prev => ({ ...prev, empathyLevel: parseInt(e.target.value) }))}
                   style={{ width: '100%', accentColor: primaryColor }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.625rem', color: '#666' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>
                   <span>Direct</span>
                   <span>Empathetic</span>
                 </div>
@@ -1199,15 +1199,15 @@ export default function IdentityRefinementPage() {
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
               Review Your Workforce Identity
             </h2>
-            <p style={{ color: '#666', marginBottom: '2rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', marginBottom: '2rem' }}>
               Confirm your AI workforce configuration before launching.
             </p>
 
             {/* Identity Summary Card */}
             <div style={{
               padding: '2rem',
-              backgroundColor: '#0a0a0a',
-              border: '1px solid #1a1a1a',
+              backgroundColor: 'var(--color-bg-main)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '1rem',
               marginBottom: '2rem'
             }}>
@@ -1222,15 +1222,15 @@ export default function IdentityRefinementPage() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '2rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                 }}>
                   {AVATAR_STYLES.find(s => s.id === identity.avatarStyle)?.preview ?? '🤖'}
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                     {identity.workforceName || 'Your AI Workforce'}
                   </h3>
-                  <p style={{ color: '#999', fontSize: '0.875rem' }}>
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                     {identity.tagline || 'Ready to help your customers'}
                   </p>
                   <div style={{
@@ -1252,37 +1252,37 @@ export default function IdentityRefinementPage() {
               {/* Details Grid */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Voice Engine
                   </div>
-                  <div style={{ color: '#fff', fontWeight: '600' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>
                     {TTS_PROVIDER_INFO[identity.voiceEngine]?.name || 'Native'} - {identity.voiceName || 'Default'}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Response Style
                   </div>
-                  <div style={{ color: '#fff', fontWeight: '600', textTransform: 'capitalize' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontWeight: '600', textTransform: 'capitalize' }}>
                     {identity.responseStyle}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Industry
                   </div>
-                  <div style={{ color: '#fff', fontWeight: '600' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>
                     {identity.brandDNA.industry || 'Not specified'}
                   </div>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Target Audience
                   </div>
-                  <div style={{ color: '#fff', fontWeight: '600' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>
                     {identity.brandDNA.targetAudience || 'Not specified'}
                   </div>
                 </div>
@@ -1290,8 +1290,8 @@ export default function IdentityRefinementPage() {
 
               {/* Key Phrases Preview */}
               {identity.brandDNA.keyPhrases.length > 0 && (
-                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #1a1a1a' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border-light)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Key Phrases
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -1300,17 +1300,17 @@ export default function IdentityRefinementPage() {
                         key={phrase}
                         style={{
                           padding: '0.25rem 0.5rem',
-                          backgroundColor: '#1a1a1a',
+                          backgroundColor: 'var(--color-bg-paper)',
                           borderRadius: '0.25rem',
                           fontSize: '0.75rem',
-                          color: '#999',
+                          color: 'var(--color-text-secondary)',
                         }}
                       >
                         {phrase}
                       </span>
                     ))}
                     {identity.brandDNA.keyPhrases.length > 5 && (
-                      <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                         +{identity.brandDNA.keyPhrases.length - 5} more
                       </span>
                     )}
@@ -1329,7 +1329,7 @@ export default function IdentityRefinementPage() {
               <h4 style={{ color: primaryColor, fontWeight: '600', marginBottom: '0.75rem' }}>
                 What happens next?
               </h4>
-              <ul style={{ color: '#999', fontSize: '0.875rem', marginLeft: '1.5rem', lineHeight: '1.8' }}>
+              <ul style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginLeft: '1.5rem', lineHeight: '1.8' }}>
                 <li>Your AI workforce identity will be saved and applied across all channels</li>
                 <li>You can further customize individual tools in the Training Labs</li>
                 <li>Visit the Voice Training Lab to configure phone-specific settings</li>
@@ -1345,7 +1345,7 @@ export default function IdentityRefinementPage() {
           justifyContent: 'space-between',
           marginTop: '2rem',
           paddingTop: '2rem',
-          borderTop: '1px solid #1a1a1a'
+          borderTop: '1px solid var(--color-border-light)'
         }}>
           <button
             onClick={handleBack}
@@ -1353,9 +1353,9 @@ export default function IdentityRefinementPage() {
             style={{
               padding: '0.75rem 1.5rem',
               backgroundColor: 'transparent',
-              border: '1px solid #333',
+              border: '1px solid var(--color-border-strong)',
               borderRadius: '0.5rem',
-              color: currentStep === 1 ? '#666' : '#fff',
+              color: currentStep === 1 ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
               cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
               fontSize: '0.875rem',
               fontWeight: '600',
@@ -1369,10 +1369,10 @@ export default function IdentityRefinementPage() {
             disabled={saving}
             style={{
               padding: '0.75rem 2rem',
-              backgroundColor: saving ? '#333' : primaryColor,
+              backgroundColor: saving ? 'var(--color-border-strong)' : primaryColor,
               border: 'none',
               borderRadius: '0.5rem',
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               cursor: saving ? 'not-allowed' : 'pointer',
               fontSize: '0.875rem',
               fontWeight: '600',

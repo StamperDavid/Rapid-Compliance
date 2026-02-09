@@ -718,10 +718,10 @@ export default function PageEditorPage() {
       {confirmDialog && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', maxWidth: '400px', margin: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
-            <p style={{ color: '#111827', marginBottom: '1rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
+            <p style={{ color: 'var(--color-text-primary)', marginBottom: '1rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button onClick={() => setConfirmDialog(null)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', color: '#6b7280', background: '#f3f4f6', border: 'none', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={confirmDialog.onConfirm} style={{ padding: '0.5rem 1rem', borderRadius: '8px', backgroundColor: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>Confirm</button>
+              <button onClick={() => setConfirmDialog(null)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', color: 'var(--color-text-disabled)', background: 'var(--color-bg-elevated)', border: 'none', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={confirmDialog.onConfirm} style={{ padding: '0.5rem 1rem', borderRadius: '8px', backgroundColor: 'var(--color-error)', color: 'white', border: 'none', cursor: 'pointer' }}>Confirm</button>
             </div>
           </div>
         </div>
@@ -731,12 +731,12 @@ export default function PageEditorPage() {
       {promptDialog && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', maxWidth: '400px', width: '100%', margin: '1rem', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
-            <p style={{ color: '#111827', marginBottom: '1rem', fontSize: '1rem' }}>{promptDialog.message}</p>
+            <p style={{ color: 'var(--color-text-primary)', marginBottom: '1rem', fontSize: '1rem' }}>{promptDialog.message}</p>
             <input
               type="text"
               value={promptValue}
               onChange={(e) => setPromptValue(e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}
+              style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--color-border-light)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.875rem' }}
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -745,8 +745,8 @@ export default function PageEditorPage() {
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button onClick={() => setPromptDialog(null)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', color: '#6b7280', background: '#f3f4f6', border: 'none', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => promptDialog.onSubmit(promptValue)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', backgroundColor: '#3b82f6', color: 'white', border: 'none', cursor: 'pointer' }}>Submit</button>
+              <button onClick={() => setPromptDialog(null)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', color: 'var(--color-text-disabled)', background: 'var(--color-bg-elevated)', border: 'none', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => promptDialog.onSubmit(promptValue)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', backgroundColor: 'var(--color-info)', color: 'white', border: 'none', cursor: 'pointer' }}>Submit</button>
             </div>
           </div>
         </div>

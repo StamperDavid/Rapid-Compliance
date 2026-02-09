@@ -88,7 +88,7 @@ export default function WorkspaceDashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : 'var(--color-primary)';
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -140,19 +140,19 @@ export default function WorkspaceDashboardPage() {
 
         // Convert to pipeline array
         const stageColors: Record<string, string> = {
-          'Prospecting': '#94a3b8',
-          'Qualification': '#6366f1',
-          'Proposal': '#8b5cf6',
-          'Negotiation': '#ec4899',
-          'Closed Won': '#10b981',
-          'Closed Lost': '#ef4444',
+          'Prospecting': 'var(--color-text-secondary)',
+          'Qualification': 'var(--color-primary)',
+          'Proposal': 'var(--color-primary)',
+          'Negotiation': 'var(--color-primary)',
+          'Closed Won': 'var(--color-success)',
+          'Closed Lost': 'var(--color-error)',
         };
 
         const pipelineData = Object.entries(stageMap).map(([stage, data]) => ({
           stage,
           count: data.count,
           value: data.value,
-          color: stageColors[stage] || '#6366f1',
+          color: stageColors[stage] || 'var(--color-primary)',
         }));
 
         setPipeline(pipelineData);
@@ -308,7 +308,7 @@ export default function WorkspaceDashboardPage() {
               style={{
                 padding: '0.625rem 1.5rem',
                 backgroundColor: primaryColor,
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 borderRadius: '0.5rem',
                 textDecoration: 'none',
                 fontSize: '0.875rem',
@@ -326,25 +326,25 @@ export default function WorkspaceDashboardPage() {
             label="Total Leads"
             value={loading ? '...' : stats.totalLeads.toLocaleString()}
             icon="🎯"
-            color="#6366f1"
+            color="var(--color-primary)"
           />
           <StatCard
             label="Active Deals"
             value={loading ? '...' : stats.activeDeals.toLocaleString()}
             icon="💼"
-            color="#8b5cf6"
+            color="var(--color-primary)"
           />
           <StatCard
             label="Pipeline Value"
             value={loading ? '...' : `$${stats.pipelineValue.toLocaleString()}`}
             icon="💰"
-            color="#10b981"
+            color="var(--color-success)"
           />
           <StatCard
             label="Win Rate"
             value={loading ? '...' : `${winRate}%`}
             icon="🏆"
-            color="#f59e0b"
+            color="var(--color-warning)"
             subtitle={`${stats.wonDeals} won / ${stats.lostDeals} lost`}
           />
         </div>
@@ -449,8 +449,8 @@ export default function WorkspaceDashboardPage() {
                       <div className="text-[var(--color-text-disabled)]" style={{ fontSize: '0.75rem' }}>
                         <span style={{
                           padding: '2px 6px',
-                          backgroundColor: task.priority === 'Urgent' ? '#7f1d1d' : task.priority === 'High' ? '#7c2d12' : '#374151',
-                          color: task.priority === 'Urgent' ? '#fca5a5' : task.priority === 'High' ? '#fdba74' : '#9ca3af',
+                          backgroundColor: task.priority === 'Urgent' ? 'var(--color-error)' : task.priority === 'High' ? 'var(--color-warning)' : 'var(--color-border-main)',
+                          color: task.priority === 'Urgent' ? 'var(--color-text-primary)' : task.priority === 'High' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                           borderRadius: '4px',
                           fontSize: '0.7rem',
                           marginRight: '0.5rem'

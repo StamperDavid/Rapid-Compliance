@@ -210,14 +210,14 @@ export default function NavigationManagementPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'var(--color-bg-elevated)' }}>
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: '#111' }}>
+          <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
             Navigation Management
           </h1>
-          <p style={{ margin: 0, color: '#666' }}>
+          <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
             Manage your site navigation and homepage
           </p>
         </div>
@@ -230,7 +230,7 @@ export default function NavigationManagementPage() {
           marginBottom: '2rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         }}>
-          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: '#212529' }}>
+          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             Homepage
           </h2>
 
@@ -240,7 +240,7 @@ export default function NavigationManagementPage() {
               marginBottom: '0.5rem',
               fontSize: '0.875rem',
               fontWeight: '600',
-              color: '#495057',
+              color: 'var(--color-text-disabled)',
             }}>
               Homepage (leave empty for default landing):
             </label>
@@ -250,7 +250,7 @@ export default function NavigationManagementPage() {
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid #ced4da',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
                 fontSize: '1rem',
               }}
@@ -268,7 +268,7 @@ export default function NavigationManagementPage() {
             onClick={() => void saveHomepage()}
             style={{
               padding: '0.75rem 1.5rem',
-              background: '#007bff',
+              background: 'var(--color-info)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -295,14 +295,14 @@ export default function NavigationManagementPage() {
             alignItems: 'center',
             marginBottom: '1.5rem',
           }}>
-            <h2 style={{ fontSize: '1.5rem', margin: 0, color: '#212529' }}>
+            <h2 style={{ fontSize: '1.5rem', margin: 0, color: 'var(--color-text-primary)' }}>
               Header Menu
             </h2>
             <button
               onClick={addHeaderLink}
               style={{
                 padding: '0.5rem 1rem',
-                background: '#28a745',
+                background: 'var(--color-success)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -319,8 +319,8 @@ export default function NavigationManagementPage() {
             <div style={{
               padding: '2rem',
               textAlign: 'center',
-              color: '#6c757d',
-              background: '#f8f9fa',
+              color: 'var(--color-text-secondary)',
+              background: 'var(--color-bg-elevated)',
               borderRadius: '4px',
             }}>
               <p style={{ margin: 0 }}>No menu items yet. Add your first link!</p>
@@ -335,15 +335,15 @@ export default function NavigationManagementPage() {
                     alignItems: 'center',
                     gap: '1rem',
                     padding: '1rem',
-                    background: '#f8f9fa',
+                    background: 'var(--color-bg-elevated)',
                     borderRadius: '4px',
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '600', color: '#212529', marginBottom: '0.25rem' }}>
+                    <div style={{ fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                       {link.label}
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                       {link.url}
                     </div>
                   </div>
@@ -354,8 +354,8 @@ export default function NavigationManagementPage() {
                       disabled={index === 0}
                       style={{
                         padding: '0.5rem',
-                        background: index === 0 ? '#e9ecef' : '#6c757d',
-                        color: index === 0 ? '#adb5bd' : 'white',
+                        background: index === 0 ? 'var(--color-bg-elevated)' : 'var(--color-text-secondary)',
+                        color: index === 0 ? 'var(--color-text-secondary)' : 'white',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: index === 0 ? 'not-allowed' : 'pointer',
@@ -369,8 +369,8 @@ export default function NavigationManagementPage() {
                       disabled={index === navigation.header.length - 1}
                       style={{
                         padding: '0.5rem',
-                        background: index === navigation.header.length - 1 ? '#e9ecef' : '#6c757d',
-                        color: index === navigation.header.length - 1 ? '#adb5bd' : 'white',
+                        background: index === navigation.header.length - 1 ? 'var(--color-bg-elevated)' : 'var(--color-text-secondary)',
+                        color: index === navigation.header.length - 1 ? 'var(--color-text-secondary)' : 'white',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: index === navigation.header.length - 1 ? 'not-allowed' : 'pointer',
@@ -383,7 +383,7 @@ export default function NavigationManagementPage() {
                       onClick={() => removeHeaderLink(link.id)}
                       style={{
                         padding: '0.5rem 0.75rem',
-                        background: '#dc3545',
+                        background: 'var(--color-error)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -408,7 +408,7 @@ export default function NavigationManagementPage() {
           marginBottom: '2rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         }}>
-          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: '#212529' }}>
+          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             Footer
           </h2>
 
@@ -418,7 +418,7 @@ export default function NavigationManagementPage() {
               marginBottom: '0.5rem',
               fontSize: '0.875rem',
               fontWeight: '600',
-              color: '#495057',
+              color: 'var(--color-text-disabled)',
             }}>
               Copyright Text:
             </label>
@@ -435,7 +435,7 @@ export default function NavigationManagementPage() {
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid #ced4da',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
                 fontSize: '1rem',
               }}
@@ -449,7 +449,7 @@ export default function NavigationManagementPage() {
               gap: '0.5rem',
               fontSize: '0.875rem',
               fontWeight: '600',
-              color: '#495057',
+              color: 'var(--color-text-disabled)',
               cursor: 'pointer',
             }}>
               <input
@@ -476,7 +476,7 @@ export default function NavigationManagementPage() {
             disabled={saving}
             style={{
               padding: '0.75rem 2rem',
-              background: saving ? '#95a5a6' : '#28a745',
+              background: saving ? 'var(--color-text-disabled)' : 'var(--color-success)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',

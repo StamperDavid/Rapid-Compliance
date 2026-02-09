@@ -460,7 +460,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <label style={labelStyle}>Text Color</label>
           <input
             type="color"
-            value={(style.color !== '' && style.color != null) ? style.color : '#000000'}
+            value={(style.color !== '' && style.color != null) ? style.color : 'var(--color-bg-main)'}
             onChange={(e) => updateStyle('color', e.target.value)}
             style={{ ...inputStyle, height: '40px' }}
           />
@@ -470,7 +470,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <label style={labelStyle}>Background Color</label>
           <input
             type="color"
-            value={(style.backgroundColor !== '' && style.backgroundColor != null) ? style.backgroundColor : '#ffffff'}
+            value={(style.backgroundColor !== '' && style.backgroundColor != null) ? style.backgroundColor : 'var(--color-text-primary)'}
             onChange={(e) => updateStyle('backgroundColor', e.target.value)}
             style={{ ...inputStyle, height: '40px' }}
           />
@@ -540,7 +540,7 @@ function SectionStyleEditor({ section, onUpdate }: SectionStyleEditorProps) {
         <label style={labelStyle}>Background Color</label>
         <input
           type="color"
-          value={(section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : '#ffffff'}
+          value={(section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : 'var(--color-text-primary)'}
           onChange={(e) => onUpdate({ backgroundColor: e.target.value })}
           style={{ ...inputStyle, height: '40px' }}
         />

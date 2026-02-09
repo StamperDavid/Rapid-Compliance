@@ -200,30 +200,30 @@ export default function LivingLedgerPage() {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
-          backgroundColor: '#000',
+          backgroundColor: 'var(--color-bg-main)',
         }}
       >
-        <div style={{ color: '#fff' }}>Loading Living Ledger...</div>
+        <div style={{ color: 'var(--color-text-primary)' }}>Loading Living Ledger...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000', padding: '2rem' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', padding: '2rem' }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1
           style={{
             fontSize: '2rem',
             fontWeight: '800',
-            color: '#fff',
+            color: 'var(--color-text-primary)',
             margin: 0,
             marginBottom: '0.5rem',
           }}
         >
           🧠 CRM Living Ledger
         </h1>
-        <p style={{ fontSize: '1rem', color: '#999', margin: 0 }}>
+        <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', margin: 0 }}>
           AI-powered deal intelligence with real-time health monitoring and next best actions
         </p>
       </div>
@@ -235,9 +235,9 @@ export default function LivingLedgerPage() {
           gap: '1rem',
           marginBottom: '2rem',
           padding: '1rem',
-          backgroundColor: '#0a0a0a',
+          backgroundColor: 'var(--color-bg-main)',
           borderRadius: '0.75rem',
-          border: '1px solid #1a1a1a',
+          border: '1px solid var(--color-border-light)',
         }}
       >
         <button
@@ -245,8 +245,8 @@ export default function LivingLedgerPage() {
           disabled={monitoringEnabled}
           style={{
             padding: '0.75rem 1.5rem',
-            backgroundColor: monitoringEnabled ? '#065f46' : '#6366f1',
-            color: '#fff',
+            backgroundColor: monitoringEnabled ? 'var(--color-success-dark)' : 'var(--color-primary)',
+            color: 'var(--color-text-primary)',
             border: 'none',
             borderRadius: '0.5rem',
             cursor: monitoringEnabled ? 'not-allowed' : 'pointer',
@@ -262,9 +262,9 @@ export default function LivingLedgerPage() {
           onClick={() => void handleHealthCheck()}
           style={{
             padding: '0.75rem 1.5rem',
-            backgroundColor: '#1a1a1a',
-            color: '#fff',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-paper)',
+            color: 'var(--color-text-primary)',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '0.5rem',
             cursor: 'pointer',
             fontWeight: '600',
@@ -282,30 +282,30 @@ export default function LivingLedgerPage() {
               gap: '1.5rem',
               alignItems: 'center',
               paddingLeft: '1.5rem',
-              borderLeft: '1px solid #333',
+              borderLeft: '1px solid var(--color-border-strong)',
             }}
           >
             <div>
-              <div style={{ fontSize: '0.625rem', color: '#666' }}>TOTAL DEALS</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#fff' }}>
+              <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>TOTAL DEALS</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-text-primary)' }}>
                 {healthCheckSummary.total}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.625rem', color: '#666' }}>HEALTHY</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981' }}>
+              <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>HEALTHY</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-success)' }}>
                 {healthCheckSummary.healthy}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.625rem', color: '#666' }}>AT RISK</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#f59e0b' }}>
+              <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>AT RISK</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-warning)' }}>
                 {healthCheckSummary.atRisk}
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.625rem', color: '#666' }}>CRITICAL</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#ef4444' }}>
+              <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>CRITICAL</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-error)' }}>
                 {healthCheckSummary.critical}
               </div>
             </div>
@@ -321,7 +321,7 @@ export default function LivingLedgerPage() {
             style={{
               fontSize: '0.875rem',
               fontWeight: '700',
-              color: '#ccc',
+              color: 'var(--color-text-primary)',
               marginBottom: '1rem',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -334,17 +334,17 @@ export default function LivingLedgerPage() {
               <div
                 style={{
                   padding: '2rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.5rem',
                   textAlign: 'center',
                 }}
               >
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📊</div>
-                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                   No deals yet
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '1rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>
                   Add deals from the CRM to track health scores and get AI recommendations.
                 </div>
                 <a
@@ -352,8 +352,8 @@ export default function LivingLedgerPage() {
                   style={{
                     display: 'inline-block',
                     padding: '0.5rem 1rem',
-                    backgroundColor: '#6366f1',
-                    color: '#fff',
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'var(--color-text-primary)',
                     borderRadius: '0.375rem',
                     fontSize: '0.75rem',
                     fontWeight: '600',
@@ -369,38 +369,38 @@ export default function LivingLedgerPage() {
                 onClick={() => setSelectedDealId(deal.id)}
                 style={{
                   padding: '1rem',
-                  backgroundColor: selectedDealId === deal.id ? '#1a1a1a' : '#0a0a0a',
-                  border: `1px solid ${selectedDealId === deal.id ? '#6366f1' : '#1a1a1a'}`,
+                  backgroundColor: selectedDealId === deal.id ? 'var(--color-bg-paper)' : 'var(--color-bg-main)',
+                  border: `1px solid ${selectedDealId === deal.id ? 'var(--color-primary)' : 'var(--color-bg-paper)'}`,
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
                   if (selectedDealId !== deal.id) {
-                    e.currentTarget.style.backgroundColor = '#111';
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-main)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (selectedDealId !== deal.id) {
-                    e.currentTarget.style.backgroundColor = '#0a0a0a';
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-main)';
                   }
                 }}
               >
-                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
+                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                   {deal.companyName}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                   {deal.name}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#10b981' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--color-success)' }}>
                     ${(deal.value / 1000).toFixed(0)}k
                   </span>
                   <span
                     style={{
                       padding: '0.125rem 0.5rem',
-                      backgroundColor: '#1a1a1a',
-                      color: '#6366f1',
+                      backgroundColor: 'var(--color-bg-paper)',
+                      color: 'var(--color-primary)',
                       borderRadius: '9999px',
                       fontSize: '0.625rem',
                       fontWeight: '600',
@@ -422,28 +422,28 @@ export default function LivingLedgerPage() {
               <div
                 style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
+                  backgroundColor: 'var(--color-bg-main)',
                   borderRadius: '0.75rem',
-                  border: '1px solid #1a1a1a',
+                  border: '1px solid var(--color-border-light)',
                   marginBottom: '2rem',
                 }}
               >
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#fff', margin: 0, marginBottom: '0.5rem' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--color-text-primary)', margin: 0, marginBottom: '0.5rem' }}>
                   {selectedDeal.name}
                 </h2>
-                <div style={{ display: 'flex', gap: '2rem', fontSize: '0.875rem', color: '#999' }}>
+                <div style={{ display: 'flex', gap: '2rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                   <div>
-                    Value: <span style={{ color: '#10b981', fontWeight: '700' }}>${selectedDeal.value.toLocaleString()}</span>
+                    Value: <span style={{ color: 'var(--color-success)', fontWeight: '700' }}>${selectedDeal.value.toLocaleString()}</span>
                   </div>
                   <div>
-                    Stage: <span style={{ color: '#6366f1', fontWeight: '600' }}>{selectedDeal.stage}</span>
+                    Stage: <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>{selectedDeal.stage}</span>
                   </div>
                   <div>
-                    Probability: <span style={{ color: '#fff', fontWeight: '600' }}>{selectedDeal.probability}%</span>
+                    Probability: <span style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>{selectedDeal.probability}%</span>
                   </div>
                   <div>
                     Close Date:{' '}
-                    <span style={{ color: '#fff', fontWeight: '600' }}>
+                    <span style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>
                       {selectedDeal.expectedCloseDate != null && selectedDeal.expectedCloseDate instanceof Date
                         ? selectedDeal.expectedCloseDate.toLocaleDateString()
                         : 'N/A'}
@@ -462,11 +462,11 @@ export default function LivingLedgerPage() {
                     <div
                       style={{
                         padding: '2rem',
-                        backgroundColor: '#0a0a0a',
+                        backgroundColor: 'var(--color-bg-main)',
                         borderRadius: '0.75rem',
-                        border: '1px solid #1a1a1a',
+                        border: '1px solid var(--color-border-light)',
                         textAlign: 'center',
-                        color: '#666',
+                        color: 'var(--color-text-disabled)',
                       }}
                     >
                       Loading health score...
@@ -488,11 +488,11 @@ export default function LivingLedgerPage() {
                     <div
                       style={{
                         padding: '2rem',
-                        backgroundColor: '#0a0a0a',
+                        backgroundColor: 'var(--color-bg-main)',
                         borderRadius: '0.75rem',
-                        border: '1px solid #1a1a1a',
+                        border: '1px solid var(--color-border-light)',
                         textAlign: 'center',
-                        color: '#666',
+                        color: 'var(--color-text-disabled)',
                       }}
                     >
                       Loading recommendations...
@@ -505,11 +505,11 @@ export default function LivingLedgerPage() {
             <div
               style={{
                 padding: '4rem',
-                backgroundColor: '#0a0a0a',
+                backgroundColor: 'var(--color-bg-main)',
                 borderRadius: '0.75rem',
-                border: '1px solid #1a1a1a',
+                border: '1px solid var(--color-border-light)',
                 textAlign: 'center',
-                color: '#666',
+                color: 'var(--color-text-disabled)',
               }}
             >
               Select a deal to view details

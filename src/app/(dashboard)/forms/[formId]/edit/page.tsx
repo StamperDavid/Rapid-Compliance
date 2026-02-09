@@ -39,7 +39,7 @@ const styles = {
     height: '100vh',
     display: 'flex',
     flexDirection: 'column' as const,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: 'var(--color-bg-main)',
   },
   loadingContainer: {
     display: 'flex',
@@ -47,20 +47,20 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100vh',
-    backgroundColor: '#0a0a0a',
+    backgroundColor: 'var(--color-bg-main)',
   },
   spinner: {
     width: '48px',
     height: '48px',
-    border: '3px solid #1a1a1a',
-    borderTop: '3px solid #6366f1',
+    border: '3px solid var(--color-border-light)',
+    borderTop: '3px solid var(--color-primary)',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
   },
   loadingText: {
     marginTop: '1.5rem',
     fontSize: '1rem',
-    color: '#666',
+    color: 'var(--color-text-disabled)',
   },
   errorContainer: {
     display: 'flex',
@@ -68,7 +68,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100vh',
-    backgroundColor: '#0a0a0a',
+    backgroundColor: 'var(--color-bg-main)',
     padding: '2rem',
   },
   errorIcon: {
@@ -78,20 +78,20 @@ const styles = {
   errorTitle: {
     fontSize: '1.5rem',
     fontWeight: 'bold',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     marginBottom: '0.5rem',
   },
   errorText: {
     fontSize: '1rem',
-    color: '#666',
+    color: 'var(--color-text-disabled)',
     marginBottom: '1.5rem',
     textAlign: 'center' as const,
     maxWidth: '400px',
   },
   errorButton: {
     padding: '0.75rem 1.5rem',
-    backgroundColor: '#6366f1',
-    color: '#fff',
+    backgroundColor: 'var(--color-primary)',
+    color: 'var(--color-text-primary)',
     border: 'none',
     borderRadius: '0.5rem',
     fontSize: '0.875rem',
@@ -103,9 +103,9 @@ const styles = {
     top: '1rem',
     left: '1rem',
     padding: '0.5rem 1rem',
-    backgroundColor: '#1a1a1a',
-    color: '#999',
-    border: '1px solid #333',
+    backgroundColor: 'var(--color-bg-paper)',
+    color: 'var(--color-text-secondary)',
+    border: '1px solid var(--color-border-strong)',
     borderRadius: '0.5rem',
     fontSize: '0.875rem',
     cursor: 'pointer',
@@ -120,10 +120,10 @@ const styles = {
     bottom: '1.5rem',
     right: '1.5rem',
     padding: '0.75rem 1.25rem',
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #333',
+    backgroundColor: 'var(--color-bg-paper)',
+    border: '1px solid var(--color-border-strong)',
     borderRadius: '0.5rem',
-    color: '#999',
+    color: 'var(--color-text-secondary)',
     fontSize: '0.875rem',
     display: 'flex',
     alignItems: 'center',
@@ -131,8 +131,8 @@ const styles = {
     zIndex: 100,
   },
   saveSuccess: {
-    borderColor: '#22c55e',
-    color: '#22c55e',
+    borderColor: 'var(--color-success)',
+    color: 'var(--color-success)',
   },
   confirmModalOverlay: {
     position: 'fixed' as const,
@@ -147,8 +147,8 @@ const styles = {
     zIndex: 1000,
   },
   confirmModal: {
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #333',
+    backgroundColor: 'var(--color-bg-paper)',
+    border: '1px solid var(--color-border-strong)',
     borderRadius: '0.75rem',
     padding: '1.5rem',
     maxWidth: '400px',
@@ -157,12 +157,12 @@ const styles = {
   confirmTitle: {
     fontSize: '1.125rem',
     fontWeight: '600',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     marginBottom: '1rem',
   },
   confirmMessage: {
     fontSize: '0.875rem',
-    color: '#999',
+    color: 'var(--color-text-secondary)',
     marginBottom: '1.5rem',
     lineHeight: '1.5',
   },
@@ -180,12 +180,12 @@ const styles = {
     cursor: 'pointer',
   },
   confirmButtonCancel: {
-    backgroundColor: '#2a2a2a',
-    color: '#999',
+    backgroundColor: 'var(--color-bg-elevated)',
+    color: 'var(--color-text-secondary)',
   },
   confirmButtonConfirm: {
-    backgroundColor: '#6366f1',
-    color: '#fff',
+    backgroundColor: 'var(--color-primary)',
+    color: 'var(--color-text-primary)',
   },
 };
 
@@ -481,8 +481,8 @@ export default function FormEditorPage() {
           <button
             style={{
               ...styles.errorButton,
-              backgroundColor: '#1a1a1a',
-              border: '1px solid #333',
+              backgroundColor: 'var(--color-bg-paper)',
+              border: '1px solid var(--color-border-strong)',
             }}
             onClick={() => {
               void handleBack();

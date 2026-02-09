@@ -87,17 +87,17 @@ export function TeamPerformanceCard({ data, loading = false }: TeamPerformanceCa
           <h4 className="text-sm font-medium text-gray-700 mb-3">Revenue by Rep</h4>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.topPerformers}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
               <XAxis
                 dataKey="repName"
-                stroke="#6b7280"
+                stroke="var(--color-text-disabled)"
                 fontSize={12}
                 angle={-45}
                 textAnchor="end"
                 height={80}
               />
               <YAxis
-                stroke="#6b7280"
+                stroke="var(--color-text-disabled)"
                 fontSize={12}
                 tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
               />

@@ -58,7 +58,7 @@ export default function EcommerceAnalyticsPage() {
     void loadAnalytics();
   }, [loadAnalytics]);
 
-  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : 'var(--color-primary)';
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

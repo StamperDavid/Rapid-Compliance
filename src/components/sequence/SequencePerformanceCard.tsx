@@ -58,9 +58,9 @@ export function SequencePerformanceCard({ analysis }: SequencePerformanceCardPro
             />
             <Tooltip />
             <Legend />
-            <Bar dataKey="openRate" fill="#3b82f6" name="Open Rate" />
-            <Bar dataKey="clickRate" fill="#10b981" name="Click Rate" />
-            <Bar dataKey="replyRate" fill="#8b5cf6" name="Reply Rate" />
+            <Bar dataKey="openRate" fill="var(--color-info)" name="Open Rate" />
+            <Bar dataKey="clickRate" fill="var(--color-success)" name="Click Rate" />
+            <Bar dataKey="replyRate" fill="var(--color-secondary)" name="Reply Rate" />
           </BarChart>
         </ResponsiveContainer>
       </div>

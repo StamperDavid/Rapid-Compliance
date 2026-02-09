@@ -108,8 +108,8 @@ export function NavigationProgress() {
           <motion.div
             style={{
               height: '100%',
-              background: 'linear-gradient(90deg, var(--color-primary, #6366f1), var(--color-primary-light, #818cf8))',
-              boxShadow: '0 0 10px var(--color-primary, #6366f1), 0 0 5px var(--color-primary, #6366f1)',
+              background: 'linear-gradient(90deg, var(--color-primary), var(--color-primary-light))',
+              boxShadow: '0 0 10px var(--color-primary), 0 0 5px var(--color-primary)',
               borderRadius: '0 2px 2px 0',
             }}
             initial={{ width: '0%' }}

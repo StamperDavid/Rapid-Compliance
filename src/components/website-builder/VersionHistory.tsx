@@ -137,7 +137,7 @@ export default function VersionHistory({
         right: 0,
         bottom: 0,
         width: '400px',
-        background: 'white',
+        background: 'var(--color-text-primary)',
         boxShadow: '-4px 0 8px rgba(0,0,0,0.1)',
         zIndex: 1000,
         display: 'flex',
@@ -149,13 +149,13 @@ export default function VersionHistory({
       <div
         style={{
           padding: '1.5rem',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--color-border-light)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}
       >
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827' }}>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-bg-main)' }}>
           Version History
         </h2>
         <button
@@ -166,7 +166,7 @@ export default function VersionHistory({
             border: 'none',
             cursor: 'pointer',
             fontSize: '1.5rem',
-            color: '#6b7280',
+            color: 'var(--color-text-disabled)',
             lineHeight: 1,
           }}
           title="Close"
@@ -178,7 +178,7 @@ export default function VersionHistory({
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
         {loading && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-disabled)' }}>
             Loading versions...
           </div>
         )}
@@ -187,10 +187,10 @@ export default function VersionHistory({
           <div
             style={{
               padding: '1rem',
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
+              background: 'var(--color-error-light)',
+              border: '1px solid var(--color-error)',
               borderRadius: '8px',
-              color: '#991b1b',
+              color: 'var(--color-error)',
               fontSize: '0.875rem',
             }}
           >
@@ -200,10 +200,10 @@ export default function VersionHistory({
 
         {!loading && !error && versions.length === 0 && (
           <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <p style={{ color: '#6b7280', marginBottom: '0.5rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>
               No version history yet
             </p>
-            <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
               Versions are created when you publish changes
             </p>
           </div>
@@ -216,8 +216,8 @@ export default function VersionHistory({
                 key={version.id}
                 style={{
                   padding: '1rem',
-                  background: '#f9fafb',
-                  border: '1px solid #e5e7eb',
+                  background: 'var(--color-surface-elevated)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '8px',
                 }}
               >
@@ -226,8 +226,8 @@ export default function VersionHistory({
                   <div
                     style={{
                       padding: '0.25rem 0.5rem',
-                      background: '#3498db',
-                      color: 'white',
+                      background: 'var(--color-info)',
+                      color: 'var(--color-text-primary)',
                       borderRadius: '4px',
                       fontSize: '0.75rem',
                       fontWeight: '600',
@@ -239,8 +239,8 @@ export default function VersionHistory({
                     style={{
                       marginLeft: '0.5rem',
                       padding: '0.25rem 0.5rem',
-                      background: version.status === 'published' ? '#27ae60' : '#95a5a6',
-                      color: 'white',
+                      background: version.status === 'published' ? 'var(--color-success)' : 'var(--color-text-disabled)',
+                      color: 'var(--color-text-primary)',
                       borderRadius: '4px',
                       fontSize: '0.75rem',
                       textTransform: 'uppercase',
@@ -252,15 +252,15 @@ export default function VersionHistory({
 
                 {/* Version Info */}
                 <div style={{ marginBottom: '0.75rem' }}>
-                  <div style={{ fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
+                  <div style={{ fontWeight: '500', color: 'var(--color-bg-main)', marginBottom: '0.25rem' }}>
                     {version.title}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                     /{version.slug}
                   </div>
                 </div>
 
-                <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.75rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
                   {formatDate(version.createdAt)}
                   <br />
                   By {version.createdBy}
@@ -275,8 +275,8 @@ export default function VersionHistory({
                   style={{
                     width: '100%',
                     padding: '0.5rem',
-                    background: restoring === version.version ? '#95a5a6' : '#3498db',
-                    color: 'white',
+                    background: restoring === version.version ? 'var(--color-text-disabled)' : 'var(--color-info)',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '0.875rem',
@@ -307,7 +307,7 @@ export default function VersionHistory({
         >
           <div
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--color-text-primary)',
               borderRadius: '12px',
               padding: '1.5rem',
               maxWidth: '400px',
@@ -315,7 +315,7 @@ export default function VersionHistory({
               boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
             }}
           >
-            <p style={{ color: '#111827', marginBottom: '1rem', fontSize: '1rem' }}>
+            <p style={{ color: 'var(--color-bg-main)', marginBottom: '1rem', fontSize: '1rem' }}>
               {confirmDialog.message}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
@@ -324,8 +324,8 @@ export default function VersionHistory({
                 style={{
                   padding: '0.5rem 1rem',
                   borderRadius: '8px',
-                  color: '#6b7280',
-                  background: '#f3f4f6',
+                  color: 'var(--color-text-disabled)',
+                  background: 'var(--color-surface-elevated)',
                   border: 'none',
                   cursor: 'pointer',
                 }}
@@ -337,8 +337,8 @@ export default function VersionHistory({
                 style={{
                   padding: '0.5rem 1rem',
                   borderRadius: '8px',
-                  backgroundColor: '#3498db',
-                  color: 'white',
+                  backgroundColor: 'var(--color-info)',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   cursor: 'pointer',
                 }}

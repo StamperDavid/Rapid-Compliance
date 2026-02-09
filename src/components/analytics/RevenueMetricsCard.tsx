@@ -121,15 +121,15 @@ export function RevenueMetricsCard({ data, loading = false }: RevenueMetricsCard
         <h4 className="text-sm font-medium text-gray-700 mb-3">Revenue Trend</h4>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={data.revenueByDay}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
             <XAxis
               dataKey="date"
               tickFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              stroke="#6b7280"
+              stroke="var(--color-text-disabled)"
               fontSize={12}
             />
             <YAxis
-              stroke="#6b7280"
+              stroke="var(--color-text-disabled)"
               fontSize={12}
               tickFormatter={(value: number) => `$${(value / 1000).toFixed(0)}k`}
             />
@@ -154,10 +154,10 @@ export function RevenueMetricsCard({ data, loading = false }: RevenueMetricsCard
         <h4 className="text-sm font-medium text-gray-700 mb-3">Revenue Forecast</h4>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={forecastData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="scenario" stroke="#6b7280" fontSize={12} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
+            <XAxis dataKey="scenario" stroke="var(--color-text-disabled)" fontSize={12} />
             <YAxis
-              stroke="#6b7280"
+              stroke="var(--color-text-disabled)"
               fontSize={12}
               tickFormatter={(value: number) => `$${(value / 1000).toFixed(0)}k`}
             />

@@ -94,13 +94,13 @@ export default function AgentConfigurationPage() {
     return String(value);
   };
 
-  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? 'var(--color-primary)';
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-          <p style={{ color: '#999' }}>Loading configuration...</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>Loading configuration...</p>
         </div>
       </div>
     );
@@ -108,13 +108,13 @@ export default function AgentConfigurationPage() {
 
   if (!baseModel) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
           <div style={{ textAlign: 'center', maxWidth: '500px', padding: '2rem' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
               No Configuration Found
             </h1>
-            <p style={{ color: '#999', marginBottom: '2rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2rem' }}>
               Please complete the onboarding wizard first to set up your AI agent.
             </p>
             <a
@@ -123,7 +123,7 @@ export default function AgentConfigurationPage() {
                 display: 'inline-block',
                 padding: '0.75rem 1.5rem',
                 backgroundColor: primaryColor,
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 borderRadius: '0.5rem',
                 textDecoration: 'none',
                 fontWeight: '600',
@@ -164,12 +164,12 @@ export default function AgentConfigurationPage() {
       case 'business':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Business Details
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Business Name
               </label>
               <input
@@ -179,17 +179,17 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Industry
               </label>
               <input
@@ -199,17 +199,17 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Website
               </label>
               <input
@@ -219,17 +219,17 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 What problem do you solve for customers?
               </label>
               <textarea
@@ -239,10 +239,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -251,7 +251,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 What makes you unique? (Competitive advantage)
               </label>
               <textarea
@@ -261,10 +261,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -273,7 +273,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Why do customers buy from you?
               </label>
               <textarea
@@ -283,10 +283,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -295,7 +295,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Why might customers NOT buy? (Common hesitations)
               </label>
               <textarea
@@ -305,10 +305,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -321,12 +321,12 @@ export default function AgentConfigurationPage() {
       case 'products':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Products & Services
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Primary Offering
               </label>
               <input
@@ -337,17 +337,17 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Top Products/Services (List your best sellers)
               </label>
               <textarea
@@ -358,10 +358,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -370,7 +370,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Product Comparison Guide
               </label>
               <textarea
@@ -381,10 +381,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -393,7 +393,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Target Customer Profile
               </label>
               <textarea
@@ -404,10 +404,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -416,7 +416,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Who Should NOT Buy? (Qualify out poor fits)
               </label>
               <textarea
@@ -427,10 +427,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -443,12 +443,12 @@ export default function AgentConfigurationPage() {
       case 'pricing':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Pricing & Sales Strategy
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Price Range
               </label>
               <input
@@ -459,17 +459,17 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Pricing Strategy
               </label>
               <textarea
@@ -480,10 +480,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -492,7 +492,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Discount Policy
               </label>
               <textarea
@@ -503,10 +503,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -515,7 +515,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Volume Discounts
               </label>
               <textarea
@@ -526,10 +526,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -538,7 +538,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 First-Time Buyer Incentive
               </label>
               <input
@@ -549,17 +549,17 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Financing Options
               </label>
               <textarea
@@ -570,10 +570,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -586,12 +586,12 @@ export default function AgentConfigurationPage() {
       case 'operations':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Operations & Fulfillment
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Geographic Coverage
               </label>
               <input
@@ -602,17 +602,17 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Delivery Timeframes
               </label>
               <textarea
@@ -623,10 +623,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -635,7 +635,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Inventory Constraints
               </label>
               <textarea
@@ -646,10 +646,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -658,7 +658,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Capacity Limitations
               </label>
               <textarea
@@ -669,10 +669,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -685,12 +685,12 @@ export default function AgentConfigurationPage() {
       case 'policies':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Policies & Guarantees
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Return Policy
               </label>
               <textarea
@@ -701,10 +701,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -713,7 +713,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Warranty Terms
               </label>
               <textarea
@@ -724,10 +724,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -736,7 +736,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Cancellation Policy
               </label>
               <textarea
@@ -747,10 +747,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -759,7 +759,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Satisfaction Guarantee
               </label>
               <textarea
@@ -770,10 +770,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -786,12 +786,12 @@ export default function AgentConfigurationPage() {
       case 'sales':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Sales Process & Flow
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Typical Sales Flow
               </label>
               <textarea
@@ -802,10 +802,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -814,7 +814,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Qualification Criteria
               </label>
               <textarea
@@ -825,10 +825,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -837,7 +837,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Discovery Questions to Ask
               </label>
               <textarea
@@ -848,10 +848,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -860,7 +860,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Closing Strategy
               </label>
               <textarea
@@ -871,10 +871,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -887,12 +887,12 @@ export default function AgentConfigurationPage() {
       case 'objections':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Objection Handling
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Common Objections
               </label>
               <textarea
@@ -903,10 +903,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -915,7 +915,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Price Objections
               </label>
               <textarea
@@ -926,10 +926,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -938,7 +938,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Time Objections
               </label>
               <textarea
@@ -949,10 +949,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -961,7 +961,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Competitor Objections
               </label>
               <textarea
@@ -972,10 +972,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -988,12 +988,12 @@ export default function AgentConfigurationPage() {
       case 'personality':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Agent Personality
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Agent Name (Optional)
               </label>
               <input
@@ -1004,17 +1004,17 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Tone & Voice
               </label>
               <select
@@ -1023,10 +1023,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               >
@@ -1040,7 +1040,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Greeting Message
               </label>
               <textarea
@@ -1051,10 +1051,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -1063,7 +1063,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Closing Message
               </label>
               <textarea
@@ -1074,10 +1074,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -1090,12 +1090,12 @@ export default function AgentConfigurationPage() {
       case 'behavior':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Behavioral Controls
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Closing Aggressiveness: {behavior.closingAggressiveness}/10
               </label>
               <input
@@ -1108,13 +1108,13 @@ export default function AgentConfigurationPage() {
                   width: '100%',
                 }}
               />
-              <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.5rem' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem' }}>
                 1 = Never pushy, 10 = Very aggressive about closing
               </p>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Discovery Question Frequency: {behavior.questionFrequency}
               </label>
               <input
@@ -1127,13 +1127,13 @@ export default function AgentConfigurationPage() {
                   width: '100%',
                 }}
               />
-              <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.5rem' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem' }}>
                 Number of discovery questions to ask before recommending
               </p>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Response Length
               </label>
               <select
@@ -1142,10 +1142,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                 }}
               >
@@ -1156,7 +1156,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Proactive Level: {behavior.proactiveLevel}/10
               </label>
               <input
@@ -1169,7 +1169,7 @@ export default function AgentConfigurationPage() {
                   width: '100%',
                 }}
               />
-              <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.5rem' }}>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem' }}>
                 1 = Reactive (wait for customer), 10 = Proactive (suggest, recommend, ask)
               </p>
             </div>
@@ -1179,12 +1179,12 @@ export default function AgentConfigurationPage() {
       case 'compliance':
         return (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Compliance & Legal
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Required Disclosures
               </label>
               <textarea
@@ -1195,10 +1195,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -1207,7 +1207,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Industry Regulations
               </label>
               <textarea
@@ -1218,10 +1218,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -1230,7 +1230,7 @@ export default function AgentConfigurationPage() {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Prohibited Topics
               </label>
               <textarea
@@ -1241,10 +1241,10 @@ export default function AgentConfigurationPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '1rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -1255,16 +1255,16 @@ export default function AgentConfigurationPage() {
         );
 
       default:
-        return <div style={{ color: '#999' }}>Select a section from the sidebar</div>;
+        return <div style={{ color: 'var(--color-text-secondary)' }}>Select a section from the sidebar</div>;
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <div style={{ display: 'flex', flex: 1 }}>
         {/* Sidebar */}
-        <div style={{ width: '280px', backgroundColor: '#0a0a0a', borderRight: '1px solid #1a1a1a', padding: '1.5rem 1rem', overflowY: 'auto' }}>
-          <h3 style={{ fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase', color: '#666', marginBottom: '1rem', letterSpacing: '0.05em' }}>
+        <div style={{ width: '280px', backgroundColor: 'var(--color-bg-main)', borderRight: '1px solid var(--color-border-light)', padding: '1.5rem 1rem', overflowY: 'auto' }}>
+          <h3 style={{ fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--color-text-disabled)', marginBottom: '1rem', letterSpacing: '0.05em' }}>
             Configuration Sections
           </h3>
           
@@ -1277,10 +1277,10 @@ export default function AgentConfigurationPage() {
                 textAlign: 'left',
                 padding: '0.75rem 1rem',
                 marginBottom: '0.5rem',
-                backgroundColor: activeSection === section.id ? '#1a1a1a' : 'transparent',
+                backgroundColor: activeSection === section.id ? 'var(--color-bg-paper)' : 'transparent',
                 border: activeSection === section.id ? `1px solid ${primaryColor}` : '1px solid transparent',
                 borderRadius: '0.5rem',
-                color: activeSection === section.id ? '#fff' : '#999',
+                color: activeSection === section.id ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
                 transition: 'all 0.2s',
@@ -1294,11 +1294,11 @@ export default function AgentConfigurationPage() {
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', maxWidth: '900px' }}>
-          <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid #1a1a1a' }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+          <div style={{ marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--color-border-light)' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
               AI Agent Configuration
             </h1>
-            <p style={{ color: '#999' }}>
+            <p style={{ color: 'var(--color-text-secondary)' }}>
               Edit your agent&apos;s base configuration. Changes will be applied to training and future Golden Masters.
             </p>
           </div>
@@ -1306,14 +1306,14 @@ export default function AgentConfigurationPage() {
           {renderSection()}
 
           {/* Save Button */}
-          <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid #1a1a1a', display: 'flex', gap: '1rem' }}>
+          <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border-light)', display: 'flex', gap: '1rem' }}>
             <button
               onClick={() => void handleSave()}
               disabled={saving}
               style={{
                 padding: '0.75rem 2rem',
-                backgroundColor: saving ? '#333' : primaryColor,
-                color: '#fff',
+                backgroundColor: saving ? 'var(--color-border-strong)' : primaryColor,
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontWeight: '600',
@@ -1329,9 +1329,9 @@ export default function AgentConfigurationPage() {
               style={{
                 display: 'inline-block',
                 padding: '0.75rem 2rem',
-                backgroundColor: '#1a1a1a',
-                color: '#999',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-paper)',
+                color: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.5rem',
                 textDecoration: 'none',
                 fontWeight: '600',
@@ -1342,9 +1342,9 @@ export default function AgentConfigurationPage() {
             </a>
           </div>
 
-          <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
-            <p style={{ fontSize: '0.875rem', color: '#999', margin: 0 }}>
-              <strong style={{ color: '#fff' }}>💡 Tip:</strong> Changes made here update your Base Model. 
+          <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-strong)' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+              <strong style={{ color: 'var(--color-text-primary)' }}>💡 Tip:</strong> Changes made here update your Base Model. 
               After training with the new configuration, save a new Golden Master version to deploy these changes to production.
             </p>
           </div>

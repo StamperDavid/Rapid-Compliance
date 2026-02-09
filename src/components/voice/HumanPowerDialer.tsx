@@ -752,7 +752,7 @@ export default function HumanPowerDialer({
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     Call Outcome
                   </label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -839,8 +839,8 @@ export default function HumanPowerDialer({
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-main)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.5rem',
                 color: 'var(--color-text-primary)',
                 fontSize: '1rem',
@@ -902,7 +902,7 @@ export default function HumanPowerDialer({
             width: '500px',
             maxWidth: '90vw',
           }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
               Dialer Settings
             </h3>
 

@@ -16,7 +16,7 @@ export default function SettingsPage() {
   const canManageBilling = usePermission('canManageBilling');
   const canManageIntegrations = usePermission('canManageIntegrations');
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   const settingsSections = [
     {
@@ -89,26 +89,26 @@ export default function SettingsPage() {
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Settings</h1>
-          <p style={{ color: '#666', fontSize: '0.875rem' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Settings</h1>
+          <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
             Manage your organization, users, integrations, and platform configuration
           </p>
         </div>
 
         {/* Organization Info Card */}
-        <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
+        <div style={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ width: '60px', height: '60px', borderRadius: '0.75rem', backgroundColor: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
               🏢
             </div>
             <div style={{ flex: 1 }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>Your Organization</h2>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>Your Organization</h2>
+              <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                 {user?.email} • {user?.role && <span style={{ textTransform: 'capitalize', color: primaryColor, fontWeight: '600' }}>{user.role}</span>}
               </p>
             </div>
             {canManageOrganization && (
-              <Link href={`/settings/organization`} style={{ padding: '0.625rem 1.25rem', backgroundColor: '#222', color: '#fff', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid #333' }}>
+              <Link href={`/settings/organization`} style={{ padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid var(--color-border-light)' }}>
                 Edit Details
               </Link>
             )}
@@ -122,7 +122,7 @@ export default function SettingsPage() {
 
           return (
             <div key={sectionIdx} style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>
                 {section.title}
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
@@ -134,8 +134,8 @@ export default function SettingsPage() {
                       display: 'flex',
                       gap: '1rem',
                       padding: '1.5rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-elevated)',
+                      border: '1px solid var(--color-border-light)',
                       borderRadius: '0.75rem',
                       textDecoration: 'none',
                       transition: 'all 0.2s',
@@ -146,16 +146,16 @@ export default function SettingsPage() {
                       e.currentTarget.style.transform = 'translateY(-2px)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#333';
+                      e.currentTarget.style.borderColor = 'var(--color-border-light)';
                       e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
                     <div style={{ fontSize: '2.5rem' }}>{item.icon}</div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>{item.label}</div>
-                      <div style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.4' }}>{item.description}</div>
+                      <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{item.label}</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.4' }}>{item.description}</div>
                     </div>
-                    <div style={{ color: '#666', fontSize: '1.25rem' }}>→</div>
+                    <div style={{ color: 'var(--color-text-disabled)', fontSize: '1.25rem' }}>→</div>
                   </Link>
                 ))}
               </div>

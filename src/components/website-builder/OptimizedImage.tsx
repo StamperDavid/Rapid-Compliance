@@ -97,7 +97,7 @@ export function OptimizedImage({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: '#f3f4f6',
+            backgroundColor: 'var(--color-bg-elevated)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -107,8 +107,8 @@ export function OptimizedImage({
             style={{
               width: '40px',
               height: '40px',
-              border: '3px solid #e5e7eb',
-              borderTopColor: '#3b82f6',
+              border: '3px solid var(--color-border-light)',
+              borderTopColor: 'var(--color-info)',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
             }}

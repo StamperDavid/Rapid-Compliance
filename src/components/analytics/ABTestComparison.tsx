@@ -95,7 +95,7 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
     <div style={{
       position: 'fixed',
       inset: 0,
-      backgroundColor: 'rgba(0,0,0,0.8)',
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -179,7 +179,7 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               {sequenceA.sequenceName}
             </h3>
-            <div style={{ fontSize: '0.875rem', color: '#666' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
               {sequenceA.channel} • Created {sequenceA.createdAt.toLocaleDateString()}
             </div>
           </div>
@@ -212,7 +212,7 @@ export function ABTestComparison({ sequenceA, sequenceB, onClose }: ABTestCompar
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               {sequenceB.sequenceName}
             </h3>
-            <div style={{ fontSize: '0.875rem', color: '#666' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
               {sequenceB.channel} • Created {sequenceB.createdAt.toLocaleDateString()}
             </div>
           </div>

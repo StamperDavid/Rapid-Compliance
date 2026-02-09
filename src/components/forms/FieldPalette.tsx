@@ -119,10 +119,10 @@ const styles = {
     width: '100%',
     padding: '0.5rem 0.75rem',
     fontSize: '0.875rem',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'var(--color-bg-main)',
     border: '1px solid var(--color-border-light)',
     borderRadius: '0.5rem',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
   },
   category: {
     marginBottom: '1.5rem',
@@ -138,13 +138,13 @@ const styles = {
   categoryTitle: {
     fontSize: '0.75rem',
     fontWeight: '600',
-    color: '#999',
+    color: 'var(--color-text-secondary)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
   },
   categoryToggle: {
     fontSize: '0.75rem',
-    color: '#666',
+    color: 'var(--color-text-disabled)',
   },
   fieldGrid: {
     display: 'grid',
@@ -157,7 +157,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '0.75rem 0.5rem',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'var(--color-bg-main)',
     border: '1px solid var(--color-border-light)',
     borderRadius: '0.5rem',
     cursor: 'grab',
@@ -165,8 +165,8 @@ const styles = {
     minHeight: '70px',
   },
   fieldItemHover: {
-    backgroundColor: '#222',
-    borderColor: '#6366f1',
+    backgroundColor: 'var(--color-bg-elevated)',
+    borderColor: 'var(--color-primary)',
   },
   fieldIcon: {
     fontSize: '1.25rem',
@@ -174,7 +174,7 @@ const styles = {
   },
   fieldLabel: {
     fontSize: '0.75rem',
-    color: '#ccc',
+    color: 'var(--color-text-primary)',
     textAlign: 'center' as const,
   },
   fieldDragging: {

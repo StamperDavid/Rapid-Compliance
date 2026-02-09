@@ -135,8 +135,8 @@ export default function VideoStudioPage() {
   const [voiceoverScript, setVoiceoverScript] = useState('');
 
   // Theme colors
-  const amberColor = '#f59e0b';
-  const amberDark = '#d97706';
+  const amberColor = 'var(--color-warning)';
+  const amberDark = 'var(--color-warning)';
 
   // Generate Storyboard via API
   const handleGenerateStoryboard = useCallback(async () => {
@@ -214,7 +214,7 @@ export default function VideoStudioPage() {
     <div style={{
       minHeight: '100vh',
       padding: '2rem',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)',
+      background: 'linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-paper) 50%, var(--color-bg-main) 100%)',
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
@@ -228,12 +228,12 @@ export default function VideoStudioPage() {
             <h1 style={{
               fontSize: '2rem',
               fontWeight: '700',
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               marginBottom: '0.5rem',
             }}>
               AI Video Studio
             </h1>
-            <p style={{ color: '#666', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
               Powered by Director Engine + Multi-Model Orchestration
             </p>
           </div>
@@ -251,10 +251,10 @@ export default function VideoStudioPage() {
             <span style={{
               width: '8px',
               height: '8px',
-              backgroundColor: '#22c55e',
+              backgroundColor: 'var(--color-success)',
               borderRadius: '50%',
             }} />
-            <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: '600' }}>
+            <span style={{ color: 'var(--color-success)', fontSize: '0.75rem', fontWeight: '600' }}>
               ENGINE ACTIVE
             </span>
           </div>
@@ -265,7 +265,7 @@ export default function VideoStudioPage() {
           display: 'flex',
           gap: '0.5rem',
           marginBottom: '2rem',
-          borderBottom: '1px solid #333',
+          borderBottom: '1px solid var(--color-border-strong)',
           paddingBottom: '1rem',
         }}>
           {[
@@ -279,9 +279,9 @@ export default function VideoStudioPage() {
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: activeTab === tab.id ? `${amberColor}22` : 'transparent',
-                border: `1px solid ${activeTab === tab.id ? amberColor : '#333'}`,
+                border: `1px solid ${activeTab === tab.id ? amberColor : 'var(--color-border-strong)'}`,
                 borderRadius: '0.5rem',
-                color: activeTab === tab.id ? amberColor : '#999',
+                color: activeTab === tab.id ? amberColor : 'var(--color-text-secondary)',
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -302,17 +302,17 @@ export default function VideoStudioPage() {
             {/* Left Column - Input Form */}
             <div style={{
               backgroundColor: 'rgba(26, 26, 26, 0.8)',
-              border: '1px solid #333',
+              border: '1px solid var(--color-border-strong)',
               borderRadius: '1rem',
               padding: '1.5rem',
             }}>
-              <h2 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem' }}>
+              <h2 style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem' }}>
                 Video Brief
               </h2>
 
               {/* Objective Selection */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', color: '#999', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                   Objective
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
@@ -327,10 +327,10 @@ export default function VideoStudioPage() {
                       onClick={() => setBrief({ ...brief, objective: obj.id as VideoObjective })}
                       style={{
                         padding: '0.75rem',
-                        backgroundColor: brief.objective === obj.id ? `${amberColor}22` : '#1a1a1a',
-                        border: `1px solid ${brief.objective === obj.id ? amberColor : '#333'}`,
+                        backgroundColor: brief.objective === obj.id ? `${amberColor}22` : 'var(--color-bg-paper)',
+                        border: `1px solid ${brief.objective === obj.id ? amberColor : 'var(--color-border-strong)'}`,
                         borderRadius: '0.5rem',
-                        color: brief.objective === obj.id ? amberColor : '#999',
+                        color: brief.objective === obj.id ? amberColor : 'var(--color-text-secondary)',
                         fontSize: '0.75rem',
                         cursor: 'pointer',
                         textAlign: 'center',
@@ -345,7 +345,7 @@ export default function VideoStudioPage() {
 
               {/* Platform Selection */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', color: '#999', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                   Target Platform
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -361,10 +361,10 @@ export default function VideoStudioPage() {
                       onClick={() => setBrief({ ...brief, targetPlatform: platform.id as VideoPlatform })}
                       style={{
                         padding: '0.5rem 1rem',
-                        backgroundColor: brief.targetPlatform === platform.id ? `${amberColor}22` : '#1a1a1a',
-                        border: `1px solid ${brief.targetPlatform === platform.id ? amberColor : '#333'}`,
+                        backgroundColor: brief.targetPlatform === platform.id ? `${amberColor}22` : 'var(--color-bg-paper)',
+                        border: `1px solid ${brief.targetPlatform === platform.id ? amberColor : 'var(--color-border-strong)'}`,
                         borderRadius: '0.25rem',
-                        color: brief.targetPlatform === platform.id ? amberColor : '#999',
+                        color: brief.targetPlatform === platform.id ? amberColor : 'var(--color-text-secondary)',
                         fontSize: '0.75rem',
                         cursor: 'pointer',
                       }}
@@ -377,7 +377,7 @@ export default function VideoStudioPage() {
 
               {/* Message Input */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', color: '#999', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                   Video Message *
                 </label>
                 <textarea
@@ -388,10 +388,10 @@ export default function VideoStudioPage() {
                   style={{
                     width: '100%',
                     padding: '0.875rem',
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-main)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                     resize: 'vertical',
                     boxSizing: 'border-box',
@@ -401,7 +401,7 @@ export default function VideoStudioPage() {
 
               {/* Call to Action */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', color: '#999', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                   Call to Action
                 </label>
                 <input
@@ -412,10 +412,10 @@ export default function VideoStudioPage() {
                   style={{
                     width: '100%',
                     padding: '0.875rem',
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-main)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                     boxSizing: 'border-box',
                   }}
@@ -424,7 +424,7 @@ export default function VideoStudioPage() {
 
               {/* Voiceover Script */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', color: '#999', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                   Voiceover Script (Optional)
                 </label>
                 <textarea
@@ -435,10 +435,10 @@ export default function VideoStudioPage() {
                   style={{
                     width: '100%',
                     padding: '0.875rem',
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-main)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                     resize: 'vertical',
                     boxSizing: 'border-box',
@@ -449,18 +449,18 @@ export default function VideoStudioPage() {
               {/* Constraints Section */}
               <div style={{
                 padding: '1rem',
-                backgroundColor: '#0a0a0a',
+                backgroundColor: 'var(--color-bg-main)',
                 borderRadius: '0.5rem',
                 marginBottom: '1.5rem',
               }}>
-                <h3 style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
+                <h3 style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
                   Video Settings
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                   {/* Duration */}
                   <div>
-                    <label style={{ display: 'block', color: '#666', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                       Duration (sec)
                     </label>
                     <select
@@ -469,10 +469,10 @@ export default function VideoStudioPage() {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.75rem',
                       }}
                     >
@@ -486,7 +486,7 @@ export default function VideoStudioPage() {
 
                   {/* Aspect Ratio */}
                   <div>
-                    <label style={{ display: 'block', color: '#666', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                       Aspect Ratio
                     </label>
                     <select
@@ -495,10 +495,10 @@ export default function VideoStudioPage() {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.75rem',
                       }}
                     >
@@ -511,7 +511,7 @@ export default function VideoStudioPage() {
 
                   {/* Resolution */}
                   <div>
-                    <label style={{ display: 'block', color: '#666', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                       Resolution
                     </label>
                     <select
@@ -520,10 +520,10 @@ export default function VideoStudioPage() {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.75rem',
                       }}
                     >
@@ -538,18 +538,18 @@ export default function VideoStudioPage() {
               {/* Creative Direction */}
               <div style={{
                 padding: '1rem',
-                backgroundColor: '#0a0a0a',
+                backgroundColor: 'var(--color-bg-main)',
                 borderRadius: '0.5rem',
                 marginBottom: '1.5rem',
               }}>
-                <h3 style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
+                <h3 style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
                   Creative Direction
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                   {/* Mood */}
                   <div>
-                    <label style={{ display: 'block', color: '#666', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                       Mood
                     </label>
                     <select
@@ -558,10 +558,10 @@ export default function VideoStudioPage() {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.75rem',
                       }}
                     >
@@ -576,7 +576,7 @@ export default function VideoStudioPage() {
 
                   {/* Pacing */}
                   <div>
-                    <label style={{ display: 'block', color: '#666', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                       Pacing
                     </label>
                     <select
@@ -585,10 +585,10 @@ export default function VideoStudioPage() {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.75rem',
                       }}
                     >
@@ -601,7 +601,7 @@ export default function VideoStudioPage() {
 
                   {/* Visual Style */}
                   <div>
-                    <label style={{ display: 'block', color: '#666', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                       Visual Style
                     </label>
                     <select
@@ -610,10 +610,10 @@ export default function VideoStudioPage() {
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.75rem',
                       }}
                     >
@@ -634,7 +634,7 @@ export default function VideoStudioPage() {
                   backgroundColor: 'rgba(239, 68, 68, 0.1)',
                   border: '1px solid rgba(239, 68, 68, 0.3)',
                   borderRadius: '0.5rem',
-                  color: '#f87171',
+                  color: 'var(--color-error-light)',
                   fontSize: '0.875rem',
                   marginBottom: '1rem',
                 }}>
@@ -652,7 +652,7 @@ export default function VideoStudioPage() {
                   background: `linear-gradient(135deg, ${amberColor} 0%, ${amberDark} 100%)`,
                   border: 'none',
                   borderRadius: '0.5rem',
-                  color: '#000',
+                  color: 'var(--color-bg-main)',
                   fontSize: '1rem',
                   fontWeight: '700',
                   cursor: isGenerating || !brief.message.trim() ? 'not-allowed' : 'pointer',
@@ -681,7 +681,7 @@ export default function VideoStudioPage() {
             {generatedStoryboard && (
               <div style={{
                 backgroundColor: 'rgba(26, 26, 26, 0.8)',
-                border: '1px solid #333',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '1rem',
                 padding: '1.5rem',
               }}>
@@ -691,7 +691,7 @@ export default function VideoStudioPage() {
                   alignItems: 'center',
                   marginBottom: '1.5rem',
                 }}>
-                  <h2 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: '600' }}>
+                  <h2 style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', fontWeight: '600' }}>
                     Generated Storyboard
                   </h2>
                   <div style={{
@@ -714,8 +714,8 @@ export default function VideoStudioPage() {
                       key={scene.id}
                       style={{
                         padding: '1rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
                         marginBottom: '0.5rem',
                       }}
@@ -726,14 +726,14 @@ export default function VideoStudioPage() {
                         alignItems: 'center',
                         marginBottom: '0.5rem',
                       }}>
-                        <span style={{ color: '#fff', fontWeight: '600', fontSize: '0.875rem' }}>
+                        <span style={{ color: 'var(--color-text-primary)', fontWeight: '600', fontSize: '0.875rem' }}>
                           Scene {index + 1}: {scene.name}
                         </span>
-                        <span style={{ color: '#666', fontSize: '0.75rem' }}>
+                        <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                           {(scene.duration / 1000).toFixed(1)}s
                         </span>
                       </div>
-                      <p style={{ color: '#999', fontSize: '0.75rem', margin: 0 }}>
+                      <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem', margin: 0 }}>
                         {scene.description}
                       </p>
                       <div style={{
@@ -743,18 +743,18 @@ export default function VideoStudioPage() {
                       }}>
                         <span style={{
                           padding: '0.125rem 0.5rem',
-                          backgroundColor: '#333',
+                          backgroundColor: 'var(--color-border-strong)',
                           borderRadius: '0.25rem',
-                          color: '#999',
+                          color: 'var(--color-text-secondary)',
                           fontSize: '0.625rem',
                         }}>
                           {scene.shotType}
                         </span>
                         <span style={{
                           padding: '0.125rem 0.5rem',
-                          backgroundColor: '#333',
+                          backgroundColor: 'var(--color-border-strong)',
                           borderRadius: '0.25rem',
-                          color: '#999',
+                          color: 'var(--color-text-secondary)',
                           fontSize: '0.625rem',
                         }}>
                           {scene.cameraMotion}
@@ -775,7 +775,7 @@ export default function VideoStudioPage() {
                           backgroundColor: 'rgba(234, 179, 8, 0.1)',
                           border: '1px solid rgba(234, 179, 8, 0.3)',
                           borderRadius: '0.25rem',
-                          color: '#eab308',
+                          color: 'var(--color-warning)',
                           fontSize: '0.75rem',
                           marginBottom: '0.5rem',
                         }}
@@ -791,7 +791,7 @@ export default function VideoStudioPage() {
                           backgroundColor: 'rgba(59, 130, 246, 0.1)',
                           border: '1px solid rgba(59, 130, 246, 0.3)',
                           borderRadius: '0.25rem',
-                          color: '#3b82f6',
+                          color: 'var(--color-info)',
                           fontSize: '0.75rem',
                           marginBottom: '0.5rem',
                         }}
@@ -805,18 +805,18 @@ export default function VideoStudioPage() {
                 {/* Total Duration */}
                 <div style={{
                   padding: '1rem',
-                  backgroundColor: '#0a0a0a',
+                  backgroundColor: 'var(--color-bg-main)',
                   borderRadius: '0.5rem',
                   marginBottom: '1.5rem',
                 }}>
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    color: '#999',
+                    color: 'var(--color-text-secondary)',
                     fontSize: '0.875rem',
                   }}>
                     <span>Total Duration</span>
-                    <span style={{ color: '#fff', fontWeight: '600' }}>
+                    <span style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>
                       {(generatedStoryboard.totalDuration / 1000).toFixed(1)} seconds
                     </span>
                   </div>
@@ -829,10 +829,10 @@ export default function VideoStudioPage() {
                     style={{
                       flex: 1,
                       padding: '0.875rem',
-                      background: `linear-gradient(135deg, #22c55e 0%, #16a34a 100%)`,
+                      background: `linear-gradient(135deg, var(--color-success) 0%, var(--color-success-dark) 100%)`,
                       border: 'none',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                       fontWeight: '700',
                       cursor: 'pointer',
@@ -850,9 +850,9 @@ export default function VideoStudioPage() {
                     style={{
                       padding: '0.875rem 1rem',
                       backgroundColor: 'transparent',
-                      border: '1px solid #333',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#999',
+                      color: 'var(--color-text-secondary)',
                       fontSize: '0.875rem',
                       cursor: 'pointer',
                     }}
@@ -869,16 +869,16 @@ export default function VideoStudioPage() {
         {activeTab === 'projects' && (
           <div style={{
             backgroundColor: 'rgba(26, 26, 26, 0.8)',
-            border: '1px solid #333',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '1rem',
             padding: '2rem',
             textAlign: 'center',
           }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📁</div>
-            <h3 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+            <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
               Your Video Projects
             </h3>
-            <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>
               Create your first video to see it here
             </p>
             <button
@@ -888,7 +888,7 @@ export default function VideoStudioPage() {
                 background: `linear-gradient(135deg, ${amberColor} 0%, ${amberDark} 100%)`,
                 border: 'none',
                 borderRadius: '0.5rem',
-                color: '#000',
+                color: 'var(--color-bg-main)',
                 fontWeight: '600',
                 cursor: 'pointer',
               }}
@@ -913,7 +913,7 @@ export default function VideoStudioPage() {
                 key={template.id}
                 style={{
                   backgroundColor: 'rgba(26, 26, 26, 0.8)',
-                  border: '1px solid #333',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '1rem',
                   padding: '1.5rem',
                   cursor: 'pointer',
@@ -927,14 +927,14 @@ export default function VideoStudioPage() {
                   e.currentTarget.style.borderColor = amberColor;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#333';
+                  e.currentTarget.style.borderColor = 'var(--color-border-strong)';
                 }}
               >
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{template.icon}</div>
-                <h3 style={{ color: '#fff', fontSize: '1rem', fontWeight: '600', marginBottom: '0.25rem' }}>
+                <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1rem', fontWeight: '600', marginBottom: '0.25rem' }}>
                   {template.name}
                 </h3>
-                <p style={{ color: '#666', fontSize: '0.75rem', margin: 0 }}>
+                <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', margin: 0 }}>
                   {template.description}
                 </p>
               </div>
@@ -953,16 +953,16 @@ export default function VideoStudioPage() {
           gap: '1rem',
           flexWrap: 'wrap',
         }}>
-          <span style={{ color: '#666', fontSize: '0.75rem' }}>Powered by:</span>
+          <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>Powered by:</span>
           {['Google Veo', 'Runway ML', 'Kling AI', 'Pika Labs', 'HeyGen', 'Sora'].map((provider) => (
             <span
               key={provider}
               style={{
                 padding: '0.25rem 0.5rem',
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-paper)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.25rem',
-                color: '#999',
+                color: 'var(--color-text-secondary)',
                 fontSize: '0.625rem',
               }}
             >

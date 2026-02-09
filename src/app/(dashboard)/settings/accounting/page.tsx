@@ -42,7 +42,7 @@ const PLATFORMS = [
     id: 'quickbooks', 
     name: 'QuickBooks Online', 
     icon: '📊', 
-    color: '#2ca01c',
+    color: 'var(--color-success)',
     description: 'Most popular for small-medium businesses',
     features: ['Invoices', 'Payments', 'Customers', 'Products', 'Sales Tax']
   },
@@ -50,7 +50,7 @@ const PLATFORMS = [
     id: 'xero', 
     name: 'Xero', 
     icon: '📈', 
-    color: '#13b5ea',
+    color: 'var(--color-info)',
     description: 'Popular internationally, great reporting',
     features: ['Invoices', 'Payments', 'Contacts', 'Items', 'Tax Rates']
   },
@@ -58,7 +58,7 @@ const PLATFORMS = [
     id: 'freshbooks', 
     name: 'FreshBooks', 
     icon: '📗', 
-    color: '#0075dd',
+    color: 'var(--color-info)',
     description: 'Simple and user-friendly for freelancers',
     features: ['Invoices', 'Payments', 'Clients', 'Expenses']
   },
@@ -66,7 +66,7 @@ const PLATFORMS = [
     id: 'wave', 
     name: 'Wave', 
     icon: '🌊', 
-    color: '#7c5aff',
+    color: 'var(--color-secondary)',
     description: 'Free accounting software',
     features: ['Invoices', 'Payments', 'Customers', 'Products']
   },
@@ -74,7 +74,7 @@ const PLATFORMS = [
     id: 'sage', 
     name: 'Sage Business Cloud', 
     icon: '🟢', 
-    color: '#00dc06',
+    color: 'var(--color-success)',
     description: 'Enterprise-grade accounting',
     features: ['Invoices', 'Payments', 'Customers', 'Inventory', 'Multi-currency']
   },
@@ -165,15 +165,15 @@ export default function AccountingPage() {
   const selectedPlatform = PLATFORMS.find(p => p.id === config.platform);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       {/* Header */}
-      <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '2rem' }}>
+      <div style={{ backgroundColor: 'var(--color-bg-main)', borderBottom: '1px solid var(--color-border-light)', padding: '2rem' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto' }}>
-          <Link href={`/settings`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
+          <Link href={`/settings`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
             ← Back to Settings
           </Link>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#fff', margin: 0, marginBottom: '0.5rem' }}>Accounting Software Integration</h1>
-          <p style={{ fontSize: '0.875rem', color: '#666' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0, marginBottom: '0.5rem' }}>Accounting Software Integration</h1>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
             Sync invoices, payments, and customers from CRM to your accounting platform
           </p>
         </div>
@@ -182,19 +182,19 @@ export default function AccountingPage() {
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem' }}>
         {/* Current Connection Status */}
         {config.connected && selectedPlatform ? (
-          <div style={{ backgroundColor: '#0a1a0a', border: '2px solid #1a3a1a', borderRadius: '0.75rem', padding: '2rem', marginBottom: '2rem' }}>
+          <div style={{ backgroundColor: 'var(--color-success-dark)', border: '2px solid var(--color-success-dark)', borderRadius: '0.75rem', padding: '2rem', marginBottom: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'start', gap: '1.5rem' }}>
                 <div style={{ fontSize: '4rem' }}>{selectedPlatform.icon}</div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>{selectedPlatform.name}</h2>
-                    <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#065f46', color: '#6ee7b7', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600' }}>✓ Connected</span>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>{selectedPlatform.name}</h2>
+                    <span style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--color-success-dark)', color: 'var(--color-success-light)', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600' }}>✓ Connected</span>
                   </div>
-                  <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '1rem' }}>{selectedPlatform.description}</p>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>{selectedPlatform.description}</p>
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     {selectedPlatform.features.map(feature => (
-                      <span key={feature} style={{ padding: '0.375rem 0.75rem', backgroundColor: '#1a1a1a', color: '#6ee7b7', borderRadius: '0.375rem', fontSize: '0.75rem' }}>
+                      <span key={feature} style={{ padding: '0.375rem 0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-success-light)', borderRadius: '0.375rem', fontSize: '0.75rem' }}>
                         {feature}
                       </span>
                     ))}
@@ -203,16 +203,16 @@ export default function AccountingPage() {
               </div>
               <button
                 onClick={handleDisconnect}
-                style={{ padding: '0.75rem 1.5rem', backgroundColor: '#7f1d1d', color: '#fca5a5', border: '1px solid #991b1b', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-error-dark)', color: 'var(--color-error-light)', border: '1px solid var(--color-error-dark)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
               >
                 Disconnect
               </button>
             </div>
           </div>
         ) : (
-          <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '2rem', marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '1rem' }}>Connect Your Accounting Software</h2>
-            <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '2rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '2rem', marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Connect Your Accounting Software</h2>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '2rem' }}>
               Choose your accounting platform to automatically sync financial data
             </p>
 
@@ -223,8 +223,8 @@ export default function AccountingPage() {
                   onClick={() => handleConnect(platform.id)}
                   style={{
                     padding: '1.5rem',
-                    backgroundColor: '#1a1a1a',
-                    border: '2px solid #333',
+                    backgroundColor: 'var(--color-bg-paper)',
+                    border: '2px solid var(--color-border-strong)',
                     borderRadius: '0.75rem',
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -232,19 +232,19 @@ export default function AccountingPage() {
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = platform.color;
-                    e.currentTarget.style.backgroundColor = '#222';
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#333';
-                    e.currentTarget.style.backgroundColor = '#1a1a1a';
+                    e.currentTarget.style.borderColor = 'var(--color-border-strong)';
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)';
                   }}
                 >
                   <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>{platform.icon}</div>
-                  <div style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>{platform.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.75rem' }}>{platform.description}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{platform.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.75rem' }}>{platform.description}</div>
                   <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
                     {platform.features.slice(0, 3).map(feature => (
-                      <span key={feature} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#0a0a0a', color: '#999', borderRadius: '0.25rem', fontSize: '0.625rem' }}>
+                      <span key={feature} style={{ padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-secondary)', borderRadius: '0.25rem', fontSize: '0.625rem' }}>
                         {feature}
                       </span>
                     ))}
@@ -258,18 +258,18 @@ export default function AccountingPage() {
         {/* Sync Settings (only show if connected) */}
         {config.connected && selectedPlatform && (
           <>
-            <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '1.5rem' }}>Sync Settings</h3>
+            <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>Sync Settings</h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     Sync Frequency
                   </label>
                   <select
                     value={config.syncFrequency}
                     onChange={(e) => updateConfig(['syncFrequency'], e.target.value as AccountingConfig['syncFrequency'])}
-                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                   >
                     <option value="realtime">⚡ Real-time (instant sync)</option>
                     <option value="hourly">⏰ Hourly</option>
@@ -277,8 +277,8 @@ export default function AccountingPage() {
                   </select>
                 </div>
 
-                <div style={{ backgroundColor: '#111', borderRadius: '0.5rem', padding: '1.25rem' }}>
-                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '1rem' }}>What to Sync</div>
+                <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', padding: '1.25rem' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>What to Sync</div>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
@@ -289,8 +289,8 @@ export default function AccountingPage() {
                         style={{ width: '1.25rem', height: '1.25rem' }}
                       />
                       <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>🧾 Invoices</div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Sync all invoices from CRM to {selectedPlatform.name}</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>🧾 Invoices</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Sync all invoices from CRM to {selectedPlatform.name}</div>
                       </div>
                     </label>
 
@@ -302,8 +302,8 @@ export default function AccountingPage() {
                         style={{ width: '1.25rem', height: '1.25rem' }}
                       />
                       <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>💳 Payments</div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Sync all payment records from CRM to {selectedPlatform.name}</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>💳 Payments</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Sync all payment records from CRM to {selectedPlatform.name}</div>
                       </div>
                     </label>
 
@@ -315,8 +315,8 @@ export default function AccountingPage() {
                         style={{ width: '1.25rem', height: '1.25rem' }}
                       />
                       <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>👥 Customers</div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Sync companies and contacts from CRM to {selectedPlatform.name}</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>👥 Customers</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Sync companies and contacts from CRM to {selectedPlatform.name}</div>
                       </div>
                     </label>
 
@@ -328,8 +328,8 @@ export default function AccountingPage() {
                         style={{ width: '1.25rem', height: '1.25rem' }}
                       />
                       <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>📦 Products/Services</div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Sync product catalog from CRM to {selectedPlatform.name}</div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>📦 Products/Services</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Sync product catalog from CRM to {selectedPlatform.name}</div>
                       </div>
                     </label>
                   </div>
@@ -338,15 +338,15 @@ export default function AccountingPage() {
             </div>
 
             {/* Account Mapping */}
-            <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '1rem' }}>Account Mapping</h3>
-              <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '1.5rem' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Account Mapping</h3>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
                 Map CRM transactions to your {selectedPlatform.name} chart of accounts
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     Revenue Account
                   </label>
                   <input
@@ -354,12 +354,12 @@ export default function AccountingPage() {
                     value={config.accountMapping.revenueAccount}
                     onChange={(e) => updateConfig(['accountMapping', 'revenueAccount'], e.target.value)}
                     placeholder="e.g., 4000 - Sales Revenue"
-                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     Sales Tax Account
                   </label>
                   <input
@@ -367,12 +367,12 @@ export default function AccountingPage() {
                     value={config.accountMapping.taxAccount}
                     onChange={(e) => updateConfig(['accountMapping', 'taxAccount'], e.target.value)}
                     placeholder="e.g., 2200 - Sales Tax Payable"
-                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     Accounts Receivable
                   </label>
                   <input
@@ -380,41 +380,41 @@ export default function AccountingPage() {
                     value={config.accountMapping.receivablesAccount}
                     onChange={(e) => updateConfig(['accountMapping', 'receivablesAccount'], e.target.value)}
                     placeholder="e.g., 1200 - Accounts Receivable"
-                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                   />
                 </div>
               </div>
             </div>
 
             {/* Sync Status */}
-            <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '1.5rem' }}>Sync Status</h3>
+            <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>Sync Status</h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                <div style={{ backgroundColor: '#111', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #1a3a1a' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Last Sync</div>
-                  <div style={{ fontSize: '1rem', fontWeight: '600', color: '#6ee7b7' }}>Just now</div>
+                <div style={{ backgroundColor: 'var(--color-bg-main)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--color-success-dark)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Last Sync</div>
+                  <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-success-light)' }}>Just now</div>
                 </div>
 
-                <div style={{ backgroundColor: '#111', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #1a3a1a' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Invoices Synced</div>
-                  <div style={{ fontSize: '1rem', fontWeight: '600', color: '#6ee7b7' }}>247</div>
+                <div style={{ backgroundColor: 'var(--color-bg-main)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--color-success-dark)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Invoices Synced</div>
+                  <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-success-light)' }}>247</div>
                 </div>
 
-                <div style={{ backgroundColor: '#111', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #1a3a1a' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Payments Synced</div>
-                  <div style={{ fontSize: '1rem', fontWeight: '600', color: '#6ee7b7' }}>189</div>
+                <div style={{ backgroundColor: 'var(--color-bg-main)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--color-success-dark)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Payments Synced</div>
+                  <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-success-light)' }}>189</div>
                 </div>
 
-                <div style={{ backgroundColor: '#111', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #1a3a1a' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Status</div>
-                  <div style={{ fontSize: '1rem', fontWeight: '600', color: '#6ee7b7' }}>✓ Healthy</div>
+                <div style={{ backgroundColor: 'var(--color-bg-main)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--color-success-dark)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Status</div>
+                  <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-success-light)' }}>✓ Healthy</div>
                 </div>
               </div>
 
               <button
                 onClick={() => {/* Trigger manual sync */}}
-                style={{ marginTop: '1.5rem', padding: '0.75rem 1.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', width: '100%' }}
+                style={{ marginTop: '1.5rem', padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', width: '100%' }}
               >
                 🔄 Sync Now
               </button>
@@ -427,7 +427,7 @@ export default function AccountingPage() {
           <button
             onClick={() => void handleSave()}
             disabled={isSaving}
-            style={{ padding: '0.75rem 2rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '600', opacity: isSaving ? 0.5 : 1 }}
+            style={{ padding: '0.75rem 2rem', backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '600', opacity: isSaving ? 0.5 : 1 }}
           >
             {isSaving ? 'Saving...' : '💾 Save Changes'}
           </button>

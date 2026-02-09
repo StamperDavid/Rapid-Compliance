@@ -94,7 +94,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
-      { id: 'executive-briefing', label: 'Executive Briefing', href: '/executive-briefing', icon: Activity, iconColor: '#10b981', requiredPermission: 'canAccessPlatformAdmin' },
+      { id: 'executive-briefing', label: 'Executive Briefing', href: '/executive-briefing', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canAccessPlatformAdmin' },
       { id: 'workforce-hq', label: 'Workforce HQ', href: '/workforce', icon: Monitor, iconColor: 'var(--color-secondary)', requiredPermission: 'canAccessPlatformAdmin' },
     ],
   },
@@ -637,9 +637,9 @@ export default function AdminSidebar() {
         }}
       >
         {mobileOpen ? (
-          <X className="w-6 h-6 text-white" />
+          <X className="w-6 h-6" style={{ color: 'var(--color-text-primary)' }} />
         ) : (
-          <Menu className="w-6 h-6 text-white" />
+          <Menu className="w-6 h-6" style={{ color: 'var(--color-text-primary)' }} />
         )}
       </button>
     </>

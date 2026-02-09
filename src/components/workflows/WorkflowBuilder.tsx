@@ -17,16 +17,16 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
   const [selectedActionType, setSelectedActionType] = useState<string>('');
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || '#ffffff'
-    : '#ffffff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
 
   const borderColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
-    : '#333333';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-strong)'
+    : 'var(--color-border-strong)';
 
   const primaryColor = typeof window !== 'undefined' 
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
-    : '#6366f1';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
 
   const triggerTypes = [
     { value: 'entity.created', label: 'Entity Created', icon: '➕' },
@@ -172,7 +172,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
                     backgroundColor: triggerType === trigger.value ? primaryColor : 'var(--color-bg-main)',
                     border: `1px solid ${triggerType === trigger.value ? primaryColor : borderColor}`,
                     borderRadius: '0.5rem',
-                    color: triggerType === trigger.value ? '#fff' : textColor,
+                    color: triggerType === trigger.value ? 'var(--color-text-primary)' : textColor,
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     display: 'flex',
@@ -216,7 +216,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
                         <div style={{ fontSize: '0.875rem', fontWeight: '500', color: textColor }}>
                           {action.name}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                           {index + 1}. {actionTypes.find(a => a.value === action.type)?.label ?? action.type}
                         </div>
                       </div>
@@ -227,7 +227,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
                         padding: '0.5rem',
                         backgroundColor: 'transparent',
                         border: 'none',
-                        color: '#f87171',
+                        color: 'var(--color-error)',
                         cursor: 'pointer',
                         fontSize: '1.25rem'
                       }}
@@ -265,8 +265,8 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
                 disabled={!selectedActionType}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: selectedActionType ? primaryColor : '#444',
-                  color: '#fff',
+                  backgroundColor: selectedActionType ? primaryColor : 'var(--color-border-main)',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   cursor: selectedActionType ? 'pointer' : 'not-allowed',
@@ -302,8 +302,8 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
             disabled={!name || actions.length === 0}
             style={{
               padding: '0.75rem 1.5rem',
-              backgroundColor: (!name || actions.length === 0) ? '#444' : primaryColor,
-              color: '#fff',
+              backgroundColor: (!name || actions.length === 0) ? 'var(--color-border-main)' : primaryColor,
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: (!name || actions.length === 0) ? 'not-allowed' : 'pointer',

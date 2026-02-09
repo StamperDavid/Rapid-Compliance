@@ -138,7 +138,7 @@ export default function TemplateBrowserPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'var(--color-bg-elevated)' }}>
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
@@ -149,10 +149,10 @@ export default function TemplateBrowserPage() {
           marginBottom: '2rem',
         }}>
           <div>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: '#111' }}>
+            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
               Page Templates
             </h1>
-            <p style={{ margin: 0, color: '#666' }}>
+            <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
               Choose a template to start building your page
             </p>
           </div>
@@ -161,7 +161,7 @@ export default function TemplateBrowserPage() {
             onClick={() => router.push(`/website/editor`)}
             style={{
               padding: '0.75rem 1.5rem',
-              background: '#6c757d',
+              background: 'var(--color-text-secondary)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -187,9 +187,9 @@ export default function TemplateBrowserPage() {
               onClick={() => setSelectedCategory(category.id)}
               style={{
                 padding: '0.5rem 1rem',
-                background: selectedCategory === category.id ? '#007bff' : 'white',
-                color: selectedCategory === category.id ? 'white' : '#495057',
-                border: '1px solid #dee2e6',
+                background: selectedCategory === category.id ? 'var(--color-info)' : 'white',
+                color: selectedCategory === category.id ? 'white' : 'var(--color-text-disabled)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -238,8 +238,8 @@ export default function TemplateBrowserPage() {
                     top: '0.75rem',
                     right: '0.75rem',
                     padding: '0.25rem 0.5rem',
-                    background: '#ffc107',
-                    color: '#000',
+                    background: 'var(--color-warning)',
+                    color: 'var(--color-bg-main)',
                     borderRadius: '4px',
                     fontSize: '0.75rem',
                     fontWeight: '600',
@@ -253,8 +253,8 @@ export default function TemplateBrowserPage() {
                     top: '0.75rem',
                     left: '0.75rem',
                     padding: '0.25rem 0.5rem',
-                    background: '#17a2b8',
-                    color: '#fff',
+                    background: 'var(--color-info)',
+                    color: 'var(--color-text-primary)',
                     borderRadius: '4px',
                     fontSize: '0.75rem',
                     fontWeight: '600',
@@ -269,14 +269,14 @@ export default function TemplateBrowserPage() {
                 <h3 style={{
                   fontSize: '1.125rem',
                   fontWeight: '600',
-                  color: '#212529',
+                  color: 'var(--color-text-primary)',
                   margin: '0 0 0.5rem',
                 }}>
                   {template.name}
                 </h3>
                 <p style={{
                   fontSize: '0.875rem',
-                  color: '#6c757d',
+                  color: 'var(--color-text-secondary)',
                   margin: '0 0 1rem',
                   lineHeight: '1.5',
                 }}>
@@ -286,8 +286,8 @@ export default function TemplateBrowserPage() {
                 <div style={{
                   display: 'inline-block',
                   padding: '0.25rem 0.5rem',
-                  background: '#e9ecef',
-                  color: '#495057',
+                  background: 'var(--color-bg-elevated)',
+                  color: 'var(--color-text-disabled)',
                   borderRadius: '4px',
                   fontSize: '0.75rem',
                   fontWeight: '500',
@@ -304,9 +304,9 @@ export default function TemplateBrowserPage() {
                     style={{
                       flex: 1,
                       padding: '0.5rem 1rem',
-                      background: '#ffffff',
-                      color: '#007bff',
-                      border: '1px solid #007bff',
+                      background: 'var(--color-text-primary)',
+                      color: 'var(--color-info)',
+                      border: '1px solid var(--color-info)',
                       borderRadius: '4px',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
@@ -320,7 +320,7 @@ export default function TemplateBrowserPage() {
                     style={{
                       flex: 1,
                       padding: '0.5rem 1rem',
-                      background: '#007bff',
+                      background: 'var(--color-info)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
@@ -345,10 +345,10 @@ export default function TemplateBrowserPage() {
             textAlign: 'center',
           }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📄</div>
-            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: '#495057' }}>
+            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'var(--color-text-disabled)' }}>
               No templates found
             </h3>
-            <p style={{ margin: 0, color: '#6c757d' }}>
+            <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
               Try selecting a different category
             </p>
           </div>
@@ -382,16 +382,16 @@ export default function TemplateBrowserPage() {
             {/* Modal Header */}
             <div style={{
               padding: '1.5rem',
-              borderBottom: '1px solid #dee2e6',
+              borderBottom: '1px solid var(--color-border-light)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}>
               <div>
-                <h2 style={{ fontSize: '1.5rem', margin: '0 0 0.25rem', color: '#212529' }}>
+                <h2 style={{ fontSize: '1.5rem', margin: '0 0 0.25rem', color: 'var(--color-text-primary)' }}>
                   {selectedTemplate.name}
                 </h2>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: '#6c757d' }}>
+                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                   {selectedTemplate.description}
                 </p>
               </div>
@@ -403,7 +403,7 @@ export default function TemplateBrowserPage() {
                   border: 'none',
                   fontSize: '1.5rem',
                   cursor: 'pointer',
-                  color: '#6c757d',
+                  color: 'var(--color-text-secondary)',
                 }}
               >
                 ✕
@@ -415,7 +415,7 @@ export default function TemplateBrowserPage() {
               flex: 1,
               overflowY: 'auto',
               padding: '2rem',
-              background: '#f8f9fa',
+              background: 'var(--color-bg-elevated)',
             }}>
               <div style={{
                 background: 'white',
@@ -440,7 +440,7 @@ export default function TemplateBrowserPage() {
             {/* Modal Footer */}
             <div style={{
               padding: '1.5rem',
-              borderTop: '1px solid #dee2e6',
+              borderTop: '1px solid var(--color-border-light)',
               display: 'flex',
               justifyContent: 'flex-end',
               gap: '0.5rem',
@@ -449,7 +449,7 @@ export default function TemplateBrowserPage() {
                 onClick={() => setShowPreview(false)}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  background: '#6c757d',
+                  background: 'var(--color-text-secondary)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
@@ -467,7 +467,7 @@ export default function TemplateBrowserPage() {
                 }}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  background: '#007bff',
+                  background: 'var(--color-info)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',

@@ -82,24 +82,24 @@ export default function AuditLogPage() {
 
   function getEventColor(type: string): string {
     if (type.includes('published')) {
-      return '#27ae60';
+      return 'var(--color-success)';
     }
     if (type.includes('unpublished')) {
-      return '#e67e22';
+      return 'var(--color-warning)';
     }
     if (type.includes('scheduled')) {
-      return '#3498db';
+      return 'var(--color-info)';
     }
     if (type.includes('deleted') || type.includes('removed')) {
-      return '#e74c3c';
+      return 'var(--color-error)';
     }
     if (type.includes('created') || type.includes('added')) {
-      return '#2ecc71';
+      return 'var(--color-success)';
     }
     if (type.includes('verified')) {
-      return '#9b59b6';
+      return 'var(--color-secondary)';
     }
-    return '#95a5a6';
+    return 'var(--color-text-disabled)';
   }
 
   function formatDate(timestamp: AuditLogEntry['performedAt']): string {
@@ -132,7 +132,7 @@ export default function AuditLogPage() {
           <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '2rem' }}>
             Website Audit Log
           </h1>
-          <p style={{ color: '#6b7280' }}>Loading audit log...</p>
+          <p style={{ color: 'var(--color-text-disabled)' }}>Loading audit log...</p>
         </div>
       </div>
     );
@@ -147,10 +147,10 @@ export default function AuditLogPage() {
           </h1>
           <div style={{
             padding: '1rem',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
+            background: 'var(--color-error-light)',
+            border: '1px solid var(--color-error-light)',
             borderRadius: '8px',
-            color: '#991b1b',
+            color: 'var(--color-error-dark)',
           }}>
             {error}
           </div>
@@ -160,7 +160,7 @@ export default function AuditLogPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', padding: '2rem', background: '#f9fafb', minHeight: '100vh' }}>
+    <div style={{ fontFamily: 'system-ui', padding: '2rem', background: 'var(--color-bg-elevated)', minHeight: '100vh' }}>
       
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
@@ -168,7 +168,7 @@ export default function AuditLogPage() {
           <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
             Website Audit Log
           </h1>
-          <p style={{ color: '#6b7280' }}>
+          <p style={{ color: 'var(--color-text-disabled)' }}>
             Track all changes and events in your website builder
           </p>
         </div>
@@ -178,13 +178,13 @@ export default function AuditLogPage() {
           background: 'white',
           padding: '1rem',
           borderRadius: '8px',
-          border: '1px solid #e5e7eb',
+          border: '1px solid var(--color-border-light)',
           marginBottom: '1.5rem',
           display: 'flex',
           alignItems: 'center',
           gap: '1rem',
         }}>
-          <label style={{ fontWeight: '500', color: '#374151' }}>
+          <label style={{ fontWeight: '500', color: 'var(--color-border-strong)' }}>
             Filter:
           </label>
           <select
@@ -192,7 +192,7 @@ export default function AuditLogPage() {
             onChange={(e) => setFilter(e.target.value)}
             style={{
               padding: '0.5rem 1rem',
-              border: '1px solid #d1d5db',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '6px',
               fontSize: '0.875rem',
               background: 'white',
@@ -206,7 +206,7 @@ export default function AuditLogPage() {
             ))}
           </select>
 
-          <div style={{ marginLeft: 'auto', color: '#6b7280', fontSize: '0.875rem' }}>
+          <div style={{ marginLeft: 'auto', color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
             {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
           </div>
         </div>
@@ -217,13 +217,13 @@ export default function AuditLogPage() {
             background: 'white',
             padding: '3rem',
             borderRadius: '8px',
-            border: '1px solid #e5e7eb',
+            border: '1px solid var(--color-border-light)',
             textAlign: 'center',
           }}>
-            <p style={{ color: '#6b7280', fontSize: '1rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '1rem' }}>
               No audit log entries found.
             </p>
-            <p style={{ color: '#9ca3af', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
               Events will appear here as you publish pages, add domains, and make changes.
             </p>
           </div>
@@ -236,7 +236,7 @@ export default function AuditLogPage() {
                   background: 'white',
                   padding: '1.25rem',
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid var(--color-border-light)',
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '1rem',
@@ -262,11 +262,11 @@ export default function AuditLogPage() {
 
                 {/* Event Details */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
+                  <div style={{ fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                     {entry.pageTitle ?? entry.domain ?? 'Event'}
                   </div>
                   
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>
                     {entry.pageId && <span>Page ID: {entry.pageId}</span>}
                     {entry.version && <span> • Version {entry.version}</span>}
                     {entry.scheduledFor && (
@@ -274,7 +274,7 @@ export default function AuditLogPage() {
                     )}
                   </div>
 
-                  <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
                     {formatDate(entry.performedAt)} • By {entry.performedBy}
                   </div>
                 </div>

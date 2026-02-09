@@ -77,7 +77,7 @@ export default function RevenueAnalyticsPage() {
     void loadAnalytics();
   }, [loadAnalytics]);
 
-  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : 'var(--color-primary)';
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -120,7 +120,7 @@ export default function RevenueAnalyticsPage() {
                     style={{
                       padding: '0.5rem 1rem',
                       backgroundColor: period === p ? primaryColor : 'transparent',
-                      color: period === p ? '#fff' : '#999',
+                      color: period === p ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                       border: 'none',
                       borderRadius: '0.375rem',
                       cursor: 'pointer',

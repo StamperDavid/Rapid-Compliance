@@ -28,20 +28,20 @@ interface TooltipPayloadEntry {
 
 export default function WinLossChart({ winLossData, lossReasons, type = 'pie' }: WinLossChartProps) {
   const successColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || '#10b981'
-    : '#10b981';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || 'var(--color-success)'
+    : 'var(--color-success)';
 
   const errorColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-error').trim() || '#ef4444'
-    : '#ef4444';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-error').trim() || 'var(--color-error)'
+    : 'var(--color-error)';
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || '#ffffff'
-    : '#ffffff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
 
   const borderColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
-    : '#333333';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-main)'
+    : 'var(--color-border-main)';
 
   const pieData = [
     { name: 'Won', value: winLossData.won },
@@ -89,7 +89,7 @@ export default function WinLossChart({ winLossData, lossReasons, type = 'pie' }:
               labelLine={false}
               label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
               outerRadius={120}
-              fill="#8884d8"
+              fill="var(--color-primary)"
               dataKey="value"
             >
               {pieData.map((entry, index) => (

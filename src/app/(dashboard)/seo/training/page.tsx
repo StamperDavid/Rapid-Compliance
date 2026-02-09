@@ -38,15 +38,15 @@ interface BrandDNA {
 
 // SaaS Premium Dark Theme Colors
 const COLORS = {
-  bg: '#000000',
-  card: '#0a0a0a',
-  border: '#1a1a1a',
-  primary: '#6366f1',
-  text: '#ffffff',
-  muted: '#999999',
-  success: '#10b981',
-  warning: '#fbbf24',
-  error: '#ef4444',
+  bg: 'var(--color-bg-main)',
+  card: 'var(--color-bg-main)',
+  border: 'var(--color-bg-paper)',
+  primary: 'var(--color-primary)',
+  text: 'var(--color-text-primary)',
+  muted: 'var(--color-text-secondary)',
+  success: 'var(--color-success)',
+  warning: 'var(--color-warning-light)',
+  error: 'var(--color-error)',
 };
 
 // Default SEO Training Settings
@@ -846,7 +846,7 @@ export default function SEOTrainingPage() {
                           width: '48px',
                           height: '24px',
                           borderRadius: '12px',
-                          backgroundColor: overrideForSEO ? primaryColor : '#333',
+                          backgroundColor: overrideForSEO ? primaryColor : 'var(--color-border-strong)',
                           border: 'none',
                           cursor: 'pointer',
                           position: 'relative',
@@ -937,7 +937,7 @@ export default function SEOTrainingPage() {
                           <span style={{ fontSize: '0.75rem', color: COLORS.muted }}>{score.label}</span>
                           <span style={{ fontSize: '0.75rem', fontWeight: score.bold ? '600' : '400', color: score.bold ? score.color : COLORS.text }}>{score.value}%</span>
                         </div>
-                        <div style={{ height: score.height, backgroundColor: '#333', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: score.height, backgroundColor: 'var(--color-border-strong)', borderRadius: '3px', overflow: 'hidden' }}>
                           <div style={{ width: `${score.value}%`, height: '100%', backgroundColor: score.color, borderRadius: '3px' }} />
                         </div>
                       </div>
@@ -1064,16 +1064,16 @@ function formatMarkdown(content: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/^### (.+)$/gm, '<h3 style="font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: #fff;">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 style="font-size: 1.25rem; font-weight: 600; margin: 1.75rem 0 0.75rem; color: #fff;">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem; color: #fff;">$1</h1>')
+    .replace(/^### (.+)$/gm, '<h3 style="font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: var(--color-text-primary);">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="font-size: 1.25rem; font-weight: 600; margin: 1.75rem 0 0.75rem; color: var(--color-text-primary);">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 1rem; color: var(--color-text-primary);">$1</h1>')
     .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^- (.+)$/gm, '<li style="margin-left: 1.5rem; margin-bottom: 0.375rem; color: #ccc;">$1</li>')
-    .replace(/^\* (.+)$/gm, '<li style="margin-left: 1.5rem; margin-bottom: 0.375rem; color: #ccc;">$1</li>')
-    .replace(/^\d+\. (.+)$/gm, '<li style="margin-left: 1.5rem; margin-bottom: 0.375rem; color: #ccc;">$1</li>')
-    .replace(/\n\n/g, '</p><p style="margin-bottom: 1rem; color: #e5e5e5;">')
+    .replace(/^- (.+)$/gm, '<li style="margin-left: 1.5rem; margin-bottom: 0.375rem; color: var(--color-text-primary);">$1</li>')
+    .replace(/^\* (.+)$/gm, '<li style="margin-left: 1.5rem; margin-bottom: 0.375rem; color: var(--color-text-primary);">$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li style="margin-left: 1.5rem; margin-bottom: 0.375rem; color: var(--color-text-primary);">$1</li>')
+    .replace(/\n\n/g, '</p><p style="margin-bottom: 1rem; color: var(--color-text-primary);">')
     .replace(/\n/g, '<br/>');
 
-  return `<p style="margin-bottom: 1rem; color: #e5e5e5;">${html}</p>`;
+  return `<p style="margin-bottom: 1rem; color: var(--color-text-primary);">${html}</p>`;
 }

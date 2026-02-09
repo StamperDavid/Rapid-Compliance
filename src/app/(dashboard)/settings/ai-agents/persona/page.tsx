@@ -174,20 +174,20 @@ export default function AgentPersonaPage() {
     }
   };
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
-  const bgPaper = '#1a1a1a';
-  const borderColor = '#333';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
+  const bgPaper = 'var(--color-bg-paper)';
+  const borderColor = 'var(--color-border-strong)';
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', backgroundColor: '#000', minHeight: '100vh', color: '#fff' }}>
+      <div style={{ padding: '2rem', backgroundColor: 'var(--color-bg-main)', minHeight: '100vh', color: 'var(--color-text-primary)' }}>
         <div>Loading persona...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '2rem', overflowY: 'auto', backgroundColor: '#000', minHeight: '100vh' }}>
+    <div style={{ padding: '2rem', overflowY: 'auto', backgroundColor: 'var(--color-bg-main)', minHeight: '100vh' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
@@ -209,10 +209,10 @@ export default function AgentPersonaPage() {
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                 🎭 Expert Agent Persona
               </h1>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>
+              <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                 Comprehensive persona auto-generated from your onboarding, refined through training
               </p>
             </div>
@@ -221,8 +221,8 @@ export default function AgentPersonaPage() {
               disabled={saving}
               style={{
                 padding: '0.75rem 1.5rem',
-                backgroundColor: saveSuccess ? '#10b981' : primaryColor,
-                color: '#fff',
+                backgroundColor: saveSuccess ? 'var(--color-success)' : primaryColor,
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
@@ -245,14 +245,14 @@ export default function AgentPersonaPage() {
             padding: '1.5rem',
             marginBottom: '2rem'
           }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
               {persona.agentName}
             </div>
-            <div style={{ fontSize: '1.125rem', color: '#999', marginBottom: '1rem' }}>
+            <div style={{ fontSize: '1.125rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
               {persona.professionalTitle}
             </div>
             {persona.coreMission && (
-              <div style={{ fontSize: '0.875rem', color: '#ccc', lineHeight: '1.6' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: '1.6' }}>
                 <strong style={{ color: primaryColor }}>Mission:</strong> {persona.coreMission}
               </div>
             )}
@@ -283,7 +283,7 @@ export default function AgentPersonaPage() {
                 backgroundColor: 'transparent',
                 border: 'none',
                 borderBottom: activeSection === section.id ? `2px solid ${primaryColor}` : '2px solid transparent',
-                color: activeSection === section.id ? '#fff' : '#666',
+                color: activeSection === section.id ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -299,7 +299,7 @@ export default function AgentPersonaPage() {
                   top: '0.5rem',
                   right: '0.5rem',
                   backgroundColor: primaryColor,
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.625rem',
                   padding: '0.125rem 0.375rem',
                   borderRadius: '999px',
@@ -419,7 +419,7 @@ export default function AgentPersonaPage() {
               borderRadius: '0.75rem',
               padding: '1.5rem'
             }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
                 Federated RAG Routing Tags
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -428,7 +428,7 @@ export default function AgentPersonaPage() {
                     key={idx}
                     style={{
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#0a0a0a',
+                      backgroundColor: 'var(--color-bg-main)',
                       border: `1px solid ${primaryColor}`,
                       borderRadius: '0.5rem',
                       fontSize: '0.75rem',
@@ -439,12 +439,12 @@ export default function AgentPersonaPage() {
                     {tag}
                   </div>
                 )) : (
-                  <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                     No RAG tags yet. Will be generated from your product categories and documents.
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#666' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                 ✓ Auto-generated from: Product categories + Document uploads
               </div>
             </div>
@@ -455,14 +455,14 @@ export default function AgentPersonaPage() {
               borderRadius: '0.75rem',
               padding: '1.5rem'
             }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
                 Knowledge Source Hierarchy
               </label>
-              <ol style={{ margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#ccc', lineHeight: '1.8' }}>
+              <ol style={{ margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: '1.8' }}>
                 {persona.knowledgeSourceHierarchy?.length > 0 ? persona.knowledgeSourceHierarchy.map((source, idx) => (
                   <li key={idx}>{source}</li>
                 )) : (
-                  <li style={{ color: '#666' }}>Will be populated from your knowledge sources</li>
+                  <li style={{ color: 'var(--color-text-disabled)' }}>Will be populated from your knowledge sources</li>
                 )}
               </ol>
             </div>
@@ -533,7 +533,7 @@ export default function AgentPersonaPage() {
               borderRadius: '0.75rem',
               padding: '1.5rem'
             }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
                 Tool/API Authorization Level
               </label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -545,23 +545,23 @@ export default function AgentPersonaPage() {
                       gridTemplateColumns: '1fr 1fr auto',
                       gap: '1rem',
                       padding: '1rem',
-                      backgroundColor: '#0a0a0a',
+                      backgroundColor: 'var(--color-bg-main)',
                       border: `1px solid ${borderColor}`,
                       borderRadius: '0.5rem',
                       alignItems: 'center'
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>{tool.tool}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>Permissions: {tool.permissions}</div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{tool.tool}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Permissions: {tool.permissions}</div>
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
                       {tool.canExecuteAutonomously ? '✓ Autonomous' : '⚠ Requires Permission'}
                     </div>
                     <div style={{
                       padding: '0.25rem 0.75rem',
-                      backgroundColor: tool.canExecuteAutonomously ? '#065f46' : '#7c2d12',
-                      color: '#fff',
+                      backgroundColor: tool.canExecuteAutonomously ? 'var(--color-success-dark)' : 'var(--color-warning-dark)',
+                      color: 'var(--color-text-primary)',
                       borderRadius: '0.25rem',
                       fontSize: '0.75rem',
                       fontWeight: '600'
@@ -570,12 +570,12 @@ export default function AgentPersonaPage() {
                     </div>
                   </div>
                 )) : (
-                  <div style={{ color: '#666', fontSize: '0.875rem', padding: '1rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', padding: '1rem' }}>
                     No integrations configured yet. Add integrations in settings.
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '1rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '1rem' }}>
                 ✓ Auto-populated from: Integrations you configured in settings
               </div>
             </div>
@@ -612,16 +612,16 @@ export default function AgentPersonaPage() {
             />
 
             <div style={{
-              backgroundColor: '#1e3a8a',
-              border: '1px solid #3b82f6',
+              backgroundColor: 'var(--color-info-dark)',
+              border: '1px solid var(--color-info)',
               borderRadius: '0.75rem',
               padding: '1.5rem',
               marginBottom: '1rem'
             }}>
-              <div style={{ fontSize: '0.875rem', color: '#93c5fd', marginBottom: '0.5rem', fontWeight: '600' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-info-light)', marginBottom: '0.5rem', fontWeight: '600' }}>
                 💡 How Training Refines Your Persona
               </div>
-              <div style={{ fontSize: '0.875rem', color: '#dbeafe', lineHeight: '1.6' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-info-light)', lineHeight: '1.6' }}>
                 As you train your agent, issues like &ldquo;too verbose,&rdquo; &ldquo;inaccurate,&rdquo; or &ldquo;off-brand&rdquo; are automatically
                 detected and used to update these settings. Your persona gets smarter with every training session.
               </div>
@@ -634,13 +634,13 @@ export default function AgentPersonaPage() {
               borderRadius: '0.75rem',
               padding: '1.5rem'
             }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
-                Verbosity Control <span style={{ color: '#f59e0b' }}>★ Modified by Training</span>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
+                Verbosity Control <span style={{ color: 'var(--color-warning)' }}>★ Modified by Training</span>
               </label>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: '#999', display: 'block', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
                     Max Response Length (words)
                   </label>
                   <input
@@ -656,17 +656,17 @@ export default function AgentPersonaPage() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
+                      backgroundColor: 'var(--color-bg-main)',
                       border: `1px solid ${borderColor}`,
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem'
                     }}
                   />
                 </div>
                 
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: '#999', display: 'block', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
                     Conversational Pacing
                   </label>
                   <select
@@ -681,10 +681,10 @@ export default function AgentPersonaPage() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
+                      backgroundColor: 'var(--color-bg-main)',
                       border: `1px solid ${borderColor}`,
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem'
                     }}
                   >
@@ -696,7 +696,7 @@ export default function AgentPersonaPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#ccc', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={persona.verbosityControl?.preferBulletPoints || false}
@@ -712,7 +712,7 @@ export default function AgentPersonaPage() {
                   Prefer Bullet Points
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#ccc', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={persona.verbosityControl?.avoidRepetition || false}
@@ -760,7 +760,7 @@ export default function AgentPersonaPage() {
                 borderRadius: '0.75rem',
                 padding: '1.5rem'
               }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
                   Training Insights History
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -769,7 +769,7 @@ export default function AgentPersonaPage() {
                       key={idx}
                       style={{
                         padding: '1rem',
-                        backgroundColor: '#0a0a0a',
+                        backgroundColor: 'var(--color-bg-main)',
                         border: `1px solid ${borderColor}`,
                         borderRadius: '0.5rem'
                       }}
@@ -777,7 +777,7 @@ export default function AgentPersonaPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         <span style={{
                           fontSize: '0.75rem',
-                          color: '#999'
+                          color: 'var(--color-text-secondary)'
                         }}>
                           {new Date(insight.date).toLocaleDateString()}
                         </span>
@@ -786,15 +786,15 @@ export default function AgentPersonaPage() {
                           padding: '0.125rem 0.5rem',
                           backgroundColor: getCategoryColor(insight.category),
                           borderRadius: '0.25rem',
-                          color: '#fff'
+                          color: 'var(--color-text-primary)'
                         }}>
                           {insight.category}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: '#ccc', marginBottom: '0.25rem' }}>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                         <strong>Issue:</strong> {insight.issue}
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: '#10b981' }}>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--color-success)' }}>
                         <strong>Adjustment:</strong> {insight.adjustment}
                       </div>
                     </div>
@@ -812,20 +812,20 @@ export default function AgentPersonaPage() {
 function SectionHeader({ title, description, badge }: { title: string; description: string; badge?: string }) {
   return (
     <div style={{
-      borderLeft: '4px solid #6366f1',
+      borderLeft: '4px solid var(--color-primary)',
       paddingLeft: '1rem',
       marginBottom: '0.5rem',
       position: 'relative'
     }}>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
         {title}
         {badge && (
           <span style={{
             marginLeft: '1rem',
             fontSize: '0.625rem',
             padding: '0.25rem 0.75rem',
-            backgroundColor: '#10b981',
-            color: '#fff',
+            backgroundColor: 'var(--color-success)',
+            color: 'var(--color-text-primary)',
             borderRadius: '0.25rem',
             fontWeight: '600',
             verticalAlign: 'middle'
@@ -834,7 +834,7 @@ function SectionHeader({ title, description, badge }: { title: string; descripti
           </span>
         )}
       </h2>
-      <p style={{ fontSize: '0.875rem', color: '#666', margin: 0 }}>
+      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', margin: 0 }}>
         {description}
       </p>
     </div>
@@ -866,8 +866,8 @@ function FormField({
   max?: number;
   readonly?: boolean;
 }) {
-  const bgPaper = '#1a1a1a';
-  const borderColor = '#333';
+  const bgPaper = 'var(--color-bg-paper)';
+  const borderColor = 'var(--color-border-strong)';
 
   return (
     <div style={{
@@ -881,7 +881,7 @@ function FormField({
         fontSize: '0.875rem',
         fontWeight: '600',
         marginBottom: '0.75rem',
-        color: '#fff'
+        color: 'var(--color-text-primary)'
       }}>
         {label}
       </label>
@@ -896,10 +896,10 @@ function FormField({
           style={{
             width: '100%',
             padding: '0.75rem',
-            backgroundColor: readonly ? '#0f0f0f' : '#0a0a0a',
+            backgroundColor: readonly ? 'var(--color-bg-main)' : 'var(--color-bg-main)',
             border: `1px solid ${borderColor}`,
             borderRadius: '0.5rem',
-            color: readonly ? '#999' : '#fff',
+            color: readonly ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
             fontSize: '0.875rem',
             fontFamily: 'inherit',
             resize: 'vertical',
@@ -919,10 +919,10 @@ function FormField({
           style={{
             width: '100%',
             padding: '0.75rem',
-            backgroundColor: readonly ? '#0f0f0f' : '#0a0a0a',
+            backgroundColor: readonly ? 'var(--color-bg-main)' : 'var(--color-bg-main)',
             border: `1px solid ${borderColor}`,
             borderRadius: '0.5rem',
-            color: readonly ? '#999' : '#fff',
+            color: readonly ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
             fontSize: '0.875rem',
             fontFamily: 'inherit',
             cursor: readonly ? 'not-allowed' : 'text'
@@ -934,7 +934,7 @@ function FormField({
         <div style={{
           marginTop: '0.5rem',
           fontSize: '0.75rem',
-          color: '#666',
+          color: 'var(--color-text-disabled)',
           fontStyle: 'italic',
           lineHeight: '1.4'
         }}>
@@ -947,11 +947,11 @@ function FormField({
 
 function getCategoryColor(category: string): string {
   switch (category) {
-    case 'verbosity': return '#f59e0b';
-    case 'accuracy': return '#ef4444';
-    case 'brand-alignment': return '#8b5cf6';
-    case 'tone': return '#06b6d4';
-    default: return '#6366f1';
+    case 'verbosity': return 'var(--color-warning)';
+    case 'accuracy': return 'var(--color-error)';
+    case 'brand-alignment': return 'var(--color-secondary)';
+    case 'tone': return 'var(--color-info)';
+    default: return 'var(--color-primary)';
   }
 }
 

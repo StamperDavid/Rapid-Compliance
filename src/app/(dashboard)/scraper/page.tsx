@@ -315,7 +315,7 @@ export default function ScraperDashboardPage() {
                 style={{
                   padding: '0.625rem 1.5rem',
                   backgroundColor: isSubmitting || !url.trim() ? 'var(--color-bg-paper)' : 'var(--color-primary)',
-                  color: isSubmitting || !url.trim() ? 'var(--color-text-disabled)' : '#fff',
+                  color: isSubmitting || !url.trim() ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',

@@ -58,9 +58,9 @@ export default function CustomDomainsPage() {
   const toast = useToast();
 
   // Get theme colors
-  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#3b82f6';
-  const bgColor = (theme?.colors?.background?.main !== '' && theme?.colors?.background?.main != null) ? theme.colors.background.main : '#000000';
-  const textColor = (theme?.colors?.text?.primary !== '' && theme?.colors?.text?.primary != null) ? theme.colors.text.primary : '#ffffff';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : 'var(--color-info)';
+  const bgColor = (theme?.colors?.background?.main !== '' && theme?.colors?.background?.main != null) ? theme.colors.background.main : 'var(--color-bg-main)';
+  const textColor = (theme?.colors?.text?.primary !== '' && theme?.colors?.text?.primary != null) ? theme.colors.text.primary : 'var(--color-text-primary)';
 
   const loadDomains = useCallback(async () => {
     try {
@@ -223,12 +223,12 @@ export default function CustomDomainsPage() {
           <h1 style={{
             fontSize: '32px',
             fontWeight: 'bold',
-            color: '#111827',
+            color: 'var(--color-text-primary)',
             marginBottom: '8px',
           }}>
             Custom Domains
           </h1>
-          <p style={{ color: '#6b7280', fontSize: '16px' }}>
+          <p style={{ color: 'var(--color-text-disabled)', fontSize: '16px' }}>
             Connect your own domain to your website
           </p>
         </div>
@@ -254,10 +254,10 @@ export default function CustomDomainsPage() {
       {error && (
         <div style={{
           padding: '16px',
-          backgroundColor: '#fef2f2',
-          border: '1px solid #fecaca',
+          backgroundColor: 'var(--color-error-light)',
+          border: '1px solid var(--color-error-light)',
           borderRadius: '6px',
-          color: '#991b1b',
+          color: 'var(--color-error-dark)',
           marginBottom: '24px',
         }}>
           {error}
@@ -267,10 +267,10 @@ export default function CustomDomainsPage() {
       {success && (
         <div style={{
           padding: '16px',
-          backgroundColor: '#f0fdf4',
-          border: '1px solid #bbf7d0',
+          backgroundColor: 'var(--color-success-light)',
+          border: '1px solid var(--color-success-light)',
           borderRadius: '6px',
-          color: '#166534',
+          color: 'var(--color-success-dark)',
           marginBottom: '24px',
         }}>
           {success}
@@ -313,7 +313,7 @@ export default function CustomDomainsPage() {
                   fontSize: '14px',
                   fontWeight: '500',
                   marginBottom: '8px',
-                  color: '#374151',
+                  color: 'var(--color-border-strong)',
                 }}>
                   Domain Name
                 </label>
@@ -325,7 +325,7 @@ export default function CustomDomainsPage() {
                   style={{
                     width: '100%',
                     padding: '10px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '6px',
                     fontSize: '14px',
                   }}
@@ -348,7 +348,7 @@ export default function CustomDomainsPage() {
                   style={{
                     padding: '10px 20px',
                     backgroundColor: 'white',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '6px',
                     fontSize: '14px',
                     cursor: 'pointer',
@@ -398,7 +398,7 @@ export default function CustomDomainsPage() {
           }}>
             No custom domains yet
           </h3>
-          <p style={{ color: '#6b7280', marginBottom: '24px' }}>
+          <p style={{ color: 'var(--color-text-disabled)', marginBottom: '24px' }}>
             Add a custom domain to use your own branded URL
           </p>
           <button
@@ -458,8 +458,8 @@ function DomainCard({
       return (
         <span style={{
           padding: '4px 12px',
-          backgroundColor: '#dcfce7',
-          color: '#166534',
+          backgroundColor: 'var(--color-success-light)',
+          color: 'var(--color-success-dark)',
           borderRadius: '12px',
           fontSize: '12px',
           fontWeight: '500',
@@ -472,8 +472,8 @@ function DomainCard({
       return (
         <span style={{
           padding: '4px 12px',
-          backgroundColor: '#fef3c7',
-          color: '#92400e',
+          backgroundColor: 'var(--color-warning-light)',
+          color: 'var(--color-warning-dark)',
           borderRadius: '12px',
           fontSize: '12px',
           fontWeight: '500',
@@ -485,8 +485,8 @@ function DomainCard({
     return (
       <span style={{
         padding: '4px 12px',
-        backgroundColor: '#fee2e2',
-        color: '#991b1b',
+        backgroundColor: 'var(--color-error-light)',
+        color: 'var(--color-error-dark)',
         borderRadius: '12px',
         fontSize: '12px',
         fontWeight: '500',
@@ -499,7 +499,7 @@ function DomainCard({
   return (
     <div style={{
       backgroundColor: 'white',
-      border: '1px solid #e5e7eb',
+      border: '1px solid var(--color-border-light)',
       borderRadius: '8px',
       padding: '24px',
     }}>
@@ -513,7 +513,7 @@ function DomainCard({
           <h3 style={{
             fontSize: '18px',
             fontWeight: '600',
-            color: '#111827',
+            color: 'var(--color-text-primary)',
           }}>
             {domain.id}
           </h3>
@@ -542,7 +542,7 @@ function DomainCard({
             style={{
               padding: '8px 16px',
               backgroundColor: 'white',
-              border: '1px solid #d1d5db',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '6px',
               fontSize: '14px',
               cursor: 'pointer',
@@ -555,8 +555,8 @@ function DomainCard({
             style={{
               padding: '8px 16px',
               backgroundColor: 'white',
-              color: '#dc2626',
-              border: '1px solid #d1d5db',
+              color: 'var(--color-error)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '6px',
               fontSize: '14px',
               cursor: 'pointer',
@@ -574,7 +574,7 @@ function DomainCard({
           gap: '24px',
           marginBottom: '16px',
           fontSize: '14px',
-          color: '#6b7280',
+          color: 'var(--color-text-disabled)',
         }}>
           <div>
             <strong>SSL Status:</strong> {domain.sslStatus}
@@ -604,13 +604,13 @@ function DomainCard({
             fontSize: '14px',
             fontWeight: '600',
             marginBottom: '12px',
-            color: '#374151',
+            color: 'var(--color-border-strong)',
           }}>
             DNS Configuration
           </h4>
           <p style={{
             fontSize: '13px',
-            color: '#6b7280',
+            color: 'var(--color-text-disabled)',
             marginBottom: '16px',
           }}>
             Add these records to your DNS provider:
@@ -623,21 +623,21 @@ function DomainCard({
                 style={{
                   padding: '12px',
                   backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   fontSize: '13px',
                   fontFamily: 'monospace',
                 }}
               >
                 <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px' }}>
-                  <div style={{ fontWeight: '600', color: '#374151' }}>Type:</div>
-                  <div style={{ color: '#111827' }}>{record.type}</div>
+                  <div style={{ fontWeight: '600', color: 'var(--color-border-strong)' }}>Type:</div>
+                  <div style={{ color: 'var(--color-text-primary)' }}>{record.type}</div>
                   
-                  <div style={{ fontWeight: '600', color: '#374151' }}>Name:</div>
-                  <div style={{ color: '#111827' }}>{record.name}</div>
+                  <div style={{ fontWeight: '600', color: 'var(--color-border-strong)' }}>Name:</div>
+                  <div style={{ color: 'var(--color-text-primary)' }}>{record.name}</div>
                   
-                  <div style={{ fontWeight: '600', color: '#374151' }}>Value:</div>
-                  <div style={{ color: '#111827', wordBreak: 'break-all' }}>{record.value}</div>
+                  <div style={{ fontWeight: '600', color: 'var(--color-border-strong)' }}>Value:</div>
+                  <div style={{ color: 'var(--color-text-primary)', wordBreak: 'break-all' }}>{record.value}</div>
                 </div>
               </div>
             ))}

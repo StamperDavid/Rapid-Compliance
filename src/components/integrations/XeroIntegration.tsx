@@ -20,16 +20,16 @@ export default function XeroIntegration({
   const [showSettings, setShowSettings] = useState(false);
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || '#ffffff'
-    : '#ffffff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
 
   const borderColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
-    : '#333333';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-main)'
+    : 'var(--color-border-main)';
 
-  const primaryColor = typeof window !== 'undefined' 
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
-    : '#6366f1';
+  const primaryColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
 
   const handleConnect = () => {
     setIsConnecting(true);
@@ -59,7 +59,7 @@ export default function XeroIntegration({
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
               Xero
             </h3>
-            <p style={{ fontSize: '0.875rem', color: '#666' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
               Sync invoices, payments, contacts, and items between Xero and your CRM
             </p>
           </div>
@@ -70,8 +70,8 @@ export default function XeroIntegration({
           style={{
             width: '100%',
             padding: '0.75rem',
-            backgroundColor: isConnecting ? '#444' : primaryColor,
-            color: '#fff',
+            backgroundColor: isConnecting ? 'var(--color-border-strong)' : primaryColor,
+            color: 'var(--color-text-primary)',
             border: 'none',
             borderRadius: '0.5rem',
             cursor: isConnecting ? 'not-allowed' : 'pointer',
@@ -81,7 +81,7 @@ export default function XeroIntegration({
         >
           {isConnecting ? 'Connecting...' : 'Connect Xero'}
         </button>
-        <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem', textAlign: 'center' }}>
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem', textAlign: 'center' }}>
           You&apos;ll be redirected to Xero to authorize the connection
         </p>
       </div>
@@ -104,25 +104,25 @@ export default function XeroIntegration({
                 Xero
               </h3>
               {integration.organizationName && (
-                <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
                   Connected to {integration.organizationName}
                 </p>
               )}
             </div>
             <div style={{
               padding: '0.375rem 0.75rem',
-              backgroundColor: '#0f4c0f',
-              border: '1px solid #4ade80',
+              backgroundColor: 'var(--color-success-dark)',
+              border: '1px solid var(--color-success-light)',
               borderRadius: '0.375rem',
               fontSize: '0.75rem',
-              color: '#4ade80',
+              color: 'var(--color-success-light)',
               fontWeight: '600'
             }}>
               ✓ Connected
             </div>
           </div>
           {integration.connectedAt && (
-            <p style={{ fontSize: '0.75rem', color: '#666' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
               Connected {new Date(
                 typeof integration.connectedAt === 'string'
                   ? integration.connectedAt
@@ -223,8 +223,8 @@ export default function XeroIntegration({
               onClick={onDisconnect}
               style={{
                 padding: '0.625rem 1rem',
-                backgroundColor: '#4c0f0f',
-                color: '#f87171',
+                backgroundColor: 'var(--color-error-dark)',
+                color: 'var(--color-error-light)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
@@ -244,7 +244,7 @@ export default function XeroIntegration({
               flex: 1,
               padding: '0.75rem',
               backgroundColor: primaryColor,
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',
@@ -258,8 +258,8 @@ export default function XeroIntegration({
             onClick={onDisconnect}
             style={{
               padding: '0.75rem 1rem',
-              backgroundColor: '#4c0f0f',
-              color: '#f87171',
+              backgroundColor: 'var(--color-error-dark)',
+              color: 'var(--color-error-light)',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',

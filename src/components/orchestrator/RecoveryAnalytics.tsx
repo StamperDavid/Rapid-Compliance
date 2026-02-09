@@ -207,7 +207,7 @@ export function RecoveryAnalytics({ metrics }: RecoveryAnalyticsProps) {
                         cy="18"
                         r="16"
                         fill="none"
-                        stroke="#1a1a1a"
+                        stroke="var(--color-bg-elevated)"
                         strokeWidth="3"
                       />
                       <circle
@@ -215,7 +215,7 @@ export function RecoveryAnalytics({ metrics }: RecoveryAnalyticsProps) {
                         cy="18"
                         r="16"
                         fill="none"
-                        stroke="#6366f1"
+                        stroke="var(--color-primary)"
                         strokeWidth="3"
                         strokeDasharray={`${reason.percentage} 100`}
                         strokeLinecap="round"

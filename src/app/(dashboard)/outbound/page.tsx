@@ -7,7 +7,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 export default function OutboundHomePage() {
   const { theme } = useOrgTheme();
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   const outboundFeatures = [
     {
@@ -16,7 +16,7 @@ export default function OutboundHomePage() {
       description: 'Generate personalized cold emails using AI and prospect research',
       href: `/outbound/email-writer`,
       status: 'Available',
-      color: '#10b981',
+      color: 'var(--color-success)',
     },
     {
       icon: '📧',
@@ -24,7 +24,7 @@ export default function OutboundHomePage() {
       description: 'Automated multi-step email campaigns with smart triggers',
       href: `/outbound/sequences`,
       status: 'Available',
-      color: '#10b981',
+      color: 'var(--color-success)',
     },
     // Removed "Coming Soon" features to avoid confusion in production
     // - AI Reply Handler
@@ -42,10 +42,10 @@ export default function OutboundHomePage() {
             <Link href="/crm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
               ← Back to CRM
             </Link>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               Outbound Sales Automation
             </h1>
-            <p style={{ color: '#999', fontSize: '1rem', maxWidth: '800px' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', maxWidth: '800px' }}>
               AI-powered outbound sales tools to find prospects, create personalized outreach, and book meetings automatically
             </p>
           </div>
@@ -58,8 +58,8 @@ export default function OutboundHomePage() {
                 href={feature.status === 'Available' ? feature.href : '#'}
                 style={{
                   display: 'block',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '1rem',
                   padding: '2rem',
                   textDecoration: 'none',
@@ -76,7 +76,7 @@ export default function OutboundHomePage() {
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#333';
+                  e.currentTarget.style.borderColor = 'var(--color-border-strong)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
@@ -87,7 +87,7 @@ export default function OutboundHomePage() {
                   right: '1rem',
                   padding: '0.25rem 0.75rem',
                   backgroundColor: feature.color,
-                  color: '#000',
+                  color: 'var(--color-bg-main)',
                   borderRadius: '0.375rem',
                   fontSize: '0.625rem',
                   fontWeight: '700',
@@ -103,12 +103,12 @@ export default function OutboundHomePage() {
                 </div>
 
                 {/* Title */}
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '0.75rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>
                   {feature.title}
                 </h3>
 
                 {/* Description */}
-                <p style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.6' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>
                   {feature.description}
                 </p>
 
@@ -128,8 +128,8 @@ export default function OutboundHomePage() {
           </div>
 
           {/* Quick Stats */}
-          <div style={{ marginTop: '3rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '1.5rem' }}>
+          <div style={{ marginTop: '3rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
               Quick Access
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -138,19 +138,19 @@ export default function OutboundHomePage() {
                 style={{
                   display: 'block',
                   padding: '1rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #222',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-bg-elevated)',
                   borderRadius: '0.5rem',
                   textDecoration: 'none',
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = primaryColor}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#222'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-bg-elevated)'}
               >
-                <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
                   Manage Features
                 </div>
-                <div style={{ fontSize: '1rem', fontWeight: '600', color: '#fff' }}>
+                <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                   Subscription Settings →
                 </div>
               </Link>
@@ -160,19 +160,19 @@ export default function OutboundHomePage() {
                 style={{
                   display: 'block',
                   padding: '1rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #222',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-bg-elevated)',
                   borderRadius: '0.5rem',
                   textDecoration: 'none',
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = primaryColor}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#222'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-bg-elevated)'}
               >
-                <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
                   View Leads
                 </div>
-                <div style={{ fontSize: '1rem', fontWeight: '600', color: '#fff' }}>
+                <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                   Lead Management →
                 </div>
               </Link>

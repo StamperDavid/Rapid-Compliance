@@ -973,7 +973,7 @@ function ToggleSetting({ label, checked, onChange }: ToggleSettingProps) {
         cursor: 'pointer',
       }}
     >
-      <span style={{ fontSize: '0.875rem', color: '#ccc' }}>{label}</span>
+      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>{label}</span>
       <div
         onClick={() => onChange(!checked)}
         style={{
@@ -1049,13 +1049,13 @@ function ShareModal({ form, onClose }: ShareModalProps) {
     return (
       <svg width={qrSize} height={qrSize} viewBox={`0 0 ${qrSize} ${qrSize}`}>
         <rect fill="var(--color-text-primary)" width={qrSize} height={qrSize} />
-        <rect fill="#000" x="20" y="20" width="40" height="40" />
+        <rect fill="var(--color-bg-main)" x="20" y="20" width="40" height="40" />
         <rect fill="var(--color-text-primary)" x="30" y="30" width="20" height="20" />
-        <rect fill="#000" x="140" y="20" width="40" height="40" />
+        <rect fill="var(--color-bg-main)" x="140" y="20" width="40" height="40" />
         <rect fill="var(--color-text-primary)" x="150" y="30" width="20" height="20" />
-        <rect fill="#000" x="20" y="140" width="40" height="40" />
+        <rect fill="var(--color-bg-main)" x="20" y="140" width="40" height="40" />
         <rect fill="var(--color-text-primary)" x="30" y="150" width="20" height="20" />
-        <rect fill="#000" x="80" y="80" width="40" height="40" />
+        <rect fill="var(--color-bg-main)" x="80" y="80" width="40" height="40" />
         <text
           x={qrSize / 2}
           y={qrSize - 10}

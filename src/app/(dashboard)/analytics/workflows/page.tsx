@@ -50,7 +50,7 @@ export default function WorkflowAnalyticsPage() {
     void loadAnalytics();
   }, [loadAnalytics]);
 
-  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : 'var(--color-primary)';
   const formatPercent = (num: number) => `${num.toFixed(1)}%`;
 
   return (
@@ -111,7 +111,7 @@ export default function WorkflowAnalyticsPage() {
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
-                        <tr style={{ borderBottom: '1px solid #333' }}>
+                        <tr style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                           <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Workflow</th>
                           <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.75rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Executions</th>
                           <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.75rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Success Rate</th>

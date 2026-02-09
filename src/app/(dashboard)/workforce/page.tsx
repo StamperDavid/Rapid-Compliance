@@ -38,10 +38,10 @@ const AgentCard = memo(function AgentCard({
 }: AgentCardProps) {
   const getStatusColor = (status: SystemAgentStatus['status']) => {
     switch (status) {
-      case 'FUNCTIONAL': return '#22c55e';
-      case 'EXECUTING': return '#6366f1';
-      case 'SHELL': return '#f59e0b';
-      case 'GHOST': return '#666';
+      case 'FUNCTIONAL': return 'var(--color-success)';
+      case 'EXECUTING': return 'var(--color-primary)';
+      case 'SHELL': return 'var(--color-warning)';
+      case 'GHOST': return 'var(--color-text-disabled)';
     }
   };
 
@@ -56,17 +56,17 @@ const AgentCard = memo(function AgentCard({
 
   const getHealthColor = (health: SystemAgentStatus['health']) => {
     switch (health) {
-      case 'HEALTHY': return '#22c55e';
-      case 'DEGRADED': return '#f59e0b';
-      case 'OFFLINE': return '#ef4444';
+      case 'HEALTHY': return 'var(--color-success)';
+      case 'DEGRADED': return 'var(--color-warning)';
+      case 'OFFLINE': return 'var(--color-error)';
     }
   };
 
   const getTierBadge = (tier: AgentTier) => {
     switch (tier) {
-      case 'L1': return { label: 'CEO', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.1)' };
-      case 'L2': return { label: 'MGR', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
-      case 'L3': return { label: 'SPL', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' };
+      case 'L1': return { label: 'CEO', color: 'var(--color-secondary)', bg: 'rgba(168, 85, 247, 0.1)' };
+      case 'L2': return { label: 'MGR', color: 'var(--color-info)', bg: 'rgba(59, 130, 246, 0.1)' };
+      case 'L3': return { label: 'SPL', color: 'var(--color-success)', bg: 'rgba(16, 185, 129, 0.1)' };
     }
   };
 
@@ -76,7 +76,7 @@ const AgentCard = memo(function AgentCard({
     <div
       style={{
         backgroundColor: 'rgba(26, 26, 26, 0.8)',
-        border: `1px solid ${agent.status === 'EXECUTING' ? '#6366f1' : '#333'}`,
+        border: `1px solid ${agent.status === 'EXECUTING' ? 'var(--color-primary)' : 'var(--color-border-strong)'}`,
         borderRadius: '1rem',
         padding: compact ? '1rem' : '1.5rem',
         opacity: agent.status === 'GHOST' ? 0.6 : 1,
@@ -106,7 +106,7 @@ const AgentCard = memo(function AgentCard({
           </span>
           <div style={{ minWidth: 0 }}>
             <h3 style={{
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               fontSize: compact ? '0.875rem' : '1rem',
               fontWeight: '600',
               margin: 0,
@@ -140,7 +140,7 @@ const AgentCard = memo(function AgentCard({
               <span style={{
                 width: '1px',
                 height: '10px',
-                backgroundColor: '#444',
+                backgroundColor: 'var(--color-border-main)',
               }} />
               <span style={{
                 width: '6px',
@@ -149,7 +149,7 @@ const AgentCard = memo(function AgentCard({
                 borderRadius: '50%',
               }} />
               <span style={{
-                color: '#666',
+                color: 'var(--color-text-disabled)',
                 fontSize: '0.625rem',
               }}>
                 {agent.health}
@@ -163,9 +163,9 @@ const AgentCard = memo(function AgentCard({
           <span style={{
             padding: '0.25rem 0.5rem',
             backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            border: '1px solid #6366f1',
+            border: '1px solid var(--color-primary)',
             borderRadius: '0.25rem',
-            color: '#6366f1',
+            color: 'var(--color-primary)',
             fontSize: '0.625rem',
             fontWeight: '600',
           }}>
@@ -176,7 +176,7 @@ const AgentCard = memo(function AgentCard({
 
       {/* Role Description */}
       <p style={{
-        color: '#999',
+        color: 'var(--color-text-secondary)',
         fontSize: '0.75rem',
         lineHeight: '1.5',
         marginBottom: compact ? '0.75rem' : '1rem',
@@ -198,9 +198,9 @@ const AgentCard = memo(function AgentCard({
               key={i}
               style={{
                 padding: '0.25rem 0.5rem',
-                backgroundColor: '#0a0a0a',
+                backgroundColor: 'var(--color-bg-main)',
                 borderRadius: '0.25rem',
-                color: '#666',
+                color: 'var(--color-text-disabled)',
                 fontSize: '0.625rem',
               }}
             >
@@ -210,7 +210,7 @@ const AgentCard = memo(function AgentCard({
           {agent.capabilities.length > 3 && (
             <span style={{
               padding: '0.25rem 0.5rem',
-              color: '#666',
+              color: 'var(--color-text-disabled)',
               fontSize: '0.625rem',
             }}>
               +{agent.capabilities.length - 3} more
@@ -232,14 +232,14 @@ const AgentCard = memo(function AgentCard({
             padding: '0.5rem',
             backgroundColor: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
               ? 'rgba(34, 197, 94, 0.1)'
-              : '#1a1a1a',
+              : 'var(--color-bg-paper)',
             border: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
-              ? '1px solid #22c55e'
-              : '1px solid #333',
+              ? '1px solid var(--color-success)'
+              : '1px solid var(--color-border-strong)',
             borderRadius: '0.375rem',
             color: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
-              ? '#22c55e'
-              : '#666',
+              ? 'var(--color-success)'
+              : 'var(--color-text-disabled)',
             fontSize: '0.75rem',
             cursor: agent.status === 'GHOST' || agent.status === 'SHELL' ? 'not-allowed' : 'pointer',
             fontWeight: '500',
@@ -252,10 +252,10 @@ const AgentCard = memo(function AgentCard({
           style={{
             flex: 1,
             padding: '0.5rem',
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-paper)',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '0.375rem',
-            color: '#999',
+            color: 'var(--color-text-secondary)',
             fontSize: '0.75rem',
             cursor: 'pointer',
           }}
@@ -267,10 +267,10 @@ const AgentCard = memo(function AgentCard({
           style={{
             flex: 1,
             padding: '0.5rem',
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-paper)',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '0.375rem',
-            color: '#999',
+            color: 'var(--color-text-secondary)',
             fontSize: '0.75rem',
             cursor: 'pointer',
           }}
@@ -314,7 +314,7 @@ const HierarchySection = memo(function HierarchySection({
   return (
     <div style={{
       backgroundColor: 'rgba(26, 26, 26, 0.5)',
-      border: '1px solid #333',
+      border: '1px solid var(--color-border-strong)',
       borderRadius: '1rem',
       marginBottom: '1rem',
       overflow: 'hidden',
@@ -340,21 +340,21 @@ const HierarchySection = memo(function HierarchySection({
             backgroundColor: color,
             borderRadius: '2px',
           }} />
-          <span style={{ color: '#fff', fontSize: '1rem', fontWeight: '600' }}>
+          <span style={{ color: 'var(--color-text-primary)', fontSize: '1rem', fontWeight: '600' }}>
             {title}
           </span>
           <span style={{
             padding: '0.25rem 0.5rem',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '0.25rem',
-            color: '#666',
+            color: 'var(--color-text-disabled)',
             fontSize: '0.75rem',
           }}>
             {functionalCount}/{agents.length} active
           </span>
         </div>
         <span style={{
-          color: '#666',
+          color: 'var(--color-text-disabled)',
           fontSize: '1.25rem',
           transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
           transition: 'transform 0.2s',
@@ -485,7 +485,7 @@ export default function WorkforceCommandCenterPage() {
       <div style={{
         minHeight: '100vh',
         padding: '2rem',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)',
+        background: 'linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-paper) 50%, var(--color-bg-main) 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -494,13 +494,13 @@ export default function WorkforceCommandCenterPage() {
           <div style={{
             width: '48px',
             height: '48px',
-            border: '3px solid #333',
-            borderTopColor: '#6366f1',
+            border: '3px solid var(--color-border-strong)',
+            borderTopColor: 'var(--color-primary)',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 1rem',
           }} />
-          <p style={{ color: '#666' }}>Loading swarm telemetry...</p>
+          <p style={{ color: 'var(--color-text-disabled)' }}>Loading swarm telemetry...</p>
         </div>
         <style>{`
           @keyframes spin {
@@ -521,7 +521,7 @@ export default function WorkforceCommandCenterPage() {
       <div style={{
         minHeight: '100vh',
         padding: '2rem',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)',
+        background: 'linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-paper) 50%, var(--color-bg-main) 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -530,14 +530,14 @@ export default function WorkforceCommandCenterPage() {
           textAlign: 'center',
           padding: '2rem',
           backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid #ef4444',
+          border: '1px solid var(--color-error)',
           borderRadius: '1rem',
           maxWidth: '400px',
         }}>
-          <p style={{ color: '#ef4444', marginBottom: '1rem' }}>
+          <p style={{ color: 'var(--color-error)', marginBottom: '1rem' }}>
             Failed to connect to swarm
           </p>
-          <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '1rem' }}>
+          <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', marginBottom: '1rem' }}>
             {error}
           </p>
           <button
@@ -545,10 +545,10 @@ export default function WorkforceCommandCenterPage() {
             disabled={isRefreshing}
             style={{
               padding: '0.75rem 1.5rem',
-              backgroundColor: '#ef4444',
+              backgroundColor: 'var(--color-error)',
               border: 'none',
               borderRadius: '0.5rem',
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               fontWeight: '600',
               cursor: 'pointer',
             }}
@@ -564,7 +564,7 @@ export default function WorkforceCommandCenterPage() {
     <div style={{
       minHeight: '100vh',
       padding: '2rem',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)',
+      background: 'linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-paper) 50%, var(--color-bg-main) 100%)',
     }}>
       <style>{`
         @keyframes spin {
@@ -590,7 +590,7 @@ export default function WorkforceCommandCenterPage() {
             <h1 style={{
               fontSize: '2rem',
               fontWeight: '700',
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               marginBottom: '0.5rem',
               display: 'flex',
               alignItems: 'center',
@@ -606,14 +606,14 @@ export default function WorkforceCommandCenterPage() {
                     ? 'rgba(245, 158, 11, 0.1)'
                     : 'rgba(239, 68, 68, 0.1)',
                   border: `1px solid ${
-                    overallHealth === 'HEALTHY' ? '#22c55e'
-                    : overallHealth === 'DEGRADED' ? '#f59e0b'
-                    : '#ef4444'
+                    overallHealth === 'HEALTHY' ? 'var(--color-success)'
+                    : overallHealth === 'DEGRADED' ? 'var(--color-warning)'
+                    : 'var(--color-error)'
                   }`,
                   borderRadius: '0.5rem',
-                  color: overallHealth === 'HEALTHY' ? '#22c55e'
-                    : overallHealth === 'DEGRADED' ? '#f59e0b'
-                    : '#ef4444',
+                  color: overallHealth === 'HEALTHY' ? 'var(--color-success)'
+                    : overallHealth === 'DEGRADED' ? 'var(--color-warning)'
+                    : 'var(--color-error)',
                   fontSize: '0.75rem',
                   fontWeight: '600',
                 }}>
@@ -621,7 +621,7 @@ export default function WorkforceCommandCenterPage() {
                 </span>
               )}
             </h1>
-            <p style={{ color: '#666', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
               Live telemetry from the 47-agent AI swarm • Last updated: {lastUpdated?.toLocaleTimeString() ?? 'Never'}
             </p>
           </div>
@@ -631,18 +631,18 @@ export default function WorkforceCommandCenterPage() {
             {/* View Toggle */}
             <div style={{
               display: 'flex',
-              backgroundColor: '#1a1a1a',
+              backgroundColor: 'var(--color-bg-paper)',
               borderRadius: '0.5rem',
-              border: '1px solid #333',
+              border: '1px solid var(--color-border-strong)',
               overflow: 'hidden',
             }}>
               <button
                 onClick={() => setViewMode('hierarchy')}
                 style={{
                   padding: '0.5rem 1rem',
-                  backgroundColor: viewMode === 'hierarchy' ? '#333' : 'transparent',
+                  backgroundColor: viewMode === 'hierarchy' ? 'var(--color-border-strong)' : 'transparent',
                   border: 'none',
-                  color: viewMode === 'hierarchy' ? '#fff' : '#666',
+                  color: viewMode === 'hierarchy' ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
                   fontSize: '0.875rem',
                   cursor: 'pointer',
                 }}
@@ -653,9 +653,9 @@ export default function WorkforceCommandCenterPage() {
                 onClick={() => setViewMode('grid')}
                 style={{
                   padding: '0.5rem 1rem',
-                  backgroundColor: viewMode === 'grid' ? '#333' : 'transparent',
+                  backgroundColor: viewMode === 'grid' ? 'var(--color-border-strong)' : 'transparent',
                   border: 'none',
-                  color: viewMode === 'grid' ? '#fff' : '#666',
+                  color: viewMode === 'grid' ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
                   fontSize: '0.875rem',
                   cursor: 'pointer',
                 }}
@@ -670,10 +670,10 @@ export default function WorkforceCommandCenterPage() {
               onChange={(e) => setFilterTier(e.target.value as FilterTier)}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-paper)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.5rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.875rem',
                 cursor: 'pointer',
               }}
@@ -691,9 +691,9 @@ export default function WorkforceCommandCenterPage() {
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid #6366f1',
+                border: '1px solid var(--color-primary)',
                 borderRadius: '0.5rem',
-                color: '#6366f1',
+                color: 'var(--color-primary)',
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 cursor: isRefreshing ? 'not-allowed' : 'pointer',
@@ -707,7 +707,7 @@ export default function WorkforceCommandCenterPage() {
                   <span style={{
                     width: '14px',
                     height: '14px',
-                    border: '2px solid #6366f1',
+                    border: '2px solid var(--color-primary)',
                     borderTopColor: 'transparent',
                     borderRadius: '50%',
                     animation: 'spin 1s linear infinite',
@@ -729,24 +729,24 @@ export default function WorkforceCommandCenterPage() {
           marginBottom: '2rem',
         }}>
           {[
-            { label: 'Total Agents', value: agents.length.toString(), color: '#6366f1', icon: '🤖' },
-            { label: 'Functional', value: `${activeCount}/${agents.length}`, color: '#22c55e', icon: '✅' },
-            { label: 'Executing', value: executingCount.toString(), color: '#a855f7', icon: '⚡' },
-            { label: 'Commands', value: totalTasks.toLocaleString(), color: '#f59e0b', icon: '📊' },
-            { label: 'Success Rate', value: `${successRate.toFixed(0)}%`, color: '#10b981', icon: '🎯' },
+            { label: 'Total Agents', value: agents.length.toString(), color: 'var(--color-primary)', icon: '🤖' },
+            { label: 'Functional', value: `${activeCount}/${agents.length}`, color: 'var(--color-success)', icon: '✅' },
+            { label: 'Executing', value: executingCount.toString(), color: 'var(--color-secondary)', icon: '⚡' },
+            { label: 'Commands', value: totalTasks.toLocaleString(), color: 'var(--color-warning)', icon: '📊' },
+            { label: 'Success Rate', value: `${successRate.toFixed(0)}%`, color: 'var(--color-success)', icon: '🎯' },
           ].map((stat, i) => (
             <div
               key={i}
               style={{
                 backgroundColor: 'rgba(26, 26, 26, 0.8)',
-                border: '1px solid #333',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '1rem',
                 padding: '1.25rem',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '1.25rem' }}>{stat.icon}</span>
-                <span style={{ color: '#666', fontSize: '0.75rem' }}>{stat.label}</span>
+                <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>{stat.label}</span>
               </div>
               <div style={{ color: stat.color, fontSize: '1.5rem', fontWeight: '700' }}>
                 {stat.value}
@@ -764,7 +764,7 @@ export default function WorkforceCommandCenterPage() {
               <HierarchySection
                 title="🎯 L1 - Master Orchestrator (Swarm CEO)"
                 agents={[hierarchy.orchestrator]}
-                color="#a855f7"
+                color="var(--color-secondary)"
                 isExpanded={expandedSections.has('L1')}
                 onToggle={() => toggleSection('L1')}
                 onExecute={handleExecute}
@@ -778,7 +778,7 @@ export default function WorkforceCommandCenterPage() {
               <HierarchySection
                 title="📋 L2 - Domain Managers (Commanders)"
                 agents={hierarchy.managers}
-                color="#3b82f6"
+                color="var(--color-info)"
                 isExpanded={expandedSections.has('L2')}
                 onToggle={() => toggleSection('L2')}
                 onExecute={handleExecute}
@@ -799,7 +799,7 @@ export default function WorkforceCommandCenterPage() {
                       key={manager.id}
                       title={`🔧 L3 - ${manager.name} Specialists`}
                       agents={specialists}
-                      color="#10b981"
+                      color="var(--color-success)"
                       isExpanded={expandedSections.has(manager.id)}
                       onToggle={() => toggleSection(manager.id)}
                       onExecute={handleExecute}
@@ -836,23 +836,23 @@ export default function WorkforceCommandCenterPage() {
             marginTop: '1rem',
             padding: '0.75rem 1rem',
             backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            border: '1px solid #f59e0b',
+            border: '1px solid var(--color-warning)',
             borderRadius: '0.5rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}>
-            <span style={{ color: '#f59e0b', fontSize: '0.875rem' }}>
+            <span style={{ color: 'var(--color-warning)', fontSize: '0.875rem' }}>
               ⚠️ Showing stale data - connection issue: {error}
             </span>
             <button
               onClick={() => void refresh()}
               style={{
                 padding: '0.375rem 0.75rem',
-                backgroundColor: '#f59e0b',
+                backgroundColor: 'var(--color-warning)',
                 border: 'none',
                 borderRadius: '0.25rem',
-                color: '#000',
+                color: 'var(--color-bg-main)',
                 fontSize: '0.75rem',
                 fontWeight: '600',
                 cursor: 'pointer',

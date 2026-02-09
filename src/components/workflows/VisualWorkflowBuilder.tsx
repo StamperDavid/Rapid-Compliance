@@ -189,7 +189,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: 'var(--color-border-light)',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.375rem',
                 cursor: 'pointer',
@@ -204,7 +204,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               style={{
                 padding: '0.5rem 1rem',
                 backgroundColor: 'var(--color-border-light)',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.375rem',
                 cursor: 'pointer',
@@ -217,8 +217,8 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               onClick={handleSave}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: '#6366f1',
-                color: '#fff',
+                backgroundColor: 'var(--color-primary)',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.375rem',
                 cursor: 'pointer',
@@ -232,7 +232,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
               Workflow Name
             </label>
             <input
@@ -242,17 +242,17 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                backgroundColor: '#0a0a0a',
+                backgroundColor: 'var(--color-bg-main)',
                 border: '1px solid var(--color-border-light)',
                 borderRadius: '0.25rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.875rem',
               }}
               placeholder="e.g., New Lead Onboarding"
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
               Trigger Type
             </label>
             <select
@@ -261,10 +261,10 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                backgroundColor: '#0a0a0a',
+                backgroundColor: 'var(--color-bg-main)',
                 border: '1px solid var(--color-border-light)',
                 borderRadius: '0.25rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.875rem',
               }}
             >
@@ -277,7 +277,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
             </select>
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>
+            <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
               Description
             </label>
             <input
@@ -287,10 +287,10 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                backgroundColor: '#0a0a0a',
+                backgroundColor: 'var(--color-bg-main)',
                 border: '1px solid var(--color-border-light)',
                 borderRadius: '0.25rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.875rem',
               }}
               placeholder="Brief description"
@@ -301,8 +301,8 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
 
       <div style={{ flex: 1, display: 'flex' }}>
         {/* Node Palette */}
-        <div style={{ width: '220px', backgroundColor: '#1a1a1a', borderRight: '1px solid #333', padding: '1rem', overflowY: 'auto' }}>
-          <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ width: '220px', backgroundColor: 'var(--color-bg-main)', borderRight: '1px solid var(--color-border-strong)', padding: '1rem', overflowY: 'auto' }}>
+          <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Actions
           </h3>
           
@@ -317,17 +317,17 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   onClick={() => addNode(type)}
                   style={{
                     padding: '0.75rem',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-main)',
                     border: '1px solid var(--color-border-light)',
                     borderRadius: '0.375rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     textAlign: 'left',
                     transition: 'all 0.2s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#6366f1'}
-                  onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
                 >
                   {getNodeLabel(type)}
                 </button>
@@ -346,16 +346,16 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   onClick={() => addNode(type)}
                   style={{
                     padding: '0.75rem',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-main)',
                     border: '1px solid var(--color-border-light)',
                     borderRadius: '0.375rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     textAlign: 'left',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#6366f1'}
-                  onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
                 >
                   {getNodeLabel(type)}
                 </button>
@@ -374,16 +374,16 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   onClick={() => addNode(type)}
                   style={{
                     padding: '0.75rem',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-main)',
                     border: '1px solid var(--color-border-light)',
                     borderRadius: '0.375rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     textAlign: 'left',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#6366f1'}
-                  onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
                 >
                   {getNodeLabel(type)}
                 </button>
@@ -402,16 +402,16 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   onClick={() => addNode(type)}
                   style={{
                     padding: '0.75rem',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-main)',
                     border: '1px solid var(--color-border-light)',
                     borderRadius: '0.375rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     textAlign: 'left',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#6366f1'}
-                  onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border-light)'}
                 >
                   {getNodeLabel(type)}
                 </button>
@@ -430,30 +430,30 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
             onConnect={onConnect}
             onNodeClick={onNodeClick}
             fitView
-            style={{ backgroundColor: '#0a0a0a' }}
+            style={{ backgroundColor: 'var(--color-bg-main)' }}
           >
-            <Background color="#333" gap={16} />
+            <Background color="var(--color-border-strong)" gap={16} />
             <Controls />
             <MiniMap
               nodeColor={(node: Node) => {
                 if (node.type === 'input') {
-                  return '#10b981';
+                  return 'var(--color-success)';
                 }
                 if (node.type === 'output') {
-                  return '#ef4444';
+                  return 'var(--color-error)';
                 }
-                return '#6366f1';
+                return 'var(--color-primary)';
               }}
-              style={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}
+              style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)' }}
             />
           </ReactFlow>
         </div>
 
         {/* Node Configuration Panel */}
         {showNodeConfig && selectedNode && (
-          <div style={{ width: '320px', backgroundColor: '#1a1a1a', borderLeft: '1px solid #333', padding: '1.5rem', overflowY: 'auto' }}>
+          <div style={{ width: '320px', backgroundColor: 'var(--color-bg-main)', borderLeft: '1px solid var(--color-border-strong)', padding: '1.5rem', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                 Node Configuration
               </h3>
               <button
@@ -462,7 +462,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                   padding: '0.25rem 0.5rem',
                   backgroundColor: 'transparent',
                   border: 'none',
-                  color: '#999',
+                  color: 'var(--color-text-secondary)',
                   cursor: 'pointer',
                   fontSize: '1.5rem',
                 }}
@@ -494,10 +494,10 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
                 style={{
                   width: '100%',
                   padding: '0.5rem',
-                  backgroundColor: '#0a0a0a',
+                  backgroundColor: 'var(--color-bg-main)',
                   border: '1px solid var(--color-border-light)',
                   borderRadius: '0.25rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                 }}
               />
@@ -521,8 +521,8 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                backgroundColor: '#ef4444',
-                color: '#fff',
+                backgroundColor: 'var(--color-error)',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.375rem',
                 cursor: 'pointer',
@@ -536,7 +536,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
       </div>
 
       {/* Instructions Footer */}
-      <div style={{ padding: '0.75rem 2rem', backgroundColor: '#1a1a1a', borderTop: '1px solid #333', fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>
+      <div style={{ padding: '0.75rem 2rem', backgroundColor: 'var(--color-bg-main)', borderTop: '1px solid var(--color-border-strong)', fontSize: '0.75rem', color: 'var(--color-text-disabled)', textAlign: 'center' }}>
         💡 Drag nodes from the left panel • Connect nodes by dragging from one to another • Click nodes to configure • Double-click canvas to add notes
       </div>
     </div>

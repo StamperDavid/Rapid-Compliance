@@ -53,7 +53,7 @@ function TextInputField({ label, field, placeholder, required, formData, updateF
 
   return (
     <div>
-      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+      <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
         {label} {required && '*'}
       </label>
       <input
@@ -64,10 +64,10 @@ function TextInputField({ label, field, placeholder, required, formData, updateF
         style={{
           width: '100%',
           padding: '0.75rem',
-          backgroundColor: '#0a0a0a',
-          border: '1px solid #333',
+          backgroundColor: 'var(--color-bg-main)',
+          border: '1px solid var(--color-border-strong)',
           borderRadius: '0.5rem',
-          color: '#fff',
+          color: 'var(--color-text-primary)',
           fontSize: '1rem'
         }}
       />
@@ -81,7 +81,7 @@ function TextAreaField({ label, field, placeholder, rows = 4, helper, required, 
 
   return (
     <div>
-      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+      <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
         {label} {required && '*'}
       </label>
       <textarea
@@ -92,17 +92,17 @@ function TextAreaField({ label, field, placeholder, rows = 4, helper, required, 
         style={{
           width: '100%',
           padding: '0.75rem',
-          backgroundColor: '#0a0a0a',
-          border: '1px solid #333',
+          backgroundColor: 'var(--color-bg-main)',
+          border: '1px solid var(--color-border-strong)',
           borderRadius: '0.5rem',
-          color: '#fff',
+          color: 'var(--color-text-primary)',
           fontSize: '1rem',
           resize: 'vertical',
           fontFamily: 'inherit'
         }}
       />
       {helper && (
-        <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+        <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
           {helper}
         </div>
       )}
@@ -568,12 +568,12 @@ export default function OnboardingWizard() {
     }
   };
 
-  const primaryColor = '#6366f1';
+  const primaryColor = 'var(--color-primary)';
 
   return (
     <div style={{ 
       minHeight: '100vh', 
-      backgroundColor: '#000', 
+      backgroundColor: 'var(--color-bg-main)', 
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
@@ -582,10 +582,10 @@ export default function OnboardingWizard() {
       <div style={{ maxWidth: '900px', width: '100%' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
             Build Your AI Sales Team
           </h1>
-          <p style={{ color: '#666', fontSize: '1rem' }}>
+          <p style={{ color: 'var(--color-text-disabled)', fontSize: '1rem' }}>
             The more detail you provide, the smarter your agent will be
           </p>
         </div>
@@ -593,12 +593,12 @@ export default function OnboardingWizard() {
         {/* Progress Bar */}
         <div style={{ marginBottom: '3rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <span style={{ color: '#999', fontSize: '0.875rem' }}>Step {currentStep} of {totalSteps}</span>
-            <span style={{ color: '#999', fontSize: '0.875rem' }}>{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Step {currentStep} of {totalSteps}</span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
           </div>
           <div style={{ 
             height: '8px', 
-            backgroundColor: '#1a1a1a', 
+            backgroundColor: 'var(--color-bg-paper)', 
             borderRadius: '9999px',
             overflow: 'hidden'
           }}>
@@ -613,8 +613,8 @@ export default function OnboardingWizard() {
 
         {/* Step Content */}
         <div style={{ 
-          backgroundColor: '#1a1a1a', 
-          border: '1px solid #333', 
+          backgroundColor: 'var(--color-bg-paper)', 
+          border: '1px solid var(--color-border-strong)', 
           borderRadius: '1rem', 
           padding: '3rem',
           marginBottom: '2rem',
@@ -624,10 +624,10 @@ export default function OnboardingWizard() {
           {currentStep === 1 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Tell us about your business
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Basic information to get started
                 </div>
               </div>
@@ -650,7 +650,7 @@ export default function OnboardingWizard() {
                 {/* Website URL - First field to enter */}
                 <div>
                   <TextInputField label="Website URL" field="website" placeholder="https://yourwebsite.com" formData={formData} updateField={updateField} />
-                  <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
                     We&apos;ll automatically analyze your website to learn about your company, products, and services
                   </div>
                   
@@ -662,8 +662,8 @@ export default function OnboardingWizard() {
                       style={{
                         marginTop: '0.75rem',
                         padding: '0.75rem 1.5rem',
-                        backgroundColor: '#6366f1',
-                        color: '#fff',
+                        backgroundColor: 'var(--color-primary)',
+                        color: 'var(--color-text-primary)',
                         border: 'none',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
@@ -712,7 +712,7 @@ export default function OnboardingWizard() {
                         isRejected={rejectedFields.has('industry')}
                       >
                       <div>
-                        <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                        <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                           Industry *
                         </label>
                         <select
@@ -721,10 +721,10 @@ export default function OnboardingWizard() {
                           style={{
                             width: '100%',
                             padding: '0.75rem',
-                            backgroundColor: '#0a0a0a',
-                            border: '1px solid #333',
+                            backgroundColor: 'var(--color-bg-main)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
-                            color: '#fff',
+                            color: 'var(--color-text-primary)',
                             fontSize: '1rem'
                           }}
                         >
@@ -749,7 +749,7 @@ export default function OnboardingWizard() {
                   })()}
                   {!getFieldConfidence('industry') && (
                     <div>
-                      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                      <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                         Industry *
                       </label>
                       <select
@@ -758,10 +758,10 @@ export default function OnboardingWizard() {
                         style={{
                           width: '100%',
                           padding: '0.75rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
+                          backgroundColor: 'var(--color-bg-main)',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
-                          color: '#fff',
+                          color: 'var(--color-text-primary)',
                           fontSize: '1rem'
                         }}
                       >
@@ -785,15 +785,15 @@ export default function OnboardingWizard() {
                 </div>
 
                 <TextInputField label="FAQ Page URL (optional)" field="faqPageUrl" placeholder="https://yourwebsite.com/faq" formData={formData} updateField={updateField} />
-                <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '0.5rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '0.5rem' }}>
                   Help your agent learn common questions and answers
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Social Media URLs (optional)
                   </label>
-                  <div style={{ color: '#666', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
                     Help your agent understand your brand voice and customer interactions
                   </div>
                   {formData.socialMediaUrls.map((url, index) => (
@@ -810,10 +810,10 @@ export default function OnboardingWizard() {
                         style={{
                           flex: 1,
                           padding: '0.75rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
+                          backgroundColor: 'var(--color-bg-main)',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
-                          color: '#fff',
+                          color: 'var(--color-text-primary)',
                           fontSize: '0.875rem'
                         }}
                       />
@@ -825,8 +825,8 @@ export default function OnboardingWizard() {
                         }}
                         style={{
                           padding: '0.75rem 1rem',
-                          backgroundColor: '#4c0f0f',
-                          color: '#f87171',
+                          backgroundColor: 'var(--color-error-dark)',
+                          color: 'var(--color-error-light)',
                           border: 'none',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
@@ -843,9 +843,9 @@ export default function OnboardingWizard() {
                     onClick={() => updateField('socialMediaUrls', [...formData.socialMediaUrls, ''])}
                     style={{
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#222',
+                      backgroundColor: 'var(--color-bg-elevated)',
                       color: primaryColor,
-                      border: '1px solid #333',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
@@ -857,7 +857,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Company Size *
                   </label>
                   <select
@@ -866,10 +866,10 @@ export default function OnboardingWizard() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem'
                     }}
                   >
@@ -888,10 +888,10 @@ export default function OnboardingWizard() {
           {currentStep === 2 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   What makes your business unique?
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   These answers will shape how your agent sells
                 </div>
               </div>
@@ -937,17 +937,17 @@ export default function OnboardingWizard() {
           {currentStep === 3 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   What do you sell?
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Overview of your offerings and target customers
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     What do you primarily sell? *
                   </label>
                   <select
@@ -956,10 +956,10 @@ export default function OnboardingWizard() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem'
                     }}
                   >
@@ -974,7 +974,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Typical price range *
                   </label>
                   <select
@@ -983,10 +983,10 @@ export default function OnboardingWizard() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem'
                     }}
                   >
@@ -1025,10 +1025,10 @@ export default function OnboardingWizard() {
           {currentStep === 4 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Product/Service Details
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Help your agent understand what you offer in detail
                 </div>
               </div>
@@ -1074,17 +1074,17 @@ export default function OnboardingWizard() {
           {currentStep === 5 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Pricing & Sales Strategy
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   How your agent should handle pricing and discounts
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Pricing strategy *
                   </label>
                   <select
@@ -1093,10 +1093,10 @@ export default function OnboardingWizard() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem'
                     }}
                   >
@@ -1149,10 +1149,10 @@ export default function OnboardingWizard() {
           {currentStep === 6 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Operations & Fulfillment
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Delivery, coverage, and capacity details
                 </div>
               </div>
@@ -1199,10 +1199,10 @@ export default function OnboardingWizard() {
           {currentStep === 7 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Policies & Guarantees
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Returns, warranties, and customer protections
                 </div>
               </div>
@@ -1248,17 +1248,17 @@ export default function OnboardingWizard() {
           {currentStep === 8 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   What should your agent accomplish?
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Define success for your AI agent
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Primary Objective *
                   </label>
                   <select
@@ -1267,10 +1267,10 @@ export default function OnboardingWizard() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem'
                     }}
                   >
@@ -1283,7 +1283,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
                     Secondary Objectives (check all that apply)
                   </label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1310,7 +1310,7 @@ export default function OnboardingWizard() {
                           }}
                           style={{ width: '20px', height: '20px' }}
                         />
-                        <span style={{ color: '#ccc', fontSize: '0.875rem' }}>{obj.label}</span>
+                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>{obj.label}</span>
                       </label>
                     ))}
                   </div>
@@ -1340,10 +1340,10 @@ export default function OnboardingWizard() {
           {currentStep === 9 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Your Sales Process
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Teach your agent how you sell
                 </div>
               </div>
@@ -1391,10 +1391,10 @@ export default function OnboardingWizard() {
           {currentStep === 10 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Objection Handling
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Teach your agent how to overcome common objections
                 </div>
               </div>
@@ -1441,10 +1441,10 @@ export default function OnboardingWizard() {
           {currentStep === 11 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Customer Service & Support
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   How your agent should handle support issues
                 </div>
               </div>
@@ -1491,10 +1491,10 @@ export default function OnboardingWizard() {
           {currentStep === 12 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Your AI Assistant Identity
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Name and personalize your AI business partner
                 </div>
               </div>
@@ -1509,7 +1509,7 @@ export default function OnboardingWizard() {
                 }}>
                   <div style={{ marginBottom: '1rem' }}>
                     <span style={{ fontSize: '1.25rem', marginRight: '0.5rem' }}>🤖</span>
-                    <span style={{ color: '#a5b4fc', fontWeight: '600', fontSize: '1rem' }}>What is the name of your AI Assistant?</span>
+                    <span style={{ color: 'var(--color-primary-light)', fontWeight: '600', fontSize: '1rem' }}>What is the name of your AI Assistant?</span>
                   </div>
                   <TextInputField
                     formData={formData}
@@ -1519,7 +1519,7 @@ export default function OnboardingWizard() {
                     placeholder="e.g., Alex, Maya, Jordan, Riley..."
                     required
                   />
-                  <div style={{ color: '#818cf8', fontSize: '0.8rem', marginTop: '0.75rem' }}>
+                  <div style={{ color: 'var(--color-primary-light)', fontSize: '0.8rem', marginTop: '0.75rem' }}>
                     Your AI assistant will introduce itself using this name and serve as your dedicated business partner
                   </div>
                 </div>
@@ -1532,12 +1532,12 @@ export default function OnboardingWizard() {
                   field="ownerName"
                   placeholder="e.g., John, Sarah, David..."
                 />
-                <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '-1rem' }}>
                   Your AI assistant will greet you by name: &quot;Hello [Your Name], I am [Assistant Name]...&quot;
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Tone *
                   </label>
                   <select
@@ -1546,10 +1546,10 @@ export default function OnboardingWizard() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem'
                     }}
                   >
@@ -1586,17 +1586,17 @@ export default function OnboardingWizard() {
           {currentStep === 13 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Behavioral Controls
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Fine-tune how your agent behaves
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
                     Closing Aggressiveness: {formData.closingAggressiveness}/10
                   </label>
                   <input
@@ -1607,7 +1607,7 @@ export default function OnboardingWizard() {
                     onChange={(e) => updateField('closingAggressiveness', parseInt(e.target.value))}
                     style={{ width: '100%' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
                     <span>Passive (1-3): Helpful, doesn&apos;t push</span>
                     <span>Balanced (4-7): Guides to purchase</span>
                     <span>Aggressive (8-10): Always closing</span>
@@ -1615,7 +1615,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
                     Question Frequency: Ask {formData.questionFrequency} questions before recommending
                   </label>
                   <input
@@ -1626,7 +1626,7 @@ export default function OnboardingWizard() {
                     onChange={(e) => updateField('questionFrequency', parseInt(e.target.value))}
                     style={{ width: '100%' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
                     <span>Quick (1-2): Fast recommendations</span>
                     <span>Balanced (3-4): Standard discovery</span>
                     <span>Thorough (5-7): Deep understanding</span>
@@ -1634,7 +1634,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Response Length Preference
                   </label>
                   <select
@@ -1643,10 +1643,10 @@ export default function OnboardingWizard() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem'
                     }}
                   >
@@ -1657,7 +1657,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
                     Proactive vs Reactive: {formData.proactiveLevel}/10
                   </label>
                   <input
@@ -1668,7 +1668,7 @@ export default function OnboardingWizard() {
                     onChange={(e) => updateField('proactiveLevel', parseInt(e.target.value))}
                     style={{ width: '100%' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
                     <span>Reactive (1-3): Only answers questions</span>
                     <span>Balanced (4-7): Suggests & answers</span>
                     <span>Proactive (8-10): Volunteers info</span>
@@ -1682,38 +1682,38 @@ export default function OnboardingWizard() {
           {currentStep === 14 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Upload Your Knowledge Base
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   The more you provide, the smarter your agent
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Upload Documents
                   </label>
                   <div style={{
-                    border: '2px dashed #333',
+                    border: '2px dashed var(--color-border-strong)',
                     borderRadius: '0.75rem',
                     padding: '3rem 2rem',
                     textAlign: 'center',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-main)',
                     cursor: 'pointer'
                   }}>
                     <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📄</div>
-                    <div style={{ color: '#ccc', fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600' }}>
+                    <div style={{ color: 'var(--color-text-primary)', fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600' }}>
                       Drag & drop files or click to browse
                     </div>
-                    <div style={{ color: '#666', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', marginBottom: '1rem' }}>
                       PDFs, Excel, Word, images - Product catalogs, price lists, manuals, policies
                     </div>
                     <button style={{
                       padding: '0.75rem 1.5rem',
                       backgroundColor: primaryColor,
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
@@ -1726,7 +1726,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Website URLs (we&apos;ll extract the content)
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -1736,18 +1736,18 @@ export default function OnboardingWizard() {
                       style={{
                         flex: 1,
                         padding: '0.75rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '1rem'
                       }}
                     />
                     <button style={{
                       padding: '0.75rem 1.5rem',
-                      backgroundColor: '#222',
+                      backgroundColor: 'var(--color-bg-elevated)',
                       color: primaryColor,
-                      border: '1px solid #333',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
@@ -1756,13 +1756,13 @@ export default function OnboardingWizard() {
                       + Add
                     </button>
                   </div>
-                  <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                     We&apos;ll analyze these pages for products, pricing, FAQs, and policies
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Competitor Websites (optional - for competitive intelligence)
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -1772,18 +1772,18 @@ export default function OnboardingWizard() {
                       style={{
                         flex: 1,
                         padding: '0.75rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '1rem'
                       }}
                     />
                     <button style={{
                       padding: '0.75rem 1.5rem',
-                      backgroundColor: '#222',
+                      backgroundColor: 'var(--color-bg-elevated)',
                       color: primaryColor,
-                      border: '1px solid #333',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
@@ -1792,7 +1792,7 @@ export default function OnboardingWizard() {
                       + Add
                     </button>
                   </div>
-                  <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                     Your agent will learn how you compare to competitors
                   </div>
                 </div>
@@ -1812,10 +1812,10 @@ export default function OnboardingWizard() {
           {currentStep === 15 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Compliance & Legal
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Important disclosures and restrictions
                 </div>
               </div>
@@ -1838,10 +1838,10 @@ export default function OnboardingWizard() {
                       style={{ width: '20px', height: '20px' }}
                     />
                     <div>
-                      <div style={{ color: '#ccc', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
                         Enable Privacy & Data Protection Compliance (GDPR/CCPA)
                       </div>
-                      <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                         Includes data collection notices and opt-out options
                       </div>
                     </div>
@@ -1867,15 +1867,15 @@ export default function OnboardingWizard() {
 
                 <div style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #f59e0b',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-warning)',
                   borderRadius: '0.75rem',
                   marginTop: '1rem'
                 }}>
-                  <div style={{ color: '#f59e0b', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <div style={{ color: 'var(--color-warning)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     ⚠️ Important: Review Before Launch
                   </div>
-                  <div style={{ color: '#ccc', fontSize: '0.875rem' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                     You&apos;ll have a chance to train and test your agent before it goes live. Make sure all information is accurate and compliant with your industry regulations.
                   </div>
                 </div>
@@ -1887,10 +1887,10 @@ export default function OnboardingWizard() {
           {currentStep === 16 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Advanced Configuration (Optional)
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   For power users who want more control
                 </div>
               </div>
@@ -1898,7 +1898,7 @@ export default function OnboardingWizard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Industry Template Selection */}
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Start with an Industry Template (Optional)
                   </label>
                   <select
@@ -1907,10 +1907,10 @@ export default function OnboardingWizard() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem'
                     }}
                   >
@@ -1920,30 +1920,30 @@ export default function OnboardingWizard() {
                     <option value="appointments">Appointment-Based Service Business</option>
                     <option value="retail_inventory">Retail with Inventory Management</option>
                   </select>
-                  <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
                     Templates provide pre-configured settings you can customize
                   </div>
                 </div>
 
                 {/* Custom Function Definitions */}
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
                     Custom Function Definitions
                   </label>
                   <div style={{
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-main)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.75rem',
                     padding: '1.5rem'
                   }}>
-                    <div style={{ color: '#ccc', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
                       Define custom actions your agent can perform (e.g., check inventory, calculate shipping, verify credit)
                     </div>
                     <button style={{
                       padding: '0.75rem 1.5rem',
-                      backgroundColor: '#222',
+                      backgroundColor: 'var(--color-bg-elevated)',
                       color: primaryColor,
-                      border: '1px solid #333',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
@@ -1952,7 +1952,7 @@ export default function OnboardingWizard() {
                       + Add Custom Function
                     </button>
                     {formData.customFunctions.length > 0 && (
-                      <div style={{ marginTop: '1rem', color: '#666', fontSize: '0.875rem' }}>
+                      <div style={{ marginTop: '1rem', color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                         {formData.customFunctions.length} custom function(s) defined
                       </div>
                     )}
@@ -1961,7 +1961,7 @@ export default function OnboardingWizard() {
 
                 {/* Advanced Behavioral Controls */}
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
                     Advanced Behavioral Controls
                   </label>
                   
@@ -1975,7 +1975,7 @@ export default function OnboardingWizard() {
                     />
 
                     <div>
-                      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                      <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                         Strict Response Length Limit (characters)
                       </label>
                       <input
@@ -1986,14 +1986,14 @@ export default function OnboardingWizard() {
                         style={{
                           width: '100%',
                           padding: '0.75rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
+                          backgroundColor: 'var(--color-bg-main)',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
-                          color: '#fff',
+                          color: 'var(--color-text-primary)',
                           fontSize: '1rem'
                         }}
                       />
-                      <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
                         Force responses to be under this character count (useful for SMS/chat widgets)
                       </div>
                     </div>
@@ -2010,10 +2010,10 @@ export default function OnboardingWizard() {
                       style={{ width: '20px', height: '20px' }}
                     />
                     <div>
-                      <div style={{ color: '#ccc', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
                         Enable Enhanced Privacy & Compliance Mode
                       </div>
-                      <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                         GDPR, CCPA, SOC 2 compliance with data collection notices and opt-outs
                       </div>
                     </div>
@@ -2022,19 +2022,19 @@ export default function OnboardingWizard() {
 
                 {/* Knowledge Priority */}
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
                     Knowledge Source Priority
                   </label>
                   <div style={{
-                    backgroundColor: '#0a0a0a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-main)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.75rem',
                     padding: '1.5rem'
                   }}>
-                    <div style={{ color: '#ccc', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
                       Set priority levels for different knowledge sources when answering questions
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#999', fontSize: '0.875rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                       <div>1. Product Catalog (always highest priority)</div>
                       <div>2. Official Documentation (uploaded PDFs)</div>
                       <div>3. Website Content (scraped URLs)</div>
@@ -2047,7 +2047,7 @@ export default function OnboardingWizard() {
                 {/* Skip/Continue Option */}
                 <div style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
+                  backgroundColor: 'var(--color-bg-main)',
                   border: `1px solid ${  primaryColor}`,
                   borderRadius: '0.75rem',
                   marginTop: '1rem',
@@ -2056,7 +2056,7 @@ export default function OnboardingWizard() {
                   <div style={{ color: primaryColor, fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     💡 Most Users Skip This Step
                   </div>
-                  <div style={{ color: '#ccc', fontSize: '0.875rem' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                     The configurations from Steps 1-15 are sufficient for 95% of users. You can always come back and configure advanced settings later from the Agent Persona page.
                   </div>
                 </div>
@@ -2068,17 +2068,17 @@ export default function OnboardingWizard() {
           {currentStep === 17 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Idle Timeout Settings
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Organization-wide setting for all agents
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Idle Timeout (Minutes)
                   </label>
                   <input
@@ -2088,14 +2088,14 @@ export default function OnboardingWizard() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem'
                     }}
                   />
-                  <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
                     How long to wait before ending an inactive conversation (default: 30 minutes)
                   </div>
                 </div>
@@ -2107,10 +2107,10 @@ export default function OnboardingWizard() {
           {currentStep === 18 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   🛡️ Objection Handling Strategies
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Define how your agent should handle common objections
                 </div>
               </div>
@@ -2163,10 +2163,10 @@ export default function OnboardingWizard() {
           {currentStep === 19 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   🤝 Customer Sentiment Handling
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Define how your agent should adapt to different customer emotions
                 </div>
               </div>
@@ -2219,10 +2219,10 @@ export default function OnboardingWizard() {
           {currentStep === 20 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   ❓ Discovery Question Frameworks
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Define the strategic questions your agent should ask to understand customer needs
                 </div>
               </div>
@@ -2275,10 +2275,10 @@ export default function OnboardingWizard() {
           {currentStep === 21 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   🎯 Closing Techniques
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Define when and how your agent should move toward closing the sale
                 </div>
               </div>
@@ -2323,10 +2323,10 @@ export default function OnboardingWizard() {
           {currentStep === 22 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   ⚖️ Agent Rules & Restrictions
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Define clear behavioral boundaries for your agent
                 </div>
               </div>
@@ -2371,16 +2371,16 @@ export default function OnboardingWizard() {
           {currentStep === 23 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   📊 Training Metrics Selection
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Choose 5-6 metrics you want to focus on when training your agent
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#0a2a1a', border: '1px solid #0a4a2a', borderRadius: '0.5rem' }}>
-                <div style={{ color: '#10b981', fontSize: '0.875rem' }}>
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-success-dark)', border: '1px solid var(--color-success-dark)', borderRadius: '0.5rem' }}>
+                <div style={{ color: 'var(--color-success)', fontSize: '0.875rem' }}>
                   💡 These metrics will appear in your Training Center. Focus on what matters most to your sales process.
                 </div>
               </div>
@@ -2389,7 +2389,7 @@ export default function OnboardingWizard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Core Sales Skills */}
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
                     Core Sales Skills
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -2408,8 +2408,8 @@ export default function OnboardingWizard() {
                           alignItems: 'center',
                           gap: '0.75rem',
                           padding: '1rem',
-                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? '#1a1a3a' : '#0a0a0a',
-                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid #333',
+                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? 'rgba(var(--color-primary-rgb), 0.15)' : 'var(--color-bg-main)',
+                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
                           transition: 'all 0.2s'
@@ -2428,7 +2428,7 @@ export default function OnboardingWizard() {
                           style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
-                        <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
                       </label>
                     ))}
                   </div>
@@ -2436,7 +2436,7 @@ export default function OnboardingWizard() {
 
                 {/* Advanced Techniques */}
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
                     Advanced Techniques
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -2455,8 +2455,8 @@ export default function OnboardingWizard() {
                           alignItems: 'center',
                           gap: '0.75rem',
                           padding: '1rem',
-                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? '#1a1a3a' : '#0a0a0a',
-                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid #333',
+                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? 'rgba(var(--color-primary-rgb), 0.15)' : 'var(--color-bg-main)',
+                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
                           transition: 'all 0.2s'
@@ -2475,7 +2475,7 @@ export default function OnboardingWizard() {
                           style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
-                        <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
                       </label>
                     ))}
                   </div>
@@ -2483,7 +2483,7 @@ export default function OnboardingWizard() {
 
                 {/* Customer Management */}
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
                     Customer Management
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -2502,8 +2502,8 @@ export default function OnboardingWizard() {
                           alignItems: 'center',
                           gap: '0.75rem',
                           padding: '1rem',
-                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? '#1a1a3a' : '#0a0a0a',
-                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid #333',
+                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? 'rgba(var(--color-primary-rgb), 0.15)' : 'var(--color-bg-main)',
+                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
                           transition: 'all 0.2s'
@@ -2522,7 +2522,7 @@ export default function OnboardingWizard() {
                           style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
-                        <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
                       </label>
                     ))}
                   </div>
@@ -2530,7 +2530,7 @@ export default function OnboardingWizard() {
 
                 {/* Strategic */}
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
                     Strategic
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -2545,8 +2545,8 @@ export default function OnboardingWizard() {
                           alignItems: 'center',
                           gap: '0.75rem',
                           padding: '1rem',
-                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? '#1a1a3a' : '#0a0a0a',
-                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid #333',
+                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? 'rgba(var(--color-primary-rgb), 0.15)' : 'var(--color-bg-main)',
+                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
                           transition: 'all 0.2s'
@@ -2565,7 +2565,7 @@ export default function OnboardingWizard() {
                           style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
-                        <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
                       </label>
                     ))}
                   </div>
@@ -2574,13 +2574,13 @@ export default function OnboardingWizard() {
                 {/* Selection Counter */}
                 <div style={{ 
                   padding: '1rem', 
-                  backgroundColor: formData.selectedTrainingMetrics.length >= 5 && formData.selectedTrainingMetrics.length <= 6 ? '#0a2a1a' : '#2a2a0a',
-                  border: `1px solid ${formData.selectedTrainingMetrics.length >= 5 && formData.selectedTrainingMetrics.length <= 6 ? '#0a4a2a' : '#4a4a0a'}`,
+                  backgroundColor: formData.selectedTrainingMetrics.length >= 5 && formData.selectedTrainingMetrics.length <= 6 ? 'var(--color-success-dark)' : 'var(--color-warning-dark)',
+                  border: `1px solid ${formData.selectedTrainingMetrics.length >= 5 && formData.selectedTrainingMetrics.length <= 6 ? 'var(--color-success-dark)' : 'var(--color-warning-dark)'}`,
                   borderRadius: '0.5rem',
                   textAlign: 'center'
                 }}>
                   <div style={{ 
-                    color: formData.selectedTrainingMetrics.length >= 5 && formData.selectedTrainingMetrics.length <= 6 ? '#10b981' : '#fbbf24',
+                    color: formData.selectedTrainingMetrics.length >= 5 && formData.selectedTrainingMetrics.length <= 6 ? 'var(--color-success)' : 'var(--color-warning-light)',
                     fontSize: '0.875rem',
                     fontWeight: '600'
                   }}>
@@ -2597,20 +2597,20 @@ export default function OnboardingWizard() {
           {currentStep === 24 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   📚 Sales Materials Upload (Optional)
                 </div>
-                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Upload sales training books, playbooks, or methodologies for AI to extract techniques
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a2a1a', border: '1px solid #0a4a2a', borderRadius: '0.75rem' }}>
-                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#10b981', marginBottom: '0.75rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-success-dark)', border: '1px solid var(--color-success-dark)', borderRadius: '0.75rem' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-success)', marginBottom: '0.75rem' }}>
                     🚀 Pro Tip: Upload Proven Sales Methodologies
                   </div>
-                  <div style={{ color: '#10b981', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: '1.6' }}>
+                  <div style={{ color: 'var(--color-success)', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: '1.6' }}>
                     Upload books like:
                     <ul style={{ marginTop: '0.5rem', marginLeft: '1.5rem' }}>
                       <li>NEPQ Black Book of Questions by Jeremy Miner</li>
@@ -2619,22 +2619,22 @@ export default function OnboardingWizard() {
                       <li>Your internal sales playbooks and scripts</li>
                     </ul>
                   </div>
-                  <div style={{ color: '#10b981', fontSize: '0.75rem', fontStyle: 'italic' }}>
+                  <div style={{ color: 'var(--color-success)', fontSize: '0.75rem', fontStyle: 'italic' }}>
                     Our AI will extract proven strategies and automatically apply them to your agent&apos;s persona.
                   </div>
                 </div>
 
                 {/* File Upload Area */}
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
                     Upload Sales Materials (PDF, DOCX)
                   </label>
                   <div style={{
-                    border: '2px dashed #333',
+                    border: '2px dashed var(--color-border-strong)',
                     borderRadius: '0.75rem',
                     padding: '2rem',
                     textAlign: 'center',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-main)',
                     cursor: 'pointer'
                   }}>
                     <input
@@ -2650,10 +2650,10 @@ export default function OnboardingWizard() {
                     />
                     <label htmlFor="sales-materials-upload" style={{ cursor: 'pointer' }}>
                       <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📤</div>
-                      <div style={{ color: '#fff', fontWeight: '600', marginBottom: '0.5rem' }}>
+                      <div style={{ color: 'var(--color-text-primary)', fontWeight: '600', marginBottom: '0.5rem' }}>
                         Click to upload or drag and drop
                       </div>
-                      <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                         PDF, DOC, DOCX up to 50MB each
                       </div>
                     </label>
@@ -2662,7 +2662,7 @@ export default function OnboardingWizard() {
                   {/* Uploaded Files List */}
                   {formData.uploadedSalesMaterials.length > 0 && (
                     <div style={{ marginTop: '1rem' }}>
-                      <div style={{ color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                         Uploaded Files ({formData.uploadedSalesMaterials.length})
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -2674,18 +2674,18 @@ export default function OnboardingWizard() {
                               alignItems: 'center',
                               justifyContent: 'space-between',
                               padding: '0.75rem',
-                              backgroundColor: '#1a1a1a',
-                              border: '1px solid #333',
+                              backgroundColor: 'var(--color-bg-paper)',
+                              border: '1px solid var(--color-border-strong)',
                               borderRadius: '0.5rem'
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                               <span style={{ fontSize: '1.5rem' }}>📄</span>
                               <div>
-                                <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>
+                                <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>
                                   {file.name}
                                 </div>
-                                <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                                   {(file.size / 1024 / 1024).toFixed(2)} MB
                                 </div>
                               </div>
@@ -2698,7 +2698,7 @@ export default function OnboardingWizard() {
                                 padding: '0.5rem',
                                 backgroundColor: 'transparent',
                                 border: 'none',
-                                color: '#ef4444',
+                                color: 'var(--color-error)',
                                 cursor: 'pointer',
                                 fontSize: '1.25rem'
                               }}
@@ -2713,8 +2713,8 @@ export default function OnboardingWizard() {
                 </div>
 
                 {/* Skip Option */}
-                <div style={{ padding: '1rem', backgroundColor: '#1a1a0a', border: '1px solid #3a3a0a', borderRadius: '0.5rem', textAlign: 'center' }}>
-                  <div style={{ color: '#999', fontSize: '0.875rem' }}>
+                <div style={{ padding: '1rem', backgroundColor: 'var(--color-warning-dark)', border: '1px solid var(--color-warning-dark)', borderRadius: '0.5rem', textAlign: 'center' }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                     Don&apos;t have materials to upload? No problem! Your agent will still work great with the information you&apos;ve already provided. You can always add materials later.
                   </div>
                 </div>
@@ -2730,9 +2730,9 @@ export default function OnboardingWizard() {
             disabled={currentStep === 1}
             style={{
               padding: '0.75rem 1.5rem',
-              backgroundColor: currentStep === 1 ? '#1a1a1a' : '#222',
-              color: currentStep === 1 ? '#666' : '#fff',
-              border: '1px solid #333',
+              backgroundColor: currentStep === 1 ? 'var(--color-bg-paper)' : 'var(--color-bg-elevated)',
+              color: currentStep === 1 ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
+              border: '1px solid var(--color-border-strong)',
               borderRadius: '0.5rem',
               cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
               fontSize: '0.875rem',
@@ -2742,7 +2742,7 @@ export default function OnboardingWizard() {
             ← Previous
           </button>
 
-          <div style={{ color: '#666', fontSize: '0.875rem' }}>
+          <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
             Step {currentStep} of {totalSteps}
           </div>
 
@@ -2752,7 +2752,7 @@ export default function OnboardingWizard() {
               style={{
                 padding: '0.75rem 2rem',
                 backgroundColor: primaryColor,
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
@@ -2767,22 +2767,22 @@ export default function OnboardingWizard() {
               {isAnalyzing ? (
                 <div style={{
                   padding: '2rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.75rem',
                   textAlign: 'center'
                 }}>
                   <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-                  <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                     Analyzing Your Company...
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>
                     {analysisProgress || 'Processing...'}
                   </div>
                   <div style={{
                     width: '100%',
                     height: '4px',
-                    backgroundColor: '#333',
+                    backgroundColor: 'var(--color-border-strong)',
                     borderRadius: '2px',
                     overflow: 'hidden'
                   }}>
@@ -2793,7 +2793,7 @@ export default function OnboardingWizard() {
                       animation: 'pulse 2s ease-in-out infinite'
                     }} />
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '1rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '1rem' }}>
                     This may take a few minutes. Your agent is learning about your company, products, and services...
                   </div>
                 </div>
@@ -2802,8 +2802,8 @@ export default function OnboardingWizard() {
                   onClick={() => void completeOnboarding()}
                   style={{
                     padding: '1rem 2.5rem',
-                    background: `linear-gradient(135deg, ${primaryColor}, #8b5cf6)`,
-                    color: '#fff',
+                    background: `linear-gradient(135deg, ${primaryColor}, var(--color-secondary))`,
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
@@ -2830,7 +2830,7 @@ export default function OnboardingWizard() {
                 width: i + 1 === currentStep ? '24px' : '8px',
                 height: '8px',
                 borderRadius: '9999px',
-                backgroundColor: i + 1 <= currentStep ? primaryColor : '#333',
+                backgroundColor: i + 1 <= currentStep ? primaryColor : 'var(--color-border-strong)',
                 transition: 'all 0.3s'
               }}
             />

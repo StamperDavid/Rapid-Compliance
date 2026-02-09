@@ -287,15 +287,15 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
         </div>
         
         <div style={{
-          backgroundColor: '#1a2e1a',
-          border: '1px solid #2a4a2a',
+          backgroundColor: 'var(--color-bg-paper)',
+          border: '1px solid var(--color-border-main)',
           borderRadius: '0.5rem',
           padding: '1rem',
         }}>
-          <div style={{ color: '#4ade80', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+          <div style={{ color: 'var(--color-success)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
             💡 Pro Tip
           </div>
-          <div style={{ color: '#86efac', fontSize: '0.875rem' }}>
+          <div style={{ color: 'var(--color-success-light)', fontSize: '0.875rem' }}>
             Enable Ensemble Mode for best quality - it queries multiple AI models and picks the best answer!
           </div>
         </div>
@@ -362,7 +362,7 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
           marginTop: '2rem',
         }}>
           <div style={{
-            backgroundColor: '#1a1a1a',
+            backgroundColor: 'var(--color-bg-main)',
             border: '1px solid var(--color-border-main)',
             borderRadius: '0.75rem',
             padding: '1.5rem',
@@ -377,7 +377,7 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
           </div>
           
           <div style={{
-            backgroundColor: '#1a1a1a',
+            backgroundColor: 'var(--color-bg-main)',
             border: '1px solid var(--color-border-main)',
             borderRadius: '0.75rem',
             padding: '1.5rem',
