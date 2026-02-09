@@ -7,6 +7,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Cart, CartItem, AppliedDiscount } from '@/types/ecommerce';
 import { Timestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getEcommerceConfig } from './types';
 
 interface ProductData {
   id: string;
@@ -29,11 +30,6 @@ interface DiscountData {
   usageCount?: number;
   minPurchaseAmount?: number;
   maxDiscountAmount?: number;
-}
-
-interface EcommerceConfig {
-  productSchema: string;
-  productMappings: Record<string, string>;
 }
 
 interface SerializedCartItem {
@@ -385,16 +381,11 @@ async function saveCart(cart: Cart): Promise<void> {
  * Get product from CRM
  */
 async function getProduct(workspaceId: string, productId: string): Promise<ProductData | null> {
-  const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
-    'config'
-  );
-  
-  if (!ecommerceConfig) {
+  const config = await getEcommerceConfig(workspaceId);
+  if (!config) {
     throw new Error('E-commerce not configured for this workspace');
   }
-  
-  const config = ecommerceConfig as unknown as EcommerceConfig;
+
   const productSchema = config.productSchema;
   
   // Get product entity from records collection
@@ -414,10 +405,10 @@ async function getProduct(workspaceId: string, productId: string): Promise<Produ
     id: productRecord.id as string,
     name: productRecord[mappings.name] as string,
     price: parseFloat(String((productRecord[mappings.price] !== '' && productRecord[mappings.price] != null) ? productRecord[mappings.price] : 0)),
-    description: productRecord[mappings.description] as string | undefined,
-    images: (productRecord[mappings.images] as string[] | undefined) ?? [],
-    sku: productRecord[mappings.sku] as string,
-    stockLevel: productRecord[mappings.inventory] as number | undefined,
+    description: mappings.description ? productRecord[mappings.description] as string | undefined : undefined,
+    images: mappings.images ? (productRecord[mappings.images] as string[] | undefined) ?? [] : [],
+    sku: mappings.sku ? productRecord[mappings.sku] as string : '',
+    stockLevel: mappings.inventory ? productRecord[mappings.inventory] as number | undefined : undefined,
   };
 }
 

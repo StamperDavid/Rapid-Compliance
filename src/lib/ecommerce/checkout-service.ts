@@ -10,6 +10,7 @@ import { Timestamp } from 'firebase/firestore';
 import { processPayment } from './payment-service';
 import { calculateShipping } from './shipping-service';
 import { calculateTax } from './tax-service';
+import { getEcommerceConfig } from './types';
 
 interface ShippingInfo {
   cost: number;
@@ -33,30 +34,6 @@ interface PaymentResultInfo {
   cardBrand?: string;
   processingFee?: number;
   error?: string;
-}
-
-interface EcommerceConfig {
-  productSchema: string;
-  productMappings: Record<string, string>;
-  inventory?: { trackInventory: boolean; inventoryField: string };
-  integration?: {
-    createCustomerEntity: boolean;
-    customerSchema: string;
-    createOrderEntity: boolean;
-    orderSchema: string;
-    triggerWorkflows: boolean;
-  };
-  notifications?: {
-    customer?: {
-      orderConfirmation?: {
-        enabled: boolean;
-        subject: string;
-        body: string;
-        fromEmail: string;
-        fromName: string;
-      };
-    };
-  };
 }
 
 function serializeTimestamp(value: unknown): string {
@@ -319,36 +296,29 @@ function generateOrderNumber(_workspaceId: string): string {
  * Get product (helper)
  */
 async function getProduct(workspaceId: string, productId: string): Promise<Record<string, unknown> | null> {
-  // Import PLATFORM_ID
   const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
-  // Similar to cart-service implementation
-  const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
-    'config'
-  );
-
-  if (!ecommerceConfig) {
+  const config = await getEcommerceConfig(workspaceId);
+  if (!config) {
     throw new Error('E-commerce not configured');
   }
 
-  const productSchema = (ecommerceConfig as unknown as EcommerceConfig).productSchema;
   const product = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${config.productSchema}/records`,
     productId
   );
-  
+
   if (!product) {
     return null;
   }
-  
-  const mappings = (ecommerceConfig as unknown as EcommerceConfig).productMappings;
+
+  const mappings = config.productMappings;
   const productData = product as Record<string, unknown>;
   return {
     id: productData.id as string,
     name: productData[mappings.name] as string,
     price: parseFloat(String(productData[mappings.price] ?? 0)),
-    stockLevel: productData[mappings.inventory] as number | undefined,
+    stockLevel: mappings.inventory ? productData[mappings.inventory] as number | undefined : undefined,
   };
 }
 
@@ -358,16 +328,11 @@ async function getProduct(workspaceId: string, productId: string): Promise<Recor
 async function updateInventory(workspaceId: string, items: Array<{ productId: string; quantity: number }>): Promise<void> {
   const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
-  const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
-    'config'
-  );
-
-  if (!ecommerceConfig || !(ecommerceConfig as unknown as EcommerceConfig).inventory?.trackInventory) {
+  const config = await getEcommerceConfig(workspaceId);
+  if (!config?.inventory?.trackInventory) {
     return; // Inventory tracking disabled
   }
 
-  const config = ecommerceConfig as unknown as EcommerceConfig;
   const productSchema = config.productSchema;
   const inventoryField = config.inventory?.inventoryField;
 
@@ -401,14 +366,8 @@ async function updateInventory(workspaceId: string, items: Array<{ productId: st
 async function createCustomerEntity(workspaceId: string, customer: { firstName: string; lastName: string; email: string; phone?: string }, orderId: string): Promise<void> {
   const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
-  const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
-    'config'
-  );
-
-  const config = ecommerceConfig as unknown as EcommerceConfig;
-
-  if (!ecommerceConfig || !config.integration?.createCustomerEntity) {
+  const config = await getEcommerceConfig(workspaceId);
+  if (!config?.integration?.createCustomerEntity) {
     return;
   }
 
@@ -451,14 +410,8 @@ async function createCustomerEntity(workspaceId: string, customer: { firstName: 
 async function createOrderEntity(workspaceId: string, order: Order): Promise<void> {
   const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
-  const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
-    'config'
-  );
-
-  const config = ecommerceConfig as unknown as EcommerceConfig;
-
-  if (!ecommerceConfig || !config.integration?.createOrderEntity) {
+  const config = await getEcommerceConfig(workspaceId);
+  if (!config?.integration?.createOrderEntity) {
     return;
   }
 
@@ -484,14 +437,8 @@ async function createOrderEntity(workspaceId: string, order: Order): Promise<voi
  * Trigger order workflows
  */
 async function triggerOrderWorkflows(workspaceId: string, order: Order): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
-  const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
-    'config'
-  );
-
-  if (!ecommerceConfig || !(ecommerceConfig as unknown as EcommerceConfig).integration?.triggerWorkflows) {
+  const config = await getEcommerceConfig(workspaceId);
+  if (!config?.integration?.triggerWorkflows) {
     return;
   }
 
@@ -511,18 +458,12 @@ async function triggerOrderWorkflows(workspaceId: string, order: Order): Promise
  * Send order confirmation email
  */
 async function sendOrderConfirmation(workspaceId: string, order: Order): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
-  const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
-    'config'
-  );
-
-  if (!ecommerceConfig) {
+  const config = await getEcommerceConfig(workspaceId);
+  if (!config) {
     return;
   }
 
-  const notifications = (ecommerceConfig as unknown as EcommerceConfig).notifications;
+  const notifications = config.notifications;
   if (!notifications?.customer?.orderConfirmation?.enabled) {
     return;
   }

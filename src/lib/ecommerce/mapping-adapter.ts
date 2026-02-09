@@ -110,8 +110,8 @@ function handleFieldRename(
 ): boolean {
   let updated = false;
   
-  // Check each mapping field
-  const mappingFields: (keyof ProductFieldMappings)[] = [
+  // String-valued mapping fields (excludes customFields which is Record<string, string>)
+  const mappingFields = [
     'name',
     'price',
     'description',
@@ -125,12 +125,12 @@ function handleFieldRename(
     'slug',
     'metaTitle',
     'metaDescription',
-  ];
-  
+  ] as const;
+
   for (const field of mappingFields) {
     const currentValue = mappings[field];
     if (typeof currentValue === 'string' && currentValue === oldFieldKey) {
-      (mappings as unknown as Record<string, string>)[field] = newFieldKey;
+      mappings[field] = newFieldKey;
       updated = true;
 
       logger.info('[E-Commerce Adapter] Updated mapping', {
@@ -191,9 +191,9 @@ async function handleFieldDeletion(
     images: ['image', 'photo', 'pictures', 'gallery'],
   };
   
-  const mappingsRecord = mappings as unknown as Record<string, string>;
   for (const [mappingKey, alternatives] of Object.entries(criticalMappings)) {
-    const currentMapping = mappingsRecord[mappingKey];
+    const typedKey = mappingKey as keyof typeof criticalMappings;
+    const currentMapping = mappings[typedKey];
 
     if (currentMapping === deletedFieldKey) {
       // Try to find an alternative field
@@ -202,7 +202,7 @@ async function handleFieldDeletion(
       });
 
       if (resolved && resolved.confidence >= 0.5) {
-        mappingsRecord[mappingKey] = resolved.fieldKey;
+        mappings[typedKey] = resolved.fieldKey;
         updated = true;
 
         logger.info('[E-Commerce Adapter] Found replacement field', {
@@ -348,14 +348,14 @@ export async function autoConfigureEcommerceMappings(
       dimensions: ['dimensions', 'size'],
     };
     
-    const mappingsRecord = mappings as Record<string, string>;
     for (const [mappingKey, aliases] of Object.entries(fieldMappings)) {
       const resolved = FieldResolver.resolveField(schema, {
         aliases,
       });
 
+      const typedKey = mappingKey as keyof typeof fieldMappings;
       if (resolved && resolved.confidence >= 0.5) {
-        mappingsRecord[mappingKey] = resolved.fieldKey;
+        mappings[typedKey] = resolved.fieldKey;
 
         logger.info('[E-Commerce Adapter] Auto-configured mapping', {
           file: 'mapping-adapter.ts',
