@@ -360,18 +360,38 @@ export class FirestoreDAL {
 }
 
 // ========================================
-// SINGLETON INSTANCE
+// SINGLETON INSTANCE (Lazy)
 // ========================================
 
 /**
- * Singleton DAL instance
+ * Lazy singleton DAL instance
+ * Defers initialization to first method call so module imports
+ * don't throw during Next.js static prerendering (build phase).
+ *
  * Import this in your services: import { dal } from '@/lib/firebase/dal'
  */
-// Type guard to ensure db is not null
-if (!db) {
-  throw new Error('Firestore instance is not initialized. Check Firebase configuration.');
+let _dalInstance: FirestoreDAL | null = null;
+
+function getDALInstance(): FirestoreDAL {
+  if (!_dalInstance) {
+    if (!db) {
+      throw new Error('Firestore instance is not initialized. Check Firebase configuration.');
+    }
+    _dalInstance = new FirestoreDAL(db);
+  }
+  return _dalInstance;
 }
-export const dal = new FirestoreDAL(db);
+
+export const dal: FirestoreDAL = new Proxy({} as FirestoreDAL, {
+  get(_target, prop: string | symbol): unknown {
+    const instance = getDALInstance();
+    const value: unknown = instance[prop as keyof FirestoreDAL];
+    if (typeof value === 'function') {
+      return (value as (...args: unknown[]) => unknown).bind(instance);
+    }
+    return value;
+  }
+});
 
 /**
  * Export the class for custom instances if needed
