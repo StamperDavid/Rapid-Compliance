@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { FieldType } from '@/types/schema';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface FieldTypeConversionPreviewProps {
   schemaId: string;
@@ -66,6 +67,7 @@ export default function FieldTypeConversionPreview({
   const [successRate, setSuccessRate] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
+  const confirmDialog = useConfirm();
 
   const loadPreview = useCallback(async () => {
     try {
@@ -99,8 +101,13 @@ export default function FieldTypeConversionPreview({
   }, [loadPreview]);
 
   const handleConvert = async () => {
-    // eslint-disable-next-line no-alert -- User confirmation required for destructive action
-    if (!confirm(`Convert ${totalRecords} records from ${oldType} to ${newType}?`)) {
+    const confirmed = await confirmDialog({
+      title: 'Confirm Conversion',
+      description: `Convert ${totalRecords} records from ${oldType} to ${newType}?`,
+      variant: 'destructive'
+    });
+
+    if (!confirmed) {
       return;
     }
 

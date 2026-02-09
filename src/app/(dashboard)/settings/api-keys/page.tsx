@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
 
 interface APIKeyLoadResponse {
   success: boolean;
@@ -24,11 +25,12 @@ interface APIKeyTestResponse {
 
 export default function APIKeysPage() {
   const { theme } = useOrgTheme();
-  
+
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [_loading, _setLoading] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, APIKeyTestResponse>>({});
+  const toast = useToast();
 
   useEffect(() => {
     void loadKeys();
@@ -57,15 +59,12 @@ export default function APIKeysPage() {
       const data = await response.json() as APIKeySaveResponse;
       if (data.success) {
         setKeys({ ...keys, [service]: value });
-        // eslint-disable-next-line no-alert -- User feedback
-        alert('API key saved successfully!');
+        toast.success('API key saved successfully!');
       } else {
-        // eslint-disable-next-line no-alert -- User feedback
-        alert(`Failed to save: ${data.error ?? 'Unknown error'}`);
+        toast.error(`Failed to save: ${data.error ?? 'Unknown error'}`);
       }
     } catch (_error) {
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Error saving API key');
+      toast.error('Error saving API key');
     }
   };
 
@@ -78,15 +77,12 @@ export default function APIKeysPage() {
       setTestResults({ ...testResults, [service]: data });
 
       if (data.success) {
-        // eslint-disable-next-line no-alert -- User feedback
-        alert(`✅ ${service} is working!`);
+        toast.success(`${service} is working!`);
       } else {
-        // eslint-disable-next-line no-alert -- User feedback
-        alert(`❌ ${service} test failed: ${data.error ?? 'Unknown error'}`);
+        toast.error(`${service} test failed: ${data.error ?? 'Unknown error'}`);
       }
     } catch (_error) {
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Error testing API key');
+      toast.error('Error testing API key');
     } finally {
       setTesting(null);
     }

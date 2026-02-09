@@ -1,12 +1,11 @@
 'use client';
 
-/* eslint-disable no-alert -- Admin UI uses native dialogs for quick user confirmations */
-
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSMS } from '@/lib/sms/sms-service';
+import { useToast } from '@/hooks/useToast';
 
 interface SmsTemplate {
   id: string;
@@ -27,6 +26,7 @@ export default function SmsMessagesPage() {
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testSMSResult, setTestSMSResult] = useState<{ success: boolean; message?: string } | null>(null);
+  const toast = useToast();
 
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
@@ -291,7 +291,7 @@ export default function SmsMessagesPage() {
                           onClick={() => {
                             const sendTest = async () => {
                               if (!testPhoneNumber) {
-                                alert('Please enter a test phone number');
+                                toast.warning('Please enter a test phone number');
                                 return;
                               }
                               setIsSendingTest(true);
@@ -350,16 +350,16 @@ export default function SmsMessagesPage() {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                      <button 
+                      <button
                         onClick={() => {
-                          const updated = smsTemplates.map(t => 
+                          const updated = smsTemplates.map(t =>
                             t.id === selectedSmsTemplate ? { ...t, message: smsContent } : t
                           );
                           if (!smsTemplates.find(t => t.id === selectedSmsTemplate)) {
                             updated.push({ id: selectedSmsTemplate, message: smsContent });
                           }
                           setSmsTemplates(updated);
-                          alert('✅ SMS template saved! Now available in workflows and automations.');
+                          toast.success('SMS template saved! Now available in workflows and automations.');
                         }}
                         style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                       >
@@ -494,7 +494,7 @@ export default function SmsMessagesPage() {
                     setSmsTemplates([...smsTemplates, newTrigger]);
                     setSelectedSmsTemplate(newTrigger.id);
                     setShowCustomTrigger(false);
-                    alert('✅ Custom trigger created! Now set up your message.');
+                    toast.success('Custom trigger created! Now set up your message.');
                   }}
                   style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                 >

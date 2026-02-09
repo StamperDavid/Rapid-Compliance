@@ -1,6 +1,5 @@
 'use client';
 
-/* eslint-disable no-alert -- This admin UI uses native dialogs for quick user confirmations. Replace with modal components in production. */
 /* eslint-disable @next/next/no-img-element -- Email template images use blob URLs from FileReader which don't work with next/image. */
 
 import React, { useState } from 'react';
@@ -13,6 +12,8 @@ import type { ViewFilter } from '@/types/filters';
 import { sendEmail } from '@/lib/email/email-service';
 import { sendSMS as _sendSMS } from '@/lib/sms/sms-service';
 import SafeHtml from '@/components/SafeHtml';
+import { useToast } from '@/hooks/useToast';
+import { useConfirm, usePrompt } from '@/hooks/useConfirm';
 
 // Type definitions for email template designer
 // Using a flat interface since the code accesses properties after type checking block.type
@@ -90,6 +91,9 @@ interface SmsTemplate {
 export default function EmailTemplatesPage() {
   const { user: _user } = useAuth();
     const { theme } = useOrgTheme();
+  const toast = useToast();
+  const confirmDialog = useConfirm();
+  const promptDialog = usePrompt();
   const [activeTab, setActiveTab] = useState<'templates' | 'campaigns' | 'designer' | 'sms'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState('welcome');
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
@@ -411,8 +415,8 @@ Best regards,
                         <button
                           onClick={() => {
                             if (!testEmailAddress) {
-                               
-                              alert('Please enter a test email address');
+
+                              toast.warning('Please enter a test email address');
                               return;
                             }
                             setIsSendingTest(true);
@@ -585,9 +589,17 @@ Best regards,
                                 </button>
                                 <button
                                   onClick={() => {
-                                    if (confirm('Delete this template?')) {
-                                      setCustomTemplates(customTemplates.filter(t => t.id !== template.id));
-                                    }
+                                    void (async () => {
+                                      const confirmed = await confirmDialog({
+                                        title: 'Delete Template',
+                                        description: 'Are you sure you want to delete this template? This action cannot be undone.',
+                                        variant: 'destructive',
+                                        confirmLabel: 'Delete'
+                                      });
+                                      if (confirmed) {
+                                        setCustomTemplates(customTemplates.filter(t => t.id !== template.id));
+                                      }
+                                    })();
                                   }}
                                   style={{ padding: '0.625rem 1rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-error)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
                                 >
@@ -717,7 +729,7 @@ Best regards,
                             setCustomTemplates(updated);
                             setShowDesigner(false);
                             setSelectedBlock(null);
-                            alert('✅ Template saved successfully! You can now use it in automated workflows and campaigns.');
+                            toast.success('Template saved successfully! You can now use it in automated workflows and campaigns.');
                           }}
                           style={{ padding: '0.625rem 1.25rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                         >
@@ -753,7 +765,7 @@ Best regards,
                                   uploadedAt: new Date()
                                 }));
                                 setUploadedAssets([...uploadedAssets, ...newAssets]);
-                                alert(`${files.length} image(s) uploaded to your library!`);
+                                toast.success(`${files.length} image(s) uploaded to your library!`);
                               }}
                               style={{ display: 'none' }}
                             />
@@ -904,15 +916,21 @@ Best regards,
 
                             <button
                               onClick={() => {
-                                const html = prompt('Paste your custom HTML here:');
-                                if (html) {
-                                  const newBlock: DesignerBlock = {
-                                    id: `block_${Date.now()}`,
-                                    type: 'html',
-                                    content: { html }
-                                  };
-                                  setDesignerBlocks([...designerBlocks, newBlock]);
-                                }
+                                void (async () => {
+                                  const html = await promptDialog({
+                                    title: 'Custom HTML',
+                                    description: 'Paste your custom HTML code here:',
+                                    placeholder: '<div>Your HTML here...</div>'
+                                  });
+                                  if (html) {
+                                    const newBlock: DesignerBlock = {
+                                      id: `block_${Date.now()}`,
+                                      type: 'html',
+                                      content: { html }
+                                    };
+                                    setDesignerBlocks([...designerBlocks, newBlock]);
+                                  }
+                                })();
                               }}
                               style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
                               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
@@ -1075,10 +1093,18 @@ Best regards,
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        if (confirm('Delete this block?')) {
-                                          setDesignerBlocks(designerBlocks.filter(b => b.id !== block.id));
-                                          setSelectedBlock(null);
-                                        }
+                                        void (async () => {
+                                          const confirmed = await confirmDialog({
+                                            title: 'Delete Block',
+                                            description: 'Are you sure you want to delete this block?',
+                                            variant: 'destructive',
+                                            confirmLabel: 'Delete'
+                                          });
+                                          if (confirmed) {
+                                            setDesignerBlocks(designerBlocks.filter(b => b.id !== block.id));
+                                            setSelectedBlock(null);
+                                          }
+                                        })();
                                       }}
                                       style={{ padding: '4px 8px', backgroundColor: 'var(--color-error)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
                                     >
@@ -1825,8 +1851,8 @@ Best regards,
                       </div>
 
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                        <button 
-                          onClick={() => alert('Test SMS would be sent to your phone number')}
+                        <button
+                          onClick={() => toast.info('Test SMS would be sent to your phone number')}
                           style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
                         >
                           📤 Send Test SMS
@@ -1846,7 +1872,7 @@ Best regards,
                               });
                             }
                             setSmsTemplates(updated);
-                            alert('✅ SMS template saved!');
+                            toast.success('SMS template saved!');
                           }}
                           style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                         >
@@ -2240,7 +2266,7 @@ Best regards,
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <button
                   onClick={() => {
-                    alert('Campaign saved as draft!');
+                    toast.success('Campaign saved as draft!');
                     setShowCreateCampaign(false);
                   }}
                   style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
@@ -2251,7 +2277,7 @@ Best regards,
                 <button
                   onClick={() => {
                     const action = newCampaign.sendType === 'immediate' ? 'sent' : 'scheduled';
-                    alert(`Campaign ${action} to ${estimatedRecipients} recipients!`);
+                    toast.success(`Campaign ${action} to ${estimatedRecipients} recipients!`);
                     setShowCreateCampaign(false);
                     setNewCampaign({ name: '', subject: '', body: '', templateId: '', sendType: 'immediate', scheduledDate: '', scheduledTime: '' });
                     setCampaignFilters([]);
@@ -2371,7 +2397,7 @@ Best regards,
                     setSmsTemplates([...smsTemplates, newTrigger]);
                     setSelectedSmsTemplate(newTrigger.id);
                     setShowSmsCustomTrigger(false);
-                    alert('✅ Custom trigger created! Now set up your message.');
+                    toast.success('Custom trigger created! Now set up your message.');
                   }}
                   style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                 >

@@ -13,6 +13,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useToast } from '@/hooks/useToast';
 import { RiskOverviewCard } from '@/components/risk/RiskOverviewCard';
 import { RiskFactorsCard } from '@/components/risk/RiskFactorsCard';
 import { InterventionsCard } from '@/components/risk/InterventionsCard';
@@ -23,6 +24,7 @@ import type { Deal } from '@/lib/crm/deal-service';
  * Risk Dashboard Page
  */
 export default function RiskDashboardPage() {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<DealRiskPrediction | null>(null);
@@ -101,20 +103,11 @@ export default function RiskDashboardPage() {
   /**
    * Handle intervention start
    */
-  const handleStartIntervention = (interventionId: string) => {
+  const handleStartIntervention = (_interventionId: string) => {
     try {
-      // TODO: Implement intervention tracking
-      // eslint-disable-next-line no-console
-      console.log('Starting intervention:', interventionId);
-
-      // TODO: Replace with toast notification
-      // eslint-disable-next-line no-console
-      console.log('Intervention started! Track progress in your CRM.');
-
+      toast.success('Intervention started! Track progress in your CRM.');
     } catch (err: unknown) {
-      // TODO: Show error toast notification
-       
-      console.error('Failed to start intervention:', err);
+      toast.error(`Failed to start intervention: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 

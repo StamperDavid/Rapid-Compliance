@@ -22,6 +22,7 @@ import type {
   ScrapingStrategy,
   ResearchIntelligence
 } from '@/types/scraper-intelligence';
+import { usePrompt } from '@/hooks/useConfirm';
 
 interface ScraperCRMTabProps {
   template: IndustryTemplate;
@@ -49,6 +50,8 @@ interface ScrapingStrategyUpdate {
 }
 
 export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabProps) {
+  const promptDialog = usePrompt();
+
   const handleBasicInfoChange = (field: string, value: string) => {
     onUpdate({ [field]: value });
   };
@@ -97,9 +100,12 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
     });
   };
 
-  const addCustomField = () => {
-    // eslint-disable-next-line no-alert
-    const key = prompt('Field key (e.g., company_size):');
+  const addCustomField = async () => {
+    const key = await promptDialog({
+      title: 'New Custom Field',
+      description: 'Enter field key',
+      placeholder: 'e.g., company_size'
+    });
     if (!key) {return;}
 
     const currentResearch = template.research ?? getDefaultResearchIntelligence();
@@ -330,7 +336,7 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
               <CardTitle>Custom CRM Fields</CardTitle>
               <CardDescription>Industry-specific data fields to extract</CardDescription>
             </div>
-            <Button size="sm" onClick={addCustomField} disabled={disabled}>
+            <Button size="sm" onClick={() => { void addCustomField(); }} disabled={disabled}>
               <Plus className="h-4 w-4 mr-2" />
               Add Field
             </Button>

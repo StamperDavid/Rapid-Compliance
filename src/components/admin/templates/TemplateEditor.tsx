@@ -17,6 +17,7 @@ import type { IndustryTemplate } from '@/lib/persona/templates/types';
 import { ScraperCRMTab } from './editor-tabs/ScraperCRMTab';
 import { IntelligenceSignalsTab } from './editor-tabs/IntelligenceSignalsTab';
 import { AIAgentsTab } from './editor-tabs/AIAgentsTab';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface TemplateEditorProps {
   template: IndustryTemplate;
@@ -38,6 +39,7 @@ export function TemplateEditor({
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const confirmDialog = useConfirm();
 
   // Track changes
   useEffect(() => {
@@ -56,11 +58,14 @@ export function TemplateEditor({
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (hasChanges) {
-      // TODO: Replace with proper confirmation dialog
-      // eslint-disable-next-line no-alert
-      if (!confirm('You have unsaved changes. Are you sure you want to cancel?')) {
+      const confirmed = await confirmDialog({
+        title: 'Unsaved Changes',
+        description: 'You have unsaved changes. Are you sure you want to cancel?',
+        variant: 'destructive'
+      });
+      if (!confirmed) {
         return;
       }
     }
@@ -68,9 +73,12 @@ export function TemplateEditor({
   };
 
   const handleRevert = async () => {
-    // TODO: Replace with proper confirmation dialog
-    // eslint-disable-next-line no-alert
-    if (!confirm('Are you sure you want to revert this template to its default? This will delete any customizations.')) {
+    const confirmed = await confirmDialog({
+      title: 'Revert to Default',
+      description: 'Are you sure you want to revert this template to its default? This will delete any customizations.',
+      variant: 'destructive'
+    });
+    if (!confirmed) {
       return;
     }
     try {
@@ -109,7 +117,7 @@ export function TemplateEditor({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleCancel}
+                onClick={() => { void handleCancel(); }}
                 disabled={isLoading || isSaving}
               >
                 <X className="h-4 w-4 mr-2" />

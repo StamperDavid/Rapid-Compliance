@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Filter } from 'lucide-react';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
+import { usePrompt } from '@/hooks/useConfirm';
 
 interface FluffPatternsSectionProps {
   template: IndustryTemplate;
@@ -26,9 +27,14 @@ type FluffPatternUpdate = Partial<{
 }>;
 
 export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, canRemove }: FluffPatternsSectionProps) {
-  const addFluffPattern = () => {
-    // eslint-disable-next-line no-alert
-    const id = prompt('Pattern ID (e.g., copyright):');
+  const promptDialog = usePrompt();
+
+  const addFluffPattern = async () => {
+    const id = await promptDialog({
+      title: 'New Fluff Pattern',
+      description: 'Enter pattern ID',
+      placeholder: 'e.g., copyright'
+    });
     if (!id) {return;}
 
     const newPattern: import('@/types/scraper-intelligence').FluffPattern = {
@@ -91,7 +97,7 @@ export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, c
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={addFluffPattern} disabled={disabled}>
+            <Button size="sm" onClick={() => { void addFluffPattern(); }} disabled={disabled}>
               <Plus className="h-4 w-4 mr-2" />
               Add Pattern
             </Button>

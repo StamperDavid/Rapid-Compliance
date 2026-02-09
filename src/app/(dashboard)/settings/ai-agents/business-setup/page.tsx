@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
 
 interface OnboardingSection {
   [key: string]: string;
@@ -23,12 +24,13 @@ interface OnboardingData {
 
 export default function BusinessSetupPage() {
   const _auth = useAuth();
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState('business-basics');
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const toast = useToast();
 
   // Load organization onboarding data
   useEffect(() => {
@@ -73,13 +75,11 @@ export default function BusinessSetupPage() {
       });
 
       setHasChanges(false);
-      // eslint-disable-next-line no-alert -- User feedback for save operation
-      alert('Business setup saved successfully!');
+      toast.success('Business setup saved successfully!');
       setSaving(false);
     } catch (error) {
       logger.error('Failed to save:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert -- User feedback for error handling
-      alert('Failed to save changes. Please try again.');
+      toast.error('Failed to save changes. Please try again.');
       setSaving(false);
     }
   };

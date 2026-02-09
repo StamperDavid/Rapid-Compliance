@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import type { BaseModel } from '@/types/agent-memory';
+import { useToast } from '@/hooks/useToast';
 
 // Extended types for dynamic field access
 type ExtendedBusinessContext = Record<string, string | undefined>;
@@ -19,6 +20,7 @@ export default function AgentConfigurationPage() {
   const [baseModel, setBaseModel] = useState<BaseModel | null>(null);
   const [activeSection, setActiveSection] = useState('business');
   const { theme } = useOrgTheme();
+  const toast = useToast();
 
   const loadBaseModel = useCallback(async () => {
     try {
@@ -29,15 +31,14 @@ export default function AgentConfigurationPage() {
         setBaseModel(model);
       } else {
         // No base model yet - redirect to onboarding
-        // eslint-disable-next-line no-alert -- User feedback
-        alert('Please complete onboarding first to configure your AI agent.');
+        toast.warning('Please complete onboarding first to configure your AI agent.');
       }
     } catch (error) {
       logger.error('Error loading base model:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     void loadBaseModel();
@@ -59,12 +60,10 @@ export default function AgentConfigurationPage() {
         knowledgeBase: baseModel.knowledgeBase,
       });
 
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('✅ Configuration saved successfully!\n\nYour Base Model has been updated. Changes will take effect in training and future Golden Masters.');
+      toast.success('Configuration saved successfully! Your Base Model has been updated. Changes will take effect in training and future Golden Masters.');
     } catch (error) {
       logger.error('Error saving configuration:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Failed to save configuration. Please try again.');
+      toast.error('Failed to save configuration. Please try again.');
     } finally {
       setSaving(false);
     }

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Database } from 'lucide-react';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
+import { usePrompt } from '@/hooks/useConfirm';
 
 interface CRMFieldsSectionProps {
   template: IndustryTemplate;
@@ -30,9 +31,14 @@ type CustomFieldUpdate = Partial<{
 }>;
 
 export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRemove }: CRMFieldsSectionProps) {
-  const addCustomField = () => {
-    // eslint-disable-next-line no-alert
-    const key = prompt('Field key (e.g., company_size):');
+  const promptDialog = usePrompt();
+
+  const addCustomField = async () => {
+    const key = await promptDialog({
+      title: 'New CRM Field',
+      description: 'Enter field key',
+      placeholder: 'e.g., company_size'
+    });
     if (!key) {return;}
 
     const newField: import('@/types/scraper-intelligence').CustomField = {
@@ -98,7 +104,7 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={addCustomField} disabled={disabled}>
+            <Button size="sm" onClick={() => { void addCustomField(); }} disabled={disabled}>
               <Plus className="h-4 w-4 mr-2" />
               Add Field
             </Button>

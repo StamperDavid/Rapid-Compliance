@@ -1,13 +1,12 @@
 'use client';
 
-/* eslint-disable no-alert -- Admin UI uses native dialogs */
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import WorkflowBuilder from '@/components/workflows/WorkflowBuilder';
 import type { Workflow } from '@/types/workflow';
+import { useToast } from '@/hooks/useToast';
 
 interface WorkflowItem {
   id: string;
@@ -34,6 +33,7 @@ export default function WorkflowsPage() {
   const [workflowsList, setWorkflowsList] = useState<WorkflowItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
@@ -105,7 +105,7 @@ export default function WorkflowsPage() {
       }
     } catch (error: unknown) {
       console.error('Error toggling workflow status:', error);
-      alert(`Failed to update workflow status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to update workflow status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -267,7 +267,7 @@ export default function WorkflowsPage() {
               setEditingWorkflow(null);
             } catch (error: unknown) {
               console.error('Error saving workflow:', error);
-              alert(`Failed to save workflow: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              toast.error(`Failed to save workflow: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
           })()}
           onCancel={() => {

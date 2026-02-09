@@ -25,6 +25,7 @@ import { KnowledgeRAGSection } from './modular-sections/KnowledgeRAGSection';
 import { LearningLoopsSection } from './modular-sections/LearningLoopsSection';
 import { TacticalExecutionSection } from './modular-sections/TacticalExecutionSection';
 import { AddSectionDialog } from './modular-sections/AddSectionDialog';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface ModularTemplateEditorProps {
   template: IndustryTemplate;
@@ -54,6 +55,7 @@ export function ModularTemplateEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [showAddSection, setShowAddSection] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const confirmDialog = useConfirm();
 
   // Section visibility management
   const [sections, setSections] = useState<SectionConfig[]>([
@@ -107,11 +109,14 @@ export function ModularTemplateEditor({
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (hasChanges) {
-      // TODO: Replace with proper confirmation dialog
-      // eslint-disable-next-line no-alert
-      if (!confirm('You have unsaved changes. Are you sure you want to cancel?')) {
+      const confirmed = await confirmDialog({
+        title: 'Unsaved Changes',
+        description: 'You have unsaved changes. Are you sure you want to cancel?',
+        variant: 'destructive'
+      });
+      if (!confirmed) {
         return;
       }
     }
@@ -119,9 +124,12 @@ export function ModularTemplateEditor({
   };
 
   const handleRevert = async () => {
-    // TODO: Replace with proper confirmation dialog
-    // eslint-disable-next-line no-alert
-    if (!confirm('Are you sure you want to revert this template to its default? This will delete any customizations.')) {
+    const confirmed = await confirmDialog({
+      title: 'Revert to Default',
+      description: 'Are you sure you want to revert this template to its default? This will delete any customizations.',
+      variant: 'destructive'
+    });
+    if (!confirmed) {
       return;
     }
     try {
@@ -195,7 +203,7 @@ export function ModularTemplateEditor({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleCancel}
+                  onClick={() => { void handleCancel(); }}
                   disabled={isLoading || isSaving}
                 >
                   <X className="h-4 w-4 mr-2" />

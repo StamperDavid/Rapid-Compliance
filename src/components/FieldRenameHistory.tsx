@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useConfirm } from '@/hooks/useConfirm';
 
 type FirestoreTimestamp = Date | string | { toDate: () => Date } | null | undefined;
 
@@ -60,6 +61,7 @@ export default function FieldRenameHistory({
   const [currentField, setCurrentField] = useState<CurrentFieldInfo | null>(null);
   const [rolling, setRolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const confirmDialog = useConfirm();
 
   const loadHistory = useCallback(async () => {
     try {
@@ -91,8 +93,13 @@ export default function FieldRenameHistory({
   }, [loadHistory]);
 
   const handleRollback = async (toVersion: number) => {
-    // eslint-disable-next-line no-alert -- User confirmation required for destructive action
-    if (!confirm(`Are you sure you want to rollback to version ${toVersion}?`)) {
+    const confirmed = await confirmDialog({
+      title: 'Confirm Rollback',
+      description: `Are you sure you want to rollback to version ${toVersion}?`,
+      variant: 'destructive'
+    });
+
+    if (!confirmed) {
       return;
     }
 

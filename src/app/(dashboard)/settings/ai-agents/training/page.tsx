@@ -5,7 +5,9 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
+import { useConfirm, usePrompt } from '@/hooks/useConfirm';
 
 // Type definitions
 interface BaseModel {
@@ -95,6 +97,9 @@ interface AIResponse {
 
 export default function AgentTrainingPage() {
   const { user } = useAuth();
+  const toast = useToast();
+  const confirmDialog = useConfirm();
+  const promptDialog = usePrompt();
 
   const [loading, setLoading] = useState(true);
   const { theme } = useOrgTheme();
@@ -338,8 +343,7 @@ export default function AgentTrainingPage() {
 
     } catch (error) {
       logger.error('Error sending message:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Failed to get agent response. Please try again.');
+      toast.error('Failed to get agent response. Please try again.');
     } finally {
       setIsTyping(false);
     }
@@ -355,14 +359,12 @@ export default function AgentTrainingPage() {
 
   const handleSubmitFeedback = async () => {
     if (!feedbackWhy.trim()) {
-      // eslint-disable-next-line no-alert -- User feedback
-      alert(`Please explain WHY this response is ${feedbackType}`);
+      toast.warning(`Please explain WHY this response is ${feedbackType}`);
       return;
     }
 
     if (feedbackType !== 'correct' && !betterResponse.trim()) {
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Please provide a better response or guidance on how to improve.');
+      toast.warning('Please provide a better response or guidance on how to improve.');
       return;
     }
 
@@ -398,8 +400,7 @@ export default function AgentTrainingPage() {
       // Update Base Model's training score
       await updateTrainingScore(feedbackType === 'correct' ? 100 : feedbackType === 'could-improve' ? 70 : 40);
 
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('✅ Feedback saved! This will help improve your AI agent.');
+      toast.success('Feedback saved! This will help improve your AI agent.');
 
       // Reset feedback mode
       setFeedbackMode(false);
@@ -409,8 +410,7 @@ export default function AgentTrainingPage() {
 
     } catch (error) {
       logger.error('Error saving feedback:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Failed to save feedback. Please try again.');
+      toast.error('Failed to save feedback. Please try again.');
     }
   };
 
@@ -436,8 +436,7 @@ export default function AgentTrainingPage() {
 
   const submitSalesCriteriaScoring = async () => {
     if (!trainingTopic.trim()) {
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Please select or enter a training topic first.');
+      toast.warning('Please select or enter a training topic first.');
       return;
     }
 
@@ -457,8 +456,7 @@ export default function AgentTrainingPage() {
         empathyAndRapport: 'Empathy & Rapport'
       };
 
-      // eslint-disable-next-line no-alert -- User feedback
-      alert(`⚠️ Please explain low scores (< 7/10):\n\n${missingExplanations.map(key => `• ${labels[key]}: ${salesCriteria[key]}/10`).join('\n')}\n\nThe AI needs this context to learn and improve!`);
+      toast.warning(`Please explain low scores (< 7/10): ${missingExplanations.map(key => `${labels[key]}: ${salesCriteria[key]}/10`).join(', ')}. The AI needs this context to learn and improve!`);
       return;
     }
 
@@ -505,8 +503,7 @@ export default function AgentTrainingPage() {
         ...prev
       ]);
 
-      // eslint-disable-next-line no-alert -- User feedback
-      alert(`✅ Training Session Scored!\n\nOverall Score: ${avgScore}/100\n\nYour detailed feedback will help the AI learn and improve!`);
+      toast.success(`Training Session Scored! Overall Score: ${avgScore}/100. Your detailed feedback will help the AI learn and improve!`);
 
       // Reset for next session
       setTrainingTopic('');
@@ -531,8 +528,7 @@ export default function AgentTrainingPage() {
 
     } catch (error) {
       logger.error('Error saving sales criteria scoring:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Failed to save session score. Please try again.');
+      toast.error('Failed to save session score. Please try again.');
     }
   };
 
@@ -604,13 +600,11 @@ export default function AgentTrainingPage() {
         // This will be automatically included in future training sessions
       }
 
-      // eslint-disable-next-line no-alert -- User feedback
-      alert(`✅ ${files.length} training material(s) uploaded successfully!\n\nThe content has been processed and will be used to train your AI agent.`);
+      toast.success(`${files.length} training material(s) uploaded successfully! The content has been processed and will be used to train your AI agent.`);
 
     } catch (error) {
       logger.error('Error uploading training materials:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Failed to upload training materials. Please try again.');
+      toast.error('Failed to upload training materials. Please try again.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -634,19 +628,20 @@ export default function AgentTrainingPage() {
     }
 
     if (baseModel.status !== 'ready') {
-      // eslint-disable-next-line no-alert -- User feedback
-      alert(`⚠️ Base Model is not ready yet!\n\nCurrent status: ${baseModel.status}\nTraining score: ${overallScore}%\n\nContinue training until you reach 80%+ score across multiple scenarios.`);
+      toast.warning(`Base Model is not ready yet! Current status: ${baseModel.status}, Training score: ${overallScore}%. Continue training until you reach 80%+ score across multiple scenarios.`);
       return;
     }
 
     if (overallScore < 80) {
-      // eslint-disable-next-line no-alert -- User feedback
-      alert(`⚠️ Training score too low!\n\nCurrent score: ${overallScore}%\nRequired: 80%+\n\nContinue training your agent with more scenarios and feedback until the score improves.`);
+      toast.warning(`Training score too low! Current score: ${overallScore}%, Required: 80%+. Continue training your agent with more scenarios and feedback until the score improves.`);
       return;
     }
 
-    // eslint-disable-next-line no-alert -- User feedback
-    const notes = prompt('Optional: Add notes about this Golden Master version\n\nWhat changes or improvements were made?');
+    const notes = await promptDialog({
+      title: 'Add Notes',
+      description: 'Optional: Add notes about this Golden Master version. What changes or improvements were made?',
+      placeholder: 'Enter notes...',
+    });
 
     try {
       const { createGoldenMaster } = await import('@/lib/agent/golden-master-builder');
@@ -654,8 +649,7 @@ export default function AgentTrainingPage() {
       const userId = user?.id;
       const newGoldenMaster = await createGoldenMaster(baseModel.id, (userId !== '' && userId !== undefined) ? userId : 'system', notes ?? undefined) as { version: string | number };
 
-      // eslint-disable-next-line no-alert -- User feedback
-      alert(`✅ Golden Master ${newGoldenMaster.version} Created!\n\nYour trained AI agent has been saved as a production-ready version.\n\nNext steps:\n1. Review the Golden Master in the "Golden Master" tab\n2. Deploy it to production when ready\n3. Continue training your Base Model for future improvements`);
+      toast.success(`Golden Master ${newGoldenMaster.version} Created! Your trained AI agent has been saved as a production-ready version. Next steps: Review the Golden Master in the "Golden Master" tab, Deploy it to production when ready, Continue training your Base Model for future improvements.`);
 
       // Reload data
       await loadTrainingData();
@@ -663,8 +657,7 @@ export default function AgentTrainingPage() {
 
     } catch (error) {
       logger.error('Error saving Golden Master:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Failed to save Golden Master. Please try again.');
+      toast.error('Failed to save Golden Master. Please try again.');
     }
   };
 
@@ -856,8 +849,13 @@ export default function AgentTrainingPage() {
   }, []);
 
   const handleDeployGoldenMaster = async (gmId: string, version: string | number) => {
-    // eslint-disable-next-line no-alert -- User feedback
-    if (!confirm(`Deploy Golden Master ${version} to production?\n\nThis will make it the active version used by all customers.`)) {
+    const confirmed = await confirmDialog({
+      title: 'Deploy Golden Master',
+      description: `Deploy Golden Master ${version} to production? This will make it the active version used by all customers.`,
+      variant: 'destructive',
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -866,15 +864,13 @@ export default function AgentTrainingPage() {
 
       await deployGoldenMaster(gmId);
 
-      // eslint-disable-next-line no-alert -- User feedback
-      alert(`✅ Golden Master ${version} is now LIVE!\n\nAll customer conversations will now use this version of your AI agent.`);
+      toast.success(`Golden Master ${version} is now LIVE! All customer conversations will now use this version of your AI agent.`);
 
       await loadTrainingData();
 
     } catch (error) {
       logger.error('Error deploying Golden Master:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
-      // eslint-disable-next-line no-alert -- User feedback
-      alert('Failed to deploy Golden Master. Please try again.');
+      toast.error('Failed to deploy Golden Master. Please try again.');
     }
   };
 

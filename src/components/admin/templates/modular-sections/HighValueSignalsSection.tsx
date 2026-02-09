@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, Trash2, TrendingUp, AlertCircle } from 'lucide-react';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
+import { usePrompt } from '@/hooks/useConfirm';
 
 interface HighValueSignalsSectionProps {
   template: IndustryTemplate;
@@ -32,13 +33,17 @@ type SignalUpdate = Partial<{
 }>;
 
 export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove, canRemove, errors }: HighValueSignalsSectionProps) {
+  const promptDialog = usePrompt();
   const sectionErrors = Object.entries(errors).filter(([key]) =>
     key.startsWith('research.highValueSignals')
   );
 
-  const addSignal = () => {
-    // eslint-disable-next-line no-alert
-    const id = prompt('Signal ID (e.g., hiring_staff):');
+  const addSignal = async () => {
+    const id = await promptDialog({
+      title: 'New Signal',
+      description: 'Enter signal ID',
+      placeholder: 'e.g., hiring_staff'
+    });
     if (!id) {return;}
 
     const newSignal: import('@/types/scraper-intelligence').HighValueSignal = {
@@ -105,7 +110,7 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={addSignal} disabled={disabled}>
+            <Button size="sm" onClick={() => { void addSignal(); }} disabled={disabled}>
               <Plus className="h-4 w-4 mr-2" />
               Add Signal
             </Button>

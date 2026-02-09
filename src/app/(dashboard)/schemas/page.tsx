@@ -5,6 +5,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { useConfirm } from '@/hooks/useConfirm';
 
 interface Field {
   id: string;
@@ -58,6 +59,7 @@ const FIELD_TYPES = [
 ];
 
 export default function SchemaBuilderPage() {
+  const confirmDialog = useConfirm();
 
   // Convert STANDARD_SCHEMAS to the format we need
   const standardSchemasArray: Schema[] = useMemo(() => Object.values(STANDARD_SCHEMAS).map(schema => ({
@@ -192,8 +194,13 @@ export default function SchemaBuilderPage() {
   };
 
   const deleteSchema = async (id: string) => {
-    // eslint-disable-next-line no-alert
-    if (!confirm('Are you sure you want to delete this schema?')) {return;}
+    const confirmed = await confirmDialog({
+      title: 'Delete Schema',
+      description: 'Are you sure you want to delete this schema?',
+      variant: 'destructive'
+    });
+
+    if (!confirmed) {return;}
     setSaving(true);
     setError(null);
     try {

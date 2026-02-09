@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
 import type { ResearchIntelligence } from '@/types/scraper-intelligence';
+import { usePrompt } from '@/hooks/useConfirm';
 
 interface IntelligenceSignalsTabProps {
   template: IndustryTemplate;
@@ -55,6 +56,7 @@ interface ScoringRuleUpdate {
 
 export function IntelligenceSignalsTab({ template, onUpdate, disabled }: IntelligenceSignalsTabProps) {
   const [activeSection, setActiveSection] = useState('signals');
+  const promptDialog = usePrompt();
 
   // Default research intelligence structure with all required fields
   const getDefaultResearch = (): ResearchIntelligence => ({
@@ -76,9 +78,12 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
     },
   });
 
-  const addSignal = () => {
-    // eslint-disable-next-line no-alert
-    const id = prompt('Signal ID (e.g., hiring_staff):');
+  const addSignal = async () => {
+    const id = await promptDialog({
+      title: 'New Signal',
+      description: 'Enter signal ID',
+      placeholder: 'e.g., hiring_staff'
+    });
     if (!id) {return;}
 
     const newSignal = {
@@ -124,9 +129,12 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
     });
   };
 
-  const addFluffPattern = () => {
-    // eslint-disable-next-line no-alert
-    const id = prompt('Pattern ID (e.g., copyright):');
+  const addFluffPattern = async () => {
+    const id = await promptDialog({
+      title: 'New Fluff Pattern',
+      description: 'Enter pattern ID',
+      placeholder: 'e.g., copyright'
+    });
     if (!id) {return;}
 
     const newPattern = {
@@ -168,9 +176,12 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
     });
   };
 
-  const addScoringRule = () => {
-    // eslint-disable-next-line no-alert
-    const id = prompt('Rule ID (e.g., growing_business):');
+  const addScoringRule = async () => {
+    const id = await promptDialog({
+      title: 'New Scoring Rule',
+      description: 'Enter rule ID',
+      placeholder: 'e.g., growing_business'
+    });
     if (!id) {return;}
 
     const newRule = {
@@ -240,7 +251,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                   Keywords and patterns that indicate high-value leads
                 </CardDescription>
               </div>
-              <Button size="sm" onClick={addSignal} disabled={disabled}>
+              <Button size="sm" onClick={() => { void addSignal(); }} disabled={disabled}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Signal
               </Button>
@@ -393,7 +404,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                   Patterns to filter out noise and boilerplate content
                 </CardDescription>
               </div>
-              <Button size="sm" onClick={addFluffPattern} disabled={disabled}>
+              <Button size="sm" onClick={() => { void addFluffPattern(); }} disabled={disabled}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Pattern
               </Button>
@@ -484,7 +495,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                   Conditional logic for lead qualification scoring
                 </CardDescription>
               </div>
-              <Button size="sm" onClick={addScoringRule} disabled={disabled}>
+              <Button size="sm" onClick={() => { void addScoringRule(); }} disabled={disabled}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Rule
               </Button>

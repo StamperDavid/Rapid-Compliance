@@ -11,6 +11,7 @@
 
 import React, { useState } from 'react';
 import type { ConversationAnalysis } from '@/lib/conversation/types';
+import { useToast } from '@/hooks/useToast';
 
 interface ConversationFollowUpsCardProps {
   analysis: ConversationAnalysis;
@@ -20,6 +21,7 @@ interface ConversationFollowUpsCardProps {
 export function ConversationFollowUpsCard({ analysis, className = '' }: ConversationFollowUpsCardProps) {
   const { followUpActions, positiveSignals } = analysis;
   const [expandedActions, setExpandedActions] = useState<Set<string>>(new Set());
+  const toast = useToast();
   
   const toggleAction = (actionId: string) => {
     const newExpanded = new Set(expandedActions);
@@ -210,9 +212,7 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                           className="px-4 py-2 bg-primary text-white text-sm font-medium rounded hover:bg-primary/90 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            // TODO: Create task in CRM - Replace with proper modal/dialog
-                            // eslint-disable-next-line no-alert
-                            alert('Task creation coming soon!');
+                            toast.success('Task creation coming soon!');
                           }}
                         >
                           Create Task
@@ -221,9 +221,7 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                           className="px-4 py-2 bg-surface-elevated text-[var(--color-text-secondary)] text-sm font-medium rounded hover:bg-surface-elevated/80 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            // TODO: Mark as done - Replace with proper modal/dialog
-                            // eslint-disable-next-line no-alert
-                            alert('Mark done coming soon!');
+                            toast.success('Mark done coming soon!');
                           }}
                         >
                           Mark Done

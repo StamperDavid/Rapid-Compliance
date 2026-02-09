@@ -125,10 +125,7 @@ export function AdminOrchestrator() {
             };
           };
           if (data.report?.summary?.created && data.report.summary.created > 0) {
-            // eslint-disable-next-line no-console
-            console.log(
-              `[Provisioner] Database provisioned: ${data.report.summary.created} items created, ${data.report.summary.skipped} skipped`
-            );
+            // Provisioning succeeded — no user-facing action needed
           }
         } else {
            
@@ -204,12 +201,6 @@ export function AdminOrchestrator() {
           monthlyRevenue: data.stats.monthlyRevenue ?? 0,
         };
 
-        // DEBUG: Log what we received from the API
-        // eslint-disable-next-line no-console
-        console.log('[Jasper] Stats received from API:', newStats);
-        // eslint-disable-next-line no-console
-        console.log('[Jasper] Stats scope:', data.stats.scope);
-
         setStats(newStats);
         setStatsVerified(true);
       } else {
@@ -247,8 +238,6 @@ export function AdminOrchestrator() {
                 activeAgents: orgCount, // Estimate one agent per org
               }));
               setStatsVerified(true);
-              // eslint-disable-next-line no-console
-              console.log(`[Jasper] Fallback succeeded: ${orgCount} organizations found`);
             }
           }
         } catch {

@@ -1,18 +1,18 @@
 'use client';
 
-/* eslint-disable no-alert -- Admin UI uses native dialogs for quick user confirmations */
-
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { useToast } from '@/hooks/useToast';
 
 export default function WebhooksPage() {
   const { user: _user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useOrgTheme();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const toast = useToast();
 
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
@@ -220,7 +220,7 @@ export default function WebhooksPage() {
               <button onClick={() => setShowCreateModal(false)} style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}>
                 Cancel
               </button>
-              <button onClick={() => { alert('Webhook created!'); setShowCreateModal(false); }} style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
+              <button onClick={() => { toast.success('Webhook created!'); setShowCreateModal(false); }} style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
                 Create Webhook
               </button>
             </div>

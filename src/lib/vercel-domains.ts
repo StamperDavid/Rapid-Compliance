@@ -3,6 +3,8 @@
  * Manage domains and SSL certificates via Vercel API
  */
 
+import { logger } from '@/lib/logger/logger';
+
 const VERCEL_API_URL = 'https://api.vercel.com';
 const VERCEL_TOKEN = process.env.VERCEL_TOKEN;
 const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID;
@@ -86,8 +88,7 @@ export async function addVercelDomain(domain: string): Promise<{
     }
 
     const data = (await response.json()) as VercelDomainResponse;
-    // eslint-disable-next-line no-console
-    console.log('[Vercel Domains] Domain added:', domain);
+    logger.info('[Vercel Domains] Domain added', { domain });
 
     return {
       success: true,
@@ -143,8 +144,7 @@ export async function verifyVercelDomain(domain: string): Promise<{
     }
 
     const data = (await response.json()) as VercelDomainResponse;
-    // eslint-disable-next-line no-console
-    console.log('[Vercel Domains] Domain verified:', domain);
+    logger.info('[Vercel Domains] Domain verified', { domain });
 
     return {
       success: true,
@@ -251,8 +251,7 @@ export async function removeVercelDomain(domain: string): Promise<{
       };
     }
 
-    // eslint-disable-next-line no-console
-    console.log('[Vercel Domains] Domain removed:', domain);
+    logger.info('[Vercel Domains] Domain removed', { domain });
 
     return {
       success: true,

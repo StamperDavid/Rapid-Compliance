@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Calculator } from 'lucide-react';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
+import { usePrompt } from '@/hooks/useConfirm';
 
 interface ScoringRulesSectionProps {
   template: IndustryTemplate;
@@ -29,9 +30,14 @@ type ScoringRuleUpdate = Partial<{
 }>;
 
 export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, canRemove }: ScoringRulesSectionProps) {
-  const addScoringRule = () => {
-    // eslint-disable-next-line no-alert
-    const id = prompt('Rule ID (e.g., growing_business):');
+  const promptDialog = usePrompt();
+
+  const addScoringRule = async () => {
+    const id = await promptDialog({
+      title: 'New Scoring Rule',
+      description: 'Enter rule ID',
+      placeholder: 'e.g., growing_business'
+    });
     if (!id) {return;}
 
     const newRule: import('@/types/scraper-intelligence').ScoringRule = {
@@ -97,7 +103,7 @@ export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, ca
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={addScoringRule} disabled={disabled}>
+            <Button size="sm" onClick={() => { void addScoringRule(); }} disabled={disabled}>
               <Plus className="h-4 w-4 mr-2" />
               Add Rule
             </Button>
