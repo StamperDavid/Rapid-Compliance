@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.0.0"
+    "node": "20.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -46,7 +46,7 @@
     "cleanup:test-orgs:auto": "AUTO_CONFIRM=true node scripts/cleanup-test-orgs.js",
     "cleanup:dev": "node scripts/cleanup-dev-test-data.js",
     "cleanup:all": "AUTO_CONFIRM=true node scripts/cleanup-all-test-data.js",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@google-cloud/firestore": "^7.1.0",
