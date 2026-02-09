@@ -12,6 +12,7 @@ import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import type { ViewFilter } from '@/types/filters';
 import { sendEmail } from '@/lib/email/email-service';
 import { sendSMS as _sendSMS } from '@/lib/sms/sms-service';
+import SafeHtml from '@/components/SafeHtml';
 
 // Type definitions for email template designer
 // Using a flat interface since the code accesses properties after type checking block.type
@@ -1039,7 +1040,7 @@ Best regards,
                                 )}
                                 
                                 {block.type === 'html' && (
-                                  <div dangerouslySetInnerHTML={{ __html: block.content.html ?? '' }} />
+                                  <SafeHtml html={block.content.html ?? ''} preset="email" />
                                 )}
                                 
                                 {/* Block Actions */}

@@ -29,17 +29,19 @@ export function addSecurityHeaders(response: NextResponse): NextResponse {
   );
   
   // Content Security Policy (CSP)
-  // Note: Adjust based on your actual needs
+  // unsafe-eval removed — Next.js 15 production builds do not require it.
+  // unsafe-inline kept for style-src (required by inline style attributes and Tailwind).
+  // unsafe-inline kept for script-src until nonce-based CSP is implemented (Phase 5).
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Adjust for Next.js
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.stripe.com https://api.openai.com",
+    "connect-src 'self' https://api.stripe.com https://api.openai.com https://openrouter.ai https://*.firebaseio.com https://*.googleapis.com",
     "frame-ancestors 'none'",
   ].join('; ');
-  
+
   response.headers.set('Content-Security-Policy', csp);
   
   // Strict Transport Security (HTTPS only)

@@ -4,6 +4,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { addCORSHeaders } from '@/lib/middleware/security-headers';
 import type { ChatMessage, ModelName } from '@/types/ai-models';
 import type { ConversationMessage } from '@/types/agent-memory';
 
@@ -24,6 +25,13 @@ export const dynamic = 'force-dynamic';
  * Penthouse model: Always uses PLATFORM_ID.
  */
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get('origin') ?? '';
+  const response = await handlePublicChat(request);
+  addCORSHeaders(response, origin);
+  return response;
+}
+
+async function handlePublicChat(request: NextRequest) {
   try {
     // Rate limiting - stricter for public endpoint
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/chat/public');
@@ -264,19 +272,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Handle OPTIONS for CORS preflight
+// Handle OPTIONS for CORS preflight — uses centralized origin whitelist
 export function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin') ?? '*';
-
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
+  const origin = request.headers.get('origin') ?? '';
+  const response = new NextResponse(null, { status: 200 });
+  addCORSHeaders(response, origin);
+  return response;
 }
 
 

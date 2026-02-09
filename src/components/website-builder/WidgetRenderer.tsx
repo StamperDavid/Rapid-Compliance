@@ -15,6 +15,7 @@ import type {
   TabItem,
   AccordionItem
 } from '@/types/widget-content';
+import SafeHtml from '@/components/SafeHtml';
 
 interface WidgetRendererProps {
   widget: Widget;
@@ -411,7 +412,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
       );
 
     case 'html':
-      return <div style={style} dangerouslySetInnerHTML={{ __html: (widget.data.html as string) ?? '' }} />;
+      return <SafeHtml style={style} html={(widget.data.html as string) ?? ''} preset="rich-text" />;
 
     case 'code':
       return (

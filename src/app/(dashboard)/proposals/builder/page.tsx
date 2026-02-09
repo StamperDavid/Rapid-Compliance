@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ProposalTemplate, ProposalSection } from '@/lib/documents/proposal-generator';
 import { useToast } from '@/hooks/useToast';
+import SafeHtml from '@/components/SafeHtml';
 
 type TemplateType = 'proposal' | 'quote' | 'contract' | 'invoice';
 
@@ -246,7 +247,7 @@ export default function ProposalBuilderPage() {
                       }
                     }}
                   >
-                    <div dangerouslySetInnerHTML={{ __html: section.content }} />
+                    <SafeHtml html={section.content} preset="rich-text" />
 
                     {selectedSection?.id === section.id && (
                       <button

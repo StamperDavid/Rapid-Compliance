@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { buildEmailHTML, type EmailTemplate, type EmailBlock } from '@/lib/email/email-builder';
 import { useToast } from '@/hooks/useToast';
+import SafeHtml from '@/components/SafeHtml';
 
 export default function EmailBuilderPage() {
   const router = useRouter();
@@ -392,9 +393,10 @@ export default function EmailBuilderPage() {
       ) : (
         <div className="flex-1 overflow-auto p-8 bg-surface-paper">
           <div className="max-w-4xl mx-auto">
-            <div
+            <SafeHtml
               className="bg-white rounded shadow-lg"
-              dangerouslySetInnerHTML={{ __html: renderPreview() }}
+              html={renderPreview()}
+              preset="email"
             />
           </div>
         </div>
