@@ -160,21 +160,21 @@ export default function TemplatesDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-surface-paper">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-blue-900 border-b border-gray-800">
+      <div className="bg-gradient-to-r from-primary via-primary to-secondary border-b border-border-light">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2">
+              <h1 className="text-4xl font-bold text-[var(--color-text-primary)] mb-2">
                 Sales Intelligence Hub
               </h1>
-              <p className="text-gray-300 text-lg">
+              <p className="text-[var(--color-text-secondary)] text-lg">
                 Industry templates, predictive scoring, and revenue forecasting
               </p>
             </div>
             {templateApplied && (
-              <div className="bg-green-500/20 border border-green-500 text-green-400 px-6 py-3 rounded-lg flex items-center gap-2">
+              <div className="bg-green-500/20 border border-green-500 text-success px-6 py-3 rounded-lg flex items-center gap-2">
                 <span className="text-2xl">✓</span>
                 <span className="font-semibold">Template Applied!</span>
               </div>
@@ -189,8 +189,8 @@ export default function TemplatesDashboard() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-6 py-3 rounded-t-lg font-semibold transition-all flex items-center gap-2 ${
                   activeTab === tab.id
-                    ? 'bg-gray-900 text-white border-t-4 border-blue-500'
-                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                    ? 'bg-surface-paper text-[var(--color-text-primary)] border-t-4 border-primary'
+                    : 'bg-surface-elevated text-[var(--color-text-secondary)] hover:bg-surface-elevated hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 <span className="text-xl">{tab.icon}</span>
@@ -206,13 +206,13 @@ export default function TemplatesDashboard() {
         {/* Templates Tab */}
         {activeTab === 'templates' && (
           <div className="space-y-6">
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <div className="bg-surface-elevated border border-border-light rounded-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">
+                  <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">
                     Choose Your Industry Template
                   </h2>
-                  <p className="text-gray-400">
+                  <p className="text-[var(--color-text-secondary)]">
                     Pre-built sales processes optimized for your industry with stages, fields, workflows, and best practices
                   </p>
                 </div>
@@ -221,8 +221,8 @@ export default function TemplatesDashboard() {
                   disabled={!selectedTemplateId || applyingTemplate}
                   className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                     selectedTemplateId && !applyingTemplate
-                      ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      ? 'bg-primary hover:bg-primary-light text-[var(--color-text-primary)]'
+                      : 'bg-surface-main text-[var(--color-text-disabled)] cursor-not-allowed'
                   }`}
                 >
                   {applyingTemplate ? 'Applying...' : 'Apply Template'}
@@ -237,24 +237,24 @@ export default function TemplatesDashboard() {
 
             {/* Template Benefits */}
             <div className="grid grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg p-6 border border-blue-700">
+              <div className="bg-gradient-to-br from-primary to-primary-light rounded-lg p-6 border border-primary">
                 <div className="text-4xl mb-3">⚡</div>
-                <h3 className="text-xl font-bold text-white mb-2">Quick Setup</h3>
-                <p className="text-blue-200">
+                <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">Quick Setup</h3>
+                <p className="text-[var(--color-text-secondary)]">
                   Get started in minutes with pre-configured sales stages, custom fields, and automated workflows
                 </p>
               </div>
-              <div className="bg-gradient-to-br from-purple-900 to-purple-800 rounded-lg p-6 border border-purple-700">
+              <div className="bg-gradient-to-br from-secondary to-secondary-light rounded-lg p-6 border border-secondary">
                 <div className="text-4xl mb-3">🎯</div>
-                <h3 className="text-xl font-bold text-white mb-2">Best Practices</h3>
-                <p className="text-purple-200">
+                <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">Best Practices</h3>
+                <p className="text-[var(--color-text-secondary)]">
                   Built-in industry best practices, discovery questions, and objection handling strategies
                 </p>
               </div>
-              <div className="bg-gradient-to-br from-green-900 to-green-800 rounded-lg p-6 border border-green-700">
+              <div className="bg-gradient-to-br from-success to-green-400 rounded-lg p-6 border border-success">
                 <div className="text-4xl mb-3">📊</div>
-                <h3 className="text-xl font-bold text-white mb-2">Data-Driven</h3>
-                <p className="text-green-200">
+                <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">Data-Driven</h3>
+                <p className="text-[var(--color-text-secondary)]">
                   Industry benchmarks for deal size, sales cycle, win rates, and forecasting accuracy
                 </p>
               </div>
@@ -265,20 +265,20 @@ export default function TemplatesDashboard() {
         {/* Deal Scoring Tab */}
         {activeTab === 'scoring' && (
           <div className="space-y-6">
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <div className="bg-surface-elevated border border-border-light rounded-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">
+                  <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">
                     Predictive Deal Scoring
                   </h2>
-                  <p className="text-gray-400">
+                  <p className="text-[var(--color-text-secondary)]">
                     AI-powered deal scoring with 7+ factors: age, velocity, engagement, decision maker, budget, competition, and historical win rate
                   </p>
                 </div>
                 <button
                   onClick={() => void loadDealScores()}
                   disabled={loadingScores}
-                  className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors disabled:bg-gray-700 disabled:text-gray-500"
+                  className="px-6 py-3 bg-primary hover:bg-primary-light text-[var(--color-text-primary)] rounded-lg font-semibold transition-colors disabled:bg-gray-700 disabled:text-gray-500"
                 >
                   {loadingScores ? 'Loading...' : 'Refresh Scores'}
                 </button>
@@ -303,10 +303,10 @@ export default function TemplatesDashboard() {
               ) : (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">🎯</div>
-                  <p className="text-gray-400 mb-4">No deals scored yet</p>
+                  <p className="text-[var(--color-text-secondary)] mb-4">No deals scored yet</p>
                   <button
                     onClick={() => void loadDealScores()}
-                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
+                    className="px-6 py-3 bg-primary hover:bg-primary-light text-[var(--color-text-primary)] rounded-lg font-semibold transition-colors"
                   >
                     Score Sample Deals
                   </button>
@@ -316,24 +316,24 @@ export default function TemplatesDashboard() {
 
             {/* Scoring Benefits */}
             <div className="grid grid-cols-3 gap-6">
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="bg-surface-elevated border border-border-light rounded-lg p-4">
                 <div className="text-3xl mb-2">🔍</div>
-                <h4 className="text-white font-semibold mb-1">7+ Scoring Factors</h4>
-                <p className="text-gray-400 text-sm">
+                <h4 className="text-[var(--color-text-primary)] font-semibold mb-1">7+ Scoring Factors</h4>
+                <p className="text-[var(--color-text-secondary)] text-sm">
                   Deal age, stage velocity, engagement, decision maker, budget, competition, historical win rate
                 </p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="bg-surface-elevated border border-border-light rounded-lg p-4">
                 <div className="text-3xl mb-2">⚠️</div>
-                <h4 className="text-white font-semibold mb-1">Risk Detection</h4>
-                <p className="text-gray-400 text-sm">
+                <h4 className="text-[var(--color-text-primary)] font-semibold mb-1">Risk Detection</h4>
+                <p className="text-[var(--color-text-secondary)] text-sm">
                   Automatically identifies at-risk deals with severity levels and mitigation strategies
                 </p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="bg-surface-elevated border border-border-light rounded-lg p-4">
                 <div className="text-3xl mb-2">💡</div>
-                <h4 className="text-white font-semibold mb-1">AI Recommendations</h4>
-                <p className="text-gray-400 text-sm">
+                <h4 className="text-[var(--color-text-primary)] font-semibold mb-1">AI Recommendations</h4>
+                <p className="text-[var(--color-text-secondary)] text-sm">
                   Actionable next steps to improve deal scores and increase win probability
                 </p>
               </div>
@@ -344,13 +344,13 @@ export default function TemplatesDashboard() {
         {/* Revenue Forecasting Tab */}
         {activeTab === 'forecasting' && (
           <div className="space-y-6">
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <div className="bg-surface-elevated border border-border-light rounded-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">
+                  <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">
                     Revenue Forecasting
                   </h2>
-                  <p className="text-gray-400">
+                  <p className="text-[var(--color-text-secondary)]">
                     Stage-weighted pipeline forecasting with quota tracking and confidence intervals
                   </p>
                 </div>
@@ -358,7 +358,7 @@ export default function TemplatesDashboard() {
                   <select
                     value={forecastPeriod}
                     onChange={(e) => setForecastPeriod(e.target.value as '30-day' | '60-day' | '90-day')}
-                    className="px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
+                    className="px-4 py-2 bg-gray-700 text-[var(--color-text-primary)] rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
                   >
                     <option value="30-day">30-Day</option>
                     <option value="60-day">60-Day</option>
@@ -367,7 +367,7 @@ export default function TemplatesDashboard() {
                   <button
                     onClick={() => void generateForecast()}
                     disabled={loadingForecast}
-                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors disabled:bg-gray-700 disabled:text-gray-500"
+                    className="px-6 py-3 bg-primary hover:bg-primary-light text-[var(--color-text-primary)] rounded-lg font-semibold transition-colors disabled:bg-gray-700 disabled:text-gray-500"
                   >
                     {loadingForecast ? 'Generating...' : 'Generate Forecast'}
                   </button>
@@ -387,10 +387,10 @@ export default function TemplatesDashboard() {
               ) : (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">📊</div>
-                  <p className="text-gray-400 mb-4">No forecast generated yet</p>
+                  <p className="text-[var(--color-text-secondary)] mb-4">No forecast generated yet</p>
                   <button
                     onClick={() => void generateForecast()}
-                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
+                    className="px-6 py-3 bg-primary hover:bg-primary-light text-[var(--color-text-primary)] rounded-lg font-semibold transition-colors"
                   >
                     Generate Forecast
                   </button>
@@ -400,24 +400,24 @@ export default function TemplatesDashboard() {
 
             {/* Forecasting Benefits */}
             <div className="grid grid-cols-3 gap-6">
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="bg-surface-elevated border border-border-light rounded-lg p-4">
                 <div className="text-3xl mb-2">📈</div>
-                <h4 className="text-white font-semibold mb-1">3 Scenarios</h4>
-                <p className="text-gray-400 text-sm">
+                <h4 className="text-[var(--color-text-primary)] font-semibold mb-1">3 Scenarios</h4>
+                <p className="text-[var(--color-text-secondary)] text-sm">
                   Best case, most likely, and worst case revenue forecasts with confidence intervals
                 </p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="bg-surface-elevated border border-border-light rounded-lg p-4">
                 <div className="text-3xl mb-2">🎯</div>
-                <h4 className="text-white font-semibold mb-1">Quota Tracking</h4>
-                <p className="text-gray-400 text-sm">
+                <h4 className="text-[var(--color-text-primary)] font-semibold mb-1">Quota Tracking</h4>
+                <p className="text-[var(--color-text-secondary)] text-sm">
                   Real-time quota attainment tracking with gap analysis and pipeline coverage
                 </p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="bg-surface-elevated border border-border-light rounded-lg p-4">
                 <div className="text-3xl mb-2">📍</div>
-                <h4 className="text-white font-semibold mb-1">Stage Breakdown</h4>
-                <p className="text-gray-400 text-sm">
+                <h4 className="text-[var(--color-text-primary)] font-semibold mb-1">Stage Breakdown</h4>
+                <p className="text-[var(--color-text-secondary)] text-sm">
                   Revenue weighted by stage probability based on industry benchmarks
                 </p>
               </div>

@@ -43,13 +43,13 @@ export default function NewCampaignPage() {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Create Email Campaign</h1>
         <Form form={form} onSubmit={onSubmit} className="space-y-6">
-          <div className="bg-gray-900 rounded-lg p-6">
+          <div className="bg-surface-paper rounded-lg p-6">
             <div className="space-y-4">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Campaign Name *</FormLabel>
                   <FormControl>
-                    <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    <input {...field} className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -58,7 +58,7 @@ export default function NewCampaignPage() {
                 <FormItem>
                   <FormLabel>Subject Line *</FormLabel>
                   <FormControl>
-                    <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    <input {...field} className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -67,7 +67,7 @@ export default function NewCampaignPage() {
                 <FormItem>
                   <FormLabel>Email Body *</FormLabel>
                   <FormControl>
-                    <textarea {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" rows={10} />
+                    <textarea {...field} className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none" rows={10} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -76,7 +76,7 @@ export default function NewCampaignPage() {
                 <FormItem>
                   <FormLabel>Schedule For (Optional)</FormLabel>
                   <FormControl>
-                    <input {...field} type="datetime-local" className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    <input {...field} type="datetime-local" className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -84,11 +84,11 @@ export default function NewCampaignPage() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
+            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-surface-elevated rounded-lg hover:bg-surface-paper">Cancel</button>
             <button
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {form.formState.isSubmitting ? 'Creating...' : 'Create Campaign'}
             </button>

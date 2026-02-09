@@ -184,7 +184,7 @@ function WorkflowStepCard({
     <div className="flex flex-col items-center w-full">
       {/* Connection line from previous step */}
       {!isFirst && (
-        <div className="w-0.5 h-8 bg-gradient-to-b from-gray-600 to-gray-700" />
+        <div className="w-0.5 h-8 bg-gradient-to-b from-border-light to-border-strong" />
       )}
 
       {/* Step Card */}
@@ -199,8 +199,8 @@ function WorkflowStepCard({
           transition-all duration-200 group
           ${colors.border} ${colors.bg}
           ${isSelected
-            ? 'ring-2 ring-indigo-500 shadow-lg shadow-indigo-500/20'
-            : 'hover:shadow-lg hover:shadow-white/5 hover:border-white/20'
+            ? 'ring-2 ring-primary shadow-lg shadow-primary/20'
+            : 'hover:shadow-lg hover:shadow-primary/5 hover:border-border-strong'
           }
           ${!isTrigger ? 'active:scale-[0.98]' : ''}
         `}
@@ -209,7 +209,7 @@ function WorkflowStepCard({
           {/* Drag Handle (for non-triggers) */}
           {!isTrigger && (
             <div className="flex items-center justify-center w-4 h-12 -ml-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
-              <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-[var(--color-text-disabled)]" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 6a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm8 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm-8 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm8 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4z" />
               </svg>
             </div>
@@ -229,12 +229,12 @@ function WorkflowStepCard({
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors.badge} ${colors.badgeText}`}>
                 {typeLabel}
               </span>
-              <span className="text-xs text-gray-500">#{step.order + 1}</span>
+              <span className="text-xs text-[var(--color-text-disabled)]">#{step.order + 1}</span>
             </div>
-            <h3 className="text-sm font-semibold text-gray-100 truncate">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
               {step.name}
             </h3>
-            <p className="text-xs text-gray-500 mt-0.5 truncate">
+            <p className="text-xs text-[var(--color-text-disabled)] mt-0.5 truncate">
               {configSummary}
             </p>
           </div>
@@ -246,7 +246,7 @@ function WorkflowStepCard({
                 e.stopPropagation();
                 onDelete();
               }}
-              className="p-2 rounded-lg text-gray-500 opacity-0 group-hover:opacity-100 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              className="p-2 rounded-lg text-[var(--color-text-disabled)] opacity-0 group-hover:opacity-100 hover:text-error hover:bg-error/10 transition-all"
               title="Delete step"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,7 +259,7 @@ function WorkflowStepCard({
 
       {/* Connection line to next step */}
       {!isLast && (
-        <div className="w-0.5 h-4 bg-gray-700" />
+        <div className="w-0.5 h-4 bg-border-light" />
       )}
     </div>
   );

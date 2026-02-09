@@ -28,22 +28,19 @@ export function DataTableToolbar<T extends { id: string }>({
   onClearSelection,
   enableCsvExport,
   onCsvExport,
-  accentColor,
 }: DataTableToolbarProps<T>) {
-  const ringClass = `focus:ring-${accentColor}-500/50 focus:border-${accentColor}-500/50`;
-
   return (
     <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
       {/* Search */}
       <div className="relative flex-1 max-w-md">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-disabled)]" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
-          className={`w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 ${ringClass} transition-all`}
+          className="w-full pl-12 pr-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
         />
       </div>
 
@@ -51,7 +48,7 @@ export function DataTableToolbar<T extends { id: string }>({
       <div className="flex items-center gap-2">
         {selectedCount > 0 && (
           <>
-            <span className="text-sm text-gray-400 mr-1">
+            <span className="text-sm text-[var(--color-text-secondary)] mr-1">
               {selectedCount} selected
             </span>
             {bulkActions.map(action => (
@@ -65,8 +62,8 @@ export function DataTableToolbar<T extends { id: string }>({
                 }}
                 className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                   action.variant === 'destructive'
-                    ? 'bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300'
-                    : 'bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white'
+                    ? 'bg-error/10 hover:bg-error/20 border border-error/30 text-error hover:text-error-light'
+                    : 'bg-surface-elevated hover:bg-surface-elevated/80 border border-border-light text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 {action.icon}
@@ -75,7 +72,7 @@ export function DataTableToolbar<T extends { id: string }>({
             ))}
             <button
               onClick={onClearSelection}
-              className="p-2 text-gray-500 hover:text-white transition-colors"
+              className="p-2 text-[var(--color-text-disabled)] hover:text-[var(--color-text-primary)] transition-colors"
               title="Clear selection"
               aria-label="Clear selection"
             >
@@ -87,7 +84,7 @@ export function DataTableToolbar<T extends { id: string }>({
         {enableCsvExport && selectedCount === 0 && (
           <button
             onClick={onCsvExport}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-lg transition-all text-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-elevated hover:bg-surface-elevated/80 border border-border-light text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-lg transition-all text-sm"
             title="Export to CSV"
             aria-label="Export to CSV"
           >

@@ -21,62 +21,62 @@ export function SequenceOptimizationCard({ analysis }: SequenceOptimizationCardP
   
   if (!optimizations || optimizations.total === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-surface-main rounded-lg shadow p-6">
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Optimization Recommendations</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Optimization Recommendations</h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
             AI-powered sequence improvements
           </p>
         </div>
         <div className="text-center py-12">
-          <CheckCircle className="w-12 h-12 text-green-300 mx-auto mb-3" />
-          <p className="text-gray-500">No optimizations needed. Sequences performing well!</p>
+          <CheckCircle className="w-12 h-12 text-success mx-auto mb-3" />
+          <p className="text-[var(--color-text-disabled)]">No optimizations needed. Sequences performing well!</p>
         </div>
       </div>
     );
   }
-  
+
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-surface-main rounded-lg shadow p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Optimization Recommendations</h2>
-        <p className="text-sm text-gray-600 mt-1">
-          {optimizations.total} recommendation{optimizations.total !== 1 ? 's' : ''} • 
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Optimization Recommendations</h2>
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+          {optimizations.total} recommendation{optimizations.total !== 1 ? 's' : ''} •
           {' '}{optimizations.critical + optimizations.high} high priority
         </p>
       </div>
       
       {/* Priority Summary */}
       <div className="grid grid-cols-4 gap-3 mb-6">
-        <div className="text-center p-3 bg-red-50 rounded">
-          <div className="text-2xl font-bold text-red-600">{optimizations.critical}</div>
-          <div className="text-xs text-gray-600 mt-1">Critical</div>
+        <div className="text-center p-3 bg-surface-elevated rounded">
+          <div className="text-2xl font-bold text-error">{optimizations.critical}</div>
+          <div className="text-xs text-[var(--color-text-secondary)] mt-1">Critical</div>
         </div>
-        <div className="text-center p-3 bg-orange-50 rounded">
-          <div className="text-2xl font-bold text-orange-600">{optimizations.high}</div>
-          <div className="text-xs text-gray-600 mt-1">High</div>
+        <div className="text-center p-3 bg-surface-elevated rounded">
+          <div className="text-2xl font-bold text-warning">{optimizations.high}</div>
+          <div className="text-xs text-[var(--color-text-secondary)] mt-1">High</div>
         </div>
-        <div className="text-center p-3 bg-yellow-50 rounded">
-          <div className="text-2xl font-bold text-yellow-600">{optimizations.medium}</div>
-          <div className="text-xs text-gray-600 mt-1">Medium</div>
+        <div className="text-center p-3 bg-surface-elevated rounded">
+          <div className="text-2xl font-bold text-warning">{optimizations.medium}</div>
+          <div className="text-xs text-[var(--color-text-secondary)] mt-1">Medium</div>
         </div>
-        <div className="text-center p-3 bg-gray-50 rounded">
-          <div className="text-2xl font-bold text-gray-600">{optimizations.low}</div>
-          <div className="text-xs text-gray-600 mt-1">Low</div>
+        <div className="text-center p-3 bg-surface-elevated rounded">
+          <div className="text-2xl font-bold text-[var(--color-text-secondary)]">{optimizations.low}</div>
+          <div className="text-xs text-[var(--color-text-secondary)] mt-1">Low</div>
         </div>
       </div>
       
       {/* Quick Wins */}
       {optimizations.quickWins.length > 0 && (
-        <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+        <div className="mb-6 p-4 bg-surface-elevated rounded-lg border border-border-light">
           <div className="flex items-center space-x-2 mb-3">
-            <Zap className="w-5 h-5 text-green-600" />
-            <h3 className="font-semibold text-green-900">Quick Wins</h3>
-            <span className="px-2 py-0.5 bg-green-200 text-green-800 text-xs rounded">
+            <Zap className="w-5 h-5 text-success" />
+            <h3 className="font-semibold text-success">Quick Wins</h3>
+            <span className="px-2 py-0.5 bg-surface-elevated text-success text-xs rounded">
               {optimizations.quickWins.length}
             </span>
           </div>
-          <p className="text-sm text-green-800 mb-3">
+          <p className="text-sm text-[var(--color-text-primary)] mb-3">
             Low effort, high impact optimizations you can implement today
           </p>
           <div className="space-y-2">
@@ -86,19 +86,19 @@ export function SequenceOptimizationCard({ analysis }: SequenceOptimizationCardP
           </div>
         </div>
       )}
-      
+
       {/* Top Priority */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-gray-700">Top Priority</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Top Priority</h3>
         {optimizations.topPriority.map((rec, index) => (
           <OptimizationCard key={index} recommendation={rec} />
         ))}
       </div>
-      
+
       {/* All Recommendations Link */}
       {optimizations.total > optimizations.topPriority.length && (
-        <div className="mt-4 pt-4 border-t text-center">
-          <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+        <div className="mt-4 pt-4 border-t border-border-light text-center">
+          <button className="text-sm text-primary hover:text-primary font-medium">
             View all {optimizations.total} recommendations →
           </button>
         </div>
@@ -117,13 +117,13 @@ interface QuickWinItemProps {
 
 function QuickWinItem({ recommendation }: QuickWinItemProps) {
   return (
-    <div className="flex items-start justify-between p-3 bg-white rounded border border-green-100">
+    <div className="flex items-start justify-between p-3 bg-surface-main rounded border border-border-light">
       <div className="flex-1">
-        <div className="font-medium text-gray-900 text-sm">{recommendation.title}</div>
-        <div className="text-xs text-gray-600 mt-1">{recommendation.solution}</div>
+        <div className="font-medium text-[var(--color-text-primary)] text-sm">{recommendation.title}</div>
+        <div className="text-xs text-[var(--color-text-secondary)] mt-1">{recommendation.solution}</div>
       </div>
       <div className="ml-3 text-right">
-        <div className="text-xs font-medium text-green-600">
+        <div className="text-xs font-medium text-success">
           +{recommendation.expectedLift.toFixed(1)}% lift
         </div>
       </div>
@@ -137,12 +137,12 @@ interface OptimizationCardProps {
 
 function OptimizationCard({ recommendation }: OptimizationCardProps) {
   const [expanded, setExpanded] = React.useState(false);
-  
+
   const priorityColors = {
-    critical: 'bg-red-100 text-red-700',
-    high: 'bg-orange-100 text-orange-700',
-    medium: 'bg-yellow-100 text-yellow-700',
-    low: 'bg-gray-100 text-gray-700',
+    critical: 'bg-surface-elevated text-error',
+    high: 'bg-surface-elevated text-warning',
+    medium: 'bg-surface-elevated text-warning',
+    low: 'bg-surface-elevated text-[var(--color-text-disabled)]',
   };
   
   const areaIcons: Record<string, React.ElementType> = {
@@ -159,25 +159,25 @@ function OptimizationCard({ recommendation }: OptimizationCardProps) {
   const Icon = areaIcons[recommendation.area] || Target;
   
   return (
-    <div className="border rounded-lg p-4">
+    <div className="border border-border-light rounded-lg p-4">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full text-left"
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3 flex-1">
-            <Icon className="w-5 h-5 text-gray-500 mt-0.5" />
+            <Icon className="w-5 h-5 text-[var(--color-text-disabled)] mt-0.5" />
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-2">
                 <span className={`px-2 py-0.5 text-xs font-medium rounded ${priorityColors[recommendation.priority]}`}>
                   {recommendation.priority}
                 </span>
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
+                <span className="px-2 py-0.5 bg-surface-elevated text-secondary text-xs font-medium rounded">
                   {recommendation.area.replace('_', ' ')}
                 </span>
               </div>
-              <h4 className="font-semibold text-gray-900">{recommendation.title}</h4>
-              <p className="text-sm text-gray-600 mt-1">{recommendation.description}</p>
+              <h4 className="font-semibold text-[var(--color-text-primary)]">{recommendation.title}</h4>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1">{recommendation.description}</p>
             </div>
           </div>
           <ArrowRight className={`w-4 h-4 ml-4 ${expanded ? 'rotate-90' : ''} transition-transform`} />
@@ -308,9 +308,9 @@ interface MetricChangeProps {
 
 function MetricChange({ label, value, unit, positive }: MetricChangeProps) {
   return (
-    <div className="text-center p-2 bg-gray-50 rounded">
-      <div className="text-xs text-gray-600 mb-1">{label}</div>
-      <div className={`text-sm font-bold ${positive ? 'text-green-600' : 'text-gray-900'}`}>
+    <div className="text-center p-2 bg-surface-elevated rounded">
+      <div className="text-xs text-[var(--color-text-secondary)] mb-1">{label}</div>
+      <div className={`text-sm font-bold ${positive ? 'text-success' : 'text-[var(--color-text-primary)]'}`}>
         {positive && value > 0 ? '+' : ''}{value}{unit}
       </div>
     </div>

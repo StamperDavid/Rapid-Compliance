@@ -51,13 +51,13 @@ export default function EditorToolbar({
   return (
     <div style={{
       height: '60px',
-      background: '#2c3e50',
-      color: 'white',
+      background: 'var(--color-surface-paper)',
+      color: 'var(--color-text-primary)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '0 1.5rem',
-      borderBottom: '1px solid #34495e',
+      borderBottom: '1px solid var(--color-border-light)',
     }}>
       {/* Left: Page info */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -65,18 +65,19 @@ export default function EditorToolbar({
           <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>
             {page.title}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#95a5a6' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
             /{page.slug}
           </div>
         </div>
-        
+
         <div style={{
           padding: '0.25rem 0.5rem',
-          background: page.status === 'published' ? '#27ae60' : '#f39c12',
+          background: page.status === 'published' ? 'var(--color-success)' : 'var(--color-warning)',
           borderRadius: '4px',
           fontSize: '0.75rem',
           fontWeight: '600',
           textTransform: 'uppercase',
+          color: 'white',
         }}>
           {page.status}
         </div>
@@ -92,8 +93,8 @@ export default function EditorToolbar({
             title="Undo (Ctrl+Z)"
             style={{
               padding: '0.5rem 0.75rem',
-              background: canUndo ? '#34495e' : '#2c3e50',
-              color: canUndo ? 'white' : '#7f8c8d',
+              background: canUndo ? 'var(--color-surface-elevated)' : 'var(--color-surface-paper)',
+              color: canUndo ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
               border: 'none',
               borderRadius: '4px',
               cursor: canUndo ? 'pointer' : 'not-allowed',
@@ -102,15 +103,15 @@ export default function EditorToolbar({
           >
             ↶ Undo
           </button>
-          
+
           <button
             onClick={onRedo}
             disabled={!canRedo}
             title="Redo (Ctrl+Shift+Z)"
             style={{
               padding: '0.5rem 0.75rem',
-              background: canRedo ? '#34495e' : '#2c3e50',
-              color: canRedo ? 'white' : '#7f8c8d',
+              background: canRedo ? 'var(--color-surface-elevated)' : 'var(--color-surface-paper)',
+              color: canRedo ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
               border: 'none',
               borderRadius: '4px',
               cursor: canRedo ? 'pointer' : 'not-allowed',
@@ -124,7 +125,7 @@ export default function EditorToolbar({
         {/* Breakpoint Switcher */}
         <div style={{
           display: 'flex',
-          background: '#34495e',
+          background: 'var(--color-surface-elevated)',
           borderRadius: '4px',
           padding: '0.25rem',
           gap: '0.25rem',
@@ -133,7 +134,7 @@ export default function EditorToolbar({
             onClick={() => onBreakpointChange('desktop')}
             style={{
               padding: '0.5rem 1rem',
-              background: breakpoint === 'desktop' ? '#3498db' : 'transparent',
+              background: breakpoint === 'desktop' ? 'var(--color-primary)' : 'transparent',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -143,12 +144,12 @@ export default function EditorToolbar({
           >
             🖥️ Desktop
           </button>
-          
+
           <button
             onClick={() => onBreakpointChange('tablet')}
             style={{
               padding: '0.5rem 1rem',
-              background: breakpoint === 'tablet' ? '#3498db' : 'transparent',
+              background: breakpoint === 'tablet' ? 'var(--color-primary)' : 'transparent',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -158,12 +159,12 @@ export default function EditorToolbar({
           >
             📱 Tablet
           </button>
-          
+
           <button
             onClick={() => onBreakpointChange('mobile')}
             style={{
               padding: '0.5rem 1rem',
-              background: breakpoint === 'mobile' ? '#3498db' : 'transparent',
+              background: breakpoint === 'mobile' ? 'var(--color-primary)' : 'transparent',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -200,7 +201,7 @@ export default function EditorToolbar({
             onClick={onPreview}
             style={{
               padding: '0.5rem 1rem',
-              background: '#3498db',
+              background: 'var(--color-primary)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -219,8 +220,8 @@ export default function EditorToolbar({
             onClick={onViewVersions}
             style={{
               padding: '0.5rem 1rem',
-              background: '#34495e',
-              color: 'white',
+              background: 'var(--color-surface-elevated)',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
@@ -237,8 +238,8 @@ export default function EditorToolbar({
             onClick={onSaveAsTemplate}
             style={{
               padding: '0.5rem 1rem',
-              background: '#34495e',
-              color: 'white',
+              background: 'var(--color-surface-elevated)',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
@@ -258,7 +259,7 @@ export default function EditorToolbar({
               disabled={publishing}
               style={{
                 padding: '0.5rem 1rem',
-                background: publishing ? '#95a5a6' : '#e67e22',
+                background: publishing ? 'var(--color-text-disabled)' : 'var(--color-warning)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -277,7 +278,7 @@ export default function EditorToolbar({
               disabled={publishing}
               style={{
                 padding: '0.5rem 1rem',
-                background: publishing ? '#95a5a6' : '#e67e22',
+                background: publishing ? 'var(--color-text-disabled)' : 'var(--color-warning)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -297,7 +298,7 @@ export default function EditorToolbar({
                 disabled={publishing}
                 style={{
                   padding: '0.5rem 1rem',
-                  background: publishing ? '#95a5a6' : '#3498db',
+                  background: publishing ? 'var(--color-text-disabled)' : 'var(--color-primary)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
@@ -315,7 +316,7 @@ export default function EditorToolbar({
                 disabled={publishing}
                 style={{
                   padding: '0.5rem 1rem',
-                  background: publishing ? '#95a5a6' : '#9b59b6',
+                  background: publishing ? 'var(--color-text-disabled)' : 'var(--color-secondary)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
@@ -335,7 +336,7 @@ export default function EditorToolbar({
           disabled={saving}
           style={{
             padding: '0.5rem 1.5rem',
-            background: saving ? '#95a5a6' : '#27ae60',
+            background: saving ? 'var(--color-text-disabled)' : 'var(--color-success)',
             color: 'white',
             border: 'none',
             borderRadius: '4px',

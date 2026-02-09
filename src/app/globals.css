@@ -76,6 +76,11 @@
   --color-text-tertiary: var(--color-text-disabled);
   --color-primary-surface: rgba(99, 102, 241, 0.1);
   --color-primary-rgb: 99, 102, 241;
+  --color-secondary-rgb: 139, 92, 246;
+  --color-error-rgb: 239, 68, 68;
+  --color-success-rgb: 16, 185, 129;
+  --color-warning-rgb: 245, 158, 11;
+  --color-info-rgb: 59, 130, 246;
   --gradient-brand: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
 
   /* Sidebar specific */

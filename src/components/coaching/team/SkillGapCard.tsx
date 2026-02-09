@@ -28,11 +28,11 @@ interface SkillGapCardProps {
 export function SkillGapCard({ skillGaps, totalReps, loading = false }: SkillGapCardProps) {
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+      <div className="bg-surface-main rounded-lg shadow-sm p-6 animate-pulse">
+        <div className="h-6 bg-surface-elevated rounded w-1/3 mb-4"></div>
         <div className="space-y-4">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-20 bg-gray-200 rounded"></div>
+            <div key={i} className="h-20 bg-surface-elevated rounded"></div>
           ))}
         </div>
       </div>
@@ -41,12 +41,12 @@ export function SkillGapCard({ skillGaps, totalReps, loading = false }: SkillGap
 
   if (skillGaps.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Skill Gaps</h3>
+      <div className="bg-surface-main rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Skill Gaps</h3>
         <div className="text-center py-8">
           <span className="text-4xl mb-3 block">🎯</span>
-          <p className="text-gray-600">No significant skill gaps detected</p>
-          <p className="text-sm text-gray-500 mt-1">Team is performing well across all competencies</p>
+          <p className="text-[var(--color-text-secondary)]">No significant skill gaps detected</p>
+          <p className="text-sm text-[var(--color-text-disabled)] mt-1">Team is performing well across all competencies</p>
         </div>
       </div>
     );
@@ -69,11 +69,11 @@ export function SkillGapCard({ skillGaps, totalReps, loading = false }: SkillGap
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-surface-main rounded-lg shadow-sm p-6">
       {/* Header */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Skill Gaps</h3>
-        <p className="text-sm text-gray-500">Areas where team lags behind top performers</p>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-1">Skill Gaps</h3>
+        <p className="text-sm text-[var(--color-text-secondary)]">Areas where team lags behind top performers</p>
       </div>
 
       {/* Skill Gaps List */}
@@ -83,12 +83,12 @@ export function SkillGapCard({ skillGaps, totalReps, loading = false }: SkillGap
           const repsPercentage = (gap.repsAffected / totalReps) * 100;
 
           return (
-            <div key={idx} className="border border-gray-200 rounded-lg p-4">
+            <div key={idx} className="border border-border-light rounded-lg p-4">
               {/* Skill Name and Badge */}
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">{gap.skill}</h4>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">{gap.skill}</h4>
+                  <p className="text-xs text-[var(--color-text-disabled)] mt-1">
                     {gap.repsAffected} of {totalReps} reps affected ({repsPercentage.toFixed(0)}%)
                   </p>
                 </div>
@@ -99,18 +99,18 @@ export function SkillGapCard({ skillGaps, totalReps, loading = false }: SkillGap
 
               {/* Score Comparison */}
               <div className="grid grid-cols-2 gap-4 mb-3">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">Team Average</div>
-                  <div className="text-2xl font-bold text-gray-900">{gap.teamAverage.toFixed(0)}</div>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                <div className="bg-surface-elevated rounded-lg p-3">
+                  <div className="text-xs text-[var(--color-text-disabled)] mb-1">Team Average</div>
+                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">{gap.teamAverage.toFixed(0)}</div>
+                  <div className="w-full bg-surface-paper rounded-full h-1.5 mt-2">
                     <div
-                      className="bg-gray-600 h-1.5 rounded-full"
+                      className="bg-primary h-1.5 rounded-full"
                       style={{ width: `${gap.teamAverage}%` }}
                     ></div>
                   </div>
                 </div>
                 <div className="bg-green-50 rounded-lg p-3">
-                  <div className="text-xs text-green-700 mb-1">Top Performers</div>
+                  <div className="text-xs text-success mb-1">Top Performers</div>
                   <div className="text-2xl font-bold text-green-900">{gap.topPerformerAverage.toFixed(0)}</div>
                   <div className="w-full bg-green-200 rounded-full h-1.5 mt-2">
                     <div
@@ -123,21 +123,21 @@ export function SkillGapCard({ skillGaps, totalReps, loading = false }: SkillGap
 
               {/* Gap Visualization */}
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 min-w-[60px]">Gap:</span>
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
+                <span className="text-xs text-[var(--color-text-disabled)] min-w-[60px]">Gap:</span>
+                <div className="flex-1 bg-surface-elevated rounded-full h-2">
                   <div
                     className={`h-2 rounded-full transition-all duration-300 ${getGapColor(gap.gap)}`}
                     style={{ width: `${(gap.gap / 50) * 100}%` }}
                   ></div>
                 </div>
-                <span className="text-sm font-semibold text-gray-900 min-w-[60px] text-right">
+                <span className="text-sm font-semibold text-[var(--color-text-primary)] min-w-[60px] text-right">
                   {gap.gap.toFixed(1)} pts
                 </span>
               </div>
 
               {/* Quick Actions */}
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <div className="flex items-center gap-2 text-xs text-gray-600">
+              <div className="mt-3 pt-3 border-t border-border-light">
+                <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
                   <span>💡</span>
                   <span>
                     {gap.gap >= 30 && 'Immediate training intervention recommended'}
@@ -153,13 +153,13 @@ export function SkillGapCard({ skillGaps, totalReps, loading = false }: SkillGap
       </div>
 
       {/* Summary */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <div className="bg-blue-50 rounded-lg p-4">
+      <div className="mt-6 pt-6 border-t border-border-light">
+        <div className="bg-surface-elevated rounded-lg p-4 border border-primary">
           <div className="flex items-start gap-3">
             <span className="text-2xl">📊</span>
             <div>
-              <h4 className="text-sm font-semibold text-blue-900 mb-1">Focus on High-Impact Gaps</h4>
-              <p className="text-xs text-blue-700">
+              <h4 className="text-sm font-semibold text-primary mb-1">Focus on High-Impact Gaps</h4>
+              <p className="text-xs text-[var(--color-text-secondary)]">
                 Address gaps affecting the most reps first. Use top performer best practices for faster improvement.
               </p>
             </div>

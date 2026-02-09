@@ -25,17 +25,17 @@ export function DataTableHeader<T>({
 }: DataTableHeaderProps<T>) {
   const getSortIcon = (columnKey: string) => {
     if (sortState.columnKey !== columnKey || !sortState.direction) {
-      return <ArrowUpDown className="w-3.5 h-3.5 text-gray-600" />;
+      return <ArrowUpDown className="w-3.5 h-3.5 text-[var(--color-text-disabled)]" />;
     }
     if (sortState.direction === 'asc') {
-      return <ArrowUp className="w-3.5 h-3.5 text-indigo-400" />;
+      return <ArrowUp className="w-3.5 h-3.5 text-primary-light" />;
     }
-    return <ArrowDown className="w-3.5 h-3.5 text-indigo-400" />;
+    return <ArrowDown className="w-3.5 h-3.5 text-primary-light" />;
   };
 
   return (
     <thead>
-      <tr className="border-b border-white/10">
+      <tr className="border-b border-border-light">
         {showSelection && (
           <th scope="col" className="w-12 p-4">
             <Checkbox
@@ -57,12 +57,12 @@ export function DataTableHeader<T>({
                   ? sortState.direction === 'asc' ? 'ascending' : 'descending'
                   : undefined
               }
-              className={`text-left p-4 text-sm font-semibold text-gray-400 ${column.className ?? ''}`}
+              className={`text-left p-4 text-sm font-semibold text-[var(--color-text-secondary)] ${column.className ?? ''}`}
             >
               {sortable ? (
                 <button
                   onClick={() => onToggleSort(column.key)}
-                  className="inline-flex items-center gap-1.5 hover:text-white transition-colors group"
+                  className="inline-flex items-center gap-1.5 hover:text-[var(--color-text-primary)] transition-colors group"
                 >
                   {column.header}
                   {sortState.columnKey === column.key && sortState.direction ? (

@@ -26,11 +26,11 @@ interface TopPerformersCardProps {
 export function TopPerformersCard({ topPerformers, loading = false }: TopPerformersCardProps) {
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+      <div className="bg-surface-main rounded-lg shadow-sm p-6 animate-pulse">
+        <div className="h-6 bg-surface-elevated rounded w-1/3 mb-4"></div>
         <div className="space-y-4">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            <div key={i} className="h-24 bg-surface-elevated rounded"></div>
           ))}
         </div>
       </div>
@@ -39,12 +39,12 @@ export function TopPerformersCard({ topPerformers, loading = false }: TopPerform
 
   if (topPerformers.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Performers</h3>
+      <div className="bg-surface-main rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Top Performers</h3>
         <div className="text-center py-8">
           <span className="text-4xl mb-3 block">🏆</span>
-          <p className="text-gray-600">No top performers identified yet</p>
-          <p className="text-sm text-gray-500 mt-1">Check back after team has more activity</p>
+          <p className="text-[var(--color-text-secondary)]">No top performers identified yet</p>
+          <p className="text-sm text-[var(--color-text-disabled)] mt-1">Check back after team has more activity</p>
         </div>
       </div>
     );
@@ -73,17 +73,17 @@ export function TopPerformersCard({ topPerformers, loading = false }: TopPerform
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-surface-main rounded-lg shadow-sm p-6">
       {/* Header */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Top Performers</h3>
-        <p className="text-sm text-gray-500">Learn from your team&apos;s best</p>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-1">Top Performers</h3>
+        <p className="text-sm text-[var(--color-text-secondary)]">Learn from your team&apos;s best</p>
       </div>
 
       {/* Top Performers List */}
       <div className="space-y-4">
         {topPerformers.map((performer, idx) => (
-          <div key={performer.repId} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+          <div key={performer.repId} className="border border-border-light rounded-lg p-4 hover:border-primary transition-colors">
             {/* Header Row */}
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
@@ -91,11 +91,11 @@ export function TopPerformersCard({ topPerformers, loading = false }: TopPerform
                 <div className="flex-shrink-0 text-2xl">
                   {getMedal(idx)}
                 </div>
-                
+
                 {/* Name and Rank */}
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">{performer.repName}</h4>
-                  <p className="text-xs text-gray-500">Rank #{idx + 1}</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">{performer.repName}</h4>
+                  <p className="text-xs text-[var(--color-text-disabled)]">Rank #{idx + 1}</p>
                 </div>
               </div>
 
@@ -109,7 +109,7 @@ export function TopPerformersCard({ topPerformers, loading = false }: TopPerform
             {/* Strengths */}
             {performer.strengths.length > 0 && (
               <div>
-                <div className="text-xs font-medium text-gray-600 mb-2">Key Strengths:</div>
+                <div className="text-xs font-medium text-[var(--color-text-secondary)] mb-2">Key Strengths:</div>
                 <div className="flex flex-wrap gap-2">
                   {performer.strengths.map((strength, sIdx) => (
                     <span
@@ -124,13 +124,13 @@ export function TopPerformersCard({ topPerformers, loading = false }: TopPerform
             )}
 
             {/* Quick Actions */}
-            <div className="mt-3 pt-3 border-t border-gray-200">
+            <div className="mt-3 pt-3 border-t border-border-light">
               <div className="flex items-center gap-4 text-xs">
-                <button className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                <button className="text-primary hover:text-primary-light font-medium flex items-center gap-1">
                   <span>📊</span>
                   <span>View Details</span>
                 </button>
-                <button className="text-green-600 hover:text-green-700 font-medium flex items-center gap-1">
+                <button className="text-success hover:text-green-700 font-medium flex items-center gap-1">
                   <span>💡</span>
                   <span>Share Best Practices</span>
                 </button>
@@ -141,8 +141,8 @@ export function TopPerformersCard({ topPerformers, loading = false }: TopPerform
       </div>
 
       {/* Best Practices Suggestion */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <div className="bg-green-50 rounded-lg p-4">
+      <div className="mt-6 pt-6 border-t border-border-light">
+        <div className="bg-green-50 rounded-lg p-4 border border-success">
           <div className="flex items-start gap-3">
             <span className="text-2xl">💡</span>
             <div>

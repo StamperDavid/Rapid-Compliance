@@ -58,18 +58,18 @@ export default function DatasetsPage() {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Training Datasets</h1>
-        <button onClick={() => router.push(`/ai/datasets/new`)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">+ Create Dataset</button>
+        <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Training Datasets</h1>
+        <button onClick={() => router.push(`/ai/datasets/new`)} className="px-4 py-2 bg-primary text-white rounded-lg hover:from-primary-light hover:to-secondary-light">+ Create Dataset</button>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-900/20 border border-red-900 rounded-lg text-red-300">
+        <div className="mb-4 p-4 border border-border-light rounded-lg text-error" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
           {error}
         </div>
       )}
 
       {datasets.length === 0 && !loading ? (
-        <div className="text-center py-12 bg-gray-900 rounded-lg"><p className="text-gray-400 mb-4">No datasets yet. Upload training data for fine-tuning!</p></div>
+        <div className="text-center py-12 bg-surface-paper rounded-lg"><p className="text-[var(--color-text-secondary)] mb-4">No datasets yet. Upload training data for fine-tuning!</p></div>
       ) : (
         <>
           <div className="grid gap-4">
@@ -80,9 +80,9 @@ export default function DatasetsPage() {
                 : 'N/A';
 
               return (
-                <div key={dataset.id} className="bg-gray-900 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold mb-2">{dataset.name}</h3>
-                  <div className="flex gap-4 text-sm text-gray-400">
+                <div key={dataset.id} className="bg-surface-paper rounded-lg p-6">
+                  <h3 className="text-xl font-semibold mb-2 text-[var(--color-text-primary)]">{dataset.name}</h3>
+                  <div className="flex gap-4 text-sm text-[var(--color-text-secondary)]">
                     <span>{exampleCount} examples</span><span>•</span><span>Created {createdDate}</span>
                   </div>
                 </div>
@@ -96,7 +96,7 @@ export default function DatasetsPage() {
               <button
                 onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
-                className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-surface-elevated text-white rounded-lg hover:bg-surface-elevated disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Loading...' : hasMore ? `Load More (Showing ${datasets.length})` : 'All loaded'}
               </button>

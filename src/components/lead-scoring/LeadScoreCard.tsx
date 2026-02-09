@@ -56,7 +56,7 @@ export function LeadScoreCard({ score, compact = false }: LeadScoreCardProps) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+    <div className="bg-surface-paper border border-border-light rounded-lg p-6 shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
@@ -74,14 +74,14 @@ export function LeadScoreCard({ score, compact = false }: LeadScoreCardProps) {
               <span className="mr-2">{priorityIcons[score.priority]}</span>
               <span className="font-semibold capitalize">{score.priority} Lead</span>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-[var(--color-text-secondary)]">
               Confidence: {Math.round(score.metadata.confidence * 100)}%
             </div>
           </div>
         </div>
 
         {/* Expiry info */}
-        <div className="text-right text-sm text-gray-500">
+        <div className="text-right text-sm text-[var(--color-text-disabled)]">
           <div>Scored {new Date(score.metadata.scoredAt).toLocaleDateString()}</div>
           <div>Expires {new Date(score.metadata.expiresAt).toLocaleDateString()}</div>
         </div>
@@ -89,17 +89,17 @@ export function LeadScoreCard({ score, compact = false }: LeadScoreCardProps) {
 
       {/* Score breakdown */}
       <div className="mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Score Breakdown</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Score Breakdown</h3>
         <div className="space-y-3">
           {/* Company Fit */}
           <div>
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Company Fit</span>
+              <span className="text-[var(--color-text-secondary)]">Company Fit</span>
               <span className="font-semibold">{score.breakdown.companyFit}/40</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-surface-elevated rounded-full h-2">
               <div
-                className="bg-blue-500 h-2 rounded-full transition-all"
+                className="bg-primary h-2 rounded-full transition-all"
                 style={{ width: `${(score.breakdown.companyFit / 40) * 100}%` }}
               />
             </div>
@@ -108,12 +108,12 @@ export function LeadScoreCard({ score, compact = false }: LeadScoreCardProps) {
           {/* Person Fit */}
           <div>
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Person Fit</span>
+              <span className="text-[var(--color-text-secondary)]">Person Fit</span>
               <span className="font-semibold">{score.breakdown.personFit}/30</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-surface-elevated rounded-full h-2">
               <div
-                className="bg-green-500 h-2 rounded-full transition-all"
+                className="bg-success h-2 rounded-full transition-all"
                 style={{ width: `${(score.breakdown.personFit / 30) * 100}%` }}
               />
             </div>
@@ -122,12 +122,12 @@ export function LeadScoreCard({ score, compact = false }: LeadScoreCardProps) {
           {/* Intent Signals */}
           <div>
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Intent Signals</span>
+              <span className="text-[var(--color-text-secondary)]">Intent Signals</span>
               <span className="font-semibold">{score.breakdown.intentSignals}/20</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-surface-elevated rounded-full h-2">
               <div
-                className="bg-purple-500 h-2 rounded-full transition-all"
+                className="bg-secondary h-2 rounded-full transition-all"
                 style={{ width: `${(score.breakdown.intentSignals / 20) * 100}%` }}
               />
             </div>
@@ -136,12 +136,12 @@ export function LeadScoreCard({ score, compact = false }: LeadScoreCardProps) {
           {/* Engagement */}
           <div>
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Engagement</span>
+              <span className="text-[var(--color-text-secondary)]">Engagement</span>
               <span className="font-semibold">{score.breakdown.engagement}/10</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-surface-elevated rounded-full h-2">
               <div
-                className="bg-orange-500 h-2 rounded-full transition-all"
+                className="bg-warning h-2 rounded-full transition-all"
                 style={{ width: `${(score.breakdown.engagement / 10) * 100}%` }}
               />
             </div>
@@ -152,20 +152,20 @@ export function LeadScoreCard({ score, compact = false }: LeadScoreCardProps) {
       {/* Intent signals */}
       {score.detectedSignals.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
             Intent Signals Detected ({score.detectedSignals.length})
           </h3>
           <div className="flex flex-wrap gap-2">
             {score.detectedSignals.map((signal, i) => (
               <div
                 key={i}
-                className="px-3 py-1 bg-purple-50 border border-purple-200 rounded-full text-xs"
+                className="px-3 py-1 bg-secondary/10 border border-secondary/30 rounded-full text-xs"
                 title={signal.description}
               >
-                <span className="font-medium text-purple-900">
+                <span className="font-medium text-secondary">
                   {signal.type.replace(/_/g, ' ')}
                 </span>
-                <span className="text-purple-600 ml-1">+{signal.points}pt</span>
+                <span className="text-secondary/80 ml-1">+{signal.points}pt</span>
               </div>
             ))}
           </div>
@@ -174,7 +174,7 @@ export function LeadScoreCard({ score, compact = false }: LeadScoreCardProps) {
 
       {/* Top reasons */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Key Scoring Factors</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Key Scoring Factors</h3>
         <div className="space-y-2">
           {score.reasons
             .filter((r) => r.impact === 'high' || r.points > 5)
@@ -182,20 +182,20 @@ export function LeadScoreCard({ score, compact = false }: LeadScoreCardProps) {
             .map((reason, i) => (
               <div
                 key={i}
-                className="flex items-start gap-2 text-sm p-2 bg-gray-50 rounded"
+                className="flex items-start gap-2 text-sm p-2 bg-surface-elevated rounded"
               >
                 <div
                   className={`mt-0.5 w-1.5 h-1.5 rounded-full ${
-                    reason.points > 0 ? 'bg-green-500' : 'bg-red-500'
+                    reason.points > 0 ? 'bg-success' : 'bg-error'
                   }`}
                 />
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">{reason.factor}</div>
-                  <div className="text-gray-600 text-xs">{reason.explanation}</div>
+                  <div className="font-medium text-[var(--color-text-primary)]">{reason.factor}</div>
+                  <div className="text-[var(--color-text-secondary)] text-xs">{reason.explanation}</div>
                 </div>
                 <div
                   className={`font-semibold ${
-                    reason.points > 0 ? 'text-green-600' : 'text-red-600'
+                    reason.points > 0 ? 'text-success' : 'text-error'
                   }`}
                 >
                   {reason.points > 0 ? '+' : ''}

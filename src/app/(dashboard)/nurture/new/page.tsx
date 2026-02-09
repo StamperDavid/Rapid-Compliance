@@ -62,13 +62,13 @@ export default function NewNurtureCampaignPage() {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Create Nurture Campaign</h1>
         <Form form={form} onSubmit={onSubmit}>
-          <div className="bg-gray-900 rounded-lg p-6 mb-4">
+          <div className="bg-surface-paper rounded-lg p-6 mb-4">
             <div className="space-y-4">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Campaign Name *</FormLabel>
                   <FormControl>
-                    <input {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" />
+                    <input {...field} className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -77,7 +77,7 @@ export default function NewNurtureCampaignPage() {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <textarea {...field} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg focus:border-blue-500 focus:outline-none" rows={3} />
+                    <textarea {...field} className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none" rows={3} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -85,20 +85,20 @@ export default function NewNurtureCampaignPage() {
             </div>
           </div>
 
-          <div className="bg-gray-900 rounded-lg p-6 mb-6">
+          <div className="bg-surface-paper rounded-lg p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Nurture Steps</h2>
-              <button type="button" onClick={addStep} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">+ Add Step</button>
+              <button type="button" onClick={addStep} className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light text-sm">+ Add Step</button>
             </div>
             <div className="space-y-3">
               {fields.map((item, idx) => (
-                <div key={item.id} className="bg-gray-800 rounded-lg p-4">
-                  <div className="text-sm font-medium text-gray-400 mb-3">Step {idx + 1}</div>
+                <div key={item.id} className="bg-surface-elevated rounded-lg p-4">
+                  <div className="text-sm font-medium text-[var(--color-text-secondary)] mb-3">Step {idx + 1}</div>
                   <div className="grid grid-cols-2 gap-3">
                     <FormField control={form.control} name={`steps.${idx}.delayDays`} render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <input {...field} type="number" placeholder="Delay (days)" className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm w-full focus:border-blue-500 focus:outline-none" />
+                          <input {...field} type="number" placeholder="Delay (days)" className="px-3 py-2 bg-surface-main border border-border-light rounded text-sm w-full focus:border-primary focus:outline-none" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -106,7 +106,7 @@ export default function NewNurtureCampaignPage() {
                     <FormField control={form.control} name={`steps.${idx}.subject`} render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <input {...field} placeholder="Subject" className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm w-full focus:border-blue-500 focus:outline-none" />
+                          <input {...field} placeholder="Subject" className="px-3 py-2 bg-surface-main border border-border-light rounded text-sm w-full focus:border-primary focus:outline-none" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -115,7 +115,7 @@ export default function NewNurtureCampaignPage() {
                   <FormField control={form.control} name={`steps.${idx}.body`} render={({ field }) => (
                     <FormItem className="mt-3">
                       <FormControl>
-                        <textarea {...field} placeholder="Email body..." className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm focus:border-blue-500 focus:outline-none" rows={3} />
+                        <textarea {...field} placeholder="Email body..." className="w-full px-3 py-2 bg-surface-main border border-border-light rounded text-sm focus:border-primary focus:outline-none" rows={3} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -126,11 +126,11 @@ export default function NewNurtureCampaignPage() {
           </div>
 
           <div className="flex gap-3">
-            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
+            <button type="button" onClick={() => router.back()} className="px-6 py-3 bg-surface-elevated rounded-lg hover:bg-surface-elevated">Cancel</button>
             <button
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {form.formState.isSubmitting ? 'Creating...' : 'Create Campaign'}
             </button>

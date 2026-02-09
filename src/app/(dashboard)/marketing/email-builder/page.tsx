@@ -115,31 +115,31 @@ export default function EmailBuilderPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950">
+    <div className="h-screen flex flex-col bg-surface-main">
       {/* Top Bar */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+      <div className="bg-surface-paper border-b border-border-light px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={() => router.back()} className="text-gray-400 hover:text-white">
+          <button onClick={() => router.back()} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
             ← Back
           </button>
           <input
             type="text"
             value={template.name}
             onChange={(e) => setTemplate({ ...template, name: e.target.value })}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-1 text-lg font-medium"
+            className="bg-surface-elevated border border-border-light rounded px-3 py-1 text-lg font-medium"
             placeholder="Template Name"
           />
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setPreviewMode(!previewMode)}
-            className="px-4 py-2 bg-gray-800 rounded hover:bg-gray-700"
+            className="px-4 py-2 bg-surface-elevated rounded hover:bg-surface-paper"
           >
             {previewMode ? '✏️ Edit' : '👁️ Preview'}
           </button>
           <button
             onClick={() => void saveTemplate()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-light"
           >
             Save Template
           </button>
@@ -149,21 +149,21 @@ export default function EmailBuilderPage() {
       {!previewMode ? (
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar - Block Library */}
-          <div className="w-64 bg-gray-900 border-r border-gray-800 p-4 overflow-y-auto">
+          <div className="w-64 bg-surface-paper border-r border-border-light p-4 overflow-y-auto">
             <h3 className="font-bold mb-4">Add Blocks</h3>
             <div className="space-y-2">
               {(['header', 'text', 'image', 'button', 'divider', 'footer'] as EmailBlock['type'][]).map(type => (
                 <button
                   key={type}
                   onClick={() => addBlock(type)}
-                  className="w-full px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded text-left capitalize"
+                  className="w-full px-4 py-3 bg-surface-elevated hover:bg-surface-paper rounded text-left capitalize"
                 >
-                  {type === 'header' && '📰'} 
-                  {type === 'text' && '📝'} 
-                  {type === 'image' && '🖼️'} 
-                  {type === 'button' && '🔘'} 
-                  {type === 'divider' && '➖'} 
-                  {type === 'footer' && '📄'} 
+                  {type === 'header' && '📰'}
+                  {type === 'text' && '📝'}
+                  {type === 'image' && '🖼️'}
+                  {type === 'button' && '🔘'}
+                  {type === 'divider' && '➖'}
+                  {type === 'footer' && '📄'}
                   {' '}{type.replace('_', ' ')}
                 </button>
               ))}
@@ -173,17 +173,17 @@ export default function EmailBuilderPage() {
               <h3 className="font-bold mb-4">Settings</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm text-gray-400">Subject Line</label>
+                  <label className="text-sm text-[var(--color-text-secondary)]">Subject Line</label>
                   <input
                     type="text"
                     value={template.subject}
                     onChange={(e) => setTemplate({ ...template, subject: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm"
+                    className="w-full mt-1 px-3 py-2 bg-surface-elevated border border-border-light rounded text-sm"
                     placeholder="Email subject..."
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-400">Primary Color</label>
+                  <label className="text-sm text-[var(--color-text-secondary)]">Primary Color</label>
                   <input
                     type="color"
                     value={template.styling?.primaryColor}
@@ -199,7 +199,7 @@ export default function EmailBuilderPage() {
           </div>
 
           {/* Center - Canvas */}
-          <div className="flex-1 bg-gray-950 p-8 overflow-y-auto">
+          <div className="flex-1 bg-surface-main p-8 overflow-y-auto">
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-2xl">
               <div className="p-8">
                 {template.blocks?.length === 0 ? (
@@ -253,24 +253,24 @@ export default function EmailBuilderPage() {
 
                         {/* Block Controls */}
                         {selectedBlock?.id === block.id && (
-                          <div className="absolute -top-3 right-2 flex gap-1 bg-gray-900 rounded shadow-lg p-1">
+                          <div className="absolute -top-3 right-2 flex gap-1 bg-surface-paper rounded shadow-lg p-1">
                             <button
                               onClick={(e) => { e.stopPropagation(); moveBlock(block.id, 'up'); }}
                               disabled={index === 0}
-                              className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded disabled:opacity-30"
+                              className="px-2 py-1 text-xs bg-surface-elevated hover:bg-surface-paper rounded disabled:opacity-30"
                             >
                               ↑
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); moveBlock(block.id, 'down'); }}
                               disabled={index === (template.blocks?.length ?? 0) - 1}
-                              className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded disabled:opacity-30"
+                              className="px-2 py-1 text-xs bg-surface-elevated hover:bg-surface-paper rounded disabled:opacity-30"
                             >
                               ↓
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); deleteBlock(block.id); }}
-                              className="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 rounded"
+                              className="px-2 py-1 text-xs bg-error hover:opacity-80 rounded"
                             >
                               🗑️
                             </button>
@@ -286,16 +286,16 @@ export default function EmailBuilderPage() {
 
           {/* Right Sidebar - Block Editor */}
           {selectedBlock && (
-            <div className="w-80 bg-gray-900 border-l border-gray-800 p-4 overflow-y-auto">
+            <div className="w-80 bg-surface-paper border-l border-border-light p-4 overflow-y-auto">
               <h3 className="font-bold mb-4">Edit {selectedBlock.type}</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm text-gray-400">Content</label>
+                  <label className="text-sm text-[var(--color-text-secondary)]">Content</label>
                   {selectedBlock.type === 'text' || selectedBlock.type === 'header' ? (
                     <textarea
                       value={selectedBlock.content}
                       onChange={(e) => updateBlock(selectedBlock.id, { content: e.target.value })}
-                      className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm h-32"
+                      className="w-full mt-1 px-3 py-2 bg-surface-elevated border border-border-light rounded text-sm h-32"
                     />
                   ) : selectedBlock.type === 'button' ? (
                     <>
@@ -303,16 +303,16 @@ export default function EmailBuilderPage() {
                         type="text"
                         value={selectedBlock.content}
                         onChange={(e) => updateBlock(selectedBlock.id, { content: e.target.value })}
-                        className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm"
+                        className="w-full mt-1 px-3 py-2 bg-surface-elevated border border-border-light rounded text-sm"
                         placeholder="Button text"
                       />
                       <input
                         type="text"
                         value={selectedBlock.styling?.buttonUrl ?? ''}
-                        onChange={(e) => updateBlock(selectedBlock.id, { 
+                        onChange={(e) => updateBlock(selectedBlock.id, {
                           styling: { ...selectedBlock.styling, buttonUrl: e.target.value }
                         })}
-                        className="w-full mt-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm"
+                        className="w-full mt-2 px-3 py-2 bg-surface-elevated border border-border-light rounded text-sm"
                         placeholder="Button URL"
                       />
                     </>
@@ -321,7 +321,7 @@ export default function EmailBuilderPage() {
                       type="text"
                       value={selectedBlock.content}
                       onChange={(e) => updateBlock(selectedBlock.id, { content: e.target.value })}
-                      className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm"
+                      className="w-full mt-1 px-3 py-2 bg-surface-elevated border border-border-light rounded text-sm"
                       placeholder="Image URL"
                     />
                   ) : (
@@ -329,19 +329,19 @@ export default function EmailBuilderPage() {
                       type="text"
                       value={selectedBlock.content}
                       onChange={(e) => updateBlock(selectedBlock.id, { content: e.target.value })}
-                      className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm"
+                      className="w-full mt-1 px-3 py-2 bg-surface-elevated border border-border-light rounded text-sm"
                     />
                   )}
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-400">Alignment</label>
+                  <label className="text-sm text-[var(--color-text-secondary)]">Alignment</label>
                   <select
                     value={selectedBlock.styling?.alignment ?? 'left'}
                     onChange={(e) => updateBlock(selectedBlock.id, {
                       styling: { ...selectedBlock.styling, alignment: e.target.value as 'left' | 'center' | 'right' }
                     })}
-                    className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded text-sm"
+                    className="w-full mt-1 px-3 py-2 bg-surface-elevated border border-border-light rounded text-sm"
                   >
                     <option value="left">Left</option>
                     <option value="center">Center</option>
@@ -378,7 +378,7 @@ export default function EmailBuilderPage() {
 
                 {(selectedBlock.type === 'text' || selectedBlock.type === 'header') && (
                   <div>
-                    <label className="text-sm text-gray-400">Text Color</label>
+                    <label className="text-sm text-[var(--color-text-secondary)]">Text Color</label>
                     <input
                       type="color"
                       value={selectedBlock.styling?.textColor ?? '#333333'}
@@ -394,9 +394,9 @@ export default function EmailBuilderPage() {
           )}
         </div>
       ) : (
-        <div className="flex-1 overflow-auto p-8 bg-gray-900">
+        <div className="flex-1 overflow-auto p-8 bg-surface-paper">
           <div className="max-w-4xl mx-auto">
-            <div 
+            <div
               className="bg-white rounded shadow-lg"
               dangerouslySetInnerHTML={{ __html: renderPreview() }}
             />

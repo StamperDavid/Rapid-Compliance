@@ -165,17 +165,17 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-lg backdrop-blur-xl bg-black/40 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+          className="relative w-full max-w-lg backdrop-blur-xl bg-black/40 border border-border-light rounded-2xl shadow-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-gradient-to-r from-indigo-600/10 to-purple-600/10">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border-light bg-gradient-to-r from-primary600/10 to-secondary600/10">
             <div className="flex items-center gap-3">
               {feedbackPath && (
                 <button
                   onClick={handleBack}
                   className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
                 >
-                  <ArrowLeft className="w-4 h-4 text-gray-400" />
+                  <ArrowLeft className="w-4 h-4 text-[var(--color-text-secondary)]" />
                 </button>
               )}
               <h2 className="text-lg font-semibold text-white">
@@ -188,7 +188,7 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
               onClick={closeFeedbackModal}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-[var(--color-text-secondary)]" />
             </button>
           </div>
 
@@ -205,7 +205,7 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
                   <CheckCircle className="w-8 h-8 text-green-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">Thank you!</h3>
-                <p className="text-gray-400 text-center">
+                <p className="text-[var(--color-text-secondary)] text-center">
                   {feedbackPath === 'support'
                     ? 'Your support ticket has been submitted. We\'ll get back to you soon.'
                     : 'Your feature request has been recorded. We appreciate your feedback!'}
@@ -218,26 +218,26 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setFeedbackPath('support')}
-                  className="group p-6 rounded-xl bg-white/5 border border-white/10 hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all text-left"
+                  className="group p-6 rounded-xl bg-white/5 border border-border-light hover:border-indigo-500/50 hover:bg-primary-500/10 transition-all text-left"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <HelpCircle className="w-6 h-6 text-indigo-400" />
+                  <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <HelpCircle className="w-6 h-6 text-primary-400" />
                   </div>
                   <h3 className="text-white font-semibold mb-2">Support Ticket</h3>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-[var(--color-text-secondary)] text-sm">
                     Report an issue or get help with a problem you&apos;re experiencing.
                   </p>
                 </button>
 
                 <button
                   onClick={() => setFeedbackPath('feature')}
-                  className="group p-6 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all text-left"
+                  className="group p-6 rounded-xl bg-white/5 border border-border-light hover:border-purple-500/50 hover:bg-purple-500/10 transition-all text-left"
                 >
                   <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                     <Lightbulb className="w-6 h-6 text-purple-400" />
                   </div>
                   <h3 className="text-white font-semibold mb-2">Feature Request</h3>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-[var(--color-text-secondary)] text-sm">
                     Suggest a new feature or improvement to help us build better.
                   </p>
                 </button>
@@ -257,7 +257,7 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
                     value={pendingSupportTicket.title ?? ''}
                     onChange={(e) => updateSupportTicket({ title: e.target.value })}
                     placeholder="Brief description of the issue"
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
+                    className="w-full px-4 py-3 bg-white/5 border border-border-light rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
                   />
                 </div>
 
@@ -275,10 +275,10 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
                         className={`p-3 rounded-xl border transition-all ${
                           pendingSupportTicket.severity === option.value
                             ? `${option.bg} border-current ${option.color}`
-                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                            : 'bg-white/5 border-border-light hover:bg-white/10'
                         }`}
                       >
-                        <option.icon className={`w-5 h-5 mx-auto mb-1 ${pendingSupportTicket.severity === option.value ? option.color : 'text-gray-400'}`} />
+                        <option.icon className={`w-5 h-5 mx-auto mb-1 ${pendingSupportTicket.severity === option.value ? option.color : 'text-[var(--color-text-secondary)]'}`} />
                         <span className={`text-sm font-medium ${pendingSupportTicket.severity === option.value ? 'text-white' : 'text-gray-300'}`}>
                           {option.label}
                         </span>
@@ -302,7 +302,7 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
                     onChange={(e) => updateSupportTicket({ description: e.target.value })}
                     placeholder="Describe the issue in detail. Include steps to reproduce if applicable."
                     rows={4}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 resize-none"
+                    className="w-full px-4 py-3 bg-white/5 border border-border-light rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 resize-none"
                   />
                 </div>
 
@@ -315,7 +315,7 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
                 <button
                   onClick={() => void handleSubmitSupport()}
                   disabled={isSubmitting}
-                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-gradient-to-r from-primary600 to-secondary600 hover:from-primary500 hover:to-secondary500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>
@@ -345,7 +345,7 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
                     value={pendingFeatureRequest.featureName ?? ''}
                     onChange={(e) => updateFeatureRequest({ featureName: e.target.value })}
                     placeholder="What feature would you like to see?"
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+                    className="w-full px-4 py-3 bg-white/5 border border-border-light rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
                   />
                 </div>
 
@@ -359,7 +359,7 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
                     onChange={(e) => updateFeatureRequest({ businessImpact: e.target.value })}
                     placeholder="How would this feature help your business? What problem does it solve?"
                     rows={4}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 resize-none"
+                    className="w-full px-4 py-3 bg-white/5 border border-border-light rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 resize-none"
                   />
                 </div>
 

@@ -32,93 +32,93 @@ export function AdoptionMetricsCard({ metrics, className = '' }: AdoptionMetrics
   
   // Adoption color
   const getAdoptionColor = (rate: number) => {
-    if (rate >= 75) {return 'text-green-600';}
-    if (rate >= 50) {return 'text-blue-600';}
-    if (rate >= 25) {return 'text-yellow-600';}
-    return 'text-red-600';
+    if (rate >= 75) {return 'text-success';}
+    if (rate >= 50) {return 'text-primary';}
+    if (rate >= 25) {return 'text-warning';}
+    return 'text-error';
   };
-  
+
   const getAdoptionBgColor = (rate: number) => {
-    if (rate >= 75) {return 'bg-green-500';}
-    if (rate >= 50) {return 'bg-blue-500';}
-    if (rate >= 25) {return 'bg-yellow-500';}
-    return 'bg-red-500';
+    if (rate >= 75) {return 'bg-success';}
+    if (rate >= 50) {return 'bg-primary';}
+    if (rate >= 25) {return 'bg-warning';}
+    return 'bg-error';
   };
-  
+
   // Impact color (for lift metrics)
   const getLiftColor = (lift: number) => {
-    if (lift > 0) {return 'text-green-600';}
-    if (lift < 0) {return 'text-red-600';}
-    return 'text-gray-600';
+    if (lift > 0) {return 'text-success';}
+    if (lift < 0) {return 'text-error';}
+    return 'text-[var(--color-text-secondary)]';
   };
-  
+
   // Barrier severity
   const getBarrierColor = (severity: string) => {
     switch (severity) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'high': return 'bg-surface-elevated text-error border-border-light';
+      case 'medium': return 'bg-surface-elevated text-warning border-border-light';
+      case 'low': return 'bg-surface-elevated text-primary border-border-light';
+      default: return 'bg-surface-elevated text-[var(--color-text-secondary)] border-border-light';
     }
   };
   
   return (
-    <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
-      <h2 className="text-xl font-semibold mb-4">Adoption & Impact</h2>
+    <div className={`bg-surface-main rounded-lg shadow p-6 ${className}`}>
+      <h2 className="text-xl font-semibold mb-4 text-[var(--color-text-primary)]">Adoption & Impact</h2>
       
       {/* Overall Adoption */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">Overall Adoption Rate</span>
+          <span className="text-sm font-medium text-[var(--color-text-secondary)]">Overall Adoption Rate</span>
           <span className={`text-2xl font-bold ${getAdoptionColor(overallAdoptionRate)}`}>
             {overallAdoptionRate}%
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
+        <div className="w-full bg-surface-elevated rounded-full h-3">
           <div
             className={`h-3 rounded-full transition-all ${getAdoptionBgColor(overallAdoptionRate)}`}
             style={{ width: `${overallAdoptionRate}%` }}
           />
         </div>
-        <div className="mt-2 text-sm text-gray-600">
+        <div className="mt-2 text-sm text-[var(--color-text-secondary)]">
           {repsUsing} of {repsAvailable} reps using this playbook
         </div>
       </div>
-      
+
       {/* Effectiveness Distribution */}
       <div className="mb-6">
-        <h3 className="font-semibold text-gray-700 mb-3">Effectiveness Distribution</h3>
+        <h3 className="font-semibold text-[var(--color-text-secondary)] mb-3">Effectiveness Distribution</h3>
         <div className="space-y-2">
           {[
-            { label: 'Excellent', value: effectivenessDistribution.excellent, color: 'bg-green-500' },
-            { label: 'Good', value: effectivenessDistribution.good, color: 'bg-blue-500' },
-            { label: 'Fair', value: effectivenessDistribution.fair, color: 'bg-yellow-500' },
-            { label: 'Poor', value: effectivenessDistribution.poor, color: 'bg-red-500' },
+            { label: 'Excellent', value: effectivenessDistribution.excellent, color: 'bg-success' },
+            { label: 'Good', value: effectivenessDistribution.good, color: 'bg-primary' },
+            { label: 'Fair', value: effectivenessDistribution.fair, color: 'bg-warning' },
+            { label: 'Poor', value: effectivenessDistribution.poor, color: 'bg-error' },
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-3">
-              <div className="w-20 text-sm text-gray-700">{item.label}</div>
-              <div className="flex-1 bg-gray-200 rounded-full h-2">
+              <div className="w-20 text-sm text-[var(--color-text-secondary)]">{item.label}</div>
+              <div className="flex-1 bg-surface-elevated rounded-full h-2">
                 <div
                   className={`h-2 rounded-full ${item.color}`}
                   style={{ width: `${item.value}%` }}
                 />
               </div>
-              <div className="w-12 text-sm text-gray-600 text-right">{item.value}%</div>
+              <div className="w-12 text-sm text-[var(--color-text-secondary)] text-right">{item.value}%</div>
             </div>
           ))}
         </div>
         <div className="mt-3 text-center">
-          <span className="text-sm text-gray-600">Average: </span>
-          <span className="text-lg font-semibold text-blue-600">{avgEffectiveness}%</span>
+          <span className="text-sm text-[var(--color-text-secondary)]">Average: </span>
+          <span className="text-lg font-semibold text-primary">{avgEffectiveness}%</span>
         </div>
       </div>
-      
+
       {/* Impact Metrics */}
       <div className="mb-6">
-        <h3 className="font-semibold text-gray-700 mb-3">Impact Metrics (Before → After)</h3>
+        <h3 className="font-semibold text-[var(--color-text-secondary)] mb-3">Impact Metrics (Before → After)</h3>
         <div className="grid grid-cols-2 gap-4">
-          <div className="border rounded-lg p-3">
-            <div className="text-xs text-gray-600 mb-1">Conversion Rate</div>
+          <div className="border border-border-light rounded-lg p-3">
+            <div className="text-xs text-[var(--color-text-secondary)] mb-1">Conversion Rate</div>
             <div className="flex items-center justify-between">
               <div className="text-sm">
                 {impactMetrics.conversionRateBefore}% → {impactMetrics.conversionRateAfter}%

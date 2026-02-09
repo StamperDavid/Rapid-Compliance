@@ -132,14 +132,14 @@ export default function BattlecardsPage() {
   return (
     <div className="min-h-screen bg-gray-950">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-b border-gray-800">
+      <div className="bg-gradient-to-r from-primary to-secondary border-b border-border-light">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">
                 🎯 Competitive Battlecards
               </h1>
-              <p className="text-gray-400">
+              <p className="text-[var(--color-text-secondary)]">
                 AI-powered competitive intelligence for winning more deals
               </p>
             </div>
@@ -148,8 +148,8 @@ export default function BattlecardsPage() {
                 onClick={() => setView('discovery')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   view === 'discovery'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:text-white'
+                    ? 'bg-primary text-white'
+                    : 'bg-surface-elevated text-[var(--color-text-secondary)] hover:text-white'
                 }`}
               >
                 Discover Competitor
@@ -159,8 +159,8 @@ export default function BattlecardsPage() {
                   onClick={() => setView('battlecard')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     view === 'battlecard'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:text-white'
+                      ? 'bg-primary text-white'
+                      : 'bg-surface-elevated text-[var(--color-text-secondary)] hover:text-white'
                   }`}
                 >
                   View Battlecard
@@ -175,12 +175,12 @@ export default function BattlecardsPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Error Message */}
         {error && (
-          <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <div className="mb-6 border rounded-lg p-4" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-error mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-red-400 text-sm">{error}</p>
+              <p className="text-error text-sm">{error}</p>
             </div>
           </div>
         )}
@@ -189,16 +189,16 @@ export default function BattlecardsPage() {
         {view === 'discovery' && (
           <div className="space-y-6">
             {/* Discovery Form */}
-            <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
+            <div className="bg-surface-paper border border-border-light rounded-lg p-6">
               <h2 className="text-xl font-bold text-white mb-4 flex items-center">
-                <svg className="w-6 h-6 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 Discover Competitor
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
                     Competitor Domain
                   </label>
                   <input
@@ -211,17 +211,17 @@ export default function BattlecardsPage() {
                       }
                     }}
                     placeholder="competitor.com"
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg text-white placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary"
                     disabled={isLoading}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-[var(--color-text-disabled)] mt-1">
                     Enter competitor&apos;s website domain (e.g., salesforce.com, hubspot.com)
                   </p>
                 </div>
                 <button
                   onClick={() => { void handleDiscoverCompetitor(); }}
                   disabled={isLoading || !competitorDomain.trim()}
-                  className="w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center"
+                  className="w-full px-6 py-3 bg-primary hover:from-primary-light hover:to-secondary-light disabled:bg-surface-elevated disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center"
                 >
                   {isLoading ? (
                     <>

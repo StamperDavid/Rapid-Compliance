@@ -48,12 +48,12 @@ export default function AppWrapper({ url, name, onError }: AppWrapperProps) {
         justifyContent: 'center',
         height: '100%',
         minHeight: '400px',
-        backgroundColor: '#0a0a0a',
+        backgroundColor: 'var(--color-background-main)',
         padding: '2rem',
       }}>
         <div style={{
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
+          backgroundColor: 'var(--color-background-elevated)',
+          border: '1px solid var(--color-border-light)',
           borderRadius: '1rem',
           padding: '2rem',
           maxWidth: '500px',
@@ -62,10 +62,10 @@ export default function AppWrapper({ url, name, onError }: AppWrapperProps) {
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
             ⚠️
           </div>
-          <h2 style={{ color: '#ef4444', fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+          <h2 style={{ color: 'var(--color-error)', fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
             Invalid URL
           </h2>
-          <p style={{ color: '#999', fontSize: '0.875rem' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
             {validation.error}
           </p>
         </div>
@@ -79,7 +79,7 @@ export default function AppWrapper({ url, name, onError }: AppWrapperProps) {
       width: '100%',
       height: '100%',
       minHeight: 'calc(100vh - 60px)',
-      backgroundColor: '#0a0a0a',
+      backgroundColor: 'var(--color-background-main)',
     }}>
       {/* Loading Overlay */}
       {loading && (
@@ -90,19 +90,19 @@ export default function AppWrapper({ url, name, onError }: AppWrapperProps) {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#0a0a0a',
+          backgroundColor: 'var(--color-background-main)',
           zIndex: 10,
         }}>
           <div style={{
             width: '48px',
             height: '48px',
-            border: '3px solid #333',
-            borderTopColor: '#6366f1',
+            border: '3px solid var(--color-border-light)',
+            borderTopColor: 'var(--color-primary)',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             marginBottom: '1rem',
           }} />
-          <p style={{ color: '#999', fontSize: '0.875rem' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
             Loading {name}...
           </p>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -118,13 +118,13 @@ export default function AppWrapper({ url, name, onError }: AppWrapperProps) {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#0a0a0a',
+          backgroundColor: 'var(--color-background-main)',
           padding: '2rem',
           zIndex: 10,
         }}>
           <div style={{
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
+            backgroundColor: 'var(--color-background-elevated)',
+            border: '1px solid var(--color-border-light)',
             borderRadius: '1rem',
             padding: '2rem',
             maxWidth: '500px',
@@ -133,13 +133,13 @@ export default function AppWrapper({ url, name, onError }: AppWrapperProps) {
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
               ❌
             </div>
-            <h2 style={{ color: '#ef4444', fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+            <h2 style={{ color: 'var(--color-error)', fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
               Failed to Load
             </h2>
-            <p style={{ color: '#999', fontSize: '0.875rem', marginBottom: '1rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
               {error}
             </p>
-            <p style={{ color: '#666', fontSize: '0.75rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
               URL: {url}
             </p>
             <button
@@ -150,9 +150,9 @@ export default function AppWrapper({ url, name, onError }: AppWrapperProps) {
               style={{
                 marginTop: '1rem',
                 padding: '0.5rem 1rem',
-                backgroundColor: '#333',
-                color: '#fff',
-                border: 'none',
+                backgroundColor: 'var(--color-background-elevated)',
+                color: 'var(--color-text-primary)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 cursor: 'pointer',
@@ -177,7 +177,7 @@ export default function AppWrapper({ url, name, onError }: AppWrapperProps) {
           height: '100%',
           minHeight: 'calc(100vh - 60px)',
           border: 'none',
-          backgroundColor: '#fff',
+          backgroundColor: 'var(--color-background-paper)',
           opacity: loading || error ? 0 : 1,
           transition: 'opacity 0.3s ease-in-out',
         }}

@@ -89,8 +89,8 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
   };
   
   return (
-    <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
-      <h2 className="text-xl font-semibold mb-4">Follow-Up Actions</h2>
+    <div className={`bg-surface-main rounded-lg shadow p-6 ${className}`}>
+      <h2 className="text-xl font-semibold mb-4 text-[var(--color-text-primary)]">Follow-Up Actions</h2>
       
       {/* Positive Signals */}
       {positiveSignals.length > 0 && (
@@ -102,24 +102,24 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
           
           <div className="space-y-2">
             {positiveSignals.map((signal, index) => (
-              <div key={index} className="bg-white p-3 rounded border border-green-300">
+              <div key={index} className="bg-surface-main p-3 rounded border border-green-300">
                 <div className="flex items-start justify-between mb-2">
-                  <span className="font-medium text-gray-900 capitalize">
+                  <span className="font-medium text-[var(--color-text-primary)] capitalize">
                     {signal.type.replace(/_/g, ' ')}
                   </span>
                   {getSignalStrengthBadge(signal.strength)}
                 </div>
-                
-                <p className="text-sm text-gray-700 mb-1">{signal.description}</p>
-                
+
+                <p className="text-sm text-[var(--color-text-secondary)] mb-1">{signal.description}</p>
+
                 {signal.quote && (
-                  <p className="text-xs text-gray-600 italic mb-2">
+                  <p className="text-xs text-[var(--color-text-disabled)] italic mb-2">
                     {'"'}{signal.quote.substring(0, 120)}{signal.quote.length > 120 ? '...' : ''}{'"'}
                   </p>
                 )}
-                
-                <div className="pt-2 border-t border-gray-200">
-                  <div className="text-xs text-gray-500">
+
+                <div className="pt-2 border-t border-border-light">
+                  <div className="text-xs text-[var(--color-text-disabled)]">
                     <span className="font-medium">Impact:</span> {signal.impact}
                   </div>
                 </div>
@@ -132,16 +132,16 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
       {/* Follow-Up Actions */}
       {followUpActions.length > 0 ? (
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">
             Recommended Actions ({followUpActions.length})
           </h3>
-          
+
           <div className="space-y-3">
             {followUpActions.map((action) => {
               const priorityStyle = getPriorityBadge(action.priority);
               const deadlineInfo = getDeadlineUrgency(action.deadline);
               const isExpanded = expandedActions.has(action.id);
-              
+
               return (
                 <div
                   key={action.id}
@@ -149,7 +149,7 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                     action.priority === 'critical' ? 'border-red-500 bg-red-50' :
                     action.priority === 'high' ? 'border-orange-500 bg-orange-50' :
                     action.priority === 'medium' ? 'border-yellow-500 bg-yellow-50' :
-                    'border-blue-500 bg-blue-50'
+                    'border-primary bg-blue-50'
                   }`}
                   onClick={() => toggleAction(action.id)}
                 >
@@ -158,8 +158,8 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                     <div className="flex items-center gap-2 flex-1">
                       <span className="text-xl">{getActionTypeIcon(action.type)}</span>
                       <div className="flex-1">
-                        <div className="font-medium text-gray-900">{action.title}</div>
-                        <div className="text-xs text-gray-600 mt-0.5">
+                        <div className="font-medium text-[var(--color-text-primary)]">{action.title}</div>
+                        <div className="text-xs text-[var(--color-text-disabled)] mt-0.5">
                           {action.description.substring(0, isExpanded ? 1000 : 100)}
                           {!isExpanded && action.description.length > 100 && '...'}
                         </div>
@@ -170,14 +170,14 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                         <span>{priorityStyle.icon}</span>
                         <span className="capitalize">{action.priority}</span>
                       </span>
-                      <button className="text-gray-400 hover:text-gray-600">
+                      <button className="text-[var(--color-text-disabled)] hover:text-[var(--color-text-secondary)]">
                         {isExpanded ? '▼' : '▶'}
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* Metadata */}
-                  <div className="flex items-center gap-4 text-xs text-gray-600 mb-2">
+                  <div className="flex items-center gap-4 text-xs text-[var(--color-text-disabled)] mb-2">
                     <span className={`flex items-center gap-1 ${deadlineInfo.color}`}>
                       <span>{deadlineInfo.icon}</span>
                       <span className="font-medium">{deadlineInfo.text}</span>
@@ -189,25 +189,25 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                   {isExpanded && (
                     <div className="mt-3 space-y-3">
                       {/* Reasoning */}
-                      <div className="p-3 bg-white rounded border border-gray-200">
-                        <div className="text-xs font-medium text-gray-700 mb-1">
+                      <div className="p-3 bg-surface-main rounded border border-border-light">
+                        <div className="text-xs font-medium text-[var(--color-text-secondary)] mb-1">
                           💡 Why This Matters:
                         </div>
-                        <p className="text-xs text-gray-600">{action.reasoning}</p>
+                        <p className="text-xs text-[var(--color-text-disabled)]">{action.reasoning}</p>
                       </div>
-                      
+
                       {/* Assignee */}
                       {action.assignee && (
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-gray-500">Suggested Owner:</span>
-                          <span className="font-medium text-gray-700">{action.assignee}</span>
+                          <span className="text-[var(--color-text-disabled)]">Suggested Owner:</span>
+                          <span className="font-medium text-[var(--color-text-secondary)]">{action.assignee}</span>
                         </div>
                       )}
-                      
+
                       {/* Action Button */}
                       <div className="flex gap-2">
                         <button
-                          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+                          className="px-4 py-2 bg-primary text-white text-sm font-medium rounded hover:bg-primary/90 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             // TODO: Create task in CRM - Replace with proper modal/dialog
@@ -218,7 +218,7 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                           Create Task
                         </button>
                         <button
-                          className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded hover:bg-gray-200 transition-colors"
+                          className="px-4 py-2 bg-surface-elevated text-[var(--color-text-secondary)] text-sm font-medium rounded hover:bg-surface-elevated/80 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             // TODO: Mark as done - Replace with proper modal/dialog
@@ -237,21 +237,21 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
           </div>
           
           {/* Summary */}
-          <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="mt-6 p-4 bg-surface-elevated border border-border-light rounded-lg">
             <div className="flex items-center justify-between text-sm">
               <div>
-                <span className="font-medium text-gray-700">Total Actions:</span>
-                <span className="ml-2 text-gray-900">{followUpActions.length}</span>
+                <span className="font-medium text-[var(--color-text-secondary)]">Total Actions:</span>
+                <span className="ml-2 text-[var(--color-text-primary)]">{followUpActions.length}</span>
               </div>
               <div>
-                <span className="font-medium text-gray-700">Est. Total Effort:</span>
-                <span className="ml-2 text-gray-900">
+                <span className="font-medium text-[var(--color-text-secondary)]">Est. Total Effort:</span>
+                <span className="ml-2 text-[var(--color-text-primary)]">
                   {followUpActions.reduce((sum, action) => sum + action.estimatedEffort, 0).toFixed(1)}h
                 </span>
               </div>
             </div>
-            
-            <div className="mt-3 flex items-center gap-4 text-xs text-gray-600">
+
+            <div className="mt-3 flex items-center gap-4 text-xs text-[var(--color-text-disabled)]">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 bg-red-500 rounded-full"></span>
                 Critical: {followUpActions.filter(a => a.priority === 'critical').length}
@@ -265,7 +265,7 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                 Medium: {followUpActions.filter(a => a.priority === 'medium').length}
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span className="w-2 h-2 bg-primary rounded-full"></span>
                 Low: {followUpActions.filter(a => a.priority === 'low').length}
               </span>
             </div>
@@ -274,10 +274,10 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
       ) : (
         <div className="text-center py-8">
           <span className="text-4xl mb-2 block">✅</span>
-          <p className="text-sm font-medium text-gray-700 mb-1">
+          <p className="text-sm font-medium text-[var(--color-text-secondary)] mb-1">
             No Immediate Actions Required
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[var(--color-text-disabled)]">
             The conversation went well. Continue nurturing the relationship.
           </p>
         </div>

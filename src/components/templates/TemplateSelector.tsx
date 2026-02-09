@@ -79,7 +79,7 @@ function TemplateSelectorInner({
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -92,8 +92,8 @@ function TemplateSelectorInner({
           onClick={() => setSelectedCategory('all')}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             selectedCategory === 'all'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-primary text-white'
+              : 'bg-surface-elevated text-[var(--color-text-secondary)] hover:bg-surface-paper'
           }`}
         >
           All Templates
@@ -104,8 +104,8 @@ function TemplateSelectorInner({
             onClick={() => setSelectedCategory(category)}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               selectedCategory === category
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                ? 'bg-primary text-white'
+                : 'bg-surface-elevated text-[var(--color-text-secondary)] hover:bg-surface-paper'
             }`}
           >
             {category.toUpperCase()}
@@ -119,10 +119,10 @@ function TemplateSelectorInner({
           <div
             key={template.id}
             onClick={() => onTemplateSelect?.(template.id)}
-            className={`group bg-gray-800 border-2 rounded-lg p-6 cursor-pointer transition-all hover:scale-105 ${
+            className={`group bg-surface-elevated border-2 rounded-lg p-6 cursor-pointer transition-all hover:scale-105 ${
               selectedTemplateId === template.id
-                ? 'border-blue-500 shadow-lg shadow-blue-500/20'
-                : 'border-gray-700 hover:border-blue-400'
+                ? 'border-primary shadow-lg shadow-primary/20'
+                : 'border-border-light hover:border-primary/50'
             }`}
           >
             {/* Icon and Name */}
@@ -132,39 +132,39 @@ function TemplateSelectorInner({
                 <h3 className="text-xl font-semibold text-white mb-1">
                   {template.name}
                 </h3>
-                <p className="text-sm text-gray-400">{template.industry}</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">{template.industry}</p>
               </div>
               {selectedTemplateId === template.id && (
-                <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
+                <div className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">
                   ✓
                 </div>
               )}
             </div>
 
             {/* Description */}
-            <p className="text-gray-300 text-sm mb-4 line-clamp-2">
+            <p className="text-[var(--color-text-secondary)] text-sm mb-4 line-clamp-2">
               {template.description}
             </p>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-700">
+            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-border-light">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-400">
                   {template.stagesCount}
                 </div>
-                <div className="text-xs text-gray-400">Stages</div>
+                <div className="text-xs text-[var(--color-text-secondary)]">Stages</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-400">
                   {template.fieldsCount}
                 </div>
-                <div className="text-xs text-gray-400">Fields</div>
+                <div className="text-xs text-[var(--color-text-secondary)]">Fields</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-400">
                   {template.workflowsCount}
                 </div>
-                <div className="text-xs text-gray-400">Workflows</div>
+                <div className="text-xs text-[var(--color-text-secondary)]">Workflows</div>
               </div>
             </div>
 
@@ -181,7 +181,7 @@ function TemplateSelectorInner({
       {/* Empty State */}
       {filteredTemplates.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-400">No templates found for this category</p>
+          <p className="text-[var(--color-text-secondary)]">No templates found for this category</p>
         </div>
       )}
     </div>

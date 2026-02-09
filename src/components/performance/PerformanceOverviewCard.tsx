@@ -23,13 +23,13 @@ export function PerformanceOverviewCard({
 }: PerformanceOverviewCardProps) {
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-surface-main rounded-lg shadow p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-6 bg-surface-elevated rounded w-1/3 mb-4"></div>
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-            <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+            <div className="h-4 bg-surface-elevated rounded"></div>
+            <div className="h-4 bg-surface-elevated rounded w-5/6"></div>
+            <div className="h-4 bg-surface-elevated rounded w-4/6"></div>
           </div>
         </div>
       </div>
@@ -62,11 +62,11 @@ export function PerformanceOverviewCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-surface-main rounded-lg shadow">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Team Performance Overview</h3>
-        <p className="text-sm text-gray-500 mt-1">
+      <div className="px-6 py-4 border-b border-border-light">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Team Performance Overview</h3>
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
           {metrics.totalConversations} conversations across the team
         </p>
       </div>
@@ -76,14 +76,14 @@ export function PerformanceOverviewCard({
         {/* Overall Score */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Overall Team Score</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Overall Team Score</span>
             <span className={`text-2xl font-bold ${getScoreColor(metrics.avgOverallScore)}`}>
               {formatScore(metrics.avgOverallScore)}
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-surface-elevated rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+              className="bg-primary h-2 rounded-full transition-all duration-500"
               style={{ width: `${metrics.avgOverallScore}%` }}
             ></div>
           </div>
@@ -91,7 +91,7 @@ export function PerformanceOverviewCard({
 
         {/* Score Breakdown */}
         <div className="space-y-3 mb-6">
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">Skill Scores</h4>
+          <h4 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Skill Scores</h4>
           
           {[
             { label: 'Discovery', value: metrics.avgDiscoveryScore },
@@ -102,11 +102,11 @@ export function PerformanceOverviewCard({
             { label: 'Engagement', value: metrics.avgEngagementScore },
           ].map((skill) => (
             <div key={skill.label} className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">{skill.label}</span>
+              <span className="text-sm text-[var(--color-text-secondary)]">{skill.label}</span>
               <div className="flex items-center gap-2">
-                <div className="w-24 bg-gray-200 rounded-full h-1.5">
+                <div className="w-24 bg-surface-elevated rounded-full h-1.5">
                   <div
-                    className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                    className="bg-primary h-1.5 rounded-full transition-all duration-500"
                     style={{ width: `${skill.value}%` }}
                   ></div>
                 </div>
@@ -119,9 +119,9 @@ export function PerformanceOverviewCard({
         </div>
 
         {/* Sentiment Analysis */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <div className="mb-6 p-4 bg-surface-elevated rounded-lg">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-medium text-gray-700">Team Sentiment</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Team Sentiment</span>
             <span className={`text-sm font-semibold ${getSentimentColor(metrics.avgSentiment)}`}>
               {formatSentiment(metrics.avgSentiment)}
             </span>
@@ -189,25 +189,25 @@ export function PerformanceOverviewCard({
         </div>
 
         {/* Stats */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
+        <div className="mt-6 pt-6 border-t border-border-light">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-[var(--color-text-primary)]">
                 {formatScore(metrics.avgConversationsPerRep)}
               </div>
-              <div className="text-xs text-gray-500">Conversations/Rep</div>
+              <div className="text-xs text-[var(--color-text-disabled)]">Conversations/Rep</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-[var(--color-text-primary)]">
                 {formatScore(metrics.avgCoachingInsights)}
               </div>
-              <div className="text-xs text-gray-500">Avg Coaching Insights</div>
+              <div className="text-xs text-[var(--color-text-disabled)]">Avg Coaching Insights</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-[var(--color-text-primary)]">
                 {formatScore(metrics.avgFollowUpActions)}
               </div>
-              <div className="text-xs text-gray-500">Avg Follow-up Actions</div>
+              <div className="text-xs text-[var(--color-text-disabled)]">Avg Follow-up Actions</div>
             </div>
           </div>
         </div>

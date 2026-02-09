@@ -51,9 +51,9 @@ export default function ABTestResultsPage() {
   return (
     <div className="p-8">
       <div className="mb-6">
-        <button onClick={() => router.back()} className="text-blue-400 hover:text-blue-300 mb-4">← Back</button>
+        <button onClick={() => router.back()} className="text-primary hover:from-primary-light hover:to-secondary-light mb-4">← Back</button>
         <h1 className="text-3xl font-bold mb-2">{test.name}</h1>
-        <p className="text-gray-400">{test.description}</p>
+        <p className="text-[var(--color-text-secondary)]">{test.description}</p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         {test.variants?.map((variant, idx: number) => {
@@ -62,18 +62,18 @@ export default function ABTestResultsPage() {
           const conversionRate = impressions > 0 ? ((conversions / impressions) * 100).toFixed(2) : '0';
 
           return (
-            <div key={idx} className="bg-gray-900 rounded-lg p-6">
+            <div key={idx} className="bg-surface-paper rounded-lg p-6">
               <h3 className="text-xl font-semibold mb-4">Variant {variant.name}</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-gray-400">Impressions</span><span className="font-semibold">{impressions}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Conversions</span><span className="font-semibold text-green-400">{conversions}</span></div>
-                <div className="flex justify-between"><span className="text-gray-400">Conversion Rate</span><span className="font-semibold">{conversionRate}%</span></div>
+                <div className="flex justify-between"><span className="text-[var(--color-text-secondary)]">Impressions</span><span className="font-semibold">{impressions}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--color-text-secondary)]">Conversions</span><span className="font-semibold text-success">{conversions}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--color-text-secondary)]">Conversion Rate</span><span className="font-semibold">{conversionRate}%</span></div>
               </div>
             </div>
           );
         })}
       </div>
-      {test.winner && <div className="mt-6 bg-green-900/20 border border-green-900 rounded-lg p-4 text-center"><div className="text-green-400 font-semibold">🏆 Winner: Variant {test.winner}</div></div>}
+      {test.winner && <div className="mt-6 border rounded-lg p-4 text-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' }}><div className="text-success font-semibold">🏆 Winner: Variant {test.winner}</div></div>}
     </div>
   );
 }

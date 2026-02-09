@@ -63,26 +63,26 @@ export default function WorkflowEditPage() {
     }
   };
 
-  if (loading || !workflow) {return <div className="p-8">Loading...</div>;}
+  if (loading || !workflow) {return <div className="p-8 text-[var(--color-text-primary)]">Loading...</div>;}
 
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Edit Workflow</h1>
-        
-        <div className="bg-gray-900 rounded-lg p-6 mb-4">
+        <h1 className="text-3xl font-bold mb-6 text-[var(--color-text-primary)]">Edit Workflow</h1>
+
+        <div className="bg-surface-paper rounded-lg p-6 mb-4">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Name</label>
-              <input type="text" value={workflow.name} onChange={(e) => setWorkflow({...workflow, name: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" />
+              <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">Name</label>
+              <input type="text" value={workflow.name} onChange={(e) => setWorkflow({...workflow, name: e.target.value})} className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)]" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Description</label>
-              <textarea value={workflow.description ?? ''} onChange={(e) => setWorkflow({...workflow, description: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" rows={3} />
+              <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">Description</label>
+              <textarea value={workflow.description ?? ''} onChange={(e) => setWorkflow({...workflow, description: e.target.value})} className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)]" rows={3} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <select value={workflow.status} onChange={(e) => setWorkflow({...workflow, status: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg">
+              <label className="block text-sm font-medium mb-2 text-[var(--color-text-primary)]">Status</label>
+              <select value={workflow.status} onChange={(e) => setWorkflow({...workflow, status: e.target.value})} className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)]">
                 <option value="active">Active</option>
                 <option value="paused">Paused</option>
                 <option value="draft">Draft</option>
@@ -92,8 +92,8 @@ export default function WorkflowEditPage() {
         </div>
 
         <div className="flex gap-3">
-          <button onClick={() => router.back()} className="px-6 py-3 bg-gray-800 rounded-lg hover:bg-gray-700">Cancel</button>
-          <button onClick={() => void handleSave()} disabled={saving} className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button onClick={() => router.back()} className="px-6 py-3 bg-surface-elevated rounded-lg hover:bg-surface-elevated text-[var(--color-text-primary)]">Cancel</button>
+          <button onClick={() => void handleSave()} disabled={saving} className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:from-primary-light hover:to-secondary-light">
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>

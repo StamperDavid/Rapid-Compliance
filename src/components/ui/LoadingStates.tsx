@@ -21,7 +21,7 @@ export const SkeletonText: React.FC<SkeletonTextProps> = ({ lines = 1, width = '
         style={{
           height: '1rem',
           width: i === lines - 1 ? '70%' : width,
-          backgroundColor: '#2a2a2a',
+          backgroundColor: 'var(--color-bg-elevated)',
           borderRadius: '0.25rem',
           animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         }}
@@ -35,15 +35,15 @@ export const SkeletonText: React.FC<SkeletonTextProps> = ({ lines = 1, width = '
  */
 export const SkeletonCard: React.FC = () => (
   <div style={{
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #2a2a2a',
+    backgroundColor: 'var(--color-bg-elevated)',
+    border: '1px solid var(--color-border-light)',
     borderRadius: '0.75rem',
     padding: '1.5rem',
   }}>
     <div style={{
       height: '1.5rem',
       width: '60%',
-      backgroundColor: '#2a2a2a',
+      backgroundColor: 'var(--color-border-light)',
       borderRadius: '0.25rem',
       marginBottom: '1rem',
       animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -70,7 +70,7 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({ rows = 5, columns 
           gridTemplateColumns: `repeat(${columns}, 1fr)`,
           gap: '1rem',
           padding: '1rem',
-          borderBottom: '1px solid #2a2a2a',
+          borderBottom: '1px solid var(--color-border-light)',
         }}
       >
         {Array.from({ length: columns }).map((_, j) => (
@@ -78,7 +78,7 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({ rows = 5, columns 
             key={j}
             style={{
               height: '1rem',
-              backgroundColor: '#2a2a2a',
+              backgroundColor: 'var(--color-bg-elevated)',
               borderRadius: '0.25rem',
               animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             }}
@@ -97,12 +97,14 @@ interface SpinnerProps {
 /**
  * Spinner loading indicator
  */
-export const Spinner: React.FC<SpinnerProps> = ({ size = 'md', color = '#6366f1' }) => {
+export const Spinner: React.FC<SpinnerProps> = ({ size = 'md', color }) => {
   const sizeMap = {
     sm: '1rem',
     md: '2rem',
     lg: '3rem',
   };
+
+  const spinnerColor = color ?? 'var(--color-primary)';
 
   return (
     <div
@@ -111,8 +113,8 @@ export const Spinner: React.FC<SpinnerProps> = ({ size = 'md', color = '#6366f1'
       style={{
         width: sizeMap[size],
         height: sizeMap[size],
-        border: `3px solid ${color}33`,
-        borderTop: `3px solid ${color}`,
+        border: `3px solid rgba(var(--color-primary-rgb), 0.2)`,
+        borderTop: `3px solid ${spinnerColor}`,
         borderRadius: '50%',
         animation: 'spin 1s linear infinite',
       }}
@@ -129,36 +131,40 @@ interface ProgressBarProps {
 /**
  * Progress bar
  */
-export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color = '#6366f1', showLabel = true }) => (
-  <div style={{ width: '100%' }}>
-    {showLabel && (
-      <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
-        {progress.toFixed(0)}% Complete
+export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color, showLabel = true }) => {
+  const barColor = color ?? 'var(--color-primary)';
+
+  return (
+    <div style={{ width: '100%' }}>
+      {showLabel && (
+        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+          {progress.toFixed(0)}% Complete
+        </div>
+      )}
+      <div
+        role="progressbar"
+        aria-valuenow={progress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${progress.toFixed(0)}% complete`}
+        style={{
+          width: '100%',
+          height: '0.5rem',
+          backgroundColor: 'var(--color-bg-elevated)',
+          borderRadius: '9999px',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{
+          width: `${progress}%`,
+          height: '100%',
+          backgroundColor: barColor,
+          transition: 'width 0.3s ease',
+        }} />
       </div>
-    )}
-    <div
-      role="progressbar"
-      aria-valuenow={progress}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label={`${progress.toFixed(0)}% complete`}
-      style={{
-        width: '100%',
-        height: '0.5rem',
-        backgroundColor: '#2a2a2a',
-        borderRadius: '9999px',
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{
-        width: `${progress}%`,
-        height: '100%',
-        backgroundColor: color,
-        transition: 'width 0.3s ease',
-      }} />
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * Dot loader (animated dots)
@@ -171,7 +177,7 @@ export const DotLoader: React.FC = () => (
         style={{
           width: '0.5rem',
           height: '0.5rem',
-          backgroundColor: '#6366f1',
+          backgroundColor: 'var(--color-primary)',
           borderRadius: '50%',
           animation: `bounce 1.4s infinite ease-in-out both`,
           animationDelay: `${i * 0.16}s`,
@@ -207,7 +213,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message }) => (
   >
     <Spinner size="lg" />
     {message && (
-      <div style={{ color: '#fff', fontSize: '1.125rem' }}>
+      <div style={{ color: 'var(--color-text-primary)', fontSize: '1.125rem' }}>
         {message}
       </div>
     )}

@@ -50,27 +50,27 @@ export default function CampaignStatsPage() {
   return (
     <div className="p-8">
       <div className="mb-6">
-        <button onClick={() => router.back()} className="text-blue-400 hover:text-blue-300 mb-4">← Back</button>
+        <button onClick={() => router.back()} className="text-primary hover:text-primary-light mb-4">← Back</button>
         <h1 className="text-3xl font-bold mb-2">{stats.name}</h1>
-        <p className="text-gray-400">{stats.subject}</p>
+        <p className="text-[var(--color-text-secondary)]">{stats.subject}</p>
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-gray-900 rounded-lg p-6">
+        <div className="bg-surface-paper rounded-lg p-6">
           <div className="text-2xl font-bold mb-1">{stats.sent ?? 0}</div>
-          <div className="text-sm text-gray-400">Sent</div>
+          <div className="text-sm text-[var(--color-text-secondary)]">Sent</div>
         </div>
-        <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-2xl font-bold mb-1 text-blue-400">{stats.opened ?? 0}</div>
-          <div className="text-sm text-gray-400">Opened ({stats.openRate ?? 0}%)</div>
+        <div className="bg-surface-paper rounded-lg p-6">
+          <div className="text-2xl font-bold mb-1 text-primary">{stats.opened ?? 0}</div>
+          <div className="text-sm text-[var(--color-text-secondary)]">Opened ({stats.openRate ?? 0}%)</div>
         </div>
-        <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-2xl font-bold mb-1 text-green-400">{stats.clicked ?? 0}</div>
-          <div className="text-sm text-gray-400">Clicked ({stats.clickRate ?? 0}%)</div>
+        <div className="bg-surface-paper rounded-lg p-6">
+          <div className="text-2xl font-bold mb-1 text-success">{stats.clicked ?? 0}</div>
+          <div className="text-sm text-[var(--color-text-secondary)]">Clicked ({stats.clickRate ?? 0}%)</div>
         </div>
-        <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-2xl font-bold mb-1 text-red-400">{stats.bounced ?? 0}</div>
-          <div className="text-sm text-gray-400">Bounced</div>
+        <div className="bg-surface-paper rounded-lg p-6">
+          <div className="text-2xl font-bold mb-1 text-error">{stats.bounced ?? 0}</div>
+          <div className="text-sm text-[var(--color-text-secondary)]">Bounced</div>
         </div>
       </div>
     </div>

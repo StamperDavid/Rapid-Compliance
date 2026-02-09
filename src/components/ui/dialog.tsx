@@ -76,7 +76,7 @@ const DialogOverlay = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "fixed inset-0 bg-black/50 backdrop-blur-sm",
+      "fixed inset-0 bg-surface-paper backdrop-blur-sm",
       className
     )}
     {...props}

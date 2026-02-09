@@ -87,29 +87,29 @@ export default function WorkflowCanvas({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <span className="text-xs text-gray-500 mt-2 font-medium">Start</span>
+          <span className="text-xs text-[var(--color-text-disabled)] mt-2 font-medium">Start</span>
         </div>
 
         {/* Nodes */}
         {nodes.length === 0 ? (
           <div className="flex flex-col items-center py-8">
             {/* Connection line */}
-            <div className="w-0.5 h-8 bg-gradient-to-b from-emerald-500/50 to-gray-700" />
+            <div className="w-0.5 h-8 bg-gradient-to-b from-success/50 to-border-light" />
 
             {/* Empty state add button */}
             <button
               onClick={() => onAddNode(-1)}
-              className="mt-4 px-6 py-3 rounded-xl border-2 border-dashed border-gray-700 hover:border-indigo-500/50 bg-[#1a1a1a]/50 hover:bg-indigo-500/5 transition-all duration-200 group"
+              className="mt-4 px-6 py-3 rounded-xl border-2 border-dashed border-border-light hover:border-primary/50 bg-surface-paper hover:bg-primary/5 transition-all duration-200 group"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors">
-                  <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-gray-300">Add first step</p>
-                  <p className="text-xs text-gray-500">Click to add a trigger</p>
+                  <p className="text-sm font-medium text-[var(--color-text-secondary)]">Add first step</p>
+                  <p className="text-xs text-[var(--color-text-disabled)]">Click to add a trigger</p>
                 </div>
               </div>
             </button>
@@ -118,7 +118,7 @@ export default function WorkflowCanvas({
           nodes.map((node, index) => (
             <div key={node.id} className="flex flex-col items-center w-full max-w-md">
               {/* Connection line */}
-              <div className="w-0.5 h-8 bg-gradient-to-b from-gray-600 to-gray-700" />
+              <div className="w-0.5 h-8 bg-gradient-to-b from-border-light to-border-strong" />
 
               {/* Node card */}
               <div
@@ -132,8 +132,8 @@ export default function WorkflowCanvas({
                   transition-all duration-200
                   ${getNodeTypeColor(node.type)}
                   ${selectedNodeId === node.id
-                    ? 'ring-2 ring-indigo-500 shadow-lg shadow-indigo-500/10'
-                    : 'hover:shadow-lg hover:shadow-white/5'
+                    ? 'ring-2 ring-primary shadow-lg shadow-primary/10'
+                    : 'hover:shadow-lg hover:shadow-primary/5'
                   }
                 `}
               >
@@ -157,10 +157,10 @@ export default function WorkflowCanvas({
                           </span>
                         );
                       })()}
-                      <span className="text-xs text-gray-500">#{index + 1}</span>
+                      <span className="text-xs text-[var(--color-text-disabled)]">#{index + 1}</span>
                     </div>
-                    <h3 className="text-sm font-semibold text-gray-100 truncate">{node.name}</h3>
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">
+                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">{node.name}</h3>
+                    <p className="text-xs text-[var(--color-text-disabled)] mt-0.5 truncate">
                       {getNodeDescription(node)}
                     </p>
                   </div>
@@ -173,7 +173,7 @@ export default function WorkflowCanvas({
                           e.stopPropagation();
                           onNodeDelete(node.id);
                         }}
-                        className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        className="p-1.5 rounded-lg text-[var(--color-text-disabled)] hover:text-error hover:bg-error/10 transition-colors"
                         title="Delete"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,13 +186,13 @@ export default function WorkflowCanvas({
               </div>
 
               {/* Add button between nodes */}
-              <div className="w-0.5 h-4 bg-gray-700" />
+              <div className="w-0.5 h-4 bg-border-light" />
               <button
                 onClick={() => onAddNode(index)}
-                className="w-8 h-8 rounded-full border border-gray-700 bg-[#1a1a1a] hover:border-indigo-500/50 hover:bg-indigo-500/10 flex items-center justify-center transition-all duration-200 group"
+                className="w-8 h-8 rounded-full border border-border-light bg-surface-main hover:border-primary/50 hover:bg-primary/10 flex items-center justify-center transition-all duration-200 group"
                 title="Add step"
               >
-                <svg className="w-4 h-4 text-gray-500 group-hover:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-[var(--color-text-disabled)] group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
               </button>
@@ -203,14 +203,14 @@ export default function WorkflowCanvas({
         {/* End marker */}
         {nodes.length > 0 && (
           <>
-            <div className="w-0.5 h-8 bg-gradient-to-b from-gray-700 to-gray-600/50" />
+            <div className="w-0.5 h-8 bg-gradient-to-b from-border-light to-border-light/50" />
             <div className="flex flex-col items-center mt-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-border-light to-border-strong flex items-center justify-center">
+                <svg className="w-6 h-6 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <span className="text-xs text-gray-500 mt-2 font-medium">End</span>
+              <span className="text-xs text-[var(--color-text-disabled)] mt-2 font-medium">End</span>
             </div>
           </>
         )}

@@ -294,18 +294,18 @@ function WorkflowPropertiesPanel({ step, onUpdate, onClose }: WorkflowProperties
 
   if (!step) {
     return (
-      <div className="h-full flex flex-col bg-[#0a0a0a]">
-        <div className="p-4 border-b border-white/10">
-          <h3 className="text-sm font-semibold text-gray-200">Properties</h3>
+      <div className="h-full flex flex-col bg-surface-main">
+        <div className="p-4 border-b border-border-light">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Properties</h3>
         </div>
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
-              <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface-elevated flex items-center justify-center">
+              <svg className="w-8 h-8 text-[var(--color-text-disabled)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[var(--color-text-disabled)]">
               Select a step to view and edit its properties
             </p>
           </div>
@@ -317,13 +317,13 @@ function WorkflowPropertiesPanel({ step, onUpdate, onClose }: WorkflowProperties
   const fields = getFieldsForActionType(step.actionType);
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0a]">
+    <div className="h-full flex flex-col bg-surface-main">
       {/* Header */}
-      <div className="p-4 border-b border-white/10 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-200">Properties</h3>
+      <div className="p-4 border-b border-border-light flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Properties</h3>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-colors"
+          className="p-1.5 rounded-lg text-[var(--color-text-disabled)] hover:text-[var(--color-text-secondary)] hover:bg-surface-elevated transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -346,14 +346,14 @@ function WorkflowPropertiesPanel({ step, onUpdate, onClose }: WorkflowProperties
 
         {/* Step Name */}
         <div className="mb-6">
-          <label className="block text-xs font-medium text-gray-400 mb-2">
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-2">
             Step Name
           </label>
           <input
             type="text"
             value={localName}
             onChange={(e) => handleNameChange(e.target.value)}
-            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+            className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
             placeholder="Enter step name"
           />
         </div>
@@ -363,9 +363,9 @@ function WorkflowPropertiesPanel({ step, onUpdate, onClose }: WorkflowProperties
           <div className="space-y-4">
             {fields.map((field) => (
               <div key={field.key}>
-                <label className="block text-xs font-medium text-gray-400 mb-2">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-2">
                   {field.label}
-                  {field.required && <span className="text-red-400 ml-1">*</span>}
+                  {field.required && <span className="text-error ml-1">*</span>}
                 </label>
 
                 {field.type === 'text' || field.type === 'email' || field.type === 'url' || field.type === 'cron' ? (
@@ -373,7 +373,7 @@ function WorkflowPropertiesPanel({ step, onUpdate, onClose }: WorkflowProperties
                     type={field.type === 'email' ? 'email' : field.type === 'url' ? 'url' : 'text'}
                     value={(localConfig[field.key] as string) || ''}
                     onChange={(e) => handleConfigChange(field.key, e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                     placeholder={field.placeholder}
                   />
                 ) : field.type === 'textarea' || field.type === 'json' ? (
@@ -389,7 +389,7 @@ function WorkflowPropertiesPanel({ step, onUpdate, onClose }: WorkflowProperties
                     type="number"
                     value={(localConfig[field.key] as number) || ''}
                     onChange={(e) => handleConfigChange(field.key, e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                     placeholder={field.placeholder}
                   />
                 ) : field.type === 'select' ? (

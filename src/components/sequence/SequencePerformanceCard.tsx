@@ -33,10 +33,10 @@ export function SequencePerformanceCard({ analysis }: SequencePerformanceCardPro
   );
   
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-surface-main rounded-lg shadow p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Sequence Performance</h2>
-        <p className="text-sm text-gray-600 mt-1">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Sequence Performance</h2>
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
           Step-by-step engagement metrics
         </p>
       </div>
@@ -85,18 +85,18 @@ interface SequenceDetailsProps {
 
 function SequenceDetails({ metrics }: SequenceDetailsProps) {
   const [expanded, setExpanded] = React.useState(false);
-  
+
   return (
-    <div className="border rounded-lg p-4">
+    <div className="border border-border-light rounded-lg p-4">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between"
       >
         <div className="flex items-center space-x-3">
-          <Mail className="w-5 h-5 text-gray-500" />
+          <Mail className="w-5 h-5 text-[var(--color-text-disabled)]" />
           <div className="text-left">
-            <div className="font-medium text-gray-900">{metrics.sequenceName}</div>
-            <div className="text-sm text-gray-600">
+            <div className="font-medium text-[var(--color-text-primary)]">{metrics.sequenceName}</div>
+            <div className="text-sm text-[var(--color-text-secondary)]">
               {metrics.totalRecipients} recipients • {metrics.stepMetrics.length} steps
             </div>
           </div>
@@ -122,41 +122,41 @@ function SequenceDetails({ metrics }: SequenceDetailsProps) {
       </button>
       
       {expanded && (
-        <div className="mt-4 pt-4 border-t">
+        <div className="mt-4 pt-4 border-t border-border-light">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {metrics.stepMetrics.map((step, index) => (
               <StepMetric key={index} step={step} />
             ))}
           </div>
-          
+
           {/* Conversion Metrics */}
-          <div className="mt-4 pt-4 border-t">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Conversion Metrics</h4>
+          <div className="mt-4 pt-4 border-t border-border-light">
+            <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-3">Conversion Metrics</h4>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-[var(--color-text-primary)]">
                   {metrics.conversationStarted}
                 </div>
-                <div className="text-xs text-gray-600 mt-1">Conversations</div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-[var(--color-text-secondary)] mt-1">Conversations</div>
+                <div className="text-xs text-[var(--color-text-disabled)]">
                   {metrics.conversationRate.toFixed(1)}% rate
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-[var(--color-text-primary)]">
                   {metrics.meetingBooked}
                 </div>
-                <div className="text-xs text-gray-600 mt-1">Meetings</div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-[var(--color-text-secondary)] mt-1">Meetings</div>
+                <div className="text-xs text-[var(--color-text-disabled)]">
                   {metrics.meetingRate.toFixed(1)}% rate
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-[var(--color-text-primary)]">
                   {metrics.opportunityCreated}
                 </div>
-                <div className="text-xs text-gray-600 mt-1">Opportunities</div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-[var(--color-text-secondary)] mt-1">Opportunities</div>
+                <div className="text-xs text-[var(--color-text-disabled)]">
                   {metrics.opportunityRate.toFixed(1)}% rate
                 </div>
               </div>
@@ -177,10 +177,10 @@ interface MetricBadgeProps {
 function MetricBadge({ icon: Icon, value, label }: MetricBadgeProps) {
   return (
     <div className="flex items-center space-x-1">
-      <Icon className="w-3 h-3 text-gray-400" />
+      <Icon className="w-3 h-3 text-[var(--color-text-secondary)]" />
       <div className="text-xs">
-        <span className="font-medium text-gray-900">{value}</span>
-        <span className="text-gray-500 ml-1">{label}</span>
+        <span className="font-medium text-[var(--color-text-primary)]">{value}</span>
+        <span className="text-[var(--color-text-disabled)] ml-1">{label}</span>
       </div>
     </div>
   );
@@ -192,30 +192,30 @@ interface StepMetricProps {
 
 function StepMetric({ step }: StepMetricProps) {
   return (
-    <div className="bg-gray-50 rounded p-3">
-      <div className="text-xs font-medium text-gray-500 mb-2">
+    <div className="bg-surface-elevated rounded p-3">
+      <div className="text-xs font-medium text-[var(--color-text-disabled)] mb-2">
         Step {step.stepNumber} • {step.stepType.replace('_', ' ')}
       </div>
       <div className="space-y-1">
         <div className="flex justify-between text-xs">
-          <span className="text-gray-600">Sent:</span>
+          <span className="text-[var(--color-text-secondary)]">Sent:</span>
           <span className="font-medium">{step.sent}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-gray-600">Delivered:</span>
+          <span className="text-[var(--color-text-secondary)]">Delivered:</span>
           <span className="font-medium">{step.deliveryRate.toFixed(1)}%</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-gray-600">Opened:</span>
-          <span className="font-medium text-blue-600">{step.openRate.toFixed(1)}%</span>
+          <span className="text-[var(--color-text-secondary)]">Opened:</span>
+          <span className="font-medium text-primary">{step.openRate.toFixed(1)}%</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-gray-600">Clicked:</span>
-          <span className="font-medium text-green-600">{step.clickRate.toFixed(1)}%</span>
+          <span className="text-[var(--color-text-secondary)]">Clicked:</span>
+          <span className="font-medium text-success">{step.clickRate.toFixed(1)}%</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-gray-600">Replied:</span>
-          <span className="font-medium text-purple-600">{step.replyRate.toFixed(1)}%</span>
+          <span className="text-[var(--color-text-secondary)]">Replied:</span>
+          <span className="font-medium text-secondary">{step.replyRate.toFixed(1)}%</span>
         </div>
       </div>
     </div>

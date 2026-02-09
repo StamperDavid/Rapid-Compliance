@@ -83,27 +83,27 @@ export function ConfirmDialog({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-md shadow-2xl"
+            className="bg-surface-paper border border-border-light rounded-2xl w-full max-w-md shadow-2xl"
           >
             <div className="p-6">
               <div className="flex items-start gap-4">
                 {variant === 'destructive' && (
-                  <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}>
+                    <AlertTriangle className="w-5 h-5 text-error" />
                   </div>
                 )}
                 <div>
-                  <h3 id={titleId} className="text-lg font-semibold text-white">{title}</h3>
-                  <p className="mt-2 text-sm text-gray-400">{description}</p>
+                  <h3 id={titleId} className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h3>
+                  <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{description}</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-white/10">
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-border-light">
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] bg-surface-elevated hover:bg-surface-elevated/80 border border-border-light rounded-xl transition-all disabled:opacity-50"
               >
                 {cancelLabel}
               </button>
@@ -112,8 +112,8 @@ export function ConfirmDialog({
                 disabled={loading}
                 className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-all disabled:opacity-50 ${
                   variant === 'destructive'
-                    ? 'bg-red-600 hover:bg-red-500 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                    ? 'bg-error hover:bg-error-light text-white'
+                    : 'bg-primary hover:bg-primary-light text-white'
                 }`}
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
