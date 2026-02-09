@@ -1,10 +1,9 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { usePagination } from '@/hooks/usePagination';
 import { orderBy, type QueryConstraint, type DocumentData, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 
@@ -29,7 +28,7 @@ export default function DatasetsPage() {
     ];
 
     const result = await FirestoreService.getAllPaginated(
-      `organizations/${DEFAULT_ORG_ID}/trainingDatasets`,
+      getSubCollection('trainingDatasets'),
       constraints,
       50,
       lastDoc

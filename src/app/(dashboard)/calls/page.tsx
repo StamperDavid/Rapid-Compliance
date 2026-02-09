@@ -1,12 +1,11 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Phone, Plus, Play, Clock, Calendar, User, PhoneCall, Download } from 'lucide-react';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { usePagination } from '@/hooks/usePagination';
 import { type QueryConstraint, type DocumentData, type QueryDocumentSnapshot, orderBy } from 'firebase/firestore';
 
@@ -34,7 +33,7 @@ export default function CallLogPage() {
     ];
 
     const result = await FirestoreService.getAllPaginated(
-      `organizations/${DEFAULT_ORG_ID}/workspaces/default/calls`,
+      `${getSubCollection('workspaces')}/default/calls`,
       constraints,
       50,
       lastDoc

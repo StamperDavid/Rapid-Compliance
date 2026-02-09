@@ -9,7 +9,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 interface OrganizationMember {
   userId: string;
@@ -127,7 +127,7 @@ export async function createComment(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/comments`,
+      `${getSubCollection('workspaces')}/${workspaceId}/comments`,
       commentId,
       comment,
       false
@@ -189,7 +189,7 @@ async function notifyMentionedUsers(
     for (const userId of mentionedUserIds) {
       // Get user email
       const user = await FirestoreService.get<OrganizationMember>(
-        `organizations/${PLATFORM_ID}/members`,
+        getSubCollection('members'),
         userId
       );
 
@@ -227,7 +227,7 @@ export async function createTask(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/tasks`,
+      `${getSubCollection('workspaces')}/${workspaceId}/tasks`,
       taskId,
       newTask,
       false
@@ -259,7 +259,7 @@ async function notifyTaskAssignment(
     const { sendEmail } = await import('@/lib/email/email-service');
 
     const user = await FirestoreService.get<OrganizationMember>(
-      `organizations/${PLATFORM_ID}/members`,
+      getSubCollection('members'),
       task.assignedTo
     );
 
@@ -287,7 +287,7 @@ export async function calculateLeaderboard(
   try {
     // Get all team members
     const membersResult = await FirestoreService.getAll<OrganizationMember>(
-      `organizations/${PLATFORM_ID}/members`
+      getSubCollection('members')
     );
 
     const members = membersResult;
@@ -398,7 +398,7 @@ async function calculateUserMetrics(
 
     // Tasks completed
     const tasksResult = await FirestoreService.getAll<TeamTask>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/tasks`
+      `${getSubCollection('workspaces')}/${workspaceId}/tasks`
     );
     const tasksCompleted = tasksResult.filter(t =>
       t.assignedTo === userId &&
@@ -440,7 +440,7 @@ export async function getUserTasks(
 ): Promise<TeamTask[]> {
   try {
     const result = await FirestoreService.getAll<TeamTask>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/tasks`
+      `${getSubCollection('workspaces')}/${workspaceId}/tasks`
     );
 
     let tasks = result.filter(t => t.assignedTo === userId);
@@ -481,7 +481,7 @@ export async function completeTask(
 ): Promise<void> {
   try {
     await FirestoreService.update(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/tasks`,
+      `${getSubCollection('workspaces')}/${workspaceId}/tasks`,
       taskId,
       {
         status: 'completed',

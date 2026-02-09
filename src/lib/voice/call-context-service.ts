@@ -5,7 +5,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { QueryConstraint } from 'firebase/firestore';
 
 export interface StoredCallContext {
@@ -71,7 +71,7 @@ class CallContextService {
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${PLATFORM_ID}/callContexts`;
+      const path = getSubCollection('callContexts');
 
       await FirestoreService.set(
         path,
@@ -115,7 +115,7 @@ class CallContextService {
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${PLATFORM_ID}/callContexts`;
+      const path = getSubCollection('callContexts');
       const context = await FirestoreService.get(path, callId);
 
       if (context) {
@@ -143,7 +143,7 @@ class CallContextService {
 
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${PLATFORM_ID}/callContexts`;
+      const path = getSubCollection('callContexts');
       const results = await FirestoreService.getAll<StoredCallContext>(path, [
         where('customerPhone', '==', phone),
         orderBy('updatedAt', 'desc'),
@@ -169,7 +169,7 @@ class CallContextService {
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${PLATFORM_ID}/callContexts`;
+      const path = getSubCollection('callContexts');
 
       await FirestoreService.set(
         path,
@@ -226,7 +226,7 @@ class CallContextService {
       const { where, orderBy, limit: limitFn } = await import('firebase/firestore');
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${PLATFORM_ID}/callContexts`;
+      const path = getSubCollection('callContexts');
       const constraints: QueryConstraint[] = [];
 
       if (queryParams.customerPhone) {
@@ -280,7 +280,7 @@ class CallContextService {
       const { where, orderBy, limit: limitFn } = await import('firebase/firestore');
       const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const path = `organizations/${PLATFORM_ID}/callContexts`;
+      const path = getSubCollection('callContexts');
 
       // Get calls with positive sentiment but not transferred
       const results = await FirestoreService.getAll<StoredCallContext>(

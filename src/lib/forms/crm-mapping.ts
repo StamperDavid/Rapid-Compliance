@@ -37,6 +37,7 @@ function getDb() {
   return db;
 }
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type {
   FormSubmission,
   FieldResponse,
@@ -325,7 +326,7 @@ function getCRMCollectionPath(
   workspaceId: string,
   entityType: CRMEntityType
 ): string {
-  return `organizations/rapid-compliance-root/workspaces/${workspaceId}/${entityType}s`;
+  return `${getSubCollection('workspaces')}/${workspaceId}/${entityType}s`;
 }
 
 /**

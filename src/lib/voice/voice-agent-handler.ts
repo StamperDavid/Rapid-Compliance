@@ -26,7 +26,7 @@ import type { VoiceCall, VoiceProvider } from './types';
 import { logger } from '@/lib/logger/logger';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
 import type { TTSEngineType } from '@/lib/voice/tts/types';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+
 
 export type VoiceAgentMode = 'prospector' | 'closer';
 
@@ -660,9 +660,10 @@ class VoiceAgentHandler {
       }
 
       const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
       await FirestoreService.set(
-        `organizations/${PLATFORM_ID}/callContexts`,
+        getSubCollection('callContexts'),
         callId,
         {
           callId,

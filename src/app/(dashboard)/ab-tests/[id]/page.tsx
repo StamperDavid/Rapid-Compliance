@@ -1,10 +1,9 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 interface ABTestVariant {
@@ -33,7 +32,7 @@ export default function ABTestResultsPage() {
 
   const loadTest = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/abTests`, testId);
+      const data = await FirestoreService.get(getSubCollection('abTests'), testId);
       setTest(data as ABTest);
     } catch (error: unknown) {
       logger.error('Error loading test:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

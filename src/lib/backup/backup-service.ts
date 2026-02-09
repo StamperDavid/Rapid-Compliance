@@ -348,13 +348,13 @@ export class BackupService {
     try {
       // Use admin SDK for backup operations
       const { adminDb } = await import('@/lib/firebase/admin');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
       if (!adminDb) {
         throw new Error('Admin Firestore not initialized');
       }
 
-      const collectionPath = `organizations/${PLATFORM_ID}/${collection}`;
+      const collectionPath = getSubCollection(collection);
 
       let query = adminDb.collection(collectionPath);
 

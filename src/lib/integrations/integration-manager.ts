@@ -6,7 +6,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface IntegrationCredentials {
   integrationId: string; // 'zoom', 'quickbooks', 'shopify', etc.
@@ -36,7 +36,7 @@ export async function saveIntegrationCredentials(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/integrations`,
+      getSubCollection('integrations'),
       integrationId,
       credentialsDoc,
       true // Merge to preserve metadata
@@ -58,7 +58,7 @@ export async function getIntegrationCredentials(
 ): Promise<IntegrationCredentials | null> {
   try {
     const credentials = await FirestoreService.get<IntegrationCredentials>(
-      `organizations/${PLATFORM_ID}/integrations`,
+      getSubCollection('integrations'),
       integrationId
     );
 
@@ -215,7 +215,7 @@ export async function disconnectIntegration(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${PLATFORM_ID}/integrations`,
+      getSubCollection('integrations'),
       integrationId
     );
 
@@ -233,7 +233,7 @@ export async function disconnectIntegration(
 export async function listConnectedIntegrations(): Promise<IntegrationCredentials[]> {
   try {
     const result = await FirestoreService.getAll<IntegrationCredentials>(
-      `organizations/${PLATFORM_ID}/integrations`
+      getSubCollection('integrations')
     );
 
     return result;
@@ -262,7 +262,7 @@ export async function updateIntegration(
 ): Promise<void> {
   try {
     await FirestoreService.update(
-      `organizations/${PLATFORM_ID}/integrations`,
+      getSubCollection('integrations'),
       integrationId,
       {
         ...updates,

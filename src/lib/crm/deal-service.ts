@@ -8,7 +8,7 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getClientSignalCoordinator } from '@/lib/orchestration/coordinator-factory-client';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface Deal {
   id: string;
@@ -75,7 +75,7 @@ export async function getDeals(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Deal>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -104,7 +104,7 @@ export async function getDeal(
 ): Promise<Deal | null> {
   try {
     const deal = await FirestoreService.get<Deal>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`,
       dealId
     );
 
@@ -145,7 +145,7 @@ export async function createDeal(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`,
       dealId,
       deal,
       false
@@ -187,7 +187,7 @@ export async function updateDeal(
     };
 
     await FirestoreService.update(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`,
       dealId,
       updatedData
     );
@@ -296,7 +296,7 @@ export async function deleteDeal(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`,
       dealId
     );
 

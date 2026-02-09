@@ -6,7 +6,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface Product {
   id: string;
@@ -86,7 +86,7 @@ export async function getProducts(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Product>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -134,7 +134,7 @@ export async function getProduct(
 ): Promise<Product | null> {
   try {
     const product = await FirestoreService.get<Product>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
       productId
     );
 
@@ -178,7 +178,7 @@ export async function createProduct(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
       productId,
       product,
       false
@@ -216,7 +216,7 @@ export async function updateProduct(
     };
 
     await FirestoreService.update(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
       productId,
       updatedData
     );
@@ -248,7 +248,7 @@ export async function deleteProduct(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
       productId
     );
 

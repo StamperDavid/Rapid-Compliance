@@ -11,6 +11,7 @@ import type { Lead } from './lead-service';
 import { getActivityStats } from './activity-service';
 import { logger } from '@/lib/logger/logger';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { ScoringWeights, ScoringModel } from './predictive-scoring';
 
@@ -110,7 +111,7 @@ export async function trainFromHistoricalData(workspaceId: string): Promise<Scor
     logger.info('Starting lead scoring model training', { workspaceId });
 
     const leadsRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/workspaces/{wsId}/entities/leads/records',
+      `${getSubCollection('workspaces')}/{wsId}/entities/leads/records`,
       { wsId: workspaceId }
     );
 
@@ -196,7 +197,7 @@ export async function trainFromHistoricalData(workspaceId: string): Promise<Scor
     };
 
     await adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/config/scoringWeights',
+      `${getSubCollection('config')}/scoringWeights`,
       {}
     ).set({
       weights: trainedWeights,

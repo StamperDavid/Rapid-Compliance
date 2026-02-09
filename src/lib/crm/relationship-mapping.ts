@@ -5,7 +5,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface Relationship {
   id: string;
@@ -90,7 +90,7 @@ export async function createRelationship(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/relationships`,
+      `${getSubCollection('workspaces')}/${workspaceId}/relationships`,
       relationshipId,
       relationship,
       false
@@ -118,7 +118,7 @@ export async function getEntityRelationships(
 ): Promise<Relationship[]> {
   try {
     const allRels = await FirestoreService.getAll<Relationship>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/relationships`
+      `${getSubCollection('workspaces')}/${workspaceId}/relationships`
     );
 
     const filtered = allRels.filter(

@@ -29,7 +29,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // Helper to ensure db is available
 function getDb() {
@@ -52,16 +52,16 @@ import type {
 // ============================================================================
 
 const getFormsCollectionPath = (workspaceId: string) =>
-  `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms`;
+  `${getSubCollection('workspaces')}/${workspaceId}/forms`;
 
 const getSubmissionsCollectionPath = (workspaceId: string, formId: string) =>
-  `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/submissions`;
+  `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/submissions`;
 
 const getViewsCollectionPath = (workspaceId: string, formId: string) =>
-  `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/views`;
+  `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/views`;
 
 const _getAnalyticsCollectionPath = (workspaceId: string, formId: string) =>
-  `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/analytics`;
+  `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/analytics`;
 
 // ============================================================================
 // FORM CRUD OPERATIONS

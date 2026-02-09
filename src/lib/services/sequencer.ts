@@ -21,6 +21,7 @@
  */
 
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email/email-service';
@@ -704,14 +705,14 @@ async function getLeadData(leadId: string): Promise<LeadData | null> {
 
     // Get all workspaces for this organization
     const workspacesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/workspaces'
+      getSubCollection('workspaces')
     );
     const workspacesSnapshot = await workspacesRef.get();
 
     for (const workspaceDoc of workspacesSnapshot.docs) {
       // Check leads collection
       const leadRef = adminDal.getNestedCollection(
-        'organizations/rapid-compliance-root/workspaces/{wsId}/entities/leads/records',
+        `${getSubCollection('workspaces')}/{wsId}/entities/leads/records`,
         { wsId: workspaceDoc.id }
       ).doc(leadId);
 
@@ -722,7 +723,7 @@ async function getLeadData(leadId: string): Promise<LeadData | null> {
 
       // Also check contacts collection
       const contactRef = adminDal.getNestedCollection(
-        'organizations/rapid-compliance-root/workspaces/{wsId}/entities/contacts/records',
+        `${getSubCollection('workspaces')}/{wsId}/entities/contacts/records`,
         { wsId: workspaceDoc.id }
       ).doc(leadId);
 
@@ -754,7 +755,7 @@ async function loadTemplate(templateId: string): Promise<TemplateData | null> {
     }
 
     const templatesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/templates'
+      getSubCollection('templates')
     );
 
     const templateDoc = await templatesRef.doc(templateId).get();

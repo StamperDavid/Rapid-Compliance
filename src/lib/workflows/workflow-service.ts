@@ -7,7 +7,7 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type Timestamp, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type { Workflow } from '@/types/workflow';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Helper to extract error message from unknown error
@@ -69,7 +69,7 @@ export async function getWorkflows(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Workflow>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
+      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -100,7 +100,7 @@ export async function getWorkflow(
 ): Promise<Workflow | null> {
   try {
     const workflow = await FirestoreService.get<Workflow>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
+      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
       workflowId
     );
 
@@ -146,7 +146,7 @@ export async function createWorkflow(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
+      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
       workflowId,
       workflow,
       false
@@ -183,7 +183,7 @@ export async function updateWorkflow(
     };
 
     await FirestoreService.update(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
+      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
       workflowId,
       updatedData
     );
@@ -214,7 +214,7 @@ export async function deleteWorkflow(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflows`,
+      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
       workflowId
     );
 
@@ -302,7 +302,7 @@ export async function getWorkflowRuns(
     ];
 
     const result = await FirestoreService.getAllPaginated<WorkflowExecution>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/workflowExecutions`,
+      `${getSubCollection('workspaces')}/${workspaceId}/workflowExecutions`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc

@@ -7,7 +7,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface EnrichmentData {
   linkedInUrl?: string;
@@ -88,7 +88,7 @@ export async function getLeads(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Lead>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -118,7 +118,7 @@ export async function getLead(
 ): Promise<Lead | null> {
   try {
     const lead = await FirestoreService.get<Lead>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
       leadId
     );
 
@@ -192,7 +192,7 @@ export async function createLead(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
       leadId,
       lead,
       false
@@ -259,7 +259,7 @@ export async function updateLead(
     };
 
     await FirestoreService.update(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
       leadId,
       updatedData
     );
@@ -319,7 +319,7 @@ export async function deleteLead(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
       leadId
     );
 

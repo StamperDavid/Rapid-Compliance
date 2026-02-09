@@ -5,6 +5,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 const FILE = 'brand-dna-service.ts';
 
@@ -130,7 +131,7 @@ export async function syncBrandDNA(): Promise<void> {
     const tools: Array<'voice' | 'social' | 'seo'> = ['voice', 'social', 'seo'];
 
     for (const toolType of tools) {
-      const toolPath = `organizations/${PLATFORM_ID}/toolTraining`;
+      const toolPath = getSubCollection('toolTraining');
       const toolDoc = await FirestoreService.get(toolPath, toolType);
 
       // Only sync if tool inherits from brand DNA (not overridden)
@@ -161,7 +162,7 @@ export async function getToolTrainingContext(
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-    const toolPath = `organizations/${PLATFORM_ID}/toolTraining`;
+    const toolPath = getSubCollection('toolTraining');
     const toolDoc = await FirestoreService.get(toolPath, toolType);
 
     if (!toolDoc) {

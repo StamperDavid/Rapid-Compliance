@@ -5,13 +5,13 @@
  * The AI Implementation Guide can trigger this when a client says
  * "I don't need that" - immediately cleaning up visual clutter.
  *
- * Persistence: Firestore (organizations/rapid-compliance-root/settings/featureVisibility)
+ * Persistence: Firestore (via getSubCollection('settings')/featureVisibility)
  *
  * @module feature-toggle-service
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { FeatureStatus } from './system-health-service';
 
 // Re-export FeatureStatus for consumers
@@ -192,7 +192,7 @@ export class FeatureToggleService {
   static async getVisibilitySettings(): Promise<FeatureVisibilitySettings | null> {
     try {
       const settings = await FirestoreService.get<FeatureVisibilitySettings>(
-        `organizations/${PLATFORM_ID}/settings`,
+        getSubCollection('settings'),
         'featureVisibility'
       );
       return settings;
@@ -215,7 +215,7 @@ export class FeatureToggleService {
     userId: string,
     reason?: string
   ): Promise<void> {
-    const path = `organizations/${PLATFORM_ID}/settings`;
+    const path = getSubCollection('settings');
     const docId = 'featureVisibility';
 
     // Get existing settings
@@ -252,7 +252,7 @@ export class FeatureToggleService {
     hidden: boolean,
     userId: string
   ): Promise<void> {
-    const path = `organizations/${PLATFORM_ID}/settings`;
+    const path = getSubCollection('settings');
     const docId = 'featureVisibility';
 
     let settings = await this.getVisibilitySettings();
@@ -307,7 +307,7 @@ export class FeatureToggleService {
    * Reset all visibility settings to default (show everything)
    */
   static async resetToDefault(userId: string): Promise<void> {
-    const path = `organizations/${PLATFORM_ID}/settings`;
+    const path = getSubCollection('settings');
     const docId = 'featureVisibility';
 
     const settings: FeatureVisibilitySettings = {

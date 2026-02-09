@@ -8,6 +8,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface ProposalTemplate {
   id: string;
@@ -85,7 +86,7 @@ export async function generateProposal(
 
     // Get template
     const template = await FirestoreService.get<ProposalTemplate>(
-      `organizations/${PLATFORM_ID}/proposalTemplates`,
+      getSubCollection('proposalTemplates'),
       data.templateId
     );
 
@@ -132,7 +133,7 @@ export async function generateProposal(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/proposals`,
+      `${getSubCollection('workspaces')}/${workspaceId}/proposals`,
       proposalId,
       proposal,
       false
@@ -389,7 +390,7 @@ export async function sendProposal(
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
     const proposal = await FirestoreService.get<GeneratedProposal>(
-      `organizations/${PLATFORM_ID}/workspaces/default/proposals`,
+      `${getSubCollection('workspaces')}/default/proposals`,
       proposalId
     );
 
@@ -421,7 +422,7 @@ Best regards
 
     // Update proposal status
     await FirestoreService.update(
-      `organizations/${PLATFORM_ID}/workspaces/default/proposals`,
+      `${getSubCollection('workspaces')}/default/proposals`,
       proposalId,
       {
         status: 'sent',

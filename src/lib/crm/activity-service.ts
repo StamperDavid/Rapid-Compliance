@@ -4,7 +4,7 @@
  * Foundation for timeline, insights, and recommendations
  */
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot} from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
@@ -64,7 +64,7 @@ export async function createActivity(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/activities`,
+      `${getSubCollection('workspaces')}/${workspaceId}/activities`,
       activityId,
       activity,
       false
@@ -124,7 +124,7 @@ export async function getActivities(
     constraints.push(orderBy('occurredAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Activity>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/activities`,
+      `${getSubCollection('workspaces')}/${workspaceId}/activities`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -573,7 +573,7 @@ export async function deleteActivity(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/activities`,
+      `${getSubCollection('workspaces')}/${workspaceId}/activities`,
       activityId
     );
 

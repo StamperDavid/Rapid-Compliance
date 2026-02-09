@@ -1,13 +1,12 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { abTestFormSchema, type ABTestFormValues } from '@/lib/validation/ab-test-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -27,7 +26,7 @@ export default function NewABTestPage() {
     try {
       const testId = `abtest-${Date.now()}`;
       await FirestoreService.set(
-        `organizations/${DEFAULT_ORG_ID}/abTests`,
+        getSubCollection('abTests'),
         testId,
         {
           ...data,

@@ -10,6 +10,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import type { Lead } from './lead-service';
 
 export interface RoutingRule {
@@ -80,7 +81,7 @@ export async function routeLead(
   try {
     // Get all routing rules for this organization
     const rulesResult = await FirestoreService.getAll<RoutingRule>(
-      `organizations/${PLATFORM_ID}/leadRoutingRules`
+      getSubCollection('leadRoutingRules')
     );
 
     const rules = rulesResult
@@ -189,7 +190,7 @@ async function getRoundRobinUser(
 ): Promise<string> {
   try {
     const state = await FirestoreService.get<{ lastIndex: number }>(
-      `organizations/${PLATFORM_ID}/leadRoutingRules/${ruleId}/state`,
+      `${getSubCollection('leadRoutingRules')}/${ruleId}/state`,
       'roundRobin'
     );
 
@@ -198,7 +199,7 @@ async function getRoundRobinUser(
     const assignedUserId = userIds[nextIndex];
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/leadRoutingRules/${ruleId}/state`,
+      `${getSubCollection('leadRoutingRules')}/${ruleId}/state`,
       'roundRobin',
       { lastIndex: nextIndex, updatedAt: new Date() },
       true
@@ -355,7 +356,7 @@ async function getDefaultAssignment(): Promise<string> {
   try {
     // Get organization members
     const membersResult = await FirestoreService.getAll<OrganizationMember>(
-      `organizations/${PLATFORM_ID}/members`
+      getSubCollection('members')
     );
 
     const activeMembers = membersResult.filter(m => m.role === 'admin' || m.role === 'member');
@@ -368,7 +369,7 @@ async function getDefaultAssignment(): Promise<string> {
     }
 
     // Fallback to org owner
-    const org = await FirestoreService.get<Organization>('organizations', PLATFORM_ID);
+    const org = await FirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     const orgCreatedBy = org?.createdBy;
     return org?.ownerId ?? (orgCreatedBy ?? 'unknown');
 

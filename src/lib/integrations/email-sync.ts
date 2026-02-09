@@ -431,7 +431,7 @@ export async function syncInbox(
   }
 }
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Get last sync timestamp
@@ -439,7 +439,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 async function getLastSyncTime(provider: string): Promise<Date | null> {
   try {
     const doc = await FirestoreService.get<EmailSyncDoc>(
-      `organizations/${PLATFORM_ID}/emailSync`,
+      getSubCollection('emailSync'),
       provider
     );
 
@@ -465,7 +465,7 @@ async function getLastSyncTime(provider: string): Promise<Date | null> {
  */
 async function setLastSyncTime(provider: string, time: Date): Promise<void> {
   await FirestoreService.set(
-    `organizations/${PLATFORM_ID}/emailSync`,
+    getSubCollection('emailSync'),
     provider,
     { lastSyncAt: time },
     true

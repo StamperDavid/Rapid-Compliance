@@ -10,7 +10,7 @@ import { where, type QueryConstraint } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { ViewFilter } from '@/types/filters';
 
 /** Request body interface for counting contacts */
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     const constraints = buildQueryConstraints(filters);
 
     // Query contacts collection
-    const collectionPath = `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`;
+    const collectionPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`;
     
     let count = 0;
     

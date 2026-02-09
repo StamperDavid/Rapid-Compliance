@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { orderBy } from 'firebase/firestore';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { validateToolUrl, type CustomTool } from '@/types/custom-tools';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 
 /**
@@ -76,7 +76,7 @@ function isStringArray(value: unknown): value is string[] {
 
 // Collection path helper
 function getCollectionPath(): string {
-  return `organizations/${PLATFORM_ID}/customTools`;
+  return getSubCollection('customTools');
 }
 
 /**

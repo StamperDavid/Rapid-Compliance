@@ -23,7 +23,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPES
@@ -251,7 +251,7 @@ class ConversationMemoryService {
         ];
 
         const callContexts = await FirestoreService.getAll<Record<string, unknown>>(
-          `organizations/${PLATFORM_ID}/callContexts`,
+          getSubCollection('callContexts'),
           callConstraints
         );
 
@@ -294,7 +294,7 @@ class ConversationMemoryService {
    */
   private async getChatInteractions(query: InteractionQuery): Promise<CustomerInteraction[]> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       const { where, orderBy, limit: limitFn } = await import('firebase/firestore');
 
       const constraints = [];
@@ -316,7 +316,7 @@ class ConversationMemoryService {
       constraints.push(limitFn(query.limit ?? 50));
 
       const sessions = await FirestoreService.getAll<Record<string, unknown>>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+        getSubCollection('chatSessions'),
         constraints
       );
 
@@ -361,7 +361,7 @@ class ConversationMemoryService {
       ];
 
       const messages = await FirestoreService.getAll<Record<string, unknown>>(
-        `organizations/${PLATFORM_ID}/smsMessages`,
+        getSubCollection('smsMessages'),
         constraints
       );
 

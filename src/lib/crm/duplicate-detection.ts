@@ -6,7 +6,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { Lead } from './lead-service';
 import type { RelatedEntityType } from '@/types/activity';
 
@@ -130,7 +130,7 @@ export async function detectLeadDuplicates(
   try {
     // Get all leads in organization
     const existingLeads = await FirestoreService.getAll<Lead>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/leads/records`
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`
     );
     const matches: DuplicateMatch[] = [];
 
@@ -267,7 +267,7 @@ export async function detectContactDuplicates(
 ): Promise<DuplicateDetectionResult> {
   try {
     const existingContacts = await FirestoreService.getAll<Contact>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`
     );
     const matches: DuplicateMatch[] = [];
 
@@ -352,7 +352,7 @@ export async function detectCompanyDuplicates(
 ): Promise<DuplicateDetectionResult> {
   try {
     const existingCompanies = await FirestoreService.getAll<Company>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/companies/records`
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/companies/records`
     );
     const matches: DuplicateMatch[] = [];
 
@@ -449,7 +449,7 @@ export async function mergeRecords(
   mergeId: string
 ): Promise<CRMRecord> {
   try {
-    const collectionPath = `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${entityType}s/records`;
+    const collectionPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/${entityType}s/records`;
 
     // Get both records - use Record<string, unknown> as base type
     const keepRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, keepId);

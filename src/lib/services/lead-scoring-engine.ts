@@ -20,6 +20,7 @@
  */
 
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import { discoverCompany, discoverPerson, type DiscoveredCompany, type DiscoveredPerson } from './discovery-engine';
@@ -1087,14 +1088,14 @@ async function getLeadData(leadId: string): Promise<LeadData | null> {
 
     // Get all workspaces for this organization
     const workspacesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/workspaces'
+      getSubCollection('workspaces')
     );
     const workspacesSnapshot = await workspacesRef.get();
 
     for (const workspaceDoc of workspacesSnapshot.docs) {
       // Check leads collection
       const leadRef = adminDal.getNestedCollection(
-        'organizations/rapid-compliance-root/workspaces/{wsId}/entities/leads/records',
+        `${getSubCollection('workspaces')}/{wsId}/entities/leads/records`,
         { wsId: workspaceDoc.id }
       ).doc(leadId);
 
@@ -1112,7 +1113,7 @@ async function getLeadData(leadId: string): Promise<LeadData | null> {
 
       // Also check contacts
       const contactRef = adminDal.getNestedCollection(
-        'organizations/rapid-compliance-root/workspaces/{wsId}/entities/contacts/records',
+        `${getSubCollection('workspaces')}/{wsId}/entities/contacts/records`,
         { wsId: workspaceDoc.id }
       ).doc(leadId);
 
@@ -1148,7 +1149,7 @@ async function getScoringRules(
     }
 
     const scoringRulesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/scoringRules'
+      getSubCollection('scoringRules')
     );
 
     // If specific rules requested
@@ -1211,7 +1212,7 @@ async function createDefaultScoringRules(): Promise<ScoringRules> {
   };
 
   const scoringRulesRef = adminDal.getNestedCollection(
-    'organizations/rapid-compliance-root/scoringRules'
+    getSubCollection('scoringRules')
   );
 
   await scoringRulesRef.doc(rulesId).set({
@@ -1237,7 +1238,7 @@ async function getCachedScore(
     }
 
     const leadScoresRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/leadScores'
+      getSubCollection('leadScores')
     );
     
     const doc = await leadScoresRef.doc(leadId).get();
@@ -1303,7 +1304,7 @@ async function cacheScore(
     };
 
     const leadScoresRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/leadScores'
+      getSubCollection('leadScores')
     );
 
     await leadScoresRef.doc(leadId).set({
@@ -1345,7 +1346,7 @@ export async function getModelMetadata(): Promise<{
     }
 
     const modelDoc = await adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/config/scoringWeights'
+      `${getSubCollection('config')}/scoringWeights`
     ).get();
 
     if (!modelDoc.exists) {

@@ -12,7 +12,7 @@ import { db } from '@/lib/firebase/config';
 import type { FormFieldConfig, FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 interface RouteContext {
   params: Promise<{ formId: string }>;
@@ -60,7 +60,7 @@ export async function GET(
 
     // Get fields
     const firestore = getDb();
-    const fieldsPath = `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/fields`;
+    const fieldsPath = `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/fields`;
     const fieldsRef = collection(firestore, fieldsPath);
     const fieldsQuery = query(fieldsRef, orderBy('order', 'asc'));
     const fieldsSnapshot = await getDocs(fieldsQuery);
@@ -102,7 +102,7 @@ export async function PUT(
     // Update fields if provided
     if (fields && Array.isArray(fields)) {
       const firestore = getDb();
-      const fieldsPath = `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/fields`;
+      const fieldsPath = `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/fields`;
       const batch = writeBatch(firestore);
 
       // Delete existing fields

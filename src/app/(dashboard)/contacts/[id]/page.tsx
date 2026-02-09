@@ -1,10 +1,9 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { getLastActivityDate, type Contact } from '@/types/contact';
 
@@ -17,7 +16,7 @@ export default function ContactDetailPage() {
 
   const loadContact = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`organizations/${DEFAULT_ORG_ID}/workspaces/default/entities/contacts/records`, contactId);
+      const data = await FirestoreService.get(`${getSubCollection('workspaces')}/default/entities/contacts/records`, contactId);
       setContact(data as Contact);
     } catch (error: unknown) {
       logger.error('Error loading contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

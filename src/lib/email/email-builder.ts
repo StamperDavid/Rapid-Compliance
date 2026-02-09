@@ -9,7 +9,7 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface EmailTemplate {
   id: string;
@@ -240,7 +240,7 @@ export async function createABTest(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/abTests`,
+      getSubCollection('abTests'),
       testId,
       abTest,
       false
@@ -266,7 +266,7 @@ export async function getABTestVariant(
 ): Promise<'A' | 'B'> {
   try {
     const test = await FirestoreService.get<ABTest>(
-      `organizations/${PLATFORM_ID}/abTests`,
+      getSubCollection('abTests'),
       testId
     );
 
@@ -335,7 +335,7 @@ export async function calculateABTestResults(
 
     // Determine winner based on configured metric
     const test = await FirestoreService.get<ABTest>(
-      `organizations/${PLATFORM_ID}/abTests`,
+      getSubCollection('abTests'),
       testId
     );
 

@@ -3,13 +3,13 @@
  * Optimized Firestore operations for the Form Builder
  *
  * COLLECTION STRUCTURE:
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
- * organizations/rapid-compliance-root/workspaces/{workspaceId}/formTemplates/{templateId}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
+ * {platform}/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
+ * {platform}/workspaces/{workspaceId}/formTemplates/{templateId}
  *
  * OPTIMIZATION STRATEGIES:
  * 1. Fields in subcollection - avoid document size limits, parallel loading
@@ -44,7 +44,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type {
   FormDefinition,
   FormFieldConfig,
@@ -76,34 +76,34 @@ function getDb() {
 
 const PATHS = {
   forms: (workspaceId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms`,
+    `${getSubCollection('workspaces')}/${workspaceId}/forms`,
 
   form: (workspaceId: string, formId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}`,
+    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}`,
 
   fields: (workspaceId: string, formId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/fields`,
+    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/fields`,
 
   field: (workspaceId: string, formId: string, fieldId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/fields/${fieldId}`,
+    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/fields/${fieldId}`,
 
   submissions: (workspaceId: string, formId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/submissions`,
+    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/submissions`,
 
   submission: (workspaceId: string, formId: string, submissionId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/submissions/${submissionId}`,
+    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/submissions/${submissionId}`,
 
   analytics: (workspaceId: string, formId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/analytics`,
+    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/analytics`,
 
   fieldAnalytics: (workspaceId: string, formId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/fieldAnalytics`,
+    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/fieldAnalytics`,
 
   views: (workspaceId: string, formId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/forms/${formId}/views`,
+    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/views`,
 
   templates: (workspaceId: string) =>
-    `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/formTemplates`,
+    `${getSubCollection('workspaces')}/${workspaceId}/formTemplates`,
 };
 
 // ============================================================================

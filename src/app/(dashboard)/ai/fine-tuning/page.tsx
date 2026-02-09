@@ -1,10 +1,9 @@
 'use client';
 
-import { DEFAULT_ORG_ID } from '@/lib/constants/platform';
-
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { usePagination } from '@/hooks/usePagination';
 import { orderBy, type QueryConstraint, type DocumentData, type QueryDocumentSnapshot } from 'firebase/firestore';
 
@@ -30,7 +29,7 @@ export default function FineTuningPage() {
     ];
 
     const result = await FirestoreService.getAllPaginated(
-      `organizations/${DEFAULT_ORG_ID}/fineTuningJobs`,
+      getSubCollection('fineTuningJobs'),
       constraints,
       50,
       lastDoc

@@ -6,7 +6,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface Contact {
   id: string;
@@ -85,7 +85,7 @@ export async function getContacts(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Contact>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -113,7 +113,7 @@ export async function getContact(
 ): Promise<Contact | null> {
   try {
     const contact = await FirestoreService.get<Contact>(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
       contactId
     );
 
@@ -153,7 +153,7 @@ export async function createContact(
     };
 
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
       contactId,
       contact,
       false
@@ -188,7 +188,7 @@ export async function updateContact(
     };
 
     await FirestoreService.update(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
       contactId,
       updatedData
     );
@@ -220,7 +220,7 @@ export async function deleteContact(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
       contactId
     );
 
@@ -340,7 +340,7 @@ export async function recordInteraction(
 
     // Save interaction record
     await FirestoreService.set(
-      `organizations/${PLATFORM_ID}/workspaces/${workspaceId}/entities/contacts/records/${contactId}/interactions`,
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records/${contactId}/interactions`,
       `interaction-${Date.now()}`,
       {
         type,
