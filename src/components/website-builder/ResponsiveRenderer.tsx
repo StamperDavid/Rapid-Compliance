@@ -276,7 +276,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
         <button
           style={{
             padding: '12px 24px',
-            backgroundColor: (widget.data.color as string) ?? '#3b82f6',
+            backgroundColor: (widget.data.color as string) ?? 'var(--color-info)',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
@@ -358,8 +358,8 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
             <button
               style={{
                 padding: '16px 32px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
+                backgroundColor: 'var(--color-info)',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '6px',
                 fontSize: '18px',
@@ -388,7 +388,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               key={idx}
               style={{
                 padding: '24px',
-                backgroundColor: '#f9fafb',
+                backgroundColor: 'var(--color-bg-elevated)',
                 borderRadius: '8px',
                 textAlign: 'center',
               }}
@@ -401,7 +401,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '12px' }}>
                 {feature.title}
               </h3>
-              <p style={{ color: '#6b7280', fontSize: '14px' }}>
+              <p style={{ color: 'var(--color-text-disabled)', fontSize: '14px' }}>
                 {feature.description}
               </p>
             </div>
@@ -420,7 +420,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               style={{
                 padding: '32px',
                 backgroundColor: 'white',
-                border: '2px solid #e5e7eb',
+                border: '2px solid var(--color-border-light)',
                 borderRadius: '8px',
                 textAlign: 'center',
               }}
@@ -430,7 +430,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               </h3>
               <div style={{ fontSize: '48px', fontWeight: 'bold', marginBottom: '24px' }}>
                 ${plan.price}
-                <span style={{ fontSize: '16px', fontWeight: 'normal', color: '#6b7280' }}>
+                <span style={{ fontSize: '16px', fontWeight: 'normal', color: 'var(--color-text-disabled)' }}>
                   /month
                 </span>
               </div>
@@ -438,9 +438,9 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
                 style={{
                   width: '100%',
                   padding: '12px',
-                  backgroundColor: plan.featured ? '#3b82f6' : 'white',
-                  color: plan.featured ? 'white' : '#374151',
-                  border: plan.featured ? 'none' : '1px solid #d1d5db',
+                  backgroundColor: plan.featured ? 'var(--color-info)' : 'white',
+                  color: plan.featured ? 'white' : 'var(--color-border-strong)',
+                  border: plan.featured ? 'none' : '1px solid var(--color-border-light)',
                   borderRadius: '6px',
                   fontSize: '16px',
                   fontWeight: '500',
@@ -463,7 +463,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
         <div
           style={{
             padding: '32px',
-            backgroundColor: '#f9fafb',
+            backgroundColor: 'var(--color-bg-elevated)',
             borderRadius: '8px',
             textAlign: 'center',
             ...style,
@@ -473,16 +473,16 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
             style={{
               fontSize: '18px',
               fontStyle: 'italic',
-              color: '#374151',
+              color: 'var(--color-border-strong)',
               marginBottom: '16px',
             }}
           >
             &quot;{String(quoteVal !== '' && quoteVal != null ? quoteVal : 'Testimonial quote')}&quot;
           </p>
-          <div style={{ fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontWeight: '600', color: 'var(--color-text-primary)' }}>
             {String(authorVal !== '' && authorVal != null ? authorVal : 'Author Name')}
           </div>
-          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+          <div style={{ fontSize: '14px', color: 'var(--color-text-disabled)' }}>
             {String(roleVal !== '' && roleVal != null ? roleVal : 'Role / Company')}
           </div>
         </div>
@@ -498,7 +498,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
           style={{
             textAlign: 'center',
             padding: breakpoint === 'mobile' ? '40px 20px' : '60px 40px',
-            backgroundColor: '#3b82f6',
+            backgroundColor: 'var(--color-info)',
             borderRadius: '8px',
             color: 'white',
             ...style,
@@ -520,7 +520,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
             style={{
               padding: '16px 32px',
               backgroundColor: 'white',
-              color: '#3b82f6',
+              color: 'var(--color-info)',
               border: 'none',
               borderRadius: '6px',
               fontSize: '16px',
@@ -547,7 +547,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '20px',
-                backgroundColor: '#f9fafb',
+                backgroundColor: 'var(--color-bg-elevated)',
                 borderRadius: '8px',
               }}
             >
@@ -572,9 +572,9 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
         <div
           style={{
             padding: '16px',
-            backgroundColor: '#f3f4f6',
+            backgroundColor: 'var(--color-bg-elevated)',
             borderRadius: '6px',
-            color: '#6b7280',
+            color: 'var(--color-text-disabled)',
             ...style,
           }}
         >

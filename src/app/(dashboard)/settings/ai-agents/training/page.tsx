@@ -878,13 +878,13 @@ export default function AgentTrainingPage() {
     }
   };
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   // Loading state
   if (loading || firebaseConfigured === null) {
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
-          <p style={{ color: '#999' }}>Loading training center...</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>Loading training center...</p>
         </div>
     );
   }
@@ -895,22 +895,22 @@ export default function AgentTrainingPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
           <div style={{ textAlign: 'center', maxWidth: '700px', padding: '2rem' }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔥</div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
               Firebase Not Configured
             </h1>
-            <p style={{ color: '#999', marginBottom: '1rem', lineHeight: '1.6' }}>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem', lineHeight: '1.6' }}>
               The AI Agent Training Center requires Firebase to store your training data, conversations, and agent configurations.
             </p>
-            <p style={{ color: '#999', marginBottom: '2rem', lineHeight: '1.6' }}>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
               Please set up Firebase to use this feature. This takes about 5 minutes.
             </p>
-            <div style={{ padding: '1.5rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', textAlign: 'left', marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>Quick Setup Steps:</h2>
-              <ol style={{ color: '#999', marginLeft: '1.5rem', lineHeight: '1.8' }}>
+            <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', textAlign: 'left', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Quick Setup Steps:</h2>
+              <ol style={{ color: 'var(--color-text-secondary)', marginLeft: '1.5rem', lineHeight: '1.8' }}>
                 <li>Create a Firebase project at <a href="https://console.firebase.google.com" target="_blank" style={{ color: primaryColor }}>console.firebase.google.com</a></li>
                 <li>Enable Firestore Database and Authentication</li>
                 <li>Copy your Firebase config from Project Settings</li>
-                <li>Create a <code style={{ backgroundColor: '#0a0a0a', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>.env.local</code> file in your project root</li>
+                <li>Create a <code style={{ backgroundColor: 'var(--color-bg-main)', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>.env.local</code> file in your project root</li>
                 <li>Add your Firebase credentials (see FIREBASE_SETUP.md)</li>
                 <li>Restart the development server</li>
               </ol>
@@ -923,7 +923,7 @@ export default function AgentTrainingPage() {
                   display: 'inline-block',
                   padding: '0.75rem 1.5rem',
                   backgroundColor: primaryColor,
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   borderRadius: '0.5rem',
                   textDecoration: 'none',
                   fontWeight: '600',
@@ -937,12 +937,12 @@ export default function AgentTrainingPage() {
                 style={{
                   display: 'inline-block',
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: '#1a1a1a',
-                  color: '#fff',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  color: 'var(--color-text-primary)',
                   borderRadius: '0.5rem',
                   textDecoration: 'none',
                   fontWeight: '600',
-                  border: '1px solid #333',
+                  border: '1px solid var(--color-border-strong)',
                 }}
               >
                 View Setup Guide
@@ -957,10 +957,10 @@ export default function AgentTrainingPage() {
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
           <div style={{ textAlign: 'center', maxWidth: '600px', padding: '2rem' }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--color-text-primary)' }}>
               No Base Model Found
             </h1>
-            <p style={{ color: '#999', marginBottom: '2rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2rem' }}>
               Please complete onboarding first to create your Base Model, then you can start training your AI agent.
             </p>
             <a
@@ -969,7 +969,7 @@ export default function AgentTrainingPage() {
                 display: 'inline-block',
                 padding: '0.75rem 1.5rem',
                 backgroundColor: primaryColor,
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 borderRadius: '0.5rem',
                 textDecoration: 'none',
                 fontWeight: '600',
@@ -996,44 +996,44 @@ export default function AgentTrainingPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
       {/* Header */}
-      <div style={{ padding: '2rem', borderBottom: '1px solid #1a1a1a' }}>
+      <div style={{ padding: '2rem', borderBottom: '1px solid var(--color-border-light)' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
             🎓 AI Agent Training Center
           </h1>
-          <p style={{ color: '#999', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
             Train your Base Model through conversations, upload training materials, and save Golden Masters when ready
           </p>
           
           {/* Status Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-            <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Base Model Status</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: baseModel.status === 'ready' ? '#10b981' : '#fbbf24' }}>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Base Model Status</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: baseModel.status === 'ready' ? 'var(--color-success)' : 'var(--color-warning-light)' }}>
                 {baseModel.status === 'draft' ? '📝 Draft' : baseModel.status === 'training' ? '🔄 Training' : '✅ Ready'}
               </div>
             </div>
             
-            <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Overall Training Score</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: overallScore >= 80 ? '#10b981' : overallScore >= 60 ? '#fbbf24' : '#ef4444' }}>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Overall Training Score</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: overallScore >= 80 ? 'var(--color-success)' : overallScore >= 60 ? 'var(--color-warning-light)' : 'var(--color-error)' }}>
                 {overallScore}%
               </div>
             </div>
             
-            <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Training Sessions</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Training Sessions</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                 {baseModel.trainingScenarios?.length ?? 0}
               </div>
             </div>
             
-            <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Golden Masters</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Golden Masters</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                 {goldenMasters.length}
                 {activeGoldenMaster && (
-                  <span style={{ fontSize: '0.875rem', marginLeft: '0.5rem', color: '#10b981' }}>
+                  <span style={{ fontSize: '0.875rem', marginLeft: '0.5rem', color: 'var(--color-success)' }}>
                     ({activeGoldenMaster.version} active)
                   </span>
                 )}
@@ -1044,7 +1044,7 @@ export default function AgentTrainingPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ borderBottom: '1px solid #1a1a1a', backgroundColor: '#0a0a0a' }}>
+      <div style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-main)' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '2rem' }}>
           {(['chat', 'materials', 'history', 'golden'] as const).map(tab => (
             <button
@@ -1055,7 +1055,7 @@ export default function AgentTrainingPage() {
                 backgroundColor: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === tab ? `2px solid ${primaryColor}` : '2px solid transparent',
-                color: activeTab === tab ? '#fff' : '#999',
+                color: activeTab === tab ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                 fontWeight: activeTab === tab ? '600' : '400',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -1077,7 +1077,7 @@ export default function AgentTrainingPage() {
               {/* Column 1: Training Topics Sidebar */}
               <div>
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                     Training Topic
                   </label>
                   <input
@@ -1088,17 +1088,17 @@ export default function AgentTrainingPage() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-paper)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '1rem',
                     }}
                   />
                 </div>
                 
                 <div>
-                  <h3 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#999', marginBottom: '0.75rem', textTransform: 'uppercase' }}>
+                  <h3 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: 'var(--color-text-secondary)', marginBottom: '0.75rem', textTransform: 'uppercase' }}>
                     Suggested Topics
                   </h3>
                   {suggestedTopics.map((topic, idx) => (
@@ -1110,10 +1110,10 @@ export default function AgentTrainingPage() {
                         textAlign: 'left',
                         padding: '0.75rem',
                         marginBottom: '0.5rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         cursor: 'pointer',
                         fontSize: '0.875rem',
                       }}
@@ -1130,9 +1130,9 @@ export default function AgentTrainingPage() {
                     padding: '0.75rem',
                     marginTop: '1rem',
                     backgroundColor: 'transparent',
-                    border: '1px solid #333',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
-                    color: '#999',
+                    color: 'var(--color-text-secondary)',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                   }}
@@ -1142,15 +1142,15 @@ export default function AgentTrainingPage() {
               </div>
 
               {/* Chat Area */}
-              <div style={{ display: 'flex', flexDirection: 'column', height: '600px', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: '600px', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
                 {/* Messages */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
                   {chatMessages.length === 0 && (
                     <div style={{ textAlign: 'center', paddingTop: '3rem' }}>
-                      <p style={{ color: '#666', marginBottom: '1rem' }}>
+                      <p style={{ color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>
                         {trainingTopic ? `Start training on: ${trainingTopic}` : 'Select a topic or enter a custom topic to begin training'}
                       </p>
-                      <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
                         Have a conversation with your AI agent, then provide feedback on its responses
                       </p>
                     </div>
@@ -1170,8 +1170,8 @@ export default function AgentTrainingPage() {
                         style={{
                           maxWidth: '70%',
                           padding: '0.75rem 1rem',
-                          backgroundColor: msg.role === 'user' ? primaryColor : '#1a1a1a',
-                          color: '#fff',
+                          backgroundColor: msg.role === 'user' ? primaryColor : 'var(--color-bg-paper)',
+                          color: 'var(--color-text-primary)',
                           borderRadius: '0.75rem',
                           fontSize: '0.875rem',
                           lineHeight: '1.5',
@@ -1187,10 +1187,10 @@ export default function AgentTrainingPage() {
                             disabled={msg.hasFeedback}
                             style={{
                               padding: '0.25rem 0.75rem',
-                              backgroundColor: msg.hasFeedback ? '#0a0a0a' : '#1a1a1a',
-                              border: '1px solid #333',
+                              backgroundColor: msg.hasFeedback ? 'var(--color-bg-main)' : 'var(--color-bg-paper)',
+                              border: '1px solid var(--color-border-strong)',
                               borderRadius: '0.25rem',
-                              color: msg.hasFeedback ? '#666' : '#999',
+                              color: msg.hasFeedback ? 'var(--color-text-disabled)' : 'var(--color-text-secondary)',
                               cursor: msg.hasFeedback ? 'not-allowed' : 'pointer',
                               fontSize: '0.75rem',
                             }}
@@ -1208,8 +1208,8 @@ export default function AgentTrainingPage() {
                   
                   {isTyping && (
                     <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start' }}>
-                      <div style={{ padding: '0.75rem 1rem', backgroundColor: '#1a1a1a', borderRadius: '0.75rem' }}>
-                        <span style={{ color: '#999' }}>Typing...</span>
+                      <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem' }}>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Typing...</span>
                       </div>
                     </div>
                   )}
@@ -1218,7 +1218,7 @@ export default function AgentTrainingPage() {
                 </div>
 
                 {/* Input */}
-                <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
+                <div style={{ padding: '1rem', borderTop: '1px solid var(--color-border-light)' }}>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <input
                       type="text"
@@ -1233,10 +1233,10 @@ export default function AgentTrainingPage() {
                       style={{
                         flex: 1,
                         padding: '0.75rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
@@ -1245,8 +1245,8 @@ export default function AgentTrainingPage() {
                       disabled={!userInput.trim() || isTyping}
                       style={{
                         padding: '0.75rem 1.5rem',
-                        backgroundColor: !userInput.trim() || isTyping ? '#333' : primaryColor,
-                        color: '#fff',
+                        backgroundColor: !userInput.trim() || isTyping ? 'var(--color-border-strong)' : primaryColor,
+                        color: 'var(--color-text-primary)',
                         border: 'none',
                         borderRadius: '0.5rem',
                         cursor: !userInput.trim() || isTyping ? 'not-allowed' : 'pointer',
@@ -1261,8 +1261,8 @@ export default function AgentTrainingPage() {
               
               {/* Column 3: Sales Criteria Scoring Panel */}
               <div style={{
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #1a1a1a',
+                backgroundColor: 'var(--color-bg-main)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.75rem',
                 padding: '1.5rem',
                 height: 'fit-content',
@@ -1270,7 +1270,7 @@ export default function AgentTrainingPage() {
                 top: '2rem'
               }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                       📊 Sales Criteria Scoring
                     </h3>
                     <button
@@ -1278,9 +1278,9 @@ export default function AgentTrainingPage() {
                       style={{
                         padding: '0.25rem 0.5rem',
                         backgroundColor: 'transparent',
-                        border: '1px solid #333',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.375rem',
-                        color: '#999',
+                        color: 'var(--color-text-secondary)',
                         fontSize: '0.75rem',
                         cursor: 'pointer'
                       }}
@@ -1289,7 +1289,7 @@ export default function AgentTrainingPage() {
                     </button>
                   </div>
                   
-                  <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
                     Rate each criterion AND explain why. The AI learns from your explanations, not just numbers.
                   </p>
 
@@ -1301,16 +1301,16 @@ export default function AgentTrainingPage() {
                   {/* Score Sliders */}
                   <div style={{ marginBottom: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
                     {customCriteria.map(({ key, label, icon }) => (
-                      <div key={key} style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
+                      <div key={key} style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-strong)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>
+                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                             {icon} {label}
                           </label>
                           <span style={{ 
                             fontSize: '0.875rem', 
                             fontWeight: 'bold',
-                            color: salesCriteria[key as keyof typeof salesCriteria] >= 8 ? '#10b981' : 
-                                   salesCriteria[key as keyof typeof salesCriteria] >= 6 ? '#fbbf24' : '#ef4444'
+                            color: salesCriteria[key as keyof typeof salesCriteria] >= 8 ? 'var(--color-success)' : 
+                                   salesCriteria[key as keyof typeof salesCriteria] >= 6 ? 'var(--color-warning-light)' : 'var(--color-error)'
                           }}>
                             {salesCriteria[key as keyof typeof salesCriteria]}/10
                           </span>
@@ -1328,7 +1328,7 @@ export default function AgentTrainingPage() {
                             width: '100%',
                             height: '6px',
                             borderRadius: '3px',
-                            background: `linear-gradient(to right, ${primaryColor} 0%, ${primaryColor} ${salesCriteria[key as keyof typeof salesCriteria] * 10}%, #1a1a1a ${salesCriteria[key as keyof typeof salesCriteria] * 10}%, #1a1a1a 100%)`,
+                            background: `linear-gradient(to right, ${primaryColor} 0%, ${primaryColor} ${salesCriteria[key as keyof typeof salesCriteria] * 10}%, var(--color-bg-paper) ${salesCriteria[key as keyof typeof salesCriteria] * 10}%, var(--color-bg-paper) 100%)`,
                             outline: 'none',
                             cursor: 'pointer',
                             marginBottom: '0.75rem'
@@ -1345,10 +1345,10 @@ export default function AgentTrainingPage() {
                             width: '100%',
                             minHeight: '60px',
                             padding: '0.5rem',
-                            backgroundColor: '#0a0a0a',
-                            border: '1px solid #333',
+                            backgroundColor: 'var(--color-bg-main)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.375rem',
-                            color: '#fff',
+                            color: 'var(--color-text-primary)',
                             fontSize: '0.75rem',
                             resize: 'vertical',
                             fontFamily: 'inherit'
@@ -1361,22 +1361,22 @@ export default function AgentTrainingPage() {
                   {/* Overall Score */}
                   <div style={{
                     padding: '1rem',
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-paper)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
                     marginBottom: '1.5rem'
                   }}>
-                    <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem', textTransform: 'uppercase' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem', textTransform: 'uppercase' }}>
                       Overall Session Score
                     </div>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-success)' }}>
                       {Math.round((Object.values(salesCriteria).reduce((sum, score) => sum + score, 0) / customCriteria.length) * 10)}/100
                     </div>
                   </div>
 
                   {/* Session Notes */}
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#999' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
                       Session Notes
                     </label>
                     <textarea
@@ -1387,10 +1387,10 @@ export default function AgentTrainingPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                         resize: 'vertical',
                         fontFamily: 'inherit'
@@ -1405,7 +1405,7 @@ export default function AgentTrainingPage() {
                       width: '100%',
                       padding: '0.75rem',
                       backgroundColor: primaryColor,
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       fontWeight: '600',
@@ -1423,10 +1423,10 @@ export default function AgentTrainingPage() {
             <div>
               <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
                     Training Materials
                   </h2>
-                  <p style={{ color: '#999', fontSize: '0.875rem' }}>
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                     Upload sales training documents (PDFs, Word docs, text files) to enhance your agent&apos;s knowledge
                   </p>
                 </div>
@@ -1436,8 +1436,8 @@ export default function AgentTrainingPage() {
                   disabled={isUploading}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    backgroundColor: isUploading ? '#333' : primaryColor,
-                    color: '#fff',
+                    backgroundColor: isUploading ? 'var(--color-border-strong)' : primaryColor,
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     cursor: isUploading ? 'not-allowed' : 'pointer',
@@ -1459,7 +1459,7 @@ export default function AgentTrainingPage() {
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
                 {uploadedMaterials.length === 0 && (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#666' }}>
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
                     <p>No training materials uploaded yet.</p>
                     <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
                       Upload PDFs like the NEPQ Black Book of Sales, product guides, or sales scripts
@@ -1472,19 +1472,19 @@ export default function AgentTrainingPage() {
                     key={material.id ?? idx}
                     style={{
                       padding: '1.5rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #1a1a1a',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-light)',
                       borderRadius: '0.5rem',
                     }}
                   >
                     <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📄</div>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
                       {material.filename}
                     </h3>
-                    <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>
                       Uploaded: {new Date(material.uploadedAt).toLocaleDateString()}
                     </p>
-                    <p style={{ fontSize: '0.75rem', color: '#666' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                       Size: {typeof material.size === 'number' ? Math.round(material.size / 1024) : material.size} {typeof material.size === 'number' ? 'KB' : ''}
                     </p>
                   </div>
@@ -1495,12 +1495,12 @@ export default function AgentTrainingPage() {
 
           {activeTab === 'history' && (
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
                 Training History
               </h2>
               
               {trainingHistory.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
                   No training sessions yet. Start a conversation in the Training Chat tab.
                 </div>
               )}
@@ -1511,20 +1511,20 @@ export default function AgentTrainingPage() {
                     key={session.id ?? idx}
                     style={{
                       padding: '1.5rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #1a1a1a',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-light)',
                       borderRadius: '0.5rem',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                      <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                         {session.topic}
                       </h3>
-                      <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                         {new Date(session.timestamp).toLocaleString()}
                       </span>
                     </div>
-                    <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                       {session.messageCount ?? session.messagesCount ?? 0} messages exchanged
                     </p>
                   </div>
@@ -1537,10 +1537,10 @@ export default function AgentTrainingPage() {
             <div>
               <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
                     Golden Masters
                   </h2>
-                  <p style={{ color: '#999', fontSize: '0.875rem' }}>
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                     Production-ready snapshots of your trained AI agent
                   </p>
                 </div>
@@ -1550,8 +1550,8 @@ export default function AgentTrainingPage() {
                   disabled={baseModel?.status !== 'ready' || overallScore < 80}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    backgroundColor: (baseModel?.status === 'ready' && overallScore >= 80) ? '#10b981' : '#333',
-                    color: '#fff',
+                    backgroundColor: (baseModel?.status === 'ready' && overallScore >= 80) ? 'var(--color-success)' : 'var(--color-border-strong)',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     cursor: (baseModel?.status === 'ready' && overallScore >= 80) ? 'pointer' : 'not-allowed',
@@ -1563,16 +1563,16 @@ export default function AgentTrainingPage() {
               </div>
 
               {baseModel && baseModel.status !== 'ready' && (
-                <div style={{ padding: '1rem', backgroundColor: '#1a1a0a', border: '1px solid #3a3a0a', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-                  <p style={{ fontSize: '0.875rem', color: '#fbbf24' }}>
+                <div style={{ padding: '1rem', backgroundColor: 'var(--color-warning-dark)', border: '1px solid var(--color-warning-dark)', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-warning-light)' }}>
                     ⚠️ Base Model is not ready yet. Status: <strong>{baseModel.status}</strong>. Continue training to reach &quot;ready&quot; status.
                   </p>
                 </div>
               )}
               
               {overallScore < 80 && (
-                <div style={{ padding: '1rem', backgroundColor: '#1a1a0a', border: '1px solid #3a3a0a', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-                  <p style={{ fontSize: '0.875rem', color: '#fbbf24' }}>
+                <div style={{ padding: '1rem', backgroundColor: 'var(--color-warning-dark)', border: '1px solid var(--color-warning-dark)', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-warning-light)' }}>
                     ⚠️ Training score is below 80%. Current score: <strong>{overallScore}%</strong>. Continue training to improve.
                   </p>
                 </div>
@@ -1580,7 +1580,7 @@ export default function AgentTrainingPage() {
               
               <div style={{ display: 'grid', gap: '1rem' }}>
                 {goldenMasters.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                  <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
                     <p>No Golden Masters saved yet.</p>
                     <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
                       Train your Base Model to 80%+ score, then save your first Golden Master
@@ -1593,24 +1593,24 @@ export default function AgentTrainingPage() {
                     key={gm.id}
                     style={{
                       padding: '1.5rem',
-                      backgroundColor: '#0a0a0a',
-                      border: gm.isActive ? `2px solid ${primaryColor}` : '1px solid #1a1a1a',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: gm.isActive ? `2px solid ${primaryColor}` : '1px solid var(--color-border-light)',
                       borderRadius: '0.5rem',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                       <div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                           {gm.version}
-                          {gm.isActive && <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', color: '#10b981', backgroundColor: '#0a2a1a', padding: '0.25rem 0.75rem', borderRadius: '1rem' }}>LIVE</span>}
+                          {gm.isActive && <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', color: 'var(--color-success)', backgroundColor: 'var(--color-success-dark)', padding: '0.25rem 0.75rem', borderRadius: '1rem' }}>LIVE</span>}
                         </h3>
                         {gm.createdAt && (
-                          <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                             Created: {new Date(gm.createdAt).toLocaleString()}
                           </p>
                         )}
                         {gm.deployedAt && (
-                          <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                             Deployed: {new Date(gm.deployedAt).toLocaleString()}
                           </p>
                         )}
@@ -1623,7 +1623,7 @@ export default function AgentTrainingPage() {
                             style={{
                               padding: '0.5rem 1rem',
                               backgroundColor: primaryColor,
-                              color: '#fff',
+                              color: 'var(--color-text-primary)',
                               border: 'none',
                               borderRadius: '0.25rem',
                               cursor: 'pointer',
@@ -1639,23 +1639,23 @@ export default function AgentTrainingPage() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '1rem' }}>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Training Score</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#10b981' }}>{gm.trainingScore}%</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Training Score</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-success)' }}>{gm.trainingScore}%</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Scenarios Trained</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff' }}>{gm.trainedScenarios?.length ?? 0}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Scenarios Trained</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{gm.trainedScenarios?.length ?? 0}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Base Model</div>
-                        <div style={{ fontSize: '0.875rem', color: '#999' }}>{gm.baseModelId.substring(0, 12)}...</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Base Model</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>{gm.baseModelId.substring(0, 12)}...</div>
                       </div>
                     </div>
 
                     {gm.notes && (
-                      <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Notes</div>
-                        <p style={{ fontSize: '0.875rem', color: '#fff' }}>{gm.notes}</p>
+                      <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Notes</div>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>{gm.notes}</p>
                       </div>
                     )}
                   </div>
@@ -1688,26 +1688,26 @@ export default function AgentTrainingPage() {
             style={{
               width: '90%',
               maxWidth: '600px',
-              backgroundColor: '#0a0a0a',
-              border: '1px solid #333',
+              backgroundColor: 'var(--color-bg-main)',
+              border: '1px solid var(--color-border-strong)',
               borderRadius: '0.75rem',
               padding: '2rem',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
               Provide Feedback on Agent Response
             </h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 How was this response?
               </label>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 {([
-                  { value: 'correct' as const, label: '✅ Correct', color: '#10b981' },
-                  { value: 'could-improve' as const, label: '⚠️ Could Improve', color: '#fbbf24' },
-                  { value: 'incorrect' as const, label: '❌ Incorrect', color: '#ef4444' },
+                  { value: 'correct' as const, label: '✅ Correct', color: 'var(--color-success)' },
+                  { value: 'could-improve' as const, label: '⚠️ Could Improve', color: 'var(--color-warning-light)' },
+                  { value: 'incorrect' as const, label: '❌ Incorrect', color: 'var(--color-error)' },
                 ]).map((option) => (
                   <button
                     key={option.value}
@@ -1715,10 +1715,10 @@ export default function AgentTrainingPage() {
                     style={{
                       flex: 1,
                       padding: '0.75rem',
-                      backgroundColor: feedbackType === option.value ? option.color : '#1a1a1a',
-                      border: feedbackType === option.value ? `2px solid ${option.color}` : '1px solid #333',
+                      backgroundColor: feedbackType === option.value ? option.color : 'var(--color-bg-paper)',
+                      border: feedbackType === option.value ? `2px solid ${option.color}` : '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       cursor: 'pointer',
                       fontWeight: feedbackType === option.value ? '600' : '400',
                     }}
@@ -1730,7 +1730,7 @@ export default function AgentTrainingPage() {
             </div>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                 Why? (Required) *
               </label>
               <textarea
@@ -1741,10 +1741,10 @@ export default function AgentTrainingPage() {
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   fontFamily: 'inherit',
                   resize: 'vertical',
@@ -1754,7 +1754,7 @@ export default function AgentTrainingPage() {
             
             {feedbackType !== 'correct' && (
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: '600' }}>
                   Better Response or Guidance *
                 </label>
                 <textarea
@@ -1765,10 +1765,10 @@ export default function AgentTrainingPage() {
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-paper)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                     fontFamily: 'inherit',
                     resize: 'vertical',
@@ -1783,9 +1783,9 @@ export default function AgentTrainingPage() {
                 style={{
                   padding: '0.75rem 1.5rem',
                   backgroundColor: 'transparent',
-                  border: '1px solid #333',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
-                  color: '#999',
+                  color: 'var(--color-text-secondary)',
                   cursor: 'pointer',
                   fontWeight: '600',
                 }}
@@ -1799,7 +1799,7 @@ export default function AgentTrainingPage() {
                   backgroundColor: primaryColor,
                   border: 'none',
                   borderRadius: '0.5rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   cursor: 'pointer',
                   fontWeight: '600',
                 }}

@@ -21,16 +21,16 @@ export default function StripeIntegration({
   const [apiKey, setApiKey] = useState('');
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)fff'
-    : 'var(--color-text-primary)fff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
 
   const borderColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
-    : '#333333';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-main)'
+    : 'var(--color-border-main)';
 
-  const primaryColor = typeof window !== 'undefined' 
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
-    : '#6366f1';
+  const primaryColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
 
   const handleConnect = async () => {
     if (!apiKey) {

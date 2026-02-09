@@ -289,9 +289,9 @@ export default function EntityTablePage() {
     const baseInputStyle = {
       width: '100%',
       padding: '0.625rem 0.875rem',
-      backgroundColor: '#1a1a1a',
-      color: '#fff',
-      border: '1px solid #333',
+      backgroundColor: 'var(--color-bg-paper)',
+      color: 'var(--color-text-primary)',
+      border: '1px solid var(--color-border-strong)',
       borderRadius: '0.5rem',
       fontSize: '0.875rem',
     };
@@ -304,9 +304,9 @@ export default function EntityTablePage() {
               type="checkbox"
               checked={!!value}
               onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
-              style={{ width: '1.25rem', height: '1.25rem', accentColor: '#6366f1' }}
+              style={{ width: '1.25rem', height: '1.25rem', accentColor: 'var(--color-primary)' }}
             />
-            <span style={{ color: '#ccc', fontSize: '0.875rem' }}>
+            <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
               {value ? 'Yes' : 'No'}
             </span>
           </label>
@@ -432,13 +432,13 @@ export default function EntityTablePage() {
   const singularName = (schema?.singularName && schema.singularName !== '') ? schema.singularName : 'Record';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       {/* Header */}
-      <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }}>
+      <div style={{ backgroundColor: 'var(--color-bg-main)', borderBottom: '1px solid var(--color-border-light)' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 2rem' }}>
           {/* Notification */}
           {notification && (
-            <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', backgroundColor: notification.type === 'success' ? '#065f46' : '#7f1d1d', border: `1px solid ${notification.type === 'success' ? '#10b981' : '#dc2626'}`, borderRadius: '0.5rem', color: notification.type === 'success' ? '#6ee7b7' : '#fca5a5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', backgroundColor: notification.type === 'success' ? 'var(--color-success-dark)' : 'var(--color-error-dark)', border: `1px solid ${notification.type === 'success' ? 'var(--color-success)' : 'var(--color-error)'}`, borderRadius: '0.5rem', color: notification.type === 'success' ? 'var(--color-success-light)' : 'var(--color-error-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>{notification.message}</span>
               <button onClick={() => setNotification(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.25rem', opacity: 0.8 }}>&times;</button>
             </div>
@@ -446,16 +446,16 @@ export default function EntityTablePage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Link href={`/schemas`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+              <Link href={`/schemas`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
                 ← Back to Schemas
               </Link>
-              <div style={{ height: '1.5rem', width: '1px', backgroundColor: '#333' }}></div>
+              <div style={{ height: '1.5rem', width: '1px', backgroundColor: 'var(--color-border-strong)' }}></div>
               <div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>{entityIcon}</span>
                   {entityDisplayName}
                 </h1>
-                <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.25rem' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
                   {loading ? 'Loading...' : `${filteredRecords.length} records`}
                   {searchTerm && ` (filtered from ${records.length})`}
                 </p>
@@ -471,19 +471,19 @@ export default function EntityTablePage() {
                   placeholder="Search..."
                   style={{
                     padding: '0.5rem 1rem 0.5rem 2.5rem',
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-paper)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                     width: '200px',
                   }}
                 />
-                <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#666' }}>🔍</span>
+                <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-disabled)' }}>🔍</span>
               </div>
               <button
                 onClick={() => setIsAdding(true)}
-                style={{ padding: '0.625rem 1.5rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                style={{ padding: '0.625rem 1.5rem', backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
               >
                 + Add {singularName}
               </button>
@@ -495,7 +495,7 @@ export default function EntityTablePage() {
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem' }}>
         {/* Loading State */}
         {loading && (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
             <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
             <p>Loading {typeof entityDisplayName === 'string' ? entityDisplayName.toLowerCase() : 'records'}...</p>
           </div>
@@ -503,37 +503,37 @@ export default function EntityTablePage() {
 
         {/* Error State */}
         {error && (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#dc2626' }}>
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-error)' }}>
             <p>Error: {error.message}</p>
           </div>
         )}
 
         {/* Table */}
         {!loading && !error && (
-          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '0.75rem', border: '1px solid #1a1a1a', overflow: 'hidden' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '0.75rem', border: '1px solid var(--color-border-light)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: '#111' }}>
+              <thead style={{ backgroundColor: 'var(--color-bg-main)' }}>
                 <tr>
                   {tableFields.map(field => (
-                    <th key={field.key} style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#999', textTransform: 'uppercase', borderBottom: '2px solid #1a1a1a' }}>
+                    <th key={field.key} style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase', borderBottom: '2px solid var(--color-border-light)' }}>
                       {field.label}
                     </th>
                   ))}
-                  <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: '#999', textTransform: 'uppercase', borderBottom: '2px solid #1a1a1a' }}>
+                  <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase', borderBottom: '2px solid var(--color-border-light)' }}>
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRecords.map((record) => (
-                  <tr key={String(record.id)} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                  <tr key={String(record.id)} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                     {tableFields.map(field => (
-                      <td key={field.key} style={{ padding: '1rem 1.5rem', color: '#fff' }}>
+                      <td key={field.key} style={{ padding: '1rem 1.5rem', color: 'var(--color-text-primary)' }}>
                         {field.type === 'checkbox' ? (
                           <span style={{
                             padding: '0.25rem 0.5rem',
-                            backgroundColor: record[field.key] ? '#065f46' : '#333',
-                            color: record[field.key] ? '#6ee7b7' : '#999',
+                            backgroundColor: record[field.key] ? 'var(--color-success-dark)' : 'var(--color-border-strong)',
+                            color: record[field.key] ? 'var(--color-success-light)' : 'var(--color-text-secondary)',
                             borderRadius: '0.25rem',
                             fontSize: '0.75rem'
                           }}>
@@ -542,8 +542,8 @@ export default function EntityTablePage() {
                         ) : field.type === 'singleSelect' && record[field.key] ? (
                           <span style={{
                             padding: '0.25rem 0.5rem',
-                            backgroundColor: '#1e1b4b',
-                            color: '#a5b4fc',
+                            backgroundColor: 'var(--color-primary-dark)',
+                            color: 'var(--color-primary-light)',
                             borderRadius: '0.25rem',
                             fontSize: '0.75rem'
                           }}>
@@ -559,13 +559,13 @@ export default function EntityTablePage() {
                     <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                       <button
                         onClick={() => handleEdit(record as EntityRecord)}
-                        style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem', fontWeight: '500' }}
+                        style={{ color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem', fontWeight: '500' }}
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(String(record.id))}
-                        style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+                        style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
                       >
                         Delete
                       </button>
@@ -576,7 +576,7 @@ export default function EntityTablePage() {
             </table>
 
             {filteredRecords.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+              <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
                 {searchTerm ? (
                   <p>No {typeof entityDisplayName === 'string' ? entityDisplayName.toLowerCase() : 'records'} matching &quot;{searchTerm}&quot;</p>
                 ) : (
@@ -590,15 +590,15 @@ export default function EntityTablePage() {
         {/* Add/Edit Modal */}
         {(isAdding || editingId) && (
           <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}>
-            <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', maxWidth: '40rem', width: '100%', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', maxWidth: '40rem', width: '100%', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ backgroundColor: 'var(--color-bg-main)', borderBottom: '1px solid var(--color-border-light)', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>{entityIcon}</span>
                   {isAdding ? `Add ${singularName}` : `Edit ${singularName}`}
                 </h2>
                 <button
                   onClick={closeModal}
-                  style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}
+                  style={{ color: 'var(--color-text-disabled)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}
                 >
                   ✕
                 </button>
@@ -607,23 +607,23 @@ export default function EntityTablePage() {
               <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto', flex: 1 }}>
                 {fields.map(field => (
                   <div key={field.key}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                      {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                      {field.label} {field.required && <span style={{ color: 'var(--color-error)' }}>*</span>}
                     </label>
                     {renderFormField(field)}
                   </div>
                 ))}
 
-                <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #1a1a1a' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border-light)' }}>
                   <button
                     onClick={closeModal}
-                    style={{ flex: 1, padding: '0.75rem 1rem', border: '1px solid #333', color: '#999', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                    style={{ flex: 1, padding: '0.75rem 1rem', border: '1px solid var(--color-border-strong)', color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => void (isAdding ? handleAdd() : handleUpdate())}
-                    style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', border: 'none' }}
+                    style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', border: 'none' }}
                   >
                     {isAdding ? 'Add' : 'Update'}
                   </button>
@@ -636,11 +636,11 @@ export default function EntityTablePage() {
         {/* Confirmation Dialog */}
         {confirmDialog && (
           <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 60 }}>
-            <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '1.5rem', maxWidth: '400px', width: '100%' }}>
-              <p style={{ color: '#fff', marginBottom: '1rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
+            <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', padding: '1.5rem', maxWidth: '400px', width: '100%' }}>
+              <p style={{ color: 'var(--color-text-primary)', marginBottom: '1rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button onClick={() => setConfirmDialog(null)} style={{ padding: '0.5rem 1rem', border: '1px solid #333', color: '#999', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>Cancel</button>
-                <button onClick={confirmDialog.onConfirm} style={{ padding: '0.5rem 1rem', backgroundColor: '#dc2626', color: 'white', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', border: 'none' }}>Delete</button>
+                <button onClick={() => setConfirmDialog(null)} style={{ padding: '0.5rem 1rem', border: '1px solid var(--color-border-strong)', color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}>Cancel</button>
+                <button onClick={confirmDialog.onConfirm} style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--color-error)', color: 'white', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', border: 'none' }}>Delete</button>
               </div>
             </div>
           </div>

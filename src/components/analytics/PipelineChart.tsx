@@ -21,35 +21,35 @@ interface TooltipPayloadEntry {
 }
 
 export default function PipelineChart({ data, showDeals = false }: PipelineChartProps) {
-  const primaryColor = typeof window !== 'undefined' 
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
-    : '#6366f1';
-  
+  const primaryColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
+
   const secondaryColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#8b5cf6'
-    : '#8b5cf6';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || 'var(--color-secondary)'
+    : 'var(--color-secondary)';
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || '#ffffff'
-    : '#ffffff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
 
   const borderColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
-    : '#333333';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-main)'
+    : 'var(--color-border-main)';
 
   // Generate color variations for stages
   const colors = [
     primaryColor,
     secondaryColor,
-    typeof window !== 'undefined' 
-      ? getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#ec4899'
-      : '#ec4899',
     typeof window !== 'undefined'
-      ? getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || '#10b981'
-      : '#10b981',
+      ? getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || 'var(--color-accent)'
+      : 'var(--color-accent)',
     typeof window !== 'undefined'
-      ? getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || '#f59e0b'
-      : '#f59e0b',
+      ? getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim() || 'var(--color-success)'
+      : 'var(--color-success)',
+    typeof window !== 'undefined'
+      ? getComputedStyle(document.documentElement).getPropertyValue('--color-warning').trim() || 'var(--color-warning)'
+      : 'var(--color-warning)',
   ];
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayloadEntry[] }) => {

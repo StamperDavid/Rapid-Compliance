@@ -10,7 +10,7 @@ export default function AIAgentsPage() {
   const { theme } = useOrgTheme();
 
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   const agentOptions = [
     {
@@ -42,8 +42,8 @@ export default function AIAgentsPage() {
               <Link href={`/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
                 ← Back to Settings
               </Link>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem', marginTop: '1rem' }}>AI Agent</h1>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>Manage your Sales & Customer Service AI Agent</p>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem', marginTop: '1rem' }}>AI Agent</h1>
+              <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>Manage your Sales & Customer Service AI Agent</p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
@@ -52,8 +52,8 @@ export default function AIAgentsPage() {
                   key={option.title}
                   href={option.href}
                   style={{ 
-                    backgroundColor: '#1a1a1a', 
-                    border: '1px solid #333', 
+                    backgroundColor: 'var(--color-bg-paper)', 
+                    border: '1px solid var(--color-border-strong)', 
                     borderRadius: '1rem', 
                     padding: '2rem',
                     textDecoration: 'none',
@@ -67,7 +67,7 @@ export default function AIAgentsPage() {
                     e.currentTarget.style.boxShadow = `0 10px 40px rgba(99, 102, 241, 0.2)`;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#333';
+                    e.currentTarget.style.borderColor = 'var(--color-border-strong)';
                     e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
@@ -87,10 +87,10 @@ export default function AIAgentsPage() {
                       {option.icon}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                      <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                         {option.title}
                       </h3>
-                      <p style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.5' }}>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>
                         {option.description}
                       </p>
                     </div>
@@ -101,16 +101,16 @@ export default function AIAgentsPage() {
                     gridTemplateColumns: '1fr 1fr', 
                     gap: '1rem', 
                     padding: '1.25rem', 
-                    backgroundColor: '#0a0a0a', 
+                    backgroundColor: 'var(--color-bg-main)', 
                     borderRadius: '0.75rem',
-                    border: '1px solid #222'
+                    border: '1px solid var(--color-bg-elevated)'
                   }}>
                     {option.stats.map((stat) => (
                       <div key={stat.label}>
-                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>
                           {stat.label}
                         </div>
-                        <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff' }}>
+                        <div style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                           {stat.value}
                         </div>
                       </div>
@@ -120,7 +120,7 @@ export default function AIAgentsPage() {
                   <div style={{ 
                     marginTop: '1.5rem',
                     padding: '0.75rem',
-                    backgroundColor: '#222',
+                    backgroundColor: 'var(--color-bg-elevated)',
                     borderRadius: '0.5rem',
                     textAlign: 'center',
                     color: primaryColor,

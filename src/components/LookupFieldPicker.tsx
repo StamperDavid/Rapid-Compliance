@@ -149,7 +149,7 @@ export default function LookupFieldPicker({
               style={{
                 padding: '0.25rem 0.5rem',
                 backgroundColor: 'var(--color-primary)',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.25rem',
                 fontSize: '0.75rem',
@@ -164,8 +164,8 @@ export default function LookupFieldPicker({
               disabled={disabled}
               style={{
                 padding: '0.25rem 0.5rem',
-                backgroundColor: '#6b7280',
-                color: '#fff',
+                backgroundColor: 'var(--color-text-disabled)',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.25rem',
                 fontSize: '0.75rem',
@@ -223,11 +223,11 @@ export default function LookupFieldPicker({
             }}
           >
             {loading ? (
-              <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
+              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--color-text-disabled)' }}>
                 Loading...
               </div>
             ) : records.length === 0 ? (
-              <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
+              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--color-text-disabled)' }}>
                 {searchTerm ? 'No records found' : `No ${targetEntity} available`}
               </div>
             ) : (
@@ -252,12 +252,12 @@ export default function LookupFieldPicker({
                     {getDisplayName(record)}
                   </div>
                   {record.email && (
-                    <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.125rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.125rem' }}>
                       {record.email}
                     </div>
                   )}
                   {record.company && (
-                    <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.125rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.125rem' }}>
                       {record.company}
                     </div>
                   )}

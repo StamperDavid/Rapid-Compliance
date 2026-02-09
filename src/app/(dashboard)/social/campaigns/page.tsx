@@ -115,22 +115,22 @@ export default function SocialMediaCampaignsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': case 'published': return '#22c55e';
-      case 'scheduled': return '#6366f1';
-      case 'paused': case 'draft': return '#f59e0b';
-      case 'completed': return '#666';
-      case 'failed': return '#ef4444';
-      default: return '#666';
+      case 'active': case 'published': return 'var(--color-success)';
+      case 'scheduled': return 'var(--color-primary)';
+      case 'paused': case 'draft': return 'var(--color-warning)';
+      case 'completed': return 'var(--color-text-disabled)';
+      case 'failed': return 'var(--color-error)';
+      default: return 'var(--color-text-disabled)';
     }
   };
 
-  const primaryColor = '#6366f1';
+  const primaryColor = 'var(--color-primary)';
 
   return (
     <div style={{
       minHeight: '100vh',
       padding: '2rem',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)',
+      background: 'linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-paper) 50%, var(--color-bg-main) 100%)',
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
@@ -144,7 +144,7 @@ export default function SocialMediaCampaignsPage() {
             <h1 style={{
               fontSize: '2rem',
               fontWeight: '700',
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               marginBottom: '0.5rem',
               display: 'flex',
               alignItems: 'center',
@@ -152,7 +152,7 @@ export default function SocialMediaCampaignsPage() {
             }}>
               <span>📱</span> Social Media Hub
             </h1>
-            <p style={{ color: '#666', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
               Powered by Autonomous Posting Agent
             </p>
           </div>
@@ -161,10 +161,10 @@ export default function SocialMediaCampaignsPage() {
             <button
               style={{
                 padding: '0.75rem 1.5rem',
-                background: `linear-gradient(135deg, ${primaryColor} 0%, #4f46e5 100%)`,
+                background: `linear-gradient(135deg, ${primaryColor} 0%, var(--color-primary-dark) 100%)`,
                 border: 'none',
                 borderRadius: '0.5rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -179,9 +179,9 @@ export default function SocialMediaCampaignsPage() {
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: 'transparent',
-                border: '1px solid #333',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.5rem',
-                color: '#999',
+                color: 'var(--color-text-secondary)',
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -200,23 +200,23 @@ export default function SocialMediaCampaignsPage() {
           marginBottom: '2rem',
         }}>
           {[
-            { label: 'Active Campaigns', value: campaigns.filter(c => c.status === 'active').length.toString(), color: '#22c55e', icon: '📊' },
-            { label: 'Posts This Week', value: '18', color: '#6366f1', icon: '📝' },
-            { label: 'Total Engagement', value: '15.7K', color: '#f59e0b', icon: '💬' },
-            { label: 'Agent Status', value: 'Active', color: '#22c55e', icon: '🤖' },
+            { label: 'Active Campaigns', value: campaigns.filter(c => c.status === 'active').length.toString(), color: 'var(--color-success)', icon: '📊' },
+            { label: 'Posts This Week', value: '18', color: 'var(--color-primary)', icon: '📝' },
+            { label: 'Total Engagement', value: '15.7K', color: 'var(--color-warning)', icon: '💬' },
+            { label: 'Agent Status', value: 'Active', color: 'var(--color-success)', icon: '🤖' },
           ].map((stat, i) => (
             <div
               key={i}
               style={{
                 backgroundColor: 'rgba(26, 26, 26, 0.8)',
-                border: '1px solid #333',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '1rem',
                 padding: '1.25rem',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '1.25rem' }}>{stat.icon}</span>
-                <span style={{ color: '#666', fontSize: '0.75rem' }}>{stat.label}</span>
+                <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>{stat.label}</span>
               </div>
               <div style={{ color: stat.color, fontSize: '1.5rem', fontWeight: '700' }}>
                 {stat.value}
@@ -230,7 +230,7 @@ export default function SocialMediaCampaignsPage() {
           display: 'flex',
           gap: '0.5rem',
           marginBottom: '2rem',
-          borderBottom: '1px solid #333',
+          borderBottom: '1px solid var(--color-border-strong)',
           paddingBottom: '1rem',
         }}>
           {[
@@ -245,9 +245,9 @@ export default function SocialMediaCampaignsPage() {
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: activeTab === tab.id ? `${primaryColor}22` : 'transparent',
-                border: `1px solid ${activeTab === tab.id ? primaryColor : '#333'}`,
+                border: `1px solid ${activeTab === tab.id ? primaryColor : 'var(--color-border-strong)'}`,
                 borderRadius: '0.5rem',
-                color: activeTab === tab.id ? primaryColor : '#999',
+                color: activeTab === tab.id ? primaryColor : 'var(--color-text-secondary)',
                 fontSize: '0.875rem',
                 fontWeight: '600',
                 cursor: 'pointer',
@@ -270,7 +270,7 @@ export default function SocialMediaCampaignsPage() {
                 key={campaign.id}
                 style={{
                   backgroundColor: 'rgba(26, 26, 26, 0.8)',
-                  border: '1px solid #333',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '1rem',
                   padding: '1.5rem',
                 }}
@@ -282,7 +282,7 @@ export default function SocialMediaCampaignsPage() {
                 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                      <h3 style={{ color: '#fff', fontSize: '1.125rem', fontWeight: '600', margin: 0 }}>
+                      <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.125rem', fontWeight: '600', margin: 0 }}>
                         {campaign.name}
                       </h3>
                       <span style={{
@@ -298,7 +298,7 @@ export default function SocialMediaCampaignsPage() {
                         {campaign.status}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: '#666', fontSize: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                       <span>
                         {campaign.platforms.map(p => getPlatformIcon(p)).join(' ')}
                       </span>
@@ -311,10 +311,10 @@ export default function SocialMediaCampaignsPage() {
                     <button
                       style={{
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.375rem',
-                        color: '#999',
+                        color: 'var(--color-text-secondary)',
                         fontSize: '0.75rem',
                         cursor: 'pointer',
                       }}
@@ -324,10 +324,10 @@ export default function SocialMediaCampaignsPage() {
                     <button
                       style={{
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.375rem',
-                        color: '#999',
+                        color: 'var(--color-text-secondary)',
                         fontSize: '0.75rem',
                         cursor: 'pointer',
                       }}
@@ -337,10 +337,10 @@ export default function SocialMediaCampaignsPage() {
                     <button
                       style={{
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.375rem',
-                        color: '#999',
+                        color: 'var(--color-text-secondary)',
                         fontSize: '0.75rem',
                         cursor: 'pointer',
                       }}
@@ -362,7 +362,7 @@ export default function SocialMediaCampaignsPage() {
                 key={post.id}
                 style={{
                   backgroundColor: 'rgba(26, 26, 26, 0.8)',
-                  border: '1px solid #333',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '1rem',
                   padding: '1.5rem',
                 }}
@@ -388,12 +388,12 @@ export default function SocialMediaCampaignsPage() {
                       {post.status}
                     </span>
                     {post.scheduledFor && (
-                      <span style={{ color: '#666', fontSize: '0.75rem' }}>
+                      <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                         Scheduled: {new Date(post.scheduledFor).toLocaleString()}
                       </span>
                     )}
                     {post.publishedAt && (
-                      <span style={{ color: '#666', fontSize: '0.75rem' }}>
+                      <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                         Published: {new Date(post.publishedAt).toLocaleString()}
                       </span>
                     )}
@@ -402,10 +402,10 @@ export default function SocialMediaCampaignsPage() {
                     <button
                       style={{
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.375rem',
-                        color: '#999',
+                        color: 'var(--color-text-secondary)',
                         fontSize: '0.75rem',
                         cursor: 'pointer',
                       }}
@@ -431,7 +431,7 @@ export default function SocialMediaCampaignsPage() {
                 </div>
 
                 <p style={{
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.875rem',
                   lineHeight: '1.6',
                   margin: 0,
@@ -445,30 +445,30 @@ export default function SocialMediaCampaignsPage() {
                     gap: '1.5rem',
                     marginTop: '1rem',
                     padding: '0.75rem',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-main)',
                     borderRadius: '0.5rem',
                   }}>
                     <div>
-                      <span style={{ color: '#666', fontSize: '0.625rem' }}>Likes</span>
-                      <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.625rem' }}>Likes</span>
+                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
                         {post.engagement.likes}
                       </div>
                     </div>
                     <div>
-                      <span style={{ color: '#666', fontSize: '0.625rem' }}>Comments</span>
-                      <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.625rem' }}>Comments</span>
+                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
                         {post.engagement.comments}
                       </div>
                     </div>
                     <div>
-                      <span style={{ color: '#666', fontSize: '0.625rem' }}>Shares</span>
-                      <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.625rem' }}>Shares</span>
+                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
                         {post.engagement.shares}
                       </div>
                     </div>
                     <div>
-                      <span style={{ color: '#666', fontSize: '0.625rem' }}>Views</span>
-                      <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.625rem' }}>Views</span>
+                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
                         {post.engagement.views.toLocaleString()}
                       </div>
                     </div>
@@ -483,16 +483,16 @@ export default function SocialMediaCampaignsPage() {
         {activeTab === 'analytics' && (
           <div style={{
             backgroundColor: 'rgba(26, 26, 26, 0.8)',
-            border: '1px solid #333',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '1rem',
             padding: '2rem',
             textAlign: 'center',
           }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📈</div>
-            <h3 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+            <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
               Social Analytics Dashboard
             </h3>
-            <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>
               Detailed engagement metrics and AI-powered insights coming soon
             </p>
             <div style={{
@@ -512,14 +512,14 @@ export default function SocialMediaCampaignsPage() {
                   key={i}
                   style={{
                     padding: '1rem',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-main)',
                     borderRadius: '0.5rem',
                   }}
                 >
-                  <div style={{ color: '#666', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                     {stat.label}
                   </div>
-                  <div style={{ color: '#fff', fontSize: '1.25rem', fontWeight: '600' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', fontWeight: '600' }}>
                     {stat.value}
                   </div>
                 </div>
@@ -532,11 +532,11 @@ export default function SocialMediaCampaignsPage() {
         {activeTab === 'settings' && (
           <div style={{
             backgroundColor: 'rgba(26, 26, 26, 0.8)',
-            border: '1px solid #333',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '1rem',
             padding: '1.5rem',
           }}>
-            <h3 style={{ color: '#fff', fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem' }}>
+            <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem' }}>
               Connected Accounts
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -553,18 +553,18 @@ export default function SocialMediaCampaignsPage() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '1rem',
-                    backgroundColor: '#0a0a0a',
+                    backgroundColor: 'var(--color-bg-main)',
                     borderRadius: '0.5rem',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ fontSize: '1.5rem' }}>{account.icon}</span>
                     <div>
-                      <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>
+                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>
                         {account.platform}
                       </div>
                       {account.connected && (
-                        <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                        <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                           {account.account}
                         </div>
                       )}
@@ -574,9 +574,9 @@ export default function SocialMediaCampaignsPage() {
                     style={{
                       padding: '0.5rem 1rem',
                       backgroundColor: account.connected ? 'rgba(239, 68, 68, 0.1)' : `${primaryColor}22`,
-                      border: `1px solid ${account.connected ? '#ef4444' : primaryColor}`,
+                      border: `1px solid ${account.connected ? 'var(--color-error)' : primaryColor}`,
                       borderRadius: '0.375rem',
-                      color: account.connected ? '#ef4444' : primaryColor,
+                      color: account.connected ? 'var(--color-error)' : primaryColor,
                       fontSize: '0.75rem',
                       cursor: 'pointer',
                     }}
@@ -587,12 +587,12 @@ export default function SocialMediaCampaignsPage() {
               ))}
             </div>
 
-            <h3 style={{ color: '#fff', fontSize: '1.125rem', fontWeight: '600', margin: '2rem 0 1rem' }}>
+            <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.125rem', fontWeight: '600', margin: '2rem 0 1rem' }}>
               Autonomous Posting Settings
             </h3>
             <div style={{
               padding: '1rem',
-              backgroundColor: '#0a0a0a',
+              backgroundColor: 'var(--color-bg-main)',
               borderRadius: '0.5rem',
             }}>
               <div style={{
@@ -602,10 +602,10 @@ export default function SocialMediaCampaignsPage() {
                 marginBottom: '1rem',
               }}>
                 <div>
-                  <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>
                     Enable Autonomous Posting
                   </div>
-                  <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                     Let AI schedule and post content automatically
                   </div>
                 </div>
@@ -613,7 +613,7 @@ export default function SocialMediaCampaignsPage() {
                   style={{
                     width: '48px',
                     height: '26px',
-                    backgroundColor: '#22c55e',
+                    backgroundColor: 'var(--color-success)',
                     borderRadius: '13px',
                     border: 'none',
                     cursor: 'pointer',
@@ -626,7 +626,7 @@ export default function SocialMediaCampaignsPage() {
                     left: '25px',
                     width: '20px',
                     height: '20px',
-                    backgroundColor: '#fff',
+                    backgroundColor: 'var(--color-text-primary)',
                     borderRadius: '50%',
                   }} />
                 </button>
@@ -637,10 +637,10 @@ export default function SocialMediaCampaignsPage() {
                 alignItems: 'center',
               }}>
                 <div>
-                  <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>
                     Require Approval Before Posting
                   </div>
-                  <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
                     Review AI-generated posts before they go live
                   </div>
                 </div>
@@ -648,7 +648,7 @@ export default function SocialMediaCampaignsPage() {
                   style={{
                     width: '48px',
                     height: '26px',
-                    backgroundColor: '#22c55e',
+                    backgroundColor: 'var(--color-success)',
                     borderRadius: '13px',
                     border: 'none',
                     cursor: 'pointer',
@@ -661,7 +661,7 @@ export default function SocialMediaCampaignsPage() {
                     left: '25px',
                     width: '20px',
                     height: '20px',
-                    backgroundColor: '#fff',
+                    backgroundColor: 'var(--color-text-primary)',
                     borderRadius: '50%',
                   }} />
                 </button>

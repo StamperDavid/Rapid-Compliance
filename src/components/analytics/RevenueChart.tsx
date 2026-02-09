@@ -25,24 +25,24 @@ interface TooltipPayloadEntry {
 export default function RevenueChart({ data, type = 'line', showDeals = false, showAverage = false }: RevenueChartProps) {
   // Get theme colors from CSS variables
   const primaryColor = typeof window !== 'undefined' 
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
-    : '#6366f1';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
   
   const secondaryColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || '#8b5cf6'
-    : '#8b5cf6';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim() || 'var(--color-secondary)'
+    : 'var(--color-secondary)';
   
   const accentColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#ec4899'
-    : '#ec4899';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || 'var(--color-secondary-light)'
+    : 'var(--color-secondary-light)';
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || '#ffffff'
-    : '#ffffff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
 
   const borderColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
-    : '#333333';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-strong)'
+    : 'var(--color-border-strong)';
 
   const ChartComponent = type === 'line' ? LineChart : BarChart;
   const DataComponent = type === 'line' ? Line : Bar;

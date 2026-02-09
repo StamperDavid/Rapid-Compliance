@@ -149,7 +149,7 @@ export default function BlogManagementPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'var(--color-bg-elevated)' }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
         <div style={{
@@ -159,10 +159,10 @@ export default function BlogManagementPage() {
           marginBottom: '2rem',
         }}>
           <div>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: '#111' }}>
+            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
               Blog Posts
             </h1>
-            <p style={{ margin: 0, color: '#666' }}>
+            <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
               Create and manage your blog content
             </p>
           </div>
@@ -172,7 +172,7 @@ export default function BlogManagementPage() {
               onClick={manageCategories}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: '#6c757d',
+                background: 'var(--color-text-secondary)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -187,7 +187,7 @@ export default function BlogManagementPage() {
               onClick={createNewPost}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: '#007bff',
+                background: 'var(--color-info)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -214,9 +214,9 @@ export default function BlogManagementPage() {
               onClick={() => setFilter('all')}
               style={{
                 padding: '0.5rem 1rem',
-                background: filter === 'all' ? '#007bff' : 'white',
-                color: filter === 'all' ? 'white' : '#495057',
-                border: '1px solid #dee2e6',
+                background: filter === 'all' ? 'var(--color-info)' : 'white',
+                color: filter === 'all' ? 'white' : 'var(--color-text-disabled)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -228,9 +228,9 @@ export default function BlogManagementPage() {
               onClick={() => setFilter('draft')}
               style={{
                 padding: '0.5rem 1rem',
-                background: filter === 'draft' ? '#007bff' : 'white',
-                color: filter === 'draft' ? 'white' : '#495057',
-                border: '1px solid #dee2e6',
+                background: filter === 'draft' ? 'var(--color-info)' : 'white',
+                color: filter === 'draft' ? 'white' : 'var(--color-text-disabled)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -242,9 +242,9 @@ export default function BlogManagementPage() {
               onClick={() => setFilter('published')}
               style={{
                 padding: '0.5rem 1rem',
-                background: filter === 'published' ? '#007bff' : 'white',
-                color: filter === 'published' ? 'white' : '#495057',
-                border: '1px solid #dee2e6',
+                background: filter === 'published' ? 'var(--color-info)' : 'white',
+                color: filter === 'published' ? 'white' : 'var(--color-text-disabled)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -261,7 +261,7 @@ export default function BlogManagementPage() {
               onChange={(e) => setCategoryFilter(e.target.value)}
               style={{
                 padding: '0.5rem 1rem',
-                border: '1px solid #dee2e6',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
                 fontSize: '0.875rem',
                 cursor: 'pointer',
@@ -286,17 +286,17 @@ export default function BlogManagementPage() {
             textAlign: 'center',
           }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
-            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: '#495057' }}>
+            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'var(--color-text-disabled)' }}>
               No blog posts yet
             </h3>
-            <p style={{ margin: '0 0 1.5rem', color: '#6c757d' }}>
+            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)' }}>
               Create your first blog post to get started
             </p>
             <button
               onClick={createNewPost}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: '#007bff',
+                background: 'var(--color-info)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -349,14 +349,14 @@ export default function BlogManagementPage() {
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#212529', flex: 1 }}>
+                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-primary)', flex: 1 }}>
                       {post.title}
                     </h3>
                     <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                       <span style={{
                         padding: '0.25rem 0.5rem',
-                        background: post.status === 'published' ? '#28a745' : '#ffc107',
-                        color: post.status === 'published' ? 'white' : '#000',
+                        background: post.status === 'published' ? 'var(--color-success)' : 'var(--color-warning)',
+                        color: post.status === 'published' ? 'white' : 'var(--color-bg-main)',
                         borderRadius: '4px',
                         fontSize: '0.75rem',
                         fontWeight: '600',
@@ -367,7 +367,7 @@ export default function BlogManagementPage() {
                       {post.featured && (
                         <span style={{
                           padding: '0.25rem 0.5rem',
-                          background: '#fd7e14',
+                          background: 'var(--color-warning)',
                           color: 'white',
                           borderRadius: '4px',
                           fontSize: '0.75rem',
@@ -382,14 +382,14 @@ export default function BlogManagementPage() {
 
                   <p style={{
                     fontSize: '0.875rem',
-                    color: '#6c757d',
+                    color: 'var(--color-text-secondary)',
                     margin: '0 0 0.75rem',
                     lineHeight: '1.5',
                   }}>
                     {post.excerpt}
                   </p>
 
-                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#adb5bd', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
                     <span>By {(post.authorName !== '' && post.authorName != null) ? post.authorName : 'Unknown'}</span>
                     <span>•</span>
                     <span>{new Date(post.createdAt).toLocaleDateString()}</span>
@@ -412,7 +412,7 @@ export default function BlogManagementPage() {
                       onClick={() => editPost(post.id)}
                       style={{
                         padding: '0.5rem 1rem',
-                        background: '#007bff',
+                        background: 'var(--color-info)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -426,7 +426,7 @@ export default function BlogManagementPage() {
                       onClick={() => void toggleFeatured(post)}
                       style={{
                         padding: '0.5rem 1rem',
-                        background: post.featured ? '#6c757d' : '#fd7e14',
+                        background: post.featured ? 'var(--color-text-secondary)' : 'var(--color-warning)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -440,7 +440,7 @@ export default function BlogManagementPage() {
                       onClick={() => handleDeleteClick(post.id)}
                       style={{
                         padding: '0.5rem 1rem',
-                        background: '#dc3545',
+                        background: 'var(--color-error)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -480,10 +480,10 @@ export default function BlogManagementPage() {
             width: '90%',
             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
           }}>
-            <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem', color: '#212529' }}>
+            <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem', color: 'var(--color-text-primary)' }}>
               Delete Post
             </h3>
-            <p style={{ margin: '0 0 1.5rem', color: '#6c757d' }}>
+            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)' }}>
               Are you sure you want to delete this post? This action cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
@@ -491,7 +491,7 @@ export default function BlogManagementPage() {
                 onClick={cancelDelete}
                 style={{
                   padding: '0.5rem 1rem',
-                  background: '#6c757d',
+                  background: 'var(--color-text-secondary)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
@@ -505,7 +505,7 @@ export default function BlogManagementPage() {
                 onClick={confirmDelete}
                 style={{
                   padding: '0.5rem 1rem',
-                  background: '#dc3545',
+                  background: 'var(--color-error)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',

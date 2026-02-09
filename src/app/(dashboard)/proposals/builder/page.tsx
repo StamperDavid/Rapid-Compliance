@@ -17,7 +17,7 @@ export default function ProposalBuilderPage() {
     sections: [],
     variables: [],
     styling: {
-      primaryColor: '#0066cc',
+      primaryColor: 'var(--color-info)',
       fontFamily: 'Arial, sans-serif',
     },
   });

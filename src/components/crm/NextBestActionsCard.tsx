@@ -172,13 +172,13 @@ export function NextBestActionsCard({
             onClick={() => onActionClick?.(action)}
             onMouseEnter={(e) => {
               if (onActionClick) {
-                e.currentTarget.style.backgroundColor = '#1a1a1a';
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)';
                 e.currentTarget.style.borderColor = getPriorityColor(action.priority);
               }
             }}
             onMouseLeave={(e) => {
               if (onActionClick) {
-                e.currentTarget.style.backgroundColor = '#111';
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)';
                 e.currentTarget.style.borderColor = `${getPriorityColor(action.priority)}20`;
               }
             }}
@@ -211,7 +211,7 @@ export function NextBestActionsCard({
             {/* Reasoning */}
             {action.reasoning.length > 0 && (
               <div className="mb-3">
-                <div className="text-[0.625rem] text-neutral-600 mb-1">
+                <div className="text-[0.625rem] mb-1" style={{ color: 'var(--color-text-disabled)' }}>
                   Reasoning:
                 </div>
                 <ul className="m-0 pl-5 text-[0.6875rem] text-text-secondary">
@@ -227,23 +227,23 @@ export function NextBestActionsCard({
             {/* Timeline & Confidence */}
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <div className="text-[0.625rem] text-neutral-600">
+                <div className="text-[0.625rem]" style={{ color: 'var(--color-text-disabled)' }}>
                   Timeline: <span className="text-text-primary font-semibold">{action.suggestedTimeline}</span>
                 </div>
-                <div className="text-[0.625rem] text-neutral-600">
+                <div className="text-[0.625rem]" style={{ color: 'var(--color-text-disabled)' }}>
                   Impact: <span className="text-text-primary font-semibold">{action.estimatedImpact}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {action.automatable && (
-                  <span className="px-1.5 py-0.5 bg-emerald-900 text-emerald-300 rounded text-[0.625rem] font-semibold">
+                  <span className="px-1.5 py-0.5 rounded text-[0.625rem] font-semibold" style={{ backgroundColor: 'rgba(var(--color-success-rgb), 0.2)', color: 'var(--color-success)' }}>
                     Auto
                   </span>
                 )}
                 <div
                   className="text-[0.625rem]"
                   style={{
-                    color: action.confidence >= 0.8 ? '#10b981' : action.confidence >= 0.6 ? '#f59e0b' : '#6b7280',
+                    color: action.confidence >= 0.8 ? 'var(--color-success)' : action.confidence >= 0.6 ? 'var(--color-warning)' : 'var(--color-text-disabled)',
                   }}
                 >
                   {Math.round(action.confidence * 100)}% confident
@@ -255,7 +255,7 @@ export function NextBestActionsCard({
       </div>
 
       {/* Footer */}
-      <div className="mt-4 p-3 bg-neutral-900 rounded-lg text-xs text-neutral-600 text-center">
+      <div className="mt-4 p-3 rounded-lg text-xs text-center" style={{ backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-disabled)' }}>
         Generated {new Date(recommendations.generatedAt).toLocaleString()} • Overall confidence:{' '}
         {Math.round(recommendations.confidence * 100)}%
       </div>

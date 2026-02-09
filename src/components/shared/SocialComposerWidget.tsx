@@ -49,7 +49,7 @@ export function SocialComposerWidget({ compact = false }: SocialComposerWidgetPr
 
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-lg text-[#0a66c2]">in</span>
+              <span className="text-lg text-info">in</span>
               <span className="text-sm text-[var(--color-text-secondary)]">LinkedIn</span>
             </div>
             <textarea
@@ -65,7 +65,7 @@ export function SocialComposerWidget({ compact = false }: SocialComposerWidgetPr
               </span>
               <button
                 disabled={!linkedInContent.trim()}
-                className="px-3 py-1.5 bg-[#0a66c2] text-white rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 bg-info text-white rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Post
               </button>

@@ -20,16 +20,16 @@ export default function ReportBuilder({ report, onSave, onCancel }: ReportBuilde
   });
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || '#ffffff'
-    : '#ffffff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
 
   const borderColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
-    : '#333333';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-main)'
+    : 'var(--color-border-main)';
 
-  const primaryColor = typeof window !== 'undefined' 
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
-    : '#6366f1';
+  const primaryColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
 
   const addFilter = () => {
     setFilters([...filters, { field: '', operator: 'equals', value: '' }]);
@@ -160,7 +160,7 @@ export default function ReportBuilder({ report, onSave, onCancel }: ReportBuilde
             style={{
               padding: '0.375rem 0.75rem',
               backgroundColor: primaryColor,
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.375rem',
               fontSize: '0.875rem',
@@ -246,7 +246,7 @@ export default function ReportBuilder({ report, onSave, onCancel }: ReportBuilde
             style={{
               padding: '0.375rem 0.75rem',
               backgroundColor: primaryColor,
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.375rem',
               fontSize: '0.875rem',
@@ -372,7 +372,7 @@ export default function ReportBuilder({ report, onSave, onCancel }: ReportBuilde
             backgroundColor: primaryColor,
             border: 'none',
             borderRadius: '0.5rem',
-            color: '#fff',
+            color: 'var(--color-text-primary)',
             fontSize: '0.875rem',
             fontWeight: '500',
             cursor: 'pointer'

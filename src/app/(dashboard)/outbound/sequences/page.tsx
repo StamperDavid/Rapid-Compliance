@@ -155,15 +155,15 @@ export default function EmailSequencesPage() {
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '2rem' }}>
-            <Link href={`/outbound`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+            <Link href={`/outbound`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
               ← Back to Outbound
             </Link>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
               <div>
-                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Email Sequences
                 </h1>
-                <p style={{ color: '#666', fontSize: '0.875rem' }}>
+                <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   {loading ? 'Loading...' : `${sequences.length} sequences • ${enrollments.filter(e => e.status === 'active').length} active enrollments`}
                 </p>
               </div>
@@ -172,9 +172,9 @@ export default function EmailSequencesPage() {
                   href={`/sequences/analytics`}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    backgroundColor: '#222',
-                    color: '#fff',
-                    border: '1px solid #333',
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -189,8 +189,8 @@ export default function EmailSequencesPage() {
                   onClick={() => setShowCreateModal(true)}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    backgroundColor: '#6366f1',
-                    color: '#fff',
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
@@ -205,15 +205,15 @@ export default function EmailSequencesPage() {
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #333', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--color-border-strong)', marginBottom: '2rem' }}>
             <button
               onClick={() => setActiveTab('sequences')}
               style={{
                 padding: '1rem 1.5rem',
                 backgroundColor: 'transparent',
-                color: activeTab === 'sequences' ? '#6366f1' : '#999',
+                color: activeTab === 'sequences' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                 border: 'none',
-                borderBottom: `3px solid ${activeTab === 'sequences' ? '#6366f1' : 'transparent'}`,
+                borderBottom: `3px solid ${activeTab === 'sequences' ? 'var(--color-primary)' : 'transparent'}`,
                 cursor: 'pointer',
                 fontSize: '0.875rem',
                 fontWeight: '600',
@@ -226,9 +226,9 @@ export default function EmailSequencesPage() {
               style={{
                 padding: '1rem 1.5rem',
                 backgroundColor: 'transparent',
-                color: activeTab === 'enrollments' ? '#6366f1' : '#999',
+                color: activeTab === 'enrollments' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                 border: 'none',
-                borderBottom: `3px solid ${activeTab === 'enrollments' ? '#6366f1' : 'transparent'}`,
+                borderBottom: `3px solid ${activeTab === 'enrollments' ? 'var(--color-primary)' : 'transparent'}`,
                 cursor: 'pointer',
                 fontSize: '0.875rem',
                 fontWeight: '600',
@@ -240,7 +240,7 @@ export default function EmailSequencesPage() {
 
           {/* Loading State */}
           {loading && (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
               <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
               <p>Loading sequences...</p>
             </div>
@@ -250,15 +250,15 @@ export default function EmailSequencesPage() {
           {!loading && activeTab === 'sequences' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
               {sequences.length === 0 ? (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333' }}>
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)' }}>
                   <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📧</div>
-                  <p style={{ color: '#666', marginBottom: '1.5rem' }}>No sequences yet. Create your first email sequence.</p>
+                  <p style={{ color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>No sequences yet. Create your first email sequence.</p>
                   <button
                     onClick={() => setShowCreateModal(true)}
                     style={{
                       padding: '0.75rem 1.5rem',
-                      backgroundColor: '#6366f1',
-                      color: '#fff',
+                      backgroundColor: 'var(--color-primary)',
+                      color: 'var(--color-text-primary)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
@@ -274,8 +274,8 @@ export default function EmailSequencesPage() {
                   <div
                     key={seq.id}
                     style={{
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '1rem',
                       padding: '1.5rem',
                       position: 'relative',
@@ -287,8 +287,8 @@ export default function EmailSequencesPage() {
                       top: '1rem',
                       right: '1rem',
                       padding: '0.25rem 0.75rem',
-                      backgroundColor: seq.status === 'active' ? '#065f46' : seq.status === 'paused' ? '#78350f' : '#374151',
-                      color: seq.status === 'active' ? '#6ee7b7' : seq.status === 'paused' ? '#fbbf24' : '#9ca3af',
+                      backgroundColor: seq.status === 'active' ? 'var(--color-success-dark)' : seq.status === 'paused' ? 'var(--color-warning-dark)' : 'var(--color-border-strong)',
+                      color: seq.status === 'active' ? 'var(--color-success-light)' : seq.status === 'paused' ? 'var(--color-warning-light)' : 'var(--color-text-secondary)',
                       borderRadius: '0.25rem',
                       fontSize: '0.75rem',
                       fontWeight: '700',
@@ -297,26 +297,26 @@ export default function EmailSequencesPage() {
                       {seq.status}
                     </div>
 
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem', paddingRight: '5rem' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem', paddingRight: '5rem' }}>
                       {seq.name}
                     </h3>
-                    <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                    <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
                       {(seq.description !== '' && seq.description != null) ? seq.description : 'No description'}
                     </p>
 
                     {/* Stats */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Steps</div>
-                        <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>{seq.steps.length}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Steps</div>
+                        <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{seq.steps.length}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Enrolled</div>
-                        <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>{seq.analytics?.totalEnrolled ?? 0}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Enrolled</div>
+                        <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{seq.analytics?.totalEnrolled ?? 0}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>Reply Rate</div>
-                        <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Reply Rate</div>
+                        <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>
                           {seq.analytics?.totalSent && seq.analytics.totalSent > 0
                             ? `${Math.round((seq.analytics.totalReplied / seq.analytics.totalSent) * 100)}%`
                             : '0%'
@@ -333,8 +333,8 @@ export default function EmailSequencesPage() {
                           style={{
                             flex: 1,
                             padding: '0.75rem',
-                            backgroundColor: '#6366f1',
-                            color: '#fff',
+                            backgroundColor: 'var(--color-primary)',
+                            color: 'var(--color-text-primary)',
                             border: 'none',
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
@@ -351,9 +351,9 @@ export default function EmailSequencesPage() {
                           style={{
                             flex: 1,
                             padding: '0.75rem',
-                            backgroundColor: '#78350f',
-                            color: '#fbbf24',
-                            border: '1px solid #fbbf24',
+                            backgroundColor: 'var(--color-warning-dark)',
+                            color: 'var(--color-warning-light)',
+                            border: '1px solid var(--color-warning-light)',
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
                             fontSize: '0.875rem',
@@ -369,8 +369,8 @@ export default function EmailSequencesPage() {
                           style={{
                             flex: 1,
                             padding: '0.75rem',
-                            backgroundColor: '#6366f1',
-                            color: '#fff',
+                            backgroundColor: 'var(--color-primary)',
+                            color: 'var(--color-text-primary)',
                             border: 'none',
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
@@ -386,9 +386,9 @@ export default function EmailSequencesPage() {
                         style={{
                           flex: 1,
                           padding: '0.75rem',
-                          backgroundColor: '#222',
-                          color: '#fff',
-                          border: '1px solid #333',
+                          backgroundColor: 'var(--color-bg-elevated)',
+                          color: 'var(--color-text-primary)',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
                           fontSize: '0.875rem',
@@ -406,23 +406,23 @@ export default function EmailSequencesPage() {
 
           {/* Enrollments Tab */}
           {!loading && activeTab === 'enrollments' && (
-            <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '1rem', overflow: 'hidden' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ backgroundColor: '#111' }}>
+                <thead style={{ backgroundColor: 'var(--color-bg-main)' }}>
                   <tr>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#999', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                       Prospect
                     </th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#999', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                       Sequence
                     </th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#999', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                       Status
                     </th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#999', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                       Step
                     </th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#999', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
                       Next Action
                     </th>
                   </tr>
@@ -430,7 +430,7 @@ export default function EmailSequencesPage() {
                 <tbody>
                   {enrollments.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>
+                      <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-disabled)' }}>
                         No enrollments yet. Activate a sequence and enroll prospects.
                       </td>
                     </tr>
@@ -438,18 +438,18 @@ export default function EmailSequencesPage() {
                     enrollments.map((enrollment) => {
                       const sequence = sequences.find(s => s.id === enrollment.sequenceId);
                       return (
-                        <tr key={enrollment.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
-                          <td style={{ padding: '1rem', color: '#fff' }}>
+                        <tr key={enrollment.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+                          <td style={{ padding: '1rem', color: 'var(--color-text-primary)' }}>
                             {enrollment.prospectId}
                           </td>
-                          <td style={{ padding: '1rem', color: '#fff' }}>
+                          <td style={{ padding: '1rem', color: 'var(--color-text-primary)' }}>
                             {(() => { const v = sequence?.name; return (v !== '' && v != null) ? v : 'Unknown'; })()}
                           </td>
                           <td style={{ padding: '1rem' }}>
                             <span style={{
                               padding: '0.25rem 0.5rem',
-                              backgroundColor: enrollment.status === 'active' ? '#065f46' : '#374151',
-                              color: enrollment.status === 'active' ? '#6ee7b7' : '#9ca3af',
+                              backgroundColor: enrollment.status === 'active' ? 'var(--color-success-dark)' : 'var(--color-border-strong)',
+                              color: enrollment.status === 'active' ? 'var(--color-success-light)' : 'var(--color-text-secondary)',
                               borderRadius: '0.25rem',
                               fontSize: '0.75rem',
                               fontWeight: '600',
@@ -457,10 +457,10 @@ export default function EmailSequencesPage() {
                               {enrollment.status}
                             </span>
                           </td>
-                          <td style={{ padding: '1rem', color: '#fff' }}>
+                          <td style={{ padding: '1rem', color: 'var(--color-text-primary)' }}>
                             {enrollment.currentStep + 1} / {sequence?.steps.length ?? 0}
                           </td>
-                          <td style={{ padding: '1rem', color: '#666', fontSize: '0.875rem' }}>
+                          <td style={{ padding: '1rem', color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                             {enrollment.nextStepAt 
                               ? new Date(enrollment.nextStepAt).toLocaleString()
                               : 'Completed'
@@ -553,7 +553,7 @@ function CreateSequenceModal({ onClose, onCreate }: { onClose: () => void; onCre
             <button
               onClick={handleSubmit}
               className="bg-primary"
-              style={{ flex: 1, padding: '0.75rem', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+              style={{ flex: 1, padding: '0.75rem', color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
             >
               Create Sequence
             </button>

@@ -121,7 +121,7 @@ export function SkipToMain() {
         left: '-9999px',
         zIndex: 999999,
         padding: '12px 24px',
-        backgroundColor: '#3b82f6',
+        backgroundColor: 'var(--color-info)',
         color: 'white',
         textDecoration: 'none',
         borderRadius: '4px',
@@ -175,7 +175,7 @@ export function FocusRing({ children }: { children: React.ReactNode }) {
         position: 'relative',
       }}
       onFocus={(e) => {
-        e.currentTarget.style.outline = '2px solid #3b82f6';
+        e.currentTarget.style.outline = '2px solid var(--color-info)';
         e.currentTarget.style.outlineOffset = '2px';
       }}
       onBlur={(e) => {

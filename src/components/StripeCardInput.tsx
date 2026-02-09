@@ -17,14 +17,14 @@ const cardElementOptions: StripeCardElementOptions = {
   style: {
     base: {
       fontSize: '16px',
-      color: '#fff',
+      color: 'var(--color-text-primary)',
       '::placeholder': {
-        color: '#999',
+        color: 'var(--color-text-secondary)',
       },
-      backgroundColor: '#0a0a0a',
+      backgroundColor: 'var(--color-bg-main)',
     },
     invalid: {
-      color: '#ef4444',
+      color: 'var(--color-error)',
     },
   },
   hidePostalCode: false,
@@ -35,8 +35,8 @@ export default function StripeCardInput({ onReady, disabled }: StripeCardInputPr
     <div
       style={{
         padding: '1rem',
-        backgroundColor: '#0a0a0a',
-        border: '1px solid #333',
+        backgroundColor: 'var(--color-bg-main)',
+        border: '1px solid var(--color-border-strong)',
         borderRadius: '0.5rem',
       }}
     >

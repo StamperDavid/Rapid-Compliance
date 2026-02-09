@@ -75,14 +75,14 @@ export function EmailMetricsCard({ data, loading = false }: EmailMetricsCardProp
         <h4 className="text-sm font-medium text-gray-700 mb-3">Generation Trend</h4>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={data.emailsByDay}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
             <XAxis
               dataKey="date"
               tickFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              stroke="#6b7280"
+              stroke="var(--color-text-disabled)"
               fontSize={12}
             />
-            <YAxis stroke="#6b7280" fontSize={12} />
+            <YAxis stroke="var(--color-text-disabled)" fontSize={12} />
             <Tooltip
               labelFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
               formatter={(value: number) => [value, 'Emails']}
@@ -104,14 +104,14 @@ export function EmailMetricsCard({ data, loading = false }: EmailMetricsCardProp
         <h4 className="text-sm font-medium text-gray-700 mb-3">Email Types</h4>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={data.byType}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
             <XAxis
               dataKey="type"
-              stroke="#6b7280"
+              stroke="var(--color-text-disabled)"
               fontSize={12}
               tickFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}
             />
-            <YAxis stroke="#6b7280" fontSize={12} />
+            <YAxis stroke="var(--color-text-disabled)" fontSize={12} />
             <Tooltip
               formatter={(value: number) => [value, 'Count']}
               labelFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}

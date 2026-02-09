@@ -118,7 +118,7 @@ export default function TeamMembersPage() {
     void refresh();
   }, [refresh]);
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   const roles: { value: UserRole; label: string; description: string }[] = [
     { value: 'owner', label: 'Owner', description: 'Master key — full system access, can delete org' },
@@ -233,13 +233,13 @@ export default function TeamMembersPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left Sidebar */}
         <div style={{ 
           width: sidebarOpen ? '260px' : '70px',
-          backgroundColor: '#0a0a0a',
-          borderRight: '1px solid #1a1a1a',
+          backgroundColor: 'var(--color-bg-main)',
+          borderRight: '1px solid var(--color-bg-elevated)',
           transition: 'width 0.3s',
           display: 'flex',
           flexDirection: 'column'
@@ -254,7 +254,7 @@ export default function TeamMembersPage() {
                 alignItems: 'center',
                 gap: '0.75rem',
                 backgroundColor: 'transparent',
-                color: '#999',
+                color: 'var(--color-text-secondary)',
                 borderLeft: '3px solid transparent',
                 fontSize: '0.875rem',
                 fontWeight: '400',
@@ -276,7 +276,7 @@ export default function TeamMembersPage() {
                   alignItems: 'center',
                   gap: '0.75rem',
                   backgroundColor: 'transparent',
-                  color: '#999',
+                  color: 'var(--color-text-secondary)',
                   borderLeft: '3px solid transparent',
                   fontSize: '0.875rem',
                   fontWeight: '400',
@@ -289,14 +289,14 @@ export default function TeamMembersPage() {
             ))}
           </nav>
 
-          <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
+          <div style={{ padding: '1rem', borderTop: '1px solid var(--color-bg-elevated)' }}>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                backgroundColor: '#1a1a1a',
-                color: '#999',
+                backgroundColor: 'var(--color-bg-elevated)',
+                color: 'var(--color-text-secondary)',
                 border: 'none',
                 borderRadius: '0.375rem',
                 cursor: 'pointer',
@@ -317,8 +317,8 @@ export default function TeamMembersPage() {
                 <Link href={`/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
                   ← Back to Settings
                 </Link>
-                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Team Members</h1>
-                <p style={{ color: '#666', fontSize: '0.875rem' }}>
+                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Team Members</h1>
+                <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                   Invite users and manage roles and permissions
                 </p>
               </div>
@@ -327,7 +327,7 @@ export default function TeamMembersPage() {
                 style={{
                   padding: '0.75rem 1.5rem',
                   backgroundColor: primaryColor,
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
@@ -341,68 +341,68 @@ export default function TeamMembersPage() {
 
             {/* Notification */}
             {notification && (
-              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: notification.type === 'success' ? '#0f4c0f' : '#2a0a0a', border: `1px solid ${notification.type === 'success' ? '#4ade80' : '#4a0a0a'}`, borderRadius: '0.5rem', color: notification.type === 'success' ? '#4ade80' : '#ff6b6b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: notification.type === 'success' ? 'var(--color-success-dark)' : 'var(--color-error-dark)', border: `1px solid ${notification.type === 'success' ? 'var(--color-success-light)' : 'var(--color-error-dark)'}`, borderRadius: '0.5rem', color: notification.type === 'success' ? 'var(--color-success-light)' : 'var(--color-error-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>{notification.message}</span>
                 <button onClick={() => setNotification(null)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1.25rem', opacity: 0.7 }}>&times;</button>
               </div>
             )}
 
             {error && (
-              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#2a0a0a', border: '1px solid #4a0a0a', borderRadius: '0.5rem', color: '#ff6b6b' }}>
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: 'var(--color-error-dark)', border: '1px solid var(--color-error-dark)', borderRadius: '0.5rem', color: 'var(--color-error-light)' }}>
                 {error}
               </div>
             )}
 
             {/* Team Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Total Members</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>{teamMembers.length}</div>
+              <div style={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1.5rem' }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Total Members</div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{teamMembers.length}</div>
               </div>
-              <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Active</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4ade80' }}>
+              <div style={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1.5rem' }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Active</div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-success-light)' }}>
                   {teamMembers.filter(m => m.status === 'active').length}
                 </div>
               </div>
-              <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Pending Invites</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fbbf24' }}>
+              <div style={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1.5rem' }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Pending Invites</div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-warning-light)' }}>
                   {teamMembers.filter(m => m.status === 'invited').length}
                 </div>
               </div>
             </div>
 
             {/* Members Table */}
-            <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #333' }}>
-                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>User</th>
-                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Role</th>
-                    <th style={{ textAlign: 'center', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Status</th>
-                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Joined</th>
-                    <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Actions</th>
+                  <tr style={{ borderBottom: '1px solid var(--color-border-strong)' }}>
+                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>User</th>
+                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Role</th>
+                    <th style={{ textAlign: 'center', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Status</th>
+                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Joined</th>
+                    <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {teamMembers.map(member => (
-                    <tr key={member.id} style={{ borderBottom: '1px solid #222' }}>
+                    <tr key={member.id} style={{ borderBottom: '1px solid var(--color-bg-elevated)' }}>
                       <td style={{ padding: '1rem 0.75rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: '600', color: '#fff' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                             {member.name.split(' ').map(n => n[0]).join('')}
                           </div>
                           <div>
-                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>{member.name}</div>
-                            <div style={{ fontSize: '0.75rem', color: '#999' }}>{member.email}</div>
+                            <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{member.name}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{member.email}</div>
                           </div>
                         </div>
                       </td>
                       <td style={{ padding: '1rem 0.75rem' }}>
                         <select
                           value={member.role}
-                          style={{ padding: '0.5rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.375rem', color: '#fff', fontSize: '0.875rem', cursor: 'pointer' }}
+                          style={{ padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', color: 'var(--color-text-primary)', fontSize: '0.875rem', cursor: 'pointer' }}
                         >
                           {roles.map(role => (
                             <option key={role.value} value={role.value}>{role.label}</option>
@@ -413,8 +413,8 @@ export default function TeamMembersPage() {
                         <span style={{
                           display: 'inline-block',
                           padding: '0.25rem 0.75rem',
-                          backgroundColor: member.status === 'active' ? '#0f4c0f' : '#4c3d0f',
-                          color: member.status === 'active' ? '#4ade80' : '#fbbf24',
+                          backgroundColor: member.status === 'active' ? 'var(--color-success-dark)' : 'var(--color-warning-dark)',
+                          color: member.status === 'active' ? 'var(--color-success-light)' : 'var(--color-warning-light)',
                           borderRadius: '9999px',
                           fontSize: '0.75rem',
                           fontWeight: '600',
@@ -423,9 +423,9 @@ export default function TeamMembersPage() {
                           {member.status}
                         </span>
                       </td>
-                      <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: '#ccc' }}>{member.joinedDate}</td>
+                      <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>{member.joinedDate}</td>
                       <td style={{ padding: '1rem 0.75rem', textAlign: 'right' }}>
-                        <button style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#f87171', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                        <button style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-error-light)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
                           Remove
                         </button>
                       </td>
@@ -442,8 +442,8 @@ export default function TeamMembersPage() {
                     disabled={loading || !hasMore}
                     style={{
                       padding: '0.75rem 1.5rem',
-                      backgroundColor: loading || !hasMore ? '#222' : '#333',
-                      color: loading || !hasMore ? '#666' : '#fff',
+                      backgroundColor: loading || !hasMore ? 'var(--color-bg-elevated)' : 'var(--color-border-strong)',
+                      color: loading || !hasMore ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       cursor: loading || !hasMore ? 'not-allowed' : 'pointer',
@@ -463,11 +463,11 @@ export default function TeamMembersPage() {
       {/* Invite Modal */}
       {showInviteModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', width: '90%', maxWidth: '500px' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Invite Team Member</h2>
+          <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem', width: '90%', maxWidth: '500px' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>Invite Team Member</h2>
             
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                 Email Address
               </label>
               <input
@@ -475,18 +475,18 @@ export default function TeamMembersPage() {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="colleague@example.com"
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
               />
             </div>
 
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                 Role
               </label>
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value)}
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
               >
                 {roles.map(role => (
                   <option key={role.value} value={role.value}>{role.label} - {role.description}</option>
@@ -497,7 +497,7 @@ export default function TeamMembersPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
               <button
                 onClick={() => setShowInviteModal(false)}
-                style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+                style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
               >
                 Cancel
               </button>
@@ -507,7 +507,7 @@ export default function TeamMembersPage() {
                   setShowInviteModal(false);
                   setInviteEmail('');
                 }}
-                style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
               >
                 Send Invite
               </button>

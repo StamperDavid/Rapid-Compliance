@@ -339,7 +339,7 @@ export default function ImpersonatePage(): React.ReactElement {
         style={{
           backgroundColor: 'var(--color-warning)',
           borderColor: 'var(--color-warning)',
-          color: '#000',
+          color: 'var(--color-bg-main)',
           opacity: 0.9,
         }}
       >
@@ -376,7 +376,7 @@ export default function ImpersonatePage(): React.ReactElement {
             className="px-4 py-2 rounded-md text-sm font-semibold transition-colors"
             style={{
               backgroundColor: 'var(--color-error)',
-              color: '#fff',
+              color: 'var(--color-text-primary)',
             }}
           >
             End Session
@@ -577,7 +577,7 @@ export default function ImpersonatePage(): React.ReactElement {
                   !reason.trim() || starting || !!activeSession
                     ? 'var(--color-text-disabled)'
                     : 'var(--color-primary)',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 cursor:
                   !reason.trim() || starting || !!activeSession ? 'not-allowed' : 'pointer',
                 opacity: !reason.trim() || starting || !!activeSession ? 0.6 : 1,

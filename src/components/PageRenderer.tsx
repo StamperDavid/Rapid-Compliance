@@ -152,7 +152,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
             {statsItems.map((item, idx) => (
               <div key={idx} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '3rem', fontWeight: 'bold', color: theme.primaryColor }}>{item.value}</div>
-                <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.7)' }}>{item.label}</div>
+                <div style={{ fontSize: '1rem', color: 'var(--color-text-secondary)' }}>{item.label}</div>
               </div>
             ))}
           </div>
@@ -175,14 +175,14 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                 key={idx}
                 style={{
                   padding: '24px',
-                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  backgroundColor: 'var(--color-bg-elevated)',
                   borderRadius: '12px',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  border: '1px solid var(--color-border-light)',
                 }}
               >
                 <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>{item.icon}</div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>{item.title}</h3>
-                <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}>{item.desc}</p>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '8px' }}>{item.title}</h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>{item.desc}</p>
               </div>
             ))}
           </div>
@@ -200,13 +200,13 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                 key={idx}
                 style={{
                   padding: '24px',
-                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  backgroundColor: 'var(--color-bg-elevated)',
                   borderRadius: '12px',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  border: '1px solid var(--color-border-light)',
                 }}
               >
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff', marginBottom: '12px' }}>{item.q}</h3>
-                <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}>{item.a}</p>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '12px' }}>{item.q}</h3>
+                <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>{item.a}</p>
               </div>
             ))}
           </div>
@@ -224,13 +224,13 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
             ...styles
           }}>
             {contentObj.plans.map((plan, idx) => (
-              <div 
-                key={idx} 
-                style={{ 
-                  padding: '32px', 
-                  backgroundColor: plan.highlighted ? theme.primaryColor : 'rgba(255,255,255,0.05)', 
+              <div
+                key={idx}
+                style={{
+                  padding: '32px',
+                  backgroundColor: plan.highlighted ? theme.primaryColor : 'var(--color-bg-elevated)',
                   borderRadius: '16px',
-                  border: plan.highlighted ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  border: plan.highlighted ? 'none' : '1px solid var(--color-border-light)',
                   position: 'relative',
                   transform: plan.highlighted ? 'scale(1.05)' : 'none',
                 }}
@@ -242,8 +242,8 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                     left: '50%',
                     transform: 'translateX(-50%)',
                     padding: '4px 16px',
-                    backgroundColor: '#fbbf24',
-                    color: '#000',
+                    backgroundColor: 'var(--color-warning)',
+                    color: 'var(--color-bg-main)',
                     fontSize: '0.75rem',
                     fontWeight: 'bold',
                     borderRadius: '9999px',
@@ -251,10 +251,10 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                     MOST POPULAR
                   </div>
                 )}
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>{plan.name}</h3>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '8px' }}>{plan.name}</h3>
                 <div style={{ marginBottom: '24px' }}>
-                  <span style={{ fontSize: '3rem', fontWeight: 'bold', color: '#fff' }}>{plan.price}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.7)' }}>{plan.period}</span>
+                  <span style={{ fontSize: '3rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{plan.price}</span>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{plan.period}</span>
                 </div>
                 <Link
                   href="/onboarding/industry"
@@ -263,8 +263,8 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                     width: '100%',
                     padding: '12px',
                     textAlign: 'center',
-                    backgroundColor: plan.highlighted ? '#fff' : theme.primaryColor,
-                    color: plan.highlighted ? theme.primaryColor : '#fff',
+                    backgroundColor: plan.highlighted ? 'var(--color-text-primary)' : theme.primaryColor,
+                    color: plan.highlighted ? theme.primaryColor : 'var(--color-text-primary)',
                     borderRadius: '8px',
                     fontWeight: '600',
                     textDecoration: 'none',
@@ -275,8 +275,8 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                 </Link>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {plan.features.map((feature, fIdx) => (
-                    <li key={fIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '12px', color: 'rgba(255,255,255,0.9)' }}>
-                      <span style={{ color: plan.highlighted ? '#fff' : theme.primaryColor }}>✓</span>
+                    <li key={fIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '12px', color: 'var(--color-text-primary)' }}>
+                      <span style={{ color: plan.highlighted ? 'var(--color-text-primary)' : theme.primaryColor }}>✓</span>
                       {feature}
                     </li>
                   ))}
@@ -294,17 +294,17 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
         return (
           <div style={{
             padding: '32px',
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: 'var(--color-bg-elevated)',
             borderRadius: '16px',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--color-border-light)',
             ...styles
           }}>
-            <p style={{ fontSize: '1.25rem', fontStyle: 'italic', color: '#fff', marginBottom: '16px', lineHeight: '1.6' }}>
+            <p style={{ fontSize: '1.25rem', fontStyle: 'italic', color: 'var(--color-text-primary)', marginBottom: '16px', lineHeight: '1.6' }}>
               &quot;{testimonial.quote}&quot;
             </p>
             <div>
-              <div style={{ fontWeight: 'bold', color: '#fff' }}>{testimonial.author}</div>
-              <div style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>
+              <div style={{ fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{testimonial.author}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                 {testimonial.role}{testimonial.company ? `, ${testimonial.company}` : ''}
               </div>
             </div>
@@ -319,14 +319,14 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
         return (
           <div style={{
             padding: '24px',
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: 'var(--color-bg-elevated)',
             borderRadius: '12px',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--color-border-light)',
             ...styles
           }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>{iconBox.icon}</div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>{iconBox.title}</h3>
-            <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}>{iconBox.text}</p>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '8px' }}>{iconBox.title}</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>{iconBox.text}</p>
           </div>
         );
       }
@@ -340,7 +340,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
             <div style={{ fontSize: '3rem', fontWeight: 'bold', color: theme.primaryColor }}>
               {counter.number}{counter.suffix}
             </div>
-            <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.7)' }}>{counter.label}</div>
+            <div style={{ fontSize: '1rem', color: 'var(--color-text-secondary)' }}>{counter.label}</div>
           </div>
         );
       }
@@ -352,9 +352,9 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
         const heroCta = contentObj as HeroCtaContent;
         return (
           <div style={{ textAlign: 'center', ...styles }}>
-            <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '16px' }}>{heroCta.title}</h2>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '16px' }}>{heroCta.title}</h2>
             {heroCta.subtitle && (
-              <p style={{ fontSize: '1.25rem', color: 'rgba(255,255,255,0.8)', marginBottom: '24px', maxWidth: '600px', margin: '0 auto 24px' }}>
+              <p style={{ fontSize: '1.25rem', color: 'var(--color-text-secondary)', marginBottom: '24px', maxWidth: '600px', margin: '0 auto 24px' }}>
                 {heroCta.subtitle}
               </p>
             )}
@@ -365,7 +365,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                   display: 'inline-block',
                   padding: '16px 32px',
                   backgroundColor: theme.primaryColor,
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   borderRadius: '8px',
                   fontWeight: '600',
                   textDecoration: 'none',

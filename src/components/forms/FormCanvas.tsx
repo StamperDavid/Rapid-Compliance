@@ -56,12 +56,12 @@ const styles = {
   emptyTitle: {
     fontSize: '1.25rem',
     fontWeight: '600',
-    color: '#666',
+    color: 'var(--color-text-disabled)',
     marginBottom: '0.5rem',
   },
   emptyText: {
     fontSize: '0.875rem',
-    color: '#555',
+    color: 'var(--color-text-disabled)',
   },
   dropZone: {
     padding: '0.5rem',
@@ -71,7 +71,7 @@ const styles = {
   },
   dropZoneActive: {
     border: '2px dashed var(--color-primary)',
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)',
   },
   fieldWrapper: {
     marginBottom: '0.5rem',
@@ -91,7 +91,7 @@ const styles = {
     backgroundColor: 'var(--color-bg-elevated)',
   },
   fieldCardHovered: {
-    borderColor: '#444',
+    borderColor: 'var(--color-border-main)',
   },
   fieldDragHandle: {
     display: 'flex',
@@ -101,7 +101,7 @@ const styles = {
     height: '24px',
     marginRight: '0.75rem',
     cursor: 'grab',
-    color: '#666',
+    color: 'var(--color-text-disabled)',
     fontSize: '1rem',
   },
   fieldContent: {
@@ -111,12 +111,12 @@ const styles = {
   fieldLabel: {
     fontSize: '0.875rem',
     fontWeight: '500',
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     marginBottom: '0.25rem',
   },
   fieldType: {
     fontSize: '0.75rem',
-    color: '#666',
+    color: 'var(--color-text-disabled)',
   },
   fieldPreview: {
     marginTop: '0.5rem',
@@ -137,14 +137,14 @@ const styles = {
   actionButton: {
     padding: '0.375rem',
     fontSize: '0.75rem',
-    color: '#999',
+    color: 'var(--color-text-secondary)',
     backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
     borderRadius: '0.25rem',
   },
   actionButtonHover: {
-    color: '#fff',
+    color: 'var(--color-text-primary)',
     backgroundColor: 'var(--color-border-light)',
   },
   actionButtonDelete: {
@@ -444,7 +444,7 @@ function FieldPreview({ field }: FieldPreviewProps) {
     backgroundColor: 'var(--color-bg-elevated)',
     border: '1px solid var(--color-border-light)',
     borderRadius: '0.375rem',
-    color: '#666',
+    color: 'var(--color-text-disabled)',
   };
 
   switch (field.type) {
@@ -489,7 +489,7 @@ function FieldPreview({ field }: FieldPreviewProps) {
           {field.options?.slice(0, 3).map((opt) => (
             <label
               key={opt.value}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#999' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}
             >
               <input type="radio" disabled />
               {opt.label}
@@ -504,7 +504,7 @@ function FieldPreview({ field }: FieldPreviewProps) {
           {field.options?.slice(0, 3).map((opt) => (
             <label
               key={opt.value}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#999' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}
             >
               <input type="checkbox" disabled />
               {opt.label}
@@ -526,7 +526,7 @@ function FieldPreview({ field }: FieldPreviewProps) {
       return (
         <div style={{ display: 'flex', gap: '0.25rem' }}>
           {[1, 2, 3, 4, 5].map((star) => (
-            <span key={star} style={{ fontSize: '1.25rem', color: '#666' }}>
+            <span key={star} style={{ fontSize: '1.25rem', color: 'var(--color-text-disabled)' }}>
               ☆
             </span>
           ))}
@@ -542,7 +542,7 @@ function FieldPreview({ field }: FieldPreviewProps) {
             border: '2px dashed var(--color-border-light)',
             borderRadius: '0.5rem',
             textAlign: 'center',
-            color: '#666',
+            color: 'var(--color-text-disabled)',
             fontSize: '0.875rem',
           }}
         >
@@ -558,7 +558,7 @@ function FieldPreview({ field }: FieldPreviewProps) {
             border: '1px solid var(--color-border-light)',
             borderRadius: '0.5rem',
             textAlign: 'center',
-            color: '#666',
+            color: 'var(--color-text-disabled)',
             fontSize: '0.875rem',
             backgroundColor: 'var(--color-bg-paper)',
           }}
@@ -569,14 +569,14 @@ function FieldPreview({ field }: FieldPreviewProps) {
 
     case 'heading':
       return (
-        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', margin: 0 }}>
+        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)', margin: 0 }}>
           {field.label}
         </h3>
       );
 
     case 'paragraph':
       return (
-        <p style={{ fontSize: '0.875rem', color: '#999', margin: 0 }}>{field.label}</p>
+        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0 }}>{field.label}</p>
       );
 
     case 'divider':

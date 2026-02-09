@@ -50,7 +50,7 @@ export default function EmailWriterPage() {
   const [error, setError] = useState<string | null>(null);
 
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   const handleGenerate = async () => {
     // Validate
@@ -104,7 +104,7 @@ export default function EmailWriterPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}
@@ -112,10 +112,10 @@ export default function EmailWriterPage() {
             <Link href={`/outbound`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
               ← Back to Outbound
             </Link>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               AI Email Writer
             </h1>
-            <p style={{ color: '#999', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
               Generate personalized cold emails using AI and prospect research
             </p>
           </div>
@@ -125,14 +125,14 @@ export default function EmailWriterPage() {
             {/* Left Column - Input Form */}
             <div>
               {/* Prospect Information */}
-              <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', marginBottom: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '1.5rem' }}>
+              <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
                   Prospect Information
                 </h2>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                       Full Name *
                     </label>
                     <input
@@ -143,17 +143,17 @@ export default function EmailWriterPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                       Company *
                     </label>
                     <input
@@ -164,17 +164,17 @@ export default function EmailWriterPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                       Title (Optional)
                     </label>
                     <input
@@ -185,17 +185,17 @@ export default function EmailWriterPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                       Email (Optional)
                     </label>
                     <input
@@ -206,10 +206,10 @@ export default function EmailWriterPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
@@ -218,14 +218,14 @@ export default function EmailWriterPage() {
               </div>
 
               {/* Email Configuration */}
-              <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '1.5rem' }}>
+              <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
                   Email Configuration
                 </h2>
 
                 {/* Template */}
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
                     Template Framework
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
@@ -235,10 +235,10 @@ export default function EmailWriterPage() {
                         onClick={() => setTemplate(t)}
                         style={{
                           padding: '0.75rem',
-                          backgroundColor: template === t ? primaryColor : '#0a0a0a',
-                          border: `1px solid ${template === t ? primaryColor : '#333'}`,
+                          backgroundColor: template === t ? primaryColor : 'var(--color-bg-main)',
+                          border: `1px solid ${template === t ? primaryColor : 'var(--color-border-strong)'}`,
                           borderRadius: '0.5rem',
-                          color: '#fff',
+                          color: 'var(--color-text-primary)',
                           cursor: 'pointer',
                           fontSize: '0.875rem',
                           fontWeight: '600',
@@ -253,7 +253,7 @@ export default function EmailWriterPage() {
 
                 {/* Tone */}
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
                     Tone
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
@@ -263,10 +263,10 @@ export default function EmailWriterPage() {
                         onClick={() => setTone(t)}
                         style={{
                           padding: '0.75rem',
-                          backgroundColor: tone === t ? primaryColor : '#0a0a0a',
-                          border: `1px solid ${tone === t ? primaryColor : '#333'}`,
+                          backgroundColor: tone === t ? primaryColor : 'var(--color-bg-main)',
+                          border: `1px solid ${tone === t ? primaryColor : 'var(--color-border-strong)'}`,
                           borderRadius: '0.5rem',
-                          color: '#fff',
+                          color: 'var(--color-text-primary)',
                           cursor: 'pointer',
                           fontSize: '0.875rem',
                           fontWeight: '600',
@@ -282,7 +282,7 @@ export default function EmailWriterPage() {
 
                 {/* Value Proposition */}
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     Value Proposition (Optional)
                   </label>
                   <input
@@ -293,10 +293,10 @@ export default function EmailWriterPage() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                     }}
                   />
@@ -304,7 +304,7 @@ export default function EmailWriterPage() {
 
                 {/* CTA */}
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     Call to Action
                   </label>
                   <input
@@ -315,17 +315,17 @@ export default function EmailWriterPage() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#fff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                     }}
                   />
                 </div>
 
                 {/* Skip Research */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', color: '#999' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                   <input
                     type="checkbox"
                     checked={skipResearch}
@@ -343,8 +343,8 @@ export default function EmailWriterPage() {
                     width: '100%',
                     marginTop: '1.5rem',
                     padding: '1rem',
-                    backgroundColor: generating || !prospect.name || !prospect.company ? '#666' : primaryColor,
-                    color: '#fff',
+                    backgroundColor: generating || !prospect.name || !prospect.company ? 'var(--color-text-disabled)' : primaryColor,
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     cursor: generating || !prospect.name || !prospect.company ? 'not-allowed' : 'pointer',
@@ -357,7 +357,7 @@ export default function EmailWriterPage() {
                 </button>
 
                 {error && (
-                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#7f1d1d', border: '1px solid #991b1b', borderRadius: '0.5rem', color: '#fecaca', fontSize: '0.875rem' }}>
+                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-error-dark)', border: '1px solid var(--color-error-dark)', borderRadius: '0.5rem', color: 'var(--color-error-light)', fontSize: '0.875rem' }}>
                     {error}
                   </div>
                 )}
@@ -367,24 +367,24 @@ export default function EmailWriterPage() {
             {/* Right Column - Generated Email */}
             <div>
               {generating && (
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '3rem', textAlign: 'center' }}>
+                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '3rem', textAlign: 'center' }}>
                   <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
-                  <div style={{ color: '#fff', fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <div style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     Generating your email...
                   </div>
-                  <div style={{ color: '#999', fontSize: '0.875rem' }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                     {skipResearch ? 'This should take a few seconds' : 'Researching company and generating personalized content'}
                   </div>
                 </div>
               )}
 
               {generatedEmail && !generating && (
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
+                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                       Generated Email
                     </h2>
-                    <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
                       Personalization: {generatedEmail.email?.personalizationScore ?? 0}%
                     </div>
                   </div>
@@ -392,15 +392,15 @@ export default function EmailWriterPage() {
                   {/* Subject Line */}
                   <div style={{ marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <label style={{ fontSize: '0.875rem', color: '#999' }}>Subject Line</label>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>Subject Line</label>
                       <button
                         onClick={() => handleCopy(generatedEmail.email?.subject ?? '')}
-                        style={{ padding: '0.25rem 0.75rem', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
+                        style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--color-border-strong)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
                       >
                         Copy
                       </button>
                     </div>
-                    <div style={{ padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}>
+                    <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                       {generatedEmail.email?.subject ?? ''}
                     </div>
                   </div>
@@ -408,15 +408,15 @@ export default function EmailWriterPage() {
                   {/* Email Body */}
                   <div style={{ marginBottom: '1.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <label style={{ fontSize: '0.875rem', color: '#999' }}>Email Body</label>
+                      <label style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>Email Body</label>
                       <button
                         onClick={() => handleCopy(generatedEmail.email?.body ?? '')}
-                        style={{ padding: '0.25rem 0.75rem', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
+                        style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--color-border-strong)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
                       >
                         Copy
                       </button>
                     </div>
-                    <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
                       {generatedEmail.email?.body ?? ''}
                     </div>
                   </div>
@@ -424,12 +424,12 @@ export default function EmailWriterPage() {
                   {/* Subject Variants */}
                   {generatedEmail.email?.subjectVariants && generatedEmail.email.subjectVariants.length > 0 && (
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
                         Subject Line Variants (for A/B testing)
                       </label>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {generatedEmail.email.subjectVariants.map((variant: string, index: number) => (
-                          <div key={index} style={{ padding: '0.5rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.375rem', color: '#ccc', fontSize: '0.75rem' }}>
+                          <div key={index} style={{ padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', color: 'var(--color-text-primary)', fontSize: '0.75rem' }}>
                             {variant}
                           </div>
                         ))}
@@ -440,12 +440,12 @@ export default function EmailWriterPage() {
                   {/* Research Insights */}
                   {generatedEmail.research && generatedEmail.research.insights.length > 0 && (
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
                         Research Insights Used
                       </label>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {generatedEmail.research.insights.map((insight: string, index: number) => (
-                          <div key={index} style={{ padding: '0.5rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.375rem', color: '#999', fontSize: '0.75rem' }}>
+                          <div key={index} style={{ padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>
                             • {insight}
                           </div>
                         ))}
@@ -456,9 +456,9 @@ export default function EmailWriterPage() {
               )}
 
               {!generatedEmail && !generating && (
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '3rem', textAlign: 'center' }}>
+                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '3rem', textAlign: 'center' }}>
                   <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✉️</div>
-                  <div style={{ color: '#999', fontSize: '1rem' }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: '1rem' }}>
                     Fill in prospect information and click &quot;Generate Email&quot; to create a personalized cold email
                   </div>
                 </div>

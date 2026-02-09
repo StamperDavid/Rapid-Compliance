@@ -571,49 +571,49 @@ const CATEGORY_METADATA: Record<SpecialistCategory, CategoryMetadata> = {
   intelligence: {
     label: 'Intelligence',
     description: 'Strategic analysis and decision-making',
-    color: 'var(--color-intelligence, #3b82f6)',
+    color: 'var(--color-intelligence, var(--color-info))',
     icon: '🧠',
   },
   marketing: {
     label: 'Marketing',
     description: 'Marketing automation and campaigns',
-    color: 'var(--color-marketing, #8b5cf6)',
+    color: 'var(--color-marketing, var(--color-secondary))',
     icon: '📢',
   },
   builder: {
     label: 'Builder',
     description: 'Development and technical tasks',
-    color: 'var(--color-builder, #10b981)',
+    color: 'var(--color-builder, var(--color-success))',
     icon: '🔨',
   },
   commerce: {
     label: 'Commerce',
     description: 'E-commerce and transactions',
-    color: 'var(--color-commerce, #f59e0b)',
+    color: 'var(--color-commerce, var(--color-warning))',
     icon: '💰',
   },
   outreach: {
     label: 'Outreach',
     description: 'Customer engagement and communication',
-    color: 'var(--color-outreach, #06b6d4)',
+    color: 'var(--color-outreach, var(--color-cyan))',
     icon: '📧',
   },
   content: {
     label: 'Content',
     description: 'Content creation and management',
-    color: 'var(--color-content, #ec4899)',
+    color: 'var(--color-content, var(--color-pink))',
     icon: '✍️',
   },
   sales: {
     label: 'Sales',
     description: 'Sales automation and enablement',
-    color: 'var(--color-sales, #ef4444)',
+    color: 'var(--color-sales, var(--color-error))',
     icon: '💼',
   },
   trust: {
     label: 'Trust',
     description: 'Security and compliance',
-    color: 'var(--color-trust, #14b8a6)',
+    color: 'var(--color-trust, var(--color-teal))',
     icon: '🛡️',
   },
 };
@@ -624,28 +624,28 @@ const CATEGORY_METADATA: Record<SpecialistCategory, CategoryMetadata> = {
 
 const STATUS_STYLES: Record<SpecialistStatus, { bg: string; text: string; label: string }> = {
   GHOST: {
-    bg: 'var(--color-status-ghost-bg, #f3f4f6)',
-    text: 'var(--color-status-ghost-text, #6b7280)',
+    bg: 'var(--color-status-ghost-bg, var(--color-bg-elevated))',
+    text: 'var(--color-status-ghost-text, var(--color-text-disabled))',
     label: 'Ghost',
   },
   UNBUILT: {
-    bg: 'var(--color-status-unbuilt-bg, #fef3c7)',
-    text: 'var(--color-status-unbuilt-text, #92400e)',
+    bg: 'var(--color-status-unbuilt-bg, rgba(var(--color-warning-rgb), 0.1))',
+    text: 'var(--color-status-unbuilt-text, var(--color-warning))',
     label: 'Unbuilt',
   },
   SHELL: {
-    bg: 'var(--color-status-shell-bg, #dbeafe)',
-    text: 'var(--color-status-shell-text, #1e40af)',
+    bg: 'var(--color-status-shell-bg, rgba(var(--color-info-rgb), 0.1))',
+    text: 'var(--color-status-shell-text, var(--color-info))',
     label: 'Shell',
   },
   FUNCTIONAL: {
-    bg: 'var(--color-status-functional-bg, #d1fae5)',
-    text: 'var(--color-status-functional-text, #065f46)',
+    bg: 'var(--color-status-functional-bg, rgba(var(--color-success-rgb), 0.1))',
+    text: 'var(--color-status-functional-text, var(--color-success))',
     label: 'Functional',
   },
   TESTED: {
-    bg: 'var(--color-status-tested-bg, #dcfce7)',
-    text: 'var(--color-status-tested-text, #14532d)',
+    bg: 'var(--color-status-tested-bg, rgba(var(--color-success-rgb), 0.2))',
+    text: 'var(--color-status-tested-text, var(--color-success))',
     label: 'Tested',
   },
 };
@@ -720,17 +720,17 @@ const SpecialistCard: React.FC<SpecialistCardProps> = React.memo(({ specialist, 
       </CardHeader>
       <CardContent>
         <div style={{ marginTop: '0.5rem' }}>
-          <h4 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--color-text-primary, #111827)' }}>
+          <h4 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
             Capabilities:
           </h4>
-          <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem', fontSize: '0.875rem', color: 'var(--color-text-secondary, #6b7280)' }}>
+          <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
             {specialist.capabilities.slice(0, 3).map((capability, index) => (
               <li key={index} style={{ marginBottom: '0.25rem' }}>
                 {capability}
               </li>
             ))}
             {specialist.capabilities.length > 3 && (
-              <li style={{ fontStyle: 'italic', color: 'var(--color-text-muted, #9ca3af)' }}>
+              <li style={{ fontStyle: 'italic', color: 'var(--color-text-disabled)' }}>
                 +{specialist.capabilities.length - 3} more...
               </li>
             )}
@@ -766,9 +766,9 @@ const FilterBar: React.FC<FilterBarProps> = React.memo(
           gap: '1rem',
           marginBottom: '2rem',
           padding: '1.5rem',
-          backgroundColor: 'var(--color-bg-secondary, #f9fafb)',
+          backgroundColor: 'var(--color-bg-elevated)',
           borderRadius: '0.5rem',
-          border: '1px solid var(--color-border, #e5e7eb)',
+          border: '1px solid var(--color-border-main)',
         }}
       >
         {/* Search Input */}
@@ -782,7 +782,7 @@ const FilterBar: React.FC<FilterBarProps> = React.memo(
               width: '100%',
               padding: '0.75rem',
               borderRadius: '0.375rem',
-              border: '1px solid var(--color-border, #d1d5db)',
+              border: '1px solid var(--color-border-main)',
               fontSize: '0.875rem',
             }}
           />
@@ -795,9 +795,9 @@ const FilterBar: React.FC<FilterBarProps> = React.memo(
             style={{
               padding: '0.5rem 1rem',
               borderRadius: '0.375rem',
-              border: '1px solid var(--color-border, #d1d5db)',
-              backgroundColor: selectedCategory === 'all' ? 'var(--color-primary, #3b82f6)' : 'white',
-              color: selectedCategory === 'all' ? 'white' : 'var(--color-text-primary, #111827)',
+              border: '1px solid var(--color-border-main)',
+              backgroundColor: selectedCategory === 'all' ? 'var(--color-primary)' : 'var(--color-bg-main)',
+              color: selectedCategory === 'all' ? 'var(--color-text-primary)' : 'var(--color-text-primary)',
               fontSize: '0.875rem',
               fontWeight: '500',
               cursor: 'pointer',
@@ -814,8 +814,8 @@ const FilterBar: React.FC<FilterBarProps> = React.memo(
                 padding: '0.5rem 1rem',
                 borderRadius: '0.375rem',
                 border: `1px solid ${CATEGORY_METADATA[category].color}`,
-                backgroundColor: selectedCategory === category ? CATEGORY_METADATA[category].color : 'white',
-                color: selectedCategory === category ? 'white' : CATEGORY_METADATA[category].color,
+                backgroundColor: selectedCategory === category ? CATEGORY_METADATA[category].color : 'var(--color-bg-main)',
+                color: selectedCategory === category ? 'var(--color-text-primary)' : CATEGORY_METADATA[category].color,
                 fontSize: '0.875rem',
                 fontWeight: '500',
                 cursor: 'pointer',
@@ -834,9 +834,9 @@ const FilterBar: React.FC<FilterBarProps> = React.memo(
             style={{
               padding: '0.5rem 1rem',
               borderRadius: '0.375rem',
-              border: '1px solid var(--color-border, #d1d5db)',
-              backgroundColor: selectedStatus === 'all' ? 'var(--color-primary, #3b82f6)' : 'white',
-              color: selectedStatus === 'all' ? 'white' : 'var(--color-text-primary, #111827)',
+              border: '1px solid var(--color-border-main)',
+              backgroundColor: selectedStatus === 'all' ? 'var(--color-primary)' : 'var(--color-bg-main)',
+              color: selectedStatus === 'all' ? 'var(--color-text-primary)' : 'var(--color-text-primary)',
               fontSize: '0.875rem',
               fontWeight: '500',
               cursor: 'pointer',
@@ -852,9 +852,9 @@ const FilterBar: React.FC<FilterBarProps> = React.memo(
               style={{
                 padding: '0.5rem 1rem',
                 borderRadius: '0.375rem',
-                border: '1px solid var(--color-border, #d1d5db)',
-                backgroundColor: selectedStatus === status ? STATUS_STYLES[status].bg : 'white',
-                color: selectedStatus === status ? STATUS_STYLES[status].text : 'var(--color-text-primary, #111827)',
+                border: '1px solid var(--color-border-main)',
+                backgroundColor: selectedStatus === status ? STATUS_STYLES[status].bg : 'var(--color-bg-main)',
+                color: selectedStatus === status ? STATUS_STYLES[status].text : 'var(--color-text-primary)',
                 fontSize: '0.875rem',
                 fontWeight: '500',
                 cursor: 'pointer',
@@ -935,7 +935,7 @@ export const SpecialistRegistry: React.FC<SpecialistRegistryProps> = React.memo(
     <div style={{ padding: '2rem' }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.5rem', color: 'var(--color-text-primary, #111827)' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
           AI Specialist Registry
         </h1>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
@@ -1018,11 +1018,11 @@ export const SpecialistRegistry: React.FC<SpecialistRegistryProps> = React.memo(
                   >
                     <span>{meta.icon}</span>
                     <span>{meta.label}</span>
-                    <span style={{ fontSize: '1rem', fontWeight: '400', color: 'var(--color-text-muted, #9ca3af)' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: '400', color: 'var(--color-text-disabled)' }}>
                       ({specialists.length})
                     </span>
                   </h2>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary, #6b7280)', marginTop: '0.25rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
                     {meta.description}
                   </p>
                 </div>
@@ -1050,14 +1050,14 @@ export const SpecialistRegistry: React.FC<SpecialistRegistryProps> = React.memo(
           style={{
             textAlign: 'center',
             padding: '4rem 2rem',
-            backgroundColor: 'var(--color-bg-secondary, #f9fafb)',
+            backgroundColor: 'var(--color-bg-elevated)',
             borderRadius: '0.5rem',
           }}
         >
-          <p style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-secondary, #6b7280)', marginBottom: '0.5rem' }}>
+          <p style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
             No specialists found
           </p>
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted, #9ca3af)' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
             Try adjusting your filters or search query
           </p>
         </div>

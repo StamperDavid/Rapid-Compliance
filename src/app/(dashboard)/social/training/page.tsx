@@ -127,7 +127,7 @@ export default function SocialMediaTrainingPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   // Load settings from Firestore
   const loadSettings = useCallback(async () => {
@@ -466,9 +466,9 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '400px',
-        backgroundColor: '#000000',
+        backgroundColor: 'var(--color-bg-main)',
       }}>
-        <p style={{ color: '#999999' }}>Loading Social Media AI Training Lab...</p>
+        <p style={{ color: 'var(--color-text-secondary)' }}>Loading Social Media AI Training Lab...</p>
       </div>
     );
   }
@@ -476,25 +476,25 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#000000',
-      color: '#ffffff',
+      backgroundColor: 'var(--color-bg-main)',
+      color: 'var(--color-text-primary)',
     }}>
       {/* Header */}
       <div style={{
         padding: '2rem',
-        borderBottom: '1px solid #1a1a1a',
-        backgroundColor: '#000000',
+        borderBottom: '1px solid var(--color-border-light)',
+        backgroundColor: 'var(--color-bg-main)',
       }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <h1 style={{
             fontSize: '2rem',
             fontWeight: 'bold',
             marginBottom: '0.5rem',
-            color: '#ffffff',
+            color: 'var(--color-text-primary)',
           }}>
             Social Media AI Training Lab
           </h1>
-          <p style={{ color: '#999999', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
             Configure how your AI generates social media content across platforms
           </p>
         </div>
@@ -502,8 +502,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
 
       {/* Tabs */}
       <div style={{
-        borderBottom: '1px solid #1a1a1a',
-        backgroundColor: '#0a0a0a',
+        borderBottom: '1px solid var(--color-border-light)',
+        backgroundColor: 'var(--color-bg-main)',
       }}>
         <div style={{
           maxWidth: '1400px',
@@ -521,7 +521,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 backgroundColor: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === tab ? `2px solid ${primaryColor}` : '2px solid transparent',
-                color: activeTab === tab ? '#ffffff' : '#999999',
+                color: activeTab === tab ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                 fontWeight: activeTab === tab ? '600' : '400',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -548,8 +548,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 {/* Brand DNA Inheritance Section */}
                 <div style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.75rem',
                   marginBottom: '1.5rem',
                 }}>
@@ -560,7 +560,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     marginBottom: '1rem',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#ffffff' }}>
+                      <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                         Brand DNA
                       </h2>
                       <span style={{
@@ -586,7 +586,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         onChange={(e) => setOverrideForSocial(e.target.checked)}
                         style={{ accentColor: primaryColor }}
                       />
-                      <span style={{ fontSize: '0.875rem', color: '#999999' }}>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                         Override for Social Only
                       </span>
                     </label>
@@ -601,14 +601,14 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       <div>
                         <label style={{
                           fontSize: '0.75rem',
-                          color: '#666666',
+                          color: 'var(--color-text-disabled)',
                           textTransform: 'uppercase',
                           display: 'block',
                           marginBottom: '0.25rem',
                         }}>
                           Company Description
                         </label>
-                        <p style={{ fontSize: '0.875rem', color: '#ffffff' }}>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
                           {brandDNA.companyDescription ?? 'Not set'}
                         </p>
                       </div>
@@ -616,21 +616,21 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         <div>
                           <label style={{
                             fontSize: '0.75rem',
-                            color: '#666666',
+                            color: 'var(--color-text-disabled)',
                             textTransform: 'uppercase',
                             display: 'block',
                             marginBottom: '0.25rem',
                           }}>
                             Tone of Voice
                           </label>
-                          <p style={{ fontSize: '0.875rem', color: '#ffffff', textTransform: 'capitalize' }}>
+                          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', textTransform: 'capitalize' }}>
                             {brandDNA.toneOfVoice ?? 'Not set'}
                           </p>
                         </div>
                         <div>
                           <label style={{
                             fontSize: '0.75rem',
-                            color: '#666666',
+                            color: 'var(--color-text-disabled)',
                             textTransform: 'uppercase',
                             display: 'block',
                             marginBottom: '0.25rem',
@@ -643,10 +643,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                                 key={idx}
                                 style={{
                                   padding: '0.25rem 0.5rem',
-                                  backgroundColor: '#1a1a1a',
+                                  backgroundColor: 'var(--color-bg-paper)',
                                   borderRadius: '0.25rem',
                                   fontSize: '0.75rem',
-                                  color: '#999999',
+                                  color: 'var(--color-text-secondary)',
                                 }}
                               >
                                 {phrase}
@@ -662,12 +662,12 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     <div style={{
                       marginTop: '1.5rem',
                       paddingTop: '1.5rem',
-                      borderTop: '1px solid #1a1a1a',
+                      borderTop: '1px solid var(--color-border-light)',
                     }}>
                       <h3 style={{
                         fontSize: '0.875rem',
                         fontWeight: '600',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         marginBottom: '1rem',
                       }}>
                         Social-Specific Overrides
@@ -677,7 +677,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           <label style={{
                             display: 'block',
                             fontSize: '0.875rem',
-                            color: '#999999',
+                            color: 'var(--color-text-secondary)',
                             marginBottom: '0.5rem',
                           }}>
                             Company Description (Social)
@@ -693,10 +693,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             style={{
                               width: '100%',
                               padding: '0.75rem',
-                              backgroundColor: '#1a1a1a',
-                              border: '1px solid #333333',
+                              backgroundColor: 'var(--color-bg-paper)',
+                              border: '1px solid var(--color-border-strong)',
                               borderRadius: '0.5rem',
-                              color: '#ffffff',
+                              color: 'var(--color-text-primary)',
                               fontSize: '0.875rem',
                               resize: 'vertical',
                             }}
@@ -710,8 +710,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 {/* Social-Specific Settings */}
                 <div style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.75rem',
                   marginBottom: '1.5rem',
                 }}>
@@ -719,7 +719,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     fontSize: '1.125rem',
                     fontWeight: 'bold',
                     marginBottom: '1.5rem',
-                    color: '#ffffff',
+                    color: 'var(--color-text-primary)',
                   }}>
                     Social-Specific Settings
                   </h2>
@@ -730,7 +730,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       display: 'block',
                       fontSize: '0.875rem',
                       fontWeight: '600',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       marginBottom: '0.75rem',
                     }}>
                       Emoji Usage
@@ -744,8 +744,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             alignItems: 'center',
                             gap: '0.5rem',
                             padding: '0.75rem 1rem',
-                            backgroundColor: emojiUsage === option ? 'rgba(99, 102, 241, 0.15)' : '#1a1a1a',
-                            border: `1px solid ${emojiUsage === option ? primaryColor : '#333333'}`,
+                            backgroundColor: emojiUsage === option ? 'rgba(99, 102, 241, 0.15)' : 'var(--color-bg-paper)',
+                            border: `1px solid ${emojiUsage === option ? primaryColor : 'var(--color-border-strong)'}`,
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
                           }}
@@ -760,7 +760,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           />
                           <span style={{
                             fontSize: '0.875rem',
-                            color: emojiUsage === option ? '#ffffff' : '#999999',
+                            color: emojiUsage === option ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                             textTransform: 'capitalize',
                           }}>
                             {option}
@@ -776,7 +776,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       display: 'block',
                       fontSize: '0.875rem',
                       fontWeight: '600',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       marginBottom: '0.75rem',
                     }}>
                       Call-to-Action Style
@@ -788,10 +788,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         width: '100%',
                         maxWidth: '300px',
                         padding: '0.75rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                       }}
                     >
@@ -807,7 +807,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       display: 'block',
                       fontSize: '0.875rem',
                       fontWeight: '600',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       marginBottom: '0.75rem',
                     }}>
                       Content Themes
@@ -821,10 +821,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             padding: '0.5rem 1rem',
                             backgroundColor: contentThemes.includes(themeOption)
                               ? 'rgba(99, 102, 241, 0.15)'
-                              : '#1a1a1a',
-                            border: `1px solid ${contentThemes.includes(themeOption) ? primaryColor : '#333333'}`,
+                              : 'var(--color-bg-paper)',
+                            border: `1px solid ${contentThemes.includes(themeOption) ? primaryColor : 'var(--color-border-strong)'}`,
                             borderRadius: '9999px',
-                            color: contentThemes.includes(themeOption) ? primaryColor : '#999999',
+                            color: contentThemes.includes(themeOption) ? primaryColor : 'var(--color-text-secondary)',
                             fontSize: '0.875rem',
                             cursor: 'pointer',
                           }}
@@ -841,7 +841,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       display: 'block',
                       fontSize: '0.875rem',
                       fontWeight: '600',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       marginBottom: '0.75rem',
                     }}>
                       Hashtag Strategy
@@ -854,10 +854,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                         resize: 'vertical',
                       }}
@@ -870,7 +870,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       display: 'block',
                       fontSize: '0.875rem',
                       fontWeight: '600',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       marginBottom: '0.75rem',
                     }}>
                       Posting Personality
@@ -883,10 +883,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                         resize: 'vertical',
                       }}
@@ -897,8 +897,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 {/* Platform-Specific Settings */}
                 <div style={{
                   padding: '1.5rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.75rem',
                   marginBottom: '1.5rem',
                 }}>
@@ -906,7 +906,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     fontSize: '1.125rem',
                     fontWeight: 'bold',
                     marginBottom: '1rem',
-                    color: '#ffffff',
+                    color: 'var(--color-text-primary)',
                   }}>
                     Platform-Specific Settings
                   </h2>
@@ -916,7 +916,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     display: 'flex',
                     gap: '0.5rem',
                     marginBottom: '1.5rem',
-                    borderBottom: '1px solid #1a1a1a',
+                    borderBottom: '1px solid var(--color-border-light)',
                     paddingBottom: '0.5rem',
                   }}>
                     {(['twitter', 'linkedin', 'instagram'] as PlatformType[]).map(platform => (
@@ -928,7 +928,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           backgroundColor: activePlatformTab === platform ? primaryColor : 'transparent',
                           border: 'none',
                           borderRadius: '0.375rem',
-                          color: activePlatformTab === platform ? '#ffffff' : '#999999',
+                          color: activePlatformTab === platform ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                           fontWeight: activePlatformTab === platform ? '600' : '400',
                           cursor: 'pointer',
                           fontSize: '0.875rem',
@@ -943,7 +943,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          backgroundColor: activePlatformTab === platform ? 'rgba(255,255,255,0.2)' : '#1a1a1a',
+                          backgroundColor: activePlatformTab === platform ? 'rgba(255,255,255,0.2)' : 'var(--color-bg-paper)',
                           borderRadius: '0.25rem',
                           fontSize: '0.625rem',
                           fontWeight: 'bold',
@@ -962,7 +962,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         <label style={{
                           display: 'block',
                           fontSize: '0.875rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           marginBottom: '0.5rem',
                         }}>
                           Max Character Length
@@ -978,10 +978,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           style={{
                             width: '150px',
                             padding: '0.75rem',
-                            backgroundColor: '#1a1a1a',
-                            border: '1px solid #333333',
+                            backgroundColor: 'var(--color-bg-paper)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
-                            color: '#ffffff',
+                            color: 'var(--color-text-primary)',
                             fontSize: '0.875rem',
                           }}
                         />
@@ -990,7 +990,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         <label style={{
                           display: 'block',
                           fontSize: '0.875rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           marginBottom: '0.5rem',
                         }}>
                           Writing Style
@@ -1005,10 +1005,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             width: '100%',
                             maxWidth: '300px',
                             padding: '0.75rem',
-                            backgroundColor: '#1a1a1a',
-                            border: '1px solid #333333',
+                            backgroundColor: 'var(--color-bg-paper)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
-                            color: '#ffffff',
+                            color: 'var(--color-text-primary)',
                             fontSize: '0.875rem',
                           }}
                         >
@@ -1028,7 +1028,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         <label style={{
                           display: 'block',
                           fontSize: '0.875rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           marginBottom: '0.5rem',
                         }}>
                           Post Format
@@ -1043,10 +1043,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             width: '100%',
                             maxWidth: '300px',
                             padding: '0.75rem',
-                            backgroundColor: '#1a1a1a',
-                            border: '1px solid #333333',
+                            backgroundColor: 'var(--color-bg-paper)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
-                            color: '#ffffff',
+                            color: 'var(--color-text-primary)',
                             fontSize: '0.875rem',
                           }}
                         >
@@ -1060,7 +1060,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         <label style={{
                           display: 'block',
                           fontSize: '0.875rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           marginBottom: '0.5rem',
                         }}>
                           Tone
@@ -1075,10 +1075,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             width: '100%',
                             maxWidth: '300px',
                             padding: '0.75rem',
-                            backgroundColor: '#1a1a1a',
-                            border: '1px solid #333333',
+                            backgroundColor: 'var(--color-bg-paper)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
-                            color: '#ffffff',
+                            color: 'var(--color-text-primary)',
                             fontSize: '0.875rem',
                           }}
                         >
@@ -1098,7 +1098,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         <label style={{
                           display: 'block',
                           fontSize: '0.875rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           marginBottom: '0.5rem',
                         }}>
                           Caption Style
@@ -1113,10 +1113,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             width: '100%',
                             maxWidth: '300px',
                             padding: '0.75rem',
-                            backgroundColor: '#1a1a1a',
-                            border: '1px solid #333333',
+                            backgroundColor: 'var(--color-bg-paper)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
-                            color: '#ffffff',
+                            color: 'var(--color-text-primary)',
                             fontSize: '0.875rem',
                           }}
                         >
@@ -1130,7 +1130,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         <label style={{
                           display: 'block',
                           fontSize: '0.875rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           marginBottom: '0.5rem',
                         }}>
                           Hashtag Count
@@ -1147,14 +1147,14 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           style={{
                             width: '150px',
                             padding: '0.75rem',
-                            backgroundColor: '#1a1a1a',
-                            border: '1px solid #333333',
+                            backgroundColor: 'var(--color-bg-paper)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
-                            color: '#ffffff',
+                            color: 'var(--color-text-primary)',
                             fontSize: '0.875rem',
                           }}
                         />
-                        <p style={{ fontSize: '0.75rem', color: '#666666', marginTop: '0.5rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem' }}>
                           Recommended: 15-20 hashtags for optimal reach
                         </p>
                       </div>
@@ -1168,8 +1168,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   disabled={saving}
                   style={{
                     padding: '0.875rem 2rem',
-                    backgroundColor: saving ? '#333333' : primaryColor,
-                    color: '#ffffff',
+                    backgroundColor: saving ? 'var(--color-border-strong)' : primaryColor,
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     fontSize: '1rem',
@@ -1184,8 +1184,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
               {/* Right Column - Quick Test Sandbox */}
               <div style={{
                 padding: '1.5rem',
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #1a1a1a',
+                backgroundColor: 'var(--color-bg-main)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.75rem',
                 height: 'fit-content',
                 position: 'sticky',
@@ -1195,11 +1195,11 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   fontSize: '1.125rem',
                   fontWeight: 'bold',
                   marginBottom: '1rem',
-                  color: '#ffffff',
+                  color: 'var(--color-text-primary)',
                 }}>
                   Quick Test
                 </h2>
-                <p style={{ fontSize: '0.875rem', color: '#999999', marginBottom: '1.5rem' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
                   Test your settings by generating a sample post
                 </p>
 
@@ -1207,7 +1207,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   <label style={{
                     display: 'block',
                     fontSize: '0.875rem',
-                    color: '#999999',
+                    color: 'var(--color-text-secondary)',
                     marginBottom: '0.5rem',
                   }}>
                     Platform
@@ -1218,10 +1218,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333333',
+                      backgroundColor: 'var(--color-bg-paper)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                     }}
                   >
@@ -1235,7 +1235,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   <label style={{
                     display: 'block',
                     fontSize: '0.875rem',
-                    color: '#999999',
+                    color: 'var(--color-text-secondary)',
                     marginBottom: '0.5rem',
                   }}>
                     Topic / Prompt
@@ -1248,10 +1248,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333333',
+                      backgroundColor: 'var(--color-bg-paper)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                     }}
                   />
@@ -1263,8 +1263,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    backgroundColor: isGenerating ? '#333333' : primaryColor,
-                    color: '#ffffff',
+                    backgroundColor: isGenerating ? 'var(--color-border-strong)' : primaryColor,
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     fontSize: '0.875rem',
@@ -1279,8 +1279,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 {generatedPost && (
                   <div style={{
                     padding: '1rem',
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #333333',
+                    backgroundColor: 'var(--color-bg-paper)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
                   }}>
                     <div style={{
@@ -1291,7 +1291,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     }}>
                       <span style={{
                         fontSize: '0.75rem',
-                        color: '#999999',
+                        color: 'var(--color-text-secondary)',
                         textTransform: 'uppercase',
                       }}>
                         Preview ({generatedPost.platform})
@@ -1299,15 +1299,15 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       <span style={{
                         fontSize: '0.75rem',
                         color: generatedPost.characterCount > PLATFORM_LIMITS[generatedPost.platform]
-                          ? '#ef4444'
-                          : '#10b981',
+                          ? 'var(--color-error)'
+                          : 'var(--color-success)',
                       }}>
                         {generatedPost.characterCount} / {PLATFORM_LIMITS[generatedPost.platform]}
                       </span>
                     </div>
                     <p style={{
                       fontSize: '0.875rem',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       whiteSpace: 'pre-wrap',
                       marginBottom: '1rem',
                       lineHeight: '1.5',
@@ -1316,7 +1316,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     </p>
                     {generatedPost.hashtags.length > 0 && (
                       <div style={{ marginBottom: '1rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#666666' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                           Hashtags: {generatedPost.hashtags.length}
                         </span>
                       </div>
@@ -1328,9 +1328,9 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           flex: 1,
                           padding: '0.5rem',
                           backgroundColor: 'transparent',
-                          border: '1px solid #333333',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.375rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           fontSize: '0.75rem',
                           cursor: 'pointer',
                         }}
@@ -1343,9 +1343,9 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           flex: 1,
                           padding: '0.5rem',
                           backgroundColor: 'transparent',
-                          border: '1px solid #333333',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.375rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           fontSize: '0.75rem',
                           cursor: 'pointer',
                         }}
@@ -1365,15 +1365,15 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
               {/* Left - Input */}
               <div style={{
                 padding: '1.5rem',
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #1a1a1a',
+                backgroundColor: 'var(--color-bg-main)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.75rem',
               }}>
                 <h2 style={{
                   fontSize: '1.125rem',
                   fontWeight: 'bold',
                   marginBottom: '1.5rem',
-                  color: '#ffffff',
+                  color: 'var(--color-text-primary)',
                 }}>
                   Generate Test Post
                 </h2>
@@ -1383,7 +1383,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     display: 'block',
                     fontSize: '0.875rem',
                     fontWeight: '600',
-                    color: '#ffffff',
+                    color: 'var(--color-text-primary)',
                     marginBottom: '0.75rem',
                   }}>
                     Platform
@@ -1398,10 +1398,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           padding: '1rem',
                           backgroundColor: generatePlatform === platform
                             ? 'rgba(99, 102, 241, 0.15)'
-                            : '#1a1a1a',
-                          border: `1px solid ${generatePlatform === platform ? primaryColor : '#333333'}`,
+                            : 'var(--color-bg-paper)',
+                          border: `1px solid ${generatePlatform === platform ? primaryColor : 'var(--color-border-strong)'}`,
                           borderRadius: '0.5rem',
-                          color: generatePlatform === platform ? '#ffffff' : '#999999',
+                          color: generatePlatform === platform ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                           cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
@@ -1417,7 +1417,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           justifyContent: 'center',
                           backgroundColor: generatePlatform === platform
                             ? primaryColor
-                            : '#333333',
+                            : 'var(--color-border-strong)',
                           borderRadius: '0.375rem',
                           fontSize: '0.75rem',
                           fontWeight: 'bold',
@@ -1427,7 +1427,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         <span style={{ fontSize: '0.875rem', textTransform: 'capitalize' }}>
                           {platform}
                         </span>
-                        <span style={{ fontSize: '0.75rem', color: '#666666' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                           {PLATFORM_LIMITS[platform]} chars
                         </span>
                       </button>
@@ -1440,7 +1440,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     display: 'block',
                     fontSize: '0.875rem',
                     fontWeight: '600',
-                    color: '#ffffff',
+                    color: 'var(--color-text-primary)',
                     marginBottom: '0.75rem',
                   }}>
                     Topic / Prompt
@@ -1453,10 +1453,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333333',
+                      backgroundColor: 'var(--color-bg-paper)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                       resize: 'vertical',
                     }}
@@ -1469,8 +1469,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   style={{
                     width: '100%',
                     padding: '1rem',
-                    backgroundColor: (isGenerating || !generateTopic.trim()) ? '#333333' : primaryColor,
-                    color: '#ffffff',
+                    backgroundColor: (isGenerating || !generateTopic.trim()) ? 'var(--color-border-strong)' : primaryColor,
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     fontSize: '1rem',
@@ -1485,15 +1485,15 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
               {/* Right - Preview */}
               <div style={{
                 padding: '1.5rem',
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #1a1a1a',
+                backgroundColor: 'var(--color-bg-main)',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '0.75rem',
               }}>
                 <h2 style={{
                   fontSize: '1.125rem',
                   fontWeight: 'bold',
                   marginBottom: '1.5rem',
-                  color: '#ffffff',
+                  color: 'var(--color-text-primary)',
                 }}>
                   Preview
                 </h2>
@@ -1502,7 +1502,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   <div style={{
                     textAlign: 'center',
                     padding: '3rem',
-                    color: '#666666',
+                    color: 'var(--color-text-disabled)',
                   }}>
                     <p>Enter a topic and click generate to see a preview</p>
                   </div>
@@ -1512,7 +1512,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   <div style={{
                     textAlign: 'center',
                     padding: '3rem',
-                    color: '#999999',
+                    color: 'var(--color-text-secondary)',
                   }}>
                     <p>Generating your post...</p>
                   </div>
@@ -1523,9 +1523,9 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     {/* Platform-styled preview */}
                     <div style={{
                       padding: '1.5rem',
-                      backgroundColor: generatePlatform === 'linkedin' ? '#0a66c2' :
+                      backgroundColor: generatePlatform === 'linkedin' ? 'var(--color-info)' :
                                        generatePlatform === 'instagram' ? 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)' :
-                                       '#1a1a1a',
+                                       'var(--color-bg-paper)',
                       background: generatePlatform === 'instagram'
                         ? 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)'
                         : undefined,
@@ -1541,19 +1541,19 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         <div style={{
                           width: '40px',
                           height: '40px',
-                          backgroundColor: '#333333',
+                          backgroundColor: 'var(--color-border-strong)',
                           borderRadius: '50%',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           fontSize: '0.875rem',
                           fontWeight: 'bold',
-                          color: '#ffffff',
+                          color: 'var(--color-text-primary)',
                         }}>
                           {PLATFORM_ICONS[generatePlatform]}
                         </div>
                         <div>
-                          <p style={{ fontWeight: '600', color: '#ffffff', fontSize: '0.875rem' }}>
+                          <p style={{ fontWeight: '600', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                             Your Brand
                           </p>
                           <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
@@ -1563,7 +1563,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       </div>
                       <p style={{
                         fontSize: '0.9375rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         whiteSpace: 'pre-wrap',
                         lineHeight: '1.6',
                       }}>
@@ -1580,49 +1580,49 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     }}>
                       <div style={{
                         padding: '1rem',
-                        backgroundColor: '#1a1a1a',
+                        backgroundColor: 'var(--color-bg-paper)',
                         borderRadius: '0.5rem',
                         textAlign: 'center',
                       }}>
-                        <p style={{ fontSize: '0.75rem', color: '#666666', marginBottom: '0.25rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>
                           Characters
                         </p>
                         <p style={{
                           fontSize: '1.25rem',
                           fontWeight: 'bold',
                           color: generatedPost.characterCount > PLATFORM_LIMITS[generatedPost.platform]
-                            ? '#ef4444'
-                            : '#10b981',
+                            ? 'var(--color-error)'
+                            : 'var(--color-success)',
                         }}>
                           {generatedPost.characterCount}
                         </p>
-                        <p style={{ fontSize: '0.75rem', color: '#666666' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                           / {PLATFORM_LIMITS[generatedPost.platform]}
                         </p>
                       </div>
                       <div style={{
                         padding: '1rem',
-                        backgroundColor: '#1a1a1a',
+                        backgroundColor: 'var(--color-bg-paper)',
                         borderRadius: '0.5rem',
                         textAlign: 'center',
                       }}>
-                        <p style={{ fontSize: '0.75rem', color: '#666666', marginBottom: '0.25rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>
                           Hashtags
                         </p>
-                        <p style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#ffffff' }}>
+                        <p style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                           {generatedPost.hashtags.length}
                         </p>
                       </div>
                       <div style={{
                         padding: '1rem',
-                        backgroundColor: '#1a1a1a',
+                        backgroundColor: 'var(--color-bg-paper)',
                         borderRadius: '0.5rem',
                         textAlign: 'center',
                       }}>
-                        <p style={{ fontSize: '0.75rem', color: '#666666', marginBottom: '0.25rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>
                           Platform
                         </p>
-                        <p style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#ffffff', textTransform: 'capitalize' }}>
+                        <p style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', textTransform: 'capitalize' }}>
                           {generatedPost.platform}
                         </p>
                       </div>
@@ -1633,7 +1633,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       <div style={{ marginBottom: '1.5rem' }}>
                         <p style={{
                           fontSize: '0.75rem',
-                          color: '#666666',
+                          color: 'var(--color-text-disabled)',
                           marginBottom: '0.5rem',
                           textTransform: 'uppercase',
                         }}>
@@ -1667,9 +1667,9 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           flex: 1,
                           padding: '0.75rem',
                           backgroundColor: 'transparent',
-                          border: '1px solid #333333',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           fontSize: '0.875rem',
                           cursor: 'pointer',
                         }}
@@ -1682,9 +1682,9 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           flex: 1,
                           padding: '0.75rem',
                           backgroundColor: 'transparent',
-                          border: '1px solid #333333',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           fontSize: '0.875rem',
                           cursor: 'pointer',
                         }}
@@ -1699,7 +1699,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           backgroundColor: primaryColor,
                           border: 'none',
                           borderRadius: '0.5rem',
-                          color: '#ffffff',
+                          color: 'var(--color-text-primary)',
                           fontSize: '0.875rem',
                           fontWeight: '600',
                           cursor: 'pointer',
@@ -1721,7 +1721,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 fontSize: '1.5rem',
                 fontWeight: 'bold',
                 marginBottom: '1.5rem',
-                color: '#ffffff',
+                color: 'var(--color-text-primary)',
               }}>
                 Generation History
               </h2>
@@ -1730,10 +1730,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 <div style={{
                   textAlign: 'center',
                   padding: '3rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.75rem',
-                  color: '#666666',
+                  color: 'var(--color-text-disabled)',
                 }}>
                   <p>No generated posts yet.</p>
                   <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
@@ -1748,8 +1748,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     key={item.id}
                     style={{
                       padding: '1.5rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #1a1a1a',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-light)',
                       borderRadius: '0.75rem',
                     }}
                   >
@@ -1762,26 +1762,26 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <span style={{
                           padding: '0.25rem 0.75rem',
-                          backgroundColor: '#1a1a1a',
-                          border: '1px solid #333333',
+                          backgroundColor: 'var(--color-bg-paper)',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.375rem',
                           fontSize: '0.75rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                           textTransform: 'capitalize',
                         }}>
                           {item.platform}
                         </span>
-                        <span style={{ fontSize: '0.875rem', color: '#999999' }}>
+                        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                           {item.topic}
                         </span>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: '#666666' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                         {new Date(item.generatedAt).toLocaleDateString()}
                       </span>
                     </div>
                     <p style={{
                       fontSize: '0.875rem',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       whiteSpace: 'pre-wrap',
                       lineHeight: '1.5',
                       marginBottom: '1rem',
@@ -1793,9 +1793,9 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: 'transparent',
-                        border: '1px solid #333333',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.375rem',
-                        color: '#999999',
+                        color: 'var(--color-text-secondary)',
                         fontSize: '0.75rem',
                         cursor: 'pointer',
                       }}
@@ -1822,11 +1822,11 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     fontSize: '1.5rem',
                     fontWeight: 'bold',
                     marginBottom: '0.5rem',
-                    color: '#ffffff',
+                    color: 'var(--color-text-primary)',
                   }}>
                     Knowledge Base
                   </h2>
-                  <p style={{ color: '#999999', fontSize: '0.875rem' }}>
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                     Upload examples, guidelines, and templates to improve AI generation
                   </p>
                 </div>
@@ -1834,7 +1834,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   style={{
                     padding: '0.75rem 1.5rem',
                     backgroundColor: primaryColor,
-                    color: '#ffffff',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     fontSize: '0.875rem',
@@ -1850,10 +1850,10 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                 <div style={{
                   textAlign: 'center',
                   padding: '3rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-light)',
                   borderRadius: '0.75rem',
-                  color: '#666666',
+                  color: 'var(--color-text-disabled)',
                 }}>
                   <p>No knowledge items yet.</p>
                   <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
@@ -1868,8 +1868,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     key={item.id}
                     style={{
                       padding: '1.5rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #1a1a1a',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-light)',
                       borderRadius: '0.75rem',
                     }}
                   >
@@ -1890,8 +1890,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                         borderRadius: '0.375rem',
                         fontSize: '0.75rem',
                         color: item.type === 'document' ? primaryColor :
-                               item.type === 'example' ? '#10b981' :
-                               '#f59e0b',
+                               item.type === 'example' ? 'var(--color-success)' :
+                               'var(--color-warning)',
                         textTransform: 'capitalize',
                       }}>
                         {item.type}
@@ -1900,19 +1900,19 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     <h3 style={{
                       fontSize: '1rem',
                       fontWeight: '600',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       marginBottom: '0.5rem',
                     }}>
                       {item.title}
                     </h3>
                     <p style={{
                       fontSize: '0.875rem',
-                      color: '#999999',
+                      color: 'var(--color-text-secondary)',
                       marginBottom: '0.75rem',
                     }}>
                       {item.content.substring(0, 100)}...
                     </p>
-                    <p style={{ fontSize: '0.75rem', color: '#666666' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                       Uploaded: {new Date(item.uploadedAt).toLocaleDateString()}
                     </p>
                   </div>

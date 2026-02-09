@@ -487,24 +487,24 @@ function CRMContent() {
   const configBusinessName = config?.businessName;
   const brandName = theme?.branding?.companyName || ((configBusinessName !== '' && configBusinessName != null) ? configBusinessName : 'AI CRM');
   const logoUrl = theme?.branding?.logoUrl;
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       {/* Main Content Area */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
       {/* Sidebar */}
-      <div style={{ 
+      <div style={{
         width: sidebarOpen ? '260px' : '70px',
-        backgroundColor: '#0a0a0a',
-        borderRight: '1px solid #1a1a1a',
+        backgroundColor: 'var(--color-bg-paper)',
+        borderRight: '1px solid var(--color-border-main)',
         transition: 'width 0.3s',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative'
       }}>
         {/* Brand */}
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid #1a1a1a' }}>
+        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border-main)' }}>
           <Link href={user ? `/dashboard` : '/login'} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', cursor: 'pointer' }}>
             {logoUrl ? (
               <Image src={logoUrl} alt={brandName} width={sidebarOpen ? 150 : 32} height={sidebarOpen ? 40 : 32} style={{ maxHeight: sidebarOpen ? '40px' : '32px', maxWidth: sidebarOpen ? '150px' : '32px', objectFit: 'contain' }} />
@@ -513,10 +513,10 @@ function CRMContent() {
                 <div style={{ fontSize: '1.5rem' }}>🚀</div>
                 {sidebarOpen && (
                   <div>
-                    <h1 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#ffffff', margin: 0 }}>
+                    <h1 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
                       {brandName}
                     </h1>
-                    <p style={{ fontSize: '0.75rem', color: '#666', margin: 0 }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', margin: 0 }}>
                       {config?.industry ? STANDARD_SCHEMAS[config.industry as keyof typeof STANDARD_SCHEMAS]?.name : 'Platform'}
                     </p>
                   </div>
@@ -538,7 +538,7 @@ function CRMContent() {
               alignItems: 'center',
               gap: '0.75rem',
               backgroundColor: 'transparent',
-              color: '#999',
+              color: 'var(--color-text-secondary)',
               border: 'none',
               fontSize: '0.875rem',
               fontWeight: '400',
@@ -548,7 +548,7 @@ function CRMContent() {
               textDecoration: 'none'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#111';
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-main)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -559,7 +559,7 @@ function CRMContent() {
           </Link>
 
           {/* Divider */}
-          <div style={{ height: '1px', backgroundColor: '#1a1a1a', margin: '0.5rem 0' }}></div>
+          <div style={{ height: '1px', backgroundColor: 'var(--color-bg-paper)', margin: '0.5rem 0' }}></div>
 
           {/* Entity Navigation */}
           {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
@@ -572,8 +572,8 @@ function CRMContent() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem',
-                  backgroundColor: activeView === key ? '#1a1a1a' : 'transparent',
-                  color: activeView === key ? primaryColor : '#999',
+                  backgroundColor: activeView === key ? 'var(--color-bg-paper)' : 'transparent',
+                  color: activeView === key ? primaryColor : 'var(--color-text-secondary)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -583,7 +583,7 @@ function CRMContent() {
                   transition: 'all 0.2s'
                 }}
               onMouseEnter={(e) => {
-                if (activeView !== key) {e.currentTarget.style.backgroundColor = '#111';}
+                if (activeView !== key) {e.currentTarget.style.backgroundColor = 'var(--color-bg-main)';}
               }}
               onMouseLeave={(e) => {
                 if (activeView !== key) {e.currentTarget.style.backgroundColor = 'transparent';}
@@ -596,14 +596,14 @@ function CRMContent() {
         </nav>
 
         {/* Settings Links - REMOVED (now in AdminBar) */}
-        <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
+        <div style={{ padding: '1rem', borderTop: '1px solid var(--color-border-light)' }}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             style={{
               width: '100%',
               padding: '0.5rem',
-              backgroundColor: '#1a1a1a',
-              color: '#999',
+              backgroundColor: 'var(--color-bg-paper)',
+              color: 'var(--color-text-secondary)',
               border: 'none',
               borderRadius: '0.375rem',
               cursor: 'pointer',
@@ -619,18 +619,18 @@ function CRMContent() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top Bar */}
         <div style={{ 
-          backgroundColor: '#0a0a0a',
-          borderBottom: '1px solid #1a1a1a',
+          backgroundColor: 'var(--color-bg-main)',
+          borderBottom: '1px solid var(--color-border-light)',
           padding: '1.25rem 2rem',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
           <div>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#ffffff', margin: 0 }}>
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
               {getSchema().pluralName}
             </h2>
-            <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.25rem' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
               {getActiveData().length} total records
             </p>
           </div>
@@ -643,9 +643,9 @@ function CRMContent() {
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 padding: '0.625rem 1rem',
-                backgroundColor: '#1a1a1a',
-                color: '#fff',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-paper)',
+                color: 'var(--color-text-primary)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 minWidth: '200px'
@@ -655,9 +655,9 @@ function CRMContent() {
               onClick={() => setShowFilterBuilder(true)}
               style={{
                 padding: '0.625rem 1rem',
-                backgroundColor: activeFilter ? primaryColor : '#1a1a1a',
-                color: activeFilter ? '#fff' : '#999',
-                border: `1px solid ${activeFilter ? primaryColor : '#333'}`,
+                backgroundColor: activeFilter ? primaryColor : 'var(--color-bg-paper)',
+                color: activeFilter ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                border: `1px solid ${activeFilter ? primaryColor : 'var(--color-border-strong)'}`,
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -669,7 +669,7 @@ function CRMContent() {
             >
               🔍 Filter
               {activeFilter && activeFilter.groups[0]?.conditions.length > 0 && (
-                <span style={{ padding: '2px 6px', backgroundColor: theme?.colors?.primary?.dark || '#4f46e5', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '600' }}>
+                <span style={{ padding: '2px 6px', backgroundColor: theme?.colors?.primary?.dark || 'var(--color-primary-dark)', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '600' }}>
                   {activeFilter.groups.reduce((sum, g) => sum + g.conditions.length, 0)}
                 </span>
               )}
@@ -679,9 +679,9 @@ function CRMContent() {
                 onClick={() => setActiveFilter(null)}
                 style={{
                   padding: '0.625rem',
-                  backgroundColor: '#1a1a1a',
-                  color: '#dc2626',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  color: 'var(--color-error)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.5rem',
                   cursor: 'pointer',
                   fontSize: '0.875rem'
@@ -695,9 +695,9 @@ function CRMContent() {
               onClick={() => setShowImportModal(true)}
               style={{
                 padding: '0.625rem 1rem',
-                backgroundColor: '#1a1a1a',
-                color: '#999',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-paper)',
+                color: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -709,9 +709,9 @@ function CRMContent() {
               onClick={handleExport}
               style={{
                 padding: '0.625rem 1rem',
-                backgroundColor: '#1a1a1a',
-                color: '#999',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-paper)',
+                color: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
                 fontSize: '0.875rem'
@@ -736,10 +736,10 @@ function CRMContent() {
         </div>
 
         {/* Content Area with Data Table */}
-        <div style={{ flex: 1, padding: '2rem', overflow: 'auto', backgroundColor: '#000' }}>
-          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '0.75rem', border: '1px solid #1a1a1a', overflow: 'hidden' }}>
+        <div style={{ flex: 1, padding: '2rem', overflow: 'auto', backgroundColor: 'var(--color-bg-main)' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '0.75rem', border: '1px solid var(--color-border-light)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: '#111' }}>
+              <thead style={{ backgroundColor: 'var(--color-bg-main)' }}>
                 <tr>
                   {getSchema().fields.slice(0, 6).map((field: SchemaField) => (
                     <th key={field.key} style={{
@@ -747,9 +747,9 @@ function CRMContent() {
                       textAlign: 'left',
                       fontSize: '0.75rem',
                       fontWeight: '600',
-                      color: '#999',
+                      color: 'var(--color-text-secondary)',
                       textTransform: 'uppercase',
-                      borderBottom: '2px solid #1a1a1a'
+                      borderBottom: '2px solid var(--color-border-light)'
                     }}>
                       {field.label}
                     </th>
@@ -759,9 +759,9 @@ function CRMContent() {
                     textAlign: 'right',
                     fontSize: '0.75rem',
                     fontWeight: '600',
-                    color: '#999',
+                    color: 'var(--color-text-secondary)',
                     textTransform: 'uppercase',
-                    borderBottom: '2px solid #1a1a1a'
+                    borderBottom: '2px solid var(--color-border-light)'
                   }}>
                     Actions
                   </th>
@@ -771,17 +771,17 @@ function CRMContent() {
                 {recordsLoading ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '4rem', textAlign: 'center' }}>
-                      <div style={{ color: '#666' }}>Loading {getSchema().pluralName}...</div>
+                      <div style={{ color: 'var(--color-text-disabled)' }}>Loading {getSchema().pluralName}...</div>
                     </td>
                   </tr>
                 ) : getActiveData().length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '4rem', textAlign: 'center' }}>
                       <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{getSchema().icon}</div>
-                      <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                      <div style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                         No {getSchema().pluralName.toLowerCase()} yet
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem' }}>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>
                         Get started by adding your first {getSchema().singularName.toLowerCase()} or importing from CSV.
                       </div>
                       <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
@@ -803,9 +803,9 @@ function CRMContent() {
                           onClick={() => setShowImportModal(true)}
                           style={{
                             padding: '0.625rem 1rem',
-                            backgroundColor: '#1a1a1a',
-                            color: '#999',
-                            border: '1px solid #333',
+                            backgroundColor: 'var(--color-bg-paper)',
+                            color: 'var(--color-text-secondary)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
                             fontSize: '0.875rem',
@@ -820,9 +820,9 @@ function CRMContent() {
                   getActiveData().map((record: CRMRecord) => {
                     const recordData = record as unknown as Record<string, unknown>;
                     return (
-                    <tr key={record.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                    <tr key={record.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                       {getSchema().fields.slice(0, 6).map((field: SchemaField) => (
-                        <td key={field.key} style={{ padding: '1rem 1.5rem', color: '#ffffff' }}>
+                        <td key={field.key} style={{ padding: '1rem 1.5rem', color: 'var(--color-text-primary)' }}>
                           {field.type === 'currency' ? (
                             <span style={{ fontWeight: '600' }}>${Number(recordData[field.key] ?? 0).toLocaleString()}</span>
                           ) : field.type === 'lookup' && field.key === 'company_id' ? (
@@ -830,8 +830,8 @@ function CRMContent() {
                           ) : field.type === 'checkbox' ? (
                             <span style={{
                               padding: '0.25rem 0.5rem',
-                              backgroundColor: recordData[field.key] ? '#065f46' : '#333',
-                              color: recordData[field.key] ? '#6ee7b7' : '#999',
+                              backgroundColor: recordData[field.key] ? 'var(--color-success-dark)' : 'var(--color-border-strong)',
+                              color: recordData[field.key] ? 'var(--color-success-light)' : 'var(--color-text-secondary)',
                               borderRadius: '0.25rem',
                               fontSize: '0.75rem'
                             }}>
@@ -840,11 +840,11 @@ function CRMContent() {
                           ) : field.key.includes('status') || field.key.includes('stage') ? (
                             <span style={{
                               padding: '0.25rem 0.75rem',
-                              backgroundColor: '#1a1a1a',
-                              color: recordData[field.key] === 'Active' || recordData[field.key] === 'Paid' ? theme?.colors?.success?.main || '#10b981' : primaryColor,
+                              backgroundColor: 'var(--color-bg-paper)',
+                              color: recordData[field.key] === 'Active' || recordData[field.key] === 'Paid' ? theme?.colors?.success?.main || 'var(--color-success)' : primaryColor,
                               borderRadius: '9999px',
                               fontSize: '0.75rem',
-                              border: '1px solid #333'
+                              border: '1px solid var(--color-border-strong)'
                             }}>
                               {String(recordData[field.key] ?? '')}
                             </span>
@@ -861,7 +861,7 @@ function CRMContent() {
                         </button>
                         <button
                           onClick={() => handleDelete(record)}
-                          style={{ color: theme?.colors?.error?.main || '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}>
+                          style={{ color: theme?.colors?.error?.main || 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}>
                           Delete
                         </button>
                       </td>
@@ -878,8 +878,8 @@ function CRMContent() {
       {/* Add Modal */}
       {showAddModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '2rem', minWidth: '500px', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', padding: '2rem', minWidth: '500px', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
               Add New {getSchema().singularName}
             </h3>
 
@@ -888,14 +888,14 @@ function CRMContent() {
                 const formDataRecord = formData as Record<string, unknown>;
                 return (
                 <div key={field.key}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     {field.label}
                   </label>
                   {field.type === 'select' ? (
                     <select
                       value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
                       <option value="">Select...</option>
                       {field.options?.map((opt: string) => (
@@ -913,7 +913,7 @@ function CRMContent() {
                     <select
                       value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
                       <option value="">Select Company...</option>
                       {companies.map((company) => (
@@ -925,7 +925,7 @@ function CRMContent() {
                       type={field.type === 'currency' || field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
                       value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     />
                   )}
                 </div>
@@ -936,7 +936,7 @@ function CRMContent() {
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
               <button
                 onClick={() => setShowAddModal(false)}
-                style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
               >
                 Cancel
               </button>
@@ -954,8 +954,8 @@ function CRMContent() {
       {/* Edit Modal */}
       {showEditModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '2rem', minWidth: '500px', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', padding: '2rem', minWidth: '500px', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
               Edit {getSchema().singularName}
             </h3>
 
@@ -964,14 +964,14 @@ function CRMContent() {
                 const formDataRecord = formData as Record<string, unknown>;
                 return (
                 <div key={field.key}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                     {field.label}
                   </label>
                   {field.type === 'select' ? (
                     <select
                       value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
                       <option value="">Select...</option>
                       {field.options?.map((opt: string) => (
@@ -989,7 +989,7 @@ function CRMContent() {
                     <select
                       value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
                       <option value="">Select Company...</option>
                       {companies.map((company) => (
@@ -1001,7 +1001,7 @@ function CRMContent() {
                       type={field.type === 'currency' || field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
                       value={String(formDataRecord[field.key] ?? '')}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     />
                   )}
                 </div>
@@ -1012,7 +1012,7 @@ function CRMContent() {
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
               <button
                 onClick={() => setShowEditModal(false)}
-                style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
               >
                 Cancel
               </button>
@@ -1030,24 +1030,24 @@ function CRMContent() {
       {/* Delete Confirmation */}
       {showDeleteConfirm && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '2rem', minWidth: '400px' }}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', padding: '2rem', minWidth: '400px' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
               Confirm Delete
             </h3>
-            <p style={{ color: '#999', marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
               Are you sure you want to delete this {getSchema().singularName}? This action cannot be undone.
             </p>
 
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                style={{ flex: 1, padding: '0.75rem', backgroundColor: theme?.colors?.error?.main || '#dc2626', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: theme?.colors?.error?.main || 'var(--color-error)', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
               >
                 Delete
               </button>
@@ -1074,11 +1074,11 @@ function CRMContent() {
       {/* Import Modal */}
       {showImportModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '2rem', minWidth: '700px', maxWidth: '900px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', padding: '2rem', minWidth: '700px', maxWidth: '900px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
               Import {getSchema().pluralName}
             </h3>
-            <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '1.5rem' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
               Upload a CSV file. We&apos;ll automatically map columns to your {getSchema().singularName} schema.
             </p>
 
@@ -1089,28 +1089,28 @@ function CRMContent() {
                   htmlFor="import-file-upload"
                   style={{
                     display: 'block',
-                    border: '2px dashed #333',
+                    border: '2px dashed var(--color-border-strong)',
                     borderRadius: '0.75rem',
                     padding: '3rem',
                     textAlign: 'center',
                     cursor: 'pointer',
-                    backgroundColor: '#111',
+                    backgroundColor: 'var(--color-bg-main)',
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = primaryColor;
-                    e.currentTarget.style.backgroundColor = '#1a1a1a';
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#333';
-                    e.currentTarget.style.backgroundColor = '#111';
+                    e.currentTarget.style.borderColor = 'var(--color-border-strong)';
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-main)';
                   }}
                 >
                   <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📄</div>
-                  <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                  <p style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                     Click to upload or drag and drop
                   </p>
-                  <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
                     CSV files only (Max 10MB)
                   </p>
                   <input
@@ -1122,13 +1122,13 @@ function CRMContent() {
                   />
                 </label>
 
-                <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-strong)' }}>
+                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                     💡 Expected Columns for {getSchema().pluralName}:
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {getSchema().fields.slice(0, 8).map((field: SchemaField) => (
-                      <span key={field.key} style={{ padding: '0.25rem 0.75rem', backgroundColor: '#222', color: primaryColor, borderRadius: '9999px', fontSize: '0.75rem', border: '1px solid #333' }}>
+                      <span key={field.key} style={{ padding: '0.25rem 0.75rem', backgroundColor: 'var(--color-bg-elevated)', color: primaryColor, borderRadius: '9999px', fontSize: '0.75rem', border: '1px solid var(--color-border-strong)' }}>
                         {field.label}
                       </span>
                     ))}
@@ -1138,11 +1138,11 @@ function CRMContent() {
             ) : (
               // Preview and Mapping
               <div>
-                <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-strong)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>📄 {importFile.name}</p>
-                      <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>📄 {importFile.name}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
                         {importPreview.length} records found (showing first 5)
                       </p>
                     </div>
@@ -1152,7 +1152,7 @@ function CRMContent() {
                         setImportPreview([]);
                         setColumnMapping({});
                       }}
-                      style={{ padding: '0.5rem 0.75rem', backgroundColor: '#222', color: '#999', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
+                      style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
                     >
                       Change File
                     </button>
@@ -1160,18 +1160,18 @@ function CRMContent() {
                 </div>
 
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>
                     Column Mapping (auto-detected):
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', maxHeight: '200px', overflowY: 'auto', padding: '0.5rem' }}>
                     {Object.keys(columnMapping).map((csvColumn) => (
                       <div key={csvColumn} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-                        <span style={{ color: '#999', flex: 1 }}>{csvColumn}</span>
-                        <span style={{ color: '#666' }}>→</span>
+                        <span style={{ color: 'var(--color-text-secondary)', flex: 1 }}>{csvColumn}</span>
+                        <span style={{ color: 'var(--color-text-disabled)' }}>→</span>
                         <select
                           value={columnMapping[csvColumn]}
                           onChange={(e) => setColumnMapping(prev => ({ ...prev, [csvColumn]: e.target.value }))}
-                          style={{ flex: 1, padding: '0.375rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.75rem' }}
+                          style={{ flex: 1, padding: '0.375rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.75rem' }}
                         >
                           <option value="">Skip</option>
                           {getSchema().fields.map((field: SchemaField) => (
@@ -1185,15 +1185,15 @@ function CRMContent() {
 
                 {/* Preview Table */}
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>
                     Preview (first 5 rows):
                   </h4>
-                  <div style={{ backgroundColor: '#111', borderRadius: '0.5rem', border: '1px solid #1a1a1a', overflow: 'auto', maxHeight: '300px' }}>
+                  <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)', overflow: 'auto', maxHeight: '300px' }}>
                     <table style={{ width: '100%', fontSize: '0.75rem' }}>
-                      <thead style={{ backgroundColor: '#1a1a1a', position: 'sticky', top: 0 }}>
+                      <thead style={{ backgroundColor: 'var(--color-bg-paper)', position: 'sticky', top: 0 }}>
                         <tr>
                           {Object.keys(importPreview[0] ?? {}).map(col => (
-                            <th key={col} style={{ padding: '0.75rem', textAlign: 'left', color: '#999', fontWeight: '600', textTransform: 'uppercase', borderBottom: '1px solid #333' }}>
+                            <th key={col} style={{ padding: '0.75rem', textAlign: 'left', color: 'var(--color-text-secondary)', fontWeight: '600', textTransform: 'uppercase', borderBottom: '1px solid var(--color-border-strong)' }}>
                               {col}
                             </th>
                           ))}
@@ -1201,9 +1201,9 @@ function CRMContent() {
                       </thead>
                       <tbody>
                         {importPreview.map((row, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
                             {Object.values(row).map((val: string, i) => (
-                              <td key={i} style={{ padding: '0.75rem', color: '#fff' }}>{val}</td>
+                              <td key={i} style={{ padding: '0.75rem', color: 'var(--color-text-primary)' }}>{val}</td>
                             ))}
                           </tr>
                         ))}
@@ -1222,7 +1222,7 @@ function CRMContent() {
                   setImportPreview([]);
                   setColumnMapping({});
                 }}
-                style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
               >
                 Cancel
               </button>
@@ -1246,13 +1246,13 @@ function CRMContent() {
           top: '2rem',
           right: '2rem',
           padding: '1rem 1.5rem',
-          backgroundColor: toast.type === 'success' ? '#065f46' : '#7f1d1d',
-          color: toast.type === 'success' ? '#6ee7b7' : '#fca5a5',
+          backgroundColor: toast.type === 'success' ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
+          color: toast.type === 'success' ? 'var(--color-success-light)' : 'var(--color-error-light)',
           borderRadius: '0.5rem',
           boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
           zIndex: 100,
           fontWeight: '600',
-          border: `1px solid ${toast.type === 'success' ? '#10b981' : '#dc2626'}`
+          border: `1px solid ${toast.type === 'success' ? 'var(--color-success)' : 'var(--color-error)'}`
         }}>
           {toast.message}
         </div>

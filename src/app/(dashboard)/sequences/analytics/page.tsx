@@ -313,9 +313,9 @@ export default function SequenceAnalyticsPage() {
                   onClick={() => exportSequencePerformanceToCSV(sequences)}
                   style={{
                     padding: '0.75rem 1.25rem',
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: 'var(--color-bg-elevated)',
                     color: 'var(--color-text-primary)',
-                    border: '1px solid #333',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -334,9 +334,9 @@ export default function SequenceAnalyticsPage() {
                   onClick={() => exportChannelPerformanceToCSV(summary.channelPerformance)}
                   style={{
                     padding: '0.75rem 1.25rem',
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: 'var(--color-bg-elevated)',
                     color: 'var(--color-text-primary)',
-                    border: '1px solid #333',
+                    border: '1px solid var(--color-border-light)',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -359,13 +359,13 @@ export default function SequenceAnalyticsPage() {
         </div>
 
         {/* View Tabs */}
-        <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #333', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--color-border-light)', marginBottom: '2rem' }}>
           <button
             onClick={() => setActiveView('overview')}
             style={{
               padding: '1rem 1.5rem',
               backgroundColor: 'transparent',
-              color: activeView === 'overview' ? '#6366f1' : '#999',
+              color: activeView === 'overview' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
               border: 'none',
               borderBottom: `3px solid ${activeView === 'overview' ? 'var(--color-primary)' : 'transparent'}`,
               cursor: 'pointer',
@@ -380,7 +380,7 @@ export default function SequenceAnalyticsPage() {
             style={{
               padding: '1rem 1.5rem',
               backgroundColor: 'transparent',
-              color: activeView === 'sequences' ? '#6366f1' : '#999',
+              color: activeView === 'sequences' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
               border: 'none',
               borderBottom: `3px solid ${activeView === 'sequences' ? 'var(--color-primary)' : 'transparent'}`,
               cursor: 'pointer',
@@ -395,7 +395,7 @@ export default function SequenceAnalyticsPage() {
             style={{
               padding: '1rem 1.5rem',
               backgroundColor: 'transparent',
-              color: activeView === 'channels' ? '#6366f1' : '#999',
+              color: activeView === 'channels' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
               border: 'none',
               borderBottom: `3px solid ${activeView === 'channels' ? 'var(--color-primary)' : 'transparent'}`,
               cursor: 'pointer',
@@ -410,7 +410,7 @@ export default function SequenceAnalyticsPage() {
             style={{
               padding: '1rem 1.5rem',
               backgroundColor: 'transparent',
-              color: activeView === 'monitoring' ? '#6366f1' : '#999',
+              color: activeView === 'monitoring' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
               border: 'none',
               borderBottom: `3px solid ${activeView === 'monitoring' ? 'var(--color-primary)' : 'transparent'}`,
               cursor: 'pointer',
@@ -462,9 +462,9 @@ export default function SequenceAnalyticsPage() {
               <FunnelChart
                 stages={[
                   { label: 'Sent', value: summary.totalSent, color: 'var(--color-primary)' },
-                  { label: 'Delivered', value: summary.totalDelivered, color: '#8b5cf6' },
-                  { label: 'Opened', value: summary.totalOpened, color: '#a855f7' },
-                  { label: 'Clicked', value: summary.totalClicked, color: '#c084fc' },
+                  { label: 'Delivered', value: summary.totalDelivered, color: 'var(--color-secondary)' },
+                  { label: 'Opened', value: summary.totalOpened, color: 'var(--color-secondary)' },
+                  { label: 'Clicked', value: summary.totalClicked, color: 'var(--color-secondary-light)' },
                   { label: 'Replied', value: summary.totalReplied, color: 'var(--color-success)' },
                 ]}
               />
@@ -578,8 +578,8 @@ export default function SequenceAnalyticsPage() {
                 {/* A/B Test Comparison Banner */}
                 {sequences.length >= 2 && (
                   <div style={{
-                    backgroundColor: '#1a1a2e',
-                    border: '1px solid #6366f1',
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    border: '1px solid var(--color-primary)',
                     borderRadius: '0.75rem',
                     padding: '1rem 1.5rem',
                     marginBottom: '1.5rem',
@@ -607,7 +607,7 @@ export default function SequenceAnalyticsPage() {
                           onClick={() => setShowABTest(true)}
                           style={{
                             padding: '0.75rem 1.25rem',
-                            backgroundColor: '#6366f1',
+                            backgroundColor: 'var(--color-primary)',
                             color: 'var(--color-text-primary)',
                             border: 'none',
                             borderRadius: '0.5rem',
@@ -624,9 +624,9 @@ export default function SequenceAnalyticsPage() {
                           onClick={() => setABTestSequences([null, null])}
                           style={{
                             padding: '0.75rem 1.25rem',
-                            backgroundColor: '#1a1a1a',
+                            backgroundColor: 'var(--color-bg-elevated)',
                             color: 'var(--color-text-secondary)',
-                            border: '1px solid #333',
+                            border: '1px solid var(--color-border-light)',
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
                             fontSize: '0.875rem',
@@ -648,7 +648,7 @@ export default function SequenceAnalyticsPage() {
                     <div
                       key={seq.sequenceId}
                       style={{
-                        backgroundColor: '#0a0a0a',
+                        backgroundColor: 'var(--color-bg-paper)',
                         border: `2px solid ${isSelectedForAB ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
                         borderRadius: '1rem',
                         padding: '1.5rem',
@@ -683,7 +683,7 @@ export default function SequenceAnalyticsPage() {
                           position: 'absolute',
                           top: '0.75rem',
                           right: '0.75rem',
-                          backgroundColor: '#6366f1',
+                          backgroundColor: 'var(--color-primary)',
                           color: 'var(--color-text-primary)',
                           padding: '0.25rem 0.5rem',
                           borderRadius: '0.25rem',
@@ -1033,7 +1033,7 @@ function SequenceDetailView({ sequence, onBack }: { sequence: SequencePerformanc
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
                     <span style={{
                       padding: '0.25rem 0.5rem',
-                      backgroundColor: '#222',
+                      backgroundColor: 'var(--color-bg-main)',
                       color: 'var(--color-text-secondary)',
                       borderRadius: '0.25rem',
                       fontSize: '0.75rem',
@@ -1203,9 +1203,9 @@ function MetricPill({ label, value, highlight }: { label: string; value: string;
 function ExecutionStatusBadge({ status }: { status: 'pending' | 'executing' | 'success' | 'failed' | 'skipped' }) {
   const styles: Record<string, { bg: string; color: string; label: string }> = {
     pending: { bg: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', label: '⏳ Pending' },
-    executing: { bg: 'var(--color-primary)', color: 'white', label: '⚡ Executing' },
+    executing: { bg: 'var(--color-primary)', color: 'var(--color-text-primary)', label: '⚡ Executing' },
     success: { bg: 'var(--color-success)', color: 'var(--color-bg-main)', label: '✅ Success' },
-    failed: { bg: 'var(--color-error)', color: 'white', label: '❌ Failed' },
+    failed: { bg: 'var(--color-error)', color: 'var(--color-text-primary)', label: '❌ Failed' },
     skipped: { bg: 'var(--color-warning)', color: 'var(--color-bg-main)', label: '⏭️ Skipped' },
   };
 

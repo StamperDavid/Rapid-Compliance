@@ -92,7 +92,7 @@ export default function APIKeysPage() {
     }
   };
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   const services = [
     {
@@ -388,7 +388,7 @@ export default function APIKeysPage() {
   const [_newCustomKey, _setNewCustomKey] = useState({name: '', key: ''});
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           {/* Header */}
@@ -396,54 +396,54 @@ export default function APIKeysPage() {
             <Link href={`/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
               ← Back to Settings
             </Link>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               API Keys Setup
             </h1>
-            <p style={{ color: '#999', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
               Connect external services to enable features. Add keys here instead of messing with .env files.
             </p>
           </div>
 
           {/* OpenRouter Recommendation Banner */}
-          <div style={{ backgroundColor: '#1a3a1a', border: '2px solid #10b981', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ backgroundColor: 'var(--color-success-dark)', border: '2px solid var(--color-success)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-success)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               ⭐ We Recommend: OpenRouter
             </h3>
-            <div style={{ fontSize: '0.875rem', color: '#d1d5db', lineHeight: '1.7' }}>
-              <p style={{ marginBottom: '0.75rem', fontWeight: '500', color: '#fff' }}>
-                For maximum simplicity and best value, use <strong style={{ color: '#10b981' }}>OpenRouter</strong> as your AI provider.
+            <div style={{ fontSize: '0.875rem', color: 'var(--color-border-light)', lineHeight: '1.7' }}>
+              <p style={{ marginBottom: '0.75rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>
+                For maximum simplicity and best value, use <strong style={{ color: 'var(--color-success)' }}>OpenRouter</strong> as your AI provider.
               </p>
               <p style={{ marginBottom: '0.75rem' }}>
                 <strong>Why we recommend it:</strong>
               </p>
-              <ul style={{ marginLeft: '1.5rem', marginBottom: '0.75rem', color: '#d1d5db' }}>
+              <ul style={{ marginLeft: '1.5rem', marginBottom: '0.75rem', color: 'var(--color-border-light)' }}>
                 <li style={{ marginBottom: '0.5rem' }}>✅ <strong>One key</strong> gives you access to 100+ AI models (GPT-4, Claude, Gemini, Llama, and more)</li>
                 <li style={{ marginBottom: '0.5rem' }}>✅ <strong>Simpler setup</strong> - No need to manage multiple API keys from different providers</li>
                 <li style={{ marginBottom: '0.5rem' }}>✅ <strong>Usually cheaper</strong> - Often 20-30% less expensive than going direct to OpenAI</li>
                 <li style={{ marginBottom: '0.5rem' }}>✅ <strong>Better reliability</strong> - Automatic failover if one provider has issues</li>
                 <li style={{ marginBottom: '0.5rem' }}>✅ <strong>Easy switching</strong> - Try different models without getting new API keys</li>
               </ul>
-              <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '1rem' }}>
-                📝 Get your OpenRouter key at <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', textDecoration: 'underline' }}>openrouter.ai</a> (takes 2 minutes)
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '1rem' }}>
+                📝 Get your OpenRouter key at <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-success)', textDecoration: 'underline' }}>openrouter.ai</a> (takes 2 minutes)
               </p>
             </div>
           </div>
 
           {/* What You Need Banner */}
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '1rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
               ⚡ What You Need to Get Started
             </h3>
-            <div style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.6' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>
               <p style={{ marginBottom: '0.5rem' }}>
-                <strong style={{ color: '#10b981' }}>REQUIRED (AI features won&apos;t work without these):</strong>
+                <strong style={{ color: 'var(--color-success)' }}>REQUIRED (AI features won&apos;t work without these):</strong>
               </p>
               <ul style={{ marginLeft: '1.5rem', marginBottom: '1rem' }}>
                 <li>OpenAI API Key - Powers all AI features ($10-50/month)</li>
                 <li>SendGrid API Key - Actually sends emails ($20/month)</li>
               </ul>
               <p style={{ marginBottom: '0.5rem' }}>
-                <strong style={{ color: '#f59e0b' }}>OPTIONAL (but highly recommended):</strong>
+                <strong style={{ color: 'var(--color-warning)' }}>OPTIONAL (but highly recommended):</strong>
               </p>
               <ul style={{ marginLeft: '1.5rem' }}>
                 <li>Google OAuth - For calendar & Gmail (FREE)</li>
@@ -458,8 +458,8 @@ export default function APIKeysPage() {
               <div
                 key={service.id}
                 style={{
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '1rem',
                   padding: '2rem',
                 }}
@@ -468,14 +468,14 @@ export default function APIKeysPage() {
                   <div style={{ fontSize: '2rem' }}>{service.icon}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff' }}>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                         {service.name}
                       </h3>
                       {service.required && (
                         <span style={{
                           padding: '0.125rem 0.5rem',
-                          backgroundColor: '#10b981',
-                          color: '#000',
+                          backgroundColor: 'var(--color-success)',
+                          color: 'var(--color-bg-main)',
                           borderRadius: '0.25rem',
                           fontSize: '0.625rem',
                           fontWeight: '700',
@@ -484,7 +484,7 @@ export default function APIKeysPage() {
                         </span>
                       )}
                     </div>
-                    <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
                       {service.description}
                     </p>
                     
@@ -493,7 +493,7 @@ export default function APIKeysPage() {
                       <summary style={{ fontSize: '0.75rem', color: primaryColor, cursor: 'pointer', marginBottom: '0.5rem' }}>
                         Why do I need this? • Cost: {service.cost}
                       </summary>
-                      <div style={{ fontSize: '0.75rem', color: '#999', backgroundColor: '#0a0a0a', padding: '1rem', borderRadius: '0.5rem', marginTop: '0.5rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-bg-main)', padding: '1rem', borderRadius: '0.5rem', marginTop: '0.5rem' }}>
                         <p style={{ marginBottom: '0.5rem' }}><strong>What it does:</strong> {service.why}</p>
                         <p><strong>Cost:</strong> {service.cost}</p>
                       </div>
@@ -504,7 +504,7 @@ export default function APIKeysPage() {
                       <summary style={{ fontSize: '0.75rem', color: primaryColor, cursor: 'pointer', marginBottom: '0.5rem' }}>
                         📖 Show setup instructions
                       </summary>
-                      <div style={{ fontSize: '0.75rem', color: '#999', backgroundColor: '#0a0a0a', padding: '1rem', borderRadius: '0.5rem', marginTop: '0.5rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-bg-main)', padding: '1rem', borderRadius: '0.5rem', marginTop: '0.5rem' }}>
                         <ol style={{ marginLeft: '1rem', lineHeight: '1.6' }}>
                           {service.setupSteps.map((step, i) => (
                             <li key={i}>{step}</li>
@@ -531,10 +531,10 @@ export default function APIKeysPage() {
                         style={{
                           flex: 1,
                           padding: '0.75rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
+                          backgroundColor: 'var(--color-bg-main)',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
-                          color: '#fff',
+                          color: 'var(--color-text-primary)',
                           fontSize: '0.875rem',
                           fontFamily: 'monospace',
                         }}
@@ -544,8 +544,8 @@ export default function APIKeysPage() {
                         disabled={!keys[service.id]}
                         style={{
                           padding: '0.75rem 1.5rem',
-                          backgroundColor: keys[service.id] ? primaryColor : '#333',
-                          color: '#fff',
+                          backgroundColor: keys[service.id] ? primaryColor : 'var(--color-border-strong)',
+                          color: 'var(--color-text-primary)',
                           border: 'none',
                           borderRadius: '0.5rem',
                           cursor: keys[service.id] ? 'pointer' : 'not-allowed',
@@ -560,8 +560,8 @@ export default function APIKeysPage() {
                         disabled={!keys[service.id] || testing === service.id}
                         style={{
                           padding: '0.75rem 1.5rem',
-                          backgroundColor: '#10b981',
-                          color: '#fff',
+                          backgroundColor: 'var(--color-success)',
+                          color: 'var(--color-text-primary)',
                           border: 'none',
                           borderRadius: '0.5rem',
                           cursor: keys[service.id] && testing !== service.id ? 'pointer' : 'not-allowed',
@@ -578,11 +578,11 @@ export default function APIKeysPage() {
                       <div style={{
                         marginTop: '0.75rem',
                         padding: '0.75rem',
-                        backgroundColor: testResults[service.id].success ? '#064e3b' : '#7f1d1d',
-                        border: `1px solid ${testResults[service.id].success ? '#10b981' : '#ef4444'}`,
+                        backgroundColor: testResults[service.id].success ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
+                        border: `1px solid ${testResults[service.id].success ? 'var(--color-success)' : 'var(--color-error)'}`,
                         borderRadius: '0.5rem',
                         fontSize: '0.75rem',
-                        color: testResults[service.id].success ? '#6ee7b7' : '#fecaca',
+                        color: testResults[service.id].success ? 'var(--color-success-light)' : 'var(--color-error-light)',
                       }}>
                         {testResults[service.id].success ? '✅ Working!' : `❌ ${  testResults[service.id].error}`}
                       </div>

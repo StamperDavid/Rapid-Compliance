@@ -96,22 +96,22 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
       zIndex: 100,
     }}>
       <div style={{
-        backgroundColor: '#1a1a1a',
-        border: '1px solid #333',
+        backgroundColor: 'var(--color-bg-paper)',
+        border: '1px solid var(--color-border-strong)',
         borderRadius: '1rem',
         padding: '2rem',
         width: '100%',
         maxWidth: '500px',
         margin: '1rem',
       }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
           {tool ? 'Edit Custom Tool' : 'Add Custom Tool'}
         </h2>
 
         <form onSubmit={(e) => void handleSubmit(e)}>
           {/* Name */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', color: '#999', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+            <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
               Name *
             </label>
             <input
@@ -123,10 +123,10 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
               style={{
                 width: '100%',
                 padding: '0.75rem 1rem',
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-main)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.5rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '1rem',
               }}
             />
@@ -134,7 +134,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
 
           {/* Icon */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', color: '#999', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+            <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
               Icon (Emoji)
             </label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -149,8 +149,8 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: formData.icon === emoji ? primaryColor : '#0a0a0a',
-                    border: formData.icon === emoji ? `2px solid ${primaryColor}` : '1px solid #333',
+                    backgroundColor: formData.icon === emoji ? primaryColor : 'var(--color-bg-main)',
+                    border: formData.icon === emoji ? `2px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
                     fontSize: '1.25rem',
                     cursor: 'pointer',
@@ -165,7 +165,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
 
           {/* URL */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', color: '#999', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+            <label style={{ display: 'block', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
               URL (HTTPS only) *
             </label>
             <input
@@ -177,15 +177,15 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
               style={{
                 width: '100%',
                 padding: '0.75rem 1rem',
-                backgroundColor: '#0a0a0a',
-                border: `1px solid ${urlError ? '#ef4444' : '#333'}`,
+                backgroundColor: 'var(--color-bg-main)',
+                border: `1px solid ${urlError ? 'var(--color-error)' : 'var(--color-border-strong)'}`,
                 borderRadius: '0.5rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontSize: '1rem',
               }}
             />
             {urlError && (
-              <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.5rem' }}>{urlError}</p>
+              <p style={{ color: 'var(--color-error)', fontSize: '0.75rem', marginTop: '0.5rem' }}>{urlError}</p>
             )}
           </div>
 
@@ -197,7 +197,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
                 style={{
                   width: '48px',
                   height: '24px',
-                  backgroundColor: formData.enabled ? primaryColor : '#333',
+                  backgroundColor: formData.enabled ? primaryColor : 'var(--color-border-strong)',
                   borderRadius: '12px',
                   position: 'relative',
                   transition: 'background-color 0.2s',
@@ -207,7 +207,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
                 <div style={{
                   width: '20px',
                   height: '20px',
-                  backgroundColor: '#fff',
+                  backgroundColor: 'var(--color-text-primary)',
                   borderRadius: '50%',
                   position: 'absolute',
                   top: '2px',
@@ -215,7 +215,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
                   transition: 'left 0.2s',
                 }} />
               </div>
-              <span style={{ color: '#fff', fontSize: '0.875rem' }}>
+              <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                 {formData.enabled ? 'Enabled' : 'Disabled'}
               </span>
             </label>
@@ -228,8 +228,8 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
               onClick={onClose}
               style={{
                 padding: '0.75rem 1.5rem',
-                backgroundColor: '#333',
-                color: '#fff',
+                backgroundColor: 'var(--color-border-strong)',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
@@ -245,7 +245,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: primaryColor,
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
@@ -274,7 +274,7 @@ export default function CustomToolsSettingsPage() {
   const [editingTool, setEditingTool] = useState<CustomTool | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? 'var(--color-primary)';
 
   // Fetch tools
   useEffect(() => {
@@ -373,22 +373,22 @@ export default function CustomToolsSettingsPage() {
   if (!canManageOrganization) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h1 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '1rem' }}>Access Denied</h1>
-        <p style={{ color: '#666' }}>You do not have permission to manage custom tools.</p>
+        <h1 style={{ color: 'var(--color-text-primary)', fontSize: '1.5rem', marginBottom: '1rem' }}>Access Denied</h1>
+        <p style={{ color: 'var(--color-text-disabled)' }}>You do not have permission to manage custom tools.</p>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '2rem', overflowY: 'auto', minHeight: '100vh', backgroundColor: '#000' }}>
+    <div style={{ padding: '2rem', overflowY: 'auto', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
           <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               Custom Tools
             </h1>
-            <p style={{ color: '#666', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
               Add external apps and tools that appear in your workspace sidebar
             </p>
           </div>
@@ -397,7 +397,7 @@ export default function CustomToolsSettingsPage() {
             style={{
               padding: '0.75rem 1.5rem',
               backgroundColor: primaryColor,
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
@@ -418,28 +418,28 @@ export default function CustomToolsSettingsPage() {
             <div style={{
               width: '40px',
               height: '40px',
-              border: '3px solid #333',
+              border: '3px solid var(--color-border-strong)',
               borderTopColor: primaryColor,
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               margin: '0 auto 1rem',
             }} />
-            <p style={{ color: '#666' }}>Loading tools...</p>
+            <p style={{ color: 'var(--color-text-disabled)' }}>Loading tools...</p>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         ) : tools.length === 0 ? (
           <div style={{
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-paper)',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '1rem',
             padding: '4rem',
             textAlign: 'center',
           }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔧</div>
-            <h3 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+            <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
               No Custom Tools Yet
             </h3>
-            <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>
               Add your first custom tool to extend your workspace with external apps.
             </p>
             <button
@@ -447,7 +447,7 @@ export default function CustomToolsSettingsPage() {
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: primaryColor,
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
@@ -464,8 +464,8 @@ export default function CustomToolsSettingsPage() {
               <div
                 key={tool.id}
                 style={{
-                  backgroundColor: '#1a1a1a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.75rem',
                   padding: '1.5rem',
                   display: 'flex',
@@ -477,7 +477,7 @@ export default function CustomToolsSettingsPage() {
                 <div style={{
                   width: '50px',
                   height: '50px',
-                  backgroundColor: '#0a0a0a',
+                  backgroundColor: 'var(--color-bg-main)',
                   borderRadius: '0.75rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -491,11 +491,11 @@ export default function CustomToolsSettingsPage() {
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                    <h3 style={{ color: '#fff', fontSize: '1rem', fontWeight: '600' }}>{tool.name}</h3>
+                    <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1rem', fontWeight: '600' }}>{tool.name}</h3>
                     <span style={{
                       padding: '0.125rem 0.5rem',
                       backgroundColor: tool.enabled ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                      color: tool.enabled ? '#22c55e' : '#ef4444',
+                      color: tool.enabled ? 'var(--color-success)' : 'var(--color-error)',
                       borderRadius: '0.25rem',
                       fontSize: '0.75rem',
                       fontWeight: '500',
@@ -504,7 +504,7 @@ export default function CustomToolsSettingsPage() {
                     </span>
                   </div>
                   <p style={{
-                    color: '#666',
+                    color: 'var(--color-text-disabled)',
                     fontSize: '0.875rem',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -523,10 +523,10 @@ export default function CustomToolsSettingsPage() {
                     style={{
                       width: '36px',
                       height: '36px',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#999',
+                      color: 'var(--color-text-secondary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -544,10 +544,10 @@ export default function CustomToolsSettingsPage() {
                     style={{
                       width: '36px',
                       height: '36px',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      backgroundColor: 'var(--color-bg-main)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#999',
+                      color: 'var(--color-text-secondary)',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -565,8 +565,8 @@ export default function CustomToolsSettingsPage() {
                         onClick={() => void handleDeleteTool(tool.id)}
                         style={{
                           padding: '0.5rem 0.75rem',
-                          backgroundColor: '#ef4444',
-                          color: '#fff',
+                          backgroundColor: 'var(--color-error)',
+                          color: 'var(--color-text-primary)',
                           border: 'none',
                           borderRadius: '0.5rem',
                           fontSize: '0.75rem',
@@ -579,8 +579,8 @@ export default function CustomToolsSettingsPage() {
                         onClick={() => setDeleteConfirm(null)}
                         style={{
                           padding: '0.5rem 0.75rem',
-                          backgroundColor: '#333',
-                          color: '#fff',
+                          backgroundColor: 'var(--color-border-strong)',
+                          color: 'var(--color-text-primary)',
                           border: 'none',
                           borderRadius: '0.5rem',
                           fontSize: '0.75rem',
@@ -597,10 +597,10 @@ export default function CustomToolsSettingsPage() {
                       style={{
                         width: '36px',
                         height: '36px',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#ef4444',
+                        color: 'var(--color-error)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -619,16 +619,16 @@ export default function CustomToolsSettingsPage() {
 
         {/* Info Card */}
         <div style={{
-          backgroundColor: '#1a1a1a',
-          border: '1px solid #333',
+          backgroundColor: 'var(--color-bg-paper)',
+          border: '1px solid var(--color-border-strong)',
           borderRadius: '0.75rem',
           padding: '1.5rem',
           marginTop: '2rem',
         }}>
-          <h3 style={{ color: '#fff', fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+          <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem' }}>
             About Custom Tools
           </h3>
-          <ul style={{ color: '#666', fontSize: '0.875rem', lineHeight: '1.75', paddingLeft: '1.25rem' }}>
+          <ul style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', lineHeight: '1.75', paddingLeft: '1.25rem' }}>
             <li>Custom tools are embedded as secure, sandboxed iframes</li>
             <li>Only HTTPS URLs are allowed for security</li>
             <li>Tools will appear in the sidebar under &quot;Custom Tools&quot; section</li>

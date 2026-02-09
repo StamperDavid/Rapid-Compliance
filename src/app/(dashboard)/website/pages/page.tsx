@@ -119,7 +119,7 @@ export default function PagesManagementPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'var(--color-bg-elevated)' }}>
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
@@ -130,10 +130,10 @@ export default function PagesManagementPage() {
           marginBottom: '2rem',
         }}>
           <div>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: '#111' }}>
+            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
               Pages
             </h1>
-            <p style={{ margin: 0, color: '#666' }}>
+            <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
               Manage your website pages
             </p>
           </div>
@@ -142,7 +142,7 @@ export default function PagesManagementPage() {
             onClick={createNewPage}
             style={{
               padding: '0.75rem 1.5rem',
-              background: '#007bff',
+              background: 'var(--color-info)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -165,9 +165,9 @@ export default function PagesManagementPage() {
             onClick={() => setFilter('all')}
             style={{
               padding: '0.5rem 1rem',
-              background: filter === 'all' ? '#007bff' : 'white',
-              color: filter === 'all' ? 'white' : '#495057',
-              border: '1px solid #dee2e6',
+              background: filter === 'all' ? 'var(--color-info)' : 'white',
+              color: filter === 'all' ? 'white' : 'var(--color-text-disabled)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '4px',
               cursor: 'pointer',
               fontSize: '0.875rem',
@@ -179,9 +179,9 @@ export default function PagesManagementPage() {
             onClick={() => setFilter('draft')}
             style={{
               padding: '0.5rem 1rem',
-              background: filter === 'draft' ? '#007bff' : 'white',
-              color: filter === 'draft' ? 'white' : '#495057',
-              border: '1px solid #dee2e6',
+              background: filter === 'draft' ? 'var(--color-info)' : 'white',
+              color: filter === 'draft' ? 'white' : 'var(--color-text-disabled)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '4px',
               cursor: 'pointer',
               fontSize: '0.875rem',
@@ -193,9 +193,9 @@ export default function PagesManagementPage() {
             onClick={() => setFilter('published')}
             style={{
               padding: '0.5rem 1rem',
-              background: filter === 'published' ? '#007bff' : 'white',
-              color: filter === 'published' ? 'white' : '#495057',
-              border: '1px solid #dee2e6',
+              background: filter === 'published' ? 'var(--color-info)' : 'white',
+              color: filter === 'published' ? 'white' : 'var(--color-text-disabled)',
+              border: '1px solid var(--color-border-light)',
               borderRadius: '4px',
               cursor: 'pointer',
               fontSize: '0.875rem',
@@ -214,17 +214,17 @@ export default function PagesManagementPage() {
             textAlign: 'center',
           }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📄</div>
-            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: '#495057' }}>
+            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'var(--color-text-disabled)' }}>
               No pages yet
             </h3>
-            <p style={{ margin: '0 0 1.5rem', color: '#6c757d' }}>
+            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)' }}>
               Create your first page to get started
             </p>
             <button
               onClick={createNewPage}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: '#007bff',
+                background: 'var(--color-info)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -256,13 +256,13 @@ export default function PagesManagementPage() {
               >
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.125rem', color: '#212529' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'var(--color-text-primary)' }}>
                       {page.title}
                     </h3>
                     <span style={{
                       padding: '0.25rem 0.5rem',
-                      background: page.status === 'published' ? '#28a745' : '#ffc107',
-                      color: page.status === 'published' ? 'white' : '#000',
+                      background: page.status === 'published' ? 'var(--color-success)' : 'var(--color-warning)',
+                      color: page.status === 'published' ? 'white' : 'var(--color-bg-main)',
                       borderRadius: '4px',
                       fontSize: '0.75rem',
                       fontWeight: '600',
@@ -271,10 +271,10 @@ export default function PagesManagementPage() {
                       {page.status}
                     </span>
                   </div>
-                  <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                     /{page.slug}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#adb5bd', marginTop: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
                     Last updated: {new Date(page.updatedAt).toLocaleDateString()}
                   </div>
                 </div>
@@ -284,7 +284,7 @@ export default function PagesManagementPage() {
                     onClick={() => editPage(page.id)}
                     style={{
                       padding: '0.5rem 1rem',
-                      background: '#007bff',
+                      background: 'var(--color-info)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
@@ -298,7 +298,7 @@ export default function PagesManagementPage() {
                     onClick={() => void duplicatePage(page)}
                     style={{
                       padding: '0.5rem 1rem',
-                      background: '#6c757d',
+                      background: 'var(--color-text-secondary)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
@@ -312,7 +312,7 @@ export default function PagesManagementPage() {
                     onClick={() => deletePage(page.id)}
                     style={{
                       padding: '0.5rem 1rem',
-                      background: '#dc3545',
+                      background: 'var(--color-error)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',

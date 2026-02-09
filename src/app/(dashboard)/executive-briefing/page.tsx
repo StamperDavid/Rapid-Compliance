@@ -89,7 +89,7 @@ export default function ExecutiveBriefingPage() {
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null)
     ? theme.colors.primary.main
-    : '#6366f1';
+    : 'var(--color-primary)';
 
   const fetchBriefing = useCallback(async () => {
     try {
@@ -155,15 +155,15 @@ export default function ExecutiveBriefingPage() {
       <div style={{ padding: '2rem' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#1a1a1a', animation: 'pulse 2s infinite' }} />
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--color-bg-paper)', animation: 'pulse 2s infinite' }} />
             <div>
-              <div style={{ width: '250px', height: '28px', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', marginBottom: '0.5rem' }} />
-              <div style={{ width: '180px', height: '16px', backgroundColor: '#111', borderRadius: '0.25rem' }} />
+              <div style={{ width: '250px', height: '28px', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', marginBottom: '0.5rem' }} />
+              <div style={{ width: '180px', height: '16px', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.25rem' }} />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             {[1, 2, 3, 4].map(i => (
-              <div key={i} style={{ height: '120px', backgroundColor: '#1a1a1a', borderRadius: '1rem', border: '1px solid #333' }} />
+              <div key={i} style={{ height: '120px', backgroundColor: 'var(--color-bg-paper)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)' }} />
             ))}
           </div>
         </div>
@@ -178,10 +178,10 @@ export default function ExecutiveBriefingPage() {
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
                 Executive Briefing
               </h1>
-              <p style={{ color: '#666', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+              <p style={{ color: 'var(--color-text-disabled)', marginTop: '0.5rem', fontSize: '0.875rem' }}>
                 {briefing
                   ? `Generated ${new Date(briefing.generatedAt).toLocaleString()}`
                   : 'Your autonomous operations summary'}
@@ -192,7 +192,7 @@ export default function ExecutiveBriefingPage() {
               style={{
                 padding: '0.625rem 1.5rem',
                 backgroundColor: primaryColor,
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 borderRadius: '0.5rem',
                 border: 'none',
                 fontSize: '0.875rem',
@@ -206,7 +206,7 @@ export default function ExecutiveBriefingPage() {
         </div>
 
         {error && (
-          <div style={{ padding: '1rem', backgroundColor: '#7f1d1d', border: '1px solid #991b1b', borderRadius: '0.75rem', marginBottom: '1.5rem', color: '#fca5a5', fontSize: '0.875rem' }}>
+          <div style={{ padding: '1rem', backgroundColor: 'var(--color-error-dark)', border: '1px solid var(--color-error-dark)', borderRadius: '0.75rem', marginBottom: '1.5rem', color: 'var(--color-error-light)', fontSize: '0.875rem' }}>
             {error}
           </div>
         )}
@@ -214,16 +214,16 @@ export default function ExecutiveBriefingPage() {
         {briefing && (
           <>
             {/* Briefing Summary Card */}
-            <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <section style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'start' }}>
                 <div style={{ fontSize: '2rem', flexShrink: 0 }}>
                   <JasperAvatar />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', margin: '0 0 0.75rem 0' }}>
+                  <h2 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)', margin: '0 0 0.75rem 0' }}>
                     Jasper&apos;s Briefing
                   </h2>
-                  <p style={{ color: '#ccc', fontSize: '0.95rem', lineHeight: '1.6', margin: 0 }}>
+                  <p style={{ color: 'var(--color-text-primary)', fontSize: '0.95rem', lineHeight: '1.6', margin: 0 }}>
                     {briefing.summary}
                   </p>
                 </div>
@@ -232,22 +232,22 @@ export default function ExecutiveBriefingPage() {
 
             {/* Metrics Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-              <MetricCard label="Op Cycles" value={briefing.metrics.totalOperationalCycles} color="#6366f1" />
-              <MetricCard label="Actions Executed" value={briefing.metrics.totalActionsExecuted} color="#8b5cf6" />
-              <MetricCard label="Success Rate" value={`${Math.round(briefing.metrics.successRate * 100)}%`} color="#10b981" />
-              <MetricCard label="Replies Processed" value={briefing.metrics.inboundRepliesProcessed} color="#3b82f6" />
-              <MetricCard label="Leads Advanced" value={briefing.metrics.leadsAdvanced} color="#f59e0b" />
-              <MetricCard label="Content Produced" value={briefing.metrics.contentProduced} color="#ec4899" />
-              <MetricCard label="Reviews Responded" value={briefing.metrics.reviewsResponded} color="#14b8a6" />
+              <MetricCard label="Op Cycles" value={briefing.metrics.totalOperationalCycles} color="var(--color-primary)" />
+              <MetricCard label="Actions Executed" value={briefing.metrics.totalActionsExecuted} color="var(--color-secondary)" />
+              <MetricCard label="Success Rate" value={`${Math.round(briefing.metrics.successRate * 100)}%`} color="var(--color-success)" />
+              <MetricCard label="Replies Processed" value={briefing.metrics.inboundRepliesProcessed} color="var(--color-info)" />
+              <MetricCard label="Leads Advanced" value={briefing.metrics.leadsAdvanced} color="var(--color-warning)" />
+              <MetricCard label="Content Produced" value={briefing.metrics.contentProduced} color="var(--color-secondary-light)" />
+              <MetricCard label="Reviews Responded" value={briefing.metrics.reviewsResponded} color="var(--color-primary)" />
             </div>
 
             {/* Main Content Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', marginBottom: '1.5rem' }} className="lg:grid-cols-2">
               {/* Highlights */}
-              <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>Highlights</h2>
+              <section style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Highlights</h2>
                 {briefing.highlights.length === 0 ? (
-                  <p style={{ color: '#666', fontSize: '0.875rem' }}>No highlights for this period.</p>
+                  <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>No highlights for this period.</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {briefing.highlights.map((h, i) => (
@@ -258,8 +258,8 @@ export default function ExecutiveBriefingPage() {
               </section>
 
               {/* Department Status */}
-              <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>Department Status</h2>
+              <section style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Department Status</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {briefing.departmentSummaries.map((dept) => (
                     <DepartmentRow key={dept.managerId} dept={dept} />
@@ -270,8 +270,8 @@ export default function ExecutiveBriefingPage() {
 
             {/* Pending Approvals */}
             {briefing.pendingApprovals.length > 0 && (
-              <section style={{ backgroundColor: '#1a1a1a', border: `1px solid ${primaryColor}44`, borderRadius: '1rem', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+              <section style={{ backgroundColor: 'var(--color-bg-paper)', border: `1px solid ${primaryColor}44`, borderRadius: '1rem', padding: '1.5rem', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
                   Pending Approvals ({briefing.pendingApprovals.length})
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -290,9 +290,9 @@ export default function ExecutiveBriefingPage() {
             )}
 
             {/* Command History */}
-            <section style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
+            <section style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
                   Command History
                 </h2>
                 <Link href="/dashboard" style={{ color: primaryColor, fontSize: '0.875rem', textDecoration: 'none' }}>
@@ -300,7 +300,7 @@ export default function ExecutiveBriefingPage() {
                 </Link>
               </div>
               {commands.length === 0 ? (
-                <p style={{ color: '#666', fontSize: '0.875rem' }}>No commands issued yet.</p>
+                <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>No commands issued yet.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {commands.map(cmd => (
@@ -326,13 +326,13 @@ function JasperAvatar() {
       width: '48px',
       height: '48px',
       borderRadius: '50%',
-      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+      background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       fontSize: '1.25rem',
       fontWeight: 'bold',
-      color: '#fff',
+      color: 'var(--color-text-primary)',
     }}>
       J
     </div>
@@ -342,16 +342,16 @@ function JasperAvatar() {
 function MetricCard({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
     <div style={{
-      backgroundColor: '#1a1a1a',
-      border: '1px solid #333',
+      backgroundColor: 'var(--color-bg-paper)',
+      border: '1px solid var(--color-border-strong)',
       borderRadius: '0.75rem',
       padding: '1.25rem',
       borderLeft: `3px solid ${color}`,
     }}>
-      <p style={{ fontSize: '0.75rem', color: '#999', margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', margin: '0 0 0.5rem 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {label}
       </p>
-      <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
+      <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
         {value}
       </p>
     </div>
@@ -360,10 +360,10 @@ function MetricCard({ label, value, color }: { label: string; value: string | nu
 
 function HighlightCard({ highlight }: { highlight: BriefingHighlight }) {
   const typeStyles: Record<string, { bg: string; border: string; icon: string }> = {
-    SUCCESS: { bg: '#052e16', border: '#166534', icon: 'check_circle' },
-    WARNING: { bg: '#431407', border: '#9a3412', icon: 'warning' },
-    ACTION_REQUIRED: { bg: '#4c0519', border: '#be123c', icon: 'error' },
-    INFO: { bg: '#0c1929', border: '#1e40af', icon: 'info' },
+    SUCCESS: { bg: 'var(--color-success-dark)', border: 'var(--color-success-dark)', icon: 'check_circle' },
+    WARNING: { bg: 'var(--color-warning-dark)', border: 'var(--color-warning-dark)', icon: 'warning' },
+    ACTION_REQUIRED: { bg: 'var(--color-error-dark)', border: 'var(--color-error)', icon: 'error' },
+    INFO: { bg: 'var(--color-info-dark)', border: 'var(--color-info-dark)', icon: 'info' },
   };
 
   const style = typeStyles[highlight.type] || typeStyles.INFO;
@@ -376,27 +376,27 @@ function HighlightCard({ highlight }: { highlight: BriefingHighlight }) {
       borderRadius: '0.5rem',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#fff' }}>{highlight.title}</span>
+        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{highlight.title}</span>
         <span style={{
           fontSize: '0.65rem',
           padding: '2px 6px',
           borderRadius: '4px',
-          backgroundColor: highlight.impact === 'HIGH' ? '#7f1d1d' : highlight.impact === 'MEDIUM' ? '#78350f' : '#1e3a5f',
-          color: highlight.impact === 'HIGH' ? '#fca5a5' : highlight.impact === 'MEDIUM' ? '#fde68a' : '#93c5fd',
+          backgroundColor: highlight.impact === 'HIGH' ? 'var(--color-error-dark)' : highlight.impact === 'MEDIUM' ? 'var(--color-warning-dark)' : 'var(--color-info-dark)',
+          color: highlight.impact === 'HIGH' ? 'var(--color-error-light)' : highlight.impact === 'MEDIUM' ? 'var(--color-warning-light)' : 'var(--color-info-light)',
         }}>
           {highlight.impact}
         </span>
       </div>
-      <p style={{ fontSize: '0.8rem', color: '#aaa', margin: 0 }}>{highlight.description}</p>
+      <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: 0 }}>{highlight.description}</p>
     </div>
   );
 }
 
 function DepartmentRow({ dept }: { dept: DepartmentSummary }) {
   const statusColors: Record<string, string> = {
-    HEALTHY: '#10b981',
-    NEEDS_ATTENTION: '#f59e0b',
-    CRITICAL: '#ef4444',
+    HEALTHY: 'var(--color-success)',
+    NEEDS_ATTENTION: 'var(--color-warning)',
+    CRITICAL: 'var(--color-error)',
   };
 
   const trendIcon: Record<string, string> = {
@@ -411,28 +411,28 @@ function DepartmentRow({ dept }: { dept: DepartmentSummary }) {
       alignItems: 'center',
       gap: '1rem',
       padding: '0.75rem',
-      backgroundColor: '#0a0a0a',
-      border: '1px solid #222',
+      backgroundColor: 'var(--color-bg-main)',
+      border: '1px solid var(--color-bg-elevated)',
       borderRadius: '0.5rem',
     }}>
       <div style={{
         width: '8px',
         height: '8px',
         borderRadius: '50%',
-        backgroundColor: statusColors[dept.status] || '#666',
+        backgroundColor: statusColors[dept.status] || 'var(--color-text-disabled)',
         flexShrink: 0,
       }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>{dept.department}</div>
-        <div style={{ fontSize: '0.75rem', color: '#666' }}>
+        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{dept.department}</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
           {dept.actionsCompleted} completed, {dept.actionsPending} pending
         </div>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
+        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-primary)' }}>
           {dept.keyMetricValue} {trendIcon[dept.trend]}
         </div>
-        <div style={{ fontSize: '0.65rem', color: '#666' }}>{dept.keyMetric}</div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--color-text-disabled)' }}>{dept.keyMetric}</div>
       </div>
     </div>
   );
@@ -452,10 +452,10 @@ function ApprovalCard({
   primaryColor: string;
 }) {
   const urgencyColors: Record<string, { bg: string; text: string }> = {
-    CRITICAL: { bg: '#7f1d1d', text: '#fca5a5' },
-    HIGH: { bg: '#7c2d12', text: '#fdba74' },
-    NORMAL: { bg: '#1e3a5f', text: '#93c5fd' },
-    LOW: { bg: '#374151', text: '#9ca3af' },
+    CRITICAL: { bg: 'var(--color-error-dark)', text: 'var(--color-error-light)' },
+    HIGH: { bg: 'var(--color-warning-dark)', text: 'var(--color-warning-light)' },
+    NORMAL: { bg: 'var(--color-info-dark)', text: 'var(--color-info-light)' },
+    LOW: { bg: 'var(--color-border-strong)', text: 'var(--color-text-secondary)' },
   };
 
   const urgStyle = urgencyColors[approval.urgency] || urgencyColors.NORMAL;
@@ -463,13 +463,13 @@ function ApprovalCard({
   return (
     <div style={{
       padding: '1rem',
-      backgroundColor: '#0a0a0a',
-      border: '1px solid #333',
+      backgroundColor: 'var(--color-bg-main)',
+      border: '1px solid var(--color-border-strong)',
       borderRadius: '0.75rem',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
         <div>
-          <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#fff' }}>{approval.type.replace(/_/g, ' ')}</span>
+          <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{approval.type.replace(/_/g, ' ')}</span>
           <span style={{
             fontSize: '0.65rem',
             padding: '2px 6px',
@@ -481,11 +481,11 @@ function ApprovalCard({
             {approval.urgency}
           </span>
         </div>
-        <span style={{ fontSize: '0.7rem', color: '#666' }}>
+        <span style={{ fontSize: '0.7rem', color: 'var(--color-text-disabled)' }}>
           {new Date(approval.createdAt).toLocaleString()}
         </span>
       </div>
-      <p style={{ fontSize: '0.8rem', color: '#aaa', margin: '0 0 0.75rem 0' }}>{approval.description}</p>
+      <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', margin: '0 0 0.75rem 0' }}>{approval.description}</p>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <button
           onClick={onApprove}
@@ -493,7 +493,7 @@ function ApprovalCard({
           style={{
             padding: '0.375rem 1rem',
             backgroundColor: primaryColor,
-            color: '#fff',
+            color: 'var(--color-text-primary)',
             border: 'none',
             borderRadius: '0.375rem',
             fontSize: '0.8rem',
@@ -510,8 +510,8 @@ function ApprovalCard({
           style={{
             padding: '0.375rem 1rem',
             backgroundColor: 'transparent',
-            color: '#ef4444',
-            border: '1px solid #ef4444',
+            color: 'var(--color-error)',
+            border: '1px solid var(--color-error)',
             borderRadius: '0.375rem',
             fontSize: '0.8rem',
             fontWeight: '600',
@@ -528,9 +528,9 @@ function ApprovalCard({
 
 function CommandRow({ command }: { command: CommandHistoryItem }) {
   const priorityColors: Record<string, string> = {
-    CRITICAL: '#ef4444',
-    HIGH: '#f59e0b',
-    NORMAL: '#6366f1',
+    CRITICAL: 'var(--color-error)',
+    HIGH: 'var(--color-warning)',
+    NORMAL: 'var(--color-primary)',
   };
 
   return (
@@ -539,8 +539,8 @@ function CommandRow({ command }: { command: CommandHistoryItem }) {
       alignItems: 'center',
       gap: '1rem',
       padding: '0.625rem 0.75rem',
-      backgroundColor: '#0a0a0a',
-      border: '1px solid #222',
+      backgroundColor: 'var(--color-bg-main)',
+      border: '1px solid var(--color-bg-elevated)',
       borderRadius: '0.375rem',
       fontSize: '0.8rem',
     }}>
@@ -548,12 +548,12 @@ function CommandRow({ command }: { command: CommandHistoryItem }) {
         width: '6px',
         height: '6px',
         borderRadius: '50%',
-        backgroundColor: priorityColors[command.priority] || '#666',
+        backgroundColor: priorityColors[command.priority] || 'var(--color-text-disabled)',
         flexShrink: 0,
       }} />
-      <span style={{ color: '#fff', fontWeight: '500', minWidth: '120px' }}>{command.targetManager.replace(/_/g, ' ')}</span>
-      <span style={{ color: '#999', flex: 1 }}>{command.command}</span>
-      <span style={{ color: '#666', fontSize: '0.7rem', flexShrink: 0 }}>
+      <span style={{ color: 'var(--color-text-primary)', fontWeight: '500', minWidth: '120px' }}>{command.targetManager.replace(/_/g, ' ')}</span>
+      <span style={{ color: 'var(--color-text-secondary)', flex: 1 }}>{command.command}</span>
+      <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.7rem', flexShrink: 0 }}>
         {new Date(command.issuedAt).toLocaleTimeString()}
       </span>
     </div>

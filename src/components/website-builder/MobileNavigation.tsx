@@ -25,7 +25,7 @@ export function MobileNavigation({ items, logo, brandName }: MobileNavigationPro
           top: 0,
           zIndex: 1000,
           backgroundColor: 'white',
-          borderBottom: '1px solid #e5e7eb',
+          borderBottom: '1px solid var(--color-border-light)',
           padding: '16px 20px',
         }}
       >
@@ -53,7 +53,7 @@ export function MobileNavigation({ items, logo, brandName }: MobileNavigationPro
                 style={{
                   fontSize: '20px',
                   fontWeight: '600',
-                  color: '#111827',
+                  color: 'var(--color-text-primary)',
                 }}
               >
                 {brandName}
@@ -77,17 +77,17 @@ export function MobileNavigation({ items, logo, brandName }: MobileNavigationPro
                 target={item.newTab ? '_blank' : undefined}
                 rel={item.newTab ? 'noopener noreferrer' : undefined}
                 style={{
-                  color: '#374151',
+                  color: 'var(--color-border-strong)',
                   textDecoration: 'none',
                   fontSize: '16px',
                   fontWeight: '500',
                   transition: 'color 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#3b82f6';
+                  e.currentTarget.style.color = 'var(--color-info)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = '#374151';
+                  e.currentTarget.style.color = 'var(--color-border-strong)';
                 }}
               >
                 {item.label}
@@ -123,7 +123,7 @@ export function MobileNavigation({ items, logo, brandName }: MobileNavigationPro
               left: 0,
               right: 0,
               backgroundColor: 'white',
-              borderBottom: '1px solid #e5e7eb',
+              borderBottom: '1px solid var(--color-border-light)',
               boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
               padding: '20px',
             }}
@@ -138,11 +138,11 @@ export function MobileNavigation({ items, logo, brandName }: MobileNavigationPro
                 style={{
                   display: 'block',
                   padding: '12px 0',
-                  color: '#374151',
+                  color: 'var(--color-border-strong)',
                   textDecoration: 'none',
                   fontSize: '16px',
                   fontWeight: '500',
-                  borderBottom: '1px solid #f3f4f6',
+                  borderBottom: '1px solid var(--color-border-light)',
                 }}
               >
                 {item.label}

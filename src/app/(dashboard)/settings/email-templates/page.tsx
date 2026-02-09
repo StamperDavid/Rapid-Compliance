@@ -110,7 +110,7 @@ export default function EmailTemplatesPage() {
   const [showFilterBuilder, setShowFilterBuilder] = useState(false);
 
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
   // Contact fields for filter builder
   const contactFields: Array<{ key: string; label: string; type: string; options?: string[] }> = STANDARD_SCHEMAS.contacts.fields.map(field => ({
@@ -253,15 +253,15 @@ Best regards,
               </Link>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                 <div>
-                  <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Email Marketing</h1>
-                  <p style={{ color: '#666', fontSize: '0.875rem' }}>
+                  <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Email Marketing</h1>
+                  <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                     Manage templates for automated emails and create targeted campaigns
                   </p>
                 </div>
                 {activeTab === 'campaigns' && (
                   <button
                     onClick={() => setShowCreateCampaign(true)}
-                    style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                    style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                   >
                     + Create Campaign
                   </button>
@@ -270,13 +270,13 @@ Best regards,
             </div>
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', borderBottom: '1px solid #1a1a1a' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', borderBottom: '1px solid var(--color-border-light)' }}>
               <button
                 onClick={() => setActiveTab('templates')}
                 style={{
                   padding: '0.75rem 1.5rem',
                   backgroundColor: 'transparent',
-                  color: activeTab === 'templates' ? primaryColor : '#999',
+                  color: activeTab === 'templates' ? primaryColor : 'var(--color-text-secondary)',
                   border: 'none',
                   borderBottom: activeTab === 'templates' ? `2px solid ${primaryColor}` : '2px solid transparent',
                   cursor: 'pointer',
@@ -291,7 +291,7 @@ Best regards,
                 style={{
                   padding: '0.75rem 1.5rem',
                   backgroundColor: 'transparent',
-                  color: activeTab === 'designer' ? primaryColor : '#999',
+                  color: activeTab === 'designer' ? primaryColor : 'var(--color-text-secondary)',
                   border: 'none',
                   borderBottom: activeTab === 'designer' ? `2px solid ${primaryColor}` : '2px solid transparent',
                   cursor: 'pointer',
@@ -306,7 +306,7 @@ Best regards,
                 style={{
                   padding: '0.75rem 1.5rem',
                   backgroundColor: 'transparent',
-                  color: activeTab === 'campaigns' ? primaryColor : '#999',
+                  color: activeTab === 'campaigns' ? primaryColor : 'var(--color-text-secondary)',
                   border: 'none',
                   borderBottom: activeTab === 'campaigns' ? `2px solid ${primaryColor}` : '2px solid transparent',
                   cursor: 'pointer',
@@ -323,9 +323,9 @@ Best regards,
               <div style={{ display: 'flex', gap: '2rem' }}>
                 {/* Template List */}
                 <div style={{ width: '300px' }}>
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>ℹ️ About Templates</div>
-                    <div style={{ fontSize: '0.75rem', color: '#ccc', lineHeight: '1.5' }}>
+                  <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>ℹ️ About Templates</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-primary)', lineHeight: '1.5' }}>
                       These templates are used by automated workflows when events occur (e.g., invoice created, payment received).
                     </div>
                   </div>
@@ -337,10 +337,10 @@ Best regards,
                         onClick={() => setSelectedTemplate(template.id)}
                         style={{
                           padding: '1rem',
-                          backgroundColor: selectedTemplate === template.id ? '#222' : 'transparent',
-                          border: selectedTemplate === template.id ? `1px solid ${primaryColor}` : '1px solid #333',
+                          backgroundColor: selectedTemplate === template.id ? 'var(--color-bg-elevated)' : 'transparent',
+                          border: selectedTemplate === template.id ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                           borderRadius: '0.5rem',
-                          color: '#fff',
+                          color: 'var(--color-text-primary)',
                           textAlign: 'left',
                           cursor: 'pointer',
                           transition: 'all 0.2s'
@@ -350,7 +350,7 @@ Best regards,
                           <span style={{ fontSize: '1.5rem' }}>{template.icon}</span>
                           <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>{template.name}</span>
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#999', paddingLeft: '2.25rem' }}>{template.description}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', paddingLeft: '2.25rem' }}>{template.description}</div>
                       </button>
                     ))}
                   </div>
@@ -358,45 +358,45 @@ Best regards,
 
                 {/* Template Editor */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
+                  <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem' }}>
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                         Subject Line
                       </label>
                       <input
                         type="text"
                         value={emailContent.subject}
                         onChange={(e) => setEmailContent({ ...emailContent, subject: e.target.value })}
-                        style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                        style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                       />
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                         Email Body
                       </label>
                       <textarea
                         value={emailContent.body}
                         onChange={(e) => setEmailContent({ ...emailContent, body: e.target.value })}
                         rows={12}
-                        style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'monospace', resize: 'vertical' }}
+                        style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontFamily: 'monospace', resize: 'vertical' }}
                       />
                     </div>
 
-                    <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#999', marginBottom: '0.5rem' }}>Available Variables:</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: '#666' }}>
-                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>{'{{contact_name}}'}</code>
-                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>{'{{contact_email}}'}</code>
-                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>{'{{company_name}}'}</code>
-                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>{'{{support_email}}'}</code>
-                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>{'{{invoice_number}}'}</code>
-                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>{'{{amount}}'}</code>
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Available Variables:</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>{'{{contact_name}}'}</code>
+                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>{'{{contact_email}}'}</code>
+                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>{'{{company_name}}'}</code>
+                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>{'{{support_email}}'}</code>
+                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>{'{{invoice_number}}'}</code>
+                        <code style={{ padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>{'{{amount}}'}</code>
                       </div>
                     </div>
 
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                         Test Email Address
                       </label>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -405,7 +405,7 @@ Best regards,
                           value={testEmailAddress}
                           onChange={(e) => setTestEmailAddress(e.target.value)}
                           placeholder="your@email.com"
-                          style={{ flex: 1, padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                          style={{ flex: 1, padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                         />
                         <button
                           onClick={() => {
@@ -463,9 +463,9 @@ Best regards,
                           disabled={isSendingTest || !testEmailAddress}
                           style={{
                             padding: '0.75rem 1.5rem',
-                            backgroundColor: isSendingTest || !testEmailAddress ? '#444' : '#222',
-                            color: '#fff',
-                            border: '1px solid #333',
+                            backgroundColor: isSendingTest || !testEmailAddress ? 'var(--color-border-main)' : 'var(--color-bg-elevated)',
+                            color: 'var(--color-text-primary)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
                             cursor: isSendingTest || !testEmailAddress ? 'not-allowed' : 'pointer',
                             fontSize: '0.875rem',
@@ -480,11 +480,11 @@ Best regards,
                         <div style={{
                           marginTop: '0.75rem',
                           padding: '0.75rem',
-                          backgroundColor: testEmailResult.success ? '#0f4c0f' : '#4c0f0f',
-                          border: `1px solid ${testEmailResult.success ? '#4ade80' : '#f87171'}`,
+                          backgroundColor: testEmailResult.success ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
+                          border: `1px solid ${testEmailResult.success ? 'var(--color-success-light)' : 'var(--color-error-light)'}`,
                           borderRadius: '0.5rem',
                           fontSize: '0.875rem',
-                          color: testEmailResult.success ? '#4ade80' : '#f87171'
+                          color: testEmailResult.success ? 'var(--color-success-light)' : 'var(--color-error-light)'
                         }}>
                           {testEmailResult.success ? '✓ ' : '✗ '}
                           {testEmailResult.message}
@@ -493,7 +493,7 @@ Best regards,
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                      <button style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <button style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
                         Save Template
                       </button>
                     </div>
@@ -510,8 +510,8 @@ Best regards,
                     {/* Custom Templates Library */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                       <div>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Custom Email Templates</h2>
-                        <p style={{ color: '#999', fontSize: '0.875rem' }}>Design beautiful promotional emails and use them in automated workflows</p>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Custom Email Templates</h2>
+                        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Design beautiful promotional emails and use them in automated workflows</p>
                       </div>
                       <button
                         onClick={() => {
@@ -525,17 +525,17 @@ Best regards,
                           setDesignerBlocks([]);
                           setShowDesigner(true);
                         }}
-                        style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                        style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                       >
                         + Create Custom Template
                       </button>
                     </div>
 
                     {customTemplates.length === 0 ? (
-                      <div style={{ backgroundColor: '#1a1a1a', border: '2px dashed #333', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center' }}>
+                      <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '2px dashed var(--color-border-strong)', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center' }}>
                         <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎨</div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>No custom templates yet</h3>
-                        <p style={{ color: '#999', marginBottom: '2rem' }}>Create beautiful, Amazon-style promotional emails with our visual designer</p>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>No custom templates yet</h3>
+                        <p style={{ color: 'var(--color-text-secondary)', marginBottom: '2rem' }}>Create beautiful, Amazon-style promotional emails with our visual designer</p>
                         <button
                           onClick={() => {
                             setEditingCustomTemplate({
@@ -547,7 +547,7 @@ Best regards,
                             });
                             setShowDesigner(true);
                           }}
-                          style={{ padding: '0.75rem 2rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                          style={{ padding: '0.75rem 2rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                         >
                           Create Your First Template
                         </button>
@@ -555,13 +555,13 @@ Best regards,
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
                         {customTemplates.map((template) => (
-                          <div key={template.id} style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                          <div key={template.id} style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', overflow: 'hidden' }}>
                             {/* Preview */}
-                            <div style={{ height: '200px', backgroundColor: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #333' }}>
+                            <div style={{ height: '200px', backgroundColor: 'var(--color-bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--color-border-strong)' }}>
                               {template.preview ? (
                                 <img src={template.preview} alt={template.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
-                                <div style={{ textAlign: 'center', color: '#666' }}>
+                                <div style={{ textAlign: 'center', color: 'var(--color-text-disabled)' }}>
                                   <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📧</div>
                                   <div style={{ fontSize: '0.875rem' }}>Email Preview</div>
                                 </div>
@@ -569,8 +569,8 @@ Best regards,
                             </div>
                             {/* Info */}
                             <div style={{ padding: '1.25rem' }}>
-                              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>{template.name}</h3>
-                              <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '1rem' }}>Last edited: {new Date().toLocaleDateString()}</p>
+                              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>{template.name}</h3>
+                              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>Last edited: {new Date().toLocaleDateString()}</p>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button
                                   onClick={() => {
@@ -578,7 +578,7 @@ Best regards,
                                     setDesignerBlocks(template.blocks ?? []);
                                     setShowDesigner(true);
                                   }}
-                                  style={{ flex: 1, padding: '0.625rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                                  style={{ flex: 1, padding: '0.625rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
                                 >
                                   Edit
                                 </button>
@@ -588,7 +588,7 @@ Best regards,
                                       setCustomTemplates(customTemplates.filter(t => t.id !== template.id));
                                     }
                                   }}
-                                  style={{ padding: '0.625rem 1rem', backgroundColor: '#222', color: '#ef4444', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
+                                  style={{ padding: '0.625rem 1rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-error)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
                                 >
                                   Delete
                                 </button>
@@ -601,22 +601,22 @@ Best regards,
                   </>
                 ) : (
                   /* Visual Email Designer */
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', overflow: 'hidden' }}>
+                  <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', overflow: 'hidden' }}>
                     {/* Designer Header */}
-                    <div style={{ padding: '1.5rem', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border-strong)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ flex: 1 }}>
                         <input
                           type="text"
                           value={editingCustomTemplate?.name ?? ''}
                           onChange={(e) => editingCustomTemplate && setEditingCustomTemplate({ ...editingCustomTemplate, name: e.target.value })}
-                          style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', backgroundColor: 'transparent', border: 'none', outline: 'none', width: '100%' }}
+                          style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', backgroundColor: 'transparent', border: 'none', outline: 'none', width: '100%' }}
                           placeholder="Template Name"
                         />
                       </div>
                       <div style={{ display: 'flex', gap: '1rem' }}>
                         <button
                           onClick={() => setShowDesigner(false)}
-                          style={{ padding: '0.625rem 1.25rem', backgroundColor: '#222', color: '#999', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                          style={{ padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
                         >
                           Cancel
                         </button>
@@ -654,7 +654,7 @@ Best regards,
                               
                               if (block.type === 'text') {
                                 generatedHtml += `
-    <div style="padding: 20px; font-size: ${(block.content.fontSize !== '' && block.content.fontSize != null) ? block.content.fontSize : '16px'}; color: ${(block.content.color !== '' && block.content.color != null) ? block.content.color : '#000000'}; text-align: ${(block.content.align !== '' && block.content.align != null) ? block.content.align : 'left'};">
+    <div style="padding: 20px; font-size: ${(block.content.fontSize !== '' && block.content.fontSize != null) ? block.content.fontSize : '16px'}; color: ${(block.content.color !== '' && block.content.color != null) ? block.content.color : 'var(--color-bg-main)'}; text-align: ${(block.content.align !== '' && block.content.align != null) ? block.content.align : 'left'};">
       ${block.content.text ?? ''}
     </div>`;
                               }
@@ -662,7 +662,7 @@ Best regards,
                               if (block.type === 'button') {
                                 generatedHtml += `
     <div style="padding: 20px; text-align: center;">
-      <a href="${(block.content.url !== '' && block.content.url != null) ? block.content.url : '#'}" style="display: inline-block; padding: 14px 40px; background-color: ${(block.content.bgColor !== '' && block.content.bgColor != null) ? block.content.bgColor : primaryColor}; color: ${(block.content.textColor !== '' && block.content.textColor != null) ? block.content.textColor : '#ffffff'}; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+      <a href="${(block.content.url !== '' && block.content.url != null) ? block.content.url : '#'}" style="display: inline-block; padding: 14px 40px; background-color: ${(block.content.bgColor !== '' && block.content.bgColor != null) ? block.content.bgColor : primaryColor}; color: ${(block.content.textColor !== '' && block.content.textColor != null) ? block.content.textColor : 'var(--color-text-primary)'}; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
         ${(block.content.text !== '' && block.content.text != null) ? block.content.text : 'Button'}
       </a>
     </div>`;
@@ -680,7 +680,7 @@ Best regards,
                               if (block.type === 'divider') {
                                 generatedHtml += `
     <div style="padding: 10px 20px;">
-      <hr style="border: none; border-top: ${(block.content.thickness !== '' && block.content.thickness != null) ? block.content.thickness : '1px'} ${(block.content.style !== '' && block.content.style != null) ? block.content.style : 'solid'} ${(block.content.color !== '' && block.content.color != null) ? block.content.color : '#cccccc'}; margin: 0;" />
+      <hr style="border: none; border-top: ${(block.content.thickness !== '' && block.content.thickness != null) ? block.content.thickness : '1px'} ${(block.content.style !== '' && block.content.style != null) ? block.content.style : 'solid'} ${(block.content.color !== '' && block.content.color != null) ? block.content.color : 'var(--color-text-secondary)'}; margin: 0;" />
     </div>`;
                               }
                               
@@ -718,7 +718,7 @@ Best regards,
                             setSelectedBlock(null);
                             alert('✅ Template saved successfully! You can now use it in automated workflows and campaigns.');
                           }}
-                          style={{ padding: '0.625rem 1.25rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                          style={{ padding: '0.625rem 1.25rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                         >
                           💾 Save Template
                         </button>
@@ -728,16 +728,16 @@ Best regards,
                     {/* Designer Content */}
                     <div style={{ display: 'flex', minHeight: '600px' }}>
                       {/* Tools Sidebar */}
-                      <div style={{ width: '280px', backgroundColor: '#0a0a0a', borderRight: '1px solid #333', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ width: '280px', backgroundColor: 'var(--color-bg-main)', borderRight: '1px solid var(--color-border-strong)', display: 'flex', flexDirection: 'column', height: '100%' }}>
                         {/* Upload Assets */}
-                        <div style={{ padding: '1.5rem', borderBottom: '1px solid #333' }}>
+                        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border-strong)' }}>
                           <button
                             onClick={() => setShowAssetLibrary(true)}
-                            style={{ width: '100%', padding: '0.875rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}
+                            style={{ width: '100%', padding: '0.875rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}
                           >
                             📁 Asset Library
                           </button>
-                          <label style={{ display: 'block', width: '100%', padding: '0.875rem', backgroundColor: '#1a1a1a', border: '1px dashed #666', borderRadius: '0.5rem', textAlign: 'center', cursor: 'pointer', fontSize: '0.875rem', color: '#999' }}>
+                          <label style={{ display: 'block', width: '100%', padding: '0.875rem', backgroundColor: 'var(--color-bg-paper)', border: '1px dashed var(--color-text-disabled)', borderRadius: '0.5rem', textAlign: 'center', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                             <input
                               type="file"
                               accept="image/*"
@@ -762,7 +762,7 @@ Best regards,
 
                         {/* Design Elements */}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
-                          <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999', marginBottom: '1rem', textTransform: 'uppercase' }}>Design Elements</h3>
+                          <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '1rem', textTransform: 'uppercase' }}>Design Elements</h3>
                           
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <button
@@ -774,12 +774,12 @@ Best regards,
                                 };
                                 setDesignerBlocks([...designerBlocks, newBlock]);
                               }}
-                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', transition: 'all 0.2s' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                              style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', transition: 'all 0.2s' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)'}
                             >
                               <div style={{ marginBottom: '0.25rem' }}>🖼️ Hero Image</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Full-width banner</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Full-width banner</div>
                             </button>
                             
                             <button
@@ -787,16 +787,16 @@ Best regards,
                                 const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'text',
-                                  content: { text: 'Enter your text here...', align: 'left', fontSize: '16px', color: '#000000' }
+                                  content: { text: 'Enter your text here...', align: 'left', fontSize: '16px', color: 'var(--color-bg-main)' }
                                 };
                                 setDesignerBlocks([...designerBlocks, newBlock]);
                               }}
-                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                              style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)'}
                             >
                               <div style={{ marginBottom: '0.25rem' }}>📝 Text Block</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Headline / Paragraph</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Headline / Paragraph</div>
                             </button>
                             
                             <button
@@ -804,16 +804,16 @@ Best regards,
                                 const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'button',
-                                  content: { text: 'Click Here', url: '', bgColor: primaryColor, textColor: '#ffffff', width: 'auto' }
+                                  content: { text: 'Click Here', url: '', bgColor: primaryColor, textColor: 'var(--color-text-primary)', width: 'auto' }
                                 };
                                 setDesignerBlocks([...designerBlocks, newBlock]);
                               }}
-                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                              style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)'}
                             >
                               <div style={{ marginBottom: '0.25rem' }}>🔘 Button</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Call-to-action</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Call-to-action</div>
                             </button>
                             
                             <button
@@ -825,12 +825,12 @@ Best regards,
                                 };
                                 setDesignerBlocks([...designerBlocks, newBlock]);
                               }}
-                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                              style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)'}
                             >
                               <div style={{ marginBottom: '0.25rem' }}>📷 Image</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>From your library</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>From your library</div>
                             </button>
                             
                             <button
@@ -842,12 +842,12 @@ Best regards,
                                 };
                                 setDesignerBlocks([...designerBlocks, newBlock]);
                               }}
-                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                              style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)'}
                             >
                               <div style={{ marginBottom: '0.25rem' }}>🛍️ Product Grid</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>2-4 columns</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>2-4 columns</div>
                             </button>
                             
                             <button
@@ -855,16 +855,16 @@ Best regards,
                                 const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'divider',
-                                  content: { color: '#cccccc', thickness: '1px', style: 'solid' }
+                                  content: { color: 'var(--color-text-secondary)', thickness: '1px', style: 'solid' }
                                 };
                                 setDesignerBlocks([...designerBlocks, newBlock]);
                               }}
-                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                              style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)'}
                             >
                               <div style={{ marginBottom: '0.25rem' }}>➖ Divider</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Horizontal line</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Horizontal line</div>
                             </button>
                             
                             <button
@@ -876,12 +876,12 @@ Best regards,
                                 };
                                 setDesignerBlocks([...designerBlocks, newBlock]);
                               }}
-                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                              style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)'}
                             >
                               <div style={{ marginBottom: '0.25rem' }}>⬜ Spacer</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Add spacing</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Add spacing</div>
                             </button>
                             
                             <button
@@ -893,12 +893,12 @@ Best regards,
                                 };
                                 setDesignerBlocks([...designerBlocks, newBlock]);
                               }}
-                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                              style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)'}
                             >
                               <div style={{ marginBottom: '0.25rem' }}>🔗 Social Links</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Icons + URLs</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Icons + URLs</div>
                             </button>
 
                             <button
@@ -913,21 +913,21 @@ Best regards,
                                   setDesignerBlocks([...designerBlocks, newBlock]);
                                 }
                               }}
-                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                              style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-paper)'}
                             >
                               <div style={{ marginBottom: '0.25rem' }}>💻 Custom HTML</div>
-                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Paste code</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Paste code</div>
                             </button>
                           </div>
                         </div>
 
                         {/* Pro Tip */}
-                        <div style={{ padding: '1.5rem', borderTop: '1px solid #333' }}>
-                          <div style={{ padding: '1rem', backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem' }}>
-                            <div style={{ fontSize: '0.75rem', color: '#86efac', marginBottom: '0.5rem', fontWeight: '600' }}>💡 Pro Tip</div>
-                            <div style={{ fontSize: '0.75rem', color: '#86efac', lineHeight: '1.4' }}>
+                        <div style={{ padding: '1.5rem', borderTop: '1px solid var(--color-border-strong)' }}>
+                          <div style={{ padding: '1rem', backgroundColor: 'var(--color-success-dark)', border: '1px solid var(--color-success)', borderRadius: '0.5rem' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-success-light)', marginBottom: '0.5rem', fontWeight: '600' }}>💡 Pro Tip</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-success-light)', lineHeight: '1.4' }}>
                               Use {`{{customer_name}}`}, {`{{product_name}}`} to personalize!
                             </div>
                           </div>
@@ -935,14 +935,14 @@ Best regards,
                       </div>
 
                       {/* Canvas */}
-                      <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', backgroundColor: '#f5f5f5' }}>
-                        <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: '#fff', minHeight: '600px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                      <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', backgroundColor: 'var(--color-bg-elevated)' }}>
+                        <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: 'var(--color-text-primary)', minHeight: '600px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', borderRadius: '0.5rem', overflow: 'hidden' }}>
                           {designerBlocks.length === 0 ? (
-                            <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#999' }}>
+                            <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👈</div>
-                              <p style={{ fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600', color: '#666' }}>Start building your email</p>
+                              <p style={{ fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--color-text-disabled)' }}>Start building your email</p>
                               <p style={{ fontSize: '0.875rem' }}>Click elements on the left to add them to your design</p>
-                              <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '0.5rem', color: '#0369a1', fontSize: '0.875rem' }}>
+                              <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: 'var(--color-info-light)', border: '1px solid var(--color-info-light)', borderRadius: '0.5rem', color: 'var(--color-info-dark)', fontSize: '0.875rem' }}>
                                 Upload your images first, then drag them into image blocks!
                               </div>
                             </div>
@@ -960,11 +960,11 @@ Best regards,
                               >
                                 {/* Block Content */}
                                 {block.type === 'hero' && (
-                                  <div style={{ width: '100%', height: (block.content.height !== '' && block.content.height != null) ? block.content.height : '400px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                  <div style={{ width: '100%', height: (block.content.height !== '' && block.content.height != null) ? block.content.height : '400px', backgroundColor: 'var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                                     {block.content.imageUrl ? (
                                       <img src={block.content.imageUrl} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
-                                      <div style={{ textAlign: 'center', color: '#9ca3af' }}>
+                                      <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                                         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🖼️</div>
                                         <div>Click to select an image</div>
                                       </div>
@@ -973,14 +973,14 @@ Best regards,
                                 )}
                                 
                                 {block.type === 'text' && (
-                                  <div style={{ padding: '20px', fontSize: (block.content.fontSize !== '' && block.content.fontSize != null) ? block.content.fontSize : '16px', color: (block.content.color !== '' && block.content.color != null) ? block.content.color : '#000000', textAlign: ((block.content.align !== '' && block.content.align != null) ? block.content.align : 'left') as React.CSSProperties['textAlign'] }}>
+                                  <div style={{ padding: '20px', fontSize: (block.content.fontSize !== '' && block.content.fontSize != null) ? block.content.fontSize : '16px', color: (block.content.color !== '' && block.content.color != null) ? block.content.color : 'var(--color-bg-main)', textAlign: ((block.content.align !== '' && block.content.align != null) ? block.content.align : 'left') as React.CSSProperties['textAlign'] }}>
                                     {(block.content.text !== '' && block.content.text != null) ? block.content.text : 'Text block'}
                                   </div>
                                 )}
                                 
                                 {block.type === 'button' && (
                                   <div style={{ padding: '20px', textAlign: 'center' }}>
-                                    <a href={(block.content.url !== '' && block.content.url != null) ? block.content.url : '#'} style={{ display: 'inline-block', padding: '14px 40px', backgroundColor: (block.content.bgColor !== '' && block.content.bgColor != null) ? block.content.bgColor : primaryColor, color: (block.content.textColor !== '' && block.content.textColor != null) ? block.content.textColor : '#ffffff', textDecoration: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '16px' }}>
+                                    <a href={(block.content.url !== '' && block.content.url != null) ? block.content.url : '#'} style={{ display: 'inline-block', padding: '14px 40px', backgroundColor: (block.content.bgColor !== '' && block.content.bgColor != null) ? block.content.bgColor : primaryColor, color: (block.content.textColor !== '' && block.content.textColor != null) ? block.content.textColor : 'var(--color-text-primary)', textDecoration: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '16px' }}>
                                       {(block.content.text !== '' && block.content.text != null) ? block.content.text : 'Button'}
                                     </a>
                                   </div>
@@ -991,7 +991,7 @@ Best regards,
                                     {block.content.imageUrl ? (
                                       <img src={block.content.imageUrl} alt={(block.content.alt !== '' && block.content.alt != null) ? block.content.alt : 'Image'} style={{ width: (block.content.width !== '' && block.content.width != null) ? block.content.width : '100%', height: 'auto', display: 'block' }} />
                                     ) : (
-                                      <div style={{ backgroundColor: '#e5e7eb', padding: '60px', textAlign: 'center', color: '#9ca3af' }}>
+                                      <div style={{ backgroundColor: 'var(--color-border-light)', padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                                         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📷</div>
                                         <div>Click to select an image</div>
                                       </div>
@@ -1003,12 +1003,12 @@ Best regards,
                                   <div style={{ padding: '20px' }}>
                                     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${block.content.columns ?? 3}, 1fr)`, gap: '15px' }}>
                                       {[1, 2, 3].map(i => (
-                                        <div key={i} style={{ border: '1px dashed #d1d5db', padding: '15px', borderRadius: '8px', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
-                                          <div style={{ backgroundColor: '#f3f4f6', height: '120px', marginBottom: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🛍️</div>
+                                        <div key={i} style={{ border: '1px dashed var(--color-border-light)', padding: '15px', borderRadius: '8px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                                          <div style={{ backgroundColor: 'var(--color-bg-elevated)', height: '120px', marginBottom: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🛍️</div>
                                           <div>Product {i}</div>
-                                          {block.content.showPrice && <div style={{ fontWeight: 'bold', color: '#000' }}>$99.99</div>}
+                                          {block.content.showPrice && <div style={{ fontWeight: 'bold', color: 'var(--color-bg-main)' }}>$99.99</div>}
                                           {block.content.showButton && (
-                                            <div style={{ marginTop: '10px', padding: '8px', backgroundColor: primaryColor, color: '#fff', borderRadius: '4px', fontSize: '0.75rem' }}>Shop Now</div>
+                                            <div style={{ marginTop: '10px', padding: '8px', backgroundColor: primaryColor, color: 'var(--color-text-primary)', borderRadius: '4px', fontSize: '0.75rem' }}>Shop Now</div>
                                           )}
                                         </div>
                                       ))}
@@ -1018,7 +1018,7 @@ Best regards,
                                 
                                 {block.type === 'divider' && (
                                   <div style={{ padding: '10px 20px' }}>
-                                    <hr style={{ border: 'none', borderTop: `${(block.content.thickness !== '' && block.content.thickness != null) ? block.content.thickness : '1px'} ${(block.content.style !== '' && block.content.style != null) ? block.content.style : 'solid'} ${(block.content.color !== '' && block.content.color != null) ? block.content.color : '#cccccc'}`, margin: 0 }} />
+                                    <hr style={{ border: 'none', borderTop: `${(block.content.thickness !== '' && block.content.thickness != null) ? block.content.thickness : '1px'} ${(block.content.style !== '' && block.content.style != null) ? block.content.style : 'solid'} ${(block.content.color !== '' && block.content.color != null) ? block.content.color : 'var(--color-text-secondary)'}`, margin: 0 }} />
                                   </div>
                                 )}
                                 
@@ -1030,7 +1030,7 @@ Best regards,
                                   <div style={{ padding: '20px', textAlign: 'center' }}>
                                     <div style={{ display: 'inline-flex', gap: '15px' }}>
                                       {(block.content.links ?? []).map((link: SocialLink, i: number) => (
-                                        <div key={i} style={{ width: (block.content.iconSize !== '' && block.content.iconSize != null) ? block.content.iconSize : '32px', height: (block.content.iconSize !== '' && block.content.iconSize != null) ? block.content.iconSize : '32px', backgroundColor: '#3b5998', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>
+                                        <div key={i} style={{ width: (block.content.iconSize !== '' && block.content.iconSize != null) ? block.content.iconSize : '32px', height: (block.content.iconSize !== '' && block.content.iconSize != null) ? block.content.iconSize : '32px', backgroundColor: 'var(--color-info)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-primary)', fontSize: '16px' }}>
                                           {link.platform[0].toUpperCase()}
                                         </div>
                                       ))}
@@ -1053,7 +1053,7 @@ Best regards,
                                           [newBlocks[index], newBlocks[index - 1]] = [newBlocks[index - 1], newBlocks[index]];
                                           setDesignerBlocks(newBlocks);
                                         }}
-                                        style={{ padding: '4px 8px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                        style={{ padding: '4px 8px', backgroundColor: 'var(--color-text-primary)', color: 'var(--color-bg-main)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
                                       >
                                         ↑
                                       </button>
@@ -1066,7 +1066,7 @@ Best regards,
                                           [newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]];
                                           setDesignerBlocks(newBlocks);
                                         }}
-                                        style={{ padding: '4px 8px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                        style={{ padding: '4px 8px', backgroundColor: 'var(--color-text-primary)', color: 'var(--color-bg-main)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
                                       >
                                         ↓
                                       </button>
@@ -1079,7 +1079,7 @@ Best regards,
                                           setSelectedBlock(null);
                                         }
                                       }}
-                                      style={{ padding: '4px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                      style={{ padding: '4px 8px', backgroundColor: 'var(--color-error)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
                                     >
                                       🗑️
                                     </button>
@@ -1092,12 +1092,12 @@ Best regards,
                       </div>
 
                       {/* Properties Panel */}
-                      <div style={{ width: '320px', backgroundColor: '#0a0a0a', borderLeft: '1px solid #333', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      <div style={{ width: '320px', backgroundColor: 'var(--color-bg-main)', borderLeft: '1px solid var(--color-border-strong)', display: 'flex', flexDirection: 'column', height: '100%' }}>
                         {selectedBlock ? (
                           /* Block Settings */
                           <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff' }}>
+                              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
                                 {selectedBlock.type === 'hero' && '🖼️ Hero Image'}
                                 {selectedBlock.type === 'text' && '📝 Text Block'}
                                 {selectedBlock.type === 'button' && '🔘 Button'}
@@ -1109,7 +1109,7 @@ Best regards,
                               </h3>
                               <button
                                 onClick={() => setSelectedBlock(null)}
-                                style={{ padding: '4px 8px', backgroundColor: '#222', color: '#999', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                style={{ padding: '4px 8px', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
                               >
                                 ✕
                               </button>
@@ -1119,7 +1119,7 @@ Best regards,
                             {selectedBlock.type === 'hero' && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.75rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>
                                     Banner Image
                                   </label>
                                   {selectedBlock.content.imageUrl ? (
@@ -1133,7 +1133,7 @@ Best regards,
                                           setDesignerBlocks(newBlocks);
                                           setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, imageUrl: '' } });
                                         }}
-                                        style={{ position: 'absolute', top: '6px', right: '6px', padding: '4px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                                        style={{ position: 'absolute', top: '6px', right: '6px', padding: '4px 8px', backgroundColor: 'var(--color-error)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
                                       >
                                         Remove
                                       </button>
@@ -1141,14 +1141,14 @@ Best regards,
                                   ) : null}
                                   <button
                                     onClick={() => setShowAssetLibrary(true)}
-                                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', border: '1px dashed #666', borderRadius: '0.5rem', color: '#999', cursor: 'pointer', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', border: '1px dashed var(--color-text-disabled)', borderRadius: '0.5rem', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.875rem' }}
                                   >
                                     📁 Choose from Library
                                   </button>
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Link URL (optional)
                                   </label>
                                   <input
@@ -1162,12 +1162,12 @@ Best regards,
                                       setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, linkUrl: e.target.value } });
                                     }}
                                     placeholder="https://yoursite.com/sale"
-                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                                   />
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Height
                                   </label>
                                   <select
@@ -1179,7 +1179,7 @@ Best regards,
                                       setDesignerBlocks(newBlocks);
                                       setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, height: e.target.value } });
                                     }}
-                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                                   >
                                     <option value="300px">Small (300px)</option>
                                     <option value="400px">Medium (400px)</option>
@@ -1194,7 +1194,7 @@ Best regards,
                             {selectedBlock.type === 'text' && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Text Content
                                   </label>
                                   <textarea
@@ -1208,12 +1208,12 @@ Best regards,
                                     }}
                                     rows={5}
                                     placeholder="Enter your text here... Use {{customer_name}} for personalization"
-                                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }}
+                                    style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem', resize: 'vertical' }}
                                   />
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Text Size
                                   </label>
                                   <select
@@ -1225,7 +1225,7 @@ Best regards,
                                       setDesignerBlocks(newBlocks);
                                       setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, fontSize: e.target.value } });
                                     }}
-                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                                   >
                                     <option value="12px">Small (12px)</option>
                                     <option value="14px">Regular (14px)</option>
@@ -1237,13 +1237,13 @@ Best regards,
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Text Color
                                   </label>
                                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                     <input
                                       type="color"
-                                      value={(selectedBlock.content.color !== '' && selectedBlock.content.color != null) ? selectedBlock.content.color : '#000000'}
+                                      value={(selectedBlock.content.color !== '' && selectedBlock.content.color != null) ? selectedBlock.content.color : 'var(--color-bg-main)'}
                                       onChange={(e) => {
                                         const newBlocks = designerBlocks.map(b => 
                                           b.id === selectedBlock.id ? { ...b, content: { ...b.content, color: e.target.value } } : b
@@ -1251,11 +1251,11 @@ Best regards,
                                         setDesignerBlocks(newBlocks);
                                         setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, color: e.target.value } });
                                       }}
-                                      style={{ width: '60px', height: '40px', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer' }}
+                                      style={{ width: '60px', height: '40px', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', cursor: 'pointer' }}
                                     />
                                     <input
                                       type="text"
-                                      value={(selectedBlock.content.color !== '' && selectedBlock.content.color != null) ? selectedBlock.content.color : '#000000'}
+                                      value={(selectedBlock.content.color !== '' && selectedBlock.content.color != null) ? selectedBlock.content.color : 'var(--color-bg-main)'}
                                       onChange={(e) => {
                                         const newBlocks = designerBlocks.map(b => 
                                           b.id === selectedBlock.id ? { ...b, content: { ...b.content, color: e.target.value } } : b
@@ -1263,14 +1263,14 @@ Best regards,
                                         setDesignerBlocks(newBlocks);
                                         setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, color: e.target.value } });
                                       }}
-                                      placeholder="#000000"
-                                      style={{ flex: 1, padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                      placeholder="var(--color-bg-main)"
+                                      style={{ flex: 1, padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                                     />
                                   </div>
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Alignment
                                   </label>
                                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
@@ -1286,10 +1286,10 @@ Best regards,
                                         }}
                                         style={{
                                           padding: '0.625rem',
-                                          backgroundColor: selectedBlock.content.align === align ? primaryColor : '#1a1a1a',
-                                          border: selectedBlock.content.align === align ? `1px solid ${primaryColor}` : '1px solid #333',
+                                          backgroundColor: selectedBlock.content.align === align ? primaryColor : 'var(--color-bg-paper)',
+                                          border: selectedBlock.content.align === align ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                                           borderRadius: '0.375rem',
-                                          color: '#fff',
+                                          color: 'var(--color-text-primary)',
                                           cursor: 'pointer',
                                           fontSize: '0.75rem',
                                           textTransform: 'capitalize'
@@ -1307,7 +1307,7 @@ Best regards,
                             {selectedBlock.type === 'button' && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Button Text
                                   </label>
                                   <input
@@ -1321,12 +1321,12 @@ Best regards,
                                       setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, text: e.target.value } });
                                     }}
                                     placeholder="Shop Now"
-                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                                   />
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Link URL
                                   </label>
                                   <input
@@ -1340,16 +1340,16 @@ Best regards,
                                       setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, url: e.target.value } });
                                     }}
                                     placeholder="https://yoursite.com"
-                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                                   />
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Button Color
                                   </label>
                                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                    {[primaryColor, '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'].map(color => (
+                                    {[primaryColor, 'var(--color-error)', 'var(--color-success)', 'var(--color-warning)', 'var(--color-secondary)', 'var(--color-secondary-light)'].map(color => (
                                       <button
                                         key={color}
                                         onClick={() => {
@@ -1362,7 +1362,7 @@ Best regards,
                                         style={{
                                           height: '40px',
                                           backgroundColor: color,
-                                          border: selectedBlock.content.bgColor === color ? '3px solid #fff' : '1px solid #333',
+                                          border: selectedBlock.content.bgColor === color ? '3px solid var(--color-text-primary)' : '1px solid var(--color-border-strong)',
                                           borderRadius: '0.375rem',
                                           cursor: 'pointer'
                                         }}
@@ -1380,18 +1380,18 @@ Best regards,
                                         setDesignerBlocks(newBlocks);
                                         setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, bgColor: e.target.value } });
                                       }}
-                                      style={{ width: '60px', height: '40px', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer' }}
+                                      style={{ width: '60px', height: '40px', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', cursor: 'pointer' }}
                                     />
-                                    <span style={{ fontSize: '0.75rem', color: '#999' }}>Custom color</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Custom color</span>
                                   </div>
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Text Color
                                   </label>
                                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    {['#ffffff', '#000000'].map(color => (
+                                    {['var(--color-text-primary)', 'var(--color-bg-main)'].map(color => (
                                       <button
                                         key={color}
                                         onClick={() => {
@@ -1405,14 +1405,14 @@ Best regards,
                                           flex: 1,
                                           padding: '0.625rem',
                                           backgroundColor: color,
-                                          border: selectedBlock.content.textColor === color ? `2px solid ${primaryColor}` : '1px solid #333',
+                                          border: selectedBlock.content.textColor === color ? `2px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                                           borderRadius: '0.375rem',
-                                          color: color === '#ffffff' ? '#000' : '#fff',
+                                          color: color === 'var(--color-text-primary)' ? 'var(--color-bg-main)' : 'var(--color-text-primary)',
                                           cursor: 'pointer',
                                           fontSize: '0.75rem'
                                         }}
                                       >
-                                        {color === '#ffffff' ? 'White' : 'Black'}
+                                        {color === 'var(--color-text-primary)' ? 'White' : 'Black'}
                                       </button>
                                     ))}
                                   </div>
@@ -1424,7 +1424,7 @@ Best regards,
                             {selectedBlock.type === 'image' && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.75rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>
                                     Select Image
                                   </label>
                                   {selectedBlock.content.imageUrl ? (
@@ -1438,7 +1438,7 @@ Best regards,
                                           setDesignerBlocks(newBlocks);
                                           setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, imageUrl: '' } });
                                         }}
-                                        style={{ position: 'absolute', top: '6px', right: '6px', padding: '4px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                                        style={{ position: 'absolute', top: '6px', right: '6px', padding: '4px 8px', backgroundColor: 'var(--color-error)', color: 'var(--color-text-primary)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
                                       >
                                         Remove
                                       </button>
@@ -1446,14 +1446,14 @@ Best regards,
                                   ) : null}
                                   <button
                                     onClick={() => setShowAssetLibrary(true)}
-                                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', border: '1px dashed #666', borderRadius: '0.5rem', color: '#999', cursor: 'pointer', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', border: '1px dashed var(--color-text-disabled)', borderRadius: '0.5rem', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.875rem' }}
                                   >
                                     📁 Choose from Library
                                   </button>
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Image Width
                                   </label>
                                   <select
@@ -1465,7 +1465,7 @@ Best regards,
                                       setDesignerBlocks(newBlocks);
                                       setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, width: e.target.value } });
                                     }}
-                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                                   >
                                     <option value="100%">Full Width</option>
                                     <option value="75%">75%</option>
@@ -1476,7 +1476,7 @@ Best regards,
                                 </div>
                                 
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Link URL (optional)
                                   </label>
                                   <input
@@ -1490,7 +1490,7 @@ Best regards,
                                       setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, linkUrl: e.target.value } });
                                     }}
                                     placeholder="https://yoursite.com"
-                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                                   />
                                 </div>
                               </div>
@@ -1500,7 +1500,7 @@ Best regards,
                             {selectedBlock.type === 'productGrid' && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                 <div>
-                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                     Number of Columns
                                   </label>
                                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.5rem' }}>
@@ -1516,10 +1516,10 @@ Best regards,
                                         }}
                                         style={{
                                           padding: '0.75rem',
-                                          backgroundColor: selectedBlock.content.columns === cols ? primaryColor : '#1a1a1a',
-                                          border: selectedBlock.content.columns === cols ? `1px solid ${primaryColor}` : '1px solid #333',
+                                          backgroundColor: selectedBlock.content.columns === cols ? primaryColor : 'var(--color-bg-paper)',
+                                          border: selectedBlock.content.columns === cols ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                                           borderRadius: '0.375rem',
-                                          color: '#fff',
+                                          color: 'var(--color-text-primary)',
                                           cursor: 'pointer',
                                           fontSize: '0.875rem',
                                           fontWeight: '600'
@@ -1531,7 +1531,7 @@ Best regards,
                                   </div>
                                 </div>
                                 
-                                <div style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem' }}>
+                                <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem' }}>
                                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
                                     <input
                                       type="checkbox"
@@ -1545,7 +1545,7 @@ Best regards,
                                       }}
                                       style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                                     />
-                                    <span style={{ fontSize: '0.875rem', color: '#ccc' }}>Show Prices</span>
+                                    <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Show Prices</span>
                                   </label>
                                   
                                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
@@ -1561,7 +1561,7 @@ Best regards,
                                       }}
                                       style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                                     />
-                                    <span style={{ fontSize: '0.875rem', color: '#ccc' }}>Show &quot;Shop Now&quot; Buttons</span>
+                                    <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Show &quot;Shop Now&quot; Buttons</span>
                                   </label>
                                 </div>
                               </div>
@@ -1570,7 +1570,7 @@ Best regards,
                             {/* Spacer Settings */}
                             {selectedBlock.type === 'spacer' && (
                               <div>
-                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                                   Space Height
                                 </label>
                                 <select
@@ -1582,7 +1582,7 @@ Best regards,
                                     setDesignerBlocks(newBlocks);
                                     setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, height: e.target.value } });
                                   }}
-                                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                                 >
                                   <option value="20px">Small (20px)</option>
                                   <option value="40px">Medium (40px)</option>
@@ -1595,19 +1595,19 @@ Best regards,
                         ) : (
                           /* No Block Selected */
                           <div style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#666' }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: 'var(--color-text-disabled)' }}>
                               <div>
                                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👆</div>
                                 <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>Click any block on the canvas</p>
-                                <p style={{ fontSize: '0.75rem', color: '#555' }}>to edit its settings</p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--color-border-main)' }}>to edit its settings</p>
                               </div>
                             </div>
                             
-                            <div style={{ borderTop: '1px solid #333', paddingTop: '1.5rem' }}>
-                              <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999', marginBottom: '1rem', textTransform: 'uppercase' }}>Advanced Options</h4>
+                            <div style={{ borderTop: '1px solid var(--color-border-strong)', paddingTop: '1.5rem' }}>
+                              <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '1rem', textTransform: 'uppercase' }}>Advanced Options</h4>
                               
                               <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                                   Import HTML
                                 </label>
                                 <input
@@ -1629,11 +1629,11 @@ Best regards,
                                       reader.readAsText(file);
                                     }
                                   }}
-                                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#999', fontSize: '0.75rem', cursor: 'pointer' }}
+                                  style={{ width: '100%', padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.75rem', cursor: 'pointer' }}
                                 />
                               </div>
 
-                              <div style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#999', lineHeight: '1.5' }}>
+                              <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>
                                 💡 Design in Mailchimp, Canva, or any tool, then import the HTML here
                               </div>
                             </div>
@@ -1651,15 +1651,15 @@ Best regards,
               <div style={{ display: 'flex', gap: '2rem' }}>
                 {/* SMS Template List */}
                 <div style={{ width: '320px' }}>
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>📱 About SMS Messages</div>
-                    <div style={{ fontSize: '0.75rem', color: '#ccc', lineHeight: '1.5' }}>
+                  <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>📱 About SMS Messages</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-primary)', lineHeight: '1.5' }}>
                       Create automated text messages for customer updates, reminders, and notifications. Messages are sent via Twilio.
                     </div>
                   </div>
 
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999', marginBottom: '0.75rem', textTransform: 'uppercase' }}>Predefined Triggers</h3>
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.75rem', textTransform: 'uppercase' }}>Predefined Triggers</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       {[
                         { id: 'order_confirmation', name: 'Order Confirmation', icon: '✅', description: 'Sent when order is placed' },
@@ -1679,10 +1679,10 @@ Best regards,
                           }}
                           style={{
                             padding: '1rem',
-                            backgroundColor: selectedSmsTemplate === trigger.id ? '#222' : 'transparent',
-                            border: selectedSmsTemplate === trigger.id ? `1px solid ${primaryColor}` : '1px solid #333',
+                            backgroundColor: selectedSmsTemplate === trigger.id ? 'var(--color-bg-elevated)' : 'transparent',
+                            border: selectedSmsTemplate === trigger.id ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
-                            color: '#fff',
+                            color: 'var(--color-text-primary)',
                             textAlign: 'left',
                             cursor: 'pointer',
                             transition: 'all 0.2s'
@@ -1692,7 +1692,7 @@ Best regards,
                             <span style={{ fontSize: '1.25rem' }}>{trigger.icon}</span>
                             <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>{trigger.name}</span>
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#999', paddingLeft: '2rem' }}>{trigger.description}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', paddingLeft: '2rem' }}>{trigger.description}</div>
                         </button>
                       ))}
                     </div>
@@ -1700,10 +1700,10 @@ Best regards,
 
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                      <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999', textTransform: 'uppercase' }}>Custom Triggers</h3>
+                      <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Custom Triggers</h3>
                       <button
                         onClick={() => setShowSmsCustomTrigger(true)}
-                        style={{ padding: '0.375rem 0.75rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                        style={{ padding: '0.375rem 0.75rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
                       >
                         + New
                       </button>
@@ -1718,10 +1718,10 @@ Best regards,
                           }}
                           style={{
                             padding: '1rem',
-                            backgroundColor: selectedSmsTemplate === template.id ? '#222' : 'transparent',
-                            border: selectedSmsTemplate === template.id ? `1px solid ${primaryColor}` : '1px solid #333',
+                            backgroundColor: selectedSmsTemplate === template.id ? 'var(--color-bg-elevated)' : 'transparent',
+                            border: selectedSmsTemplate === template.id ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                             borderRadius: '0.5rem',
-                            color: '#fff',
+                            color: 'var(--color-text-primary)',
                             textAlign: 'left',
                             cursor: 'pointer',
                             transition: 'all 0.2s'
@@ -1731,12 +1731,12 @@ Best regards,
                             <span style={{ fontSize: '1.25rem' }}>🎯</span>
                             <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>{template.name}</span>
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#999', paddingLeft: '2rem' }}>{template.trigger}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', paddingLeft: '2rem' }}>{template.trigger}</div>
                         </button>
                       ))}
                       
                       {smsTemplates.filter(t => t.isCustom).length === 0 && (
-                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#666', fontSize: '0.75rem', border: '1px dashed #333', borderRadius: '0.5rem' }}>
+                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: '0.75rem', border: '1px dashed var(--color-border-strong)', borderRadius: '0.5rem' }}>
                           No custom triggers yet.<br/>Click &quot;+ New&quot; to create one
                         </div>
                       )}
@@ -1747,13 +1747,13 @@ Best regards,
                 {/* SMS Message Editor */}
                 <div style={{ flex: 1 }}>
                   {selectedSmsTemplate ? (
-                    <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+                    <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem' }}>
+                      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
                         {(() => { const name = smsTemplates.find(t => t.id === selectedSmsTemplate)?.name; return (name !== '' && name != null) ? name : 'SMS Template'; })()}
                       </h2>
 
                       <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                           Message Content
                         </label>
                         <textarea
@@ -1765,56 +1765,56 @@ Best regards,
                           }}
                           rows={6}
                           placeholder="Hi {{customer_name}}, your order #{{order_number}} has been confirmed!"
-                          style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }}
+                          style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem', resize: 'vertical' }}
                         />
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                          <div style={{ fontSize: '0.75rem', color: smsContent.length > 140 ? '#f59e0b' : '#999' }}>
+                          <div style={{ fontSize: '0.75rem', color: smsContent.length > 140 ? 'var(--color-warning)' : 'var(--color-text-secondary)' }}>
                             {smsContent.length}/160 characters {smsContent.length > 160 && '(1 extra SMS)'}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                             {Math.ceil(smsContent.length / 160)} SMS {smsContent.length > 160 ? 'messages' : 'message'}
                           </div>
                         </div>
                       </div>
 
-                      <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#999', marginBottom: '0.5rem' }}>Available Variables:</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: '#666' }}>
+                      <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Available Variables:</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                           <button
                             onClick={() => setSmsContent(`${smsContent  }{{customer_name}}`)}
-                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.25rem', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '0.75rem' }}
                           >
                             + {`{{customer_name}}`}
                           </button>
                           <button
                             onClick={() => setSmsContent(`${smsContent  }{{order_number}}`)}
-                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.25rem', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '0.75rem' }}
                           >
                             + {`{{order_number}}`}
                           </button>
                           <button
                             onClick={() => setSmsContent(`${smsContent  }{{appointment_date}}`)}
-                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.25rem', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '0.75rem' }}
                           >
                             + {`{{appointment_date}}`}
                           </button>
                           <button
                             onClick={() => setSmsContent(`${smsContent  }{{company_name}}`)}
-                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.25rem', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '0.75rem' }}
                           >
                             + {`{{company_name}}`}
                           </button>
                           <button
                             onClick={() => setSmsContent(`${smsContent  }{{tracking_link}}`)}
-                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.25rem', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '0.75rem' }}
                           >
                             + {`{{tracking_link}}`}
                           </button>
                         </div>
                       </div>
 
-                      <div style={{ padding: '1rem', backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#86efac', lineHeight: '1.5' }}>
+                      <div style={{ padding: '1rem', backgroundColor: 'var(--color-success-dark)', border: '1px solid var(--color-success)', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-success-light)', lineHeight: '1.5' }}>
                           <strong style={{ display: 'block', marginBottom: '0.5rem' }}>📱 SMS Best Practices:</strong>
                           • Keep messages under 160 characters to avoid extra charges<br/>
                           • Always include your business name<br/>
@@ -1826,7 +1826,7 @@ Best regards,
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                         <button 
                           onClick={() => alert('Test SMS would be sent to your phone number')}
-                          style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+                          style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
                         >
                           📤 Send Test SMS
                         </button>
@@ -1847,17 +1847,17 @@ Best regards,
                             setSmsTemplates(updated);
                             alert('✅ SMS template saved!');
                           }}
-                          style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                          style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                         >
                           💾 Save Template
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ backgroundColor: '#1a1a1a', border: '1px dashed #333', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center' }}>
+                    <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px dashed var(--color-border-strong)', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center' }}>
                       <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📱</div>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Select an SMS Template</h3>
-                      <p style={{ color: '#999', marginBottom: '1rem' }}>Choose a predefined trigger or create a custom one to get started</p>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Select an SMS Template</h3>
+                      <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>Choose a predefined trigger or create a custom one to get started</p>
                     </div>
                   )}
                 </div>
@@ -1869,37 +1869,37 @@ Best regards,
               <div>
                 {/* Campaign Stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                    <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Total Campaigns</div>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>4</div>
+                  <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1.5rem' }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Total Campaigns</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>4</div>
                   </div>
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                    <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Avg Open Rate</div>
+                  <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1.5rem' }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Avg Open Rate</div>
                     <div style={{ fontSize: '2rem', fontWeight: 'bold', color: primaryColor }}>49.9%</div>
                   </div>
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                    <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Avg Click Rate</div>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4ade80' }}>12.5%</div>
+                  <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1.5rem' }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Avg Click Rate</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-success-light)' }}>12.5%</div>
                   </div>
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                    <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Total Sent</div>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>7,465</div>
+                  <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1.5rem' }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Total Sent</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>7,465</div>
                   </div>
                 </div>
 
                 {/* Campaigns List */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
+                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem' }}>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
-                        <tr style={{ borderBottom: '1px solid #333' }}>
-                          <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Campaign</th>
-                          <th style={{ textAlign: 'center', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Status</th>
-                          <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Recipients</th>
-                          <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Opens</th>
-                          <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Clicks</th>
-                          <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Date</th>
-                          <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Actions</th>
+                        <tr style={{ borderBottom: '1px solid var(--color-border-strong)' }}>
+                          <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Campaign</th>
+                          <th style={{ textAlign: 'center', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Status</th>
+                          <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Recipients</th>
+                          <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Opens</th>
+                          <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Clicks</th>
+                          <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Date</th>
+                          <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1908,25 +1908,25 @@ Best regards,
                           const clickRate = campaign.clicked && campaign.recipients ? ((campaign.clicked / campaign.recipients) * 100).toFixed(1) : '-';
                           
                           return (
-                            <tr key={campaign.id} style={{ borderBottom: '1px solid #222' }}>
+                            <tr key={campaign.id} style={{ borderBottom: '1px solid var(--color-bg-elevated)' }}>
                               <td style={{ padding: '1rem 0.75rem' }}>
-                                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>{campaign.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: '#999' }}>{campaign.subject}</div>
+                                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{campaign.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{campaign.subject}</div>
                               </td>
                               <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
                                 <span style={{
                                   display: 'inline-block',
                                   padding: '0.25rem 0.75rem',
                                   backgroundColor: 
-                                    campaign.status === 'sent' ? '#0f4c0f' :
-                                    campaign.status === 'scheduled' ? '#4c3d0f' :
-                                    campaign.status === 'sending' ? '#0f3d4c' :
-                                    '#4c4c4c',
+                                    campaign.status === 'sent' ? 'var(--color-success-dark)' :
+                                    campaign.status === 'scheduled' ? 'var(--color-warning-dark)' :
+                                    campaign.status === 'sending' ? 'var(--color-info-dark)' :
+                                    'var(--color-text-disabled)',
                                   color:
-                                    campaign.status === 'sent' ? '#4ade80' :
-                                    campaign.status === 'scheduled' ? '#fbbf24' :
-                                    campaign.status === 'sending' ? '#22d3ee' :
-                                    '#999',
+                                    campaign.status === 'sent' ? 'var(--color-success-light)' :
+                                    campaign.status === 'scheduled' ? 'var(--color-warning-light)' :
+                                    campaign.status === 'sending' ? 'var(--color-info-light)' :
+                                    'var(--color-text-secondary)',
                                   borderRadius: '9999px',
                                   fontSize: '0.75rem',
                                   fontWeight: '600',
@@ -1935,25 +1935,25 @@ Best regards,
                                   {campaign.status}
                                 </span>
                               </td>
-                              <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: '#fff', textAlign: 'right', fontWeight: '600' }}>
+                              <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', textAlign: 'right', fontWeight: '600' }}>
                                 {campaign.status === 'sending' ? `${campaign.sent}/${campaign.recipients}` : campaign.recipients.toLocaleString()}
                               </td>
-                              <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: '#ccc', textAlign: 'right' }}>
+                              <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', textAlign: 'right' }}>
                                 {campaign.opened ? `${campaign.opened.toLocaleString()} (${openRate}%)` : '-'}
                               </td>
-                              <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: '#ccc', textAlign: 'right' }}>
+                              <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', textAlign: 'right' }}>
                                 {campaign.clicked ? `${campaign.clicked.toLocaleString()} (${clickRate}%)` : '-'}
                               </td>
-                              <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: '#999' }}>
+                              <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                                 {(campaign.sentDate !== '' && campaign.sentDate != null) ? campaign.sentDate : ((campaign.scheduledDate !== '' && campaign.scheduledDate != null) ? campaign.scheduledDate : 'Draft')}
                               </td>
                               <td style={{ padding: '1rem 0.75rem', textAlign: 'right' }}>
                                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                  <button style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}>
+                                  <button style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}>
                                     View
                                   </button>
                                   {campaign.status === 'draft' && (
-                                    <button style={{ padding: '0.5rem 1rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}>
+                                    <button style={{ padding: '0.5rem 1rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}>
                                       Send
                                     </button>
                                   )}
@@ -1974,12 +1974,12 @@ Best regards,
         {/* Create Campaign Modal */}
       {showCreateCampaign && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Create Email Campaign</h2>
+          <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>Create Email Campaign</h2>
             
             {/* Campaign Name */}
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                 Campaign Name
               </label>
               <input
@@ -1987,13 +1987,13 @@ Best regards,
                 value={newCampaign.name}
                 onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
                 placeholder="Holiday Sale 2025"
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
               />
             </div>
 
             {/* Template Selection */}
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                 Email Template (Optional)
               </label>
               <select
@@ -2015,7 +2015,7 @@ Best regards,
                     }
                   }
                 }}
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
               >
                 <option value="">Create from scratch</option>
                 <optgroup label="Custom Templates">
@@ -2024,14 +2024,14 @@ Best regards,
                   ))}
                 </optgroup>
                 {customTemplates.length === 0 && (
-                  <option disabled style={{ color: '#666' }}>No custom templates yet - create one in the Custom Templates tab</option>
+                  <option disabled style={{ color: 'var(--color-text-disabled)' }}>No custom templates yet - create one in the Custom Templates tab</option>
                 )}
               </select>
             </div>
 
             {/* Email Content */}
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                 Subject Line
               </label>
               <input
@@ -2039,12 +2039,12 @@ Best regards,
                 value={newCampaign.subject}
                 onChange={(e) => setNewCampaign({ ...newCampaign, subject: e.target.value })}
                 placeholder="Special offer just for you, {{contact_name}}!"
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
               />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                 Email Body
               </label>
               <textarea
@@ -2052,14 +2052,14 @@ Best regards,
                 onChange={(e) => setNewCampaign({ ...newCampaign, body: e.target.value })}
                 rows={10}
                 placeholder="Hi {{contact_name}},&#10;&#10;We have an exclusive offer for you...&#10;&#10;Best regards,&#10;{{company_name}}"
-                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'monospace', resize: 'vertical' }}
+                style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontFamily: 'monospace', resize: 'vertical' }}
               />
             </div>
 
             {/* Recipient Filters */}
             <div style={{ marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#ccc' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>
                   Target Audience (Filter Contacts)
                 </label>
                 {estimatedRecipients > 0 && (
@@ -2069,10 +2069,10 @@ Best regards,
                 )}
               </div>
               
-              <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', padding: '1rem' }}>
+              <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', padding: '1rem' }}>
                 {campaignFilters.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem' }}>
-                    <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', marginBottom: '1rem' }}>
                       No filters set - campaign will be sent to all contacts
                     </p>
                     <button
@@ -2080,7 +2080,7 @@ Best regards,
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: primaryColor,
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                         border: 'none',
                         borderRadius: '0.375rem',
                         cursor: 'pointer',
@@ -2098,8 +2098,8 @@ Best regards,
                         key={filter.id || index}
                         style={{ 
                           padding: '0.75rem',
-                          backgroundColor: '#1a1a1a',
-                          border: '1px solid #333',
+                          backgroundColor: 'var(--color-bg-paper)',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.375rem',
                           marginBottom: '0.5rem',
                           display: 'flex',
@@ -2108,10 +2108,10 @@ Best regards,
                         }}
                       >
                         <div>
-                          <div style={{ fontSize: '0.875rem', color: '#fff', marginBottom: '0.25rem' }}>
+                          <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
                             {filter.name || 'Filter'}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
                             {filter.groups.reduce((total, group) => total + group.conditions.length, 0)} condition(s)
                           </div>
                         </div>
@@ -2122,8 +2122,8 @@ Best regards,
                           style={{
                             padding: '0.375rem 0.75rem',
                             backgroundColor: 'transparent',
-                            color: '#ef4444',
-                            border: '1px solid #ef4444',
+                            color: 'var(--color-error)',
+                            border: '1px solid var(--color-error)',
                             borderRadius: '0.25rem',
                             cursor: 'pointer',
                             fontSize: '0.75rem'
@@ -2152,14 +2152,14 @@ Best regards,
                 )}
               </div>
 
-              <div style={{ marginTop: '0.75rem', padding: '0.75rem', backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#86efac' }}>
+              <div style={{ marginTop: '0.75rem', padding: '0.75rem', backgroundColor: 'var(--color-success-dark)', border: '1px solid var(--color-success)', borderRadius: '0.5rem', fontSize: '0.75rem', color: 'var(--color-success-light)' }}>
                 💡 Use filters to target specific segments: new contacts, high-value customers, inactive users, by location, tags, or any custom field
               </div>
             </div>
 
             {/* Send Options */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.75rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>
                 Send Options
               </label>
               
@@ -2169,16 +2169,16 @@ Best regards,
                   style={{
                     flex: 1,
                     padding: '1rem',
-                    backgroundColor: newCampaign.sendType === 'immediate' ? '#222' : '#0a0a0a',
-                    border: newCampaign.sendType === 'immediate' ? `2px solid ${primaryColor}` : '1px solid #333',
+                    backgroundColor: newCampaign.sendType === 'immediate' ? 'var(--color-bg-elevated)' : 'var(--color-bg-main)',
+                    border: newCampaign.sendType === 'immediate' ? `2px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     cursor: 'pointer',
                     textAlign: 'left'
                   }}
                 >
                   <div style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>⚡ Send Immediately</div>
-                  <div style={{ fontSize: '0.75rem', color: '#999' }}>Send to all recipients right away</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Send to all recipients right away</div>
                 </button>
                 
                 <button
@@ -2186,41 +2186,41 @@ Best regards,
                   style={{
                     flex: 1,
                     padding: '1rem',
-                    backgroundColor: newCampaign.sendType === 'scheduled' ? '#222' : '#0a0a0a',
-                    border: newCampaign.sendType === 'scheduled' ? `2px solid ${primaryColor}` : '1px solid #333',
+                    backgroundColor: newCampaign.sendType === 'scheduled' ? 'var(--color-bg-elevated)' : 'var(--color-bg-main)',
+                    border: newCampaign.sendType === 'scheduled' ? `2px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     cursor: 'pointer',
                     textAlign: 'left'
                   }}
                 >
                   <div style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>📅 Schedule for Later</div>
-                  <div style={{ fontSize: '0.75rem', color: '#999' }}>Pick a specific date and time</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Pick a specific date and time</div>
                 </button>
               </div>
 
               {newCampaign.sendType === 'scheduled' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                       Date
                     </label>
                     <input
                       type="date"
                       value={newCampaign.scheduledDate}
                       onChange={(e) => setNewCampaign({ ...newCampaign, scheduledDate: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                       Time
                     </label>
                     <input
                       type="time"
                       value={newCampaign.scheduledTime}
                       onChange={(e) => setNewCampaign({ ...newCampaign, scheduledTime: e.target.value })}
-                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                     />
                   </div>
                 </div>
@@ -2228,10 +2228,10 @@ Best regards,
             </div>
 
             {/* Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', paddingTop: '1.5rem', borderTop: '1px solid #333' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border-strong)' }}>
               <button
                 onClick={() => setShowCreateCampaign(false)}
-                style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+                style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
               >
                 Cancel
               </button>
@@ -2242,7 +2242,7 @@ Best regards,
                     alert('Campaign saved as draft!');
                     setShowCreateCampaign(false);
                   }}
-                  style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+                  style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
                 >
                   Save as Draft
                 </button>
@@ -2255,7 +2255,7 @@ Best regards,
                     setNewCampaign({ name: '', subject: '', body: '', templateId: '', sendType: 'immediate', scheduledDate: '', scheduledTime: '' });
                     setCampaignFilters([]);
                   }}
-                  style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                  style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                 >
                   {newCampaign.sendType === 'immediate' ? '📤 Send Now' : '📅 Schedule Campaign'}
                 </button>
@@ -2268,29 +2268,29 @@ Best regards,
       {/* Custom SMS Trigger Modal */}
       {showSmsCustomTrigger && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '2rem' }}>
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', width: '100%', maxWidth: '700px' }}>
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid #333' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Create Custom SMS Trigger</h2>
-              <p style={{ fontSize: '0.875rem', color: '#999' }}>Define when this SMS should be automatically sent</p>
+          <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', width: '100%', maxWidth: '700px' }}>
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border-strong)' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Create Custom SMS Trigger</h2>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>Define when this SMS should be automatically sent</p>
             </div>
 
             <div style={{ padding: '1.5rem' }}>
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Trigger Name
                 </label>
                 <input
                   type="text"
                   placeholder="e.g., VIP Customer Welcome"
-                  style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                  style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}
                 />
               </div>
 
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   When should this trigger?
                 </label>
-                <select style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                <select style={{ width: '100%', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
                   <option>When a record is created...</option>
                   <option>When a record is updated...</option>
                   <option>When a field changes...</option>
@@ -2298,63 +2298,63 @@ Best regards,
                   <option>When a condition is met...</option>
                 </select>
 
-                <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.75rem' }}>
+                <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>
                     Conditions (optional)
                   </label>
                   
                   <div style={{ marginBottom: '0.75rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <select style={{ padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.375rem', color: '#fff', fontSize: '0.875rem' }}>
+                      <select style={{ padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                         <option>Select field...</option>
                         <option>Customer Tier</option>
                         <option>Order Total</option>
                         <option>Status</option>
                         <option>Tags</option>
                       </select>
-                      <select style={{ padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.375rem', color: '#fff', fontSize: '0.875rem' }}>
+                      <select style={{ padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                         <option>equals</option>
                         <option>greater than</option>
                         <option>less than</option>
                         <option>contains</option>
                       </select>
-                      <input type="text" placeholder="Value" style={{ padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.375rem', color: '#fff', fontSize: '0.875rem' }} />
+                      <input type="text" placeholder="Value" style={{ padding: '0.625rem', backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', color: 'var(--color-text-primary)', fontSize: '0.875rem' }} />
                     </div>
                   </div>
                   
-                  <button style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: primaryColor, border: `1px solid ${primaryColor}`, borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}>
+                  <button style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--color-bg-elevated)', color: primaryColor, border: `1px solid ${primaryColor}`, borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}>
                     + Add Condition
                   </button>
                 </div>
               </div>
 
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
                   Timing
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <button style={{ padding: '1rem', backgroundColor: '#222', border: `2px solid ${primaryColor}`, borderRadius: '0.5rem', color: '#fff', cursor: 'pointer', textAlign: 'left' }}>
+                  <button style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', border: `2px solid ${primaryColor}`, borderRadius: '0.5rem', color: 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left' }}>
                     <div style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>⚡ Send Immediately</div>
-                    <div style={{ fontSize: '0.75rem', color: '#999' }}>When trigger fires</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>When trigger fires</div>
                   </button>
-                  <button style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', cursor: 'pointer', textAlign: 'left' }}>
+                  <button style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', color: 'var(--color-text-primary)', cursor: 'pointer', textAlign: 'left' }}>
                     <div style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>⏱️ Delay</div>
-                    <div style={{ fontSize: '0.75rem', color: '#999' }}>Wait before sending</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Wait before sending</div>
                   </button>
                 </div>
               </div>
 
-              <div style={{ padding: '1rem', backgroundColor: '#2e1a1a', border: '1px solid #4a2d2d', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-                <div style={{ fontSize: '0.75rem', color: '#fca5a5', lineHeight: '1.5' }}>
+              <div style={{ padding: '1rem', backgroundColor: 'var(--color-error-dark)', border: '1px solid var(--color-error-dark)', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-error-light)', lineHeight: '1.5' }}>
                   <strong style={{ display: 'block', marginBottom: '0.5rem' }}>⚠️ Important:</strong>
                   SMS messages require customer consent. Make sure you have permission to text your customers and include opt-out instructions.
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid #333' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border-strong)' }}>
                 <button
                   onClick={() => setShowSmsCustomTrigger(false)}
-                  style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+                  style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
                 >
                   Cancel
                 </button>
@@ -2372,7 +2372,7 @@ Best regards,
                     setShowSmsCustomTrigger(false);
                     alert('✅ Custom trigger created! Now set up your message.');
                   }}
-                  style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                  style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                 >
                   Create Trigger
                 </button>
@@ -2385,24 +2385,24 @@ Best regards,
       {/* Asset Library Modal */}
       {showAssetLibrary && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '2rem' }}>
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', width: '100%', maxWidth: '900px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', width: '100%', maxWidth: '900px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border-strong)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Asset Library</h2>
-                <p style={{ fontSize: '0.875rem', color: '#999' }}>Your uploaded images and assets</p>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Asset Library</h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>Your uploaded images and assets</p>
               </div>
               <button
                 onClick={() => setShowAssetLibrary(false)}
-                style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}
               >
                 ✕ Close
               </button>
             </div>
 
             {/* Upload New */}
-            <div style={{ padding: '1.5rem', borderBottom: '1px solid #333' }}>
-              <label style={{ display: 'block', padding: '2rem', backgroundColor: '#0a0a0a', border: '2px dashed #666', borderRadius: '0.75rem', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--color-border-strong)' }}>
+              <label style={{ display: 'block', padding: '2rem', backgroundColor: 'var(--color-bg-main)', border: '2px dashed var(--color-text-disabled)', borderRadius: '0.75rem', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
                 <input
                   type="file"
                   accept="image/*"
@@ -2421,16 +2421,16 @@ Best regards,
                   style={{ display: 'none' }}
                 />
                 <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>📁</div>
-                <div style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>Click to upload images</div>
-                <div style={{ fontSize: '0.875rem', color: '#999' }}>or drag and drop files here</div>
-                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem' }}>Supports: JPG, PNG, GIF, WebP</div>
+                <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Click to upload images</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>or drag and drop files here</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem' }}>Supports: JPG, PNG, GIF, WebP</div>
               </label>
             </div>
 
             {/* Assets Grid */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
               {uploadedAssets.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
                   <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🖼️</div>
                   <p style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>No assets uploaded yet</p>
                   <p style={{ fontSize: '0.875rem' }}>Upload your images, logos, and graphics to use in your emails</p>
@@ -2454,20 +2454,20 @@ Best regards,
                         cursor: 'pointer',
                         borderRadius: '0.5rem',
                         overflow: 'hidden',
-                        border: '1px solid #333',
+                        border: '1px solid var(--color-border-strong)',
                         transition: 'all 0.2s',
-                        backgroundColor: '#0a0a0a'
+                        backgroundColor: 'var(--color-bg-main)'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = primaryColor;
                         e.currentTarget.style.transform = 'scale(1.05)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#333';
+                        e.currentTarget.style.borderColor = 'var(--color-border-strong)';
                         e.currentTarget.style.transform = 'scale(1)';
                       }}
                     >
-                      <div style={{ aspectRatio: '1', overflow: 'hidden', backgroundColor: '#222' }}>
+                      <div style={{ aspectRatio: '1', overflow: 'hidden', backgroundColor: 'var(--color-bg-elevated)' }}>
                         <img 
                           src={asset.url} 
                           alt={asset.name} 
@@ -2475,10 +2475,10 @@ Best regards,
                         />
                       </div>
                       <div style={{ padding: '0.75rem' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#ccc', marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-primary)', marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {asset.name}
                         </div>
-                        <div style={{ fontSize: '0.65rem', color: '#666' }}>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text-disabled)' }}>
                           {new Date(asset.uploadedAt).toLocaleDateString()}
                         </div>
                       </div>
@@ -2489,8 +2489,8 @@ Best regards,
             </div>
 
             {/* Footer */}
-            <div style={{ padding: '1.5rem', borderTop: '1px solid #333', textAlign: 'center' }}>
-              <p style={{ fontSize: '0.875rem', color: '#999' }}>
+            <div style={{ padding: '1.5rem', borderTop: '1px solid var(--color-border-strong)', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                 {uploadedAssets.length > 0 ? `${uploadedAssets.length} asset${uploadedAssets.length !== 1 ? 's' : ''} in your library` : 'Upload images to get started'}
               </p>
             </div>

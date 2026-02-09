@@ -240,7 +240,7 @@ export default function VoiceAITrainingLabPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Theme colors
-  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? 'var(--color-primary)';
 
   // Scroll to bottom of chat
   useEffect(() => {
@@ -857,28 +857,28 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
   // Loading state
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem', backgroundColor: '#000000', minHeight: '100vh' }}>
-        <p style={{ color: '#999999' }}>Loading Voice AI Training Lab...</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem', backgroundColor: 'var(--color-bg-main)', minHeight: '100vh' }}>
+        <p style={{ color: 'var(--color-text-secondary)' }}>Loading Voice AI Training Lab...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ backgroundColor: '#000000', minHeight: '100vh', color: '#ffffff' }}>
+    <div style={{ backgroundColor: 'var(--color-bg-main)', minHeight: '100vh', color: 'var(--color-text-primary)' }}>
       {/* Header */}
-      <div style={{ padding: '2rem', borderBottom: '1px solid #1a1a1a' }}>
+      <div style={{ padding: '2rem', borderBottom: '1px solid var(--color-border-light)' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
             Voice AI Training Lab
           </h1>
-          <p style={{ color: '#999999', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
             Configure and train your Voice AI agent for phone conversations
           </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ borderBottom: '1px solid #1a1a1a', backgroundColor: '#0a0a0a' }}>
+      <div style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-main)' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '2rem' }}>
           {([
             { id: 'settings' as const, label: 'Settings' },
@@ -894,7 +894,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 backgroundColor: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === tab.id ? `2px solid ${primaryColor}` : '2px solid transparent',
-                color: activeTab === tab.id ? '#ffffff' : '#999999',
+                color: activeTab === tab.id ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                 fontWeight: activeTab === tab.id ? '600' : '400',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
@@ -916,11 +916,11 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
               {/* Left: Settings Form */}
               <div>
                 {/* Voice Engine Selection */}
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                     <div>
                       <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Voice Engine</h3>
-                      <p style={{ fontSize: '0.875rem', color: '#666666' }}>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
                         Choose the text-to-speech provider for your AI agent&apos;s voice
                       </p>
                     </div>
@@ -937,8 +937,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           onClick={() => handleEngineChange(engine)}
                           style={{
                             padding: '1rem',
-                            backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : '#1a1a1a',
-                            border: isSelected ? `2px solid ${primaryColor}` : '2px solid #333333',
+                            backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--color-bg-paper)',
+                            border: isSelected ? `2px solid ${primaryColor}` : '2px solid var(--color-border-strong)',
                             borderRadius: '0.75rem',
                             cursor: 'pointer',
                             textAlign: 'left',
@@ -946,13 +946,13 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                            <span style={{ fontWeight: '600', color: isSelected ? primaryColor : '#ffffff', fontSize: '0.875rem' }}>
+                            <span style={{ fontWeight: '600', color: isSelected ? primaryColor : 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                               {info.name}
                             </span>
                             <span style={{
                               padding: '0.125rem 0.5rem',
                               backgroundColor: info.quality === 'ultra' ? 'rgba(168, 85, 247, 0.2)' : info.quality === 'premium' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                              color: info.quality === 'ultra' ? '#a855f7' : info.quality === 'premium' ? '#10b981' : '#f59e0b',
+                              color: info.quality === 'ultra' ? 'var(--color-secondary)' : info.quality === 'premium' ? 'var(--color-success)' : 'var(--color-warning)',
                               borderRadius: '9999px',
                               fontSize: '0.625rem',
                               fontWeight: '600',
@@ -961,18 +961,18 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                               {info.quality}
                             </span>
                           </div>
-                          <p style={{ fontSize: '0.75rem', color: '#999999', marginBottom: '0.75rem', lineHeight: '1.4' }}>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem', lineHeight: '1.4' }}>
                             {info.description.substring(0, 80)}...
                           </p>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#666666' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                               ${(info.pricing.costPer1kChars / 100).toFixed(3)}/1k chars
                             </span>
                             <span style={{
                               fontSize: '0.625rem',
                               padding: '0.125rem 0.375rem',
                               backgroundColor: info.latency === 'low' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                              color: info.latency === 'low' ? '#10b981' : '#f59e0b',
+                              color: info.latency === 'low' ? 'var(--color-success)' : 'var(--color-warning)',
                               borderRadius: '0.25rem',
                             }}>
                               {info.latency} latency
@@ -985,9 +985,9 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                   {/* API Key Mode (for Unreal and ElevenLabs) */}
                   {(ttsEngine === 'unreal' || ttsEngine === 'elevenlabs') && (
-                    <div style={{ padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', marginBottom: '1rem' }}>
                       <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999999', marginBottom: '0.5rem', display: 'block' }}>
+                        <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
                           API Key Mode
                         </label>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -996,17 +996,17 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             style={{
                               flex: 1,
                               padding: '0.75rem',
-                              backgroundColor: ttsKeyMode === 'platform' ? 'rgba(99, 102, 241, 0.2)' : '#0a0a0a',
-                              border: ttsKeyMode === 'platform' ? `1px solid ${primaryColor}` : '1px solid #333333',
+                              backgroundColor: ttsKeyMode === 'platform' ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-bg-main)',
+                              border: ttsKeyMode === 'platform' ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                               borderRadius: '0.5rem',
-                              color: ttsKeyMode === 'platform' ? primaryColor : '#999999',
+                              color: ttsKeyMode === 'platform' ? primaryColor : 'var(--color-text-secondary)',
                               cursor: 'pointer',
                               fontSize: '0.875rem',
                               fontWeight: ttsKeyMode === 'platform' ? '600' : '400',
                             }}
                           >
                             Use Platform Keys
-                            <div style={{ fontSize: '0.75rem', color: '#666666', marginTop: '0.25rem' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
                               We bill you at usage rates
                             </div>
                           </button>
@@ -1015,17 +1015,17 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             style={{
                               flex: 1,
                               padding: '0.75rem',
-                              backgroundColor: ttsKeyMode === 'user' ? 'rgba(99, 102, 241, 0.2)' : '#0a0a0a',
-                              border: ttsKeyMode === 'user' ? `1px solid ${primaryColor}` : '1px solid #333333',
+                              backgroundColor: ttsKeyMode === 'user' ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-bg-main)',
+                              border: ttsKeyMode === 'user' ? `1px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
                               borderRadius: '0.5rem',
-                              color: ttsKeyMode === 'user' ? primaryColor : '#999999',
+                              color: ttsKeyMode === 'user' ? primaryColor : 'var(--color-text-secondary)',
                               cursor: 'pointer',
                               fontSize: '0.875rem',
                               fontWeight: ttsKeyMode === 'user' ? '600' : '400',
                             }}
                           >
                             Use My Own Key
-                            <div style={{ fontSize: '0.75rem', color: '#666666', marginTop: '0.25rem' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
                               Pay directly to provider
                             </div>
                           </button>
@@ -1035,7 +1035,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       {/* User API Key Input */}
                       {ttsKeyMode === 'user' && (
                         <div>
-                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999999', marginBottom: '0.5rem', display: 'block' }}>
+                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
                             Your {TTS_PROVIDER_INFO[ttsEngine].name} API Key
                           </label>
                           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1050,10 +1050,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                               style={{
                                 flex: 1,
                                 padding: '0.75rem',
-                                backgroundColor: '#0a0a0a',
-                                border: apiKeyValid === true ? '1px solid #10b981' : apiKeyValid === false ? '1px solid #ef4444' : '1px solid #333333',
+                                backgroundColor: 'var(--color-bg-main)',
+                                border: apiKeyValid === true ? '1px solid var(--color-success)' : apiKeyValid === false ? '1px solid var(--color-error)' : '1px solid var(--color-border-strong)',
                                 borderRadius: '0.5rem',
-                                color: '#ffffff',
+                                color: 'var(--color-text-primary)',
                                 fontSize: '0.875rem',
                               }}
                             />
@@ -1062,10 +1062,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                               disabled={validatingKey || !ttsUserApiKey.trim()}
                               style={{
                                 padding: '0.75rem 1rem',
-                                backgroundColor: validatingKey ? '#333333' : '#333333',
+                                backgroundColor: validatingKey ? 'var(--color-border-strong)' : 'var(--color-border-strong)',
                                 border: 'none',
                                 borderRadius: '0.5rem',
-                                color: '#ffffff',
+                                color: 'var(--color-text-primary)',
                                 cursor: validatingKey || !ttsUserApiKey.trim() ? 'not-allowed' : 'pointer',
                                 fontSize: '0.875rem',
                                 fontWeight: '600',
@@ -1076,7 +1076,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             </button>
                           </div>
                           {apiKeyValid !== null && (
-                            <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: apiKeyValid ? '#10b981' : '#ef4444' }}>
+                            <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: apiKeyValid ? 'var(--color-success)' : 'var(--color-error)' }}>
                               {apiKeyValid ? 'API key is valid' : 'Invalid API key'}
                             </div>
                           )}
@@ -1087,7 +1087,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                   {/* Voice Selection */}
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999999', marginBottom: '0.5rem', display: 'block' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
                       Select Voice
                     </label>
                     <select
@@ -1097,10 +1097,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                       }}
                     >
@@ -1115,7 +1115,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       )}
                     </select>
                     {ttsVoices.find(v => v.id === selectedVoiceId)?.description && (
-                      <p style={{ fontSize: '0.75rem', color: '#666666', marginTop: '0.5rem' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem' }}>
                         {ttsVoices.find(v => v.id === selectedVoiceId)?.description}
                       </p>
                     )}
@@ -1128,8 +1128,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: testingVoice ? '#333333' : '#10b981',
-                      color: '#ffffff',
+                      backgroundColor: testingVoice ? 'var(--color-border-strong)' : 'var(--color-success)',
+                      color: 'var(--color-text-primary)',
                       border: 'none',
                       borderRadius: '0.5rem',
                       cursor: testingVoice || !selectedVoiceId ? 'not-allowed' : 'pointer',
@@ -1145,17 +1145,17 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   </button>
 
                   {/* Provider Features */}
-                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#666666', marginBottom: '0.5rem' }}>Features:</div>
+                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Features:</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                       {TTS_PROVIDER_INFO[ttsEngine].features.slice(0, 4).map((feature, i) => (
                         <span key={i} style={{
                           padding: '0.25rem 0.5rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333333',
+                          backgroundColor: 'var(--color-bg-main)',
+                          border: '1px solid var(--color-border-strong)',
                           borderRadius: '0.25rem',
                           fontSize: '0.625rem',
-                          color: '#999999',
+                          color: 'var(--color-text-secondary)',
                         }}>
                           {feature}
                         </span>
@@ -1165,15 +1165,15 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 </div>
 
                 {/* Brand DNA Inheritance */}
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                     <div>
                       <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Brand DNA</h3>
                       <span style={{
                         display: 'inline-block',
                         padding: '0.25rem 0.75rem',
-                        backgroundColor: overrideForVoice ? '#1a1a1a' : 'rgba(99, 102, 241, 0.2)',
-                        color: overrideForVoice ? '#999999' : primaryColor,
+                        backgroundColor: overrideForVoice ? 'var(--color-bg-paper)' : 'rgba(99, 102, 241, 0.2)',
+                        color: overrideForVoice ? 'var(--color-text-secondary)' : primaryColor,
                         borderRadius: '9999px',
                         fontSize: '0.75rem',
                         fontWeight: '600',
@@ -1182,7 +1182,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       </span>
                     </div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <span style={{ fontSize: '0.875rem', color: '#999999' }}>Override for Voice Only</span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>Override for Voice Only</span>
                       <input
                         type="checkbox"
                         checked={overrideForVoice}
@@ -1194,19 +1194,19 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                   {brandDNA && !overrideForVoice && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '1rem' }}>
-                      <div style={{ padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#666666', marginBottom: '0.25rem' }}>Company</div>
-                        <div style={{ fontSize: '0.875rem', color: '#ffffff' }}>{brandDNA.companyDescription?.substring(0, 50)}...</div>
+                      <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Company</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>{brandDNA.companyDescription?.substring(0, 50)}...</div>
                       </div>
-                      <div style={{ padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#666666', marginBottom: '0.25rem' }}>Tone</div>
-                        <div style={{ fontSize: '0.875rem', color: '#ffffff', textTransform: 'capitalize' }}>{brandDNA.toneOfVoice}</div>
+                      <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Tone</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', textTransform: 'capitalize' }}>{brandDNA.toneOfVoice}</div>
                       </div>
-                      <div style={{ gridColumn: 'span 2', padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem' }}>
-                        <div style={{ fontSize: '0.75rem', color: '#666666', marginBottom: '0.25rem' }}>Key Phrases</div>
+                      <div style={{ gridColumn: 'span 2', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Key Phrases</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                           {brandDNA.keyPhrases?.slice(0, 5).map((phrase, i) => (
-                            <span key={i} style={{ padding: '0.25rem 0.5rem', backgroundColor: '#0a0a0a', border: '1px solid #333333', borderRadius: '0.25rem', fontSize: '0.75rem' }}>
+                            <span key={i} style={{ padding: '0.25rem 0.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '0.25rem', fontSize: '0.75rem' }}>
                               {phrase}
                             </span>
                           ))}
@@ -1217,12 +1217,12 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 </div>
 
                 {/* Voice Settings */}
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Voice-Specific Settings</h3>
 
                   {/* Greeting Script */}
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#999999' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>
                       Greeting Script
                     </label>
                     <textarea
@@ -1233,10 +1233,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                         fontFamily: 'inherit',
                         resize: 'vertical',
@@ -1246,7 +1246,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                   {/* Tone of Voice */}
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#999999' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>
                       Tone of Voice
                     </label>
                     <select
@@ -1260,10 +1260,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                       }}
                     >
@@ -1275,7 +1275,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                   {/* Call Hand-off Instructions */}
                   <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: '#999999' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>
                       Call Hand-off Instructions
                     </label>
                     <textarea
@@ -1286,10 +1286,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.5rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                         fontFamily: 'inherit',
                         resize: 'vertical',
@@ -1299,32 +1299,32 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 </div>
 
                 {/* Objection Response Templates */}
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Objection Response Templates</h3>
-                  <p style={{ fontSize: '0.875rem', color: '#666666', marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>
                     Define pre-written responses for common objections. The AI will use these when matching objections are detected.
                   </p>
 
                   {/* Existing templates */}
                   <div style={{ marginBottom: '1.5rem' }}>
                     {objectionTemplates.map((template, index) => (
-                      <div key={index} style={{ padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', marginBottom: '0.75rem', border: '1px solid #333333' }}>
+                      <div key={index} style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', marginBottom: '0.75rem', border: '1px solid var(--color-border-strong)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
                           <span style={{ fontWeight: '600', color: primaryColor, fontSize: '0.875rem' }}>&quot;{template.key}&quot;</span>
                           <button
                             onClick={() => handleRemoveObjection(template.key)}
-                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.875rem' }}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: '0.875rem' }}
                           >
                             Remove
                           </button>
                         </div>
-                        <p style={{ fontSize: '0.875rem', color: '#cccccc', lineHeight: '1.5' }}>{template.response}</p>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>{template.response}</p>
                       </div>
                     ))}
                   </div>
 
                   {/* Add new template */}
-                  <div style={{ padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px dashed #333333' }}>
+                  <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px dashed var(--color-border-strong)' }}>
                     <input
                       type="text"
                       value={newObjectionKey}
@@ -1333,10 +1333,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                         marginBottom: '0.75rem',
                       }}
@@ -1349,10 +1349,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                         fontFamily: 'inherit',
                         marginBottom: '0.75rem',
@@ -1363,7 +1363,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: primaryColor,
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         border: 'none',
                         borderRadius: '0.25rem',
                         cursor: 'pointer',
@@ -1377,19 +1377,19 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 </div>
 
                 {/* Qualification Criteria */}
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Qualification Criteria</h3>
-                  <p style={{ fontSize: '0.875rem', color: '#666666', marginBottom: '1rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>
                     Criteria the AI should use to qualify callers during conversations.
                   </p>
 
                   <div style={{ marginBottom: '1rem' }}>
                     {(voiceSettings.qualificationCriteria ?? []).map((criteria, index) => (
-                      <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>
                         <span style={{ flex: 1, fontSize: '0.875rem' }}>{criteria}</span>
                         <button
                           onClick={() => handleRemoveCriteria(index)}
-                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem' }}
+                          style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: '0.75rem' }}
                         >
                           X
                         </button>
@@ -1411,10 +1411,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       style={{
                         flex: 1,
                         padding: '0.5rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#ffffff',
+                        color: 'var(--color-text-primary)',
                         fontSize: '0.875rem',
                       }}
                     />
@@ -1422,8 +1422,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       onClick={handleAddCriteria}
                       style={{
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#333333',
-                        color: '#ffffff',
+                        backgroundColor: 'var(--color-border-strong)',
+                        color: 'var(--color-text-primary)',
                         border: 'none',
                         borderRadius: '0.25rem',
                         cursor: 'pointer',
@@ -1442,8 +1442,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   style={{
                     width: '100%',
                     padding: '1rem',
-                    backgroundColor: saving ? '#333333' : primaryColor,
-                    color: '#ffffff',
+                    backgroundColor: saving ? 'var(--color-border-strong)' : primaryColor,
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     cursor: saving ? 'not-allowed' : 'pointer',
@@ -1457,11 +1457,11 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
               {/* Right: Testing Sandbox */}
               <div style={{ position: 'sticky', top: '2rem', height: 'fit-content' }}>
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>Testing Sandbox</h3>
                     {isCallActive && (
-                      <span style={{ fontSize: '0.875rem', color: '#10b981', fontWeight: '600' }}>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--color-success)', fontWeight: '600' }}>
                         {formatDuration(callDuration)}
                       </span>
                     )}
@@ -1469,20 +1469,20 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                   {/* Phone UI */}
                   <div style={{
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: 'var(--color-bg-paper)',
                     borderRadius: '1rem',
                     padding: '1rem',
-                    border: '2px solid #333333',
+                    border: '2px solid var(--color-border-strong)',
                     minHeight: '400px',
                     display: 'flex',
                     flexDirection: 'column',
                   }}>
                     {/* Call Header */}
-                    <div style={{ textAlign: 'center', padding: '0.5rem', borderBottom: '1px solid #333333', marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666666' }}>
+                    <div style={{ textAlign: 'center', padding: '0.5rem', borderBottom: '1px solid var(--color-border-strong)', marginBottom: '1rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                         {isCallActive ? 'Call in Progress' : 'Ready to Test'}
                       </div>
-                      <div style={{ fontSize: '1rem', fontWeight: '600', color: isCallActive ? '#10b981' : '#999999' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: '600', color: isCallActive ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>
                         {isCallActive ? 'Connected' : 'No Active Call'}
                       </div>
                     </div>
@@ -1502,8 +1502,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             maxWidth: '85%',
                             padding: '0.75rem',
                             borderRadius: msg.role === 'caller' ? '0.75rem 0.75rem 0 0.75rem' : '0.75rem 0.75rem 0.75rem 0',
-                            backgroundColor: msg.role === 'caller' ? primaryColor : '#333333',
-                            color: '#ffffff',
+                            backgroundColor: msg.role === 'caller' ? primaryColor : 'var(--color-border-strong)',
+                            color: 'var(--color-text-primary)',
                             fontSize: '0.875rem',
                             lineHeight: '1.4',
                           }}>
@@ -1517,7 +1517,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                       {isAgentTyping && (
                         <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '0.75rem' }}>
-                          <div style={{ padding: '0.75rem', backgroundColor: '#333333', borderRadius: '0.75rem', color: '#999999', fontSize: '0.875rem' }}>
+                          <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-border-strong)', borderRadius: '0.75rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                             Agent is typing...
                           </div>
                         </div>
@@ -1532,8 +1532,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                         style={{
                           width: '100%',
                           padding: '1rem',
-                          backgroundColor: '#10b981',
-                          color: '#ffffff',
+                          backgroundColor: 'var(--color-success)',
+                          color: 'var(--color-text-primary)',
                           border: 'none',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
@@ -1563,10 +1563,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             style={{
                               flex: 1,
                               padding: '0.75rem',
-                              backgroundColor: '#0a0a0a',
-                              border: '1px solid #333333',
+                              backgroundColor: 'var(--color-bg-main)',
+                              border: '1px solid var(--color-border-strong)',
                               borderRadius: '0.5rem',
-                              color: '#ffffff',
+                              color: 'var(--color-text-primary)',
                               fontSize: '0.875rem',
                             }}
                           />
@@ -1575,8 +1575,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             disabled={!callerInput.trim()}
                             style={{
                               padding: '0.75rem 1rem',
-                              backgroundColor: !callerInput.trim() ? '#333333' : primaryColor,
-                              color: '#ffffff',
+                              backgroundColor: !callerInput.trim() ? 'var(--color-border-strong)' : primaryColor,
+                              color: 'var(--color-text-primary)',
                               border: 'none',
                               borderRadius: '0.5rem',
                               cursor: !callerInput.trim() ? 'not-allowed' : 'pointer',
@@ -1592,8 +1592,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           style={{
                             width: '100%',
                             padding: '0.75rem',
-                            backgroundColor: '#ef4444',
-                            color: '#ffffff',
+                            backgroundColor: 'var(--color-error)',
+                            color: 'var(--color-text-primary)',
                             border: 'none',
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
@@ -1607,7 +1607,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     )}
                   </div>
 
-                  <p style={{ fontSize: '0.75rem', color: '#666666', marginTop: '1rem', textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '1rem', textAlign: 'center' }}>
                     Test your voice AI settings with a simulated phone conversation
                   </p>
                 </div>
@@ -1620,16 +1620,16 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 500px', gap: '2rem' }}>
               {/* Left: Instructions */}
               <div>
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Test Your Voice AI</h3>
-                  <p style={{ color: '#999999', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+                  <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: '1.6' }}>
                     Use the testing sandbox on the right to simulate phone conversations with your Voice AI agent.
                     The agent will respond based on your configured settings, objection templates, and brand DNA.
                   </p>
 
-                  <div style={{ padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                  <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', marginBottom: '1rem' }}>
                     <h4 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Testing Tips:</h4>
-                    <ul style={{ color: '#999999', fontSize: '0.875rem', marginLeft: '1.5rem', lineHeight: '1.8' }}>
+                    <ul style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginLeft: '1.5rem', lineHeight: '1.8' }}>
                       <li>Try common objections to see if templates are triggered correctly</li>
                       <li>Test qualification questions to see how the AI gathers information</li>
                       <li>Ask about pricing, features, and competitors</li>
@@ -1637,23 +1637,23 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     </ul>
                   </div>
 
-                  <div style={{ padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem' }}>
+                  <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
                     <h4 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Current Configuration:</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginTop: '0.75rem' }}>
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: '#666666' }}>Tone:</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Tone:</span>
                         <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem', textTransform: 'capitalize' }}>{voiceSettings.toneOfVoice}</span>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: '#666666' }}>Objection Templates:</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Objection Templates:</span>
                         <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>{objectionTemplates.length}</span>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: '#666666' }}>Qualification Criteria:</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Qualification Criteria:</span>
                         <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>{(voiceSettings.qualificationCriteria ?? []).length}</span>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: '#666666' }}>Brand DNA:</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Brand DNA:</span>
                         <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>{overrideForVoice ? 'Custom' : 'Inherited'}</span>
                       </div>
                     </div>
@@ -1661,13 +1661,13 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 </div>
 
                 {/* Recent Test Calls */}
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Recent Test Calls</h3>
                   {callHistory.slice(0, 5).map((call) => (
-                    <div key={call.id} style={{ padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={call.id} style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>{call.summary}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#666666' }}>{new Date(call.timestamp).toLocaleString()}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>{new Date(call.timestamp).toLocaleString()}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>{call.duration}</div>
@@ -1676,7 +1676,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           padding: '0.125rem 0.5rem',
                           borderRadius: '9999px',
                           backgroundColor: call.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : call.status === 'transferred' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                          color: call.status === 'completed' ? '#10b981' : call.status === 'transferred' ? '#f59e0b' : '#ef4444',
+                          color: call.status === 'completed' ? 'var(--color-success)' : call.status === 'transferred' ? 'var(--color-warning)' : 'var(--color-error)',
                         }}>
                           {call.status}
                         </div>
@@ -1688,30 +1688,30 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
               {/* Right: Large Testing Sandbox */}
               <div style={{ position: 'sticky', top: '2rem', height: 'fit-content' }}>
-                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>Phone Simulation</h3>
                     {isCallActive && (
-                      <span style={{ fontSize: '0.875rem', color: '#10b981', fontWeight: '600' }}>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--color-success)', fontWeight: '600' }}>
                         {formatDuration(callDuration)}
                       </span>
                     )}
                   </div>
 
                   <div style={{
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: 'var(--color-bg-paper)',
                     borderRadius: '1rem',
                     padding: '1rem',
-                    border: '2px solid #333333',
+                    border: '2px solid var(--color-border-strong)',
                     minHeight: '500px',
                     display: 'flex',
                     flexDirection: 'column',
                   }}>
-                    <div style={{ textAlign: 'center', padding: '0.5rem', borderBottom: '1px solid #333333', marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666666' }}>
+                    <div style={{ textAlign: 'center', padding: '0.5rem', borderBottom: '1px solid var(--color-border-strong)', marginBottom: '1rem' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
                         {isCallActive ? 'Call in Progress' : 'Ready to Test'}
                       </div>
-                      <div style={{ fontSize: '1rem', fontWeight: '600', color: isCallActive ? '#10b981' : '#999999' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: '600', color: isCallActive ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>
                         {isCallActive ? 'Connected' : 'No Active Call'}
                       </div>
                     </div>
@@ -1730,8 +1730,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             maxWidth: '85%',
                             padding: '0.75rem',
                             borderRadius: msg.role === 'caller' ? '0.75rem 0.75rem 0 0.75rem' : '0.75rem 0.75rem 0.75rem 0',
-                            backgroundColor: msg.role === 'caller' ? primaryColor : '#333333',
-                            color: '#ffffff',
+                            backgroundColor: msg.role === 'caller' ? primaryColor : 'var(--color-border-strong)',
+                            color: 'var(--color-text-primary)',
                             fontSize: '0.875rem',
                             lineHeight: '1.4',
                           }}>
@@ -1745,7 +1745,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                       {isAgentTyping && (
                         <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '0.75rem' }}>
-                          <div style={{ padding: '0.75rem', backgroundColor: '#333333', borderRadius: '0.75rem', color: '#999999', fontSize: '0.875rem' }}>
+                          <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-border-strong)', borderRadius: '0.75rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                             Agent is typing...
                           </div>
                         </div>
@@ -1759,8 +1759,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                         style={{
                           width: '100%',
                           padding: '1rem',
-                          backgroundColor: '#10b981',
-                          color: '#ffffff',
+                          backgroundColor: 'var(--color-success)',
+                          color: 'var(--color-text-primary)',
                           border: 'none',
                           borderRadius: '0.5rem',
                           cursor: 'pointer',
@@ -1786,10 +1786,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             style={{
                               flex: 1,
                               padding: '0.75rem',
-                              backgroundColor: '#0a0a0a',
-                              border: '1px solid #333333',
+                              backgroundColor: 'var(--color-bg-main)',
+                              border: '1px solid var(--color-border-strong)',
                               borderRadius: '0.5rem',
-                              color: '#ffffff',
+                              color: 'var(--color-text-primary)',
                               fontSize: '0.875rem',
                             }}
                           />
@@ -1798,8 +1798,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             disabled={!callerInput.trim()}
                             style={{
                               padding: '0.75rem 1rem',
-                              backgroundColor: !callerInput.trim() ? '#333333' : primaryColor,
-                              color: '#ffffff',
+                              backgroundColor: !callerInput.trim() ? 'var(--color-border-strong)' : primaryColor,
+                              color: 'var(--color-text-primary)',
                               border: 'none',
                               borderRadius: '0.5rem',
                               cursor: !callerInput.trim() ? 'not-allowed' : 'pointer',
@@ -1815,8 +1815,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           style={{
                             width: '100%',
                             padding: '0.75rem',
-                            backgroundColor: '#ef4444',
-                            color: '#ffffff',
+                            backgroundColor: 'var(--color-error)',
+                            color: 'var(--color-text-primary)',
                             border: 'none',
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
@@ -1839,22 +1839,22 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
             <div>
               <div style={{ marginBottom: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Call History</h2>
-                <p style={{ color: '#999999' }}>Review past test calls and their outcomes</p>
+                <p style={{ color: 'var(--color-text-secondary)' }}>Review past test calls and their outcomes</p>
               </div>
 
               {callHistory.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '4rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem' }}>
-                  <p style={{ color: '#666666', marginBottom: '1rem' }}>No call history yet.</p>
-                  <p style={{ color: '#999999', fontSize: '0.875rem' }}>Start a test call in the Testing Sandbox to see history here.</p>
+                <div style={{ textAlign: 'center', padding: '4rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
+                  <p style={{ color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>No call history yet.</p>
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Start a test call in the Testing Sandbox to see history here.</p>
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: '1rem' }}>
                   {callHistory.map((call) => (
-                    <div key={call.id} style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem' }}>
+                    <div key={call.id} style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                         <div>
                           <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{call.summary}</h3>
-                          <p style={{ fontSize: '0.875rem', color: '#666666' }}>{new Date(call.timestamp).toLocaleString()}</p>
+                          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>{new Date(call.timestamp).toLocaleString()}</p>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{call.duration}</div>
@@ -1864,7 +1864,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             fontSize: '0.75rem',
                             fontWeight: '600',
                             backgroundColor: call.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : call.status === 'transferred' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                            color: call.status === 'completed' ? '#10b981' : call.status === 'transferred' ? '#f59e0b' : '#ef4444',
+                            color: call.status === 'completed' ? 'var(--color-success)' : call.status === 'transferred' ? 'var(--color-warning)' : 'var(--color-error)',
                           }}>
                             {call.status}
                           </span>
@@ -1883,12 +1883,12 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
               <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                 <div>
                   <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Knowledge Base</h2>
-                  <p style={{ color: '#999999' }}>Add scripts, FAQs, and product information for your Voice AI to reference</p>
+                  <p style={{ color: 'var(--color-text-secondary)' }}>Add scripts, FAQs, and product information for your Voice AI to reference</p>
                 </div>
               </div>
 
               {/* Add Knowledge Form */}
-              <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+              <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Add Knowledge Item</h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: '1rem', marginBottom: '1rem' }}>
@@ -1899,10 +1899,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     placeholder="Title (e.g., 'Pricing Information')"
                     style={{
                       padding: '0.75rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333333',
+                      backgroundColor: 'var(--color-bg-paper)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                     }}
                   />
@@ -1916,10 +1916,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     }}
                     style={{
                       padding: '0.75rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333333',
+                      backgroundColor: 'var(--color-bg-paper)',
+                      border: '1px solid var(--color-border-strong)',
                       borderRadius: '0.5rem',
-                      color: '#ffffff',
+                      color: 'var(--color-text-primary)',
                       fontSize: '0.875rem',
                     }}
                   >
@@ -1938,10 +1938,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #333333',
+                    backgroundColor: 'var(--color-bg-paper)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
-                    color: '#ffffff',
+                    color: 'var(--color-text-primary)',
                     fontSize: '0.875rem',
                     fontFamily: 'inherit',
                     marginBottom: '1rem',
@@ -1954,8 +1954,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   disabled={!newKnowledgeTitle.trim() || !newKnowledgeContent.trim()}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    backgroundColor: (!newKnowledgeTitle.trim() || !newKnowledgeContent.trim()) ? '#333333' : primaryColor,
-                    color: '#ffffff',
+                    backgroundColor: (!newKnowledgeTitle.trim() || !newKnowledgeContent.trim()) ? 'var(--color-border-strong)' : primaryColor,
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     cursor: (!newKnowledgeTitle.trim() || !newKnowledgeContent.trim()) ? 'not-allowed' : 'pointer',
@@ -1970,24 +1970,24 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
               {/* Knowledge Items List */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
                 {knowledgeItems.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem' }}>
-                    <p style={{ color: '#666666', marginBottom: '0.5rem' }}>No knowledge items yet.</p>
-                    <p style={{ color: '#999999', fontSize: '0.875rem' }}>Add scripts, FAQs, and product information above.</p>
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
+                    <p style={{ color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>No knowledge items yet.</p>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Add scripts, FAQs, and product information above.</p>
                   </div>
                 ) : (
                   knowledgeItems.map((item) => (
-                    <div key={item.id} style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem' }}>
+                    <div key={item.id} style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
                         <div>
                           <h4 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{item.title}</h4>
                           <span style={{
                             padding: '0.125rem 0.5rem',
-                            backgroundColor: '#1a1a1a',
-                            border: '1px solid #333333',
+                            backgroundColor: 'var(--color-bg-paper)',
+                            border: '1px solid var(--color-border-strong)',
                             borderRadius: '0.25rem',
                             fontSize: '0.625rem',
                             textTransform: 'uppercase',
-                            color: '#999999',
+                            color: 'var(--color-text-secondary)',
                           }}>
                             {item.type}
                           </span>
@@ -1997,7 +1997,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: '#ef4444',
+                            color: 'var(--color-error)',
                             cursor: 'pointer',
                             fontSize: '0.75rem',
                           }}
@@ -2005,10 +2005,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           Remove
                         </button>
                       </div>
-                      <p style={{ fontSize: '0.875rem', color: '#999999', lineHeight: '1.5' }}>
+                      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>
                         {item.content.length > 200 ? `${item.content.substring(0, 200)}...` : item.content}
                       </p>
-                      <p style={{ fontSize: '0.75rem', color: '#666666', marginTop: '0.75rem' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem' }}>
                         Added: {new Date(item.uploadedAt).toLocaleDateString()}
                       </p>
                     </div>

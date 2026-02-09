@@ -74,9 +74,9 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
           {(widget.data.caption as string) && (
-            <p style={{ 
-              fontSize: '0.875rem', 
-              color: '#6c757d', 
+            <p style={{
+              fontSize: '0.875rem',
+              color: 'var(--color-text-disabled)',
               marginTop: '0.5rem',
               textAlign: 'center',
             }}>
@@ -120,7 +120,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
         <hr style={{
           border: 'none',
           height: (widget.data.thickness as string) ?? '1px',
-          backgroundColor: (widget.data.color as string) ?? '#dee2e6',
+          backgroundColor: (widget.data.color as string) ?? 'var(--color-text-primary)',
           ...style,
         }} />
       );
@@ -142,13 +142,13 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
             </p>
           )}
           {(widget.data.buttonText as string) && (
-            <a 
+            <a
               href={(widget.data.buttonUrl as string) ?? '#'}
               style={{
                 display: 'inline-block',
                 padding: '1rem 2rem',
-                background: '#007bff',
-                color: 'white',
+                background: 'var(--color-info)',
+                color: 'var(--color-text-primary)',
                 textDecoration: 'none',
                 borderRadius: '4px',
                 fontSize: '1.125rem',
@@ -173,7 +173,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
             <div key={i} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{feature.icon}</div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{feature.title}</h3>
-              <p style={{ color: '#6c757d' }}>{feature.description}</p>
+              <p style={{ color: 'var(--color-text-disabled)' }}>{feature.description}</p>
             </div>
           ))}
         </div>
@@ -188,13 +188,13 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
           gap: '2rem',
         }}>
           {((widget.data.plans as PricingPlan[]) || []).map((plan, i: number) => (
-            <div 
-              key={i} 
+            <div
+              key={i}
               style={{
                 padding: '2rem',
-                background: plan.featured ? '#007bff' : 'white',
-                color: plan.featured ? 'white' : '#212529',
-                border: plan.featured ? 'none' : '1px solid #dee2e6',
+                background: plan.featured ? 'var(--color-info)' : 'var(--color-text-primary)',
+                color: plan.featured ? 'var(--color-text-primary)' : 'var(--color-bg-main)',
+                border: plan.featured ? 'none' : '1px solid var(--color-text-primary)',
                 borderRadius: '8px',
                 textAlign: 'center',
               }}
@@ -214,13 +214,13 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
                   <li key={j} style={{ padding: '0.5rem 0' }}>✓ {feature}</li>
                 ))}
               </ul>
-              <a 
+              <a
                 href={plan.buttonUrl ?? '#'}
                 style={{
                   display: 'inline-block',
                   padding: '0.75rem 1.5rem',
-                  background: plan.featured ? 'white' : '#007bff',
-                  color: plan.featured ? '#007bff' : 'white',
+                  background: plan.featured ? 'var(--color-text-primary)' : 'var(--color-info)',
+                  color: plan.featured ? 'var(--color-info)' : 'var(--color-text-primary)',
                   textDecoration: 'none',
                   borderRadius: '4px',
                   fontWeight: '600',
@@ -260,7 +260,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
             )}
             <div>
               <div style={{ fontWeight: '600' }}>{String(widget.data.author)}</div>
-              <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>{String(widget.data.role)}</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>{String(widget.data.role)}</div>
             </div>
           </div>
         </div>
@@ -273,13 +273,13 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
           {(widget.data.subheading as string) && (
             <p style={{ fontSize: '1.125rem', marginBottom: '1.5rem' }}>{String(widget.data.subheading)}</p>
           )}
-          <a 
+          <a
             href={(widget.data.buttonUrl as string) ?? '#'}
             style={{
               display: 'inline-block',
               padding: '1rem 2rem',
-              background: 'white',
-              color: '#007bff',
+              background: 'var(--color-text-primary)',
+              color: 'var(--color-info)',
               textDecoration: 'none',
               borderRadius: '4px',
               fontSize: '1.125rem',
@@ -301,10 +301,10 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
         }}>
           {((widget.data.stats as StatItem[]) || []).map((stat, i: number) => (
             <div key={i} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '3rem', fontWeight: '700', color: '#007bff', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '3rem', fontWeight: '700', color: 'var(--color-info)', marginBottom: '0.5rem' }}>
                 {stat.number}
               </div>
-              <div style={{ fontSize: '1.125rem', color: '#6c757d' }}>{stat.label}</div>
+              <div style={{ fontSize: '1.125rem', color: 'var(--color-text-disabled)' }}>{stat.label}</div>
             </div>
           ))}
         </div>
@@ -388,8 +388,8 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: '#007bff',
-                color: 'white',
+                background: 'var(--color-info)',
+                color: 'var(--color-text-primary)',
                 borderRadius: '50%',
                 textDecoration: 'none',
                 fontSize: '1.25rem',
@@ -406,7 +406,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
         <div style={style}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{String(widget.data.icon)}</div>
           <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{String(widget.data.title)}</h3>
-          <p style={{ color: '#6c757d' }}>{String(widget.data.description)}</p>
+          <p style={{ color: 'var(--color-text-disabled)' }}>{String(widget.data.description)}</p>
         </div>
       );
 
@@ -427,8 +427,8 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
           <button
             style={{
               padding: '12px 24px',
-              background: (widget.data.buttonColor as string) ?? '#007bff',
-              color: 'white',
+              background: (widget.data.buttonColor as string) ?? 'var(--color-info)',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
@@ -447,26 +447,26 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
       const tabContentVal = tabs[0]?.content as string | null | undefined;
       return (
         <div style={style}>
-          <div style={{ borderBottom: '2px solid #dee2e6', display: 'flex' }}>
+          <div style={{ borderBottom: '2px solid var(--color-text-primary)', display: 'flex' }}>
             {tabs.map((tab, index: number) => (
               <button
                 key={index}
                 style={{
                   padding: '12px 24px',
-                  background: index === 0 ? '#007bff' : 'transparent',
-                  color: index === 0 ? 'white' : '#495057',
+                  background: index === 0 ? 'var(--color-info)' : 'transparent',
+                  color: index === 0 ? 'var(--color-text-primary)' : 'var(--color-border-strong)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '14px',
                   fontWeight: '500',
-                  borderBottom: index === 0 ? '2px solid #007bff' : 'none',
+                  borderBottom: index === 0 ? '2px solid var(--color-info)' : 'none',
                 }}
               >
                 {tab.title}
               </button>
             ))}
           </div>
-          <div style={{ padding: '20px', background: 'white' }}>
+          <div style={{ padding: '20px', background: 'var(--color-text-primary)' }}>
             {tabContentVal !== '' && tabContentVal != null ? tabContentVal : 'Tab content'}
           </div>
         </div>
@@ -481,7 +481,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
             <div
               key={index}
               style={{
-                border: '1px solid #dee2e6',
+                border: '1px solid var(--color-text-primary)',
                 borderRadius: '6px',
                 marginBottom: '8px',
                 overflow: 'hidden',
@@ -490,7 +490,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
               <div
                 style={{
                   padding: '16px',
-                  background: '#f8f9fa',
+                  background: 'var(--color-surface-elevated)',
                   fontSize: '16px',
                   fontWeight: '500',
                   cursor: 'pointer',
@@ -502,7 +502,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
                 {item.title}
                 <span style={{ fontSize: '12px' }}>▼</span>
               </div>
-              <div style={{ padding: '16px', background: 'white', borderTop: '1px solid #dee2e6' }}>
+              <div style={{ padding: '16px', background: 'var(--color-text-primary)', borderTop: '1px solid var(--color-text-primary)' }}>
                 {item.content}
               </div>
             </div>
@@ -604,15 +604,15 @@ function getSocialIcon(platform: string): string {
 const inputStyle: React.CSSProperties = {
   width: '100%',
   padding: '0.75rem',
-  border: '1px solid #ced4da',
+  border: '1px solid var(--color-border-main)',
   borderRadius: '4px',
   fontSize: '1rem',
 };
 
 const buttonStyle: React.CSSProperties = {
   padding: '0.75rem 1.5rem',
-  background: '#007bff',
-  color: 'white',
+  background: 'var(--color-info)',
+  color: 'var(--color-text-primary)',
   border: 'none',
   borderRadius: '4px',
   cursor: 'pointer',

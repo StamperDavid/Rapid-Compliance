@@ -70,18 +70,18 @@ export default function CustomToolPage() {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        backgroundColor: '#000',
+        backgroundColor: 'var(--color-bg-main)',
       }}>
         <div style={{
           width: '48px',
           height: '48px',
-          border: '3px solid #333',
-          borderTopColor: '#6366f1',
+          border: '3px solid var(--color-border-strong)',
+          borderTopColor: 'var(--color-primary)',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite',
           marginBottom: '1rem',
         }} />
-        <p style={{ color: '#999', fontSize: '0.875rem' }}>Loading tool...</p>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Loading tool...</p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -96,12 +96,12 @@ export default function CustomToolPage() {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        backgroundColor: '#000',
+        backgroundColor: 'var(--color-bg-main)',
         padding: '2rem',
       }}>
         <div style={{
-          backgroundColor: '#1a1a1a',
-          border: '1px solid #333',
+          backgroundColor: 'var(--color-bg-paper)',
+          border: '1px solid var(--color-border-strong)',
           borderRadius: '1rem',
           padding: '3rem',
           maxWidth: '500px',
@@ -110,10 +110,10 @@ export default function CustomToolPage() {
           <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>
             {error === 'Tool not found' ? '🔍' : error === 'This tool is currently disabled' ? '🚫' : '⚠️'}
           </div>
-          <h1 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+          <h1 style={{ color: 'var(--color-text-primary)', fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
             {error === 'Tool not found' ? 'Tool Not Found' : error === 'This tool is currently disabled' ? 'Tool Disabled' : 'Error'}
           </h1>
-          <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
             {error === 'Tool not found'
               ? 'The custom tool you are looking for does not exist or has been removed.'
               : error === 'This tool is currently disabled'
@@ -124,8 +124,8 @@ export default function CustomToolPage() {
             onClick={() => router.push(`/dashboard`)}
             style={{
               padding: '0.75rem 1.5rem',
-              backgroundColor: '#6366f1',
-              color: '#fff',
+              backgroundColor: 'var(--color-primary)',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.5rem',
               fontSize: '0.875rem',
@@ -147,7 +147,7 @@ export default function CustomToolPage() {
       flexDirection: 'column',
       height: '100%',
       minHeight: '100vh',
-      backgroundColor: '#000',
+      backgroundColor: 'var(--color-bg-main)',
     }}>
       {/* Header Bar */}
       <div style={{
@@ -155,14 +155,14 @@ export default function CustomToolPage() {
         alignItems: 'center',
         gap: '0.75rem',
         padding: '0.75rem 1.5rem',
-        backgroundColor: '#0a0a0a',
-        borderBottom: '1px solid #1a1a1a',
+        backgroundColor: 'var(--color-bg-main)',
+        borderBottom: '1px solid var(--color-border-light)',
         flexShrink: 0,
       }}>
         <span style={{ fontSize: '1.5rem' }}>{tool.icon}</span>
         <div>
-          <h1 style={{ color: '#fff', fontSize: '1rem', fontWeight: '600' }}>{tool.name}</h1>
-          <p style={{ color: '#666', fontSize: '0.75rem' }}>
+          <h1 style={{ color: 'var(--color-text-primary)', fontSize: '1rem', fontWeight: '600' }}>{tool.name}</h1>
+          <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
             {new URL(tool.url).hostname}
           </p>
         </div>

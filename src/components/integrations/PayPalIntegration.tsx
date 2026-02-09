@@ -23,16 +23,16 @@ export default function PayPalIntegration({
   const [mode, setMode] = useState<'sandbox' | 'live'>('sandbox');
 
   const textColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || '#ffffff'
-    : '#ffffff';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-text-primary').trim() || 'var(--color-text-primary)'
+    : 'var(--color-text-primary)';
 
   const borderColor = typeof window !== 'undefined'
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || '#333333'
-    : '#333333';
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-border-main').trim() || 'var(--color-border-main)'
+    : 'var(--color-border-main)';
 
-  const primaryColor = typeof window !== 'undefined' 
-    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#6366f1'
-    : '#6366f1';
+  const primaryColor = typeof window !== 'undefined'
+    ? getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || 'var(--color-primary)'
+    : 'var(--color-primary)';
 
   const handleConnect = async () => {
     if (!clientId || !clientSecret) {
@@ -95,7 +95,7 @@ export default function PayPalIntegration({
             <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
               PayPal
             </h3>
-            <p style={{ fontSize: '0.875rem', color: '#666' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
               Accept PayPal payments and manage transactions
             </p>
           </div>
@@ -165,8 +165,8 @@ export default function PayPalIntegration({
           style={{
             width: '100%',
             padding: '0.75rem',
-            backgroundColor: isConnecting || !clientId || !clientSecret ? '#444' : primaryColor,
-            color: '#fff',
+            backgroundColor: isConnecting || !clientId || !clientSecret ? 'var(--color-border-strong)' : primaryColor,
+            color: 'var(--color-text-primary)',
             border: 'none',
             borderRadius: '0.5rem',
             cursor: isConnecting || !clientId || !clientSecret ? 'not-allowed' : 'pointer',
@@ -195,17 +195,17 @@ export default function PayPalIntegration({
               <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
                 PayPal
               </h3>
-              <p style={{ fontSize: '0.875rem', color: '#666' }}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
                 Mode: {integration.mode === 'live' ? 'Live' : 'Sandbox'}
               </p>
             </div>
             <div style={{
               padding: '0.375rem 0.75rem',
-              backgroundColor: '#0f4c0f',
-              border: '1px solid #4ade80',
+              backgroundColor: 'var(--color-success-dark)',
+              border: '1px solid var(--color-success-light)',
               borderRadius: '0.375rem',
               fontSize: '0.75rem',
-              color: '#4ade80',
+              color: 'var(--color-success-light)',
               fontWeight: '600'
             }}>
               ✓ Connected
@@ -259,8 +259,8 @@ export default function PayPalIntegration({
               onClick={onDisconnect}
               style={{
                 padding: '0.625rem 1rem',
-                backgroundColor: '#4c0f0f',
-                color: '#f87171',
+                backgroundColor: 'var(--color-error-dark)',
+                color: 'var(--color-error-light)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
@@ -280,7 +280,7 @@ export default function PayPalIntegration({
               flex: 1,
               padding: '0.75rem',
               backgroundColor: primaryColor,
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',
@@ -294,8 +294,8 @@ export default function PayPalIntegration({
             onClick={onDisconnect}
             style={{
               padding: '0.75rem 1rem',
-              backgroundColor: '#4c0f0f',
-              color: '#f87171',
+              backgroundColor: 'var(--color-error-dark)',
+              color: 'var(--color-error-light)',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',

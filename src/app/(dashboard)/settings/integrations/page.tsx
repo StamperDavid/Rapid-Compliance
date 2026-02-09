@@ -52,10 +52,10 @@ export default function IntegrationsPage() {
     void loadIntegrations();
   }, [user]);
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
-  const textColor = theme?.colors?.text?.primary || '#ffffff';
-  const bgPaper = theme?.colors?.background?.paper || '#1a1a1a';
-  const borderColor = theme?.colors?.border?.main || '#333333';
+  const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
+  const textColor = theme?.colors?.text?.primary || 'var(--color-text-primary)';
+  const bgPaper = theme?.colors?.background?.paper || 'var(--color-bg-paper)';
+  const borderColor = theme?.colors?.border?.main || 'var(--color-border-strong)';
 
   const handleConnect = async (integrationId: string, integration: Partial<ConnectedIntegration>) => {
     if (!user) {return;}
@@ -188,13 +188,13 @@ export default function IntegrationsPage() {
   const connectedCount = Object.values(integrations).filter(i => i?.status === 'active').length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left Sidebar */}
         <div style={{ 
           width: sidebarOpen ? '260px' : '70px',
-          backgroundColor: '#0a0a0a',
-          borderRight: '1px solid #1a1a1a',
+          backgroundColor: 'var(--color-bg-main)',
+          borderRight: '1px solid var(--color-border-light)',
           transition: 'width 0.3s',
           display: 'flex',
           flexDirection: 'column'
@@ -209,7 +209,7 @@ export default function IntegrationsPage() {
                 alignItems: 'center',
                 gap: '0.75rem',
                 backgroundColor: 'transparent',
-                color: '#999',
+                color: 'var(--color-text-secondary)',
                 borderLeft: '3px solid transparent',
                 fontSize: '0.875rem',
                 fontWeight: '400',
@@ -231,7 +231,7 @@ export default function IntegrationsPage() {
                   alignItems: 'center',
                   gap: '0.75rem',
                   backgroundColor: 'transparent',
-                  color: '#999',
+                  color: 'var(--color-text-secondary)',
                   borderLeft: '3px solid transparent',
                   fontSize: '0.875rem',
                   fontWeight: '400',
@@ -244,14 +244,14 @@ export default function IntegrationsPage() {
             ))}
           </nav>
 
-          <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
+          <div style={{ padding: '1rem', borderTop: '1px solid var(--color-border-light)' }}>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               style={{
                 width: '100%',
                 padding: '0.5rem',
-                backgroundColor: '#1a1a1a',
-                color: '#999',
+                backgroundColor: 'var(--color-bg-paper)',
+                color: 'var(--color-text-secondary)',
                 border: 'none',
                 borderRadius: '0.375rem',
                 cursor: 'pointer',
@@ -288,7 +288,7 @@ export default function IntegrationsPage() {
                   <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: textColor, marginBottom: '0.5rem' }}>
                     Integrations
                   </h1>
-                  <p style={{ color: '#666', fontSize: '0.875rem' }}>
+                  <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                     Connect your favorite apps and services
                   </p>
                 </div>
@@ -298,11 +298,11 @@ export default function IntegrationsPage() {
             {/* Summary Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
               <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>Connected</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Connected</div>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: primaryColor }}>{connectedCount}</div>
               </div>
               <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>Available</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Available</div>
                 <div style={{ fontSize: '2rem', fontWeight: 'bold', color: textColor }}>
                   {integrationCategories.reduce((sum, cat) => sum + cat.integrations.length, 0)}
                 </div>
@@ -318,7 +318,7 @@ export default function IntegrationsPage() {
                   backgroundColor: activeCategory === null ? primaryColor : 'transparent',
                   border: `1px solid ${activeCategory === null ? primaryColor : borderColor}`,
                   borderRadius: '0.375rem',
-                  color: activeCategory === null ? '#fff' : textColor,
+                  color: activeCategory === null ? 'var(--color-text-primary)' : textColor,
                   fontSize: '0.875rem',
                   cursor: 'pointer'
                 }}
@@ -334,7 +334,7 @@ export default function IntegrationsPage() {
                     backgroundColor: activeCategory === category.id ? primaryColor : 'transparent',
                     border: `1px solid ${activeCategory === category.id ? primaryColor : borderColor}`,
                     borderRadius: '0.375rem',
-                    color: activeCategory === category.id ? '#fff' : textColor,
+                    color: activeCategory === category.id ? 'var(--color-text-primary)' : textColor,
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     display: 'flex',

@@ -49,7 +49,7 @@ export default function PromotionsPage() {
     topCoupons: { code: string; uses: number; revenue_impact: number }[];
   } | null>(null);
 
-  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? 'var(--color-primary)';
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -153,7 +153,7 @@ export default function PromotionsPage() {
   if (loading) {
     return (
       <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <div style={{ color: '#666' }}>Loading promotions...</div>
+        <div style={{ color: 'var(--color-text-disabled)' }}>Loading promotions...</div>
       </div>
     );
   }
@@ -164,10 +164,10 @@ export default function PromotionsPage() {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
           <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               Promotions & Coupons
             </h1>
-            <p style={{ color: '#666', fontSize: '0.875rem' }}>
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
               Create discount codes for your customers. Configure AI authorization for automated offers.
             </p>
           </div>
@@ -177,7 +177,7 @@ export default function PromotionsPage() {
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: primaryColor,
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
@@ -193,8 +193,8 @@ export default function PromotionsPage() {
         {message.text && (
           <div style={{
             padding: '1rem',
-            backgroundColor: message.type === 'success' ? '#065f46' : '#7f1d1d',
-            border: `1px solid ${message.type === 'success' ? '#10b981' : '#ef4444'}`,
+            backgroundColor: message.type === 'success' ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
+            border: `1px solid ${message.type === 'success' ? 'var(--color-success)' : 'var(--color-error)'}`,
             borderRadius: '0.5rem',
             marginBottom: '1.5rem',
           }}>
@@ -213,7 +213,7 @@ export default function PromotionsPage() {
         )}
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid #333', paddingBottom: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border-strong)', paddingBottom: '0.5rem' }}>
           <TabButton active={activeTab === 'active'} onClick={() => setActiveTab('active')} primaryColor={primaryColor}>
             Active ({activeCoupons.length})
           </TabButton>
@@ -256,12 +256,12 @@ export default function PromotionsPage() {
 function StatCard({ label, value, primaryColor }: { label: string; value: string | number; primaryColor: string }) {
   return (
     <div style={{
-      backgroundColor: '#1a1a1a',
-      border: '1px solid #333',
+      backgroundColor: 'var(--color-bg-paper)',
+      border: '1px solid var(--color-border-strong)',
       borderRadius: '0.75rem',
       padding: '1.25rem',
     }}>
-      <div style={{ color: '#999', fontSize: '0.75rem', marginBottom: '0.5rem' }}>{label}</div>
+      <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>{label}</div>
       <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: primaryColor }}>{value}</div>
     </div>
   );
@@ -279,7 +279,7 @@ function TabButton({ active, onClick, children, primaryColor }: {
       style={{
         padding: '0.5rem 1rem',
         backgroundColor: 'transparent',
-        color: active ? primaryColor : '#999',
+        color: active ? primaryColor : 'var(--color-text-secondary)',
         border: 'none',
         borderBottom: active ? `2px solid ${primaryColor}` : '2px solid transparent',
         cursor: 'pointer',
@@ -305,7 +305,7 @@ function CouponsListView({
 }) {
   if (coupons.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+      <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏷️</div>
         <p>No coupons yet. Create your first coupon to start offering discounts!</p>
       </div>
@@ -318,8 +318,8 @@ function CouponsListView({
         <div
           key={coupon.id}
           style={{
-            backgroundColor: '#1a1a1a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-paper)',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '0.75rem',
             padding: '1.25rem',
           }}
@@ -330,7 +330,7 @@ function CouponsListView({
                 <code style={{
                   fontSize: '1.25rem',
                   fontWeight: 'bold',
-                  backgroundColor: '#0a0a0a',
+                  backgroundColor: 'var(--color-bg-main)',
                   padding: '0.25rem 0.75rem',
                   borderRadius: '0.25rem',
                   color: primaryColor,
@@ -339,7 +339,7 @@ function CouponsListView({
                 </code>
                 <span style={{
                   padding: '0.25rem 0.5rem',
-                  backgroundColor: coupon.status === 'active' ? '#065f46' : '#7f1d1d',
+                  backgroundColor: coupon.status === 'active' ? 'var(--color-success-dark)' : 'var(--color-error-dark)',
                   borderRadius: '0.25rem',
                   fontSize: '0.75rem',
                   textTransform: 'uppercase',
@@ -349,8 +349,8 @@ function CouponsListView({
                 {coupon.ai_authorized && (
                   <span style={{
                     padding: '0.25rem 0.5rem',
-                    backgroundColor: '#1e3a5f',
-                    color: '#60a5fa',
+                    backgroundColor: 'var(--color-info-dark)',
+                    color: 'var(--color-info-light)',
                     borderRadius: '0.25rem',
                     fontSize: '0.75rem',
                   }}>
@@ -358,7 +358,7 @@ function CouponsListView({
                   </span>
                 )}
               </div>
-              <div style={{ color: '#999', fontSize: '0.875rem', display: 'flex', gap: '1.5rem' }}>
+              <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', display: 'flex', gap: '1.5rem' }}>
                 <span>
                   {coupon.discount_type === 'percentage' ? `${coupon.value}% off` : `$${(coupon.value / 100).toFixed(2)} off`}
                 </span>
@@ -371,7 +371,7 @@ function CouponsListView({
                 )}
               </div>
               {coupon.ai_authorized && coupon.ai_discount_limit && (
-                <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#60a5fa' }}>
+                <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--color-info-light)' }}>
                   AI can offer up to {coupon.ai_discount_limit}% without approval
                 </div>
               )}
@@ -381,8 +381,8 @@ function CouponsListView({
                 onClick={() => onEdit(coupon)}
                 style={{
                   padding: '0.5rem 1rem',
-                  backgroundColor: '#333',
-                  color: '#fff',
+                  backgroundColor: 'var(--color-border-strong)',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '0.25rem',
                   cursor: 'pointer',
@@ -395,8 +395,8 @@ function CouponsListView({
                 onClick={() => onToggleStatus(coupon.id, coupon.status === 'active' ? 'disabled' : 'active')}
                 style={{
                   padding: '0.5rem 1rem',
-                  backgroundColor: coupon.status === 'active' ? '#7f1d1d' : '#065f46',
-                  color: '#fff',
+                  backgroundColor: coupon.status === 'active' ? 'var(--color-error-dark)' : 'var(--color-success-dark)',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '0.25rem',
                   cursor: 'pointer',
@@ -422,7 +422,7 @@ function AnalyticsView({
 }) {
   if (!analytics) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+      <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
         No analytics data available yet.
       </div>
     );
@@ -432,7 +432,7 @@ function AnalyticsView({
     <div>
       <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>Top Performing Coupons</h3>
       {analytics.topCoupons.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-disabled)' }}>
           No redemption data yet. Analytics will appear once customers start using coupons.
         </div>
       ) : (
@@ -441,8 +441,8 @@ function AnalyticsView({
             <div
               key={coupon.code}
               style={{
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-paper)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.5rem',
                 padding: '1rem',
                 display: 'flex',
@@ -451,12 +451,12 @@ function AnalyticsView({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#666' }}>#{idx + 1}</span>
+                <span style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-disabled)' }}>#{idx + 1}</span>
                 <code style={{ fontSize: '1rem', fontWeight: 'bold', color: primaryColor }}>{coupon.code}</code>
               </div>
-              <div style={{ display: 'flex', gap: '2rem', color: '#999', fontSize: '0.875rem' }}>
-                <span><strong style={{ color: '#fff' }}>{coupon.uses}</strong> uses</span>
-                <span><strong style={{ color: '#fff' }}>${(coupon.revenue_impact / 100).toFixed(2)}</strong> discounts given</span>
+              <div style={{ display: 'flex', gap: '2rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                <span><strong style={{ color: 'var(--color-text-primary)' }}>{coupon.uses}</strong> uses</span>
+                <span><strong style={{ color: 'var(--color-text-primary)' }}>${(coupon.revenue_impact / 100).toFixed(2)}</strong> discounts given</span>
               </div>
             </div>
           ))}
@@ -496,7 +496,7 @@ function CouponEditorModal({
       zIndex: 100,
     }}>
       <div style={{
-        backgroundColor: '#1a1a1a',
+        backgroundColor: 'var(--color-bg-paper)',
         borderRadius: '0.75rem',
         padding: '2rem',
         width: '600px',
@@ -504,10 +504,10 @@ function CouponEditorModal({
         overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
             {coupon.id ? 'Edit Coupon' : 'Create New Coupon'}
           </h2>
-          <button onClick={onClose} style={{ fontSize: '1.5rem', background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ fontSize: '1.5rem', background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
             &times;
           </button>
         </div>
@@ -515,7 +515,7 @@ function CouponEditorModal({
         <div style={{ display: 'grid', gap: '1.5rem' }}>
           {/* Coupon Code */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
               Coupon Code
             </label>
             <input
@@ -526,10 +526,10 @@ function CouponEditorModal({
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-main)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.25rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 fontFamily: 'monospace',
                 fontSize: '1.125rem',
                 textTransform: 'uppercase',
@@ -540,7 +540,7 @@ function CouponEditorModal({
           {/* Discount Type & Value */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                 Discount Type
               </label>
               <select
@@ -549,10 +549,10 @@ function CouponEditorModal({
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.25rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                 }}
               >
                 <option value="percentage">Percentage (%)</option>
@@ -560,7 +560,7 @@ function CouponEditorModal({
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                 Value {coupon.discount_type === 'percentage' ? '(%)' : '(in cents)'}
               </label>
               <input
@@ -570,10 +570,10 @@ function CouponEditorModal({
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.25rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                 }}
               />
             </div>
@@ -582,7 +582,7 @@ function CouponEditorModal({
           {/* Min Purchase & Max Uses */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                 Minimum Purchase (cents, 0 = no minimum)
               </label>
               <input
@@ -592,15 +592,15 @@ function CouponEditorModal({
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.25rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                 }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
                 Max Uses (empty = unlimited)
               </label>
               <input
@@ -611,10 +611,10 @@ function CouponEditorModal({
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #333',
+                  backgroundColor: 'var(--color-bg-main)',
+                  border: '1px solid var(--color-border-strong)',
                   borderRadius: '0.25rem',
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                 }}
               />
             </div>
@@ -622,7 +622,7 @@ function CouponEditorModal({
 
           {/* Expiration */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
               Expiration Date (optional)
             </label>
             <input
@@ -632,20 +632,20 @@ function CouponEditorModal({
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-main)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.25rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
               }}
             />
           </div>
 
           {/* AI Authorization Section */}
-          <div style={{ backgroundColor: '#0a0a0a', padding: '1.25rem', borderRadius: '0.5rem', border: '1px solid #333' }}>
-            <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', color: '#60a5fa' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-main)', padding: '1.25rem', borderRadius: '0.5rem', border: '1px solid var(--color-border-strong)' }}>
+            <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', color: 'var(--color-info-light)' }}>
               AI Agent Settings
             </h4>
-            <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '1rem' }}>
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
               Configure how your AI Inbound Closer can use this coupon during conversations with leads.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -657,8 +657,8 @@ function CouponEditorModal({
                   style={{ width: '1.25rem', height: '1.25rem' }}
                 />
                 <div>
-                  <span style={{ fontWeight: '500', color: '#fff' }}>AI Authorized</span>
-                  <p style={{ fontSize: '0.75rem', color: '#999', margin: 0 }}>
+                  <span style={{ fontWeight: '500', color: 'var(--color-text-primary)' }}>AI Authorized</span>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', margin: 0 }}>
                     Allow AI agents to offer this coupon to customers
                   </p>
                 </div>
@@ -667,7 +667,7 @@ function CouponEditorModal({
               {coupon.ai_authorized && (
                 <>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
                       AI Discount Limit (%) - Max discount AI can offer without human approval
                     </label>
                     <input
@@ -679,10 +679,10 @@ function CouponEditorModal({
                       style={{
                         width: '100%',
                         padding: '0.5rem',
-                        backgroundColor: '#1a1a1a',
-                        border: '1px solid #333',
+                        backgroundColor: 'var(--color-bg-paper)',
+                        border: '1px solid var(--color-border-strong)',
                         borderRadius: '0.25rem',
-                        color: '#fff',
+                        color: 'var(--color-text-primary)',
                       }}
                     />
                   </div>
@@ -694,8 +694,8 @@ function CouponEditorModal({
                       onChange={(e) => updateField('ai_auto_apply', e.target.checked)}
                     />
                     <div>
-                      <span style={{ fontWeight: '500', color: '#fff' }}>Auto-offer on Price Objection</span>
-                      <p style={{ fontSize: '0.75rem', color: '#999', margin: 0 }}>
+                      <span style={{ fontWeight: '500', color: 'var(--color-text-primary)' }}>Auto-offer on Price Objection</span>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', margin: 0 }}>
                         AI will automatically mention this coupon when a lead hesitates on price
                       </p>
                     </div>
@@ -707,7 +707,7 @@ function CouponEditorModal({
 
           {/* Notes */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
               Internal Notes (optional)
             </label>
             <textarea
@@ -717,10 +717,10 @@ function CouponEditorModal({
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                backgroundColor: '#0a0a0a',
-                border: '1px solid #333',
+                backgroundColor: 'var(--color-bg-main)',
+                border: '1px solid var(--color-border-strong)',
                 borderRadius: '0.25rem',
-                color: '#fff',
+                color: 'var(--color-text-primary)',
                 minHeight: '60px',
               }}
             />
@@ -733,8 +733,8 @@ function CouponEditorModal({
             onClick={onClose}
             style={{
               padding: '0.75rem 1.5rem',
-              backgroundColor: '#333',
-              color: '#fff',
+              backgroundColor: 'var(--color-border-strong)',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.25rem',
               cursor: 'pointer',
@@ -748,7 +748,7 @@ function CouponEditorModal({
             style={{
               padding: '0.75rem 1.5rem',
               backgroundColor: primaryColor,
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '0.25rem',
               cursor: 'pointer',

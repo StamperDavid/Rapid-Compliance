@@ -41,14 +41,14 @@ export default function PasscodeGate({ children }: { children: React.ReactNode }
       left: 0,
       width: '100vw',
       height: '100vh',
-      backgroundColor: '#000',
+      backgroundColor: 'var(--color-bg-main)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 9999,
     }}>
       <div style={{
-        backgroundColor: '#1a1a1a',
+        backgroundColor: 'var(--color-bg-paper)',
         padding: '3rem',
         borderRadius: '12px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
@@ -65,7 +65,7 @@ export default function PasscodeGate({ children }: { children: React.ReactNode }
         `}</style>
         
         <h2 style={{
-          color: '#fff',
+          color: 'var(--color-text-primary)',
           fontSize: '1.5rem',
           fontWeight: '600',
           marginBottom: '0.5rem',
@@ -75,7 +75,7 @@ export default function PasscodeGate({ children }: { children: React.ReactNode }
         </h2>
         
         <p style={{
-          color: '#999',
+          color: 'var(--color-text-secondary)',
           fontSize: '0.875rem',
           marginBottom: '2rem',
           textAlign: 'center',
@@ -98,25 +98,25 @@ export default function PasscodeGate({ children }: { children: React.ReactNode }
               fontSize: '1.5rem',
               textAlign: 'center',
               letterSpacing: '0.5rem',
-              backgroundColor: '#2a2a2a',
-              border: error ? '2px solid #ef4444' : '2px solid #333',
+              backgroundColor: 'var(--color-bg-elevated)',
+              border: error ? '2px solid var(--color-error)' : '2px solid var(--color-border-strong)',
               borderRadius: '8px',
-              color: '#fff',
+              color: 'var(--color-text-primary)',
               outline: 'none',
               transition: 'border-color 0.2s',
               marginBottom: '1rem',
             }}
             onFocus={(e) => {
-              e.target.style.borderColor = '#3b82f6';
+              e.target.style.borderColor = 'var(--color-info)';
             }}
             onBlur={(e) => {
-              e.target.style.borderColor = error ? '#ef4444' : '#333';
+              e.target.style.borderColor = error ? 'var(--color-error)' : 'var(--color-border-strong)';
             }}
           />
 
           {error && (
             <p style={{
-              color: '#ef4444',
+              color: 'var(--color-error)',
               fontSize: '0.875rem',
               textAlign: 'center',
               marginBottom: '1rem',
@@ -133,8 +133,8 @@ export default function PasscodeGate({ children }: { children: React.ReactNode }
               padding: '1rem',
               fontSize: '1rem',
               fontWeight: '600',
-              backgroundColor: passcode.length === 4 ? '#3b82f6' : '#333',
-              color: passcode.length === 4 ? '#fff' : '#666',
+              backgroundColor: passcode.length === 4 ? 'var(--color-info)' : 'var(--color-border-strong)',
+              color: passcode.length === 4 ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
               border: 'none',
               borderRadius: '8px',
               cursor: passcode.length === 4 ? 'pointer' : 'not-allowed',
@@ -142,12 +142,12 @@ export default function PasscodeGate({ children }: { children: React.ReactNode }
             }}
             onMouseEnter={(e) => {
               if (passcode.length === 4) {
-                e.currentTarget.style.backgroundColor = '#2563eb';
+                e.currentTarget.style.backgroundColor = 'var(--color-info)';
               }
             }}
             onMouseLeave={(e) => {
               if (passcode.length === 4) {
-                e.currentTarget.style.backgroundColor = '#3b82f6';
+                e.currentTarget.style.backgroundColor = 'var(--color-info)';
               }
             }}
           >

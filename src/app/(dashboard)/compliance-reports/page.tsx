@@ -211,7 +211,7 @@ export default function ComplianceReportsPage() {
                   style={{
                     padding: '0.5rem 1rem',
                     backgroundColor: selectedCategory === cat ? 'var(--color-primary)' : 'var(--color-bg-elevated)',
-                    color: selectedCategory === cat ? '#fff' : 'var(--color-text-secondary)',
+                    color: selectedCategory === cat ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                     border: `1px solid ${selectedCategory === cat ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
                     borderRadius: '0.5rem',
                     cursor: 'pointer',

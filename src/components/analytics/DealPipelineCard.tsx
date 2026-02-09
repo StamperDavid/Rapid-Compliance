@@ -85,12 +85,12 @@ export function DealPipelineCard({ data, loading = false }: DealPipelineCardProp
         <h4 className="text-sm font-medium text-gray-700 mb-3">Pipeline by Stage</h4>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={data.byStage} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis type="number" stroke="#6b7280" fontSize={12} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
+            <XAxis type="number" stroke="var(--color-text-disabled)" fontSize={12} />
             <YAxis
               type="category"
               dataKey="stage"
-              stroke="#6b7280"
+              stroke="var(--color-text-disabled)"
               fontSize={12}
               width={120}
               tickFormatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)}
@@ -117,7 +117,7 @@ export function DealPipelineCard({ data, loading = false }: DealPipelineCardProp
               <div className="flex items-center justify-between mb-2">
                 <div
                   className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: TIER_COLORS[tier.tier] || '#6b7280' }}
+                  style={{ backgroundColor: TIER_COLORS[tier.tier] || 'var(--color-text-disabled)' }}
                 ></div>
                 <span className="text-sm font-medium text-gray-700 capitalize">{tier.tier}</span>
               </div>

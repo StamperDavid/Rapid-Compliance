@@ -102,7 +102,7 @@ export default function CategoriesManagementPage() {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'var(--color-bg-elevated)' }}>
 
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
@@ -113,10 +113,10 @@ export default function CategoriesManagementPage() {
           marginBottom: '2rem',
         }}>
           <div>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: '#111' }}>
+            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
               Blog Categories
             </h1>
-            <p style={{ margin: 0, color: '#666' }}>
+            <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
               Organize your blog posts with categories
             </p>
           </div>
@@ -125,7 +125,7 @@ export default function CategoriesManagementPage() {
             onClick={() => router.push(`/website/blog`)}
             style={{
               padding: '0.75rem 1.5rem',
-              background: '#6c757d',
+              background: 'var(--color-text-secondary)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -146,7 +146,7 @@ export default function CategoriesManagementPage() {
           marginBottom: '2rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         }}>
-          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1rem', color: '#212529' }}>
+          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1rem', color: 'var(--color-text-primary)' }}>
             Add New Category
           </h2>
 
@@ -160,7 +160,7 @@ export default function CategoriesManagementPage() {
               style={{
                 flex: 1,
                 padding: '0.75rem',
-                border: '1px solid #ced4da',
+                border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
                 fontSize: '1rem',
               }}
@@ -169,7 +169,7 @@ export default function CategoriesManagementPage() {
               onClick={addCategory}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: '#28a745',
+                background: 'var(--color-success)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -191,7 +191,7 @@ export default function CategoriesManagementPage() {
           marginBottom: '2rem',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
         }}>
-          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1.5rem', color: '#212529' }}>
+          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             Categories ({categories.length})
           </h2>
 
@@ -199,8 +199,8 @@ export default function CategoriesManagementPage() {
             <div style={{
               padding: '2rem',
               textAlign: 'center',
-              color: '#6c757d',
-              background: '#f8f9fa',
+              color: 'var(--color-text-secondary)',
+              background: 'var(--color-bg-elevated)',
               borderRadius: '4px',
             }}>
               <p style={{ margin: 0 }}>No categories yet. Add your first category above!</p>
@@ -215,14 +215,14 @@ export default function CategoriesManagementPage() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '1rem',
-                    background: '#f8f9fa',
+                    background: 'var(--color-bg-elevated)',
                     borderRadius: '4px',
                   }}
                 >
                   <div style={{
                     fontSize: '1rem',
                     fontWeight: '500',
-                    color: '#212529',
+                    color: 'var(--color-text-primary)',
                   }}>
                     {category}
                   </div>
@@ -230,7 +230,7 @@ export default function CategoriesManagementPage() {
                     onClick={() => handleDeleteClick(category)}
                     style={{
                       padding: '0.5rem 0.75rem',
-                      background: '#dc3545',
+                      background: 'var(--color-error)',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
@@ -253,7 +253,7 @@ export default function CategoriesManagementPage() {
             disabled={saving}
             style={{
               padding: '0.75rem 2rem',
-              background: saving ? '#95a5a6' : '#007bff',
+              background: saving ? 'var(--color-text-disabled)' : 'var(--color-info)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -289,10 +289,10 @@ export default function CategoriesManagementPage() {
             width: '90%',
             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
           }}>
-            <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem', color: '#212529' }}>
+            <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem', color: 'var(--color-text-primary)' }}>
               Delete Category
             </h3>
-            <p style={{ margin: '0 0 1.5rem', color: '#6c757d' }}>
+            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)' }}>
               Are you sure you want to delete the category &quot;{deleteConfirm}&quot;?
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
@@ -300,7 +300,7 @@ export default function CategoriesManagementPage() {
                 onClick={cancelDelete}
                 style={{
                   padding: '0.5rem 1rem',
-                  background: '#6c757d',
+                  background: 'var(--color-text-secondary)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
@@ -314,7 +314,7 @@ export default function CategoriesManagementPage() {
                 onClick={confirmDelete}
                 style={{
                   padding: '0.5rem 1rem',
-                  background: '#dc3545',
+                  background: 'var(--color-error)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',

@@ -111,8 +111,8 @@ export default function BusinessSetupPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: '#666' }}>
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', color: 'var(--color-text-disabled)' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
           <div>Loading business setup...</div>
         </div>
@@ -120,10 +120,10 @@ export default function BusinessSetupPage() {
     );
   }
 
-  const primaryColor = '#6366f1';
+  const primaryColor = 'var(--color-primary)';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)' }}>
       <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
@@ -138,7 +138,7 @@ export default function BusinessSetupPage() {
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
                 Business Setup
               </h1>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>
+              <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
                 View and edit your business information that powers your AI agent
               </p>
             </div>
@@ -149,7 +149,7 @@ export default function BusinessSetupPage() {
                 style={{
                   padding: '0.75rem 2rem',
                   backgroundColor: primaryColor,
-                  color: '#fff',
+                  color: 'var(--color-text-primary)',
                   border: 'none',
                   borderRadius: '0.5rem',
                   fontWeight: '600',
@@ -166,8 +166,8 @@ export default function BusinessSetupPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '2rem' }}>
           {/* Sidebar Navigation */}
           <div style={{ position: 'sticky', top: '2rem', height: 'fit-content' }}>
-            <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1rem' }}>
-              <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#666', marginBottom: '1rem', paddingLeft: '0.5rem' }}>
+            <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '1rem' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-disabled)', marginBottom: '1rem', paddingLeft: '0.5rem' }}>
                 SECTIONS
               </div>
               {sections.map((section) => (
@@ -179,7 +179,7 @@ export default function BusinessSetupPage() {
                     padding: '0.75rem 1rem',
                     marginBottom: '0.25rem',
                     backgroundColor: activeSection === section.id ? `${primaryColor  }22` : 'transparent',
-                    color: activeSection === section.id ? primaryColor : '#999',
+                    color: activeSection === section.id ? primaryColor : 'var(--color-text-secondary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
@@ -200,7 +200,7 @@ export default function BusinessSetupPage() {
           </div>
 
           {/* Content Area */}
-          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '2rem' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '0.75rem', padding: '2rem' }}>
             {/* Business Basics Section */}
             {activeSection === 'business-basics' && (
               <div>
@@ -437,14 +437,14 @@ export default function BusinessSetupPage() {
 
             {/* Save Button at Bottom */}
             {hasChanges && (
-              <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid #333' }}>
+              <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--color-border-strong)' }}>
                 <button
                   onClick={() => void handleSave()}
                   disabled={saving}
                   style={{
                     padding: '0.875rem 2.5rem',
                     backgroundColor: primaryColor,
-                    color: '#fff',
+                    color: 'var(--color-text-primary)',
                     border: 'none',
                     borderRadius: '0.5rem',
                     fontWeight: '600',
@@ -460,8 +460,8 @@ export default function BusinessSetupPage() {
                   style={{
                     padding: '0.875rem 2rem',
                     backgroundColor: 'transparent',
-                    color: '#999',
-                    border: '1px solid #333',
+                    color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border-strong)',
                     borderRadius: '0.5rem',
                     fontWeight: '600',
                     fontSize: '1rem',
@@ -497,7 +497,7 @@ function FormField({
 }) {
   return (
     <div style={{ marginBottom: '1.5rem' }}>
-      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
         {label}
       </label>
       {multiline ? (
@@ -509,10 +509,10 @@ function FormField({
           style={{
             width: '100%',
             padding: '0.75rem',
-            backgroundColor: '#0a0a0a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-main)',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '0.5rem',
-            color: '#fff',
+            color: 'var(--color-text-primary)',
             fontSize: '0.875rem',
             resize: 'vertical',
             fontFamily: 'inherit'
@@ -527,10 +527,10 @@ function FormField({
           style={{
             width: '100%',
             padding: '0.75rem',
-            backgroundColor: '#0a0a0a',
-            border: '1px solid #333',
+            backgroundColor: 'var(--color-bg-main)',
+            border: '1px solid var(--color-border-strong)',
             borderRadius: '0.5rem',
-            color: '#fff',
+            color: 'var(--color-text-primary)',
             fontSize: '0.875rem'
           }}
         />

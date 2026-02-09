@@ -87,14 +87,14 @@ export function WorkflowMetricsCard({ data, loading = false }: WorkflowMetricsCa
         <h4 className="text-sm font-medium text-gray-700 mb-3">Execution Trend</h4>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={data.executionsByDay}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-light)" />
             <XAxis
               dataKey="date"
               tickFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              stroke="#6b7280"
+              stroke="var(--color-text-disabled)"
               fontSize={12}
             />
-            <YAxis stroke="#6b7280" fontSize={12} />
+            <YAxis stroke="var(--color-text-disabled)" fontSize={12} />
             <Tooltip
               labelFormatter={(date: string) => new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
               formatter={(value: number) => [value, 'Executions']}

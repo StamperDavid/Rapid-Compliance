@@ -202,7 +202,7 @@ export function PerformanceTrendsChart({
                 key={index}
                 x={x}
                 y={height - padding.bottom + 20}
-                fill="#666"
+                fill="var(--color-text-disabled)"
                 fontSize="11"
                 textAnchor="middle"
               >
