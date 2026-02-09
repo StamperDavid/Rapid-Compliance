@@ -5,6 +5,7 @@
 
 'use client';
 
+import Image from 'next/image';
 import type { Widget, WidgetStyle, Spacing } from '@/types/website';
 import type {
   FeatureItem,
@@ -68,10 +69,12 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
     case 'image':
       return (
         <div style={style}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={(widget.data.src as string) || 'https://via.placeholder.com/800x400'}
             alt={(widget.data.alt as string) || ''}
+            width={800}
+            height={400}
+            unoptimized
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
           {(widget.data.caption as string) && (
@@ -247,10 +250,12 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
             {(widget.data.avatar as string) && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={widget.data.avatar as string}
                 alt={(widget.data.author as string) || ''}
+                width={60}
+                height={60}
+                unoptimized
                 style={{
                   width: '60px',
                   height: '60px',
@@ -320,11 +325,13 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
           gap: (widget.data.gap as string) || '1rem',
         }}>
           {((widget.data.images as GalleryImage[]) || []).map((img, i: number) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               key={i}
               src={img.src}
               alt={img.alt}
+              width={400}
+              height={250}
+              unoptimized
               style={{
                 width: '100%',
                 height: '250px',

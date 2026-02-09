@@ -272,7 +272,7 @@ export default function AgentTrainingPage() {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDemoData is stable and only depends on PLATFORM_ID
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDemoData is a stable useCallback defined later in the component; adding it to deps would cause a temporal dead zone error
   }, [PLATFORM_ID]);
 
   useEffect(() => {

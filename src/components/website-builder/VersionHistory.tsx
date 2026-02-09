@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { PageSection } from '@/types/website';
 
 interface PageSEO {
@@ -52,12 +52,7 @@ export default function VersionHistory({
   const [restoring, setRestoring] = useState<number | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
-  useEffect(() => {
-    void loadVersions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageId]);
-
-  async function loadVersions() {
+  const loadVersions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -78,7 +73,11 @@ export default function VersionHistory({
     } finally {
       setLoading(false);
     }
-  }
+  }, [pageId]);
+
+  useEffect(() => {
+    void loadVersions();
+  }, [loadVersions]);
 
   function handleRestore(version: PageVersion) {
     setConfirmDialog({

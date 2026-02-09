@@ -1,0 +1,16 @@
+{
+  "_comment": "Bypass budget as of February 9, 2026. Pre-commit hook ensures these counts only go DOWN, never UP.",
+  "_total": 26,
+  "rules": {
+    "no-template-curly-in-string": 8,
+    "no-console": 6,
+    "@next/next/no-img-element": 3,
+    "require-atomic-updates": 2,
+    "@typescript-eslint/no-implied-eval": 2,
+    "react-hooks/exhaustive-deps": 1,
+    "@typescript-eslint/require-await": 1,
+    "@typescript-eslint/no-unused-vars": 1,
+    "@typescript-eslint/no-unsafe-member-access": 1,
+    "@next/next/no-html-link-for-pages": 1
+  }
+}

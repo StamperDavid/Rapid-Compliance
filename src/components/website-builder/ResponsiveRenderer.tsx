@@ -6,6 +6,7 @@
 
 'use client';
 
+import Image from 'next/image';
 import type { PageSection, Widget } from '@/types/website';
 import type {
   FeatureItem,
@@ -551,10 +552,12 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
                 borderRadius: '8px',
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={logo.src}
                 alt={logo.alt}
+                width={120}
+                height={60}
+                unoptimized
                 style={{
                   maxWidth: '120px',
                   maxHeight: '60px',

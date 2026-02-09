@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, type ReactNode } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
 import { logger } from '@/lib/logger/logger';
@@ -106,10 +107,12 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div className="flex justify-between items-center" style={{ height: `${navHeight}px` }}>
             <Link href="/" className="flex items-center gap-2">
               {theme.logoUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element -- Dynamic theme logo URL from CMS */
-                <img
+                <Image
                   src={theme.logoUrl}
                   alt={(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}
+                  width={200}
+                  height={theme.logoHeight ?? 48}
+                  unoptimized
                   style={{
                     height: `${theme.logoHeight ?? 48}px`,
                     width: 'auto',

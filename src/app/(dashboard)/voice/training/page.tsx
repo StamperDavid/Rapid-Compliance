@@ -2,7 +2,7 @@
 
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useToast } from '@/hooks/useToast';
@@ -249,8 +249,77 @@ export default function VoiceAITrainingLabPage() {
 
   // Load data on mount
   useEffect(() => {
-    void loadVoiceTrainingData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const loadData = async () => {
+      try {
+        setLoading(true);
+
+        const { isFirebaseConfigured } = await import('@/lib/firebase/config');
+        if (!isFirebaseConfigured) {
+          logger.warn('Firebase not configured, using demo data', { file: 'voice-training-page.tsx' });
+          loadDemoData();
+          setLoading(false);
+          return;
+        }
+
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+
+        // Load voice training settings
+        const voiceData = await FirestoreService.get(
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/toolTraining`,
+          'voice'
+        );
+        const typedVoiceData = voiceData as FirestoreVoiceData | null;
+
+        if (typedVoiceData?.toolSettings && isVoiceTrainingSettings(typedVoiceData.toolSettings)) {
+          setVoiceSettings(typedVoiceData.toolSettings);
+          const objectionResponses = typedVoiceData.toolSettings.objectionResponses;
+          if (objectionResponses && typeof objectionResponses === 'object') {
+            const templates = Object.entries(objectionResponses).map(
+              ([key, response]) => ({ key, response: typeof response === 'string' ? response : String(response) })
+            );
+            setObjectionTemplates(templates);
+          }
+        }
+
+        if (typedVoiceData?.inheritFromBrandDNA !== undefined) {
+          setOverrideForVoice(!typedVoiceData.inheritFromBrandDNA);
+        }
+
+        // Load Brand DNA
+        const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
+        const typedOrgData = orgData as FirestoreOrgData | null;
+        if (typedOrgData?.brandDNA && isBrandDNA(typedOrgData.brandDNA)) {
+          setBrandDNA(typedOrgData.brandDNA);
+        }
+
+        // Load call history
+        const { orderBy } = await import('firebase/firestore');
+        const historyResult = await FirestoreService.getAllPaginated(
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/voiceCallHistory`,
+          [orderBy('timestamp', 'desc')],
+          50
+        );
+        if (isCallHistoryItemArray(historyResult.data)) {
+          setCallHistory(historyResult.data);
+        }
+
+        // Load knowledge base
+        const knowledgeResult = await FirestoreService.getAllPaginated(
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/voiceKnowledge`,
+          [orderBy('uploadedAt', 'desc')],
+          100
+        );
+        if (isKnowledgeItemArray(knowledgeResult.data)) {
+          setKnowledgeItems(knowledgeResult.data);
+        }
+
+      } catch (error: unknown) {
+        logger.error('Error loading voice training data:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    void loadData();
   }, []);
 
   // Call timer
@@ -270,78 +339,6 @@ export default function VoiceAITrainingLabPage() {
       }
     };
   }, [isCallActive]);
-
-  const loadVoiceTrainingData = async () => {
-    try {
-      setLoading(true);
-
-      const { isFirebaseConfigured } = await import('@/lib/firebase/config');
-      if (!isFirebaseConfigured) {
-        logger.warn('Firebase not configured, using demo data', { file: 'voice-training-page.tsx' });
-        loadDemoData();
-        setLoading(false);
-        return;
-      }
-
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-
-      // Load voice training settings
-      const voiceData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/toolTraining`,
-        'voice'
-      );
-      const typedVoiceData = voiceData as FirestoreVoiceData | null;
-
-      if (typedVoiceData?.toolSettings && isVoiceTrainingSettings(typedVoiceData.toolSettings)) {
-        setVoiceSettings(typedVoiceData.toolSettings);
-        // Convert objectionResponses to array format for UI
-        const objectionResponses = typedVoiceData.toolSettings.objectionResponses;
-        if (objectionResponses && typeof objectionResponses === 'object') {
-          const templates = Object.entries(objectionResponses).map(
-            ([key, response]) => ({ key, response: typeof response === 'string' ? response : String(response) })
-          );
-          setObjectionTemplates(templates);
-        }
-      }
-
-      if (typedVoiceData?.inheritFromBrandDNA !== undefined) {
-        setOverrideForVoice(!typedVoiceData.inheritFromBrandDNA);
-      }
-
-      // Load Brand DNA
-      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
-      const typedOrgData = orgData as FirestoreOrgData | null;
-      if (typedOrgData?.brandDNA && isBrandDNA(typedOrgData.brandDNA)) {
-        setBrandDNA(typedOrgData.brandDNA);
-      }
-
-      // Load call history
-      const { orderBy } = await import('firebase/firestore');
-      const historyResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/voiceCallHistory`,
-        [orderBy('timestamp', 'desc')],
-        50
-      );
-      if (isCallHistoryItemArray(historyResult.data)) {
-        setCallHistory(historyResult.data);
-      }
-
-      // Load knowledge base
-      const knowledgeResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/voiceKnowledge`,
-        [orderBy('uploadedAt', 'desc')],
-        100
-      );
-      if (isKnowledgeItemArray(knowledgeResult.data)) {
-        setKnowledgeItems(knowledgeResult.data);
-      }
-
-    } catch (error: unknown) {
-      logger.error('Error loading voice training data:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadDemoData = () => {
     setBrandDNA({
@@ -409,24 +406,23 @@ export default function VoiceAITrainingLabPage() {
     }
   };
 
-  const loadTTSVoices = async (engine: TTSEngineType) => {
+  const loadTTSVoices = useCallback(async (engine: TTSEngineType) => {
     setLoadingVoices(true);
     try {
       const response = await fetch(`/api/voice/tts?engine=${engine}`);
       const data = await response.json() as TTSVoicesResponse;
       if (data.success && data.voices) {
-        setTtsVoices(data.voices);
+        const voices = data.voices;
+        setTtsVoices(voices);
         // Set default voice if none selected
-        if (!selectedVoiceId && data.voices.length > 0) {
-          setSelectedVoiceId(data.voices[0].id);
-        }
+        setSelectedVoiceId(prev => (!prev && voices.length > 0) ? voices[0].id : prev);
       }
     } catch (error: unknown) {
       logger.error('Error loading TTS voices:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
     } finally {
       setLoadingVoices(false);
     }
-  };
+  }, []);
 
   // Load TTS config on mount
   useEffect(() => {
@@ -436,8 +432,7 @@ export default function VoiceAITrainingLabPage() {
   // Load voices when engine changes
   useEffect(() => {
     void loadTTSVoices(ttsEngine);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ttsEngine]);
+  }, [loadTTSVoices, ttsEngine]);
 
   const handleEngineChange = (engine: TTSEngineType) => {
     setTtsEngine(engine);

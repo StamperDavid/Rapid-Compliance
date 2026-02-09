@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -30,12 +30,7 @@ export default function LeadDetailPage() {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
-  useEffect(() => {
-    void loadLead();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadLead = async (): Promise<void> => {
+  const loadLead = useCallback(async (): Promise<void> => {
     try {
       const data = await FirestoreService.get(`${getSubCollection('workspaces')}/default/entities/leads/records`, leadId);
 
@@ -54,7 +49,11 @@ export default function LeadDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [leadId]);
+
+  useEffect(() => {
+    void loadLead();
+  }, [loadLead]);
 
   const loadIntelligence = async (leadData: ExtendedLead): Promise<void> => {
     try {

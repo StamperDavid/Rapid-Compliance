@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { LeaderboardEntry } from '@/lib/team/collaboration';
 
 export default function TeamLeaderboardPage() {
@@ -8,12 +8,7 @@ export default function TeamLeaderboardPage() {
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    void loadLeaderboard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period]);
-
-  const loadLeaderboard = async () => {
+  const loadLeaderboard = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/team/leaderboard?period=${period}`);
@@ -26,7 +21,11 @@ export default function TeamLeaderboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [period]);
+
+  useEffect(() => {
+    void loadLeaderboard();
+  }, [loadLeaderboard]);
 
   const getRankEmoji = (rank: number) => {
     if (rank === 1) {return '🥇';}

@@ -6,6 +6,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import type { NavItem } from '@/types/website';
 
 interface MobileNavigationProps {
@@ -41,10 +42,12 @@ export function MobileNavigation({ items, logo, brandName }: MobileNavigationPro
           {/* Logo/Brand */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {logo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={logo}
                 alt={(brandName !== '' && brandName != null) ? brandName : 'Logo'}
+                width={120}
+                height={32}
+                unoptimized
                 style={{ height: '32px', width: 'auto' }}
               />
             )}

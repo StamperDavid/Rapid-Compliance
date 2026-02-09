@@ -117,7 +117,7 @@ export function OptimizedImage({
       )}
 
       {/* Actual image */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- Custom lazy loading with srcSet/IntersectionObserver; next/image would duplicate this optimization */}
       <img
         ref={imgRef}
         src={isVisible ? src : undefined}

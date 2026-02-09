@@ -3,9 +3,9 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Commit: b1c50e8f — "feat: implement ConversationMemory service — agents recall customer history"
+Last Commit: (see git log for latest)
 
-## Current State (February 8, 2026)
+## Current State (February 9, 2026)
 
 ### Architecture
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
@@ -46,18 +46,18 @@ Last Commit: b1c50e8f — "feat: implement ConversationMemory service — agents
   - 3e: Agent integration — Outreach Manager enriches lead profiles, Revenue Director includes brief context in delegations, Voice AI loads caller history.
 
 ### Immediate Next Task
-**Code Integrity Hardening Phase 3** — Type safety: Zod schemas for e-commerce Firestore boundary, `Function` type replacements. See the full action plan below.
+**Deploy to Production** — Firestore indexes, Vercel import, env vars, smoke test. Code integrity hardening (Phases 3-5) is COMPLETE.
 
 ### Known Issues
 | Issue | Details |
 |-------|---------|
-| ~~**113 eslint-disable bypasses**~~ | **DOWN TO ~58** — 47 `no-alert` ELIMINATED (→ 0), 8 `no-console` ELIMINATED (15 → 7 legitimate). Remaining: 7 `react-hooks/exhaustive-deps`, 7 `@next/next/no-img-element`, ~2 `@next/next/no-img-element` file-level. |
+| ~~**113 eslint-disable bypasses**~~ | **DOWN TO 26** — 47 `no-alert` ELIMINATED, 8 `no-console` ELIMINATED, 8/9 `exhaustive-deps` FIXED (→ 1 legitimate), 7/10 `no-img-element` MIGRATED to `next/image` (→ 3 legitimate). Pre-commit bypass ratchet enforces count can only go DOWN. |
 | ~~**4 XSS-vulnerable files**~~ | **FIXED** — All 4 files now use `SafeHtml` component with DOMPurify sanitization (commit 21988280) |
 | ~~**CSP weakened**~~ | **FIXED** — `unsafe-eval` removed from both CSP locations. `unsafe-inline` kept for styles (required by Tailwind/inline styles) and scripts (until nonce-based CSP in Phase 5) |
 | ~~**CORS open**~~ | **FIXED** — Public chat endpoint now uses centralized `addCORSHeaders()` whitelist. CORS headers added to both OPTIONS and POST responses |
-| **CSRF not enforced** | Functions `generateCSRFToken()` / `validateCSRFToken()` exist in security-middleware.ts but are never called |
+| ~~**CSRF not enforced**~~ | **NOT NEEDED** — System uses stateless Bearer token auth (Authorization header), which is inherently immune to CSRF. Functions exist in security-middleware.ts as defense-in-depth if session cookies become primary auth. |
 | **132+ type laundering casts** | `as unknown as` used heavily. ~70% legitimate (Firebase type bridge), ~30% workarounds (especially e-commerce services — 8 repeated casts in checkout-service.ts) |
-| **20+ files use `Function` type** | Should use specific function signatures instead of the broad `Function` type |
+| ~~**20+ files use `Function` type**~~ | **ALREADY CLEAN** — Audit found zero broad `Function` types. Only 2 `new Function()` usages exist (formula engine, distillation engine), both properly cast to specific signatures. |
 | 3 service tests failing | Missing Firestore composite indexes (status+createdAt, stage+createdAt on `records` and `workflows`). Fix: `firebase login --reauth` then `firebase deploy --only firestore:indexes` |
 | Firebase CLI credentials expired | Run `firebase login --reauth` to re-authenticate before deploying indexes |
 | Outbound webhooks are scaffolding | Settings UI exists with event list but backend dispatch system is not implemented |
@@ -72,9 +72,9 @@ A full read-only audit was performed covering ESLint config, TypeScript config, 
 
 **Configuration integrity: A (Excellent)** — ESLint rules, TypeScript strict mode, pre-commit hooks, and lint-staged are all properly configured and have NOT been tampered with. No `.eslintrc` overrides, no `.eslintignore` bypass files.
 
-**Inline bypass abuse: B (was C)** — Down from 113 to ~58 `eslint-disable` comments. 47 `no-alert` eliminated, 8 `no-console` eliminated. Remaining: 7 `react-hooks/exhaustive-deps`, 7 `@next/next/no-img-element`, 7 legitimate `no-console` (logger, firebase admin, CLI tool), 2 `@ts-expect-error` (in jest.setup.js — acceptable).
+**Inline bypass abuse: A- (was C)** — Down from 113 to **26** `eslint-disable` comments. All remaining are legitimate (template literals, console in CLI tools, custom image optimization, formula engine eval). Pre-commit ratchet enforces count can only decrease.
 
-**Type safety: B+** — Zero `any` types, zero `as any`, zero `Record<string, any>`. But 132+ `as unknown as` casts and 20+ files using broad `Function` type.
+**Type safety: A-** — Zero `any` types, zero `as any`, zero `Record<string, any>`, zero broad `Function` types. Remaining: 132+ `as unknown as` casts (~70% legitimate Firebase type bridging).
 
 **Security: B+ (was C+)** — XSS: FIXED (DOMPurify SafeHtml component). CSP: `unsafe-eval` removed. CORS: whitelisted. Remaining: CSRF not enforced, `unsafe-inline` for scripts (pending nonce-based CSP).
 
@@ -184,9 +184,9 @@ A full read-only audit was performed covering ESLint config, TypeScript config, 
 | ~~**3**~~ | ~~ConversationMemory service~~ | ~~6-8 hrs~~ | **DONE** — commit b1c50e8f. |
 | ~~**1**~~ | ~~Code Integrity Hardening Phase 1~~ | ~~3-4 hrs~~ | **DONE** — commit 21988280. SafeHtml + DOMPurify (4 XSS files), CSP `unsafe-eval` removed, CORS whitelist on public chat. |
 | ~~**2**~~ | ~~Code Integrity Hardening Phase 2~~ | ~~4-6 hrs~~ | **DONE** — commit 6168ef42. useConfirm/usePrompt hooks, 47 alert→toast, 8 console.log→logger. 55 eslint-disable comments removed. |
-| **3** | **Code Integrity Hardening Phase 3** | 3-4 hrs | Type safety: Zod schemas for e-commerce boundary, `Function` type replacements. |
-| **4** | **Code Integrity Hardening Phase 4** | 2-3 hrs | Hook deps fixes, `<img>` → `<Image>` migration. |
-| **5** | **Code Integrity Hardening Phase 5** | 1-2 hrs | Pre-commit ratchet + CSRF enforcement. Lock down so bypasses can never increase. |
+| ~~**3**~~ | ~~**Code Integrity Hardening Phase 3**~~ | ~~3-4 hrs~~ | **DONE** — Phase 3A Zod schemas (commit 3376671f). Phase 3B: `Function` type audit found zero issues — already clean. |
+| ~~**4**~~ | ~~**Code Integrity Hardening Phase 4**~~ | ~~2-3 hrs~~ | **DONE** — 8/9 `exhaustive-deps` fixed via `useCallback`, 7/10 `<img>` migrated to `next/image` with `unoptimized`. |
+| ~~**5**~~ | ~~**Code Integrity Hardening Phase 5**~~ | ~~1-2 hrs~~ | **DONE** — Pre-commit bypass ratchet (26 budget). CSRF not needed (Bearer auth). |
 | **6** | Deploy Firestore indexes | 15 min | `firebase deploy --only firestore:indexes`. Fixes 3 failing service tests. |
 | **7** | **Production deploy to Vercel** | 2-3 hrs | 7 cron jobs already defined in `vercel.json`. OAuth flows, webhooks, Stripe — none work until deployed with real env vars. |
 | **8** | Smoke test the OODA loop | 2-3 hrs | Feed a real lead through the system. Verify event router fires, Revenue Director picks it up, sequence engine enrolls. |

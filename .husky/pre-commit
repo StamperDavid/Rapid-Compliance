@@ -11,4 +11,8 @@ npx lint-staged
 echo "🔷 TypeScript: Checking for build blockers..."
 npx tsc --noEmit
 
+# Step 3: Bypass budget ratchet (eslint-disable count can only go DOWN)
+echo "📊 Bypass Ratchet: Checking eslint-disable budget..."
+bash scripts/check-bypass-budget.sh
+
 echo "✅ Quality check passed!"

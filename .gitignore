@@ -79,6 +79,7 @@ eslint-*.json
 eslint-*.txt
 audit_*.json
 *lint*.json
+!.eslint-bypass-budget.json
 CLUSTER_REPORT.txt
 error-cluster-report.json
 

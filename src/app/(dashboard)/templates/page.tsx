@@ -16,7 +16,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import TemplateSelector from '@/components/templates/TemplateSelector';
 import DealScoreCard from '@/components/templates/DealScoreCard';
 import RevenueForecastChart from '@/components/templates/RevenueForecastChart';
@@ -75,7 +75,7 @@ export default function TemplatesDashboard() {
   };
 
   // Load Deal Scores from Firestore
-  const loadDealScores = async () => {
+  const loadDealScores = useCallback(async () => {
     try {
       setLoadingScores(true);
 
@@ -101,20 +101,20 @@ export default function TemplatesDashboard() {
           scores.set(dealId, data.score);
         }
       }
-      
+
       setDealScores(scores);
     } catch (error) {
       console.error('Failed to load deal scores:', error);
     } finally {
       setLoadingScores(false);
     }
-  };
+  }, [workspaceId, selectedTemplateId]);
 
   // Generate Forecast
-  const generateForecast = async () => {
+  const generateForecast = useCallback(async () => {
     try {
       setLoadingForecast(true);
-      
+
       const response = await fetch('/api/templates/forecast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -136,22 +136,20 @@ export default function TemplatesDashboard() {
     } finally {
       setLoadingForecast(false);
     }
-  };
+  }, [workspaceId, forecastPeriod, quota, selectedTemplateId]);
 
   // Auto-load when switching tabs
   useEffect(() => {
     if (activeTab === 'scoring' && dealScores.size === 0) {
       void loadDealScores();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, dealScores.size, loadDealScores]);
 
   useEffect(() => {
     if (activeTab === 'forecasting' && !forecast) {
       void generateForecast();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, [activeTab, forecast, generateForecast]);
 
   const tabs: Array<{ id: Tab; label: string; icon: string }> = [
     { id: 'templates', label: 'Industry Templates', icon: '📋' },

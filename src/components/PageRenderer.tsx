@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import type { PageContent } from '@/hooks/usePageContent';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
@@ -127,10 +128,12 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
 
     case 'image':
       return (
-        /* eslint-disable-next-line @next/next/no-img-element -- Dynamic CMS image content */
-        <img
+        <Image
           src={typeof element.content === 'string' ? element.content : '/placeholder.jpg'}
           alt={element.settings?.alt ?? ''}
+          width={800}
+          height={400}
+          unoptimized
           style={{ maxWidth: '100%', ...styles }}
         />
       );

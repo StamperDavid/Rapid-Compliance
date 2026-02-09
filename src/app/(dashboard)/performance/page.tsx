@@ -9,7 +9,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { PerformanceOverviewCard } from '@/components/performance/PerformanceOverviewCard';
 import { BenchmarksCard } from '@/components/performance/BenchmarksCard';
 import { TopPerformersCard } from '@/components/performance/TopPerformersCard';
@@ -23,12 +23,7 @@ export default function PerformanceDashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter'>('month');
 
   // Load performance analytics
-  useEffect(() => {
-    void loadAnalytics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPeriod]);
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -57,7 +52,11 @@ export default function PerformanceDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPeriod]);
+
+  useEffect(() => {
+    void loadAnalytics();
+  }, [loadAnalytics]);
 
   const handleRefresh = () => {
     void loadAnalytics();
