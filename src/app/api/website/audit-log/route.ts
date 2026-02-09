@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import type { Query, DocumentData } from 'firebase-admin/firestore';
 
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(limitParam ?? '50', 10);
 
     const auditRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/audit-log/entries'
+      `${getSubCollection('website')}/audit-log/entries`
     );
     let query: Query<DocumentData> = auditRef.orderBy('performedAt', 'desc');
 

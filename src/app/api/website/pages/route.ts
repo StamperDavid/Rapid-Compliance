@@ -5,6 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status'); // Filter by status
 
     const pagesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/pages/items'
+      `${getSubCollection('website')}/pages/items`
     );
 
     // Build query with optional status filter
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
 
     // Check if slug already exists for this org
     const pagesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/pages/items'
+      `${getSubCollection('website')}/pages/items`
     );
     const existingPageQuery = await pagesRef
       .where('slug', '==', page.slug)

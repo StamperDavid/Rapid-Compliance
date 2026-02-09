@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 interface GlobalDomainData {
@@ -55,7 +56,7 @@ export async function GET(
 
     // Verify domain is verified
     const domainRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/custom-domains/{domain}',
+      `${getSubCollection('website')}/config/custom-domains/{domain}`,
       { domain }
     );
 

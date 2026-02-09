@@ -6,6 +6,7 @@
 
 import type { NextRequest } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import {
   handleAPIError,
@@ -55,7 +56,7 @@ export async function POST(
     const { scheduledFor } = body;
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      `${getSubCollection('website')}/pages/items/{pageId}`,
       { pageId: params.pageId }
     );
 
@@ -77,7 +78,7 @@ export async function POST(
 
     // Create version snapshot before publishing
     const versionRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/pages/items/{pageId}/versions/{version}',
+      `${getSubCollection('website')}/pages/items/{pageId}/versions/{version}`,
       { pageId: params.pageId, version: `v${currentVersion}` }
     );
 
@@ -123,7 +124,7 @@ export async function POST(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/audit-log/entries'
+      `${getSubCollection('website')}/audit-log/entries`
     );
 
     await auditRef.add({
@@ -169,7 +170,7 @@ export async function DELETE(
     const params = await context.params;
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      `${getSubCollection('website')}/pages/items/{pageId}`,
       { pageId: params.pageId }
     );
 
@@ -198,7 +199,7 @@ export async function DELETE(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/audit-log/entries'
+      `${getSubCollection('website')}/audit-log/entries`
     );
 
     await auditRef.add({

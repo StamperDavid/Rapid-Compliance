@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 const postBodySchema = z.object({
@@ -29,7 +30,7 @@ export async function GET(_request: NextRequest) {
 
     // Get categories document
     const categoriesRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/blog-categories'
+      `${getSubCollection('website')}/blog-categories`
     );
 
     const categoriesDoc = await categoriesRef.get();
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     // Save categories
     const categoriesRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/blog-categories'
+      `${getSubCollection('website')}/blog-categories`
     );
 
     const categoriesData = {

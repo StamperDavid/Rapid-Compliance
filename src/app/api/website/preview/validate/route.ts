@@ -6,6 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     for (const _orgDoc of orgsSnapshot.docs) {
       const tokenRef = adminDal.getNestedDocRef(
-        'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+        `${getSubCollection('website')}/preview-tokens/tokens/{token}`,
         { token }
       );
 

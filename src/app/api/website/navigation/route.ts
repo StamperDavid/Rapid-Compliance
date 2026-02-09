@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { Navigation } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
@@ -25,7 +26,7 @@ export async function GET(_request: NextRequest) {
 
     // Get navigation document
     const navRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/navigation'
+      `${getSubCollection('website')}/navigation`
     );
 
     const navDoc = await navRef.get();
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Save to Firestore
     const navRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/navigation'
+      `${getSubCollection('website')}/navigation`
     );
 
     await navRef.set(navigationData);

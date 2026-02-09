@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
@@ -71,7 +72,7 @@ export async function POST(
     const { expiresIn } = bodyResult.data;
 
     const postRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      `${getSubCollection('website')}/config/blog-posts/{postId}`,
       { postId }
     );
 
@@ -93,7 +94,7 @@ export async function POST(
     const performedBy = await getUserIdentifier();
 
     const tokenRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+      `${getSubCollection('website')}/preview-tokens/tokens/{token}`,
       { token: previewToken }
     );
 
@@ -165,7 +166,7 @@ export async function GET(
 
     // Verify preview token
     const tokenRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+      `${getSubCollection('website')}/preview-tokens/tokens/{token}`,
       { token }
     );
 
@@ -201,7 +202,7 @@ export async function GET(
 
     // Get the post data
     const postRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      `${getSubCollection('website')}/config/blog-posts/{postId}`,
       { postId }
     );
 

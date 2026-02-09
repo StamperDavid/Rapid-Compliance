@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -70,7 +71,7 @@ export async function POST(
     const { scheduledFor } = bodyResult.data;
 
     const postRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      `${getSubCollection('website')}/config/blog-posts/{postId}`,
       { postId }
     );
 
@@ -126,7 +127,7 @@ export async function POST(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/audit-log/entries'
+      `${getSubCollection('website')}/audit-log/entries`
     );
 
     await auditRef.add({
@@ -182,7 +183,7 @@ export async function DELETE(
     const { postId } = paramsResult.data;
 
     const postRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      `${getSubCollection('website')}/config/blog-posts/{postId}`,
       { postId }
     );
 
@@ -210,7 +211,7 @@ export async function DELETE(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/audit-log/entries'
+      `${getSubCollection('website')}/audit-log/entries`
     );
 
     await auditRef.add({

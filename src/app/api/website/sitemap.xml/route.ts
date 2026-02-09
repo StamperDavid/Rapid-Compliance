@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { Page } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     // Get all published pages for this org
     const pagesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/config/pages'
+      `${getSubCollection('website')}/config/pages`
     );
     const pagesSnapshot = await pagesRef.where('status', '==', 'published').get();
 

@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { BlogPost, PageSection, PageSEO } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
 
     // Get posts collection
     const postsRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/config/blog-posts'
+      `${getSubCollection('website')}/config/blog-posts`
     );
 
     // Get all posts and filter
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
 
     // Save to Firestore
     const postRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      `${getSubCollection('website')}/config/blog-posts/{postId}`,
       { postId: postData.id }
     );
 

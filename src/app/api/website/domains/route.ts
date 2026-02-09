@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
@@ -43,7 +44,7 @@ export async function GET(_request: NextRequest) {
     }
 
     const domainsRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/config/custom-domains'
+      `${getSubCollection('website')}/config/custom-domains`
     );
     const snapshot = await domainsRef.get();
 
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
 
     // Save domain using domain name as document ID
     const domainsRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/config/custom-domains'
+      `${getSubCollection('website')}/config/custom-domains`
     );
     const domainRef = domainsRef.doc(domain);
     await domainRef.set(domainData);

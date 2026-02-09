@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
@@ -45,7 +46,7 @@ export async function GET(
 
     // Verify the page belongs to this org
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      `${getSubCollection('website')}/pages/items/{pageId}`,
       { pageId: params.pageId }
     );
 
@@ -119,7 +120,7 @@ export async function POST(
     }
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      `${getSubCollection('website')}/pages/items/{pageId}`,
       { pageId: params.pageId }
     );
 
@@ -175,7 +176,7 @@ export async function POST(
 
     // Create audit log entry
     const auditRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/audit-log/entries'
+      `${getSubCollection('website')}/audit-log/entries`
     );
 
     await auditRef.add({

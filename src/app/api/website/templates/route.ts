@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { getUserIdentifier } from '@/lib/server-auth';
 import type { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
@@ -40,7 +41,7 @@ export async function GET(_request: NextRequest) {
 
     // Get custom templates for this org
     const templatesRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/config/templates'
+      `${getSubCollection('website')}/config/templates`
     );
 
     const snapshot = await templatesRef.get();
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     // Save to Firestore
     const templateRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/templates/{templateId}',
+      `${getSubCollection('website')}/config/templates/{templateId}`,
       { templateId: templateData.id }
     );
 
@@ -151,7 +152,7 @@ export async function DELETE(request: NextRequest) {
 
     // Delete template
     const templateRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/templates/{templateId}',
+      `${getSubCollection('website')}/config/templates/{templateId}`,
       { templateId }
     );
 

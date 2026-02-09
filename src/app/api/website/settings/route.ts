@@ -6,6 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
@@ -32,7 +33,7 @@ export async function GET(_request: NextRequest) {
     }
 
     const settingsRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/settings'
+      `${getSubCollection('website')}/settings`
     );
     const doc = await settingsRef.get();
 
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
     const { settings } = bodyResult.data;
 
     const settingsRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/settings'
+      `${getSubCollection('website')}/settings`
     );
 
     const settingsData: Record<string, unknown> = {
@@ -156,7 +157,7 @@ export async function PUT(request: NextRequest) {
     const { settings } = bodyResult.data;
 
     const settingsRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/settings'
+      `${getSubCollection('website')}/settings`
     );
 
     const settingsData: Record<string, unknown> = {

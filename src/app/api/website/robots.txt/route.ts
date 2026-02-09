@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 interface WebsiteData {
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     // Get robots.txt from settings
     const settingsRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/settings'
+      `${getSubCollection('website')}/settings`
     );
     const settingsDoc = await settingsRef.get();
 

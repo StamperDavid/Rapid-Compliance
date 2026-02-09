@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
@@ -39,7 +40,7 @@ export async function POST(
     const { expiresIn } = body; // expiresIn in hours, default 24
 
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      `${getSubCollection('website')}/pages/items/{pageId}`,
       { pageId: params.pageId }
     );
 
@@ -62,7 +63,7 @@ export async function POST(
     const createdBy = await getUserIdentifier();
 
     const previewRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+      `${getSubCollection('website')}/preview-tokens/tokens/{token}`,
       { token: previewToken }
     );
 
@@ -122,7 +123,7 @@ export async function GET(
 
     // Verify preview token
     const tokenRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/preview-tokens/tokens/{token}',
+      `${getSubCollection('website')}/preview-tokens/tokens/{token}`,
       { token }
     );
 
@@ -157,7 +158,7 @@ export async function GET(
 
     // Get the page data
     const pageRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/pages/items/{pageId}',
+      `${getSubCollection('website')}/pages/items/{pageId}`,
       { pageId: params.pageId }
     );
 

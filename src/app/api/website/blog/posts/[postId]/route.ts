@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
@@ -65,7 +66,7 @@ export async function GET(
 
     // Get post document
     const postRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      `${getSubCollection('website')}/config/blog-posts/{postId}`,
       { postId }
     );
 
@@ -132,7 +133,7 @@ export async function PUT(
 
     // Get existing post
     const postRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      `${getSubCollection('website')}/config/blog-posts/{postId}`,
       { postId }
     );
 
@@ -213,7 +214,7 @@ export async function DELETE(
 
     // Get post to verify ownership
     const postRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/blog-posts/{postId}',
+      `${getSubCollection('website')}/config/blog-posts/{postId}`,
       { postId }
     );
 

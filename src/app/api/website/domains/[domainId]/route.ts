@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 
@@ -26,7 +27,7 @@ export async function DELETE(
     const domainId = decodeURIComponent(params.domainId);
 
     const domainRef = adminDal.getNestedDocRef(
-      'organizations/rapid-compliance-root/website/config/custom-domains/{domainId}',
+      `${getSubCollection('website')}/config/custom-domains/{domainId}`,
       { domainId }
     );
 
@@ -62,7 +63,7 @@ export async function DELETE(
     const performedBy = await getUserIdentifier();
 
     const auditRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/audit-log/entries'
+      `${getSubCollection('website')}/audit-log/entries`
     );
 
     await auditRef.add({

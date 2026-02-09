@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
 
     // Get all published blog posts for this org
     const postsRef = adminDal.getNestedCollection(
-      'organizations/rapid-compliance-root/website/config/blog-posts'
+      `${getSubCollection('website')}/config/blog-posts`
     );
     const postsSnapshot = await postsRef.where('status', '==', 'published').get();
 
