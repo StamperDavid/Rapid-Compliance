@@ -124,9 +124,12 @@ export default function DealDetailPage() {
     return <div className="p-8">Loading...</div>;
   }
 
-  const healthColor = healthScore?.status === 'healthy' ? 'bg-green-900/20 border-green-600' :
-                      healthScore?.status === 'at-risk' ? 'bg-yellow-900/20 border-yellow-600' :
-                      'bg-red-900/20 border-red-600';
+  const healthColor = healthScore?.status === 'healthy' ? 'rgba(var(--color-success-rgb), 0.1)' :
+                      healthScore?.status === 'at-risk' ? 'rgba(var(--color-warning-rgb), 0.1)' :
+                      'rgba(var(--color-error-rgb), 0.1)';
+  const healthBorderColor = healthScore?.status === 'healthy' ? 'var(--color-success)' :
+                            healthScore?.status === 'at-risk' ? 'var(--color-warning)' :
+                            'var(--color-error)';
 
   // Safely get display values
   const displayName = deal.name ?? 'Untitled Deal';
@@ -145,15 +148,15 @@ export default function DealDetailPage() {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-6">
-        <button onClick={() => router.back()} className="text-blue-400 hover:text-blue-300 mb-4">&larr; Back to Deals</button>
+        <button onClick={() => router.back()} className="text-[var(--color-primary)] hover:opacity-80 mb-4">&larr; Back to Deals</button>
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold mb-2">{displayName}</h1>
-            <p className="text-gray-400">{displayCompany}</p>
+            <p className="text-[var(--color-text-secondary)]">{displayCompany}</p>
           </div>
           <div className="text-right flex items-start gap-4">
             {healthScore && (
-              <div className={`px-4 py-2 rounded-lg border-2 ${healthColor}`}>
+              <div style={{ backgroundColor: healthColor, borderColor: healthBorderColor }} className="px-4 py-2 rounded-lg border-2">
                 <div className="text-sm font-medium uppercase mb-1">
                   {healthScore.status === 'healthy' ? 'Healthy' :
                    healthScore.status === 'at-risk' ? 'At Risk' :
@@ -163,8 +166,8 @@ export default function DealDetailPage() {
               </div>
             )}
             <div>
-              <div className="text-3xl font-bold text-green-400">${displayValue.toLocaleString()}</div>
-              <div className="text-sm text-gray-400">{displayProbability}% probability</div>
+              <div className="text-3xl font-bold text-[var(--color-success)]">${displayValue.toLocaleString()}</div>
+              <div className="text-sm text-[var(--color-text-secondary)]">{displayProbability}% probability</div>
             </div>
           </div>
         </div>
@@ -174,7 +177,7 @@ export default function DealDetailPage() {
         <div className="col-span-2 space-y-6">
           {/* Deal Health Warnings & Recommendations */}
           {healthScore && (healthScore.warnings.length > 0 || healthScore.recommendations.length > 0) && (
-            <div className={`rounded-lg border-2 p-4 ${healthColor}`}>
+            <div style={{ backgroundColor: healthColor, borderColor: healthBorderColor }} className="rounded-lg border-2 p-4">
               <h3 className="font-bold text-lg mb-3">
                 {healthScore.status === 'critical' ? 'Critical Issues' :
                  healthScore.status === 'at-risk' ? 'Attention Needed' :
@@ -212,23 +215,23 @@ export default function DealDetailPage() {
           )}
 
           {/* Deal Information */}
-          <div className="bg-gray-900 rounded-lg p-6">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Deal Information</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-sm text-gray-400 mb-1">Stage</div>
+                <div className="text-sm text-[var(--color-text-secondary)] mb-1">Stage</div>
                 <div className="capitalize font-medium">{displayStage}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-400 mb-1">Expected Close</div>
+                <div className="text-sm text-[var(--color-text-secondary)] mb-1">Expected Close</div>
                 <div>{displayExpectedClose}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-400 mb-1">Source</div>
+                <div className="text-sm text-[var(--color-text-secondary)] mb-1">Source</div>
                 <div>{displaySource}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-400 mb-1">Owner</div>
+                <div className="text-sm text-[var(--color-text-secondary)] mb-1">Owner</div>
                 <div>{displayOwner}</div>
               </div>
             </div>
@@ -248,9 +251,9 @@ export default function DealDetailPage() {
           </div>
 
           {/* Notes */}
-          <div className="bg-gray-900 rounded-lg p-6">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Notes</h2>
-            <div className="bg-gray-800 rounded p-4 text-gray-300">{displayNotes}</div>
+            <div className="bg-[var(--color-bg-elevated)] rounded p-4 text-[var(--color-text-secondary)]">{displayNotes}</div>
           </div>
         </div>
 
@@ -258,30 +261,31 @@ export default function DealDetailPage() {
         <div className="space-y-6">
           {/* Health Score Breakdown */}
           {healthScore && (
-            <div className="bg-gray-900 rounded-lg p-6">
+            <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4">Health Score Breakdown</h2>
               <div className="space-y-3">
                 {healthScore.factors.map((factor, idx) => (
                   <div key={idx}>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-400">{factor.name}</span>
-                      <span className={
-                        factor.impact === 'positive' ? 'text-green-400' :
-                        factor.impact === 'negative' ? 'text-red-400' :
-                        'text-gray-400'
-                      }>{factor.score}/100</span>
+                      <span className="text-[var(--color-text-secondary)]">{factor.name}</span>
+                      <span style={{
+                        color: factor.impact === 'positive' ? 'var(--color-success)' :
+                          factor.impact === 'negative' ? 'var(--color-error)' :
+                          'var(--color-text-secondary)'
+                      }}>{factor.score}/100</span>
                     </div>
-                    <div className="w-full bg-gray-800 rounded-full h-2">
+                    <div className="w-full bg-[var(--color-bg-elevated)] rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full ${
-                          factor.impact === 'positive' ? 'bg-green-600' :
-                          factor.impact === 'negative' ? 'bg-red-600' :
-                          'bg-gray-600'
-                        }`}
-                        style={{ width: `${factor.score}%` }}
+                        style={{
+                          width: `${factor.score}%`,
+                          backgroundColor: factor.impact === 'positive' ? 'var(--color-success)' :
+                            factor.impact === 'negative' ? 'var(--color-error)' :
+                            'var(--color-border-light)'
+                        }}
+                        className="h-2 rounded-full"
                       />
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">{factor.description}</div>
+                    <div className="text-xs text-[var(--color-text-disabled)] mt-1">{factor.description}</div>
                   </div>
                 ))}
               </div>
@@ -289,12 +293,12 @@ export default function DealDetailPage() {
           )}
 
           {/* Quick Actions */}
-          <div className="bg-gray-900 rounded-lg p-6">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
             <div className="space-y-2">
               <button
                 onClick={() => router.push(`/deals/${dealId}/edit`)}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-left"
+                className="w-full px-4 py-2 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)] text-left"
               >
                 Edit Deal
               </button>
@@ -303,25 +307,25 @@ export default function DealDetailPage() {
                   const subject = `Regarding: ${displayName}`;
                   window.location.href = `mailto:${displayContactEmail}?subject=${encodeURIComponent(subject)}`;
                 }}
-                className="w-full px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-left"
+                className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] rounded-lg hover:bg-[var(--color-border-light)] text-left"
               >
                 Send Email
               </button>
               <button
                 onClick={() => router.push(`/outbound/meetings/schedule?dealId=${dealId}`)}
-                className="w-full px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-left"
+                className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] rounded-lg hover:bg-[var(--color-border-light)] text-left"
               >
                 Schedule Meeting
               </button>
               <button
                 onClick={() => setShowWonConfirm(true)}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-left font-medium"
+                className="w-full px-4 py-2 bg-[var(--color-success)] text-[var(--color-text-primary)] rounded-lg hover:opacity-90 text-left font-medium"
               >
                 Mark Won
               </button>
               <button
                 onClick={() => setShowLostModal(true)}
-                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-left"
+                className="w-full px-4 py-2 bg-[var(--color-error)] text-[var(--color-text-primary)] rounded-lg hover:opacity-90 text-left"
               >
                 Mark Lost
               </button>
@@ -333,19 +337,19 @@ export default function DealDetailPage() {
       {/* Won Confirmation Modal */}
       {showWonConfirm && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-bold mb-4">Mark Deal as Won?</h3>
-            <p className="text-gray-400 mb-6">Are you sure you want to mark this deal as won?</p>
+            <p className="text-[var(--color-text-secondary)] mb-6">Are you sure you want to mark this deal as won?</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowWonConfirm(false)}
-                className="flex-1 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+                className="flex-1 px-4 py-2 bg-[var(--color-bg-elevated)] rounded-lg hover:bg-[var(--color-border-light)]"
               >
                 Cancel
               </button>
               <button
                 onClick={() => void handleMarkWon()}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="flex-1 px-4 py-2 bg-[var(--color-success)] text-[var(--color-text-primary)] rounded-lg hover:opacity-90"
               >
                 Yes, Mark Won
               </button>
@@ -357,15 +361,15 @@ export default function DealDetailPage() {
       {/* Lost Reason Modal */}
       {showLostModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-[var(--color-bg-paper)] rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-bold mb-4">Mark Deal as Lost</h3>
-            <label className="block text-sm text-gray-400 mb-2">Reason for loss:</label>
+            <label className="block text-sm text-[var(--color-text-secondary)] mb-2">Reason for loss:</label>
             <input
               type="text"
               value={lostReason}
               onChange={(e) => setLostReason(e.target.value)}
               placeholder="Enter reason..."
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg mb-4"
+              className="w-full px-4 py-2 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg mb-4"
               autoFocus
             />
             <div className="flex gap-3">
@@ -374,13 +378,13 @@ export default function DealDetailPage() {
                   setShowLostModal(false);
                   setLostReason('');
                 }}
-                className="flex-1 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+                className="flex-1 px-4 py-2 bg-[var(--color-bg-elevated)] rounded-lg hover:bg-[var(--color-border-light)]"
               >
                 Cancel
               </button>
               <button
                 onClick={() => void handleMarkLost()}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="flex-1 px-4 py-2 bg-[var(--color-error)] text-[var(--color-text-primary)] rounded-lg hover:opacity-90"
               >
                 Mark Lost
               </button>

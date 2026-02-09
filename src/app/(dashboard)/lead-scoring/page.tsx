@@ -173,28 +173,28 @@ export default function LeadScoringDashboard() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-                  <Flame className="w-4 h-4 text-red-400" />
+                  <Flame className="w-4 h-4 text-error" />
                   Hot Leads
                 </span>
-                <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-red-500/20 border border-red-500/30 text-red-300">
+                <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-error/20 border border-error/30 text-error">
                   {analytics.priorities.hot}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-                  <Sun className="w-4 h-4 text-yellow-400" />
+                  <Sun className="w-4 h-4 text-warning" />
                   Warm Leads
                 </span>
-                <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-yellow-500/20 border border-yellow-500/30 text-yellow-300">
+                <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-warning/20 border border-warning/30 text-warning">
                   {analytics.priorities.warm}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-                  <Snowflake className="w-4 h-4 text-blue-400" />
+                  <Snowflake className="w-4 h-4 text-primary" />
                   Cold Leads
                 </span>
-                <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-blue-500/20 border border-blue-500/30 text-blue-300">
+                <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-primary/20 border border-primary/30 text-primary">
                   {analytics.priorities.cold}
                 </span>
               </div>
@@ -245,7 +245,7 @@ export default function LeadScoringDashboard() {
                   <span className="text-[var(--color-text-secondary)] capitalize">
                     {signal.type.replace(/_/g, ' ')}
                   </span>
-                  <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-amber-500/20 border border-amber-500/30 text-amber-300">
+                  <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-warning/20 border border-warning/30 text-warning">
                     {signal.count}
                   </span>
                 </div>

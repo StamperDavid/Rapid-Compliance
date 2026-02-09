@@ -142,8 +142,8 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="flex items-center gap-3 text-gray-400">
+      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center">
+        <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Loading SEO settings...</span>
         </div>
@@ -153,14 +153,14 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
   if (!settings) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-gray-400">Failed to load SEO settings</div>
+      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center">
+        <div className="text-[var(--color-text-secondary)]">Failed to load SEO settings</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black p-8">
+    <div className="min-h-screen bg-[var(--color-bg-main)] p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
@@ -169,12 +169,12 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           className="mb-8"
         >
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
-              <Search className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+              <Search className="w-5 h-5 text-[var(--color-text-primary)]" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">SEO & Analytics</h1>
-              <p className="text-gray-400">Manage site-wide SEO settings and analytics integrations</p>
+              <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">SEO & Analytics</h1>
+              <p className="text-[var(--color-text-secondary)]">Manage site-wide SEO settings and analytics integrations</p>
             </div>
           </div>
         </motion.div>
@@ -184,17 +184,17 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 mb-6"
+          className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6 mb-6"
         >
           <div className="flex items-center gap-3 mb-6">
-            <Globe className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-xl font-semibold text-white">Site-wide SEO</h2>
+            <Globe className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Site-wide SEO</h2>
           </div>
 
           <div className="space-y-5">
             {/* Site Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
                 Site Title
               </label>
               <input
@@ -202,9 +202,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.seo?.title ?? ''}
                 onChange={(e) => updateSEO('title', e.target.value)}
                 placeholder="Your Site Title"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
-              <p className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+              <p className="mt-1.5 text-xs text-[var(--color-text-disabled)] flex items-center gap-1">
                 <Info className="w-3 h-3" />
                 Recommended: 50-60 characters
               </p>
@@ -212,7 +212,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
             {/* Site Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
                 Site Description
               </label>
               <textarea
@@ -220,9 +220,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 onChange={(e) => updateSEO('description', e.target.value)}
                 placeholder="Describe your site..."
                 rows={3}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all resize-none"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all resize-none"
               />
-              <p className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+              <p className="mt-1.5 text-xs text-[var(--color-text-disabled)] flex items-center gap-1">
                 <Info className="w-3 h-3" />
                 Recommended: 150-160 characters
               </p>
@@ -230,7 +230,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
             {/* Keywords */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
                 Keywords (comma-separated)
               </label>
               <input
@@ -238,15 +238,15 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.seo?.keywords?.join(', ') ?? ''}
                 onChange={(e) => updateSEO('keywords', e.target.value.split(',').map(k => k.trim()))}
                 placeholder="keyword1, keyword2, keyword3"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
             </div>
 
             {/* OG Image */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center gap-2">
                 {/* Image is a lucide-react icon component, not an img tag */}
-                <Image className="w-4 h-4 text-gray-400" aria-label="Image icon" />
+                <Image className="w-4 h-4 text-[var(--color-text-secondary)]" aria-label="Image icon" />
                 Default OG Image URL
               </label>
               <input
@@ -254,9 +254,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.seo?.ogImage ?? ''}
                 onChange={(e) => updateSEO('ogImage', e.target.value)}
                 placeholder="https://yoursite.com/og-image.jpg"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
-              <p className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+              <p className="mt-1.5 text-xs text-[var(--color-text-disabled)] flex items-center gap-1">
                 <Info className="w-3 h-3" />
                 Recommended: 1200x630px for social sharing
               </p>
@@ -264,8 +264,8 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
             {/* Favicon */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-gray-400" />
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-[var(--color-text-secondary)]" />
                 Favicon URL
               </label>
               <input
@@ -273,7 +273,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.seo?.favicon ?? ''}
                 onChange={(e) => updateSEO('favicon', e.target.value)}
                 placeholder="https://yoursite.com/favicon.ico"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
             </div>
 
@@ -287,13 +287,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                     onChange={(e) => updateSEO('robotsIndex', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-5 h-5 rounded border border-white/20 bg-white/5 peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all flex items-center justify-center">
+                  <div className="w-5 h-5 rounded border border-border-light bg-surface-elevated peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all flex items-center justify-center">
                     {settings.seo?.robotsIndex !== false && (
-                      <CheckCircle className="w-3.5 h-3.5 text-white" />
+                      <CheckCircle className="w-3.5 h-3.5 text-[var(--color-text-primary)]" />
                     )}
                   </div>
                 </div>
-                <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                <span className="text-sm text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
                   Allow Search Engines to Index
                 </span>
               </label>
@@ -306,13 +306,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                     onChange={(e) => updateSEO('robotsFollow', e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-5 h-5 rounded border border-white/20 bg-white/5 peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all flex items-center justify-center">
+                  <div className="w-5 h-5 rounded border border-border-light bg-surface-elevated peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all flex items-center justify-center">
                     {settings.seo?.robotsFollow !== false && (
-                      <CheckCircle className="w-3.5 h-3.5 text-white" />
+                      <CheckCircle className="w-3.5 h-3.5 text-[var(--color-text-primary)]" />
                     )}
                   </div>
                 </div>
-                <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                <span className="text-sm text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
                   Allow Search Engines to Follow Links
                 </span>
               </label>
@@ -325,17 +325,17 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 mb-6"
+          className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6 mb-6"
         >
           <div className="flex items-center gap-3 mb-6">
-            <BarChart3 className="w-5 h-5 text-purple-400" />
-            <h2 className="text-xl font-semibold text-white">Analytics & Tracking</h2>
+            <BarChart3 className="w-5 h-5 text-secondary" />
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Analytics & Tracking</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Google Analytics */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
                 Google Analytics ID (GA4)
               </label>
               <input
@@ -343,13 +343,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.analytics?.googleAnalyticsId ?? ''}
                 onChange={(e) => updateAnalytics('googleAnalyticsId', e.target.value)}
                 placeholder="G-XXXXXXXXXX"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-mono text-sm"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
               />
             </div>
 
             {/* GTM */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
                 Google Tag Manager ID
               </label>
               <input
@@ -357,13 +357,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.analytics?.googleTagManagerId ?? ''}
                 onChange={(e) => updateAnalytics('googleTagManagerId', e.target.value)}
                 placeholder="GTM-XXXXXX"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-mono text-sm"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
               />
             </div>
 
             {/* Facebook Pixel */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
                 Facebook Pixel ID
               </label>
               <input
@@ -371,13 +371,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.analytics?.facebookPixelId ?? ''}
                 onChange={(e) => updateAnalytics('facebookPixelId', e.target.value)}
                 placeholder="XXXXXXXXXXXXXXX"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-mono text-sm"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
               />
             </div>
 
             {/* Hotjar */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
                 Hotjar Site ID
               </label>
               <input
@@ -385,7 +385,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.analytics?.hotjarId ?? ''}
                 onChange={(e) => updateAnalytics('hotjarId', e.target.value)}
                 placeholder="XXXXXXX"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-mono text-sm"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
               />
             </div>
           </div>
@@ -396,11 +396,11 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 mb-6"
+          className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6 mb-6"
         >
           <div className="flex items-center gap-3 mb-6">
-            <Bot className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-xl font-semibold text-white">Robots.txt</h2>
+            <Bot className="w-5 h-5 text-success" />
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Robots.txt</h2>
           </div>
 
           <div>
@@ -408,9 +408,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               value={robotsTxt}
               onChange={(e) => setRobotsTxt(e.target.value)}
               rows={8}
-              className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-emerald-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all font-mono text-sm resize-none"
+              className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-success placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-success/50 focus:border-success/50 transition-all font-mono text-sm resize-none"
             />
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-[var(--color-text-disabled)]">
               This will be served at /robots.txt
             </p>
           </div>
@@ -421,18 +421,18 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 mb-6"
+          className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6 mb-6"
         >
           <div className="flex items-center gap-3 mb-4">
             <FileText className="w-5 h-5 text-blue-400" />
-            <h2 className="text-xl font-semibold text-white">Sitemap</h2>
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Sitemap</h2>
           </div>
 
-          <p className="text-gray-400 mb-4">
+          <p className="text-[var(--color-text-secondary)] mb-4">
             Your sitemap is automatically generated and includes all published pages.
           </p>
 
-          <div className="px-4 py-3 bg-black/40 border border-white/10 rounded-xl font-mono text-sm text-blue-300">
+          <div className="px-4 py-3 bg-surface-elevated border border-border-light rounded-xl font-mono text-sm text-primary">
             {settings.subdomain
               ? `https://${settings.subdomain}.yourplatform.com/sitemap.xml`
               : settings.customDomain
@@ -451,7 +451,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           <button
             onClick={() => void saveSettings()}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/25"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-text-primary)] font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/25"
           >
             {saving ? (
               <>

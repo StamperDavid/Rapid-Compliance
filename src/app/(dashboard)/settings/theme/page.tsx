@@ -68,7 +68,7 @@ const DEFAULT_THEME: ThemeConfig = {
   layout: {
     borderRadius: { sm: '0.25rem', md: '0.375rem', lg: '0.5rem', xl: '0.75rem', full: '9999px', card: '0.75rem', button: '0.5rem', input: '0.375rem' },
     spacing: { xs: '0.5rem', sm: '1rem', md: '1.5rem', lg: '2rem', xl: '3rem' },
-    shadow: { sm: '0 1px 2px 0 rgba(0,0,0,0.05)', md: '0 4px 6px -1px rgba(0,0,0,0.1)', lg: '0 10px 15px -3px rgba(0,0,0,0.1)', xl: '0 20px 25px -5px rgba(0,0,0,0.1)', glow: '0 0 20px rgba(99,102,241,0.5)' },
+    shadow: { sm: '0 1px 2px 0 rgba(0,0,0,0.05)', md: '0 4px 6px -1px rgba(0,0,0,0.1)', lg: '0 10px 15px -3px rgba(0,0,0,0.1)', xl: '0 20px 25px -5px rgba(0,0,0,0.1)', glow: '0 0 20px rgba(var(--color-primary-rgb),0.5)' },
   },
   branding: {
     companyName: 'My Company',

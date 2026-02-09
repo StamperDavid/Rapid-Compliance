@@ -208,7 +208,7 @@ export default function SocialMediaCampaignsPage() {
             <div
               key={i}
               style={{
-                backgroundColor: 'rgba(26, 26, 26, 0.8)',
+                backgroundColor: 'var(--color-bg-elevated)',
                 border: '1px solid var(--color-border-strong)',
                 borderRadius: '1rem',
                 padding: '1.25rem',
@@ -269,7 +269,7 @@ export default function SocialMediaCampaignsPage() {
               <div
                 key={campaign.id}
                 style={{
-                  backgroundColor: 'rgba(26, 26, 26, 0.8)',
+                  backgroundColor: 'var(--color-bg-elevated)',
                   border: '1px solid var(--color-border-strong)',
                   borderRadius: '1rem',
                   padding: '1.5rem',
@@ -361,7 +361,7 @@ export default function SocialMediaCampaignsPage() {
               <div
                 key={post.id}
                 style={{
-                  backgroundColor: 'rgba(26, 26, 26, 0.8)',
+                  backgroundColor: 'var(--color-bg-elevated)',
                   border: '1px solid var(--color-border-strong)',
                   borderRadius: '1rem',
                   padding: '1.5rem',
@@ -482,7 +482,7 @@ export default function SocialMediaCampaignsPage() {
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
           <div style={{
-            backgroundColor: 'rgba(26, 26, 26, 0.8)',
+            backgroundColor: 'var(--color-bg-elevated)',
             border: '1px solid var(--color-border-strong)',
             borderRadius: '1rem',
             padding: '2rem',
@@ -531,7 +531,7 @@ export default function SocialMediaCampaignsPage() {
         {/* Settings Tab */}
         {activeTab === 'settings' && (
           <div style={{
-            backgroundColor: 'rgba(26, 26, 26, 0.8)',
+            backgroundColor: 'var(--color-bg-elevated)',
             border: '1px solid var(--color-border-strong)',
             borderRadius: '1rem',
             padding: '1.5rem',
@@ -573,7 +573,7 @@ export default function SocialMediaCampaignsPage() {
                   <button
                     style={{
                       padding: '0.5rem 1rem',
-                      backgroundColor: account.connected ? 'rgba(239, 68, 68, 0.1)' : `${primaryColor}22`,
+                      backgroundColor: account.connected ? 'rgba(var(--color-error-rgb), 0.1)' : `${primaryColor}22`,
                       border: `1px solid ${account.connected ? 'var(--color-error)' : primaryColor}`,
                       borderRadius: '0.375rem',
                       color: account.connected ? 'var(--color-error)' : primaryColor,

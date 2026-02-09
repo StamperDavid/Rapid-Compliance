@@ -162,7 +162,7 @@ export default function EmailWriterPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 text-primary text-xs font-medium rounded" style={{ backgroundColor: 'rgba(99, 102, 241, 0.3)' }}>
+                        <span className="px-2 py-0.5 text-primary text-xs font-medium rounded" style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.3)' }}>
                           {email.emailType}
                         </span>
                         {email.dealTier && (
@@ -176,7 +176,7 @@ export default function EmailWriterPage() {
                                 ? 'text-warning'
                                 : 'text-[var(--color-text-disabled)]'
                             }`}
-                            style={{ backgroundColor: email.dealTier === 'hot' ? 'rgba(239, 68, 68, 0.3)' : email.dealTier === 'warm' ? 'rgba(234, 179, 8, 0.3)' : email.dealTier === 'at-risk' ? 'rgba(249, 115, 22, 0.3)' : 'var(--color-bg-elevated)' }}
+                            style={{ backgroundColor: email.dealTier === 'hot' ? 'rgba(var(--color-error-rgb), 0.3)' : email.dealTier === 'warm' ? 'rgba(var(--color-warning-rgb), 0.3)' : email.dealTier === 'at-risk' ? 'rgba(var(--color-warning-rgb), 0.3)' : 'var(--color-bg-elevated)' }}
                           >
                             {email.dealTier}
                           </span>

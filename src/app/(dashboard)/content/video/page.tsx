@@ -244,8 +244,8 @@ export default function VideoStudioPage() {
             alignItems: 'center',
             gap: '0.5rem',
             padding: '0.5rem 1rem',
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
+            backgroundColor: 'rgba(var(--color-success-rgb), 0.1)',
+            border: '1px solid rgba(var(--color-success-rgb), 0.3)',
             borderRadius: '2rem',
           }}>
             <span style={{
@@ -301,7 +301,7 @@ export default function VideoStudioPage() {
           <div style={{ display: 'grid', gridTemplateColumns: generatedStoryboard ? '1fr 1fr' : '1fr', gap: '2rem' }}>
             {/* Left Column - Input Form */}
             <div style={{
-              backgroundColor: 'rgba(26, 26, 26, 0.8)',
+              backgroundColor: 'var(--color-bg-elevated)',
               border: '1px solid var(--color-border-strong)',
               borderRadius: '1rem',
               padding: '1.5rem',
@@ -631,8 +631,8 @@ export default function VideoStudioPage() {
               {error && (
                 <div style={{
                   padding: '0.75rem 1rem',
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  backgroundColor: 'rgba(var(--color-error-rgb), 0.1)',
+                  border: '1px solid rgba(var(--color-error-rgb), 0.3)',
                   borderRadius: '0.5rem',
                   color: 'var(--color-error-light)',
                   fontSize: '0.875rem',
@@ -680,7 +680,7 @@ export default function VideoStudioPage() {
             {/* Right Column - Storyboard Preview */}
             {generatedStoryboard && (
               <div style={{
-                backgroundColor: 'rgba(26, 26, 26, 0.8)',
+                backgroundColor: 'var(--color-bg-elevated)',
                 border: '1px solid var(--color-border-strong)',
                 borderRadius: '1rem',
                 padding: '1.5rem',
@@ -772,8 +772,8 @@ export default function VideoStudioPage() {
                         key={`warn-${i}`}
                         style={{
                           padding: '0.5rem 0.75rem',
-                          backgroundColor: 'rgba(234, 179, 8, 0.1)',
-                          border: '1px solid rgba(234, 179, 8, 0.3)',
+                          backgroundColor: 'rgba(var(--color-warning-rgb), 0.1)',
+                          border: '1px solid rgba(var(--color-warning-rgb), 0.3)',
                           borderRadius: '0.25rem',
                           color: 'var(--color-warning)',
                           fontSize: '0.75rem',
@@ -788,8 +788,8 @@ export default function VideoStudioPage() {
                         key={`sug-${i}`}
                         style={{
                           padding: '0.5rem 0.75rem',
-                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          backgroundColor: 'rgba(var(--color-info-rgb), 0.1)',
+                          border: '1px solid rgba(var(--color-info-rgb), 0.3)',
                           borderRadius: '0.25rem',
                           color: 'var(--color-info)',
                           fontSize: '0.75rem',
@@ -868,7 +868,7 @@ export default function VideoStudioPage() {
         {/* Projects Tab */}
         {activeTab === 'projects' && (
           <div style={{
-            backgroundColor: 'rgba(26, 26, 26, 0.8)',
+            backgroundColor: 'var(--color-bg-elevated)',
             border: '1px solid var(--color-border-strong)',
             borderRadius: '1rem',
             padding: '2rem',
@@ -912,7 +912,7 @@ export default function VideoStudioPage() {
               <div
                 key={template.id}
                 style={{
-                  backgroundColor: 'rgba(26, 26, 26, 0.8)',
+                  backgroundColor: 'var(--color-bg-elevated)',
                   border: '1px solid var(--color-border-strong)',
                   borderRadius: '1rem',
                   padding: '1.5rem',
@@ -946,7 +946,7 @@ export default function VideoStudioPage() {
         <div style={{
           marginTop: '2rem',
           padding: '1rem',
-          backgroundColor: 'rgba(26, 26, 26, 0.5)',
+          backgroundColor: 'var(--color-bg-paper)',
           borderRadius: '0.5rem',
           display: 'flex',
           justifyContent: 'center',

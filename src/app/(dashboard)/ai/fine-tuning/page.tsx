@@ -64,7 +64,7 @@ export default function FineTuningPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 border border-border-light rounded-lg text-error" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+        <div className="mb-4 p-4 border border-border-light rounded-lg text-error" style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}>
           {error}
         </div>
       )}
@@ -82,9 +82,9 @@ export default function FineTuningPage() {
                 job.status === 'failed' ? 'text-error' :
                 'text-[var(--color-text-secondary)]';
               const statusBg =
-                job.status === 'completed' ? 'rgba(16, 185, 129, 0.1)' :
-                job.status === 'running' ? 'rgba(99, 102, 241, 0.1)' :
-                job.status === 'failed' ? 'rgba(239, 68, 68, 0.1)' :
+                job.status === 'completed' ? 'rgba(var(--color-success-rgb), 0.1)' :
+                job.status === 'running' ? 'rgba(var(--color-primary-rgb), 0.1)' :
+                job.status === 'failed' ? 'rgba(var(--color-error-rgb), 0.1)' :
                 'var(--color-bg-elevated)';
 
               return (
@@ -97,7 +97,7 @@ export default function FineTuningPage() {
                       </div>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${statusClass}`} style={{ backgroundColor: statusBg }}>{job.status}</span>
                     </div>
-                    <div>{job.status === 'completed' && <button className="px-3 py-1.5 text-primary rounded text-sm font-medium" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}>Deploy Model</button>}</div>
+                    <div>{job.status === 'completed' && <button className="px-3 py-1.5 text-primary rounded text-sm font-medium" style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)' }}>Deploy Model</button>}</div>
                   </div>
                 </div>
               );

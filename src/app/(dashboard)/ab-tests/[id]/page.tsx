@@ -73,7 +73,7 @@ export default function ABTestResultsPage() {
           );
         })}
       </div>
-      {test.winner && <div className="mt-6 border rounded-lg p-4 text-center" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' }}><div className="text-success font-semibold">🏆 Winner: Variant {test.winner}</div></div>}
+      {test.winner && <div className="mt-6 border rounded-lg p-4 text-center" style={{ backgroundColor: 'rgba(var(--color-success-rgb), 0.1)', borderColor: 'rgba(var(--color-success-rgb), 0.2)' }}><div className="text-success font-semibold">🏆 Winner: Variant {test.winner}</div></div>}
     </div>
   );
 }

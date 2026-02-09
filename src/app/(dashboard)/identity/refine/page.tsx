@@ -938,8 +938,8 @@ export default function IdentityRefinementPage() {
                     key={phrase}
                     style={{
                       padding: '0.25rem 0.75rem',
-                      backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      backgroundColor: 'rgba(var(--color-error-rgb), 0.15)',
+                      border: '1px solid rgba(var(--color-error-rgb), 0.3)',
                       borderRadius: '9999px',
                       fontSize: '0.75rem',
                       color: 'var(--color-error)',
@@ -1031,8 +1031,8 @@ export default function IdentityRefinementPage() {
                         </span>
                         <span style={{
                           padding: '0.125rem 0.5rem',
-                          backgroundColor: info.quality === 'ultra' ? 'rgba(168, 85, 247, 0.2)' :
-                                          info.quality === 'premium' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                          backgroundColor: info.quality === 'ultra' ? 'rgba(var(--color-secondary-rgb), 0.2)' :
+                                          info.quality === 'premium' ? 'rgba(var(--color-success-rgb), 0.2)' : 'rgba(var(--color-warning-rgb), 0.2)',
                           color: info.quality === 'ultra' ? 'var(--color-secondary)' :
                                 info.quality === 'premium' ? 'var(--color-success)' : 'var(--color-warning)',
                           borderRadius: '9999px',

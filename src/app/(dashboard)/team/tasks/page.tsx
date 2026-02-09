@@ -46,10 +46,10 @@ export default function TasksPage() {
 
   const getPriorityColor = (priority: string) => {
     const colors = {
-      urgent: 'bg-red-900 text-red-300 border-red-600',
-      high: 'bg-orange-900 text-orange-300 border-orange-600',
-      normal: 'bg-blue-900 text-blue-300 border-blue-600',
-      low: 'bg-gray-800 text-gray-400 border-gray-600',
+      urgent: 'bg-error/20 text-error border-error',
+      high: 'bg-warning/20 text-warning border-warning',
+      normal: 'bg-primary/20 text-primary border-primary',
+      low: 'bg-surface-elevated text-[var(--color-text-disabled)] border-border-light',
     };
     return colors[priority as keyof typeof colors] || colors.normal;
   };
@@ -67,7 +67,7 @@ export default function TasksPage() {
         <h1 className="text-3xl font-bold">My Tasks</h1>
         <button
           onClick={() => setShowNewTask(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light"
         >
           + New Task
         </button>
@@ -79,7 +79,7 @@ export default function TasksPage() {
             key={status}
             onClick={() => setFilter(status)}
             className={`px-4 py-2 rounded-lg capitalize ${
-              filter === status ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              filter === status ? 'bg-primary text-white' : 'bg-surface-elevated text-[var(--color-text-secondary)] hover:bg-surface-paper'
             }`}
           >
             {status.replace('_', ' ')}
@@ -90,10 +90,10 @@ export default function TasksPage() {
       {/* Kanban Board */}
       <div className="grid grid-cols-4 gap-4">
         {Object.entries(tasksByStatus).map(([status, statusTasks]) => (
-          <div key={status} className="bg-gray-900 rounded-lg p-4">
+          <div key={status} className="bg-surface-paper rounded-lg p-4">
             <h3 className="font-bold mb-4 capitalize flex items-center justify-between">
               <span>{status.replace('_', ' ')}</span>
-              <span className="text-sm text-gray-400">({statusTasks.length})</span>
+              <span className="text-sm text-[var(--color-text-secondary)]">({statusTasks.length})</span>
             </h3>
             <div className="space-y-3">
               {statusTasks.map(task => (
@@ -118,7 +118,7 @@ export default function TasksPage() {
                   {status !== 'completed' && (
                     <button
                       onClick={() => void completeTask(task.id)}
-                      className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 w-full mt-2"
+                      className="text-xs bg-success text-white px-2 py-1 rounded hover:bg-success/80 w-full mt-2"
                     >
                       ✓ Complete
                     </button>
@@ -126,7 +126,7 @@ export default function TasksPage() {
                 </div>
               ))}
               {statusTasks.length === 0 && (
-                <div className="text-center text-gray-500 text-sm py-8">
+                <div className="text-center text-[var(--color-text-disabled)] text-sm py-8">
                   No tasks
                 </div>
               )}

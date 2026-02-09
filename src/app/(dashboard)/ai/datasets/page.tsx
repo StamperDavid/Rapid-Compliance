@@ -63,7 +63,7 @@ export default function DatasetsPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 border border-border-light rounded-lg text-error" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+        <div className="mb-4 p-4 border border-border-light rounded-lg text-error" style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}>
           {error}
         </div>
       )}

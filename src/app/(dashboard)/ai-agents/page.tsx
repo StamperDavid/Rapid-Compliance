@@ -84,9 +84,9 @@ const AGENT_CARDS: AgentCard[] = [
 ];
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  active: { bg: 'rgba(16, 185, 129, 0.1)', text: 'var(--color-success)', label: 'Active' },
-  available: { bg: 'rgba(99, 102, 241, 0.1)', text: 'var(--color-primary)', label: 'Available' },
-  'coming-soon': { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--color-warning)', label: 'Coming Soon' },
+  active: { bg: 'rgba(var(--color-success-rgb), 0.1)', text: 'var(--color-success)', label: 'Active' },
+  available: { bg: 'rgba(var(--color-primary-rgb), 0.1)', text: 'var(--color-primary)', label: 'Available' },
+  'coming-soon': { bg: 'rgba(var(--color-warning-rgb), 0.1)', text: 'var(--color-warning)', label: 'Coming Soon' },
 };
 
 export default function AIAgentsPage() {
@@ -207,7 +207,7 @@ export default function AIAgentsPage() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = 'var(--color-primary)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(99, 102, 241, 0.15)';
+                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(var(--color-primary-rgb), 0.15)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--color-border-light)';

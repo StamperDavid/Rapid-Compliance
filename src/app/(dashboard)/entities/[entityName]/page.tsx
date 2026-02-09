@@ -589,7 +589,7 @@ export default function EntityTablePage() {
 
         {/* Add/Edit Modal */}
         {(isAdding || editingId) && (
-          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}>
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}>
             <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', maxWidth: '40rem', width: '100%', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ backgroundColor: 'var(--color-bg-main)', borderBottom: '1px solid var(--color-border-light)', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -635,7 +635,7 @@ export default function EntityTablePage() {
 
         {/* Confirmation Dialog */}
         {confirmDialog && (
-          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 60 }}>
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 60 }}>
             <div style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', padding: '1.5rem', maxWidth: '400px', width: '100%' }}>
               <p style={{ color: 'var(--color-text-primary)', marginBottom: '1rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>

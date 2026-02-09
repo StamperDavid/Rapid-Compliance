@@ -326,7 +326,7 @@ export default function WorkflowBuilderPage() {
 
           {/* Workflow Name Input */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(99, 102, 241, 0.2)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.2)' }}>
               <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
@@ -442,7 +442,7 @@ export default function WorkflowBuilderPage() {
 
                   {/* Empty state */}
                   <div className="mt-4 p-6 rounded-xl border-2 border-dashed border-border-light bg-surface-elevated text-center max-w-md">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}>
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)' }}>
                       <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
                       </svg>
@@ -454,13 +454,13 @@ export default function WorkflowBuilderPage() {
                       Start by adding a trigger from the palette on the left, then add actions to automate your process.
                     </p>
                     <div className="flex flex-wrap gap-2 justify-center">
-                      <span className="px-3 py-1 rounded-full text-success text-xs font-medium" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                      <span className="px-3 py-1 rounded-full text-success text-xs font-medium" style={{ backgroundColor: 'rgba(var(--color-success-rgb), 0.1)' }}>
                         1. Add Trigger
                       </span>
-                      <span className="px-3 py-1 rounded-full text-primary text-xs font-medium" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}>
+                      <span className="px-3 py-1 rounded-full text-primary text-xs font-medium" style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)' }}>
                         2. Add Actions
                       </span>
-                      <span className="px-3 py-1 rounded-full text-secondary text-xs font-medium" style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)' }}>
+                      <span className="px-3 py-1 rounded-full text-secondary text-xs font-medium" style={{ backgroundColor: 'rgba(var(--color-secondary-rgb), 0.1)' }}>
                         3. Configure
                       </span>
                     </div>

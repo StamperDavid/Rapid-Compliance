@@ -98,7 +98,7 @@ export default function SalesAnalyticsPage() {
               const bgColor = 
                 insight.type === 'warning' ? 'bg-yellow-900/20 border-yellow-600' :
                 insight.type === 'success' ? 'bg-green-900/20 border-green-600' :
-                'bg-blue-900/20 border-blue-600';
+                'bg-[rgba(var(--color-info-rgb),0.2)] border-[var(--color-info)]';
               
               const icon = 
                 insight.type === 'warning' ? '⚠️' :
@@ -115,7 +115,7 @@ export default function SalesAnalyticsPage() {
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           insight.priority === 'high' ? 'bg-red-900 text-red-300' :
                           insight.priority === 'medium' ? 'bg-yellow-900 text-yellow-300' :
-                          'bg-blue-900 text-blue-300'
+                          'bg-[rgba(var(--color-info-rgb),0.2)] text-[var(--color-info)]'
                         }`}>
                           {insight.priority.toUpperCase()}
                         </span>

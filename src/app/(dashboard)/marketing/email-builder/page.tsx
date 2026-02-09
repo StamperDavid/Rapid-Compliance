@@ -203,7 +203,7 @@ export default function EmailBuilderPage() {
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-2xl">
               <div className="p-8">
                 {template.blocks?.length === 0 ? (
-                  <div className="text-center py-20 text-gray-400">
+                  <div className="text-center py-20 text-[var(--color-text-secondary)]">
                     <p className="text-lg mb-2">Your email is empty</p>
                     <p className="text-sm">Add blocks from the left sidebar</p>
                   </div>
@@ -214,7 +214,7 @@ export default function EmailBuilderPage() {
                         key={block.id}
                         onClick={() => setSelectedBlock(block)}
                         className={`relative group cursor-pointer border-2 rounded p-4 ${
-                          selectedBlock?.id === block.id ? 'border-blue-500' : 'border-transparent hover:border-gray-300'
+                          selectedBlock?.id === block.id ? 'border-[var(--color-primary)]' : 'border-transparent hover:border-[var(--color-border-light)]'
                         }`}
                       >
                         {/* Block Content */}
@@ -224,7 +224,7 @@ export default function EmailBuilderPage() {
                           </h1>
                         )}
                         {block.type === 'text' && (
-                          <div className="text-gray-700" style={{ fontSize: block.styling?.fontSize }}>
+                          <div style={{ fontSize: block.styling?.fontSize, color: 'var(--color-text-primary)' }}>
                             {block.content}
                           </div>
                         )}
@@ -245,10 +245,10 @@ export default function EmailBuilderPage() {
                           </div>
                         )}
                         {block.type === 'divider' && (
-                          <hr className="border-gray-300" />
+                          <hr className="border-[var(--color-border-light)]" />
                         )}
                         {block.type === 'footer' && (
-                          <div className="text-center text-xs text-gray-500">{block.content}</div>
+                          <div className="text-center text-xs text-[var(--color-text-disabled)]">{block.content}</div>
                         )}
 
                         {/* Block Controls */}

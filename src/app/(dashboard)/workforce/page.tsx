@@ -64,9 +64,9 @@ const AgentCard = memo(function AgentCard({
 
   const getTierBadge = (tier: AgentTier) => {
     switch (tier) {
-      case 'L1': return { label: 'CEO', color: 'var(--color-secondary)', bg: 'rgba(168, 85, 247, 0.1)' };
-      case 'L2': return { label: 'MGR', color: 'var(--color-info)', bg: 'rgba(59, 130, 246, 0.1)' };
-      case 'L3': return { label: 'SPL', color: 'var(--color-success)', bg: 'rgba(16, 185, 129, 0.1)' };
+      case 'L1': return { label: 'CEO', color: 'var(--color-secondary)', bg: 'rgba(var(--color-secondary-rgb), 0.1)' };
+      case 'L2': return { label: 'MGR', color: 'var(--color-info)', bg: 'rgba(var(--color-info-rgb), 0.1)' };
+      case 'L3': return { label: 'SPL', color: 'var(--color-success)', bg: 'rgba(var(--color-success-rgb), 0.1)' };
     }
   };
 
@@ -75,7 +75,7 @@ const AgentCard = memo(function AgentCard({
   return (
     <div
       style={{
-        backgroundColor: 'rgba(26, 26, 26, 0.8)',
+        backgroundColor: 'rgba(var(--color-bg-elevated-rgb), 0.8)',
         border: `1px solid ${agent.status === 'EXECUTING' ? 'var(--color-primary)' : 'var(--color-border-strong)'}`,
         borderRadius: '1rem',
         padding: compact ? '1rem' : '1.5rem',
@@ -162,7 +162,7 @@ const AgentCard = memo(function AgentCard({
         {agent.activeWorkloads > 0 && (
           <span style={{
             padding: '0.25rem 0.5rem',
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)',
             border: '1px solid var(--color-primary)',
             borderRadius: '0.25rem',
             color: 'var(--color-primary)',
@@ -231,7 +231,7 @@ const AgentCard = memo(function AgentCard({
             flex: 1,
             padding: '0.5rem',
             backgroundColor: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
-              ? 'rgba(34, 197, 94, 0.1)'
+              ? 'rgba(var(--color-success-rgb), 0.1)'
               : 'var(--color-bg-paper)',
             border: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
               ? '1px solid var(--color-success)'
@@ -313,7 +313,7 @@ const HierarchySection = memo(function HierarchySection({
 
   return (
     <div style={{
-      backgroundColor: 'rgba(26, 26, 26, 0.5)',
+      backgroundColor: 'rgba(var(--color-bg-elevated-rgb), 0.5)',
       border: '1px solid var(--color-border-strong)',
       borderRadius: '1rem',
       marginBottom: '1rem',
@@ -345,7 +345,7 @@ const HierarchySection = memo(function HierarchySection({
           </span>
           <span style={{
             padding: '0.25rem 0.5rem',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            backgroundColor: 'rgba(var(--color-text-primary-rgb), 0.05)',
             borderRadius: '0.25rem',
             color: 'var(--color-text-disabled)',
             fontSize: '0.75rem',
@@ -529,7 +529,7 @@ export default function WorkforceCommandCenterPage() {
         <div style={{
           textAlign: 'center',
           padding: '2rem',
-          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          backgroundColor: 'rgba(var(--color-error-rgb), 0.1)',
           border: '1px solid var(--color-error)',
           borderRadius: '1rem',
           maxWidth: '400px',
@@ -601,10 +601,10 @@ export default function WorkforceCommandCenterPage() {
                 <span style={{
                   padding: '0.25rem 0.75rem',
                   backgroundColor: overallHealth === 'HEALTHY'
-                    ? 'rgba(34, 197, 94, 0.1)'
+                    ? 'rgba(var(--color-success-rgb), 0.1)'
                     : overallHealth === 'DEGRADED'
-                    ? 'rgba(245, 158, 11, 0.1)'
-                    : 'rgba(239, 68, 68, 0.1)',
+                    ? 'rgba(var(--color-warning-rgb), 0.1)'
+                    : 'rgba(var(--color-error-rgb), 0.1)',
                   border: `1px solid ${
                     overallHealth === 'HEALTHY' ? 'var(--color-success)'
                     : overallHealth === 'DEGRADED' ? 'var(--color-warning)'
@@ -690,7 +690,7 @@ export default function WorkforceCommandCenterPage() {
               disabled={isRefreshing}
               style={{
                 padding: '0.5rem 1rem',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)',
                 border: '1px solid var(--color-primary)',
                 borderRadius: '0.5rem',
                 color: 'var(--color-primary)',
@@ -738,7 +738,7 @@ export default function WorkforceCommandCenterPage() {
             <div
               key={i}
               style={{
-                backgroundColor: 'rgba(26, 26, 26, 0.8)',
+                backgroundColor: 'rgba(var(--color-bg-elevated-rgb), 0.8)',
                 border: '1px solid var(--color-border-strong)',
                 borderRadius: '1rem',
                 padding: '1.25rem',
@@ -835,7 +835,7 @@ export default function WorkforceCommandCenterPage() {
           <div style={{
             marginTop: '1rem',
             padding: '0.75rem 1rem',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            backgroundColor: 'rgba(var(--color-warning-rgb), 0.1)',
             border: '1px solid var(--color-warning)',
             borderRadius: '0.5rem',
             display: 'flex',

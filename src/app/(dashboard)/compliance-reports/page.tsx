@@ -23,10 +23,10 @@ interface ComplianceReport {
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  compliant: { bg: 'rgba(16, 185, 129, 0.1)', text: 'var(--color-success)', label: 'Compliant' },
-  'review-needed': { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--color-warning)', label: 'Review Needed' },
-  'non-compliant': { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--color-error)', label: 'Non-Compliant' },
-  pending: { bg: 'rgba(99, 102, 241, 0.1)', text: 'var(--color-primary)', label: 'Pending' },
+  compliant: { bg: 'rgba(var(--color-success-rgb), 0.1)', text: 'var(--color-success)', label: 'Compliant' },
+  'review-needed': { bg: 'rgba(var(--color-warning-rgb), 0.1)', text: 'var(--color-warning)', label: 'Review Needed' },
+  'non-compliant': { bg: 'rgba(var(--color-error-rgb), 0.1)', text: 'var(--color-error)', label: 'Non-Compliant' },
+  pending: { bg: 'rgba(var(--color-primary-rgb), 0.1)', text: 'var(--color-primary)', label: 'Pending' },
 };
 
 export default function ComplianceReportsPage() {

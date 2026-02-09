@@ -565,8 +565,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                       </h2>
                       <span style={{
                         padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        backgroundColor: 'rgba(var(--color-primary-rgb), 0.15)',
+                        border: '1px solid rgba(var(--color-primary-rgb), 0.3)',
                         borderRadius: '9999px',
                         fontSize: '0.75rem',
                         color: primaryColor,
@@ -744,7 +744,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                             alignItems: 'center',
                             gap: '0.5rem',
                             padding: '0.75rem 1rem',
-                            backgroundColor: emojiUsage === option ? 'rgba(99, 102, 241, 0.15)' : 'var(--color-bg-paper)',
+                            backgroundColor: emojiUsage === option ? 'rgba(var(--color-primary-rgb), 0.15)' : 'var(--color-bg-paper)',
                             border: `1px solid ${emojiUsage === option ? primaryColor : 'var(--color-border-strong)'}`,
                             borderRadius: '0.5rem',
                             cursor: 'pointer',
@@ -820,7 +820,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           style={{
                             padding: '0.5rem 1rem',
                             backgroundColor: contentThemes.includes(themeOption)
-                              ? 'rgba(99, 102, 241, 0.15)'
+                              ? 'rgba(var(--color-primary-rgb), 0.15)'
                               : 'var(--color-bg-paper)',
                             border: `1px solid ${contentThemes.includes(themeOption) ? primaryColor : 'var(--color-border-strong)'}`,
                             borderRadius: '9999px',
@@ -943,7 +943,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          backgroundColor: activePlatformTab === platform ? 'rgba(255,255,255,0.2)' : 'var(--color-bg-paper)',
+                          backgroundColor: activePlatformTab === platform ? 'rgba(var(--color-text-primary-rgb), 0.2)' : 'var(--color-bg-paper)',
                           borderRadius: '0.25rem',
                           fontSize: '0.625rem',
                           fontWeight: 'bold',
@@ -1397,7 +1397,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           flex: 1,
                           padding: '1rem',
                           backgroundColor: generatePlatform === platform
-                            ? 'rgba(99, 102, 241, 0.15)'
+                            ? 'rgba(var(--color-primary-rgb), 0.15)'
                             : 'var(--color-bg-paper)',
                           border: `1px solid ${generatePlatform === platform ? primaryColor : 'var(--color-border-strong)'}`,
                           borderRadius: '0.5rem',
@@ -1556,7 +1556,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                           <p style={{ fontWeight: '600', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
                             Your Brand
                           </p>
-                          <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+                          <p style={{ fontSize: '0.75rem', color: 'rgba(var(--color-text-primary-rgb), 0.7)' }}>
                             @yourbrand
                           </p>
                         </div>
@@ -1645,8 +1645,8 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                               key={idx}
                               style={{
                                 padding: '0.25rem 0.75rem',
-                                backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                                border: '1px solid rgba(99, 102, 241, 0.3)',
+                                backgroundColor: 'rgba(var(--color-primary-rgb), 0.15)',
+                                border: '1px solid rgba(var(--color-primary-rgb), 0.3)',
                                 borderRadius: '9999px',
                                 fontSize: '0.75rem',
                                 color: primaryColor,
@@ -1881,12 +1881,12 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     }}>
                       <span style={{
                         padding: '0.25rem 0.75rem',
-                        backgroundColor: item.type === 'document' ? 'rgba(99, 102, 241, 0.15)' :
-                                         item.type === 'example' ? 'rgba(16, 185, 129, 0.15)' :
-                                         'rgba(245, 158, 11, 0.15)',
-                        border: `1px solid ${item.type === 'document' ? 'rgba(99, 102, 241, 0.3)' :
-                                             item.type === 'example' ? 'rgba(16, 185, 129, 0.3)' :
-                                             'rgba(245, 158, 11, 0.3)'}`,
+                        backgroundColor: item.type === 'document' ? 'rgba(var(--color-primary-rgb), 0.15)' :
+                                         item.type === 'example' ? 'rgba(var(--color-success-rgb), 0.15)' :
+                                         'rgba(var(--color-warning-rgb), 0.15)',
+                        border: `1px solid ${item.type === 'document' ? 'rgba(var(--color-primary-rgb), 0.3)' :
+                                             item.type === 'example' ? 'rgba(var(--color-success-rgb), 0.3)' :
+                                             'rgba(var(--color-warning-rgb), 0.3)'}`,
                         borderRadius: '0.375rem',
                         fontSize: '0.75rem',
                         color: item.type === 'document' ? primaryColor :

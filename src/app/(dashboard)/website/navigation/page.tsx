@@ -228,7 +228,7 @@ export default function NavigationManagementPage() {
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         }}>
           <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             Homepage
@@ -287,7 +287,7 @@ export default function NavigationManagementPage() {
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         }}>
           <div style={{
             display: 'flex',
@@ -406,7 +406,7 @@ export default function NavigationManagementPage() {
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
         }}>
           <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             Footer

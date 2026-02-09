@@ -64,7 +64,7 @@ export default function ABTestsPage() {
                   test.status === 'running' ? 'text-success' :
                   test.status === 'completed' ? 'text-primary' :
                   'text-[var(--color-text-disabled)]'
-                }`} style={{ backgroundColor: test.status === 'running' ? 'rgba(34, 197, 94, 0.2)' : test.status === 'completed' ? 'rgba(99, 102, 241, 0.2)' : 'var(--color-bg-elevated)' }}>
+                }`} style={{ backgroundColor: test.status === 'running' ? 'rgba(var(--color-success-rgb), 0.2)' : test.status === 'completed' ? 'rgba(var(--color-primary-rgb), 0.2)' : 'var(--color-bg-elevated)' }}>
                   {test.status}
                 </span>
               </div>
@@ -136,7 +136,7 @@ export default function ABTestsPage() {
               )}
 
               {test.results && (
-                <div className="mt-4 p-4 border border-primary rounded-lg" style={{ backgroundColor: 'rgba(99, 102, 241, 0.2)' }}>
+                <div className="mt-4 p-4 border border-primary rounded-lg" style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.2)' }}>
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="font-medium">📊 {test.results.recommendation}</div>

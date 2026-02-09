@@ -1503,8 +1503,8 @@ export default function OnboardingWizard() {
                 {/* AI Assistant Name - Primary Focus */}
                 <div style={{
                   padding: '1.5rem',
-                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)',
+                  border: '1px solid rgba(var(--color-primary-rgb), 0.3)',
                   borderRadius: '0.75rem'
                 }}>
                   <div style={{ marginBottom: '1rem' }}>

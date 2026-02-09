@@ -173,7 +173,7 @@ export default function ConversationsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="fixed top-4 right-4 z-50"
         >
-          <div className={`p-3 rounded-lg text-sm shadow-lg ${notification.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+          <div className={`p-3 rounded-lg text-sm shadow-lg ${notification.type === 'success' ? 'bg-success/10 text-success border border-success/20' : 'bg-error/10 text-error border border-error/20'}`}>
             <div className="flex items-center justify-between">
               <span>{notification.message}</span>
               <button onClick={() => setNotification(null)} className="ml-2 text-current opacity-60 hover:opacity-100">&times;</button>
@@ -209,8 +209,8 @@ export default function ConversationsPage() {
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-              <div className="absolute inset-0 w-3 h-3 bg-green-500 rounded-full animate-ping opacity-75" />
+              <div className="w-3 h-3 bg-success rounded-full animate-pulse" />
+              <div className="absolute inset-0 w-3 h-3 bg-success rounded-full animate-ping opacity-75" />
             </div>
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               {liveConversations.filter(c => c.status === 'active').length} Active
@@ -218,8 +218,8 @@ export default function ConversationsPage() {
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              <div className="absolute inset-0 w-3 h-3 bg-red-500 rounded-full animate-ping opacity-75" />
+              <div className="w-3 h-3 bg-error rounded-full animate-pulse" />
+              <div className="absolute inset-0 w-3 h-3 bg-error rounded-full animate-ping opacity-75" />
             </div>
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               {needsAttentionCount} Need Attention
@@ -256,7 +256,7 @@ export default function ConversationsPage() {
               {tab.label}
             </span>
             {tab.badge > 0 && (
-              <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] text-center">
+              <span className="px-2 py-0.5 bg-error text-white text-xs font-bold rounded-full min-w-[20px] text-center">
                 {tab.badge}
               </span>
             )}
@@ -288,8 +288,8 @@ export default function ConversationsPage() {
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-16"
           >
-            <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-            <p className="text-red-500">{error}</p>
+            <AlertCircle className="w-12 h-12 text-error mb-4" />
+            <p className="text-error">{error}</p>
           </motion.div>
         ) : (
           <>
@@ -333,7 +333,7 @@ export default function ConversationsPage() {
                                 selectedConversation === conv.id
                                   ? 'border-primary shadow-lg shadow-primary/25'
                                   : conv.status === 'needs_help'
-                                  ? 'border-red-500 shadow-lg shadow-red-500/25'
+                                  ? 'border-error shadow-lg shadow-error/25'
                                   : 'border-border-light'
                               }`}
                             >
@@ -341,7 +341,7 @@ export default function ConversationsPage() {
                                 <motion.div
                                   initial={{ scale: 0 }}
                                   animate={{ scale: 1 }}
-                                  className="absolute -top-3 right-6 px-3 py-1 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-lg"
+                                  className="absolute -top-3 right-6 px-3 py-1 bg-gradient-to-r from-error to-warning text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-lg"
                                 >
                                   <AlertTriangle className="w-3 h-3" />
                                   NEEDS ATTENTION
@@ -388,9 +388,9 @@ export default function ConversationsPage() {
                                 <div className="flex-1 bg-surface-paper rounded-xl p-3 border border-border-light">
                                   <div className="text-xs text-[var(--color-text-secondary)] mb-1">Sentiment</div>
                                   <div className={`text-xs font-bold ${
-                                    conv.sentiment === 'positive' ? 'text-green-500' :
-                                    conv.sentiment === 'frustrated' ? 'text-red-500' :
-                                    'text-yellow-500'
+                                    conv.sentiment === 'positive' ? 'text-success' :
+                                    conv.sentiment === 'frustrated' ? 'text-error' :
+                                    'text-warning'
                                   }`}>
                                     {conv.sentiment?.toUpperCase() || 'NEUTRAL'}
                                   </div>
@@ -405,7 +405,7 @@ export default function ConversationsPage() {
                                 }}
                                 className={`w-full px-4 py-3 rounded-xl font-semibold text-white shadow-lg transition-all ${
                                   conv.status === 'needs_help'
-                                    ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 shadow-red-500/25'
+                                    ? 'bg-gradient-to-r from-error to-warning hover:from-error/80 hover:to-warning/80 shadow-error/25'
                                     : 'bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light shadow-primary/25'
                                 }`}
                               >
@@ -484,7 +484,7 @@ export default function ConversationsPage() {
                             <div className="p-6 border-t border-border-light">
                               <button
                                 onClick={() => void handleTakeOver(selectedConversation)}
-                                className="w-full px-6 py-4 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 transition-all"
+                                className="w-full px-6 py-4 bg-gradient-to-r from-error to-warning hover:from-error/80 hover:to-warning/80 text-white font-semibold rounded-xl shadow-lg shadow-error/25 transition-all"
                               >
                                 <div className="flex items-center justify-center gap-2">
                                   <Send className="w-5 h-5" />
@@ -532,14 +532,14 @@ export default function ConversationsPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05 }}
                             className={`relative bg-surface-paper backdrop-blur-xl border-2 rounded-2xl p-6 ${
-                              conv.flaggedForTraining ? 'border-red-500 shadow-lg shadow-red-500/25' : 'border-border-light'
+                              conv.flaggedForTraining ? 'border-error shadow-lg shadow-error/25' : 'border-border-light'
                             }`}
                           >
                             {conv.flaggedForTraining && (
                               <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="absolute -top-3 right-6 px-3 py-1 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-lg"
+                                className="absolute -top-3 right-6 px-3 py-1 bg-gradient-to-r from-error to-warning text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-lg"
                               >
                                 <AlertTriangle className="w-3 h-3" />
                                 FLAGGED FOR RETRAINING
@@ -575,7 +575,7 @@ export default function ConversationsPage() {
                               <div className="bg-surface-paper rounded-xl p-3 border border-border-light">
                                 <div className="text-xs text-[var(--color-text-secondary)] mb-1">Status</div>
                                 <div className={`text-xs font-bold ${
-                                  conv.status === 'completed' ? 'text-green-500' : 'text-yellow-500'
+                                  conv.status === 'completed' ? 'text-success' : 'text-warning'
                                 }`}>
                                   {conv.status.toUpperCase()}
                                 </div>
@@ -585,9 +585,9 @@ export default function ConversationsPage() {
                               <div className="bg-surface-paper rounded-xl p-3 border border-border-light">
                                 <div className="text-xs text-[var(--color-text-secondary)] mb-1">Sentiment</div>
                                 <div className={`text-xs font-bold ${
-                                  conv.sentiment === 'positive' ? 'text-green-500' :
-                                  conv.sentiment === 'frustrated' ? 'text-red-500' :
-                                  'text-yellow-500'
+                                  conv.sentiment === 'positive' ? 'text-success' :
+                                  conv.sentiment === 'frustrated' ? 'text-error' :
+                                  'text-warning'
                                 }`}>
                                   {conv.sentiment.toUpperCase()}
                                 </div>
@@ -622,9 +622,9 @@ export default function ConversationsPage() {
                               <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
-                                className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
+                                className="mt-4 p-4 bg-error/10 border border-error/30 rounded-xl"
                               >
-                                <div className="flex items-center gap-2 text-red-500 text-xs font-semibold">
+                                <div className="flex items-center gap-2 text-error text-xs font-semibold">
                                   <AlertCircle className="w-4 h-4" />
                                   ISSUE: {conv.trainingIssue}
                                 </div>

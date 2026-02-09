@@ -114,20 +114,20 @@ export default function TeamCoachingDashboardPage() {
   // Loading state
   if (loading && !teamInsights) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-[var(--color-bg-main)] p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header Skeleton */}
           <div className="mb-8 animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-8 bg-[var(--color-border-main)] rounded w-1/3 mb-2"></div>
+            <div className="h-4 bg-[var(--color-border-main)] rounded w-1/4"></div>
           </div>
 
           {/* Cards Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="bg-white rounded-lg shadow-sm p-6 animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-                <div className="h-48 bg-gray-200 rounded"></div>
+              <div key={i} className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 animate-pulse">
+                <div className="h-6 bg-[var(--color-border-main)] rounded w-1/3 mb-4"></div>
+                <div className="h-48 bg-[var(--color-border-main)] rounded"></div>
               </div>
             ))}
           </div>
@@ -139,17 +139,17 @@ export default function TeamCoachingDashboardPage() {
   // Error state
   if (error && !teamInsights) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="min-h-screen bg-[var(--color-bg-main)] p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="bg-[rgba(var(--color-error-rgb),0.1)] border border-[rgba(var(--color-error-rgb),0.2)] rounded-lg p-6">
             <div className="flex items-start gap-4">
               <span className="text-3xl">⚠️</span>
               <div>
-                <h3 className="text-lg font-semibold text-red-900 mb-2">Error Loading Team Insights</h3>
-                <p className="text-sm text-red-700 mb-4">{error}</p>
+                <h3 className="text-lg font-semibold text-[var(--color-error)] mb-2">Error Loading Team Insights</h3>
+                <p className="text-sm text-[var(--color-error-light)] mb-4">{error}</p>
                 <button
                   onClick={handleRefresh}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 bg-[var(--color-error)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-error-dark)] transition-colors text-sm font-medium"
                 >
                   Try Again
                 </button>
@@ -162,14 +162,14 @@ export default function TeamCoachingDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--color-bg-main)]">
       <div className="max-w-7xl mx-auto p-8">
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Team Coaching</h1>
-              <p className="text-gray-600">
+              <h1 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2">Team Coaching</h1>
+              <p className="text-[var(--color-text-secondary)]">
                 {teamInsights ? teamInsights.teamName : 'Loading...'} · Manager Dashboard
               </p>
             </div>
@@ -178,7 +178,7 @@ export default function TeamCoachingDashboardPage() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2 ${
+              className={`px-4 py-2 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors text-sm font-medium flex items-center gap-2 ${
                 refreshing ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -204,8 +204,8 @@ export default function TeamCoachingDashboardPage() {
                 onClick={() => handlePeriodChange(value)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                   period === value
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                    ? 'bg-[var(--color-primary)] text-[var(--color-text-primary)]'
+                    : 'bg-[var(--color-bg-paper)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)]'
                 }`}
               >
                 {label}
@@ -247,22 +247,22 @@ export default function TeamCoachingDashboardPage() {
 
             {/* Team Strengths & Weaknesses */}
             {(teamInsights.teamStrengths.length > 0 || teamInsights.teamWeaknesses.length > 0) && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Team Analysis</h3>
+              <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Team Analysis</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Strengths */}
                   {teamInsights.teamStrengths.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-green-900 mb-3 flex items-center gap-2">
+                      <h4 className="text-sm font-medium text-[var(--color-success)] mb-3 flex items-center gap-2">
                         <span>💪</span>
                         <span>Team Strengths</span>
                       </h4>
                       <div className="space-y-2">
                         {teamInsights.teamStrengths.map((strength, idx) => (
                           <div key={idx} className="flex items-start gap-2">
-                            <span className="text-green-600 mt-0.5">✓</span>
-                            <span className="text-sm text-gray-700">{strength}</span>
+                            <span className="text-[var(--color-success)] mt-0.5">✓</span>
+                            <span className="text-sm text-[var(--color-text-secondary)]">{strength}</span>
                           </div>
                         ))}
                       </div>
@@ -272,15 +272,15 @@ export default function TeamCoachingDashboardPage() {
                   {/* Weaknesses */}
                   {teamInsights.teamWeaknesses.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-orange-900 mb-3 flex items-center gap-2">
+                      <h4 className="text-sm font-medium text-[var(--color-warning)] mb-3 flex items-center gap-2">
                         <span>⚠️</span>
                         <span>Areas for Improvement</span>
                       </h4>
                       <div className="space-y-2">
                         {teamInsights.teamWeaknesses.map((weakness, idx) => (
                           <div key={idx} className="flex items-start gap-2">
-                            <span className="text-orange-600 mt-0.5">!</span>
-                            <span className="text-sm text-gray-700">{weakness}</span>
+                            <span className="text-[var(--color-warning)] mt-0.5">!</span>
+                            <span className="text-sm text-[var(--color-text-secondary)]">{weakness}</span>
                           </div>
                         ))}
                       </div>
@@ -292,26 +292,26 @@ export default function TeamCoachingDashboardPage() {
 
             {/* Best Practices to Share */}
             {teamInsights.bestPracticesToShare.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Best Practices to Share</h3>
-                <p className="text-sm text-gray-600 mb-4">
+              <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Best Practices to Share</h3>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-4">
                   These practices from top performers can help the entire team improve
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {teamInsights.bestPracticesToShare.map((practice, idx) => (
-                    <div key={idx} className="border border-gray-200 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">{practice.title}</h4>
-                      <p className="text-xs text-gray-600 mb-3">{practice.description}</p>
+                    <div key={idx} className="border border-[var(--color-border-main)] rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">{practice.title}</h4>
+                      <p className="text-xs text-[var(--color-text-secondary)] mb-3">{practice.description}</p>
                       
                       {/* Top Performers */}
                       <div className="mb-3">
-                        <div className="text-xs text-gray-500 mb-1">Top performers using this:</div>
+                        <div className="text-xs text-[var(--color-text-disabled)] mb-1">Top performers using this:</div>
                         <div className="flex flex-wrap gap-1">
                           {practice.topPerformers.map((performer, pIdx) => (
                             <span
                               key={pIdx}
-                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-[var(--color-text-primary)]"
                             >
                               {performer}
                             </span>
@@ -320,8 +320,8 @@ export default function TeamCoachingDashboardPage() {
                       </div>
 
                       {/* Expected Impact */}
-                      <div className="bg-blue-50 rounded p-2">
-                        <div className="text-xs text-blue-900">
+                      <div className="bg-[var(--color-primary)] rounded p-2">
+                        <div className="text-xs text-[var(--color-primary)]">
                           <span className="font-semibold">Impact: </span>
                           {practice.expectedImpact}
                         </div>
@@ -333,8 +333,8 @@ export default function TeamCoachingDashboardPage() {
             )}
 
             {/* Metadata Footer */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
+              <div className="flex items-center justify-between text-xs text-[var(--color-text-disabled)]">
                 <div>
                   Last updated: {new Date(teamInsights.generatedAt).toLocaleString()}
                 </div>

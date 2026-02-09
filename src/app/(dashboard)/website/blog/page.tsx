@@ -322,7 +322,7 @@ export default function BlogManagementPage() {
                   padding: '1.5rem',
                   display: 'flex',
                   gap: '1.5rem',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
                 }}
               >
                 {/* Featured Image */}
@@ -478,7 +478,7 @@ export default function BlogManagementPage() {
             padding: '2rem',
             maxWidth: '400px',
             width: '90%',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
           }}>
             <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem', color: 'var(--color-text-primary)' }}>
               Delete Post

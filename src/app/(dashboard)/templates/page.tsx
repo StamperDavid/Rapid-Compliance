@@ -251,7 +251,7 @@ export default function TemplatesDashboard() {
                   Built-in industry best practices, discovery questions, and objection handling strategies
                 </p>
               </div>
-              <div className="bg-gradient-to-br from-success to-green-400 rounded-lg p-6 border border-success">
+              <div className="bg-gradient-to-br from-success to-[#22c55e] rounded-lg p-6 border border-success">
                 <div className="text-4xl mb-3">📊</div>
                 <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">Data-Driven</h3>
                 <p className="text-[var(--color-text-secondary)]">
@@ -278,7 +278,7 @@ export default function TemplatesDashboard() {
                 <button
                   onClick={() => void loadDealScores()}
                   disabled={loadingScores}
-                  className="px-6 py-3 bg-primary hover:bg-primary-light text-[var(--color-text-primary)] rounded-lg font-semibold transition-colors disabled:bg-gray-700 disabled:text-gray-500"
+                  className="px-6 py-3 bg-primary hover:bg-primary-light text-[var(--color-text-primary)] rounded-lg font-semibold transition-colors disabled:bg-[var(--color-bg-elevated)] disabled:text-[var(--color-text-disabled)]"
                 >
                   {loadingScores ? 'Loading...' : 'Refresh Scores'}
                 </button>
@@ -286,7 +286,7 @@ export default function TemplatesDashboard() {
 
               {loadingScores ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
                 </div>
               ) : dealScores.size > 0 ? (
                 <div className="space-y-6">
@@ -358,7 +358,7 @@ export default function TemplatesDashboard() {
                   <select
                     value={forecastPeriod}
                     onChange={(e) => setForecastPeriod(e.target.value as '30-day' | '60-day' | '90-day')}
-                    className="px-4 py-2 bg-gray-700 text-[var(--color-text-primary)] rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
+                    className="px-4 py-2 bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] rounded-lg border border-[var(--color-border-light)] focus:outline-none focus:border-[var(--color-primary)]"
                   >
                     <option value="30-day">30-Day</option>
                     <option value="60-day">60-Day</option>
@@ -367,7 +367,7 @@ export default function TemplatesDashboard() {
                   <button
                     onClick={() => void generateForecast()}
                     disabled={loadingForecast}
-                    className="px-6 py-3 bg-primary hover:bg-primary-light text-[var(--color-text-primary)] rounded-lg font-semibold transition-colors disabled:bg-gray-700 disabled:text-gray-500"
+                    className="px-6 py-3 bg-primary hover:bg-primary-light text-[var(--color-text-primary)] rounded-lg font-semibold transition-colors disabled:bg-[var(--color-bg-elevated)] disabled:text-[var(--color-text-disabled)]"
                   >
                     {loadingForecast ? 'Generating...' : 'Generate Forecast'}
                   </button>
@@ -376,7 +376,7 @@ export default function TemplatesDashboard() {
 
               {loadingForecast ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
                 </div>
               ) : forecast ? (
                 <RevenueForecastChart
