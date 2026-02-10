@@ -2,8 +2,20 @@
 
 **Repository:** https://github.com/StamperDavid/Rapid-Compliance
 **Branch:** dev
+**Launch Date:** February 15, 2026
 **Last Updated:** February 10, 2026
-**Status:** All development complete. Deployment pending.
+**Status:** All development complete. Testing and deployment in progress.
+
+---
+
+## Session Protocol
+
+**Every new Claude Code session MUST:**
+1. Read `CLAUDE.md` first — it contains binding project governance, constraints, and worktree rules
+2. Read this file (`CONTINUATION_PROMPT.md`) for current launch status and next steps
+3. Pick up where the last session left off — check the checklist below for progress
+4. Update this file at end of session with what was accomplished and what's next
+5. Do NOT create new planning/status documents — this is the single tracking file
 
 ---
 
@@ -19,10 +31,8 @@
 ## Launch Checklist
 
 ### Step 1: Deploy Firestore Indexes (~15 min)
-```bash
-firebase login --reauth
-firebase deploy --only firestore:indexes
-```
+- [ ] `firebase login --reauth`
+- [ ] `firebase deploy --only firestore:indexes`
 - Fixes 3 failing service tests (need composite indexes on `status+createdAt`, `stage+createdAt`)
 - Indexes are already defined in `firestore.indexes.json` — just need to be pushed
 
@@ -66,9 +76,19 @@ Budget time for:
 - Stripe webhook signature verification with production keys
 
 ### Step 5: Wire Up Outbound Webhook Dispatch (~3-4 hrs)
-- Settings UI exists with event list — backend dispatch not implemented
-- EventRouter can trigger internal agent actions but can't notify external systems
+- [ ] Implement backend dispatch when EventRouter fires events
+- [ ] Connect to existing Settings UI event list
 - This is the last functional code gap
+
+---
+
+## Issues Found During Testing
+
+_Update this section as issues are discovered and resolved during Steps 3-4._
+
+| Issue | Status | Resolution |
+|-------|--------|------------|
+| _(none yet)_ | | |
 
 ---
 
@@ -83,7 +103,7 @@ Budget time for:
 
 ---
 
-## Boundaries (Not Building Now)
+## Boundaries (Not Building Before Launch)
 
 - No plugin/hook registry — internal infrastructure is intentionally closed
 - No external agent registration API — 52-agent swarm is a closed system
@@ -101,7 +121,7 @@ Budget time for:
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md` | Binding governance for all Claude Code sessions |
+| `CLAUDE.md` | Binding governance — READ FIRST every session |
 | `docs/single_source_of_truth.md` | Authoritative architecture doc |
 | `ENGINEERING_STANDARDS.md` | Code quality requirements |
 | `AGENT_REGISTRY.json` | 52-agent system inventory |
@@ -112,14 +132,3 @@ Budget time for:
 | `src/lib/orchestrator/jasper-command-authority.ts` | Executive briefings + approval gateway |
 | `src/lib/conversation/conversation-memory.ts` | Unified retrieval + Lead Briefing generator |
 | `src/lib/agents/shared/memory-vault.ts` | Shared agent knowledge (Firestore-backed) |
-
----
-
-## Documentation Inventory
-
-**Root docs** (3 active): CLAUDE.md, README.md, ENGINEERING_STANDARDS.md
-**Root context** (2 files): CONTINUATION_PROMPT.md, AGENT_REGISTRY.json
-**docs/** (3 files): single_source_of_truth.md, playwright-audit-2026-01-30.md, test-results-summary.md
-**docs/master_library/** (16 files): Per-feature audit summaries from Feb 5, 2026
-**docs/archive/** (19 files): Historical records + archived specs
-**.claude/agents/** (6 files): QA and architecture agent prompts
