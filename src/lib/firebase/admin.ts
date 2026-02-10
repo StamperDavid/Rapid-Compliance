@@ -37,17 +37,27 @@ function initializeAdmin() {
     
     // Option 2: Individual env vars (preferred for Vercel)
     if (!serviceAccount && process.env.FIREBASE_ADMIN_PROJECT_ID && process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
-      // Clean up private key: remove surrounding quotes and replace \n with actual newlines
       let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
-      
-      // Remove surrounding quotes if present (common when copying from JSON)
+
+      // Remove surrounding quotes if present
       if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
         privateKey = privateKey.slice(1, -1);
       }
-      
+
       // Replace escaped newlines with actual newlines
       privateKey = privateKey.replace(/\\n/g, '\n');
-      
+
+      // Normalize PEM: Vercel can mangle the key with spaces/whitespace.
+      // Strip header/footer, remove all whitespace from base64, re-wrap at 64 chars.
+      const pemHeader = '-----BEGIN PRIVATE KEY-----';
+      const pemFooter = '-----END PRIVATE KEY-----';
+      const base64Only = privateKey
+        .replace(pemHeader, '')
+        .replace(pemFooter, '')
+        .replace(/\s+/g, '');
+      const rewrapped = base64Only.match(/.{1,64}/g)?.join('\n') ?? base64Only;
+      privateKey = `${pemHeader}\n${rewrapped}\n${pemFooter}\n`;
+
       serviceAccount = {
         projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
         clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
