@@ -29,10 +29,19 @@ function initializeAdmin() {
   try {
     let serviceAccount: admin.ServiceAccount | undefined;
 
-    // Production: Full service account JSON in single env var (Vercel best practice)
+    // Production: Service account from env var (supports base64 or raw JSON)
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY) as admin.ServiceAccount;
-      logger.info('Using FIREBASE_SERVICE_ACCOUNT_KEY env var', { file: 'admin.ts' });
+      const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY.trim();
+      if (raw.startsWith('{')) {
+        // Raw JSON — works locally or when env var escaping is intact
+        serviceAccount = JSON.parse(raw) as admin.ServiceAccount;
+        logger.info('Using raw JSON FIREBASE_SERVICE_ACCOUNT_KEY', { file: 'admin.ts' });
+      } else {
+        // Base64-encoded JSON — recommended for Vercel to avoid newline mangling
+        const decoded = Buffer.from(raw, 'base64').toString('utf-8');
+        serviceAccount = JSON.parse(decoded) as admin.ServiceAccount;
+        logger.info('Using base64 FIREBASE_SERVICE_ACCOUNT_KEY', { file: 'admin.ts' });
+      }
     }
 
     // Local development: Load from serviceAccountKey.json file
