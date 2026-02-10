@@ -29,44 +29,13 @@ function initializeAdmin() {
   try {
     let serviceAccount: admin.ServiceAccount | undefined;
 
-    // Option 1: Full JSON in single env var
+    // Production: Full service account JSON in single env var (Vercel best practice)
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY) as admin.ServiceAccount;
-      logger.info('🔑 Using FIREBASE_SERVICE_ACCOUNT_KEY env var', { file: 'admin.ts' });
-    }
-    
-    // Option 2: Individual env vars (preferred for Vercel)
-    if (!serviceAccount && process.env.FIREBASE_ADMIN_PROJECT_ID && process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
-      let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
-
-      // Remove surrounding quotes if present
-      if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-        privateKey = privateKey.slice(1, -1);
-      }
-
-      // Replace escaped newlines with actual newlines
-      privateKey = privateKey.replace(/\\n/g, '\n');
-
-      // Normalize PEM: Vercel can mangle the key with spaces/whitespace.
-      // Strip header/footer, remove all whitespace from base64, re-wrap at 64 chars.
-      const pemHeader = '-----BEGIN PRIVATE KEY-----';
-      const pemFooter = '-----END PRIVATE KEY-----';
-      const base64Only = privateKey
-        .replace(pemHeader, '')
-        .replace(pemFooter, '')
-        .replace(/\s+/g, '');
-      const rewrapped = base64Only.match(/.{1,64}/g)?.join('\n') ?? base64Only;
-      privateKey = `${pemHeader}\n${rewrapped}\n${pemFooter}\n`;
-
-      serviceAccount = {
-        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-        privateKey: privateKey,
-      };
-      logger.info('🔑 Using individual Firebase Admin env vars', { file: 'admin.ts' });
+      logger.info('Using FIREBASE_SERVICE_ACCOUNT_KEY env var', { file: 'admin.ts' });
     }
 
-    // Option 3: Try to load from file (local development)
+    // Local development: Load from serviceAccountKey.json file
     if (!serviceAccount) {
       try {
         const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
@@ -125,11 +94,10 @@ function initializeAdmin() {
 // Initialize on import (server-side only)
 if (typeof window === 'undefined') {
   try {
-    logger.info('[Firebase Admin] Initializing...', { 
-      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID ? 'SET' : 'MISSING',
-      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'SET' : 'MISSING',
-      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY ? `SET (length: ${process.env.FIREBASE_ADMIN_PRIVATE_KEY.length})` : 'MISSING',
-      file: 'admin.ts' 
+    logger.info('[Firebase Admin] Initializing...', {
+      serviceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY ? 'SET' : 'MISSING',
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? 'SET' : 'MISSING',
+      file: 'admin.ts'
     });
     initializeAdmin();
     logger.info('[Firebase Admin] ✅ Initialization complete', { 
