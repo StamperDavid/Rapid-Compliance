@@ -30,15 +30,18 @@
 
 ## Launch Checklist
 
-### Step 1: Deploy Firestore Indexes (~15 min)
-- [ ] `firebase login --reauth`
-- [ ] `firebase deploy --only firestore:indexes`
+### Step 1: Deploy Firestore Indexes (~15 min) ✅
+- [x] `firebase login --reauth`
+- [x] `firebase deploy --only firestore:indexes`
 - Fixes 3 failing service tests (need composite indexes on `status+createdAt`, `stage+createdAt`)
 - Indexes are already defined in `firestore.indexes.json` — just need to be pushed
+- **Completed:** February 10, 2026
 
-### Step 2: Production Deploy to Vercel (~2-3 hrs)
-- [ ] Import GitHub repo into Vercel (if not already done)
-- [ ] Transfer environment variables from `.env.local` to Vercel dashboard
+### Step 2: Production Deploy to Vercel (~2-3 hrs) — IN PROGRESS
+- [x] Import GitHub repo into Vercel (if not already done)
+- [x] Transfer environment variables from `.env.local` to Vercel dashboard
+- [x] Build succeeds on Vercel (143/143 static pages generated)
+- [x] Site live at `https://rapid-compliance-two.vercel.app`
 - [ ] Set production domain to SalesVelocity.ai
 - [ ] Verify 7 cron jobs activate (defined in `vercel.json`)
 - [ ] Update OAuth callback URLs to production domain:
@@ -47,13 +50,16 @@
   - Slack OAuth redirect
 - [ ] Configure Stripe webhook endpoint to production URL
 - [ ] Verify Firebase Auth authorized domains include production domain
+- [ ] Add remaining API keys to Vercel (OPENAI, ANTHROPIC, GOOGLE_AI, SENDGRID, STRIPE)
 
-**Already resolved during Feb 9 deployment debugging:**
+**Already resolved during Feb 9-10 deployment debugging:**
 - force-dynamic on 163 API routes (prevents static prerender)
 - Firebase service account key: base64-encoded for Vercel
 - PEM private key normalization for Vercel whitespace
 - Husky graceful fallback in CI
 - DAL singleton lazy-init for cold starts
+- **Feb 10:** Fixed firebase-admin.ts base64 auto-detection (was crashing with raw JSON.parse on base64 key)
+- **Feb 10:** Added FROM_EMAIL, FROM_NAME, CRON_SECRET to Vercel env vars
 
 ### Step 3: Smoke Test the OODA Loop (~2-3 hrs)
 - [ ] Create a lead via dashboard or public form

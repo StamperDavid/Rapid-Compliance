@@ -50,6 +50,8 @@ serviceAccountKey-*.json
 *-firebase-adminsdk-*.json
 firebase-prod-key.json
 firebase-dev-key.json
+vercel-key.txt
+*-key.txt
 .env.local.backup
 .env.development
 .env.production
