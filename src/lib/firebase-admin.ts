@@ -24,9 +24,18 @@ if (!admin.apps.length) {
         privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
       });
     }
-    // In production, use service account from environment (JSON blob)
+    // In production, use service account from environment (supports base64 or raw JSON)
     else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY) as admin.ServiceAccount;
+      const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY.trim();
+      let serviceAccount: admin.ServiceAccount;
+      if (raw.startsWith('{')) {
+        // Raw JSON — works locally or when env var escaping is intact
+        serviceAccount = JSON.parse(raw) as admin.ServiceAccount;
+      } else {
+        // Base64-encoded JSON — recommended for Vercel to avoid newline mangling
+        const decoded = Buffer.from(raw, 'base64').toString('utf-8');
+        serviceAccount = JSON.parse(decoded) as admin.ServiceAccount;
+      }
       credential = admin.credential.cert(serviceAccount);
     }
     // In development, use service account file
